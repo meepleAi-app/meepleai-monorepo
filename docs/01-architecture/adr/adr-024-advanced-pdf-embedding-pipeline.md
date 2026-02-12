@@ -134,45 +134,13 @@ Implement **5-Phase Advanced PDF Embedding Pipeline**:
 **Objective**: Create evaluation framework with dual dataset strategy
 
 **Deliverables**:
-1. **Mozilla Structured QA Integration**
-   - Download benchmark from `mozilla-ai/structured-qa`
-   - Extract board game rulebook subset (~20-30 questions)
-   - Adapt to MeepleAI evaluation format
-
-2. **Custom MeepleAI Dataset**
-   - Select 3 representative rulebooks (simple, medium, complex with tables)
-   - Create 10-15 Q&A pairs per rulebook (30-45 total)
-   - Categories: setup, gameplay, scoring, edge cases
-   - Format: `{ question, expected_answer, source_page, difficulty }`
-
-3. **Evaluation Harness**
-   - Implement `RagEvaluationService` with metrics:
-     - Recall@5, Recall@10
-     - nDCG@10
-     - MRR (Mean Reciprocal Rank)
-     - Answer correctness (LLM-as-judge)
-   - Baseline measurement with current pipeline
+1. **Mozilla Structured QA**: Board game subset (~20-30 questions)
+2. **Custom MeepleAI Dataset**: 30-45 Q&A pairs across 3 rulebooks (simple/medium/complex)
+3. **Evaluation Harness**: Recall@5/10, nDCG@10, MRR, LLM-as-judge correctness
 
 **Validation Gate**: ≥30 Q&A pairs ready, baseline metrics documented
 
-**Files**:
-```
-apps/api/src/Api/BoundedContexts/KnowledgeBase/
-├── Application/
-│   └── Evaluation/
-│       ├── Commands/RunEvaluationCommand.cs
-│       ├── Queries/GetEvaluationResultsQuery.cs
-│       └── Services/RagEvaluationService.cs
-├── Domain/
-│   └── Evaluation/
-│       ├── EvaluationDataset.cs
-│       ├── EvaluationResult.cs
-│       └── EvaluationMetrics.cs
-tests/
-└── evaluation-datasets/
-    ├── mozilla-structured-qa/
-    └── meepleai-custom/
-```
+**Implementation Reference**: See `tests/evaluation-datasets/` for dataset files, `RagEvaluationService.cs` for harness implementation
 
 ---
 
@@ -191,94 +159,20 @@ tests/
 | **Sparse** | 500 tokens | 10% (50 tokens) | Narrative sections |
 
 **Parent/Child Architecture**:
-```csharp
-public class HierarchicalChunk
-{
-    public string Id { get; set; }                    // UUID
-    public string ParentId { get; set; }              // null for root
-    public List<string> ChildIds { get; set; }        // child chunk refs
-    public string Content { get; set; }               // chunk text
-    public int Level { get; set; }                    // 0=section, 1=paragraph, 2=sentence
-    public ChunkMetadata Metadata { get; set; }       // page, heading, bbox, element_type
-}
+- `HierarchicalChunk`: ID, ParentID, ChildIDs, Content, Level (0=section, 1=paragraph, 2=sentence)
+- `ChunkMetadata`: Page, Heading, BoundingBox, ElementType (text/table/list), GameID, DocumentID
 
-public class ChunkMetadata
-{
-    public int Page { get; set; }
-    public string Heading { get; set; }               // nearest section heading
-    public BoundingBox? BBox { get; set; }            // optional spatial info
-    public string ElementType { get; set; }           // text, table, list, heading
-    public string GameId { get; set; }
-    public string DocumentId { get; set; }
-}
-```
-
-**Implementation**:
-```csharp
-// BoundedContexts/KnowledgeBase/Application/Services/AdvancedChunkingService.cs
-public interface IAdvancedChunkingService
-{
-    Task<List<HierarchicalChunk>> ChunkDocumentAsync(
-        ExtractedDocument document,
-        ChunkingConfiguration config,
-        CancellationToken ct = default);
-}
-
-public class AdvancedChunkingService : IAdvancedChunkingService
-{
-    private readonly ILogger<AdvancedChunkingService> _logger;
-
-    public async Task<List<HierarchicalChunk>> ChunkDocumentAsync(
-        ExtractedDocument document,
-        ChunkingConfiguration config,
-        CancellationToken ct = default)
-    {
-        var chunks = new List<HierarchicalChunk>();
-
-        // Step 1: Section detection (headings from Unstructured metadata)
-        var sections = ExtractSections(document);
-
-        // Step 2: For each section, create parent chunk
-        foreach (var section in sections)
-        {
-            var parentChunk = CreateParentChunk(section);
-            chunks.Add(parentChunk);
-
-            // Step 3: Split into child chunks (sentence-based)
-            var childChunks = await SplitIntoChildChunksAsync(
-                section.Content,
-                config,
-                parentChunk.Id,
-                ct);
-
-            parentChunk.ChildIds = childChunks.Select(c => c.Id).ToList();
-            chunks.AddRange(childChunks);
-        }
-
-        return chunks;
-    }
-}
-```
+**Implementation Strategy**:
+1. Section detection from Unstructured metadata headings
+2. Parent chunk creation per section
+3. Child chunks via sentence-based splitting
+4. Bidirectional parent/child ID mapping
 
 **Validation Gate**: Unit tests pass, parent/child relationships correct
 
-**Files**:
-```
-apps/api/src/Api/BoundedContexts/KnowledgeBase/
-├── Application/
-│   └── Services/
-│       └── AdvancedChunkingService.cs
-├── Domain/
-│   ├── Chunking/
-│   │   ├── HierarchicalChunk.cs
-│   │   ├── ChunkMetadata.cs
-│   │   └── ChunkingConfiguration.cs
-│   └── Services/
-│       └── ChunkingStrategySelector.cs
-└── Infrastructure/
-    └── Repositories/
-        └── ChunkRepository.cs
-```
+**Test Reference**: See `AdvancedChunkingServiceTests.cs` for parent/child mapping validation
+
+**Implementation Files**: See `AdvancedChunkingService.cs`, `HierarchicalChunk.cs`, `ChunkRepository.cs` in KnowledgeBase bounded context
 
 ---
 
@@ -297,61 +191,19 @@ apps/api/src/Api/BoundedContexts/KnowledgeBase/
 | **HuggingFace** | BGE-M3 | 1024 | 8K | Multilingual | Free |
 
 **Multi-Provider Architecture**:
-```csharp
-public interface IEmbeddingProvider
-{
-    string ProviderName { get; }
-    int Dimensions { get; }
-    int MaxContextTokens { get; }
-    Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken ct);
-    Task<List<float[]>> GenerateBatchEmbeddingsAsync(List<string> texts, CancellationToken ct);
-}
+- `IEmbeddingProvider`: Abstract interface with ProviderName, Dimensions, MaxContextTokens, GenerateEmbedding methods
+- `EmbeddingProviderFactory`: Factory pattern for provider instantiation (OpenRouter, Ollama, HuggingFace)
 
-public class EmbeddingProviderFactory
-{
-    public IEmbeddingProvider GetProvider(EmbeddingProviderType type)
-    {
-        return type switch
-        {
-            EmbeddingProviderType.OpenRouterLarge => new OpenRouterEmbeddingProvider("text-embedding-3-large"),
-            EmbeddingProviderType.OpenRouterSmall => new OpenRouterEmbeddingProvider("text-embedding-3-small"),
-            EmbeddingProviderType.OllamaNomic => new OllamaEmbeddingProvider("nomic-embed-text"),
-            EmbeddingProviderType.OllamaMxbai => new OllamaEmbeddingProvider("mxbai-embed-large"),
-            EmbeddingProviderType.HuggingFaceBGE => new HuggingFaceEmbeddingProvider("BAAI/bge-m3"),
-            _ => throw new ArgumentException($"Unknown provider: {type}")
-        };
-    }
-}
-```
-
-**Configuration**:
-```json
-{
-  "Embedding": {
-    "Provider": "OpenRouterLarge",
-    "FallbackProvider": "OllamaNomic",
-    "BatchSize": 100,
-    "MaxRetries": 3,
-    "TimeoutSeconds": 30
-  }
-}
-```
+**Configuration Strategy**:
+- Primary provider: OpenRouterLarge (production)
+- Fallback provider: OllamaNomic (dev/offline)
+- Batch size: 100, max retries: 3, timeout: 30s
 
 **Validation Gate**: Integration tests pass for all providers
 
-**Files**:
-```
-apps/api/src/Api/BoundedContexts/KnowledgeBase/
-├── Infrastructure/
-│   └── Embedding/
-│       ├── IEmbeddingProvider.cs
-│       ├── EmbeddingProviderFactory.cs
-│       ├── Providers/
-│       │   ├── OpenRouterEmbeddingProvider.cs
-│       │   ├── OllamaEmbeddingProvider.cs
-│       │   └── HuggingFaceEmbeddingProvider.cs
-│       └── EmbeddingConfiguration.cs
-```
+**Test Reference**: See `EmbeddingProviderTests.cs` for provider-specific tests, `EmbeddingProviderFactoryTests.cs` for factory pattern validation
+
+**Implementation Files**: See `Infrastructure/Embedding/` directory for provider implementations
 
 ---
 
@@ -359,71 +211,21 @@ apps/api/src/Api/BoundedContexts/KnowledgeBase/
 
 **Objective**: Tune HNSW, add PQ quantization, optimize BM25 sparse index
 
-**Qdrant HNSW Tuning**:
-```json
-{
-  "vectors": {
-    "size": 3072,
-    "distance": "Cosine"
-  },
-  "hnsw_config": {
-    "m": 16,
-    "ef_construct": 100,
-    "full_scan_threshold": 10000
-  },
-  "quantization_config": {
-    "scalar": {
-      "type": "int8",
-      "quantile": 0.99,
-      "always_ram": true
-    }
-  }
-}
-```
+**Qdrant HNSW Configuration**:
+- Vector size: 3072, distance: Cosine
+- HNSW: m=16, ef_construct=100, full_scan_threshold=10000
+- Quantization: Scalar int8 (75% memory reduction, <1% accuracy loss) for medium collections (100K-1M chunks)
 
-**Quantization Options**:
+**PostgreSQL BM25 Index**:
+- Custom text search config: `meepleai_italian` with Italian stemming + synonyms
+- GIN index on `to_tsvector('meepleai_italian', content)`
+- Optional: Materialized view for pre-computed BM25 scores
 
-| Type | Memory Reduction | Accuracy Loss | Use Case |
-|------|------------------|---------------|----------|
-| **None** | 0% | 0% | Small collections (<100K) |
-| **Scalar (int8)** | 75% | <1% | Medium (100K-1M) |
-| **Product (PQ)** | 90% | 2-5% | Large (>1M) |
-
-**BM25 Sparse Index** (PostgreSQL):
-```sql
--- Enhanced FTS configuration for Italian board game terms
-CREATE TEXT SEARCH CONFIGURATION meepleai_italian (COPY = italian);
-
--- Add game-specific synonyms
-ALTER TEXT SEARCH CONFIGURATION meepleai_italian
-    ALTER MAPPING FOR word WITH italian_stem, italian_synonym;
-
--- Create GIN index for fast BM25-style retrieval
-CREATE INDEX idx_chunks_fts ON chunks
-    USING GIN (to_tsvector('meepleai_italian', content));
-
--- Materialized view for pre-computed BM25 scores (optional)
-CREATE MATERIALIZED VIEW chunks_bm25 AS
-SELECT
-    id,
-    content,
-    ts_rank_cd(to_tsvector('meepleai_italian', content), query) AS bm25_score
-FROM chunks, plainto_tsquery('meepleai_italian', '') AS query;
-```
-
-**Metadata Index**:
-```csharp
-public class ChunkIndexEntry
-{
-    public string ChunkId { get; set; }
-    public string ParentId { get; set; }
-    public float[] Embedding { get; set; }
-    public Dictionary<string, object> Payload { get; set; }
-    // Payload includes: page, heading, element_type, game_id, document_id
-}
-```
+**Metadata Payload**: page, heading, element_type, game_id, document_id
 
 **Validation Gate**: Benchmark baseline vs optimized (latency, storage)
+
+**Configuration Reference**: See `qdrant-collections.json` and migration `AddChunksFtsIndex.sql`
 
 ---
 
@@ -442,77 +244,19 @@ public class ChunkIndexEntry
 **Recommended**: BGE-reranker-v2-m3 (best accuracy, acceptable latency)
 
 **Reranking Pipeline**:
-```csharp
-public class RerankedRetrievalService : IRerankedRetrievalService
-{
-    private readonly IHybridSearchService _hybridSearch;
-    private readonly ICrossEncoderReranker _reranker;
-    private readonly IParentChunkResolver _parentResolver;
+1. **Hybrid Retrieval**: Vector (40 results) + BM25 (20 results)
+2. **RRF Fusion**: Combine to top 50 candidates (k=60)
+3. **Cross-Encoder Reranking**: BGE-reranker-v2-m3 scores top 50 → select top 10
+4. **Parent Expansion**: Retrieve full context for final chunks
 
-    public async Task<List<RankedChunk>> RetrieveAndRerankAsync(
-        string query,
-        RetrievalOptions options,
-        CancellationToken ct = default)
-    {
-        // Step 1: Hybrid retrieval (vector + BM25)
-        var candidates = await _hybridSearch.SearchAsync(
-            query,
-            vectorCount: options.VectorCount,    // 40
-            bm25Count: options.Bm25Count,        // 20
-            ct);
-
-        // Step 2: RRF fusion
-        var fused = RrfFusion(candidates, k: 60);
-        var topCandidates = fused.Take(options.RerankPoolSize).ToList();  // 50
-
-        // Step 3: Cross-encoder reranking
-        var reranked = await _reranker.RerankAsync(query, topCandidates, ct);
-        var topReranked = reranked.Take(options.FinalCount).ToList();     // 10
-
-        // Step 4: Parent expansion (retrieve full context)
-        var expanded = await _parentResolver.ExpandToParentsAsync(topReranked, ct);
-
-        return expanded;
-    }
-}
-```
-
-**Integration with sentence-transformers**:
-```python
-# Python service for reranking (called via HTTP or gRPC)
-from sentence_transformers import CrossEncoder
-
-model = CrossEncoder('BAAI/bge-reranker-v2-m3')
-
-def rerank(query: str, chunks: list[dict]) -> list[dict]:
-    pairs = [(query, chunk['content']) for chunk in chunks]
-    scores = model.predict(pairs)
-
-    for i, chunk in enumerate(chunks):
-        chunk['rerank_score'] = float(scores[i])
-
-    return sorted(chunks, key=lambda x: x['rerank_score'], reverse=True)
-```
-
-**C# Integration** (HTTP client to Python service):
-```csharp
-public class CrossEncoderRerankerClient : ICrossEncoderReranker
-{
-    private readonly HttpClient _httpClient;
-
-    public async Task<List<RankedChunk>> RerankAsync(
-        string query,
-        List<RetrievedChunk> chunks,
-        CancellationToken ct)
-    {
-        var request = new RerankRequest { Query = query, Chunks = chunks };
-        var response = await _httpClient.PostAsJsonAsync("/rerank", request, ct);
-        return await response.Content.ReadFromJsonAsync<List<RankedChunk>>(ct);
-    }
-}
-```
+**Python Reranker Service**:
+- Model: `sentence-transformers` CrossEncoder (BAAI/bge-reranker-v2-m3)
+- API: HTTP endpoint `/rerank` with JSON request/response
+- Integration: C# `CrossEncoderRerankerClient` via HttpClient
 
 **Validation Gate**: Recall@10 ≥60% on evaluation dataset
+
+**Test Reference**: See `RerankedRetrievalServiceTests.cs` for pipeline integration, `CrossEncoderRerankerTests.cs` for Python service interaction
 
 ---
 
@@ -532,49 +276,17 @@ public class CrossEncoderRerankerClient : ICrossEncoderReranker
 | Storage/page | TBD | Documented | Bytes per PDF page |
 
 **Grid Search Configurations**:
-```yaml
-chunking:
-  - { size: 200, overlap: 0.20, name: "dense" }
-  - { size: 350, overlap: 0.15, name: "baseline" }
-  - { size: 500, overlap: 0.10, name: "sparse" }
+- Chunking: dense (200/20%), baseline (350/15%), sparse (500/10%)
+- Quantization: none, scalar_int8
+- Reranking: disabled, BGE-reranker-v2-m3
 
-quantization:
-  - { type: "none", name: "full_precision" }
-  - { type: "scalar_int8", name: "quantized" }
+**Evaluation Outputs**:
+- Benchmark reports with configuration matrix
+- Prometheus metrics: retrieval_latency_ms, rerank_latency_ms, chunks_retrieved
+- Retrieval trace logging for debugging
+- PII redaction pre-embedding
 
-reranking:
-  - { enabled: false, name: "no_rerank" }
-  - { enabled: true, model: "bge-reranker-v2-m3", name: "bge_rerank" }
-```
-
-**Benchmark Report Template**:
-```markdown
-## Evaluation Report - [Date]
-
-### Configuration
-- Chunking: [config]
-- Embedding: [model]
-- Quantization: [type]
-- Reranking: [enabled/disabled]
-
-### Metrics
-| Dataset | Recall@5 | Recall@10 | nDCG@10 | MRR | P95 Latency |
-|---------|----------|-----------|---------|-----|-------------|
-| Mozilla | X% | X% | X.XX | X.XX | Xms |
-| Custom | X% | X% | X.XX | X.XX | Xms |
-
-### Observations
-- [Key findings]
-
-### Recommendations
-- [Next steps]
-```
-
-**Observability Checklist**:
-- [ ] Retrieval trace logging (query → chunks → rerank → generation)
-- [ ] Prometheus metrics (retrieval_latency_ms, rerank_latency_ms, chunks_retrieved)
-- [ ] PII redaction pre-embedding (player names, email patterns)
-- [ ] Error handling for failed embeddings
+**Report Template Reference**: See `docs/evaluation-reports/` for completed benchmarks
 
 **Validation Gate**: Report with ≥3 configurations compared, Recall@10 ≥70%
 
@@ -637,40 +349,15 @@ Adding reranking risks exceeding P95 <1.5s target:
 
 ### Optimization Strategies
 
-**1. Parallel Execution**
-```csharp
-// Vector and BM25 search in parallel
-var (vectorResults, bm25Results) = await (
-    _vectorSearch.SearchAsync(query, 40, ct),
-    _bm25Search.SearchAsync(query, 20, ct)
-).WhenAll();
-```
+**1. Parallel Execution**: Run vector and BM25 searches concurrently (saves ~30ms)
 
-**2. Reranker Result Caching**
-```csharp
-// Cache rerank scores for query+chunk pairs (5-minute TTL)
-var cacheKey = $"rerank:{query.GetHashCode()}:{chunk.Id}";
-var cachedScore = await _cache.GetAsync<float?>(cacheKey);
-if (cachedScore.HasValue) return cachedScore.Value;
-```
-Expected cache hit rate: 30-50% for common game rules questions
+**2. Reranker Result Caching**: Cache query+chunk scores for 5 minutes (30-50% hit rate expected)
 
-**3. Adaptive Reranking**
-```csharp
-// Skip reranking for high-confidence queries
-if (topCandidate.Score >= 0.90m)
-{
-    _logger.LogInformation("Skipping rerank, high confidence: {Score}", topCandidate.Score);
-    return candidates.Take(options.FinalCount).ToList();
-}
-```
+**3. Adaptive Reranking**: Skip reranking when top candidate score ≥0.90 (high confidence)
 
-**4. Batched Parent Expansion**
-```csharp
-// Single DB query for all parent chunks
-var parentIds = rerankedChunks.Select(c => c.ParentId).Distinct();
-var parents = await _chunkRepo.GetByIdsAsync(parentIds, ct);
-```
+**4. Batched Parent Expansion**: Single DB query for all parent chunks (prevents N+1 queries)
+
+**Implementation Reference**: See `LatencyOptimizationTests.cs` for parallel execution benchmarks
 
 ### Optimized Latency Budget
 
@@ -702,137 +389,35 @@ var parents = await _chunkRepo.GetByIdsAsync(parentIds, ct);
 
 ### Core Interfaces
 
-```csharp
-/// <summary>
-/// Resolves child chunks to their parent chunks for context expansion.
-/// </summary>
-public interface IParentChunkResolver
-{
-    /// <summary>
-    /// Expands ranked child chunks to include parent context.
-    /// </summary>
-    Task<List<HierarchicalChunk>> ExpandToParentsAsync(
-        List<RankedChunk> childChunks,
-        CancellationToken ct = default);
+**IParentChunkResolver**:
+- `ExpandToParentsAsync()`: Expands child chunks to include parent context
+- `GetParentAsync()`: Retrieves parent chunk by child ID
 
-    /// <summary>
-    /// Gets parent chunk by child ID.
-    /// </summary>
-    Task<HierarchicalChunk?> GetParentAsync(
-        string childId,
-        CancellationToken ct = default);
-}
+**ICrossEncoderReranker**:
+- `RerankAsync()`: Reranks chunks using cross-encoder model
+- `ScoreAsync()`: Scores single query-chunk pair
+- `IsHealthyAsync()`: Health check for reranker service
 
-/// <summary>
-/// Cross-encoder reranking service for improving retrieval relevance.
-/// </summary>
-public interface ICrossEncoderReranker
-{
-    /// <summary>
-    /// Reranks retrieved chunks using cross-encoder model.
-    /// </summary>
-    Task<List<RankedChunk>> RerankAsync(
-        string query,
-        List<RetrievedChunk> chunks,
-        CancellationToken ct = default);
+**IChunkRepository**:
+- CRUD operations: `GetByIdAsync()`, `GetByIdsAsync()`, `SaveAsync()`, `SaveBatchAsync()`
+- Navigation: `GetChildrenAsync()`, `DeleteByDocumentIdAsync()`
 
-    /// <summary>
-    /// Scores a single query-chunk pair.
-    /// </summary>
-    Task<float> ScoreAsync(
-        string query,
-        string chunkContent,
-        CancellationToken ct = default);
+**IRagEvaluationService**:
+- `EvaluateAsync()`: Runs benchmarks on evaluation dataset
+- `ComputeMetricsAsync()`: Calculates Recall@K, nDCG, MRR
 
-    /// <summary>
-    /// Health check for reranker service.
-    /// </summary>
-    Task<bool> IsHealthyAsync(CancellationToken ct = default);
-}
+**IRerankedRetrievalService**:
+- `RetrieveAndRerankAsync()`: Orchestrates hybrid search + reranking + parent expansion
 
-/// <summary>
-/// Repository for hierarchical chunk storage and retrieval.
-/// </summary>
-public interface IChunkRepository
-{
-    Task<HierarchicalChunk?> GetByIdAsync(string id, CancellationToken ct = default);
-    Task<List<HierarchicalChunk>> GetByIdsAsync(IEnumerable<string> ids, CancellationToken ct = default);
-    Task<List<HierarchicalChunk>> GetChildrenAsync(string parentId, CancellationToken ct = default);
-    Task SaveAsync(HierarchicalChunk chunk, CancellationToken ct = default);
-    Task SaveBatchAsync(List<HierarchicalChunk> chunks, CancellationToken ct = default);
-    Task DeleteByDocumentIdAsync(string documentId, CancellationToken ct = default);
-}
+### Key Data Structures
 
-/// <summary>
-/// RAG evaluation service for benchmarking retrieval quality.
-/// </summary>
-public interface IRagEvaluationService
-{
-    Task<EvaluationResult> EvaluateAsync(
-        EvaluationDataset dataset,
-        EvaluationOptions options,
-        CancellationToken ct = default);
+**RankedChunk**: Id, Content, Score, RerankScore, ParentId, Metadata
 
-    Task<Dictionary<string, double>> ComputeMetricsAsync(
-        List<EvaluationSample> samples,
-        CancellationToken ct = default);
-}
+**RetrievalOptions**: VectorCount (40), Bm25Count (20), RerankPoolSize (50), FinalCount (10), EnableReranking, ExpandToParents
 
-/// <summary>
-/// Reranked retrieval orchestrator (wraps hybrid search + reranking).
-/// </summary>
-public interface IRerankedRetrievalService
-{
-    Task<List<RankedChunk>> RetrieveAndRerankAsync(
-        string query,
-        RetrievalOptions options,
-        CancellationToken ct = default);
-}
-```
+**EvaluationResult**: RecallAt5, RecallAt10, NdcgAt10, Mrr, P95LatencyMs, Configuration
 
-### Data Transfer Objects
-
-```csharp
-public record RankedChunk
-{
-    public required string Id { get; init; }
-    public required string Content { get; init; }
-    public required float Score { get; init; }
-    public float? RerankScore { get; init; }
-    public string? ParentId { get; init; }
-    public ChunkMetadata? Metadata { get; init; }
-}
-
-public record RetrievalOptions
-{
-    public int VectorCount { get; init; } = 40;
-    public int Bm25Count { get; init; } = 20;
-    public int RerankPoolSize { get; init; } = 50;
-    public int FinalCount { get; init; } = 10;
-    public bool EnableReranking { get; init; } = true;
-    public bool ExpandToParents { get; init; } = true;
-}
-
-public record EvaluationSample
-{
-    public required string Query { get; init; }
-    public required string ExpectedAnswer { get; init; }
-    public required List<string> RelevantChunkIds { get; init; }
-    public List<RankedChunk>? RetrievedChunks { get; init; }
-    public string? GeneratedAnswer { get; init; }
-}
-
-public record EvaluationResult
-{
-    public required double RecallAt5 { get; init; }
-    public required double RecallAt10 { get; init; }
-    public required double NdcgAt10 { get; init; }
-    public required double Mrr { get; init; }
-    public required double P95LatencyMs { get; init; }
-    public required DateTime EvaluatedAt { get; init; }
-    public required string Configuration { get; init; }
-}
-```
+**Contract Reference**: See interface files in `BoundedContexts/KnowledgeBase/Application/Interfaces/`
 
 ---
 
@@ -851,64 +436,17 @@ public record EvaluationResult
 | **Quality below threshold** | Score < 0.60 after reranking | Add disclaimer to response | `Info` + low_confidence metric |
 | **Empty retrieval results** | Zero chunks returned | Return "information not found" message | `Warning` + query logged |
 
-### Error Handling Implementation
+### Error Handling Strategy
 
-```csharp
-public class ResilientRetrievalService : IRerankedRetrievalService
-{
-    private readonly IHybridSearchService _hybridSearch;
-    private readonly ICrossEncoderReranker _reranker;
-    private readonly ILogger<ResilientRetrievalService> _logger;
+**Resilience Pattern**:
+1. Hybrid search failure → Fallback to single-mode search (vector-only or BM25-only)
+2. Reranker unavailable → Skip reranking, use RRF scores (set `RerankScore = null`)
+3. Parent chunk missing → Return child with `ParentMissing` flag
+4. Empty results → Log warning, return empty list with user message
 
-    public async Task<List<RankedChunk>> RetrieveAndRerankAsync(
-        string query,
-        RetrievalOptions options,
-        CancellationToken ct = default)
-    {
-        // Step 1: Hybrid retrieval with fallback
-        List<RetrievedChunk> candidates;
-        try
-        {
-            candidates = await _hybridSearch.SearchAsync(query, options, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hybrid search failed, attempting degraded search");
-            candidates = await FallbackSearchAsync(query, options, ct);
-        }
+**Graceful Degradation**: Service continues with reduced functionality rather than failing completely
 
-        if (candidates.Count == 0)
-        {
-            _logger.LogWarning("No chunks retrieved for query: {Query}", query);
-            return new List<RankedChunk>();
-        }
-
-        // Step 2: Reranking with graceful degradation
-        if (options.EnableReranking && await _reranker.IsHealthyAsync(ct))
-        {
-            try
-            {
-                return await _reranker.RerankAsync(query, candidates, ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Reranking failed, returning RRF-ranked results");
-                // Fall through to return candidates without reranking
-            }
-        }
-
-        return candidates.Select(c => new RankedChunk
-        {
-            Id = c.Id,
-            Content = c.Content,
-            Score = c.Score,
-            RerankScore = null,  // Indicates reranking was skipped
-            ParentId = c.ParentId,
-            Metadata = c.Metadata
-        }).ToList();
-    }
-}
-```
+**Error Handling Reference**: See `ResilientRetrievalServiceTests.cs` for failure scenarios
 
 ---
 
@@ -969,25 +507,13 @@ public class ResilientRetrievalService : IRerankedRetrievalService
 
 ### Feature Flag Integration
 
-```csharp
-// RagService can use either path based on config
-public class RagService : IRagService
-{
-    private readonly IHybridSearchService _hybridSearch;
-    private readonly IRerankedRetrievalService _rerankedRetrieval;
-    private readonly IOptions<RetrievalConfiguration> _config;
+**Strategy Selection**:
+- `EnableAdvancedRetrieval = true`: Use reranked retrieval path
+- `EnableAdvancedRetrieval = false`: Use basic hybrid search (baseline)
 
-    public async Task<RagResponse> AskAsync(string query, CancellationToken ct)
-    {
-        // Choose retrieval strategy based on feature flag
-        var chunks = _config.Value.EnableAdvancedRetrieval
-            ? await _rerankedRetrieval.RetrieveAndRerankAsync(query, ct)
-            : await _hybridSearch.SearchAsync(query, ct);
+**Backward Compatibility**: Existing `RagService` routes to either pipeline based on configuration flag, no breaking changes
 
-        // Rest of pipeline unchanged...
-    }
-}
-```
+**Feature Flag Reference**: See `appsettings.json` Retrieval section
 
 ### Backward Compatibility
 

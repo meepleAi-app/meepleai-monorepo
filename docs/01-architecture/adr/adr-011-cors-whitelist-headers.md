@@ -236,73 +236,17 @@ policy.WithHeaders(allowedHeaders)
 
 ### Pre-Merge Testing
 
-1. **Grep for Custom Headers**:
-```bash
-# Search frontend for custom headers
-grep -r "X-" apps/web/src/lib/api/
-grep -r "headers\[" apps/web/src/
-```
-
-2. **Test All Endpoints**:
-```bash
-# Test with allowed headers
-curl -H "Content-Type: application/json" \
-     -H "X-Correlation-ID: test-123" \
-     http://localhost:8080/api/v1/games
-
-# Test with non-allowed header (should fail preflight)
-curl -H "X-Custom-Header: evil" \
-     http://localhost:8080/api/v1/games
-```
-
-3. **CORS Preflight Tests**:
-```bash
-# OPTIONS request should include allowed headers
-curl -X OPTIONS \
-     -H "Origin: http://localhost:3000" \
-     -H "Access-Control-Request-Method: POST" \
-     -H "Access-Control-Request-Headers: Content-Type,X-Correlation-ID" \
-     http://localhost:8080/api/v1/auth/login
-```
+1. **Grep for Custom Headers**: Search frontend codebase for any X-* headers in API calls
+2. **Manual Endpoint Tests**: Test allowed headers (Content-Type, X-Correlation-ID) pass, blocked headers (X-Custom-Header) fail
+3. **CORS Preflight Tests**: Validate OPTIONS requests return correct Access-Control-Allow-Headers
 
 ### Integration Tests
 
-```csharp
-[Fact]
-public async Task CorsPolicy_ShouldAllowWhitelistedHeaders()
-{
-    // Arrange
-    var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
-    request.Headers.Add("Origin", "http://localhost:3000");
-    request.Headers.Add("Access-Control-Request-Method", "GET");
-    request.Headers.Add("Access-Control-Request-Headers", "Content-Type,X-Correlation-ID");
+**Two test cases required**:
+1. `CorsPolicy_ShouldAllowWhitelistedHeaders`: Verify Content-Type, Authorization, X-Correlation-ID, X-API-Key pass
+2. `CorsPolicy_ShouldRejectNonWhitelistedHeaders`: Verify X-Evil-Header blocked
 
-    // Act
-    var response = await _client.SendAsync(request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    Assert.Contains("Content-Type", response.Headers.GetValues("Access-Control-Allow-Headers"));
-    Assert.Contains("X-Correlation-ID", response.Headers.GetValues("Access-Control-Allow-Headers"));
-}
-
-[Fact]
-public async Task CorsPolicy_ShouldRejectNonWhitelistedHeaders()
-{
-    // Arrange
-    var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
-    request.Headers.Add("Origin", "http://localhost:3000");
-    request.Headers.Add("Access-Control-Request-Method", "GET");
-    request.Headers.Add("Access-Control-Request-Headers", "X-Evil-Header");
-
-    // Act
-    var response = await _client.SendAsync(request);
-
-    // Assert
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode); // Preflight succeeds but header not allowed
-    Assert.DoesNotContain("X-Evil-Header", response.Headers.GetValues("Access-Control-Allow-Headers"));
-}
-```
+**Full test implementation**: See `CorsPolicyTests.cs` for complete test suite
 
 ---
 
@@ -381,27 +325,11 @@ public async Task CorsPolicy_ShouldRejectNonWhitelistedHeaders()
 
 ## Monitoring
 
-**Metrics**:
-```
-cors_preflight_requests_total{status, origin}
-cors_blocked_headers_total{header_name}
-```
+**Metrics**: `cors_preflight_requests_total{status, origin}`, `cors_blocked_headers_total{header_name}`
 
-**Alerts**:
-- CORS preflight failure rate >1%
-- Blocked header attempts detected
+**Alerts**: Preflight failure rate >1%, Blocked header attempts detected
 
-**Logging**:
-```csharp
-if (request.Headers.Contains("X-Custom-Header"))
-{
-    _logger.LogWarning(
-        "Blocked non-whitelisted CORS header: {Header} from {Origin}",
-        "X-Custom-Header",
-        request.Headers.Origin
-    );
-}
-```
+**Logging**: Log warnings when non-whitelisted headers detected (header name + origin)
 
 ---
 

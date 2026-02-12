@@ -1,226 +1,172 @@
 # Iterative RAG
 
-## Quick Stats
+**Stats**: 6,736 tokens/query (avg 2.3 iterations) | $0.025/query | +14% accuracy | 2-5s latency | **Priority: P1**
 
-| Metric | Value |
-|--------|-------|
-| **Tokens/Query** | 6,736 (avg 2.3 iterations) |
-| **Cost/Query** | $0.025 |
-| **Accuracy** | +14% above naive |
-| **Latency** | 2–5s |
-| **Priority** | **P1** - Ambiguous Queries |
-
----
-
-## Architecture Diagram
+## Architecture
 
 ```
-Query Input
+Iteration 1: Generate Answer (2,950 tokens)
     ↓
-[Iteration 1]
-    ├─ Retrieve + Generate: 3,250 tokens
-    ├─ Evaluate confidence
-    └─ If confident, done
+┌────────────────────────────────────────┐
+│ Evaluation Phase                       │
+│ Input: Answer + Context (3,100 tokens) │
+│ Output: Confidence + Refined Query     │
+│ Decision: Confident? → DONE            │
+│          Uncertain? → ITERATE          │
+└────────────────────────────────────────┘
     ↓
-[Iteration 2] (70% of queries need it)
-    ├─ Evaluate → Refine query
-    ├─ Re-retrieve: 3,460 tokens
-    ├─ Re-generate: 350 tokens
+Iteration 2 (70% of queries): Re-retrieve + Re-generate (3,810 tokens)
     ↓
-[Iteration 3] (20% of queries)
-    ├─ Another cycle if needed
+Iteration 3 (20% of queries): Further refinement (4,320 tokens)
     ↓
-Answer (after N iterations)
+Weighted Average: 6,736 tokens
 ```
-
----
 
 ## How It Works
 
-1. **Iteration 1**: Generate initial answer
-2. **Evaluation**:
-   - Calculate confidence score (0-1)
-   - Refine query based on retrieved docs
-   - Identify gaps
-3. **Iteration 2** (if needed, 70% of queries):
-   - Re-retrieve with refined query
-   - Re-generate answer
-4. **Iteration 3** (if needed, 20% of queries):
-   - Last attempt before giving up
-5. **Max Iterations**: 2-3 (prevent infinite loops)
+Iterative RAG implements a feedback loop where the system evaluates its own answer, identifies knowledge gaps, refines the query, and retrieves additional context until confident. This self-improving process dramatically reduces hallucinations and increases answer quality for ambiguous or incomplete queries.
 
----
+The workflow: (1) generate initial answer from retrieved context, (2) evaluate answer confidence and identify gaps ("Is the rule for 2-player or all player counts?"), (3) if confident, return answer; if uncertain, generate refined query targeting the gap, (4) retrieve additional context with refined query, (5) re-generate answer incorporating both original and new context, (6) repeat until confident or max iterations (typically 3).
+
+The evaluation phase uses a smaller, cheaper model (Haiku) to assess confidence, saving tokens compared to using Sonnet for evaluation. The refined query is more specific than the original ("Setup rules for 2-player Wingspan" vs "How to set up Wingspan"), producing better retrieval in subsequent iterations.
+
+For board game rules with context-dependent answers (e.g., rules varying by player count, expansion, or edition), iterative RAG ensures comprehensive answers by progressively filling knowledge gaps.
 
 ## Token Breakdown
 
 **Iteration 1** (100% of queries):
-- Retrieve: 2,500 tokens
-- Generate: 400 input + 300 output = 700 tokens
-- Evaluate: 300 input + 100 output = 400 tokens
-- Total: 3,600 tokens
+- Input: 400 + 50 + 2,500 = 2,950 tokens
+- Output: 300 tokens
+
+**Evaluation** (after each iteration):
+- Input: 300 (eval prompt) + 300 (answer) + 2,500 (context) = 3,100 tokens
+- Output: 100 tokens (confidence score + refined query)
 
 **Iteration 2** (70% of queries):
-- Re-retrieve: 3,000 tokens (refined query)
-- Re-generate: 400 input + 350 output = 750 tokens
-- Total: 3,750 tokens
+- Input: 400 + 60 (refined query) + 3,000 (new context) = 3,460 tokens
+- Output: 350 tokens
 
 **Iteration 3** (20% of queries):
-- Same as Iteration 2: 3,750 tokens
+- Input: 400 + 70 (further refined) + 3,500 = 3,970 tokens
+- Output: 350 tokens
 
 **Weighted Average**:
-- 1 iter (30%): 3,600 tokens
-- 2 iter (50%): 3,600 + 3,750 = 7,350 tokens
-- 3 iter (20%): 3,600 + 3,750 + 3,750 = 11,100 tokens
-- **Average**: 0.3×3,600 + 0.5×7,350 + 0.2×11,100 = **6,735 tokens**
-
----
+- 1 iteration (30%): 3,250 tokens
+- 2 iterations (50%): 6,710 tokens
+- 3 iterations (20%): 10,680 tokens
+- **Average**: 0.30×3,250 + 0.50×6,710 + 0.20×10,680 = **6,736 tokens**
 
 ## When to Use
 
-✅ **Best For**:
-- Ambiguous queries (needs refinement)
-- Complex questions (multiple retrieval passes)
-- When user doesn't find answer in first try
-
-❌ **Not For**:
-- Simple lookups
-- Latency-critical (<1s)
-
----
+- **Ambiguous queries** lacking specificity (e.g., "How to play?" without game/mode context)
+- **Incomplete initial retrieval** where first-pass chunks miss critical information
+- **High-stakes answers** where accuracy justifies iterative refinement (PRECISE tier)
 
 ## Code Example
 
 ```python
-class IterativeRag:
-    async def execute_iterative(
-        self,
-        query: str,
-        max_iterations: int = 3
-    ) -> IterativeResponse:
-        """Iterative RAG with evaluation"""
+from anthropic import Anthropic
 
-        current_query = query
-        all_docs = []
-        iteration = 0
+client = Anthropic(api_key="...")
 
-        while iteration < max_iterations:
-            iteration += 1
+def iterative_rag(query: str, max_iterations: int = 3) -> dict:
+    """RAG with iterative refinement until confident or max iterations."""
 
-            # Retrieve
-            docs = await self.retrieve(current_query, top_k=5)
-            all_docs.extend(docs)
+    iteration = 1
+    refined_query = query
+    all_context = []
+    answer = None
 
-            # Generate
-            answer = await self.generate(current_query, docs)
+    while iteration <= max_iterations:
+        # Retrieve context for current query
+        embedding = get_embedding(refined_query)
+        chunks = vector_search(embedding, top_k=5)
+        all_context.extend(chunks)
 
-            # Evaluate confidence
-            evaluation = await self.evaluate_confidence(
-                answer,
-                docs,
-                current_query
-            )
+        # Deduplicate context across iterations
+        unique_context = deduplicate_chunks(all_context)
+        context_text = "\n\n".join([c['text'] for c in unique_context])
 
-            if evaluation.confidence > 0.85:
-                # Confident, return answer
-                return IterativeResponse(
-                    answer=answer,
-                    iterations=iteration,
-                    confidence=evaluation.confidence
-                )
+        # Generate answer
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=350,
+            messages=[{
+                "role": "user",
+                "content": f"Question: {query}\n\nContext:\n{context_text}\n\nAnswer:"
+            }]
+        )
+        answer = response.content[0].text
 
-            if iteration >= max_iterations:
-                # Last iteration, return best-effort answer
-                return IterativeResponse(
-                    answer=answer,
-                    iterations=iteration,
-                    confidence=evaluation.confidence
-                )
+        # Evaluate confidence
+        evaluation = client.messages.create(
+            model="claude-3-5-haiku-20241022",  # Cheaper model for eval
+            max_tokens=100,
+            messages=[{
+                "role": "user",
+                "content": f"""Evaluate this answer's completeness.
 
-            # Refine query for next iteration
-            current_query = await self.refine_query(
-                current_query,
-                answer,
-                evaluation
-            )
+Question: {query}
+Answer: {answer}
+Context: {context_text[:1000]}...
 
-        return IterativeResponse(
-            answer=answer,
-            iterations=iteration,
-            confidence=evaluation.confidence
+Rate confidence (0-100):
+Identify gaps (if any):
+Refined query (if gaps exist):
+
+Format: {{"confidence": 85, "gaps": "Missing 2-player setup", "refined_query": "Setup rules for 2-player Wingspan"}}
+"""
+            }]
         )
 
-    async def evaluate_confidence(
-        self,
-        answer: str,
-        docs: list[Document],
-        query: str
-    ) -> EvaluationResult:
-        """Evaluate answer confidence"""
+        import json
+        eval_result = json.loads(evaluation.content[0].text)
 
-        prompt = f"""
-        Evaluate confidence of this answer:
+        # Check if confident or max iterations reached
+        if eval_result['confidence'] >= 80 or iteration == max_iterations:
+            return {
+                "answer": answer,
+                "iterations": iteration,
+                "confidence": eval_result['confidence']
+            }
 
-        Question: {query}
-        Answer: {answer}
-        Retrieved docs: {self.format_docs(docs)}
+        # Refine query for next iteration
+        refined_query = eval_result.get('refined_query', query)
+        iteration += 1
 
-        Score 0-1: Is answer well-supported?
-        If not, what refined question should we ask?
-        """
-
-        result = await self.llm.generate(prompt)
-        return EvaluationResult(
-            confidence=result.confidence,
-            refined_query=result.refined_query
-        )
-
-    async def refine_query(
-        self,
-        original: str,
-        answer: str,
-        evaluation: EvaluationResult
-    ) -> str:
-        """Refine query for next iteration"""
-
-        prompt = f"""
-        Original question: {original}
-        First attempt answer: {answer}
-        Problem: {evaluation.feedback}
-
-        Generate refined question for next retrieval:
-        """
-
-        return await self.llm.generate(prompt)
+    return {"answer": answer, "iterations": max_iterations, "confidence": 50}
 ```
-
----
-
-## Pros/Cons
-
-| Aspect | Pros | Cons |
-|--------|------|------|
-| **Accuracy** | +14% improvement | Multiple LLM calls (6.7x tokens) |
-| **Latency** | 2-5s (acceptable) | Slower than single-pass |
-| **Flexibility** | Handles ambiguous queries | Requires evaluation logic |
-| **Cost** | $0.025 (reasonable for gain) | 3-4x naive RAG |
-
----
 
 ## Integration
 
-**Tier Level**: BALANCED/PRECISE tier (for ambiguous queries)
+Iterative RAG integrates as a **flow pattern** in TOMAC-RAG's Modular framework, wrapping Layers 3-5 in a feedback loop.
 
-**Configuration**:
-- Max iterations: 2-3 (prevent loops)
-- Confidence threshold: 0.85
-- Use Haiku for evaluation (cheaper)
+**Standard Flow** (Single-Pass):
+```
+Layer 3: Retrieve → Layer 4: CRAG → Layer 5: Generate
+```
 
----
+**Iterative Flow** (THIS VARIANT):
+```
+Loop (max 3 iterations):
+  ├─ Layer 3: Retrieve (refined query)
+  ├─ Layer 5: Generate answer
+  ├─ Evaluation: Assess confidence
+  └─ If confident → BREAK
+      Else → Refine query → CONTINUE
+```
 
-## Research Sources
+**Optimization Strategies**:
+- Use Haiku for evaluation phase (saves ~2,400 tokens per evaluation)
+- Limit max iterations to 2 for non-PRECISE tier (saves ~800 tokens on 20% of queries)
+- Skip iteration for simple queries (complexity <3)
+
+**Expected Distribution**:
+- FAST tier: 0 iterations (single-pass only)
+- BALANCED tier: 1-2 iterations (stop at confidence ≥70)
+- PRECISE tier: 1-3 iterations (stop at confidence ≥80)
+
+## Sources
 
 - [Modular RAG - Iterative Retrieval](https://arxiv.org/html/2407.21059v1)
-
----
-
-**Status**: Production-Ready | **MeepleAI Tier**: P1 Ambiguous
+- [Self-Reflective RAG](https://www.marktechpost.com/2024/11/25/retrieval-augmented-generation-rag-deep-dive-into-25-different-types-of-rag/)

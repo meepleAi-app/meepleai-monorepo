@@ -36,90 +36,17 @@ Implement a **5-Layer Validation Architecture** with progressive quality gates, 
 
 ### Architecture Overview
 
-```
-┌───────────────────────────────────────────────────────────────────┐
-│              AI RESPONSE VALIDATION PIPELINE                      │
-│              (5 Progressive Quality Gates)                        │
-└───────────────────────────────────────────────────────────────────┘
+**5 Progressive Quality Gates**:
 
-INPUT: User Question + Retrieved Context (Hybrid RAG)
-  │
-  ├─→ PRIMARY GENERATION (GPT-4)
-  │      └─→ Response + Confidence Score + Citations
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ LAYER 1: Confidence Validation                                 │
-│ ────────────────────────────────────────────────────────────── │
-│ Service:   ConfidenceValidationService                         │
-│ Threshold: ≥0.70 (correlates to >95% accuracy)                 │
-│ Check:     LLM self-reported confidence score                  │
-│ Fail Action: Return "uncertain" message (explicit uncertainty) │
-│                                                                 │
-│ Pass ✓ → Continue to Layer 2                                   │
-│ Fail ✗ → Skip remaining layers, return uncertainty message     │
-└─────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ LAYER 2: Multi-Model Consensus Validation                      │
-│ ────────────────────────────────────────────────────────────── │
-│ Service:   MultiModelValidationService                         │
-│ Algorithm: TF-IDF Cosine Similarity (ADR-005)                  │
-│ Models:    GPT-4 (openai/gpt-4o) + Claude (claude-3.5-sonnet) │
-│ Threshold: ≥0.90 similarity (semantic consensus)               │
-│ Check:     Both models agree on answer semantics               │
-│ Fail Action: Flag disagreement, return both responses          │
-│                                                                 │
-│ Pass ✓ → Continue to Layer 3                                   │
-│ Fail ✗ → Log warning, use primary response with caveat         │
-└─────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ LAYER 3: Citation Validation                                   │
-│ ────────────────────────────────────────────────────────────── │
-│ Service:   CitationValidationService                           │
-│ Check:     - PDF document exists in database (by ID)           │
-│            - Page numbers within valid range                   │
-│            - Citation format correct (PDF:guid)                │
-│ Fail Action: Remove invalid citations, log error               │
-│                                                                 │
-│ Pass ✓ → Continue to Layer 4                                   │
-│ Fail ✗ → Strip invalid citations, flag for review              │
-└─────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ LAYER 4: Hallucination Detection                               │
-│ ────────────────────────────────────────────────────────────── │
-│ Service:   HallucinationDetectionService                       │
-│ Method:    Forbidden keyword analysis (multilingual)           │
-│ Languages: IT (14 keywords), EN (14), DE (9), FR (10), ES (10) │
-│ Keywords:  "non lo so", "I don't know", "unclear", etc.        │
-│ Check:     Detect uncertainty/admission phrases                │
-│ Fail Action: Flag response as uncertain, log warning           │
-│                                                                 │
-│ Pass ✓ → Continue to Layer 5                                   │
-│ Fail ✗ → Return "uncertain" message or flag for human review   │
-└─────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ LAYER 5: User Feedback Loop (Post-Response)                    │
-│ ────────────────────────────────────────────────────────────── │
-│ Mechanism: Thumbs up/down, report error                        │
-│ Purpose:   Continuous quality monitoring                       │
-│ Actions:   - Update quality metrics                            │
-│            - Flag for expert review if negative feedback       │
-│            - Feed into model fine-tuning dataset               │
-│                                                                 │
-│ Monitoring: Prometheus metrics, Grafana dashboards             │
-└─────────────────────────────────────────────────────────────────┘
-  │
-  ▼
-OUTPUT: Validated Response (or Explicit Uncertainty)
-```
+| Layer | Service | Check | Threshold | Fail Action |
+|-------|---------|-------|-----------|-------------|
+| **1. Confidence** | ConfidenceValidationService | LLM confidence score | ≥0.70 | Return "uncertain" message |
+| **2. Consensus** | MultiModelValidationService | TF-IDF cosine similarity (GPT-4 + Claude) | ≥0.90 | Log warning, flag disagreement |
+| **3. Citation** | CitationValidationService | PDF exists, page in range, format valid | 100% valid | Strip invalid citations |
+| **4. Hallucination** | HallucinationDetectionService | Forbidden keywords (5 languages) | 0 keywords | Return "uncertain" or flag |
+| **5. Feedback** | User review | Thumbs up/down, report error | N/A | Update metrics, flag negative |
+
+**Flow**: Input (RAG) → GPT-4 → L1 → L2 (adaptive) → L3 → L4 → Output → L5 (post-response)
 
 ---
 
@@ -132,30 +59,13 @@ OUTPUT: Validated Response (or Explicit Uncertainty)
 **Issue**: BGAI-028 (#970)
 
 **Threshold Tiers**:
-```csharp
-public const double MinimumConfidenceThreshold = 0.70;  // PASS
-private const double WarningThreshold = 0.60;           // WARNING
-// Below 0.60: CRITICAL
-```
+- ≥0.70: PASS (meets accuracy target)
+- 0.60-0.69: WARNING (acceptable but flagged)
+- <0.60: CRITICAL (reject response)
 
-**Validation Logic**:
-```csharp
-public ConfidenceValidationResult ValidateConfidence(double? confidence)
-{
-    if (!confidence.HasValue)
-        return Fail(ValidationSeverity.Unknown, "No confidence score");
+**Logic**: Check LLM self-reported confidence score, return explicit uncertainty if below threshold
 
-    if (confidence.Value >= 0.70)
-        return Pass($"Confidence {confidence:F3} meets threshold");
-
-    if (confidence.Value >= 0.60)
-        return Warning($"Below threshold but acceptable");
-
-    return Critical($"Confidence {confidence:F3} critically low");
-}
-```
-
-**Calibration**: 0.70 threshold correlates to >95% accuracy based on empirical testing with board game rulebook corpus.
+**Calibration**: 0.70 threshold correlates to >95% accuracy (empirical testing on board game rulebook corpus)
 
 ---
 
@@ -200,54 +110,22 @@ public const double MinimumConsensusThreshold = 0.90;  // High consensus
 **Issue**: BGAI-029 (#971)
 
 **Validation Rules**:
-```csharp
-public async Task<CitationValidationResult> ValidateCitationsAsync(
-    IReadOnlyList<Snippet> snippets,
-    string gameId,
-    CancellationToken ct = default)
-{
-    // 1. Parse game ID (GUID format)
-    if (!Guid.TryParse(gameId, out var gameGuid))
-        return InvalidGameId();
-
-    // 2. Fetch PDF documents for game (single query, optimized)
-    var pdfDict = await GetPdfDocumentsAsync(gameGuid, ct);
-
-    // 3. Validate each citation
-    foreach (var snippet in snippets)
-    {
-        // 3a. Check citation format: "PDF:guid"
-        if (!ParseCitationSource(snippet.source, out var pdfId))
-            errors.Add(MalformedSourceError(snippet));
-
-        // 3b. Check PDF document exists
-        if (!pdfDict.ContainsKey(pdfId))
-            errors.Add(DocumentNotFoundError(snippet));
-
-        // 3c. Check page number within valid range
-        if (snippet.page < 1 || snippet.page > pdfDict[pdfId].PageCount)
-            errors.Add(InvalidPageNumberError(snippet));
-    }
-
-    return new CitationValidationResult
-    {
-        IsValid = errors.Count == 0,
-        ValidCitations = validCount,
-        TotalCitations = snippets.Count,
-        Errors = errors
-    };
-}
-```
+1. Parse game ID (GUID format validation)
+2. Fetch PDF documents for game (single optimized query)
+3. Validate each citation:
+   - Format check: "PDF:guid" pattern
+   - Document existence: PDF ID in database
+   - Page range: 1 ≤ page ≤ document.PageCount
 
 **Error Types**:
-- `MalformedSource`: Invalid format (expected "PDF:guid")
-- `DocumentNotFound`: PDF ID not in database
-- `InvalidPageNumber`: Page number out of range
+- `MalformedSource`: Invalid citation format
+- `DocumentNotFound`: PDF not in database
+- `InvalidPageNumber`: Page out of range
 
-**Database Optimization**:
-- Single query to fetch all game PDFs (avoid N+1 queries)
-- AsNoTracking for read-only operations
-- Dictionary lookup for O(1) citation checks
+**Performance**:
+- Single query for all PDFs (avoid N+1)
+- AsNoTracking (read-only)
+- Dictionary lookup (O(1) checks)
 
 ---
 
@@ -261,60 +139,27 @@ public async Task<CitationValidationResult> ValidateCitationsAsync(
 
 | Language | Keywords | Examples |
 |----------|----------|----------|
-| Italian (IT) | 15 | "non lo so", "non sono sicuro", "poco chiaro", "forse" |
-| English (EN) | 14 | "I don't know", "I'm not sure", "unclear", "might be" |
+| Italian (IT) | 15 | "non lo so", "non sono sicuro", "poco chiaro" |
+| English (EN) | 14 | "I don't know", "I'm not sure", "unclear" |
 | German (DE) | 9 | "Ich weiß nicht", "unklar", "vielleicht" |
 | French (FR) | 10 | "Je ne sais pas", "peu clair", "peut-être" |
 | Spanish (ES) | 10 | "No lo sé", "poco claro", "tal vez" |
 
 **Detection Logic**:
-```csharp
-public async Task<HallucinationValidationResult> DetectHallucinationsAsync(
-    string responseText,
-    string? language = null,
-    CancellationToken ct = default)
-{
-    // 1. Auto-detect language (or use provided)
-    language ??= await _languageDetection.DetectLanguageAsync(responseText);
-
-    // 2. Get language-specific keywords
-    var keywords = ForbiddenKeywordsByLanguage[language];
-
-    // 3. Check for forbidden keywords (case-insensitive)
-    var detectedKeywords = new List<string>();
-    foreach (var keyword in keywords)
-    {
-        if (responseText.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            detectedKeywords.Add(keyword);
-    }
-
-    // 4. Calculate severity
-    var severity = CalculateSeverity(detectedKeywords, responseText);
-
-    return new HallucinationValidationResult
-    {
-        IsValid = detectedKeywords.Count == 0,
-        DetectedKeywords = detectedKeywords,
-        Language = language,
-        Severity = severity
-    };
-}
-```
+1. Auto-detect language (or use provided)
+2. Get language-specific forbidden keywords
+3. Check for keywords (case-insensitive)
+4. Calculate severity based on count + critical phrase detection
 
 **Severity Levels**:
-- **None**: 0 keywords detected (valid response)
-- **Low**: 1-2 keywords (minor uncertainty, acceptable)
-- **Medium**: 3-4 keywords (significant uncertainty, flag for review)
+- **None**: 0 keywords (valid)
+- **Low**: 1-2 keywords (acceptable)
+- **Medium**: 3-4 keywords (flag for review)
 - **High**: 5+ keywords OR critical phrases ("don't know", "cannot find")
 
 **Critical Phrases** (immediate failure):
 - "don't know", "non lo so", "ne sais pas", "weiß nicht", "no lo sé"
 - "cannot find", "non riesco", "ne trouve pas", "kann nicht", "no puedo"
-
-**Language Detection**:
-- Auto-detect if not provided (uses ILanguageDetectionService)
-- Fallback to English if language unsupported
-- Supports mixing (e.g., Italian response with English keywords)
 
 ---
 
@@ -328,278 +173,71 @@ public async Task<HallucinationValidationResult> DetectHallucinationsAsync(
 3. **Correction Submission**: User provides correct answer
 
 **Actions**:
-```csharp
-// Prometheus metrics
-qa_user_feedback_total.WithLabels(feedbackType, gameId).Inc();
-qa_accuracy_by_game.WithLabels(gameId).Set(accuracyRate);
-
-// Flag for expert review if negative feedback
-if (feedbackType == "thumbs_down" || feedbackType == "report_error")
-{
-    await _alertService.NotifyExpertReviewAsync(responseId, userId, reason);
-}
-
-// Add to fine-tuning dataset
-if (feedbackType == "correction_submitted")
-{
-    await _mlDatasetService.AddTrainingExampleAsync(
-        question, incorrectAnswer, correctAnswer, gameId);
-}
-```
+- Update Prometheus metrics (`qa_user_feedback_total`, `qa_accuracy_by_game`)
+- Flag for expert review (negative feedback triggers alert)
+- Add corrections to fine-tuning dataset (continuous learning)
 
 **Monitoring**:
 - Real-time Grafana dashboards (validation pass/fail rates)
-- Prometheus metrics (confidence distribution, consensus rates)
-- Alert triggers (hallucination rate >5%, accuracy <90%)
+- Alert triggers: hallucination rate >5%, accuracy <90%
+- Confidence distribution tracking
 
 ---
 
 ## PDF Quality Validation (Separate Pipeline)
 
-**Service**: `PdfQualityValidationDomainService.cs`
-**Location**: `BoundedContexts/DocumentProcessing/Domain/Services/`
+**Service**: `PdfQualityValidationDomainService.cs` (DocumentProcessing BC)
 **Issue**: BGAI-012 (#951)
 
-**Purpose**: Validate PDF extraction quality before ingestion into RAG pipeline
-
 **4-Metric Quality Score**:
+- TextCoverage (40%): Chars per page (≥1000 chars = optimal)
+- StructureDetection (20%): Title, headers, paragraphs, lists detected
+- TableDetection (20%): Number of tables found
+- PageCoverage (20%): Processed pages / total pages
 
-```
-Total Quality Score = (
-    TextCoverage × 0.40 +
-    StructureDetection × 0.20 +
-    TableDetection × 0.20 +
-    PageCoverage × 0.20
-)
-```
+**Formula**: `(TextCoverage × 0.40) + (Structure × 0.20) + (Tables × 0.20) + (PageCoverage × 0.20)`
 
-**Metric Calculations**:
-
-1. **Text Coverage** (40% weight):
-   ```csharp
-   var charsPerPage = totalChars / pageCount;
-   if (charsPerPage >= 1000) return 1.0;
-   if (charsPerPage >= 500) return LinearScale(0.5, 1.0);
-   return LinearScale(0.0, 0.5);
-   ```
-
-2. **Structure Detection** (20% weight):
-   - Title detected: +0.3
-   - Headers detected: +0.3
-   - Paragraphs detected: +0.2
-   - Lists detected: +0.2
-   - Max: 1.0
-
-3. **Table Detection** (20% weight):
-   - 0 tables: 0.3 (neutral, not all docs have tables)
-   - 1-3 tables: LinearScale(0.5, 0.8)
-   - 4+ tables: 1.0
-
-4. **Page Coverage** (20% weight):
-   ```csharp
-   return processedPages / totalPages;
-   ```
-
-**Validation Thresholds**:
-```csharp
-private const double MinimumQualityThreshold = 0.80;  // PASS (Stage 1)
-private const double WarningQualityThreshold = 0.70;  // WARNING (Stage 2)
-private const double CriticalQualityThreshold = 0.50; // CRITICAL (Stage 3)
-```
+**Thresholds**:
+- ≥0.80: PASS (Stage 1 extraction sufficient)
+- 0.70-0.79: WARNING (Stage 2 fallback recommended)
+- 0.50-0.69: CRITICAL (Stage 3 fallback required)
+- <0.50: REJECT (document likely corrupted)
 
 **3-Stage Orchestration** (ADR-003b):
-1. **Stage 1**: Unstructured (fast, 1.3s) → If quality ≥0.80, PASS
-2. **Stage 2**: SmolDocling VLM (3-5s) → If quality ≥0.70, PASS
-3. **Stage 3**: Docnet (fallback) → Return best effort
+1. Unstructured (1.3s) → Pass if ≥0.80
+2. SmolDocling VLM (3-5s) → Pass if ≥0.70
+3. Docnet fallback → Return best effort
 
-**Quality Report**:
-```csharp
-public record PdfQualityReport(
-    string RequestId,
-    string SourceExtractor,
-    string QualityLevel,        // "Excellent", "Good", "Acceptable", "Poor", "Critical"
-    PdfQualityMetrics Metrics,
-    bool PassesThreshold,
-    double Threshold,
-    string Recommendation,      // Actionable guidance
-    DateTime Timestamp
-);
-```
-
-**Recommendations**:
-- ≥0.80: "Quality meets threshold - suitable for RAG pipeline"
-- 0.70-0.79: "Consider fallback extraction if Stage 1"
-- 0.50-0.69: "Quality poor - fallback to next stage recommended"
-- <0.50: "Quality critical - document may be corrupted or incompatible"
+**Report**: Quality level, metrics, recommendations. See `PdfQualityReport` record for full structure.
 
 ---
 
 ## Domain-Driven Design Architecture
 
-### Service Locations
+**Service Locations**:
+- `BoundedContexts/KnowledgeBase/Domain/Services/`: 4 validation services + interfaces
+- `BoundedContexts/DocumentProcessing/Domain/Services/`: PDF quality validation
 
-All validation services are **pure domain services** (no infrastructure dependencies):
+**Dependency Injection**:
+- Scoped: 4 validation services (Confidence, MultiModel, Citation, Hallucination)
+- Singleton: CosineSimilarityCalculator (stateless helper)
 
-```
-BoundedContexts/
-├── KnowledgeBase/
-│   └── Domain/
-│       └── Services/
-│           ├── ConfidenceValidationService.cs         (Layer 1)
-│           ├── MultiModelValidationService.cs         (Layer 2)
-│           ├── CosineSimilarityCalculator.cs          (Layer 2 helper)
-│           ├── CitationValidationService.cs           (Layer 3)
-│           ├── HallucinationDetectionService.cs       (Layer 4)
-│           ├── IConfidenceValidationService.cs
-│           ├── IMultiModelValidationService.cs
-│           ├── ICitationValidationService.cs
-│           └── IHallucinationDetectionService.cs
-│
-└── DocumentProcessing/
-    └── Domain/
-        └── Services/
-            ├── PdfQualityValidationDomainService.cs   (PDF quality)
-            └── PdfValidationDomainService.cs          (PDF structure)
-```
-
-### Dependency Injection
-
-**Registration** (`KnowledgeBaseServiceExtensions.cs`):
-```csharp
-public static IServiceCollection AddKnowledgeBaseDomain(
-    this IServiceCollection services)
-{
-    // Validation services (Domain layer)
-    services.AddScoped<IConfidenceValidationService, ConfidenceValidationService>();
-    services.AddScoped<IMultiModelValidationService, MultiModelValidationService>();
-    services.AddScoped<ICitationValidationService, CitationValidationService>();
-    services.AddScoped<IHallucinationDetectionService, HallucinationDetectionService>();
-
-    // Helper services
-    services.AddSingleton<CosineSimilarityCalculator>();
-
-    return services;
-}
-```
-
-**Usage in Application Layer** (Command/Query Handlers):
-```csharp
-public class AskQuestionQueryHandler : IRequestHandler<AskQuestionQuery, Result<AiResponse>>
-{
-    private readonly IConfidenceValidationService _confidenceValidation;
-    private readonly IMultiModelValidationService _consensusValidation;
-    private readonly ICitationValidationService _citationValidation;
-    private readonly IHallucinationDetectionService _hallucinationDetection;
-
-    public async Task<Result<AiResponse>> Handle(
-        AskQuestionQuery request,
-        CancellationToken ct)
-    {
-        // Generate primary response (GPT-4)
-        var response = await _llmClient.GenerateAsync(...);
-
-        // Layer 1: Confidence validation
-        var confidenceResult = _confidenceValidation.ValidateConfidence(
-            response.Confidence);
-        if (!confidenceResult.IsValid)
-            return ExplicitUncertainty(confidenceResult);
-
-        // Layer 2: Multi-model consensus (adaptive)
-        if (response.Confidence < 0.90)
-        {
-            var consensusResult = await _consensusValidation
-                .ValidateWithConsensusAsync(prompt, response, ct);
-            if (!consensusResult.HasConsensus)
-                return ModelDisagreement(consensusResult);
-        }
-
-        // Layer 3: Citation validation
-        var citationResult = await _citationValidation
-            .ValidateCitationsAsync(response.Citations, gameId, ct);
-        if (!citationResult.IsValid)
-            response = StripInvalidCitations(response, citationResult);
-
-        // Layer 4: Hallucination detection
-        var hallucinationResult = await _hallucinationDetection
-            .DetectHallucinationsAsync(response.Answer, language, ct);
-        if (!hallucinationResult.IsValid)
-            return ExplicitUncertainty(hallucinationResult);
-
-        // All validations passed
-        return ValidatedResponse(response);
-    }
-}
-```
+**Usage**: See `AskQuestionQueryHandler.cs` for complete validation pipeline integration pattern
 
 ---
 
-## Validation Flow Diagram
+## Validation Flow Example
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│  User Question: "Can I castle after moving my king?"           │
-└──────────────────────────┬─────────────────────────────────────┘
-                           │
-                           ▼
-                 ┌─────────────────────┐
-                 │ Hybrid RAG Retrieval│
-                 │ (Vector + Keyword)  │
-                 └──────────┬──────────┘
-                           │
-                           ▼
-                 ┌─────────────────────┐
-                 │ GPT-4 Generation    │
-                 │ (Primary Response)  │
-                 └──────────┬──────────┘
-                           │
-           ┌───────────────┴────────────────┐
-           │ Response:                      │
-           │ - Answer: "No, castling..."   │
-           │ - Confidence: 0.85             │
-           │ - Citations: [PDF:123, p.5]   │
-           └───────────────┬────────────────┘
-                           │
-                           ▼
-           ┌───────────────────────────────────┐
-           │ LAYER 1: Confidence ≥0.70?        │
-           │ Check: 0.85 ≥ 0.70 → PASS ✓       │
-           └───────────────┬───────────────────┘
-                           │
-                           ▼
-           ┌───────────────────────────────────┐
-           │ LAYER 2: Consensus (adaptive)     │
-           │ Confidence 0.85 < 0.90 → TRIGGER  │
-           │ Query Claude in parallel...       │
-           │ Cosine Similarity: 0.93 → PASS ✓  │
-           └───────────────┬───────────────────┘
-                           │
-                           ▼
-           ┌───────────────────────────────────┐
-           │ LAYER 3: Citations Valid?         │
-           │ Check: PDF:123 exists → PASS ✓    │
-           │ Check: Page 5 in range → PASS ✓   │
-           └───────────────┬───────────────────┘
-                           │
-                           ▼
-           ┌───────────────────────────────────┐
-           │ LAYER 4: Hallucinations?          │
-           │ Scan for forbidden keywords...    │
-           │ 0 keywords detected → PASS ✓      │
-           └───────────────┬───────────────────┘
-                           │
-                           ▼
-           ┌───────────────────────────────────┐
-           │ ALL VALIDATIONS PASSED ✓          │
-           │ Return validated response to user │
-           └───────────────────────────────────┘
-                           │
-                           ▼
-           ┌───────────────────────────────────┐
-           │ LAYER 5: User Feedback            │
-           │ Thumbs up/down, report error      │
-           │ → Update metrics, flag if needed  │
-           └───────────────────────────────────┘
-```
+**Question**: "Can I castle after moving my king?"
+
+1. **RAG Retrieval**: Hybrid search (vector + keyword)
+2. **GPT-4 Generation**: Answer + confidence 0.85 + citations [PDF:123, p.5]
+3. **Layer 1**: Confidence 0.85 ≥ 0.70 → PASS ✓
+4. **Layer 2**: Adaptive consensus (0.85 < 0.90) → Query Claude → Similarity 0.93 → PASS ✓
+5. **Layer 3**: PDF:123 exists, page 5 in range → PASS ✓
+6. **Layer 4**: 0 forbidden keywords detected → PASS ✓
+7. **Output**: Validated response to user
+8. **Layer 5**: User feedback (thumbs up/down) → Update metrics
 
 ---
 
@@ -671,67 +309,21 @@ public class AskQuestionQueryHandler : IRequestHandler<AskQuestionQuery, Result<
 
 ## Validation Metrics & Thresholds
 
-### Summary Table
+### Success Criteria
 
-| Layer | Service | Metric | Threshold | Severity Levels |
-|-------|---------|--------|-----------|-----------------|
-| 1. Confidence | ConfidenceValidationService | Confidence score | ≥0.70 | Pass, Warning (≥0.60), Critical (<0.60) |
-| 2. Consensus | MultiModelValidationService | Cosine similarity | ≥0.90 | High (≥0.90), Moderate (≥0.70), Low (≥0.50), None (<0.50) |
-| 3. Citations | CitationValidationService | Citation validity | 100% valid | MalformedSource, DocumentNotFound, InvalidPageNumber |
-| 4. Hallucination | HallucinationDetectionService | Keyword count | 0 keywords | None (0), Low (1-2), Medium (3-4), High (5+) |
-| 5. User Feedback | Manual review | User rating | N/A | Thumbs up/down, report error, correction |
-| PDF Quality | PdfQualityValidationService | Quality score | ≥0.80 | Excellent (≥0.90), Good (≥0.80), Acceptable (≥0.70), Poor (≥0.50), Critical (<0.50) |
-
-### Success Criteria (Production)
-
-**Phase 1 (MVP)**:
-- [x] Accuracy ≥80% on golden dataset (100 Q&A, 10 games)
-- [x] Hallucination rate ≤10% on adversarial queries
-- [x] P95 latency ≤5s (acceptable for MVP)
-- [ ] User satisfaction ≥4.0/5.0 (beta testing)
-
-**Phase 2 (Production)**:
-- [ ] Accuracy ≥90% on expanded dataset (500 Q&A, 20 games)
-- [ ] Hallucination rate ≤5%
-- [ ] P95 latency ≤3s (optimized via caching)
-- [ ] Validation layer pass rate >85% (Layer 1), >70% (Layer 2)
-
-**Phase 3 (Gold Standard)**:
-- [ ] Accuracy ≥95% on comprehensive dataset (1000 Q&A, 50+ games)
-- [ ] Hallucination rate ≤3% (target: <1%)
-- [ ] P95 latency ≤3s maintained at scale
-- [ ] User satisfaction ≥4.5/5.0
+| Phase | Accuracy | Hallucination Rate | P95 Latency | Dataset |
+|-------|----------|-------------------|-------------|---------|
+| **Phase 1 (MVP)** | ≥80% ✅ | ≤10% ✅ | ≤5s ✅ | 100 Q&A, 10 games |
+| **Phase 2 (Production)** | ≥90% | ≤5% | ≤3s | 500 Q&A, 20 games |
+| **Phase 3 (Gold)** | ≥95% | ≤3% (target <1%) | ≤3s | 1000 Q&A, 50+ games |
 
 ---
 
 ## Testing
 
-### Unit Tests
-
-**KnowledgeBase Domain Services**:
-- ConfidenceValidationServiceTests: 20 tests
-- MultiModelValidationServiceTests: 18 tests
-- CosineSimilarityCalculatorTests: 20 tests
-- CitationValidationServiceTests: 24 tests
-- HallucinationDetectionServiceTests: 35 tests
-
-**DocumentProcessing Domain Services**:
-- PdfQualityValidationDomainServiceTests: 10 tests
-- PdfValidationDomainServiceTests: 21 tests
-
-**Total**: 148 unit tests (all passing)
-
-### Integration Tests
-
-- OrchestratorDICircularDependencyTests: 6 tests
-- UnstructuredPdfExtractionIntegrationTests: 8 tests
-- SmolDoclingIntegrationTests: 6 tests
-
-### E2E Tests
-
-- Validation pipeline end-to-end: 12 scenarios
-- Multi-language validation: 5 languages × 3 scenarios = 15 tests
-- Adaptive consensus validation: 8 scenarios
+**148 unit tests** (all passing): 5 KnowledgeBase services + 2 DocumentProcessing services
+**20 integration tests**: DI orchestration, PDF extraction pipelines
+**35 E2E tests**: Full validation pipeline, multi-language, adaptive consensus
 
 **Coverage**: 90%+ domain services, 85%+ application handlers
 
@@ -739,90 +331,34 @@ public class AskQuestionQueryHandler : IRequestHandler<AskQuestionQuery, Result<
 
 ## Rollback Plan
 
-If validation layers cause unacceptable performance degradation:
+**4 Options** (ordered by preference):
+1. **Disable Consensus**: Skip Layer 2, keep 1/3/4 (−800ms, −5-10% accuracy)
+2. **Increase Threshold**: Raise L1 to 0.80-0.85 (50% fewer consensus calls)
+3. **Async Validation**: Return immediately, validate in background (faster UX, potential corrections)
+4. **Feature Flag Disable**: Revert to single LLM (document regression)
 
-**Option 1: Disable Consensus Validation**
-- Skip Layer 2 (multi-model consensus) entirely
-- Keep Layers 1, 3, 4 (confidence, citations, hallucination)
-- Expected: Latency reduction ~800ms, accuracy reduction ~5-10 points
-
-**Option 2: Increase Confidence Threshold**
-- Raise Layer 1 threshold to 0.80 or 0.85
-- Reduce consensus triggers (more queries skip Layer 2)
-- Expected: 50% fewer consensus calls, similar accuracy
-
-**Option 3: Asynchronous Validation**
-- Return primary response immediately
-- Run Layers 2-4 asynchronously
-- Update response via WebSocket if validation fails
-- Trade-off: User sees answer faster but may need correction
-
-**Option 4: Feature Flag Rollback**
-- Disable multi-layer validation entirely
-- Revert to single LLM with basic confidence check
-- Document accuracy regression, plan remediation
-
-**Monitoring Triggers**:
-- P95 latency >5s sustained for 10 minutes
-- Error rate >2% (validation failures)
-- User complaints about slowness >10/day
+**Triggers**: P95 latency >5s (10min), error rate >2%, user complaints >10/day
 
 ---
 
 ## Performance Optimization (BGAI-037) ✅
 
-**Issue**: #979
-**Status**: ✅ Implemented (2025-11-17)
-**Impact**: 30-66% reduction in validation latency
+**Issue**: #979 | **Status**: Implemented (2025-11-17) | **Impact**: 30-66% latency reduction
 
 ### Parallel Validation Execution
 
-The validation pipeline has been optimized to execute independent validation layers in parallel:
+**Standard Mode (3 layers)**: Layer 1 synchronous → Layers 3 & 4 parallel (`Task.WhenAll`)
 
-**Standard Mode (3 layers)**:
-```csharp
-// Layer 1: Confidence (synchronous, must be first)
-var confidenceResult = ValidateConfidence(response.confidence);
-
-// Layers 3 & 4: Execute in parallel (independent validations)
-var citationTask = ValidateCitationsAsync(...);
-var hallucinationTask = DetectHallucinationsAsync(...);
-await Task.WhenAll(citationTask, hallucinationTask);
-```
-
-**Multi-Model Mode (4 layers)**:
-```csharp
-// Layer 1: Confidence (synchronous, must be first)
-var confidenceResult = ValidateConfidence(response.confidence);
-
-// Layers 2, 3, 4: Execute in parallel
-var multiModelTask = ValidateWithConsensusAsync(...);
-var citationTask = ValidateCitationsAsync(...);
-var hallucinationTask = multiModelTask.ContinueWith(result =>
-    DetectHallucinationsAsync(result.ConsensusResponse)
-).Unwrap();
-await Task.WhenAll(multiModelTask, citationTask, hallucinationTask);
-```
+**Multi-Model Mode (4 layers)**: Layer 1 synchronous → Layers 2, 3 parallel → Layer 4 chained to Layer 2
 
 ### Performance Improvements
 
-| Mode | Before (Sequential) | After (Parallel) | Improvement |
-|------|---------------------|------------------|-------------|
-| Standard (3 layers) | ~200-300ms | ~100-150ms | 50-66% faster |
-| Multi-Model (4 layers) | ~600-800ms | ~400-500ms | 30-40% faster |
+| Mode | Before | After | Improvement |
+|------|--------|-------|-------------|
+| Standard | 200-300ms | 100-150ms | 50-66% faster |
+| Multi-Model | 600-800ms | 400-500ms | 30-40% faster |
 
-**Key Benefits**:
-- Layer 3 (Citation) and Layer 4 (Hallucination) execute concurrently in standard mode
-- Layer 2 (Multi-Model), Layer 3 (Citation) execute concurrently in multi-model mode
-- Layer 4 (Hallucination) starts immediately after Layer 2 completes (optimal chaining)
-- No change to validation logic or thresholds
-- Thread-safe implementation with proper CancellationToken propagation
-
-### Implementation Details
-
-**File**: `RagValidationPipelineService.cs` (lines 78-106, 180-231)
-**Tests**: `RagValidationPipelineServiceTests.cs` (14 tests, all passing)
-**Pattern**: `Task.WhenAll()` for true parallel execution, `ContinueWith().Unwrap()` for dependent chaining
+**Implementation**: See `RagValidationPipelineService.cs` for `Task.WhenAll()` and `ContinueWith().Unwrap()` patterns
 
 ---
 

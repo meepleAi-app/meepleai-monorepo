@@ -23,6 +23,7 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.ProcessingState)
             .IsRequired()
             .HasMaxLength(32)
+            .HasColumnName("processing_state")
             .HasDefaultValue("Pending")
             .HasConversion<string>(); // EF Core converts enum to string automatically
 
@@ -30,6 +31,22 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.ProcessingStatus).IsRequired().HasMaxLength(32);
 
         builder.Property(e => e.ProcessingError).HasMaxLength(1024);
+
+        // Issue #4216: Retry tracking configuration
+        builder.Property(e => e.RetryCount)
+            .IsRequired()
+            .HasColumnName("retry_count")
+            .HasDefaultValue(0);
+
+        builder.Property(e => e.ErrorCategory)
+            .HasMaxLength(32)
+            .HasColumnName("error_category")
+            .IsRequired(false);
+
+        builder.Property(e => e.FailedAtState)
+            .HasMaxLength(32)
+            .HasColumnName("failed_at_state")
+            .IsRequired(false);
         builder.Property(e => e.ExtractedTables).HasMaxLength(8192);
         builder.Property(e => e.ExtractedDiagrams).HasMaxLength(8192);
         builder.Property(e => e.AtomicRules).HasMaxLength(8192);

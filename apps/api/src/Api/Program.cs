@@ -534,6 +534,7 @@ v1Api.MapAgentEndpoints();
 
 // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
 v1Api.MapArbitroAgentEndpoints();
+v1Api.MapDecisoreAgentEndpoints();  // Issue #3773
 
 // Issue #3377: AI model configuration endpoints
 v1Api.MapModelEndpoints();

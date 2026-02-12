@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Metadata } from 'next';
+import { RequireRole } from '@/components/auth/RequireRole';
 import { StatsOverview } from '@/components/admin/dashboard/stats-overview';
 import { SharedGamesBlock } from '@/components/admin/dashboard/shared-games-block';
 import { UserManagementBlock } from '@/components/admin/dashboard/user-management-block';
@@ -11,9 +12,10 @@ export const metadata: Metadata = {
 
 export default function AdminDashboardPage() {
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-background">
-      <div className="flex-1 overflow-y-auto">
-        <div className="container max-w-7xl mx-auto p-6 space-y-8">
+    <RequireRole allowedRoles={['Admin']}>
+      <div className="flex-1 flex flex-col overflow-hidden bg-background">
+        <div className="flex-1 overflow-y-auto">
+          <div className="container max-w-7xl mx-auto p-6 space-y-8">
         {/* Page Header */}
         <div className="border-b pb-6">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -45,11 +47,12 @@ export default function AdminDashboardPage() {
           <UserManagementBlock />
         </Suspense>
 
-        {/* Future blocks can be added here */}
-        {/* Block 4: Analytics (Future) */}
-        {/* Block 5: System Health (Future) */}
+          {/* Future blocks can be added here */}
+          {/* Block 4: Analytics (Future) */}
+          {/* Block 5: System Health (Future) */}
+          </div>
         </div>
       </div>
-    </div>
+    </RequireRole>
   );
 }

@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { StatsOverview } from '../stats-overview';
+import * as adminClientModule from '@/lib/api/admin-client';
 
 // Mock admin client
 vi.mock('@/lib/api/admin-client', () => ({
@@ -10,29 +11,13 @@ vi.mock('@/lib/api/admin-client', () => ({
   },
 }));
 
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  });
-
-function renderWithQueryClient(ui: React.ReactElement) {
-  const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
-}
-
 describe('StatsOverview', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders block header with title and link', () => {
-    renderWithQueryClient(<StatsOverview />);
+    renderWithQuery(<StatsOverview />);
 
     expect(screen.getByRole('heading', { name: /collection overview/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /view details/i })).toHaveAttribute(
@@ -42,12 +27,11 @@ describe('StatsOverview', () => {
   });
 
   it('displays loading skeletons while fetching data', () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getStats.mockImplementation(
+    vi.mocked(adminClientModule.adminClient.getStats).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
 
-    renderWithQueryClient(<StatsOverview />);
+    renderWithQuery(<StatsOverview />);
 
     // Should show 4 StatCard components in loading state
     const statCards = screen.getAllByTestId('stat-card-loading');
@@ -55,8 +39,7 @@ describe('StatsOverview', () => {
   });
 
   it('displays stat cards with data when loaded', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getStats.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getStats).mockResolvedValue({
       totalGames: 1247,
       publishedGames: 1156,
       pendingGames: 23,
@@ -68,7 +51,7 @@ describe('StatsOverview', () => {
       recentSubmissions: 47,
     });
 
-    renderWithQueryClient(<StatsOverview />);
+    renderWithQuery(<StatsOverview />);
 
     // Wait for data to load
     await screen.findByText('1247');
@@ -83,8 +66,7 @@ describe('StatsOverview', () => {
   });
 
   it('shows trend values when available', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getStats.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getStats).mockResolvedValue({
       totalGames: 1247,
       publishedGames: 1156,
       totalUsers: 8542,
@@ -92,7 +74,7 @@ describe('StatsOverview', () => {
       pendingApprovals: 23,
     });
 
-    renderWithQueryClient(<StatsOverview />);
+    renderWithQuery(<StatsOverview />);
 
     await screen.findByText(/1156 published/i);
     await screen.findByText(/3891 active/i);
@@ -100,20 +82,18 @@ describe('StatsOverview', () => {
   });
 
   it('handles API errors gracefully', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getStats.mockRejectedValue(new Error('API Error'));
+    vi.mocked(adminClientModule.adminClient.getStats).mockRejectedValue(new Error('API Error'));
 
-    renderWithQueryClient(<StatsOverview />);
+    renderWithQuery(<StatsOverview />);
 
     // Component should not crash, React Query handles error state
     expect(screen.getByRole('heading', { name: /collection overview/i })).toBeInTheDocument();
   });
 
   it('uses default values when data is missing', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getStats.mockResolvedValue({});
+    vi.mocked(adminClientModule.adminClient.getStats).mockResolvedValue({});
 
-    renderWithQueryClient(<StatsOverview />);
+    renderWithQuery(<StatsOverview />);
 
     await screen.findByText('0'); // Should show 0 for missing values
   });

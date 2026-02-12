@@ -67,8 +67,8 @@ jobs:
 
       # Stage 1: Lint + TypeCheck (fail fast)
       - name: Lint
-        run: pnpm lint -- --max-warnings=15
-        # Allow 15 security/detect-object-injection warnings (TypeScript type-safe false positives)
+        run: pnpm lint
+        # Note: package.json lint script has --max-warnings=15 for security false positives
 
       - name: Typecheck
         run: pnpm typecheck

@@ -6,13 +6,14 @@
 'use client';
 
 import { useState } from 'react';
+
 import { Check, Loader2, Play } from 'lucide-react';
 
-import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Separator } from '@/components/ui/navigation/separator';
+import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
 
 interface ReviewStepProps {
   agent: AgentForm;

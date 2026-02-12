@@ -1,17 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Search, Filter, Grid3x3, List, Shield, Award, UserX, UserCheck } from 'lucide-react';
+import { Search, Filter, Grid3x3, List, Shield, Award } from 'lucide-react';
 import Link from 'next/link';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { StatCard } from '@/components/ui/data-display/stat-card';
+import { useToast } from '@/hooks/use-toast';
 import { adminClient } from '@/lib/api/admin-client';
 
 type ViewMode = 'grid' | 'list';

@@ -24,8 +24,8 @@ import { toast } from 'sonner';
 import { ChatMessageList, ChatInput } from '@/components/agent/chat';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { cn } from '@/lib/utils';
 import { useAgentChat } from '@/hooks/queries/useAgentChat';
+import { cn } from '@/lib/utils';
 import type { AgentMessage } from '@/types/agent';
 
 // ============================================================================
@@ -93,7 +93,7 @@ const STRATEGY_COLORS: Record<string, string> = {
 
 export function AgentChat({
   agentId,
-  gameId,
+  gameId: _gameId,
   layout = 'full-page',
   gameName,
   agentName = 'AI Assistant',

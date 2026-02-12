@@ -5,8 +5,8 @@
 
 'use client';
 
-import Link from 'next/link';
 import { ChevronRight, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 export function AgentBuilderHeader() {
   return (

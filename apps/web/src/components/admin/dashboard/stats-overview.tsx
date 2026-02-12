@@ -1,8 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Users, Package, TrendingUp, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+
 import { StatCard } from '@/components/ui/data-display/stat-card';
 import { adminClient } from '@/lib/api/admin-client';
 

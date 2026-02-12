@@ -6,11 +6,10 @@
 'use client';
 
 import { useState } from 'react';
+
 import Editor from '@monaco-editor/react';
 import { Plus, Trash2 } from 'lucide-react';
 
-import type { AgentForm, PromptTemplate } from '@/lib/schemas/agent-definition-schema';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
@@ -20,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { AgentForm, PromptTemplate } from '@/lib/schemas/agent-definition-schema';
 
 interface PromptEditorStepProps {
   agent: AgentForm;
@@ -29,7 +29,7 @@ interface PromptEditorStepProps {
 export function PromptEditorStep({ agent, onChange }: PromptEditorStepProps) {
   const [activePromptIndex, setActivePromptIndex] = useState(0);
 
-  const activePrompt = agent.prompts[activePromptIndex];
+  const _activePrompt = agent.prompts[activePromptIndex];
 
   const updatePrompt = (index: number, updates: Partial<PromptTemplate>) => {
     const newPrompts = [...agent.prompts];

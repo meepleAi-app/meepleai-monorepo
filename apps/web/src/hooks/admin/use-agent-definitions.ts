@@ -8,12 +8,12 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import * as agentClient from '@/lib/api/admin-agent-client';
 import type {
   AgentDefinitionResponse,
   CreateAgentDefinitionRequest,
   UpdateAgentDefinitionRequest,
 } from '@/lib/schemas/agent-definition-schema';
-import * as agentClient from '@/lib/api/admin-agent-client';
 
 // Query Keys
 const agentDefinitionsKeys = {

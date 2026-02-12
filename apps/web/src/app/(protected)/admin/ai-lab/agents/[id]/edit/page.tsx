@@ -6,19 +6,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { ArrowLeft, ArrowRight, Save, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
 import { AgentBuilderSteps } from '@/components/admin/agent-builder/AgentBuilderSteps';
+import { AgentPreviewPanel } from '@/components/admin/agent-builder/AgentPreviewPanel';
 import { BasicInfoStep } from '@/components/admin/agent-builder/BasicInfoStep';
 import { PromptEditorStep } from '@/components/admin/agent-builder/PromptEditorStep';
 import { ToolsStrategyStep } from '@/components/admin/agent-builder/ToolsStrategyStep';
-import { AgentPreviewPanel } from '@/components/admin/agent-builder/AgentPreviewPanel';
 import { Button } from '@/components/ui/button';
 import { useAgentDefinition, useUpdateAgent } from '@/hooks/admin/use-agent-definitions';
 import { defaultAgentForm, type AgentForm } from '@/lib/schemas/agent-definition-schema';
-import { toast } from 'sonner';
 
 interface AgentEditorPageProps {
   params: { id: string };
@@ -39,7 +40,7 @@ export default function AgentEditorPage({ params }: AgentEditorPageProps) {
       setAgent({
         name: existingAgent.name,
         description: existingAgent.description || '',
-        type: existingAgent.type as any,
+        type: existingAgent.type as 'RagAgent' | 'ToolAgent' | 'ReasoningAgent',
         model: existingAgent.model,
         maxTokens: existingAgent.maxTokens,
         temperature: existingAgent.temperature,

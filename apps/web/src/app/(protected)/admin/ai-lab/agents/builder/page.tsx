@@ -6,20 +6,21 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
 import { AgentBuilderSteps } from '@/components/admin/agent-builder/AgentBuilderSteps';
+import { AgentPreviewPanel } from '@/components/admin/agent-builder/AgentPreviewPanel';
 import { BasicInfoStep } from '@/components/admin/agent-builder/BasicInfoStep';
 import { PromptEditorStep } from '@/components/admin/agent-builder/PromptEditorStep';
-import { ToolsStrategyStep } from '@/components/admin/agent-builder/ToolsStrategyStep';
 import { ReviewStep } from '@/components/admin/agent-builder/ReviewStep';
-import { AgentPreviewPanel } from '@/components/admin/agent-builder/AgentPreviewPanel';
+import { ToolsStrategyStep } from '@/components/admin/agent-builder/ToolsStrategyStep';
 import { Button } from '@/components/ui/button';
 import { useCreateAgent } from '@/hooks/admin/use-agent-definitions';
 import { defaultAgentForm, AgentFormSchema, type AgentForm } from '@/lib/schemas/agent-definition-schema';
-import { toast } from 'sonner';
 
 export default function AgentBuilderPage() {
   const router = useRouter();

@@ -16,11 +16,14 @@ import { toast } from '@/components/layout';
  */
 export interface ExtractedMetadata {
   title?: string;
+  yearPublished?: number;
   minPlayers?: number;
   maxPlayers?: number;
   playTime?: number;
+  minAge?: number;
   complexity?: number;
   description?: string;
+  confidence?: number; // 0-100 (UI representation of backend 0.0-1.0 ConfidenceScore)
 }
 
 /**

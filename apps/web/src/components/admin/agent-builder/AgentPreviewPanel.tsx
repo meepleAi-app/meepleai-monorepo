@@ -7,11 +7,11 @@
 
 import { Code2, Eye } from 'lucide-react';
 
-import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
+import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
 
 interface AgentPreviewPanelProps {
   agent: AgentForm;

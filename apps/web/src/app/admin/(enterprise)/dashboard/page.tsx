@@ -1,9 +1,11 @@
 import { Suspense } from 'react';
+
 import { Metadata } from 'next';
-import { RequireRole } from '@/components/auth/RequireRole';
-import { StatsOverview } from '@/components/admin/dashboard/stats-overview';
+
 import { SharedGamesBlock } from '@/components/admin/dashboard/shared-games-block';
+import { StatsOverview } from '@/components/admin/dashboard/stats-overview';
 import { UserManagementBlock } from '@/components/admin/dashboard/user-management-block';
+import { RequireRole } from '@/components/auth/RequireRole';
 
 export const metadata: Metadata = {
   title: 'Admin Dashboard | MeepleAI',

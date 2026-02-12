@@ -19,8 +19,8 @@ import { toast } from 'sonner';
 import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils/timeUtils';
-import { AgentMessage as AgentMessageType } from '@/types/agent';
 import { useAgentStore } from '@/stores/agentStore';
+import { AgentMessage as AgentMessageType } from '@/types/agent';
 
 import { CitationBadge } from './CitationBadge';
 import { ConfidenceBar } from './ConfidenceBar';

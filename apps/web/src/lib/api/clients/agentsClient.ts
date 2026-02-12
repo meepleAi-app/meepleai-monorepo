@@ -17,8 +17,7 @@ import {
   AgentDocumentsDtoSchema,
   UpdateAgentDocumentsResponseSchema,
   PlayerModeSuggestionResponseSchema,
-  typologySchema, // Added for AGT-012
-  SSEEventSchema, // Issue #4126
+  typologySchema, // Issue #4126
   type AgentDto,
   type AgentResponseDto,
   type SSEEvent, // Issue #4126

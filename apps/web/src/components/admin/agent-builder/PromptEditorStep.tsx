@@ -6,11 +6,10 @@
 'use client';
 
 import { useState } from 'react';
+
 import Editor from '@monaco-editor/react';
 import { Plus, Trash2 } from 'lucide-react';
 
-import type { AgentForm, PromptTemplate } from '@/lib/schemas/agent-definition-schema';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
@@ -20,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { AgentForm, PromptTemplate } from '@/lib/schemas/agent-definition-schema';
 
 interface PromptEditorStepProps {
   agent: AgentForm;

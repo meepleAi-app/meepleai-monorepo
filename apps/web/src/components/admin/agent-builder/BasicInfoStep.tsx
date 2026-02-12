@@ -5,8 +5,6 @@
 
 'use client';
 
-import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
-import { AVAILABLE_MODELS } from '@/lib/schemas/agent-definition-schema';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
@@ -18,6 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { AVAILABLE_MODELS } from '@/lib/schemas/agent-definition-schema';
+import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
 
 interface BasicInfoStepProps {
   agent: AgentForm;

@@ -48,6 +48,7 @@
         .task-bar.epic2 { background: linear-gradient(90deg, #8b5cf6, #a855f7); color: white; }
         .task-bar.epic3 { background: linear-gradient(90deg, #3b82f6, #6366f1); color: white; }
         .task-bar.epic4 { background: linear-gradient(90deg, #10b981, #14b8a6); color: white; }
+        .task-bar.completed { background: linear-gradient(90deg, #10b981, #059669) !important; opacity: 0.8; }
 
         .task-bar.blocked { opacity: 0.5; }
         .task-bar.parallel { border: 2px dashed white; }
@@ -110,7 +111,7 @@
                 <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-amber-200/50">
                     <div class="text-sm text-zinc-500">Epic 1: Core</div>
                     <div class="text-2xl font-quicksand font-bold text-amber-600">9 issue</div>
-                    <div class="text-xs text-zinc-400 mt-1">3 settimane</div>
+                    <div class="text-xs text-emerald-600 font-semibold mt-1">✅ 2/9 completed</div>
                 </div>
                 <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-purple-200/50">
                     <div class="text-sm text-zinc-500">Epic 2: Users</div>
@@ -133,7 +134,7 @@
         <!-- Legend -->
         <div class="mb-6 p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-zinc-200/50">
             <h3 class="font-quicksand font-semibold text-lg mb-4">Legenda</h3>
-            <div class="grid grid-cols-4 gap-4">
+            <div class="grid grid-cols-5 gap-4">
                 <div class="legend-item">
                     <div class="legend-box epic1"></div>
                     <span>Epic 1: Core Dashboard</span>
@@ -145,6 +146,10 @@
                 <div class="legend-item">
                     <div class="legend-box epic3"></div>
                     <span>Epic 3: AI Platform</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background: linear-gradient(90deg, #10b981, #059669);"></div>
+                    <span>✅ Completato</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-box epic4"></div>
@@ -217,11 +222,11 @@
                     </div>
 
                     <div class="flex items-center mb-2">
-                        <div class="w-48 flex-shrink-0 text-sm text-zinc-700 pr-4 text-right">#3692 Tokens</div>
+                        <div class="w-48 flex-shrink-0 text-sm text-zinc-700 pr-4 text-right">#3692 Tokens ✅</div>
                         <div class="flex flex-1">
                             <div style="margin-left: 9%; width: 9%;">
-                                <div class="task-bar epic1 parallel" title="Issue #3692: 3-4 giorni | Depends: #3689">
-                                    <span class="text-xs">€ Pool</span>
+                                <div class="task-bar epic1 parallel completed" title="Issue #3692: CLOSED | PR #3781">
+                                    <span class="text-xs">✅ € Pool</span>
                                 </div>
                             </div>
                         </div>
@@ -274,11 +279,11 @@
                     </div>
 
                     <div class="flex items-center mb-2">
-                        <div class="w-48 flex-shrink-0 text-sm text-zinc-700 pr-4 text-right">#3693 Batch Jobs</div>
+                        <div class="w-48 flex-shrink-0 text-sm text-zinc-700 pr-4 text-right">#3693 Batch Jobs ✅</div>
                         <div class="flex flex-1">
                             <div style="margin-left: 22%; width: 11%;">
-                                <div class="task-bar epic1" title="Issue #3693: 4-5 giorni | Depends: #3691">
-                                    <span class="text-xs">Queue</span>
+                                <div class="task-bar epic1 completed" title="Issue #3693: CLOSED | PR #3783">
+                                    <span class="text-xs">✅ Queue</span>
                                 </div>
                             </div>
                         </div>

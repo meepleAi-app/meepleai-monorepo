@@ -1,10 +1,8 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
-using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 
@@ -18,7 +16,6 @@ internal sealed class GetPdfPreviewForWizardQueryHandler : IQueryHandler<GetPdfP
 {
     private readonly IMediator _mediator;
     private readonly IBggApiService _bggApiService;
-    private readonly MeepleAiDbContext _context;
     private readonly ILogger<GetPdfPreviewForWizardQueryHandler> _logger;
 
     private const int MaxBggSuggestions = 5;
@@ -26,12 +23,10 @@ internal sealed class GetPdfPreviewForWizardQueryHandler : IQueryHandler<GetPdfP
     public GetPdfPreviewForWizardQueryHandler(
         IMediator mediator,
         IBggApiService bggApiService,
-        MeepleAiDbContext context,
         ILogger<GetPdfPreviewForWizardQueryHandler> logger)
     {
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _bggApiService = bggApiService ?? throw new ArgumentNullException(nameof(bggApiService));
-        _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -92,11 +87,29 @@ internal sealed class GetPdfPreviewForWizardQueryHandler : IQueryHandler<GetPdfP
             // Continue without BGG suggestions - not critical for preview
         }
 
-        // Step 3: Check for duplicate games by title similarity
-        var duplicateWarnings = await CheckDuplicatesByTitleAsync(
-            metadata.Title,
-            requestId,
-            cancellationToken).ConfigureAwait(false);
+        // Step 3: Check for duplicate games using enhanced detection (BggId + fuzzy title matching)
+        var duplicateCheckQuery = new CheckDuplicateGameQuery(
+            Title: metadata.Title,
+            BggId: bggSuggestions?.FirstOrDefault()?.BggId); // Use top BGG suggestion if available
+
+        var duplicateResult = await _mediator.Send(duplicateCheckQuery, cancellationToken).ConfigureAwait(false);
+
+        // Build duplicate warning messages for UI display
+        var duplicateWarnings = new List<string>();
+
+        if (duplicateResult.HasExactDuplicate && duplicateResult.ExactDuplicateTitle != null)
+        {
+            duplicateWarnings.Add($"⚠️ Exact match found: '{duplicateResult.ExactDuplicateTitle}' (BGG ID: {bggSuggestions?.FirstOrDefault()?.BggId})");
+        }
+
+        foreach (var fuzzyDup in duplicateResult.FuzzyDuplicates)
+        {
+            duplicateWarnings.Add($"Similar: '{fuzzyDup.Title}' ({fuzzyDup.SimilarityScore}% match)");
+        }
+
+        _logger.LogInformation(
+            "[{RequestId}] Duplicate detection complete: ExactMatch={HasExact}, FuzzyMatches={FuzzyCount}",
+            requestId, duplicateResult.HasExactDuplicate, duplicateResult.FuzzyDuplicates.Count);
 
         // Step 4: Build preview DTO with new structure from #4138
         var preview = new PdfGamePreviewDto
@@ -116,50 +129,4 @@ internal sealed class GetPdfPreviewForWizardQueryHandler : IQueryHandler<GetPdfP
         return preview;
     }
 
-    /// <summary>
-    /// Checks for existing shared games with similar titles using case-insensitive LIKE matching.
-    /// Returns list of warning messages for duplicate detection UI.
-    /// </summary>
-    private async Task<List<string>> CheckDuplicatesByTitleAsync(
-        string extractedTitle,
-        string requestId,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Search for games with similar titles (case-insensitive partial match)
-            var similarGames = await _context.SharedGames
-                .AsNoTracking()
-                .Where(g => EF.Functions.Like(g.Title, $"%{extractedTitle}%"))
-                .Select(g => new { g.Title, g.BggId })
-                .Take(5) // Limit to top 5 matches
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            if (similarGames.Count == 0)
-            {
-                _logger.LogInformation(
-                    "[{RequestId}] No duplicate games found for title '{Title}'",
-                    requestId, extractedTitle);
-                return [];
-            }
-
-            _logger.LogWarning(
-                "[{RequestId}] Found {Count} potential duplicates for title '{Title}'",
-                requestId, similarGames.Count, extractedTitle);
-
-            return similarGames
-                .Select(g => $"'{g.Title}'" + (g.BggId.HasValue ? $" (BGG ID: {g.BggId})" : string.Empty))
-                .ToList();
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogError(ex,
-                "[{RequestId}] Error checking duplicates for title '{Title}'. Proceeding without duplicate warnings.",
-                requestId, extractedTitle);
-
-            // Return empty list on error - duplicate check is not critical for wizard flow
-            return [];
-        }
-    }
 }

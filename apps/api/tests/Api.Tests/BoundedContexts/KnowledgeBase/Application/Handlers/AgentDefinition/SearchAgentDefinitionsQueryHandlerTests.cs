@@ -32,7 +32,7 @@ public sealed class SearchAgentDefinitionsQueryHandlerTests
         // Arrange
         var agents = new List<AgentDefinitionEntity>
         {
-            AgentDefinitionEntity.Create("SearchAgent", "Desc", AgentDefinitionConfig.Default())
+            AgentDefinitionEntity.Create("SearchAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default())
         };
 
         _mockRepository

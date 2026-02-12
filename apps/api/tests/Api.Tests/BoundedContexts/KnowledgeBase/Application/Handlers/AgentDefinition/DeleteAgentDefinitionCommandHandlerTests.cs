@@ -37,6 +37,7 @@ public sealed class DeleteAgentDefinitionCommandHandlerTests
         var agentDefinition = AgentDefinitionEntity.Create(
             "TestAgent",
             "Desc",
+            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
 
         _mockRepository

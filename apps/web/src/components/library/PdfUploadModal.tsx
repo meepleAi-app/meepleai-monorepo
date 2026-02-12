@@ -16,7 +16,6 @@
 import { useState, ChangeEvent, FormEvent, useCallback, useEffect } from 'react';
 
 import { Loader2, Upload, FileText, X, Check, Eye, ChevronLeft } from 'lucide-react';
-import { pdfjs } from 'react-pdf';
 
 import { toast } from '@/components/layout/Toast';
 import { PdfPreview } from '@/components/pdf/PdfPreview';
@@ -35,16 +34,9 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 
-// Configure PDF.js worker for page count validation
-// Use pdfjs.version to ensure worker matches the bundled API version
-if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs?v=${pdfjs.version}`;
-}
-
-// Validation constants (Issue #2616)
+// Validation constants (Issue #2616, #4133)
 const MAX_FILE_SIZE_MB = 50;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const MAX_PAGE_COUNT = 500;
 
 type UploadStep = 'select' | 'preview' | 'uploading';
 
@@ -99,24 +91,6 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
     return errors;
   }, []);
 
-  // Async page count validation (Issue #2616)
-  const validatePageCount = useCallback(async (selectedFile: File): Promise<string | null> => {
-    try {
-      const arrayBuffer = await selectedFile.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-      const pages = pdf.numPages;
-      setPageCount(pages);
-
-      if (pages > MAX_PAGE_COUNT) {
-        return `Il PDF ha troppe pagine: ${pages} (max ${MAX_PAGE_COUNT} pagine)`;
-      }
-      return null;
-    } catch (error) {
-      console.error('[PdfUploadModal] PDF validation error:', error);
-      return 'Impossibile leggere il PDF. Il file potrebbe essere corrotto.';
-    }
-  }, []);
-
   const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -125,7 +99,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
     setValidationErrors([]);
     setPageCount(null);
 
-    // Sync validation first
+    // Sync validation only
     const syncErrors = validateFileSync(selectedFile);
     if (syncErrors.length > 0) {
       setValidationErrors(syncErrors);
@@ -133,21 +107,10 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
       return;
     }
 
-    // Async page count validation
-    setIsValidating(true);
-    const pageError = await validatePageCount(selectedFile);
-    setIsValidating(false);
-
-    if (pageError) {
-      setValidationErrors([pageError]);
-      setFile(null);
-      return;
-    }
-
     // All validations passed
     setFile(selectedFile);
     setUploadProgress(0);
-  }, [validateFileSync, validatePageCount]);
+  }, [validateFileSync]);
 
   // Show preview step
   const handleShowPreview = useCallback(() => {
@@ -258,7 +221,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
                   data-testid="pdf-file-input"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Formato: PDF • Dimensione massima: {MAX_FILE_SIZE_MB}MB • Max {MAX_PAGE_COUNT} pagine
+                  Formato: PDF • Dimensione massima: {MAX_FILE_SIZE_MB}MB
                 </p>
 
                 {/* Validating State */}
@@ -302,7 +265,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
                         {file.name}
                       </p>
                       <p className="text-xs text-green-700 dark:text-green-300">
-                        {formatFileSize(file.size)} • {pageCount} {pageCount === 1 ? 'pagina' : 'pagine'}
+                        {formatFileSize(file.size)}
                       </p>
                     </div>
                     <Check className="h-5 w-5 text-green-600 dark:text-green-400" />

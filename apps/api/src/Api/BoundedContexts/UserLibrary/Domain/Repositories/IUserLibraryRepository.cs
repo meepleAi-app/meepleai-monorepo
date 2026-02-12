@@ -114,4 +114,30 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Count of entries with private PDFs</returns>
     Task<int> GetPrivatePdfCountAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets recently played games for a user, ordered by last played date descending.
+    /// Issue #3916: Required for AI insights recommendations.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="limit">Maximum number of games to return</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of recently played library entries</returns>
+    Task<IReadOnlyList<UserLibraryEntry>> GetRecentlyPlayedAsync(
+        Guid userId,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets unplayed games or games not played for a specified number of days.
+    /// Issue #3916: Required for AI insights backlog detection.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="daysSince">Number of days since last played (games not played for this many days are considered unplayed)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of unplayed or stale library entries</returns>
+    Task<IReadOnlyList<UserLibraryEntry>> GetUnplayedGamesAsync(
+        Guid userId,
+        int daysSince,
+        CancellationToken cancellationToken = default);
 }

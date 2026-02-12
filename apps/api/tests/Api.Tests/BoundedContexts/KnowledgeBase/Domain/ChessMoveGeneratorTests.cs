@@ -87,7 +87,7 @@ public sealed class ChessMoveGeneratorTests
         // First moves should be higher priority
         var firstPriority = candidates.First().Priority;
         var lastPriority = candidates.Last().Priority;
-        ((int)firstPriority).Should().BeLessOrEqualTo((int)lastPriority);
+        ((int)firstPriority).Should().BeLessThanOrEqualTo((int)lastPriority);
     }
 
     [Fact]

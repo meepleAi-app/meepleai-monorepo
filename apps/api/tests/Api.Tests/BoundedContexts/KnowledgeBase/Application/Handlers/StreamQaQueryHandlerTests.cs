@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -34,6 +35,7 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<QualityTrackingDomainService> _qualityTrackingServiceMock;
     private readonly Mock<ChatContextDomainService> _chatContextServiceMock;
     private readonly Mock<IChatThreadRepository> _chatThreadRepositoryMock;
+    private readonly Mock<IPdfDocumentRepository> _pdfDocumentRepositoryMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IAiResponseCacheService> _cacheMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
@@ -64,6 +66,7 @@ public class StreamQaQueryHandlerTests
         _qualityTrackingServiceMock = new Mock<QualityTrackingDomainService>();
         _chatContextServiceMock = new Mock<ChatContextDomainService>();
         _chatThreadRepositoryMock = new Mock<IChatThreadRepository>();
+        _pdfDocumentRepositoryMock = new Mock<IPdfDocumentRepository>();
         _llmServiceMock = new Mock<ILlmService>();
         _cacheMock = new Mock<IAiResponseCacheService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
@@ -76,6 +79,7 @@ public class StreamQaQueryHandlerTests
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,
+            _pdfDocumentRepositoryMock.Object,
             _llmServiceMock.Object,
             _cacheMock.Object,
             _promptTemplateServiceMock.Object,

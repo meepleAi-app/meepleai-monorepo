@@ -4,6 +4,7 @@ using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
@@ -100,7 +101,17 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
             await dbContext.Database.MigrateAsync();
 
             // Seed test agent
-            var agent = new Agent(Guid.NewGuid(), "Test Agent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+            var agentId = Guid.NewGuid();
+            var strategy = AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal));
+            var agent = new AgentEntity
+            {
+                Id = agentId,
+                Name = "Test Agent",
+                Type = AgentType.RagAgent.Value,
+                StrategyName = strategy.Name,
+                StrategyParametersJson = System.Text.Json.JsonSerializer.Serialize(strategy.Parameters),
+                IsActive = true
+            };
             _testAgentId = agent.Id;
             dbContext.Agents.Add(agent);
             await dbContext.SaveChangesAsync();

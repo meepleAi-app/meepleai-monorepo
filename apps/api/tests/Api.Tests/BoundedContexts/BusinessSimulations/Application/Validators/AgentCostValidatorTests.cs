@@ -56,7 +56,7 @@ public sealed class AgentCostValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("InvalidStrategy")]
-    [InlineData("fast")] // case sensitive check via Must()
+    // Note: "fast" is valid (validator uses OrdinalIgnoreCase, matches "Fast")
     public void Estimate_WithInvalidStrategy_ShouldFail(string strategy)
     {
         var query = CreateEstimateQuery(strategy: strategy);

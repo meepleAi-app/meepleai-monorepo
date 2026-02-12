@@ -50,7 +50,7 @@ public sealed class ResourceForecastValidatorTests
     [Theory]
     [InlineData("")]
     [InlineData("InvalidPattern")]
-    [InlineData("linear")] // case-insensitive but Must() uses OrdinalIgnoreCase
+    // Note: "linear" is valid (validator uses OrdinalIgnoreCase, matches "Linear")
     public void Estimate_WithInvalidGrowthPattern_ShouldFail(string pattern)
     {
         var query = CreateEstimateQuery(growthPattern: pattern);

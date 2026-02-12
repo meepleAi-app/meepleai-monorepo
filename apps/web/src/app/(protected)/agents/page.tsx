@@ -17,7 +17,6 @@ import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Input } from '@/components/ui/primitives/input';
 import {
@@ -27,48 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-// TODO: Replace with actual API fetch
-// import { useQuery } from '@tanstack/react-query';
-// import { agentsClient } from '@/lib/api/agents-client';
-
-interface Agent {
-  id: string;
-  name: string;
-  type: 'Tutor' | 'Arbitro' | 'Decisore';
-  description: string;
-  imageUrl?: string;
-  usage: number;
-  rating?: number;
-}
-
-// Mock data - replace with API call
-const mockAgents: Agent[] = [
-  {
-    id: '1',
-    name: 'Tutor Agent',
-    type: 'Tutor',
-    description: 'Helps you learn game rules and strategies',
-    usage: 150,
-    rating: 4.5,
-  },
-  {
-    id: '2',
-    name: 'Arbitro Agent',
-    type: 'Arbitro',
-    description: 'Resolves rule conflicts and clarifications',
-    usage: 80,
-    rating: 4.8,
-  },
-  {
-    id: '3',
-    name: 'Decisore Agent',
-    type: 'Decisore',
-    description: 'Suggests optimal moves and strategies',
-    usage: 120,
-    rating: 4.6,
-  },
-];
+import { useAgents } from '@/hooks/queries/useAgents';
 
 export default function AgentsPage() {
   const router = useRouter();
@@ -76,13 +34,11 @@ export default function AgentsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
 
-  // TODO: Replace with React Query
-  // const { data: agents, isLoading } = useQuery({
-  //   queryKey: ['agents'],
-  //   queryFn: () => agentsClient.getAll(),
-  // });
-
-  const agents = mockAgents;
+  // Use real API (Issue #4126)
+  const { data: agents = [], isLoading } = useAgents({
+    activeOnly: true,
+    type: typeFilter === 'all' ? undefined : typeFilter,
+  });
 
   // Client-side filtering and sorting
   const filteredAgents = useMemo(() => {
@@ -93,7 +49,7 @@ export default function AgentsPage() {
       result = result.filter(
         agent =>
           agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          agent.description.toLowerCase().includes(searchQuery.toLowerCase())
+          agent.type.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -105,8 +61,8 @@ export default function AgentsPage() {
     // Sort
     result.sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'usage') return b.usage - a.usage;
-      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+      if (sortBy === 'usage') return b.invocationCount - a.invocationCount;
+      if (sortBy === 'rating') return 0; // Rating TBD
       return 0;
     });
 
@@ -177,13 +133,10 @@ export default function AgentsPage() {
             entity="agent"
             variant="grid"
             title={agent.name}
-            subtitle={agent.description}
-            imageUrl={agent.imageUrl}
-            rating={agent.rating}
-            ratingMax={5}
+            subtitle={`${agent.type} agent`}
             metadata={[
-              { value: `${agent.usage} uses`, label: 'Usage' },
-              { value: agent.type, label: 'Type' },
+              { value: `${agent.invocationCount} uses`, label: 'Usage' },
+              { value: agent.strategyName, label: 'Strategy' },
             ]}
             onClick={() => {
               // Navigate to agent chat or detail

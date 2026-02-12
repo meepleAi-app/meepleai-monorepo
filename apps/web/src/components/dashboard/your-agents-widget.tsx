@@ -13,18 +13,12 @@ import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Button } from '@/components/ui/primitives/button';
-
-// TODO: Fetch from API
-// import { useQuery } from '@tanstack/react-query';
+import { useRecentAgents } from '@/hooks/queries/useRecentAgents';
 
 export function YourAgentsWidget() {
   const router = useRouter();
-  // Mock data - replace with API
-  const recentAgents = [
-    { id: '1', name: 'Tutor Agent', type: 'Tutor', lastUsed: '2 hours ago' },
-    { id: '2', name: 'Arbitro Agent', type: 'Arbitro', lastUsed: '1 day ago' },
-    { id: '3', name: 'Decisore Agent', type: 'Decisore', lastUsed: '3 days ago' },
-  ];
+  // Use real API (Issue #4126)
+  const { data: recentAgents = [], isLoading } = useRecentAgents(3);
 
   return (
     <div className="bg-card rounded-xl p-6 border border-border/50">
@@ -45,7 +39,7 @@ export function YourAgentsWidget() {
             entity="agent"
             variant="compact"
             title={agent.name}
-            subtitle={`Last used ${agent.lastUsed}`}
+            subtitle={`${agent.type} • ${agent.invocationCount} uses`}
             onClick={() => {
               router.push(`/agents/${agent.id}/chat`);
             }}

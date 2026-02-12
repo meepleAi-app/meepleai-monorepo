@@ -20,6 +20,8 @@ permissions:
   contents: read
   packages: write
   id-token: write  # For OIDC auth to cloud providers
+  checks: write     # Required by ci.yml reusable workflow
+  pull-requests: write  # Required by ci.yml reusable workflow
 
 env:
   REGISTRY: ghcr.io

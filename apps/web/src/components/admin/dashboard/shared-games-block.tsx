@@ -137,7 +137,7 @@ export function SharedGamesBlock() {
             />
           ))}
         </div>
-      ) : data?.items.length === 0 ? (
+      ) : !data || !data.items || data.items.length === 0 ? (
         <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-xl border border-amber-200/60">
           <p className="font-nunito text-slate-500">No games in approval queue</p>
         </div>

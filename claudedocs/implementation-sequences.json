@@ -172,9 +172,9 @@
     {
       "name": "Sequence B: Backend-Focused AI & Infrastructure",
       "description": "Backend services focusing on AI agents, PDF processing, infrastructure, and system reliability",
-      "totalStoryPoints": 48,
-      "totalIssues": 15,
-      "estimatedWeeks": "5-6 weeks",
+      "totalStoryPoints": 82,
+      "totalIssues": 21,
+      "estimatedWeeks": "7-9 weeks",
       "issues": [
         {
           "number": 4069,
@@ -227,9 +227,75 @@
           "labels": ["p1-high", "epic"],
           "priority": "high",
           "area": "backend",
+          "storyPoints": 42,
+          "dependencies": [],
+          "rationale": "High priority user-facing feature. 7-state pipeline with SSE streaming, multi-location UI, ETA calculation, notifications."
+        },
+        {
+          "number": 4208,
+          "title": "[Epic #4] Backend - PDF Processing State Machine & Error Handling",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4208",
+          "labels": ["backend", "p1-high", "size:L"],
+          "priority": "high",
+          "area": "backend",
           "storyPoints": 8,
           "dependencies": [],
-          "rationale": "High priority user-facing feature. 7-state pipeline with real-time updates."
+          "rationale": "Foundation: State machine with transitions validation, error categorization (transient/permanent), manual retry, automatic recovery."
+        },
+        {
+          "number": 4209,
+          "title": "[Epic #4] Backend - SSE Progress Stream for Public PDFs",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4209",
+          "labels": ["backend", "p1-high", "size:L"],
+          "priority": "high",
+          "area": "backend",
+          "storyPoints": 8,
+          "dependencies": ["#4208"],
+          "rationale": "Real-time streaming: Generalize PrivatePdfProgressStreamService, multi-client support, 30s heartbeat, SSE endpoint with authorization."
+        },
+        {
+          "number": 4212,
+          "title": "[Epic #4] Backend - Processing Duration Metrics & ETA Calculation",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4212",
+          "labels": ["backend", "p1-high", "size:M"],
+          "priority": "high",
+          "area": "backend",
+          "storyPoints": 5,
+          "dependencies": ["#4208"],
+          "rationale": "Metrics infrastructure: Historical averages (last 100 PDFs), ETA calculation with size adjustment, admin-only metrics endpoint."
+        },
+        {
+          "number": 4210,
+          "title": "[Epic #4] Frontend - Real-time Progress UI Components",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4210",
+          "labels": ["frontend", "p1-high", "size:L"],
+          "priority": "high",
+          "area": "frontend",
+          "storyPoints": 8,
+          "dependencies": ["#4211"],
+          "rationale": "Multi-location UI: ProgressModal, ProgressCard, ProgressToast, ProgressBadge. 4 locations (Modal, KB, Dashboard, Notifications)."
+        },
+        {
+          "number": 4211,
+          "title": "[Epic #4] Frontend - SSE Connection Management & Polling Fallback",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4211",
+          "labels": ["frontend", "p1-high", "size:M"],
+          "priority": "high",
+          "area": "frontend",
+          "storyPoints": 5,
+          "dependencies": ["#4209"],
+          "rationale": "Connection reliability: usePdfProgress hook, exponential backoff reconnection, automatic polling fallback, connection state tracking."
+        },
+        {
+          "number": 4213,
+          "title": "[Epic #4] Frontend - Configurable Notifications System",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4213",
+          "labels": ["frontend", "p1-high", "size:L"],
+          "priority": "high",
+          "area": "frontend",
+          "storyPoints": 8,
+          "dependencies": ["#4210", "#4211"],
+          "rationale": "User preferences: Toast (default), email (opt-in), push (PWA opt-in). 4 events: upload_complete, processing_complete, failed, retry_available."
         },
         {
           "number": 3769,
@@ -345,54 +411,68 @@
       "keyMilestones": [
         {
           "week": 1,
-          "deliverables": ["Agent System foundation (#4069)", "AgentDefinition model (#3708)"]
+          "deliverables": ["Agent System foundation (#4069)", "AgentDefinition model (#3708)", "PDF State Machine (#4208)"]
         },
         {
           "week": 2,
-          "deliverables": ["Multi-Agent Orchestration (#3776)", "Context Preservation (#3777)", "PDF Status Tracking started (#4071)"]
+          "deliverables": ["Multi-Agent Orchestration (#3776)", "Context Preservation (#3777)", "SSE Stream (#4209)", "Metrics/ETA (#4212)"]
         },
         {
           "week": 3,
-          "deliverables": ["PDF Status complete", "Decisore Analysis Engine (#3769)", "Move Suggestion (#3770)"]
+          "deliverables": ["SSE Connection Hook (#4211)", "Decisore Analysis Engine (#3769)", "Move Suggestion (#3770)"]
         },
         {
           "week": 4,
-          "deliverables": ["Decisore Parser (#3772)", "API Endpoint (#3773)", "Performance Tuning (#3774)"]
+          "deliverables": ["Progress UI Components (#4210)", "Decisore Parser (#3772)", "API Endpoint (#3773)"]
         },
         {
           "week": 5,
-          "deliverables": ["AI Insights Validation (#4124)", "E2E Testing Suite (#3779)", "Arbitro Benchmarks (#3874)"]
+          "deliverables": ["Notifications System (#4213)", "Decisore Performance (#3774)", "AI Insights Validation (#4124)"]
         },
         {
           "week": 6,
+          "deliverables": ["E2E Testing Suite (#3779)", "Arbitro Benchmarks (#3874)"]
+        },
+        {
+          "week": 7,
           "deliverables": ["k6 Load Testing (#3368)", "Log Aggregation (#3367)"]
         }
       ],
       "strategicGoals": [
         "Establish multi-agent AI platform foundation",
         "Implement Decisore agent (strategic game decisions)",
-        "Add PDF processing visibility and tracking",
+        "Complete PDF Status Tracking with real-time SSE streaming and multi-location UI",
+        "Add configurable notifications system (toast, email, push)",
         "Build production-grade testing infrastructure",
         "Improve system observability and performance"
       ]
     }
   ],
   "analysisMetadata": {
-    "totalIssuesAnalyzed": 57,
-    "openIssues": 57,
+    "totalIssuesAnalyzed": 63,
+    "openIssues": 63,
     "epicsIdentified": 11,
     "criticalPriority": 1,
-    "highPriority": 18,
+    "highPriority": 24,
     "mediumPriority": 14,
     "lowPriority": 24,
     "areaBreakdown": {
-      "frontend": 12,
-      "backend": 15,
+      "frontend": 15,
+      "backend": 18,
       "ai": 18,
       "infra": 8,
       "other": 4
     },
+    "totalStoryPoints": 124,
+    "estimatedDuration": "9-11 weeks",
     "sequencingStrategy": "Priority-first with dependency respect, area batching, complexity balancing",
-    "recommendedApproach": "Execute sequences in parallel with separate teams OR execute Sequence B first (backend foundation) then Sequence A (frontend polish)"
+    "recommendedApproach": "Execute sequences in parallel with separate teams OR execute Sequence B first (backend foundation) then Sequence A (frontend polish)",
+    "lastUpdated": "2026-02-12",
+    "changeLog": [
+      {
+        "date": "2026-02-12",
+        "change": "Added Epic #4071 PDF Status Tracking breakdown: 6 sub-issues (42 SP total). Backend: State Machine (#4208), SSE Stream (#4209), Metrics (#4212). Frontend: UI Components (#4210), SSE Hook (#4211), Notifications (#4213). Updated Sequence B: 82 SP, 21 issues, 7-9 weeks."
+      }
+    ]
   }
 }

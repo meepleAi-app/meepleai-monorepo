@@ -19,7 +19,16 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.UploadedByUserId).IsRequired().HasMaxLength(64);
         builder.Property(e => e.UploadedAt).IsRequired();
         builder.Property(e => e.Metadata).HasMaxLength(2048);
+        // Issue #4215: New granular state tracking (enum stored as string)
+        builder.Property(e => e.ProcessingState)
+            .IsRequired()
+            .HasMaxLength(32)
+            .HasDefaultValue("Pending")
+            .HasConversion<string>(); // EF Core converts enum to string automatically
+
+        // Deprecated: Keep for backward compatibility
         builder.Property(e => e.ProcessingStatus).IsRequired().HasMaxLength(32);
+
         builder.Property(e => e.ProcessingError).HasMaxLength(1024);
         builder.Property(e => e.ExtractedTables).HasMaxLength(8192);
         builder.Property(e => e.ExtractedDiagrams).HasMaxLength(8192);

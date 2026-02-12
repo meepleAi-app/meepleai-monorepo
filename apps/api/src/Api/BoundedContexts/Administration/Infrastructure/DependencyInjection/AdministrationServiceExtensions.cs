@@ -77,6 +77,9 @@ internal static class AdministrationServiceExtensions
         // ISSUE-2512: Auto-configuration service for first run setup
         services.AddScoped<IAutoConfigurationService, AutoConfigurationService>();
 
+        // Issue #3916: AI insights service for personalized dashboard recommendations
+        services.AddScoped<IAiInsightsService, AiInsightsService>();
+
         // Issue #3324: SSE real-time dashboard streaming service
         // Singleton because it holds Channel-based subscriber state across requests
         services.AddSingleton<IDashboardStreamService, DashboardStreamService>();

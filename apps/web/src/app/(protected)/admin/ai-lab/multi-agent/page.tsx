@@ -5,12 +5,12 @@
 
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Activity, DollarSign, Zap, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Badge } from '@/components/ui/data-display/badge';
 import { AgentSelectorBadge } from '@/components/agent/AgentSelectorBadge';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { mockMultiAgentDashboardData, type AgentStats } from '@/lib/schemas/multi-agent-dashboard-schema';
 
 export default function MultiAgentDashboardPage() {

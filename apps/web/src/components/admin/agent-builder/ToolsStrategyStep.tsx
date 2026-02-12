@@ -5,10 +5,10 @@
 
 'use client';
 
-import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
-import { AVAILABLE_STRATEGIES } from '@/lib/schemas/agent-definition-schema';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
   SelectContent,
@@ -16,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/primitives/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { AgentForm } from '@/lib/schemas/agent-definition-schema';
+import { AVAILABLE_STRATEGIES } from '@/lib/schemas/agent-definition-schema';
 
 interface ToolsStrategyStepProps {
   agent: AgentForm;

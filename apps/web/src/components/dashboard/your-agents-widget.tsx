@@ -18,7 +18,7 @@ import { useRecentAgents } from '@/hooks/queries/useRecentAgents';
 export function YourAgentsWidget() {
   const router = useRouter();
   // Use real API (Issue #4126)
-  const { data: recentAgents = [], isLoading } = useRecentAgents(3);
+  const { data: recentAgents = [], isLoading: _isLoading } = useRecentAgents(3);
 
   return (
     <div className="bg-card rounded-xl p-6 border border-border/50">

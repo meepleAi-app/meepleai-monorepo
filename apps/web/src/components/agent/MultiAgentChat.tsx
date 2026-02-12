@@ -6,14 +6,16 @@
 'use client';
 
 import { useState } from 'react';
+
 import { Send } from 'lucide-react';
+
+import { useExecuteWorkflow, useSwitchAgent } from '@/hooks/agent/use-orchestrator';
+import type { AgentType } from '@/lib/api/orchestrator-client';
 
 import { AgentSelectorBadge } from './AgentSelectorBadge';
 import { ChatMessage } from '../ui/meeple/chat-message';
 import { Button } from '../ui/primitives/button';
 import { Input } from '../ui/primitives/input';
-import { useExecuteWorkflow, useSwitchAgent } from '@/hooks/agent/use-orchestrator';
-import type { AgentType } from '@/lib/api/orchestrator-client';
 
 interface Message {
   id: string;

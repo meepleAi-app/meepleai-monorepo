@@ -66,7 +66,7 @@ export const adminClient = {
     if (params?.days) query.set('days', params.days.toString());
 
     // Backend returns DashboardStatsDto, we extract metrics
-    const response = await httpClient.get<any>(
+    const response = await httpClient.get<{ metrics: Record<string, number> }>(
       `/admin/dashboard/stats?${query.toString()}`
     );
 

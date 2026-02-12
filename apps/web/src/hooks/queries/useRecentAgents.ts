@@ -4,6 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+
 import { api } from '@/lib/api';
 
 export function useRecentAgents(limit: number = 3) {

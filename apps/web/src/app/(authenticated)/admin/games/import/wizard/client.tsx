@@ -14,12 +14,12 @@
 import { useCallback } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
+import { WizardSteps } from '@/components/wizard';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
 import { Step1UploadPdf } from './steps/Step1UploadPdf';
@@ -42,7 +42,6 @@ const STEPS: StepConfig[] = [
 
 export function AdminGameImportWizardClient() {
   const { user, loading: authLoading } = useAuthUser();
-  const router = useRouter();
 
   const {
     currentStep,
@@ -59,6 +58,7 @@ export function AdminGameImportWizardClient() {
     reset,
     submitWizard,
     setUploadedPdf,
+    setStep,
   } = useGameImportWizardStore();
 
   // Handle submission
@@ -71,6 +71,25 @@ export function AdminGameImportWizardClient() {
       console.error('Wizard submission failed:', err);
     }
   }, [submitWizard]);
+
+  // Breadcrumb navigation handler
+  const handleStepClick = useCallback(
+    (stepId: string) => {
+      const step = parseInt(stepId) as WizardStep;
+      setStep(step);
+    },
+    [setStep]
+  );
+
+  // Progress calculation (0% → 33% → 67% → 100%)
+  const progress = ((currentStep - 1) / (STEPS.length - 1)) * 100;
+
+  // Map STEPS to WizardSteps format
+  const wizardSteps = STEPS.map(s => ({
+    id: s.id.toString(),
+    label: s.label,
+    description: s.description,
+  }));
 
   // Auth loading state
   if (authLoading) {
@@ -112,44 +131,33 @@ export function AdminGameImportWizardClient() {
         </p>
       </div>
 
-      {/* Step Indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {STEPS.map((step, index) => {
-            const isCompleted = step.id < currentStep;
-            const isActive = step.id === currentStep;
-
-            return (
-              <div key={step.id} className="flex flex-1 items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-full text-xl transition-colors ${
-                      isCompleted
-                        ? 'bg-green-500 text-white'
-                        : isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {isCompleted ? '✓' : step.icon}
-                  </div>
-                  <div className="mt-2 text-center">
-                    <div className="text-sm font-medium">{step.label}</div>
-                    <div className="text-xs text-muted-foreground">{step.description}</div>
-                  </div>
-                </div>
-                {index < STEPS.length - 1 && (
-                  <div
-                    className={`mx-2 h-1 flex-1 transition-colors ${
-                      isCompleted ? 'bg-green-500' : 'bg-muted'
-                    }`}
-                  />
-                )}
-              </div>
-            );
-          })}
+      {/* Progress Bar */}
+      <div className="mb-4">
+        <div className="mb-2 flex justify-between text-sm text-muted-foreground">
+          <span>
+            Step {currentStep} of {STEPS.length}
+          </span>
+          <span>{Math.round(progress)}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full bg-primary transition-all duration-300"
+            style={{ width: `${progress}%` }}
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            role="progressbar"
+          />
         </div>
       </div>
+
+      {/* Wizard Steps with Breadcrumb Navigation */}
+      <WizardSteps
+        steps={wizardSteps}
+        currentStep={currentStep.toString()}
+        onStepClick={handleStepClick}
+        allowSkip={true}
+      />
 
       {/* Error Display */}
       {error && (

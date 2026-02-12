@@ -14,6 +14,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 
 import { MessageSquare, Minimize2, Maximize2, X, Download, Copy } from 'lucide-react';
+import { toast } from 'sonner';
+
 
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
@@ -78,9 +80,10 @@ export function AgentChatSidebar({
 
     try {
       await navigator.clipboard.writeText(text);
-      // TODO: Add toast notification
+      toast.success('Conversation copied to clipboard');
     } catch (error) {
       console.error('Failed to copy conversation:', error);
+      toast.error('Failed to copy conversation');
     }
   };
 

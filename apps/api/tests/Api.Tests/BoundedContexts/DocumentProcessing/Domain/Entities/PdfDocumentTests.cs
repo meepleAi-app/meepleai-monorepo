@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
@@ -227,5 +228,206 @@ public class PdfDocumentTests
             Guid.NewGuid(),
             LanguageCode.English
         );
+    }
+
+    // ===== Retry Logic Tests (Issue #4216) =====
+
+    [Fact]
+    public void CanRetry_WhenFailedAndBelowMaxRetries_ReturnsTrue()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+        document.MarkAsFailed("Test error", ErrorCategory.Network, PdfProcessingState.Extracting);
+
+        // Act
+        var canRetry = document.CanRetry();
+
+        // Assert
+        Assert.True(canRetry);
+        Assert.Equal(0, document.RetryCount);
+        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+    }
+
+    [Fact]
+    public void CanRetry_WhenAtMaxRetries_ReturnsFalse()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+        document.MarkAsFailed("Error 1", ErrorCategory.Network, PdfProcessingState.Extracting);
+        document.Retry(); // Retry 1
+        document.MarkAsFailed("Error 2", ErrorCategory.Parsing, PdfProcessingState.Chunking);
+        document.Retry(); // Retry 2
+        document.MarkAsFailed("Error 3", ErrorCategory.Service, PdfProcessingState.Embedding);
+        document.Retry(); // Retry 3
+        document.MarkAsFailed("Error 4", ErrorCategory.Unknown, PdfProcessingState.Indexing);
+
+        // Act
+        var canRetry = document.CanRetry();
+
+        // Assert
+        Assert.False(canRetry);
+        Assert.Equal(3, document.RetryCount);
+        Assert.Equal(document.MaxRetries, document.RetryCount);
+    }
+
+    [Fact]
+    public void CanRetry_WhenNotFailed_ReturnsFalse()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+
+        // Act
+        var canRetry = document.CanRetry();
+
+        // Assert
+        Assert.False(canRetry);
+        Assert.Equal(PdfProcessingState.Pending, document.ProcessingState);
+    }
+
+    [Fact]
+    public void Retry_WhenAllowed_IncrementsCountAndResetsState()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+        document.MarkAsFailed("Network timeout", ErrorCategory.Network, PdfProcessingState.Extracting);
+
+        // Act
+        document.Retry();
+
+        // Assert
+        Assert.Equal(1, document.RetryCount);
+        Assert.Equal(PdfProcessingState.Extracting, document.ProcessingState);
+        Assert.Null(document.ProcessingError);
+        Assert.Null(document.ProcessedAt);
+    }
+
+    [Fact]
+    public void Retry_WhenAtMaxRetries_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+
+        // Exhaust retries
+        for (int i = 0; i < 3; i++)
+        {
+            document.MarkAsFailed($"Error {i + 1}", ErrorCategory.Network, PdfProcessingState.Extracting);
+            document.Retry();
+        }
+
+        // Final failure
+        document.MarkAsFailed("Final error", ErrorCategory.Unknown, PdfProcessingState.Indexing);
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => document.Retry());
+        Assert.Contains("Cannot retry", exception.Message);
+        Assert.Contains("RetryCount=3", exception.Message);
+    }
+
+    [Fact]
+    public void Retry_WhenNotFailed_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() => document.Retry());
+        Assert.Contains("Cannot retry", exception.Message);
+        Assert.Contains("State=Pending", exception.Message);
+    }
+
+    [Fact]
+    public void Retry_ResumesFromFailedAtState()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+        document.MarkAsFailed("Chunking failed", ErrorCategory.Parsing, PdfProcessingState.Chunking);
+
+        // Act
+        document.Retry();
+
+        // Assert - Should resume from Chunking, not restart from beginning
+        Assert.Equal(PdfProcessingState.Chunking, document.ProcessingState);
+    }
+
+    [Fact]
+    public void MarkAsFailed_WithCategory_SetsAllFields()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+        var errorMessage = "Network timeout after 30s";
+        var category = ErrorCategory.Network;
+        var failedState = PdfProcessingState.Extracting;
+
+        // Act
+        document.MarkAsFailed(errorMessage, category, failedState);
+
+        // Assert
+        Assert.Equal(PdfProcessingState.Failed, document.ProcessingState);
+        Assert.Equal(errorMessage, document.ProcessingError);
+        Assert.Equal(category, document.ErrorCategory);
+        Assert.Equal(failedState, document.FailedAtState);
+        Assert.NotNull(document.ProcessedAt);
+    }
+
+    [Theory]
+    [InlineData(ErrorCategory.Network)]
+    [InlineData(ErrorCategory.Parsing)]
+    [InlineData(ErrorCategory.Quota)]
+    [InlineData(ErrorCategory.Service)]
+    [InlineData(ErrorCategory.Unknown)]
+    public void MarkAsFailed_WithDifferentCategories_SetsCorrectly(ErrorCategory category)
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+
+        // Act
+        document.MarkAsFailed("Test error", category, PdfProcessingState.Embedding);
+
+        // Assert
+        Assert.Equal(category, document.ErrorCategory);
+    }
+
+    [Fact]
+    public void MaxRetries_Returns3()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+
+        // Act & Assert
+        Assert.Equal(3, document.MaxRetries);
+    }
+
+    [Fact]
+    public void RetryWorkflow_FullCycle_WorksCorrectly()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+
+        // Scenario: Network error → retry → parsing error → retry → success
+
+        // First failure
+        document.MarkAsFailed("Network error", ErrorCategory.Network, PdfProcessingState.Extracting);
+        Assert.True(document.CanRetry());
+        Assert.Equal(0, document.RetryCount);
+
+        // First retry
+        document.Retry();
+        Assert.Equal(1, document.RetryCount);
+        Assert.Equal(PdfProcessingState.Extracting, document.ProcessingState);
+        Assert.Null(document.ProcessingError);
+
+        // Second failure
+        document.MarkAsFailed("Parsing error", ErrorCategory.Parsing, PdfProcessingState.Chunking);
+        Assert.True(document.CanRetry());
+
+        // Second retry
+        document.Retry();
+        Assert.Equal(2, document.RetryCount);
+        Assert.Equal(PdfProcessingState.Chunking, document.ProcessingState);
+
+        // Success path - complete processing
+        document.MarkAsCompleted(10);
+        Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
+        Assert.False(document.CanRetry()); // Can't retry completed document
     }
 }

@@ -18,7 +18,7 @@ import type { JSX } from 'react';
 
 import { CheckCircle2, AlertCircle, Loader2, Save } from 'lucide-react';
 
-
+import { DuplicateWarningDialog } from '@/components/admin/games/import/DuplicateWarningDialog';
 import { toast } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
@@ -27,6 +27,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/al
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
+import { useCheckDuplicate } from '@/hooks/wizard/useCheckDuplicate';
 import { cn } from '@/lib/utils';
 import { useGameImportWizardStore, type EnrichedGameData } from '@/stores/useGameImportWizardStore';
 
@@ -63,6 +64,11 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     isProcessing,
     error: storeError,
   } = useGameImportWizardStore();
+
+  // Duplicate check
+  const { data: duplicateCheck } = useCheckDuplicate({ bggId: selectedBggId, enabled: !!selectedBggId });
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [forceCreate, setForceCreate] = useState(false);
 
   // Conflict resolution state
   const [conflictResolutions, setConflictResolutions] = useState<ConflictResolutions>({});
@@ -249,10 +255,16 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     });
   }, []);
 
-  // Handle submit
+  // Handle submit with duplicate check
   const handleSubmit = useCallback(async () => {
     if (!enrichedData) {
       toast.error('No data to submit');
+      return;
+    }
+
+    // Check for duplicate (if not force creating)
+    if (!forceCreate && duplicateCheck?.isDuplicate) {
+      setShowDuplicateModal(true);
       return;
     }
 
@@ -272,7 +284,27 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       // Error handled by store (toast + state)
       console.error('Failed to submit wizard:', err);
     }
-  }, [enrichedData, resolveConflicts, submitWizard, onComplete, selectedBggId]);
+  }, [enrichedData, resolveConflicts, submitWizard, onComplete, selectedBggId, forceCreate, duplicateCheck]);
+
+  // Handle duplicate dialog actions
+  const handleDuplicateCancel = useCallback(() => {
+    setShowDuplicateModal(false);
+  }, []);
+
+  const handleDuplicateReplace = useCallback(() => {
+    setShowDuplicateModal(false);
+    // TODO: Implement replace logic (Issue #4167 - Replace existing game)
+    toast.info('Replace functionality will be implemented in a future update');
+  }, []);
+
+  const handleDuplicateCreateAnyway = useCallback(() => {
+    setShowDuplicateModal(false);
+    setForceCreate(true);
+    // Will trigger handleSubmit again with forceCreate=true
+    setTimeout(() => {
+      handleSubmit();
+    }, 100);
+  }, [handleSubmit]);
 
   // Render conflict field
   const renderConflictField = (field: string, label: string) => {
@@ -459,6 +491,19 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           )}
         </Button>
       </div>
+
+      {/* Duplicate Warning Dialog */}
+      {duplicateCheck?.isDuplicate && (
+        <DuplicateWarningDialog
+          open={showDuplicateModal}
+          existingGame={duplicateCheck.existingGame}
+          newGameTitle={enrichedData?.title || 'Unknown'}
+          bggId={selectedBggId || 0}
+          onCancel={handleDuplicateCancel}
+          onReplace={handleDuplicateReplace}
+          onCreateAnyway={handleDuplicateCreateAnyway}
+        />
+      )}
     </div>
   );
 }

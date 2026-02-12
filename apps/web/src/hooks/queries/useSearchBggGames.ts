@@ -1,19 +1,23 @@
 /**
  * BGG Search Hook
  * Issue #4164: Step 3 BGG Match
+ * Issue #4167: Network retry logic and error handling
  *
  * React Query hook for searching BoardGameGeek games.
  * Features:
  * - Auto-search when query length >= 2
  * - 5-minute cache for performance
- * - Error handling
+ * - Automatic retry (3 attempts) on network errors
+ * - Error handling with toast notifications
  * - Pagination support
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { api } from '@/lib/api';
 import type { BggSearchResponse } from '@/lib/api/schemas/games.schemas';
+import { isRetryableError } from '@/lib/retryUtils';
 
 export interface UseSearchBggGamesOptions {
   /** Search query string */
@@ -52,7 +56,16 @@ export function useSearchBggGames({
     enabled: shouldEnable,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (previously cacheTime)
-    retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retry: (failureCount, error) => {
+      // Retry up to 3 times, but only for retryable errors
+      if (failureCount >= 3) return false;
+      return isRetryableError(error);
+    },
+    retryDelay: attemptIndex => {
+      // Exponential backoff: 1s, 2s, 4s (capped at 8s)
+      const delay = Math.min(1000 * 2 ** attemptIndex, 8000);
+      toast.info(`BGG search failed. Retrying... (attempt ${attemptIndex + 1}/3)`);
+      return delay;
+    },
   });
 }

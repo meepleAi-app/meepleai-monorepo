@@ -12,9 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { StatCard } from '@/components/ui/data-display/stat-card';
-// TODO: Switch to real API when available
-// import { adminClient } from '@/lib/api/admin-client';
-import { adminClientMock as adminClient } from '@/lib/api/admin-client-mock';
+import { adminClient } from '@/lib/api/admin-client';
 
 type ViewMode = 'grid' | 'list';
 

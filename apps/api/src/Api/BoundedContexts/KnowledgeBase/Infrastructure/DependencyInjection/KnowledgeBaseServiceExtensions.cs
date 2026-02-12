@@ -89,6 +89,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Issue #3769: Decisore Agent Strategic Analysis
         services.AddScoped<IDecisoreAgentService, DecisoreAgentService>();
+
+        // Issue #3771: Multi-Model Ensemble Evaluation
+        services.AddScoped<IMultiModelEvaluator, MultiModelEvaluator>();
         services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
         services.AddScoped<IContextSource, ConversationMemorySource>();
         services.AddScoped<GameStateSource>();

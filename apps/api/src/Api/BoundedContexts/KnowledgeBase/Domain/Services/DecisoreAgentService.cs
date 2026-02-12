@@ -15,6 +15,7 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
 {
     private readonly IMoveGeneratorService _moveGenerator;
     private readonly HybridLlmService _llmService;
+    private readonly IMultiModelEvaluator? _ensembleEvaluator;
     private readonly ILogger<DecisoreAgentService> _logger;
 
     private const string SystemPrompt = """
@@ -34,11 +35,13 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
     public DecisoreAgentService(
         IMoveGeneratorService moveGenerator,
         HybridLlmService llmService,
-        ILogger<DecisoreAgentService> logger)
+        ILogger<DecisoreAgentService> logger,
+        IMultiModelEvaluator? ensembleEvaluator = null)
     {
         _moveGenerator = moveGenerator ?? throw new ArgumentNullException(nameof(moveGenerator));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _ensembleEvaluator = ensembleEvaluator;  // Optional for ensemble mode
     }
 
     public async Task<StrategicAnalysisResultDto> AnalyzePositionAsync(
@@ -71,17 +74,30 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
             return CreateEmptyResult(stopwatch.ElapsedMilliseconds);
         }
 
-        // STEP 2: Refine top N candidates with LLM
+        // STEP 2: Refine top N candidates with LLM (or ensemble if enabled)
         var topCandidates = candidates.Take(maxSuggestions).ToList();
         var suggestions = new List<MoveSuggestionDto>();
 
         foreach (var candidate in topCandidates)
         {
-            var suggestion = await RefineCandidateWithLLMAsync(
-                candidate,
-                state,
-                playerColor,
-                cancellationToken).ConfigureAwait(false);
+            MoveSuggestionDto suggestion;
+
+            if (useEnsemble && _ensembleEvaluator != null)
+            {
+                suggestion = await RefineCandidateWithEnsembleAsync(
+                    candidate,
+                    state,
+                    playerColor,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                suggestion = await RefineCandidateWithLLMAsync(
+                    candidate,
+                    state,
+                    playerColor,
+                    cancellationToken).ConfigureAwait(false);
+            }
 
             suggestions.Add(suggestion);
         }
@@ -292,6 +308,38 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
             ExecutionTimeMs = (int)elapsedMs,
             Timestamp = DateTime.UtcNow
         };
+    }
+
+    private async Task<MoveSuggestionDto> RefineCandidateWithEnsembleAsync(
+        CandidateMove candidate,
+        ParsedGameState state,
+        string playerColor,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var consensus = await _ensembleEvaluator!.EvaluateWithEnsembleAsync(
+                candidate,
+                state,
+                playerColor,
+                cancellationToken).ConfigureAwait(false);
+
+            return new MoveSuggestionDto
+            {
+                Move = candidate.ToAlgebraicNotation(),
+                Position = candidate.To.Notation,
+                Score = consensus.Score,
+                Reasoning = $"{consensus.Reasoning} (Consensus: {consensus.Agreement}, models agree)",
+                Pros = consensus.Pros,
+                Cons = consensus.Cons,
+                ExpectedOutcome = consensus.ExpectedOutcome
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ensemble evaluation failed, falling back to single model");
+            return await RefineCandidateWithLLMAsync(candidate, state, playerColor, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private sealed record LlmEvaluation(

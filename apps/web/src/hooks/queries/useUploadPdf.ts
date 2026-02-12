@@ -52,16 +52,13 @@ export function useUploadPdf(options: UseUploadPdfOptions = {}) {
       setProgress(0);
 
       // Upload with progress tracking and automatic retry
+      // Issue #4168: Use wizard-specific endpoint (no gameId required)
       const result = await retryWithBackoff(
         () =>
-          api.pdf.uploadPdf(
-            'wizard-temp', // Temporary gameId for wizard uploads
-            file,
-            percent => {
-              setProgress(percent);
-              onProgress?.(percent);
-            }
-          ),
+          api.sharedGames.wizardUploadPdf(file, percent => {
+            setProgress(percent);
+            onProgress?.(percent);
+          }),
         {
           maxAttempts: 3,
           shouldRetry: isRetryableError,

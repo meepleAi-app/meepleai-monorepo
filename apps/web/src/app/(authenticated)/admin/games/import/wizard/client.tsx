@@ -23,6 +23,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
+import { Step1UploadPdf } from './steps/Step1UploadPdf';
+
 type WizardStep = 1 | 2 | 3 | 4;
 
 interface StepConfig {
@@ -57,6 +59,7 @@ export function AdminGameImportWizardClient() {
     canGoBack,
     reset,
     submitWizard,
+    setUploadedPdf,
   } = useGameImportWizardStore();
 
   // Handle submission
@@ -169,26 +172,11 @@ export function AdminGameImportWizardClient() {
         <div className="rounded-md border bg-muted/50 p-8">
           {/* Step 1: Upload PDF */}
           {currentStep === 1 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Upload PDF Rulebook</h3>
-              <p className="text-sm text-muted-foreground">
-                Upload a PDF file to extract game metadata automatically.
-              </p>
-              {uploadedPdf ? (
-                <div className="rounded-md border bg-background p-4">
-                  <p className="text-sm">
-                    <strong>Uploaded:</strong> {uploadedPdf.fileName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">ID: {uploadedPdf.id}</p>
-                </div>
-              ) : (
-                <div className="rounded-md border-2 border-dashed p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    PDF upload component will be implemented in a separate issue
-                  </p>
-                </div>
-              )}
-            </div>
+            <Step1UploadPdf
+              onUploadComplete={pdf => {
+                setUploadedPdf(pdf);
+              }}
+            />
           )}
 
           {/* Step 2: Review Extracted Metadata */}

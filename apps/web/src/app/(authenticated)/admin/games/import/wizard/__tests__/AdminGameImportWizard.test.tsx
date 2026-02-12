@@ -21,6 +21,16 @@ import { AdminGameImportWizardClient } from '../client';
 
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
+// Mock useUploadPdf hook (used by Step1UploadPdf)
+vi.mock('@/hooks/queries/useUploadPdf', () => ({
+  useUploadPdf: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+    progress: 0,
+    error: null,
+  })),
+}));
+
 // Mock dependencies
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -219,8 +229,9 @@ describe('AdminGameImportWizardClient', () => {
 
       render(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText(/uploaded:/i)).toBeInTheDocument();
-      expect(screen.getByText('rulebook.pdf')).toBeInTheDocument();
+      // Check wizard state summary shows PDF uploaded
+      const summary = screen.getByText('Wizard State').closest('div');
+      expect(within(summary!).getByText(/✓.*rulebook\.pdf/i)).toBeInTheDocument();
     });
 
     it('displays extracted metadata on step 2', () => {

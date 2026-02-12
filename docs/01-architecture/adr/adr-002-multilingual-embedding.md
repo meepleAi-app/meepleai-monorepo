@@ -95,180 +95,45 @@ Use **multilingual-e5-large** base model with **Italian board game corpus fine-t
 
 ### Phase 1-2: Base Model
 
-```python
-# services/embeddings.py
-from sentence_transformers import SentenceTransformer
-
-class EmbeddingService:
-    def __init__(self):
-        self.model = SentenceTransformer('intfloat/multilingual-e5-large')
-        self.model.to('cpu')  # CPU sufficient for MVP (<100 embeddings/sec)
-
-    def embed_text(self, text: str) -> np.ndarray:
-        # Add instruction prefix (e5 models expect this for retrieval tasks)
-        prefixed = f"query: {text}"  # For queries
-        # prefixed = f"passage: {text}"  # For documents
-
-        embedding = self.model.encode(
-            prefixed,
-            normalize_embeddings=True  # L2 normalization for cosine similarity
-        )
-        return embedding  # Shape: (1024,)
-
-    def embed_batch(self, texts: List[str], is_query: bool = False) -> np.ndarray:
-        prefix = "query:" if is_query else "passage:"
-        prefixed_texts = [f"{prefix} {text}" for text in texts]
-
-        embeddings = self.model.encode(
-            prefixed_texts,
-            batch_size=32,
-            show_progress_bar=True,
-            normalize_embeddings=True
-        )
-        return embeddings  # Shape: (len(texts), 1024)
-```
-
----
+**Service**: `EmbeddingService` using `sentence-transformers` library
+- Load model: `SentenceTransformer('intfloat/multilingual-e5-large')`
+- Add instruction prefix: `"query: {text}"` for queries, `"passage: {text}"` for documents
+- Normalize embeddings (L2 normalization for cosine similarity)
+- Batch processing: 32 documents per batch for efficiency
+- Output: 1024-dimensional vectors
 
 ### Phase 3: Fine-Tuning Process
 
-**1. Data Collection**:
-```python
-# scripts/collect_training_data.py
-corpus = []
+**1. Data Collection** (~11K examples):
+- 10,000 Italian rulebook chunks (100 games)
+- 1,000 Q&A pairs from Italian board game communities
+- Annotated with positive/negative passage pairs
 
-# Rulebook text (10,000 chunks from 100 games)
-for game in games_catalog:
-    rulebook_chunks = chunk_rulebook(game.rulebook_path)
-    corpus.extend(rulebook_chunks)
+**2. Training Method**:
+- Contrastive learning: Pull similar embeddings together, push dissimilar apart
+- CosineSimilarityLoss optimizer
+- 5 epochs on GPU (~2-4 hours, €500-1K cost)
+- Output: Domain-specific model with +5-10 point accuracy improvement
 
-# Community FAQ (1,000 Q&A pairs from La Tana dei Goblin)
-community_qa = scrape_forum_qa("https://www.gdt.it/forum", min_upvotes=5)
-corpus.extend(community_qa)
+**3. Validation**:
+- Held-out test set (100 Q&A pairs)
+- Metrics: Retrieval accuracy (P@10, MRR)
+- Expected: Base 70-75% → Fine-tuned 80-85%
 
-print(f"Collected {len(corpus)} training examples")
-# Expected: ~11,000 examples
-```
-
-**2. Annotation** (manually annotate 1000 Q&A pairs):
-```json
-{
-  "query": "Posso usare Standard Projects dopo aver passato?",
-  "positive_passages": [
-    "Durante il proprio turno, prima di effettuare 1 o 2 azioni, il giocatore può utilizzare qualsiasi numero di Progetti Standard."
-  ],
-  "negative_passages": [
-    "Il giocatore può passare in qualsiasi momento del proprio turno.",
-    "Le azioni possono essere effettuate in qualsiasi ordine."
-  ],
-  "game_id": "terraforming-mars",
-  "difficulty": "medium"
-}
-```
-
-**3. Fine-Tuning Script**:
-```python
-# scripts/finetune_embeddings.py
-from sentence_transformers import SentenceTransformer, losses, InputExample
-from torch.utils.data import DataLoader
-
-# Load base model
-model = SentenceTransformer('intfloat/multilingual-e5-large')
-
-# Prepare training data (contrastive learning)
-train_examples = []
-for item in annotated_dataset:
-    # Positive pair (query + relevant passage)
-    train_examples.append(InputExample(
-        texts=[item['query'], item['positive_passages'][0]],
-        label=1.0  # Similar
-    ))
-
-    # Negative pairs (query + irrelevant passages)
-    for neg_passage in item['negative_passages']:
-        train_examples.append(InputExample(
-            texts=[item['query'], neg_passage],
-            label=0.0  # Dissimilar
-        ))
-
-train_dataloader = DataLoader(train_examples, batch_size=16, shuffle=True)
-
-# Contrastive loss (pull similar together, push dissimilar apart)
-train_loss = losses.CosineSimilarityLoss(model)
-
-# Fine-tune (5 epochs, ~2-4 hours on GPU)
-model.fit(
-    train_objectives=[(train_dataloader, train_loss)],
-    epochs=5,
-    warmup_steps=100,
-    output_path='./models/italian-boardgame-e5-large'
-)
-
-print("Fine-tuning complete. Model saved to ./models/italian-boardgame-e5-large")
-```
-
-**4. Validation** (compare base vs fine-tuned):
-```python
-# scripts/evaluate_embeddings.py
-from sklearn.metrics.pairwise import cosine_similarity
-
-base_model = SentenceTransformer('intfloat/multilingual-e5-large')
-finetuned_model = SentenceTransformer('./models/italian-boardgame-e5-large')
-
-test_queries = load_test_dataset()  # 100 held-out Q&A pairs
-
-# Evaluate retrieval accuracy
-base_accuracy = evaluate_retrieval(base_model, test_queries)
-finetuned_accuracy = evaluate_retrieval(finetuned_model, test_queries)
-
-print(f"Base model accuracy: {base_accuracy:.2%}")
-print(f"Fine-tuned accuracy: {finetuned_accuracy:.2%}")
-print(f"Improvement: +{finetuned_accuracy - base_accuracy:.2%}")
-
-# Expected: Base 70-75%, Fine-tuned 80-85% (+5-10 points)
-```
+**Implementation**: See `scripts/finetune_embeddings.py` and `scripts/evaluate_embeddings.py` for full code
 
 ---
 
 ## Terminology Handling Strategy
 
-### Game-Specific Keywords Preservation
+**Challenge**: Italian embeddings may not recognize English game terms (Meeple, Worker Placement, Deck Building)
 
-**Challenge**: Italian embeddings may not recognize English game terms
-- "Meeple" (originated from "my people", universally used)
-- "Worker Placement" (mechanic name, not translated)
-- "Deck Building" (mechanic, Italian = "costruzione mazzo" but English common)
+**Solution**: Bilingual glossary with query expansion
+- 500+ term dictionary: English ↔ Italian translations
+- Query expansion: Search "meeple" also searches "pedina", "segnalino"
+- Preserves recognizable English terms in Italian context
 
-**Solution**: Bilingual Glossary Injection
-
-```python
-# services/terminology.py
-GAME_TERMINOLOGY = {
-    # English term: Italian translation + preserve original
-    'meeple': ['meeple', 'pedina', 'segnalino'],
-    'worker placement': ['worker placement', 'piazzamento lavoratori'],
-    'deck building': ['deck building', 'costruzione mazzo'],
-    'engine building': ['engine building', 'costruzione motore'],
-    'area control': ['area control', 'controllo area'],
-    # ... 500+ terms
-}
-
-class TerminologyHandler:
-    def expand_query(self, query: str, language: str) -> List[str]:
-        expanded = [query]
-
-        # Detect English game terms in Italian query
-        for en_term, translations in GAME_TERMINOLOGY.items():
-            if en_term in query.lower():
-                # Add queries with Italian equivalents
-                for it_term in translations:
-                    if it_term != en_term:
-                        expanded.append(query.replace(en_term, it_term))
-
-        return expanded
-```
-
-**Usage**: Query expansion at retrieval time (search for "meeple" also searches "pedina", "segnalino")
+**Implementation**: See `services/terminology.py` for glossary handler
 
 ---
 
@@ -382,105 +247,38 @@ class TerminologyHandler:
 ## Implementation Plan
 
 ### Phase 1-2: Base Model Deployment
-
-```bash
-# Install dependencies
-pip install sentence-transformers
-
-# Download model (one-time, ~1.2 GB)
-python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-large')"
-
-# Model cached at: ~/.cache/torch/sentence_transformers/
-```
-
-**Embedding Generation** (during indexing):
-```python
-from services.embeddings import EmbeddingService
-
-embedder = EmbeddingService()
-
-# Single text
-embedding = embedder.embed_text("Posso usare Standard Projects?")
-print(embedding.shape)  # (1024,)
-
-# Batch (efficient for rulebook chunking)
-chunks = ["Chunk 1 text...", "Chunk 2 text...", ...]  # 89 chunks
-embeddings = embedder.embed_batch(chunks, is_query=False)
-print(embeddings.shape)  # (89, 1024)
-```
-
----
+- Install `sentence-transformers` library
+- Download model (~1.2 GB, cached locally)
+- Embedding generation: 1024-dim vectors with L2 normalization
+- Batch processing for efficiency (32 documents per batch)
 
 ### Phase 3: Fine-Tuning Workflow
 
-**Step 1: Data Collection** (Months 13-14):
-- Scrape 100 Italian rulebooks (public domain, publisher-licensed)
-- Extract community Q&A from La Tana dei Goblin (via web scraping, API if available)
-- Total corpus: ~10,000 text chunks
+| Step | Timeline | Effort | Deliverable |
+|------|----------|--------|-------------|
+| Data Collection | Months 13-14 | 100 hours | 10K rulebook chunks + 1K Q&A pairs |
+| Annotation | Months 14-15 | 50 hours | 1K annotated Q&A pairs (positive/negative passages) |
+| Training | Month 15 | 20-40 GPU hours | Fine-tuned model (~€20-40 cost) |
+| Validation | Month 15 | 40 hours | P@10, MRR metrics + A/B test (1 week) |
+| Deployment | Month 16 | 20 hours | Production deployment + Hugging Face release |
 
-**Step 2: Annotation** (Months 14-15):
-- Manually annotate 1,000 Q&A pairs:
-  - Query: "Posso usare X?"
-  - Positive passages: [relevant rulebook sections]
-  - Negative passages: [irrelevant but similar sections]
-- Tools: Prodigy (annotation tool), Label Studio (open-source alternative)
-- Team: 2 board game experts, 25 hours each (50 hours total)
-
-**Step 3: Training** (Month 15):
-- GPU instance: AWS g5.xlarge (1x NVIDIA A10G, $1.01/hour)
-- Training time: 20-40 hours (~$20-40 GPU cost)
-- Framework: Sentence Transformers library, PyTorch backend
-
-**Step 4: Validation** (Month 15):
-- Held-out test set: 100 Q&A pairs (not used in training)
-- Metrics: Retrieval accuracy (P@10, MRR), embedding similarity distribution
-- A/B test: Base vs fine-tuned on production traffic (1 week, 10% fine-tuned)
-
-**Step 5: Deployment** (Month 16):
-- Model registry: Hugging Face Hub (public release, open-source contribution)
-- Production deployment: Update EmbeddingService to load fine-tuned model
-- Monitoring: Track retrieval accuracy improvement vs baseline
+**Tools**: Prodigy/Label Studio (annotation), AWS g5.xlarge GPU, PyTorch
 
 ---
 
 ## Monitoring & Evaluation
 
 ### Retrieval Quality Metrics
+- **P@K**: Precision at K (% of top-K results that are relevant)
+- **MRR**: Mean Reciprocal Rank (average rank of first relevant result)
+- **Latency**: Embedding generation time
 
-```python
-# Precision at K (P@K): % of top-K results that are relevant
-def precision_at_k(retrieved_chunks: List[Chunk], relevant_pages: List[int], k: int) -> float:
-    top_k = retrieved_chunks[:k]
-    relevant_count = sum(1 for chunk in top_k if chunk.page in relevant_pages)
-    return relevant_count / k
+**Prometheus Metrics**: `retrieval_precision_at_k`, `retrieval_mrr`, `embedding_generation_time_ms`
 
-# Mean Reciprocal Rank (MRR): average rank of first relevant result
-def mean_reciprocal_rank(retrieved_chunks: List[Chunk], relevant_pages: List[int]) -> float:
-    for rank, chunk in enumerate(retrieved_chunks, start=1):
-        if chunk.page in relevant_pages:
-            return 1.0 / rank
-    return 0.0  # No relevant result found
-```
+**Weekly Evaluation**: Automated script compares base vs fine-tuned on golden dataset
+- Target: Base 70-75% → Fine-tuned 80-85% (+7-8 points)
 
-**Prometheus Metrics**:
-```python
-retrieval_precision_at_k = Histogram('retrieval_precision_at_k', 'P@K metric', ['k'])
-retrieval_mrr = Histogram('retrieval_mrr', 'Mean reciprocal rank')
-embedding_generation_time_ms = Histogram('embedding_generation_time_ms', 'Embedding latency')
-```
-
-**Weekly Evaluation** (automated script):
-```bash
-# Evaluate base model on golden dataset
-python scripts/evaluate_retrieval.py --model base --dataset tests/data/golden_dataset.json
-
-# Compare fine-tuned (Phase 3+)
-python scripts/evaluate_retrieval.py --model finetuned --dataset tests/data/golden_dataset.json
-
-# Output:
-# Base model P@10: 0.78, MRR: 0.65
-# Fine-tuned P@10: 0.85, MRR: 0.73 (+7 points, +8 points)
-```
+**Implementation**: See `scripts/evaluate_retrieval.py` for full metrics code
 
 ---
 

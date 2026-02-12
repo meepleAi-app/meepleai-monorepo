@@ -303,5 +303,5 @@ Response con configurazione e costi
 
 - [TOMAC-RAG Overview](./00-overview.md)
 - [Layer 5: Generation](./06-layer5-generation.md)
-- [Multi-Agent RAG](./variants/12-multi-agent-rag.md)
+- [Multi-Agent RAG](./variants/multi-agent-rag.md)
 - [Token Cost Breakdown](./appendix/C-token-cost-breakdown.md)

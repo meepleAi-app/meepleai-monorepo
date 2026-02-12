@@ -9,20 +9,20 @@ using System.Runtime.CompilerServices;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Handler for ChatWithAgentCommand.
+/// Handler for SendAgentMessageCommand.
 /// Implements SSE streaming for standalone agent chat (non-session).
 /// Issue #4126: API Integration for Agent Chat
 /// </summary>
-internal sealed class ChatWithAgentCommandHandler : IStreamingQueryHandler<ChatWithAgentCommand, RagStreamingEvent>
+internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<SendAgentMessageCommand, RagStreamingEvent>
 {
     private readonly IAgentRepository _agentRepository;
     private readonly ILlmService _llmService;
-    private readonly ILogger<ChatWithAgentCommandHandler> _logger;
+    private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
-    public ChatWithAgentCommandHandler(
+    public SendAgentMessageCommandHandler(
         IAgentRepository agentRepository,
         ILlmService llmService,
-        ILogger<ChatWithAgentCommandHandler> logger)
+        ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
@@ -31,7 +31,7 @@ internal sealed class ChatWithAgentCommandHandler : IStreamingQueryHandler<ChatW
 
 #pragma warning disable S4456 // Standard MediatR streaming pattern
     public async IAsyncEnumerable<RagStreamingEvent> Handle(
-        ChatWithAgentCommand command,
+        SendAgentMessageCommand command,
         [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore S4456
     {
@@ -44,7 +44,7 @@ internal sealed class ChatWithAgentCommandHandler : IStreamingQueryHandler<ChatW
     }
 
     private async IAsyncEnumerable<RagStreamingEvent> HandleCore(
-        ChatWithAgentCommand command,
+        SendAgentMessageCommand command,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         _logger.LogInformation(

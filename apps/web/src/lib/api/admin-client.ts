@@ -60,14 +60,28 @@ interface UserBadge {
 }
 
 export const adminClient = {
-  // Stats
+  // Stats - adapted to use real backend DashboardStatsDto
   async getStats(params?: { days?: number }): Promise<AdminStats> {
     const query = new URLSearchParams();
     if (params?.days) query.set('days', params.days.toString());
 
-    return await httpClient.get<AdminStats>(
-      `/admin/stats?${query.toString()}`
+    // Backend returns DashboardStatsDto, we extract metrics
+    const response = await httpClient.get<any>(
+      `/admin/dashboard/stats?${query.toString()}`
     );
+
+    // Map backend DashboardMetrics to frontend AdminStats
+    return {
+      totalGames: response.metrics?.totalGames ?? 0,
+      publishedGames: 0, // TODO: Calculate from SharedGameCatalog
+      pendingGames: 0,   // TODO: Get from approval queue count
+      totalUsers: response.metrics?.totalUsers ?? 0,
+      activeUsers: response.metrics?.totalUsers ?? 0, // Approximate with total
+      newUsers: 0, // TODO: Calculate from userTrend
+      approvalRate: 90, // TODO: Calculate from approval stats
+      pendingApprovals: 0, // TODO: Get from approval queue
+      recentSubmissions: 0, // TODO: Calculate from trends
+    };
   },
 
   // Shared Games Management

@@ -150,8 +150,6 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
         {
             _logger.LogInformation("Approval workflow initiated for game: {GameId}", sharedGame.Id);
             // Note: ApprovalRequest creation will be implemented in Administration BC integration (separate issue)
-            // When implemented, use: await _mediator.Send(new CreateApprovalRequestCommand(...), cancellationToken);
-            // RequestType: "PdfEmbeddingApproval"
         }
 
         // STEP 8: SaveChanges + Return result

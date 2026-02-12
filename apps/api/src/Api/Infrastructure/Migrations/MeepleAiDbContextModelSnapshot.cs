@@ -3324,6 +3324,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("base");
 
+                    b.Property<string>("ErrorCategory")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("error_category");
+
                     b.Property<string>("ExtractedDiagrams")
                         .HasMaxLength(8192)
                         .HasColumnType("character varying(8192)");
@@ -3334,6 +3339,11 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<string>("ExtractedText")
                         .HasColumnType("text");
+
+                    b.Property<string>("FailedAtState")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("failed_at_state");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -3380,10 +3390,24 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("ProcessingProgressJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("ProcessingState")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("processing_state");
+
                     b.Property<string>("ProcessingStatus")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("retry_count");
 
                     b.Property<Guid?>("SharedGameId")
                         .HasColumnType("uuid");

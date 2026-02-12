@@ -43,11 +43,46 @@ namespace Api.Infrastructure.Migrations
 
             // Note: Keep processing_status column for backward compatibility
             // Will be removed in future migration after full transition
+
+            // Issue #4216: Add retry mechanism tracking columns
+            migrationBuilder.AddColumn<int>(
+                name: "retry_count",
+                table: "pdf_documents",
+                type: "integer",
+                nullable: false,
+                defaultValue: 0);
+
+            migrationBuilder.AddColumn<string>(
+                name: "error_category",
+                table: "pdf_documents",
+                type: "character varying(32)",
+                maxLength: 32,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "failed_at_state",
+                table: "pdf_documents",
+                type: "character varying(32)",
+                maxLength: 32,
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Issue #4216: Rollback retry tracking columns
+            migrationBuilder.DropColumn(
+                name: "retry_count",
+                table: "pdf_documents");
+
+            migrationBuilder.DropColumn(
+                name: "error_category",
+                table: "pdf_documents");
+
+            migrationBuilder.DropColumn(
+                name: "failed_at_state",
+                table: "pdf_documents");
+
             // Issue #4215: Rollback processing_state column
             migrationBuilder.DropColumn(
                 name: "processing_state",

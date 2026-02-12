@@ -18,8 +18,10 @@ import {
   UpdateAgentDocumentsResponseSchema,
   PlayerModeSuggestionResponseSchema,
   typologySchema, // Added for AGT-012
+  SSEEventSchema, // Issue #4126
   type AgentDto,
   type AgentResponseDto,
+  type SSEEvent, // Issue #4126
   type InvokeAgentRequest,
   type CreateAgentRequest,
   type ConfigureAgentRequest,
@@ -108,6 +110,18 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       }));
 
       return response?.typologies ?? [];
+    },
+
+    /**
+     * Get recent agents for dashboard widget
+     * Issue #4126: API Integration
+     */
+    async getRecent(limit: number = 10): Promise<AgentDto[]> {
+      const response = await httpClient.get<AgentDto[]>(
+        `/api/v1/agents/recent?limit=${limit}`,
+        z.array(AgentDtoSchema)
+      );
+      return response ?? [];
     },
 
     // ========== Agent Commands ==========
@@ -302,6 +316,65 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       }
 
       return response;
+    },
+
+    // ========== Agent Chat SSE (Issue #4126) ==========
+
+    /**
+     * Chat with agent using SSE streaming
+     * Returns async generator for streaming responses
+     * Issue #4126: API Integration
+     */
+    async *chat(
+      agentId: string,
+      message: string,
+      signal?: AbortSignal
+    ): AsyncGenerator<SSEEvent, void, unknown> {
+      const response = await fetch(`/api/v1/agents/${encodeURIComponent(agentId)}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat failed: ${response.statusText}`);
+      }
+
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              try {
+                const event = JSON.parse(data);
+                yield event as SSEEvent;
+              } catch (e) {
+                console.error('Failed to parse SSE event:', e);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
     },
   };
 }

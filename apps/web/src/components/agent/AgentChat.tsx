@@ -21,11 +21,11 @@ import React, { useState, useCallback } from 'react';
 import { X, Bot, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
-
 import { ChatMessageList, ChatInput } from '@/components/agent/chat';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
+import { useAgentChat } from '@/hooks/queries/useAgentChat';
 import type { AgentMessage } from '@/types/agent';
 
 // ============================================================================
@@ -102,9 +102,29 @@ export function AgentChat({
   className,
 }: AgentChatProps) {
   const [messages, setMessages] = useState<AgentMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Use real agent chat hook (Issue #4126)
+  const { isStreaming, sendMessage: sendChatMessage } = useAgentChat(agentId, {
+    onToken: (token) => {
+      setStreamingContent(prev => prev + token);
+    },
+    onComplete: () => {
+      const agentMessage: AgentMessage = {
+        type: 'agent',
+        content: streamingContent,
+        timestamp: new Date(),
+        confidence: 0.85,
+      };
+      setMessages(prev => [...prev, agentMessage]);
+      setStreamingContent('');
+    },
+    onError: (err) => {
+      setError(err.message);
+      toast.error('Failed to send message');
+    },
+  });
 
   const config = LAYOUT_CONFIG[layout];
 
@@ -119,25 +139,10 @@ export function AgentChat({
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // Start streaming (mock for now - replace with real SSE)
-      setIsStreaming(true);
-      setStreamingContent('');
-      setError(null);
-
-      // TODO: Replace with real SSE streaming to POST /api/v1/agents/{agentId}/chat
-      setTimeout(() => {
-        const agentMessage: AgentMessage = {
-          type: 'agent',
-          content: `Echo: ${content}`,
-          timestamp: new Date(),
-          confidence: 0.95,
-        };
-        setMessages(prev => [...prev, agentMessage]);
-        setIsStreaming(false);
-        setStreamingContent('');
-      }, 1500);
+      // Send via real API
+      sendChatMessage(content);
     },
-    [agentId]
+    [sendChatMessage]
   );
 
   // Handle retry on error

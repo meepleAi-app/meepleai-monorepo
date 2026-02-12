@@ -16,10 +16,12 @@ import { useCallback } from 'react';
 import Link from 'next/link';
 
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';
 import { WizardSteps } from '@/components/wizard';
+import { useWizardAutoSave, clearDraft } from '@/hooks/wizard/useWizardAutoSave';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
 import { Step1UploadPdf } from './steps/Step1UploadPdf';
@@ -44,12 +46,14 @@ const STEPS: StepConfig[] = [
 export function AdminGameImportWizardClient() {
   const { user, loading: authLoading } = useAuthUser();
 
+  // Auto-save wizard state to localStorage
+  useWizardAutoSave();
+
   const {
     currentStep,
     uploadedPdf,
     extractedMetadata,
     selectedBggId,
-    bggGameData,
     enrichedData,
     isProcessing,
     error,
@@ -68,6 +72,8 @@ export function AdminGameImportWizardClient() {
   const handleSubmit = useCallback(async () => {
     try {
       await submitWizard();
+      // Clear draft on successful submission
+      clearDraft();
       // Toast and navigation handled by store
     } catch (err) {
       // Error already handled by store
@@ -120,7 +126,44 @@ export function AdminGameImportWizardClient() {
   const currentStepConfig = STEPS.find(s => s.id === currentStep);
 
   return (
-    <div className="container mx-auto max-w-5xl py-8">
+    <ErrorBoundary
+      componentName="GameImportWizard"
+      fallback={(error, reset) => (
+        <div className="container mx-auto max-w-5xl py-8">
+          <Card className="p-8 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <svg
+                className="h-8 w-8 text-destructive"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-destructive">Wizard Error</h2>
+            <p className="mb-6 text-muted-foreground">
+              An error occurred in the game import wizard. You can try starting over or contact support if the problem persists.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button onClick={reset} variant="default">
+                Start Over
+              </Button>
+              <Link href="/admin/games">
+                <Button variant="outline">Back to Games</Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      )}
+    >
+      <div className="container mx-auto max-w-5xl py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="mb-4 flex items-center justify-between">
@@ -315,5 +358,6 @@ export function AdminGameImportWizardClient() {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

@@ -1,8 +1,10 @@
 /**
  * BoardGameGeek Client (FE-IMP-005)
+ * Issue #4167: BGG API timeout handling
  *
  * Modular client for BoardGameGeek API integration.
  * Covers: BGG search and game details
+ * Features: 30s timeout, automatic abort on timeout
  */
 
 import {
@@ -15,6 +17,9 @@ import {
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
+
+// BGG API timeout configuration (30 seconds)
+const BGG_TIMEOUT_MS = 30000;
 
 export interface CreateBggClientParams {
   httpClient: HttpClient;
@@ -49,16 +54,30 @@ export function createBggClient({ httpClient }: CreateBggClientParams) {
         params.append('exact', 'true');
       }
 
-      const response = await httpClient.get(
-        `/api/v1/bgg/search?${params}`,
-        BggSearchResponseSchema
-      );
+      // Create abort controller with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), BGG_TIMEOUT_MS);
 
-      if (!response) {
-        throw new Error('Failed to search BoardGameGeek');
+      try {
+        const response = await httpClient.get(
+          `/api/v1/bgg/search?${params}`,
+          BggSearchResponseSchema,
+          { signal: controller.signal }
+        );
+
+        if (!response) {
+          throw new Error('Failed to search BoardGameGeek');
+        }
+
+        return response;
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error(`BGG search timed out after ${BGG_TIMEOUT_MS / 1000}s. Please try again.`);
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      return response;
     },
 
     // ========== BGG Game Details ==========
@@ -68,13 +87,30 @@ export function createBggClient({ httpClient }: CreateBggClientParams) {
      * @param bggId BoardGameGeek game ID
      */
     async getGameDetails(bggId: number): Promise<BggGameDetails> {
-      const response = await httpClient.get(`/api/v1/bgg/games/${bggId}`, BggGameDetailsSchema);
+      // Create abort controller with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), BGG_TIMEOUT_MS);
 
-      if (!response) {
-        throw new Error(`Game with BGG ID ${bggId} not found`);
+      try {
+        const response = await httpClient.get(
+          `/api/v1/bgg/games/${bggId}`,
+          BggGameDetailsSchema,
+          { signal: controller.signal }
+        );
+
+        if (!response) {
+          throw new Error(`Game with BGG ID ${bggId} not found`);
+        }
+
+        return response;
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error(`BGG game details request timed out after ${BGG_TIMEOUT_MS / 1000}s. Please try again.`);
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      return response;
     },
 
     // ========== BGG Batch Thumbnails ==========

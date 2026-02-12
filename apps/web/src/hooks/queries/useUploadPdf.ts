@@ -1,15 +1,18 @@
 /**
  * useUploadPdf - React Query hook for PDF upload
  * Issue #4162: Upload PDF step for wizard
+ * Issue #4167: Network retry logic
  *
- * Handles PDF file upload with progress tracking and error handling.
+ * Handles PDF file upload with progress tracking, error handling, and automatic retry.
  */
 
 import { useState } from 'react';
 
 import { useMutation, type UseMutationOptions } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { api } from '@/lib/api';
+import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 
 export interface UploadPdfResult {
   documentId: string;
@@ -48,13 +51,25 @@ export function useUploadPdf(options: UseUploadPdfOptions = {}) {
       // Reset progress
       setProgress(0);
 
-      // Upload with progress tracking
-      const result = await api.pdf.uploadPdf(
-        'wizard-temp', // Temporary gameId for wizard uploads
-        file,
-        percent => {
-          setProgress(percent);
-          onProgress?.(percent);
+      // Upload with progress tracking and automatic retry
+      const result = await retryWithBackoff(
+        () =>
+          api.pdf.uploadPdf(
+            'wizard-temp', // Temporary gameId for wizard uploads
+            file,
+            percent => {
+              setProgress(percent);
+              onProgress?.(percent);
+            }
+          ),
+        {
+          maxAttempts: 3,
+          shouldRetry: isRetryableError,
+          onRetry: (error, attempt, _delayMs) => {
+            toast.info(`Upload failed. Retrying... (attempt ${attempt}/3)`);
+            // Reset progress before retry
+            setProgress(0);
+          },
         }
       );
 

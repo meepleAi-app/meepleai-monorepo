@@ -118,11 +118,26 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
 
         stopwatch.Stop();
 
+        // Issue #3774: Performance metrics logging
         _logger.LogInformation(
-            "Decisore analysis complete: suggestions={Count}, strength={Strength:F2}, time={Time}ms",
+            "Decisore analysis complete: suggestions={Count}, strength={Strength:F2}, time={Time}ms, " +
+            "candidates={Candidates}, riskLevel={Risk}, confidence={Confidence:F2}",
             suggestions.Count,
             positionStrength,
-            stopwatch.ElapsedMilliseconds);
+            stopwatch.ElapsedMilliseconds,
+            candidates.Count,
+            riskLevel,
+            confidence);
+
+        // Performance warning if exceeds target
+        if (stopwatch.ElapsedMilliseconds > 5000)
+        {
+            _logger.LogWarning(
+                "Decisore analysis exceeded 5s target: {Time}ms (candidates={Candidates}, depth={Depth})",
+                stopwatch.ElapsedMilliseconds,
+                candidates.Count,
+                useEnsemble ? "deep" : "standard");
+        }
 
         return new StrategicAnalysisResultDto
         {

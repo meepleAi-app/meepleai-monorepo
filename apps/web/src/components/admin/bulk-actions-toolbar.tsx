@@ -6,7 +6,9 @@
 'use client';
 
 import React from 'react';
+
 import { Trash2, Mail, UserCog, Download, Upload } from 'lucide-react';
+
 import { Button } from '@/components/ui/primitives/button';
 
 interface BulkActionsToolbarProps {

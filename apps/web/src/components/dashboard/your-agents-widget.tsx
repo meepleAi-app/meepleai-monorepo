@@ -6,8 +6,11 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Button } from '@/components/ui/primitives/button';
 
@@ -15,6 +18,7 @@ import { Button } from '@/components/ui/primitives/button';
 // import { useQuery } from '@tanstack/react-query';
 
 export function YourAgentsWidget() {
+  const router = useRouter();
   // Mock data - replace with API
   const recentAgents = [
     { id: '1', name: 'Tutor Agent', type: 'Tutor', lastUsed: '2 hours ago' },
@@ -43,7 +47,7 @@ export function YourAgentsWidget() {
             title={agent.name}
             subtitle={`Last used ${agent.lastUsed}`}
             onClick={() => {
-              window.location.href = `/agents/${agent.id}/chat`;
+              router.push(`/agents/${agent.id}/chat`);
             }}
           />
         ))}

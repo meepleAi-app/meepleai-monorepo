@@ -5,8 +5,9 @@
  * Used by useEmbeddingStatus hook to poll RAG readiness.
  */
 
-import type { HttpClient } from '../core/httpClient';
 import { KnowledgeBaseStatusSchema, type KnowledgeBaseStatus } from '../schemas/knowledge-base.schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 export interface CreateKnowledgeBaseClientParams {
   httpClient: HttpClient;

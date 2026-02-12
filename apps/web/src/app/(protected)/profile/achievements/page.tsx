@@ -6,9 +6,11 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { Trophy, Lock, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
 
 // TODO: Replace with API
 interface Achievement {

@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertTriangle,
   ChevronLeft,
@@ -21,15 +22,14 @@ import {
   SortDesc,
   Gamepad2,
 } from 'lucide-react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
 import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
+import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,10 +47,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
@@ -58,10 +54,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useCreateShareRequest } from '@/hooks/queries/useShareRequests';
 import { api } from '@/lib/api';
 import type { PrivateGameDto, GetPrivateGamesParams } from '@/lib/api/schemas/private-games.schemas';
-import { useCreateShareRequest } from '@/hooks/queries/useShareRequests';
 
 type SortByOption = 'title' | 'createdAt' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';

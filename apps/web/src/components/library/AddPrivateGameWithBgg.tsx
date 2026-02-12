@@ -14,11 +14,12 @@ import { useState, useCallback } from 'react';
 import { ArrowLeft, Globe, PenLine, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { BggGameSearch } from './BggGameSearch';
-import { AddPrivateGameForm, type AddPrivateGameFormData } from './AddPrivateGameForm';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { BggSearchResult, BggGameDetails } from '@/lib/api/schemas/games.schemas';
+
+import { AddPrivateGameForm, type AddPrivateGameFormData } from './AddPrivateGameForm';
+import { BggGameSearch } from './BggGameSearch';
 
 export interface AddPrivateGameWithBggProps {
   onSubmit: (data: AddPrivateGameFormData, source: 'Manual' | 'Bgg', bggId?: number, thumbnailUrl?: string) => Promise<void>;

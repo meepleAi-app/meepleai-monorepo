@@ -6,8 +6,10 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+
 import { Trophy, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 

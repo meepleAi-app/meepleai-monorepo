@@ -20,7 +20,7 @@ import React, { useState, useCallback } from 'react';
 
 import { X, Bot, Sparkles } from 'lucide-react';
 
-import { ChatMessageList, ChatInput, TypingIndicator } from '@/components/agent/chat';
+import { ChatMessageList, ChatInput } from '@/components/agent/chat';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';

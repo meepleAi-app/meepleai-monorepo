@@ -6,10 +6,12 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+
 import { Heart, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/primitives/button';
+import Link from 'next/link';
+
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { Button } from '@/components/ui/primitives/button';
 
 export function WishlistHighlightsWidget() {
   // TODO: Fetch from API GET /wishlist/highlights

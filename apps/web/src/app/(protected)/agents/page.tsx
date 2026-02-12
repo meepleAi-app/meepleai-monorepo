@@ -13,7 +13,11 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+
 import { Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Input } from '@/components/ui/primitives/input';
 import {
@@ -67,6 +71,7 @@ const mockAgents: Agent[] = [
 ];
 
 export default function AgentsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
@@ -182,7 +187,7 @@ export default function AgentsPage() {
             ]}
             onClick={() => {
               // Navigate to agent chat or detail
-              window.location.href = `/agents/${agent.id}`;
+              router.push(`/agents/${agent.id}`);
             }}
           />
         ))}

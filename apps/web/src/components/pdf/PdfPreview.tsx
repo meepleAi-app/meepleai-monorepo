@@ -38,7 +38,7 @@ export function PdfPreview({ file }: PdfPreviewProps) {
 
   return (
     <div className="pdf-preview-container h-full">
-      <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.0.279/build/pdf.worker.min.js">
+      <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
         <Viewer fileUrl={fileUrl} plugins={[defaultLayoutPluginInstance]} />
       </Worker>
     </div>

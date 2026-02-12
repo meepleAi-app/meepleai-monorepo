@@ -32,9 +32,9 @@ import Link from 'next/link';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { useEmbeddingStatus, type UseEmbeddingStatusOptions } from '@/hooks/useEmbeddingStatus';
+import type { EmbeddingStatus } from '@/lib/api/schemas/knowledge-base.schemas';
 import { cn } from '@/lib/utils';
 
-import type { EmbeddingStatus } from '@/lib/api/schemas/knowledge-base.schemas';
 
 // ============================================================================
 // Types

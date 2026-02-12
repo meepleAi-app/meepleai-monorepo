@@ -11,6 +11,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 export default function WishlistPage() {

@@ -12,9 +12,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/navigation/sheet';
-import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { cn } from '@/lib/utils';
 
 export interface MobileTagsProps {
   /** All tags to display */

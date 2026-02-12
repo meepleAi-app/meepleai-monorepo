@@ -58,13 +58,13 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import Image from 'next/image';
 
-import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { cn } from '@/lib/utils';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';

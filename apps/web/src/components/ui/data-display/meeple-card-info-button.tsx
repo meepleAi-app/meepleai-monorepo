@@ -13,13 +13,13 @@ import React from 'react';
 import { Info } from 'lucide-react';
 import Link from 'next/link';
 
-import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { cn } from '@/lib/utils';
 
 import { entityColors } from './meeple-card';
 

@@ -6,9 +6,9 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { Shield, Download } from 'lucide-react';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
+
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 
 export default function SecuritySettingsPage() {
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);

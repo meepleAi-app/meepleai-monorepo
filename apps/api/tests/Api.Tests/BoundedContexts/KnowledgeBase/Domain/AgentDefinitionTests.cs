@@ -20,7 +20,7 @@ public sealed class AgentDefinitionTests
         var config = AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f);
 
         // Act
-        var agent = AgentDefinition.Create("TestAgent", "Test description", config);
+        var agent = AgentDefinition.Create("TestAgent", "Test description", AgentType.RagAgent, config);
 
         // Assert
         agent.Should().NotBeNull();
@@ -40,7 +40,7 @@ public sealed class AgentDefinitionTests
         var config = AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f);
 
         // Act
-        var act = () => AgentDefinition.Create("", "Description", config);
+        var act = () => AgentDefinition.Create("", "Description", AgentType.RagAgent, config);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithParameterName("name");
@@ -54,7 +54,7 @@ public sealed class AgentDefinitionTests
         var longName = new string('a', 101);
 
         // Act
-        var act = () => AgentDefinition.Create(longName, "Description", config);
+        var act = () => AgentDefinition.Create(longName, "Description", AgentType.RagAgent, config);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithParameterName("name");
@@ -64,7 +64,7 @@ public sealed class AgentDefinitionTests
     public void Create_WithNullConfig_ShouldThrowArgumentNullException()
     {
         // Act
-        var act = () => AgentDefinition.Create("Name", "Description", null!);
+        var act = () => AgentDefinition.Create("Name", "Description", AgentType.RagAgent, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>().WithParameterName("config");
@@ -85,7 +85,7 @@ public sealed class AgentDefinitionTests
         };
 
         // Act
-        var agent = AgentDefinition.Create("TestAgent", "Description", config, prompts, tools);
+        var agent = AgentDefinition.Create("TestAgent", "Description", AgentType.RagAgent, config, null, prompts, tools);
 
         // Assert
         agent.Prompts.Should().HaveCount(1);
@@ -98,7 +98,7 @@ public sealed class AgentDefinitionTests
     public void UpdateConfig_WithValidConfig_ShouldUpdateAndSetTimestamp()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Description", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Description", AgentType.RagAgent, AgentDefinitionConfig.Default());
         agent.UpdatedAt.Should().BeNull();
         var newConfig = AgentDefinitionConfig.Create("claude-3", 4096, 0.9f);
 
@@ -118,7 +118,7 @@ public sealed class AgentDefinitionTests
     public void UpdateNameAndDescription_WithValidData_ShouldUpdate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("OriginalName", "Original desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("OriginalName", "Original desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
 
         // Act
         agent.UpdateNameAndDescription("NewName", "New description");
@@ -133,7 +133,7 @@ public sealed class AgentDefinitionTests
     public void UpdatePrompts_WithValidPrompts_ShouldUpdate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         var newPrompts = new List<AgentPromptTemplate>
         {
             AgentPromptTemplate.Create("system", "New system prompt"),
@@ -154,7 +154,7 @@ public sealed class AgentDefinitionTests
     public void UpdatePrompts_WithMoreThan20Prompts_ShouldThrowArgumentException()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         var tooManyPrompts = Enumerable.Range(0, 21)
             .Select(i => AgentPromptTemplate.Create("system", $"Prompt {i}"))
             .ToList();
@@ -170,7 +170,7 @@ public sealed class AgentDefinitionTests
     public void UpdateTools_WithValidTools_ShouldUpdate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         var newTools = new List<AgentToolConfig>
         {
             AgentToolConfig.Create("web_search"),
@@ -191,7 +191,7 @@ public sealed class AgentDefinitionTests
     public void UpdateTools_WithMoreThan50Tools_ShouldThrowArgumentException()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         var tooManyTools = Enumerable.Range(0, 51)
             .Select(i => AgentToolConfig.Create($"tool_{i}"))
             .ToList();
@@ -207,7 +207,7 @@ public sealed class AgentDefinitionTests
     public void Activate_WhenInactive_ShouldActivate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         agent.Deactivate();
 
         // Act
@@ -222,7 +222,7 @@ public sealed class AgentDefinitionTests
     public void Deactivate_WhenActive_ShouldDeactivate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
 
         // Act
         agent.Deactivate();
@@ -236,7 +236,7 @@ public sealed class AgentDefinitionTests
     public void Activate_WhenAlreadyActive_ShouldNotChangeState()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
 
         // Act
         agent.Activate();
@@ -244,4 +244,146 @@ public sealed class AgentDefinitionTests
         // Assert
         agent.IsActive.Should().BeTrue();
     }
+
+    // ===== NEW TESTS FOR ISSUE #3708 =====
+
+    [Fact]
+    public void Create_WithAgentType_ShouldStoreTypeCorrectly()
+    {
+        // Arrange
+        var type = AgentType.CitationAgent;
+        var config = AgentDefinitionConfig.Default();
+
+        // Act
+        var agent = AgentDefinition.Create("CitationTest", "Description", type, config);
+
+        // Assert
+        agent.Type.Should().NotBeNull();
+        agent.Type.Value.Should().Be("Citation");
+        agent.Type.Description.Should().Contain("sources");
+    }
+
+    [Fact]
+    public void Create_WithCustomAgentType_ShouldStoreCustomType()
+    {
+        // Arrange
+        var type = AgentType.Custom("Decisore", "Strategic decision making agent");
+        var config = AgentDefinitionConfig.Default();
+
+        // Act
+        var agent = AgentDefinition.Create("DecisoreAgent", "Desc", type, config);
+
+        // Assert
+        agent.Type.Value.Should().Be("Decisore");
+        agent.Type.Description.Should().Be("Strategic decision making agent");
+    }
+
+    [Fact]
+    public void Create_WithNullType_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var config = AgentDefinitionConfig.Default();
+
+        // Act
+        var act = () => AgentDefinition.Create("Name", "Desc", null!, config);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("type");
+    }
+
+    [Fact]
+    public void UpdateType_WithValidType_ShouldUpdateAndSetTimestamp()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var newType = AgentType.ConfidenceAgent;
+
+        // Act
+        var beforeUpdate = DateTime.UtcNow;
+        Thread.Sleep(10);
+        agent.UpdateType(newType);
+
+        // Assert
+        agent.Type.Value.Should().Be("Confidence");
+        agent.UpdatedAt.Should().NotBeNull().And.BeOnOrAfter(beforeUpdate);
+    }
+
+    [Fact]
+    public void UpdateType_WithNullType_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+
+        // Act
+        var act = () => agent.UpdateType(null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("type");
+    }
+
+    [Fact]
+    public void Create_WithStrategy_ShouldStoreStrategyCorrectly()
+    {
+        // Arrange
+        var type = AgentType.RagAgent;
+        var config = AgentDefinitionConfig.Default();
+        var strategy = AgentStrategy.VectorOnly(topK: 15, minScore: 0.85);
+
+        // Act
+        var agent = AgentDefinition.Create("TestAgent", "Desc", type, config, strategy);
+
+        // Assert
+        agent.Strategy.Should().NotBeNull();
+        agent.Strategy.Name.Should().Be("VectorOnly");
+        agent.Strategy.GetParameter<int>("TopK", 0).Should().Be(15);
+        agent.Strategy.GetParameter<double>("MinScore", 0).Should().Be(0.85);
+    }
+
+    [Fact]
+    public void Create_WithoutStrategy_ShouldUseDefaultHybridSearch()
+    {
+        // Arrange
+        var type = AgentType.RagAgent;
+        var config = AgentDefinitionConfig.Default();
+
+        // Act
+        var agent = AgentDefinition.Create("TestAgent", "Desc", type, config);
+
+        // Assert
+        agent.Strategy.Should().NotBeNull();
+        agent.Strategy.Name.Should().Be("HybridSearch");
+        agent.Strategy.HasParameter("VectorWeight").Should().BeTrue();
+    }
+
+    [Fact]
+    public void UpdateStrategy_WithValidStrategy_ShouldUpdateAndSetTimestamp()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var newStrategy = AgentStrategy.MultiModelConsensus(new[] { "gpt-4", "claude-3" }, 0.9);
+
+        // Act
+        var beforeUpdate = DateTime.UtcNow;
+        Thread.Sleep(10);
+        agent.UpdateStrategy(newStrategy);
+
+        // Assert
+        agent.Strategy.Name.Should().Be("MultiModelConsensus");
+        agent.Strategy.GetParameter<double>("ConsensusThreshold", 0).Should().Be(0.9);
+        agent.UpdatedAt.Should().NotBeNull().And.BeOnOrAfter(beforeUpdate);
+    }
+
+    [Fact]
+    public void UpdateStrategy_WithNullStrategy_ShouldThrowArgumentNullException()
+    {
+        // Arrange
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+
+        // Act
+        var act = () => agent.UpdateStrategy(null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("strategy");
+    }
 }
+

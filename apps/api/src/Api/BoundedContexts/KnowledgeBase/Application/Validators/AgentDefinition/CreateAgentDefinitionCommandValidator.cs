@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using FluentValidation;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Validators.AgentDefinition;
@@ -6,10 +7,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Validators.AgentDefiniti
 /// <summary>
 /// Validator for CreateAgentDefinitionCommand.
 /// Issue #3808 (Epic #3687)
+/// Issue #3708: Extended with Type field validation.
 /// </summary>
 internal sealed class CreateAgentDefinitionCommandValidator : AbstractValidator<CreateAgentDefinitionCommand>
 {
     private static readonly string[] s_allowedRoles = { "system", "user", "assistant", "function" };
+    private static readonly string[] s_allowedTypes = { "RAG", "Citation", "Confidence", "RulesInterpreter", "Conversation" };
 
     public CreateAgentDefinitionCommandValidator()
     {
@@ -19,6 +22,19 @@ internal sealed class CreateAgentDefinitionCommandValidator : AbstractValidator<
 
         RuleFor(x => x.Description)
             .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters");
+
+        RuleFor(x => x.Type)
+            .NotEmpty().WithMessage("Type is required")
+            .Must(t => AgentType.TryParse(t, out _))
+            .WithMessage($"Type must be one of: {string.Join(", ", s_allowedTypes)}, or a custom value");
+
+        RuleFor(x => x.StrategyName)
+            .MaximumLength(100).WithMessage("StrategyName must not exceed 100 characters")
+            .When(x => !string.IsNullOrWhiteSpace(x.StrategyName));
+
+        RuleFor(x => x.StrategyParameters)
+            .Must(p => p == null || p.Count <= 50).WithMessage("StrategyParameters cannot have more than 50 entries")
+            .When(x => x.StrategyParameters != null);
 
         RuleFor(x => x.Model)
             .NotEmpty().WithMessage("Model is required")

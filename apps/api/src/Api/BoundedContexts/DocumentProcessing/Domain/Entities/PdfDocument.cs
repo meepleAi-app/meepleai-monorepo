@@ -30,6 +30,12 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public int? PageCount { get; private set; }
     public string? ProcessingError { get; private set; }
 
+    // Issue #4216: Retry mechanism and error categorization
+    public int RetryCount { get; private set; }
+    public int MaxRetries => 3;
+    public ErrorCategory? ErrorCategory { get; private set; }
+    public PdfProcessingState? FailedAtState { get; private set; }
+
     // Issue #2029: Language detection for PDF filtering
     public LanguageCode Language { get; private set; }
 
@@ -83,6 +89,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         ProcessingState = PdfProcessingState.Pending;
         ProcessingStatus = "pending"; // Backward compat
 
+        // Issue #4216: Initialize retry tracking
+        RetryCount = 0;
+
         Language = language ?? LanguageCode.English; // Default to English
         CollectionId = collectionId;
         DocumentType = documentType ?? ValueObjects.DocumentType.Base; // Default to base
@@ -95,6 +104,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
     /// Issue #3664: Added PrivateGameId
     /// Issue #4215: Added ProcessingState enum support
+    /// Issue #4216: Added retry tracking fields
     /// </summary>
     public static PdfDocument Reconstitute(
         Guid id,
@@ -117,7 +127,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         Guid? contributorId = null,
         Guid? sourceDocumentId = null,
         Guid? privateGameId = null,
-        PdfProcessingState? processingState = null)
+        PdfProcessingState? processingState = null,
+        int retryCount = 0,
+        ErrorCategory? errorCategory = null,
+        PdfProcessingState? failedAtState = null)
     {
         var document = new PdfDocument
         {
@@ -140,6 +153,12 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ProcessedAt = processedAt,
             PageCount = pageCount,
             ProcessingError = processingError,
+
+            // Issue #4216: Retry tracking
+            RetryCount = retryCount,
+            ErrorCategory = errorCategory,
+            FailedAtState = failedAtState,
+
             Language = language,
             CollectionId = collectionId,
             DocumentType = documentType ?? ValueObjects.DocumentType.Base,
@@ -176,12 +195,68 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         ProcessedAt = DateTime.UtcNow;
     }
 
-    // Deprecated: Use TransitionTo() instead (remove in Issue #4216)
+    // Deprecated: Use MarkAsFailed(error, category, state) instead (remove in Issue #4216)
     public void MarkAsFailed(string error)
     {
+        MarkAsFailed(error, Enums.ErrorCategory.Unknown, ProcessingState);
+    }
+
+    /// <summary>
+    /// Marks the document as failed with error categorization.
+    /// Issue #4216: Enhanced failure tracking with category and recovery point.
+    /// </summary>
+    /// <param name="error">The error message.</param>
+    /// <param name="category">The error category for retry strategy.</param>
+    /// <param name="failedAtState">The state where failure occurred.</param>
+    public void MarkAsFailed(string error, ErrorCategory category, PdfProcessingState failedAtState)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(error);
+
         ProcessingError = error;
+        ErrorCategory = category;
+        FailedAtState = failedAtState;
         TransitionTo(PdfProcessingState.Failed);
         ProcessedAt = DateTime.UtcNow;
+
+        // Issue #4220: Emit event for notification system
+        AddDomainEvent(new PdfFailedEvent(Id, category, failedAtState, error, UploadedByUserId));
+    }
+
+    /// <summary>
+    /// Determines if the document can be retried after failure.
+    /// Issue #4216: Retry eligibility check.
+    /// </summary>
+    /// <returns>True if retry is allowed, false otherwise.</returns>
+    public bool CanRetry()
+    {
+        return RetryCount < MaxRetries && ProcessingState == PdfProcessingState.Failed;
+    }
+
+    /// <summary>
+    /// Retries processing from the failed state.
+    /// Issue #4216: Manual retry mechanism.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when retry is not allowed.</exception>
+    public void Retry()
+    {
+        if (!CanRetry())
+        {
+            throw new InvalidOperationException(
+                $"Cannot retry: RetryCount={RetryCount}, MaxRetries={MaxRetries}, State={ProcessingState}");
+        }
+
+        RetryCount++;
+
+        // Resume from failed state or restart from Extracting
+        var resumeState = FailedAtState ?? PdfProcessingState.Extracting;
+        TransitionTo(resumeState);
+
+        // Clear error state
+        ProcessingError = null;
+        ProcessedAt = null;
+
+        // Emit event to trigger pipeline resumption
+        AddDomainEvent(new PdfRetryInitiatedEvent(Id, RetryCount, UploadedByUserId));
     }
 
     /// <summary>

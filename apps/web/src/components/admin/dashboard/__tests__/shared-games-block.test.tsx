@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { SharedGamesBlock } from '../shared-games-block';
+import * as adminClientModule from '@/lib/api/admin-client';
 
 // Mock dependencies
 vi.mock('@/lib/api/admin-client', () => ({
@@ -18,29 +19,13 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }));
 
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-function renderWithQueryClient(ui: React.ReactElement) {
-  const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
-}
-
 describe('SharedGamesBlock', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders block header with title and badge', () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
       items: [],
       totalCount: 23,
       page: 1,
@@ -48,7 +33,7 @@ describe('SharedGamesBlock', () => {
       totalPages: 4,
     });
 
-    renderWithQueryClient(<SharedGamesBlock />);
+    renderWithQuery(<SharedGamesBlock />);
 
     expect(screen.getByRole('heading', { name: /approval queue/i })).toBeInTheDocument();
     expect(screen.getByText(/23 pending/i)).toBeInTheDocument();
@@ -59,12 +44,11 @@ describe('SharedGamesBlock', () => {
   });
 
   it('displays loading skeletons initially', () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockImplementation(
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockImplementation(
       () => new Promise(() => {})
     );
 
-    const { container } = renderWithQueryClient(<SharedGamesBlock />);
+    const { container } = renderWithQuery(<SharedGamesBlock />);
 
     // Should show 6 skeleton cards
     const skeletons = container.querySelectorAll('.animate-pulse');
@@ -72,8 +56,7 @@ describe('SharedGamesBlock', () => {
   });
 
   it('displays game cards when data loads', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
       items: [
         {
           gameId: '1',
@@ -98,7 +81,7 @@ describe('SharedGamesBlock', () => {
       totalPages: 1,
     });
 
-    renderWithQueryClient(<SharedGamesBlock />);
+    renderWithQuery(<SharedGamesBlock />);
 
     await waitFor(() => {
       expect(screen.getByText(/twilight imperium/i)).toBeInTheDocument();
@@ -107,8 +90,7 @@ describe('SharedGamesBlock', () => {
   });
 
   it('shows urgent badge for games 7+ days pending', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
       items: [
         {
           gameId: '1',
@@ -125,7 +107,7 @@ describe('SharedGamesBlock', () => {
       totalPages: 1,
     });
 
-    renderWithQueryClient(<SharedGamesBlock />);
+    renderWithQuery(<SharedGamesBlock />);
 
     await waitFor(() => {
       expect(screen.getByText(/urgent/i)).toBeInTheDocument();
@@ -133,8 +115,7 @@ describe('SharedGamesBlock', () => {
   });
 
   it('toggles between grid and list views', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
       items: [],
       totalCount: 0,
       page: 1,
@@ -142,7 +123,7 @@ describe('SharedGamesBlock', () => {
       totalPages: 0,
     });
 
-    renderWithQueryClient(<SharedGamesBlock />);
+    renderWithQuery(<SharedGamesBlock />);
 
     const buttons = screen.getAllByRole('button');
     const gridButton = buttons.find((btn) => btn.querySelector('svg'));
@@ -153,8 +134,7 @@ describe('SharedGamesBlock', () => {
   });
 
   it('filters games by search query', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
       items: [],
       totalCount: 0,
       page: 1,
@@ -162,7 +142,7 @@ describe('SharedGamesBlock', () => {
       totalPages: 0,
     });
 
-    renderWithQueryClient(<SharedGamesBlock />);
+    renderWithQuery(<SharedGamesBlock />);
 
     const searchInput = screen.getByPlaceholderText(/search games/i);
     fireEvent.change(searchInput, { target: { value: 'Wingspan' } });
@@ -171,8 +151,7 @@ describe('SharedGamesBlock', () => {
   });
 
   it('shows empty state when no games', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockResolvedValue({
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
       items: [],
       totalCount: 0,
       page: 1,
@@ -180,7 +159,7 @@ describe('SharedGamesBlock', () => {
       totalPages: 0,
     });
 
-    renderWithQueryClient(<SharedGamesBlock />);
+    renderWithQuery(<SharedGamesBlock />);
 
     await waitFor(() => {
       expect(screen.getByText(/no games in approval queue/i)).toBeInTheDocument();
@@ -188,10 +167,9 @@ describe('SharedGamesBlock', () => {
   });
 
   it('handles undefined API response gracefully', async () => {
-    const { adminClient } = require('@/lib/api/admin-client');
-    adminClient.getApprovalQueue.mockResolvedValue(undefined);
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue(undefined);
 
-    renderWithQueryClient(<SharedGamesBlock />);
+    renderWithQuery(<SharedGamesBlock />);
 
     await waitFor(() => {
       expect(screen.getByText(/no games in approval queue/i)).toBeInTheDocument();

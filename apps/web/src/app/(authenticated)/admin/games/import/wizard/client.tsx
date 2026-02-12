@@ -23,6 +23,7 @@ import { WizardSteps } from '@/components/wizard';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
 import { Step1UploadPdf } from './steps/Step1UploadPdf';
+import { Step3BggMatch } from './steps/Step3BggMatch';
 
 type WizardStep = 1 | 2 | 3 | 4;
 
@@ -48,6 +49,7 @@ export function AdminGameImportWizardClient() {
     uploadedPdf,
     extractedMetadata,
     selectedBggId,
+    bggGameData,
     enrichedData,
     isProcessing,
     error,
@@ -59,6 +61,7 @@ export function AdminGameImportWizardClient() {
     submitWizard,
     setUploadedPdf,
     setStep,
+    setSelectedBggId,
   } = useGameImportWizardStore();
 
   // Handle submission
@@ -218,25 +221,11 @@ export function AdminGameImportWizardClient() {
 
           {/* Step 3: BGG Selection */}
           {currentStep === 3 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Select BoardGameGeek Game</h3>
-              <p className="text-sm text-muted-foreground">
-                Search and select the matching game from BoardGameGeek.
-              </p>
-              {selectedBggId ? (
-                <div className="rounded-md border bg-background p-4">
-                  <p className="text-sm">
-                    <strong>Selected BGG ID:</strong> {selectedBggId}
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-md border-2 border-dashed p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    BGG selection component will be implemented in a separate issue
-                  </p>
-                </div>
-              )}
-            </div>
+            <Step3BggMatch
+              onComplete={(bggId, data) => {
+                setSelectedBggId(bggId, data);
+              }}
+            />
           )}
 
           {/* Step 4: Resolve Conflicts */}

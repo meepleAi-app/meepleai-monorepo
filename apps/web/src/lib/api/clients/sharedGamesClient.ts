@@ -642,6 +642,64 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       return result;
     },
 
+    // ========== PDF Wizard Upload (Issue #4168) ==========
+
+    /**
+     * Upload PDF for wizard import workflow (ADMIN/EDITOR)
+     * Issue #4168: Wizard-specific upload endpoint
+     *
+     * Uploads PDF to temporary storage for wizard processing.
+     * Does not require gameId (wizard-specific endpoint).
+     *
+     * @param file - PDF file to upload
+     * @param onProgress - Optional progress callback (0-100)
+     * @returns Upload result with documentId
+     */
+    async wizardUploadPdf(
+      file: File,
+      onProgress?: (percent: number) => void
+    ): Promise<{ documentId: string; fileName: string }> {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const WizardUploadResultSchema = z.object({
+        documentId: z.string(),
+        fileName: z.string(),
+      });
+
+      // Use XMLHttpRequest for progress tracking
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', e => {
+          if (e.lengthComputable && onProgress) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            onProgress(percent);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              const validated = WizardUploadResultSchema.parse(response);
+              resolve(validated);
+            } catch (error) {
+              reject(new Error('Invalid response format'));
+            }
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        xhr.open('POST', '/api/v1/admin/games/wizard/upload-pdf');
+        xhr.send(formData);
+      });
+    },
+
     // ========== AI Agent Linking (Issue #4230 - Mock API) ==========
     // TODO: Replace with real API when Issue #2 (Backend linking API) is complete
 

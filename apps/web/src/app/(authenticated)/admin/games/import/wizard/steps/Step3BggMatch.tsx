@@ -20,18 +20,18 @@ import type { JSX } from 'react';
 import { Search, Loader2, ExternalLink, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/data-display/badge';
 import { Card } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { Badge } from '@/components/ui/data-display/badge';
+import { Separator } from '@/components/ui/navigation/separator';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { Separator } from '@/components/ui/navigation/separator';
 import { useSearchBggGames } from '@/hooks/queries/useSearchBggGames';
-import { calculateStringSimilarity } from '@/lib/utils/string-similarity';
-import { useGameImportWizardStore, type BggGameData } from '@/stores/useGameImportWizardStore';
+import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 import { cn } from '@/lib/utils';
-import { api } from '@/lib/api';
+import { calculateStringSimilarity } from '@/lib/utils/string-similarity';
+import { useGameImportWizardStore, type BggGameData } from '@/stores/useGameImportWizardStore';
 
 export interface Step3BggMatchProps {
   /** Callback when BGG game is selected */

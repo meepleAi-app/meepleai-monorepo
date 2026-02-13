@@ -185,7 +185,7 @@ export function usePdfStatus(
 
     try {
       const eventSource = new EventSource(
-        `/api/v1/documents/${documentId}/status/stream`
+        `/api/v1/pdfs/${documentId}/status/stream`
       );
 
       eventSourceRef.current = eventSource;

@@ -539,6 +539,7 @@ v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 v1Api.MapKnowledgeBaseEndpoints();
 v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 v1Api.MapRagDashboardEndpoints();   // Issue #3304: RAG Dashboard configuration and metrics
+v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strategies endpoint
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();

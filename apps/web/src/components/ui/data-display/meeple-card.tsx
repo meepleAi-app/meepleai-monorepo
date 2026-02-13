@@ -65,6 +65,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/contexts/PermissionContext';
+import { TierBadge } from '@/components/ui/feedback/tier-badge';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
@@ -234,6 +236,16 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   showInfoButton?: boolean;
   infoHref?: string;
   infoTooltip?: string;
+
+  // ========== PERMISSION SYSTEM (Epic #4068 - Issue #4179) ==========
+
+  /** Permission override for testing/preview (optional) */
+  permissions?: {
+    tier: import('@/types/permissions').UserTier;
+    role: import('@/types/permissions').UserRole;
+    canAccess: (feature: string) => boolean;
+    isAdmin: () => boolean;
+  };
 }
 
 // ============================================================================
@@ -735,7 +747,12 @@ export const MeepleCard = React.memo(function MeepleCard({
   showInfoButton,
   infoHref,
   infoTooltip,
+  permissions: permissionsOverride,
 }: MeepleCardProps) {
+  // Epic #4068 - Issue #4179: Permission integration
+  const defaultPermissions = usePermissions();
+  const permissions = permissionsOverride ?? defaultPermissions;
+
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
   const isHeroOrFeatured = variant === 'hero' || variant === 'featured';
@@ -744,11 +761,31 @@ export const MeepleCard = React.memo(function MeepleCard({
   // Avoid nested-interactive: don't make card clickable when it has action buttons
   const isInteractive = !!onClick && !showActions;
 
-  // Feature visibility logic (Issue #3820)
+  // Feature visibility logic (Issue #3820 + Epic #4068)
   // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = quickActions && quickActions.length > 0;
-  const showWishlistBtn = showWishlist && !hasQuickActions; // Priority: quickActions > wishlist
+
+  // Permission-aware feature visibility (Epic #4068 - Issue #4179)
+  const canUseWishlist = permissions.canAccess('wishlist');
+  const canUseBulkSelect = permissions.canAccess('bulk-select');
+  const canUseDragDrop = permissions.canAccess('drag-drop');
+
+  const showWishlistBtn = showWishlist && canUseWishlist && !hasQuickActions; // Permission check added
+  const showSelectCheckbox = selectable && canUseBulkSelect;
+  const enableDrag = draggable && canUseDragDrop;
+
+  // Filter quick actions by permission (Epic #4068 - Issue #4179)
+  const filteredQuickActions = quickActions?.filter(action => {
+    // Admin-only actions require admin role
+    if (action.adminOnly && !permissions.isAdmin()) {
+      return false;
+    }
+    // Respect hidden flag
+    return !action.hidden;
+  });
+
+  const hasFilteredQuickActions = filteredQuickActions && filteredQuickActions.length > 0;
 
   if (loading) {
     return <MeepleCardSkeleton variant={variant} />;
@@ -786,10 +823,10 @@ export const MeepleCard = React.memo(function MeepleCard({
       data-entity={entity}
       data-variant={variant}
     >
-      {/* Feature: Bulk Selection Checkbox (highest z-index) */}
-      {selectable && (
+      {/* Feature: Bulk Selection Checkbox (highest z-index) - Permission checked */}
+      {showSelectCheckbox && (
         <BulkSelectCheckbox
-          selectable={selectable}
+          selectable={showSelectCheckbox}
           selected={!!selected}
           onSelect={onSelect || (() => {})}
           id={testId || 'card'}
@@ -824,10 +861,10 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       )}
 
-      {/* Feature: Drag Handle (list variant, left side) */}
-      {draggable && variant === 'list' && dragData && (
+      {/* Feature: Drag Handle (list variant, left side) - Permission checked */}
+      {enableDrag && variant === 'list' && dragData && (
         <DragHandle
-          draggable={draggable}
+          draggable={enableDrag}
           dragData={dragData as DragData}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
@@ -861,9 +898,9 @@ export const MeepleCard = React.memo(function MeepleCard({
               />
             )}
 
-            {/* Legacy quick actions menu (Issue #3825) */}
-            {hasQuickActions && !entityQuickActions && (
-              <QuickActionsMenu actions={quickActions} userRole={userRole} size="sm" />
+            {/* Legacy quick actions menu (Issue #3825) - Permission filtered */}
+            {hasFilteredQuickActions && !entityQuickActions && (
+              <QuickActionsMenu actions={filteredQuickActions} userRole={userRole} size="sm" />
             )}
 
             {/* Wishlist button (if no entity quick actions) */}
@@ -950,9 +987,16 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
+        {/* Tier Badge (Epic #4068 - top-right, always visible for non-free tiers) */}
+        {permissions.tier !== 'free' && (
+          <div className="absolute top-3 right-3 z-20">
+            <TierBadge tier={permissions.tier} />
+          </div>
+        )}
+
         {/* Badge overlay (only for non-grid/non-featured variants without VerticalTagStack) */}
         {badge && variant !== 'grid' && variant !== 'featured' && !isHeroOrFeatured && (
-          <span className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
+          <span className="absolute top-12 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
             {badge}
           </span>
         )}

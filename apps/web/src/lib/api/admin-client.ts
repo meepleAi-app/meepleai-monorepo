@@ -68,7 +68,8 @@ export const adminClient = {
     const response = await apiClient.get<AdminStats>(
       `/admin/stats?${query.toString()}`
     );
-    return response.data;
+    if (!response) throw new Error('API request failed');
+  return response;
   },
 
   // Shared Games Management
@@ -87,7 +88,8 @@ export const adminClient = {
     const response = await apiClient.get<PagedResult<ApprovalQueueItem>>(
       `/admin/shared-games/approval-queue?${query.toString()}`
     );
-    return response.data;
+    if (!response) throw new Error('API request failed');
+  return response;
   },
 
   async batchApproveGames(gameIds: string[]): Promise<void> {
@@ -116,26 +118,30 @@ export const adminClient = {
     const response = await apiClient.get<PagedResult<User>>(
       `/admin/users?${query.toString()}`
     );
-    return response.data;
+    if (!response) throw new Error('API request failed');
+  return response;
   },
 
   async getUserDetail(userId: string): Promise<User> {
     const response = await apiClient.get<User>(`/admin/users/${userId}`);
-    return response.data;
+    if (!response) throw new Error('API request failed');
+  return response;
   },
 
   async getUserLibraryStats(userId: string): Promise<UserLibraryStats> {
     const response = await apiClient.get<UserLibraryStats>(
       `/admin/users/${userId}/library/stats`
     );
-    return response.data;
+    if (!response) throw new Error('API request failed');
+  return response;
   },
 
   async getUserBadges(userId: string): Promise<UserBadge[]> {
     const response = await apiClient.get<UserBadge[]>(
       `/admin/users/${userId}/badges`
     );
-    return response.data;
+    if (!response) throw new Error('API request failed');
+  return response;
   },
 
   async suspendUser(userId: string): Promise<void> {
@@ -158,6 +164,7 @@ export const adminClient = {
     const response = await apiClient.post<{ sessionToken: string }>(
       `/admin/users/${userId}/impersonate`
     );
-    return response.data;
+    if (!response) throw new Error('API request failed');
+  return response;
   },
 };

@@ -85,7 +85,7 @@ public sealed class Permission
                 ? PermissionCheckResult.Allowed("Both tier and role sufficient")
                 : PermissionCheckResult.Denied("Both tier and role required"),
 
-            _ => throw new ArgumentOutOfRangeException()
+            _ => throw new InvalidOperationException($"Invalid permission logic: {Logic}")
         };
     }
 }

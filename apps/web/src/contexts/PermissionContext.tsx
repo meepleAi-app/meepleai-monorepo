@@ -18,11 +18,29 @@ interface PermissionContextValue {
 const PermissionContext = createContext<PermissionContextValue | null>(null);
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['permissions', 'me'],
     queryFn: getUserPermissions,
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
+    retry: 2
   });
+
+  // Error handling: fallback to safe default permissions
+  if (error) {
+    console.error('Failed to load user permissions:', error);
+
+    // Return minimal safe defaults (Free tier, User role)
+    const safeDefaults: PermissionContextValue = {
+      tier: 'free',
+      role: 'user',
+      canAccess: () => false, // Deny all features on error (safe default)
+      hasTier: () => false,
+      isAdmin: () => false,
+      loading: false
+    };
+
+    return <PermissionContext.Provider value={safeDefaults}>{children}</PermissionContext.Provider>;
+  }
 
   const value: PermissionContextValue = {
     tier: data?.tier ?? 'free',

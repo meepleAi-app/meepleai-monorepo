@@ -3,12 +3,14 @@ import type { UserPermissions, PermissionCheckResponse } from '@/types/permissio
 
 export async function getUserPermissions(): Promise<UserPermissions> {
   const response = await apiClient.get<UserPermissions>('/api/v1/permissions/me');
-  return response.data;
+  if (!response) throw new Error('Failed to fetch user permissions');
+  return response;
 }
 
 export async function checkPermission(feature: string, state?: string): Promise<PermissionCheckResponse> {
   const params = new URLSearchParams({ feature });
   if (state) params.append('state', state);
   const response = await apiClient.get<PermissionCheckResponse>(`/api/v1/permissions/check?${params}`);
-  return response.data;
+  if (!response) throw new Error('Failed to check permission');
+  return response;
 }

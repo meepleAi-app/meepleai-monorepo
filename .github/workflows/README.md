@@ -12,7 +12,7 @@ Workflows are organized by category with consistent naming prefixes:
 ├── deploy-production.yml     # Production deployment
 │
 ├── # Testing (test- prefix)
-├── test-e2e.yml              # Full E2E suite (4-shard parallel)
+├── test-e2e.yml              # Full E2E suite (6-shard parallel)
 ├── test-performance.yml      # K6 + Lighthouse performance
 ├── test-visual.yml           # Playwright + Chromatic visual
 │
@@ -48,8 +48,9 @@ Workflows are organized by category with consistent naming prefixes:
 
 ### test-e2e.yml - Full E2E Suite
 - **Triggers**: Push/PR with web/api changes
-- **Jobs**: 4-shard parallel Playwright tests, quality gate (≥90% pass rate)
-- **Features**: Full browser matrix, coverage reports, PR comments
+- **Jobs**: 6-shard parallel Playwright tests, quality gate (≥90% pass rate)
+- **Features**: Full browser matrix, Playwright browser caching, coverage reports, PR comments
+- **Optimization** (Issue #3082): Increased from 4 to 6 shards (~30% faster), added browser caching (80-90% cache hit rate)
 
 ### test-performance.yml - Performance Testing
 - **Triggers**: Nightly schedule, PR with api/web changes, manual

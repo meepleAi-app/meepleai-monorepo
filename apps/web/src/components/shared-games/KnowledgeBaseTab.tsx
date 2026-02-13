@@ -17,6 +17,7 @@ import { useQueries } from '@tanstack/react-query';
 import { Database, FileText, Loader2 } from 'lucide-react';
 
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
+import { PdfStatusBadge } from '@/components/pdf';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -24,6 +25,7 @@ import { agentDocumentsKeys } from '@/hooks/queries/useAgentDocuments';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { api } from '@/lib/api';
 import type { AgentDocumentsDto, SelectedDocumentDto } from '@/lib/api/schemas';
+import type { PdfState } from '@/types/pdf';
 
 // ============================================================================
 // Types
@@ -169,6 +171,9 @@ function DocumentCard({ document }: DocumentCardProps) {
   const typeLabel = DOCUMENT_TYPE_LABELS[document.documentType] || 'Unknown';
   const typeVariant = DOCUMENT_TYPE_VARIANTS[document.documentType] || 'secondary';
 
+  // Map document state to PdfState (simplified for now - can be enhanced with real data)
+  const pdfState: PdfState = 'ready'; // TODO: Get actual state from API
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -188,9 +193,13 @@ function DocumentCard({ document }: DocumentCardProps) {
                 </p>
               </div>
             </div>
-            <Badge variant={typeVariant} className="flex-shrink-0">
-              {typeLabel}
-            </Badge>
+            <div className="flex gap-2 flex-shrink-0">
+              {/* New: PdfStatusBadge (Issue #4217) */}
+              <PdfStatusBadge state={pdfState} variant="compact" />
+              <Badge variant={typeVariant}>
+                {typeLabel}
+              </Badge>
+            </div>
           </div>
 
           {/* Indexing Status */}

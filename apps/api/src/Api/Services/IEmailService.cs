@@ -146,4 +146,26 @@ internal interface IEmailService
         string gameTitle,
         Guid sharedGameId,
         CancellationToken ct = default);
+
+    // ISSUE-4220: PDF notification emails
+    Task SendPdfReadyEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        Guid pdfDocumentId,
+        CancellationToken ct = default);
+
+    Task SendPdfFailedEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        string errorMessage,
+        CancellationToken ct = default);
+
+    Task SendPdfRetryEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        int retryCount,
+        CancellationToken ct = default);
 }

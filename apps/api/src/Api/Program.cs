@@ -10,6 +10,7 @@ using Api.Models;
 using Api.Observability;
 using Api.Routing;
 using Api.Routing.GameManagement;
+using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.Services;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -466,6 +467,7 @@ v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
+v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
@@ -499,6 +501,7 @@ v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
+v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
 v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)

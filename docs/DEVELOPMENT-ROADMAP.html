@@ -1,765 +1,1220 @@
+
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MeepleAI Roadmap - 87 Issue • Dual Fullstack Terminals</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        quicksand: ['Quicksand', 'sans-serif'],
-                        nunito: ['Nunito', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+    <title>MeepleAI Development Roadmap - 85 Issues Across 8 Parallel Streams</title>
     <style>
-        body { font-family: 'Nunito', sans-serif; }
-
-        .issue-row {
-            display: flex;
-            align-items: center;
-            padding: 10px 12px;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            cursor: pointer;
-            transition: all 0.15s;
-            border-left: 3px solid transparent;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-
-        .issue-row:hover {
-            transform: translateX(4px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
         }
-
-        .issue-row.p1 {
-            background: linear-gradient(to right, #fef3c7, #ffffff);
-            border-left-color: #f59e0b;
-        }
-
-        .issue-row.p2 {
-            background: linear-gradient(to right, #e0e7ff, #ffffff);
-            border-left-color: #6366f1;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .badge-fe { background: #bfdbfe; color: #1e40af; }
-        .badge-be { background: #bbf7d0; color: #15803d; }
-        .badge-fs { background: #fbcfe8; color: #9f1239; }
-        .badge-s { background: #d1fae5; color: #065f46; }
-        .badge-m { background: #fde68a; color: #78350f; }
-        .badge-l { background: #fecaca; color: #991b1b; }
-
-        .terminal-box {
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
         }
-
-        .terminal-header {
-            background: linear-gradient(135deg, #1e293b, #334155);
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 12px 16px;
-            font-weight: 600;
+            padding: 40px;
+            text-align: center;
         }
-
-        .section-toggle {
-            cursor: pointer;
-            user-select: none;
-            transition: opacity 0.2s;
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
         }
-
-        .section-toggle:hover {
-            opacity: 0.7;
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
         }
-
-        .collapsible {
-            max-height: 3000px;
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px 40px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .metric {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .streams {
+            padding: 40px;
+        }
+        .stream {
+            margin-bottom: 40px;
+            border: 2px solid #667eea;
+            border-radius: 15px;
             overflow: hidden;
-            transition: max-height 0.3s ease;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
-        .collapsible.collapsed {
-            max-height: 0;
+        .stream-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        .validation-checkbox {
-            cursor: pointer;
-            accent-color: #f43f5e;
+        .stream-title {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .stream-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+        }
+        .stream-stat {
+            padding: 5px 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+        }
+        .sequences {
+            padding: 20px;
+        }
+        .sequence {
+            margin-bottom: 20px;
+            border-left: 3px solid #667eea;
+            padding-left: 15px;
+        }
+        .sequence-header {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #495057;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .issues-grid {
+            display: grid;
+            gap: 10px;
+        }
+        .issue {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        .issue:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .issue-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .issue-priority {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .priority-high {
+            background: #ff6b6b;
+            color: white;
+        }
+        .priority-medium {
+            background: #ffd93d;
+            color: #333;
+        }
+        .priority-low {
+            background: #95e1d3;
+            color: #333;
+        }
+        .issue-title {
+            color: #495057;
+            line-height: 1.4;
+        }
+        .issue-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        .label {
+            padding: 3px 8px;
+            background: #e9ecef;
+            border-radius: 3px;
+            font-size: 0.75em;
+            color: #6c757d;
+        }
+        .epics {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        .epics-header {
+            font-size: 2em;
+            color: #495057;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .epic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .epic {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border-left: 5px solid #764ba2;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            color: #6c757d;
+            border-top: 2px solid #e9ecef;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-100 via-white to-zinc-100 min-h-screen p-6">
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 MeepleAI Development Roadmap</h1>
+            <p>Parallel Execution Plan - 5.9x Faster</p>
+        </div>
 
-    <div class="max-w-[1600px] mx-auto">
-        <!-- Header -->
-        <div class="mb-6 p-6 rounded-2xl bg-white shadow-lg border border-zinc-200">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-quicksand font-bold text-zinc-900">MeepleAI Development Roadmap</h1>
-                    <p class="text-sm text-zinc-600">87 Open Issues • Dual Fullstack Terminals • PM Agent Orchestrated</p>
-                </div>
+        <div class="metrics">
+            <div class="metric">
+                <span class="metric-value">85</span>
+                <div class="metric-label">Total Issues</div>
             </div>
-
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-6 gap-3">
-                <div class="p-3 rounded-lg bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-300">
-                    <div class="text-xs text-amber-700 font-semibold">P1 High</div>
-                    <div class="text-3xl font-quicksand font-bold text-amber-600">15</div>
-                </div>
-                <div class="p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-300">
-                    <div class="text-xs text-indigo-700 font-semibold">P2 Medium</div>
-                    <div class="text-3xl font-quicksand font-bold text-indigo-600">4</div>
-                </div>
-                <div class="p-3 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-300">
-                    <div class="text-xs text-emerald-700 font-semibold">Backlog</div>
-                    <div class="text-3xl font-quicksand font-bold text-emerald-600">68</div>
-                </div>
-                <div class="p-3 rounded-lg bg-gradient-to-br from-rose-50 to-rose-100 border border-rose-300">
-                    <div class="text-xs text-rose-700 font-semibold">Validate</div>
-                    <div class="text-3xl font-quicksand font-bold text-rose-600">20+</div>
-                </div>
-                <div class="p-3 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-300">
-                    <div class="text-xs text-purple-700 font-semibold">Total Open</div>
-                    <div class="text-3xl font-quicksand font-bold text-purple-600">87</div>
-                </div>
-                <div class="p-3 rounded-lg bg-gradient-to-br from-cyan-50 to-cyan-100 border border-cyan-300">
-                    <div class="text-xs text-cyan-700 font-semibold">Terminals</div>
-                    <div class="text-3xl font-quicksand font-bold text-cyan-600">2</div>
-                </div>
+            <div class="metric">
+                <span class="metric-value">8</span>
+                <div class="metric-label">Work Streams</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">10</span>
+                <div class="metric-label">Epics</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">15</span>
+                <div class="metric-label">Days (Parallel)</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">89</span>
+                <div class="metric-label">Days (Sequential)</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">5.9x</span>
+                <div class="metric-label">Speedup</div>
             </div>
         </div>
 
-        <!-- Priority Work: Dual Terminal Sequences -->
-        <div class="mb-6">
-            <div class="section-toggle flex items-center gap-2 p-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg" onclick="toggleSection('terminals')">
-                <svg class="w-6 h-6 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-                <h2 class="font-quicksand font-bold text-2xl">🚀 Dual Terminal Sequences (19 issues P1+P2)</h2>
-                <span class="ml-auto text-sm font-mono">Terminal 1: 10 • Terminal 2: 9</span>
-            </div>
-
-            <div id="terminals" class="collapsible mt-4">
-                <div class="grid grid-cols-2 gap-6">
-
-                    <!-- TERMINAL 1 -->
-                    <div class="terminal-box">
-                        <div class="terminal-header">
-                            <div class="flex items-center gap-2">
-                                <span class="font-quicksand text-lg">Terminal 1: PDF Pipeline</span>
-                                <span class="ml-auto text-xs opacity-75">10 issues • ~18-22 days</span>
-                            </div>
-                        </div>
-                        <div class="p-4 bg-white">
-                            <div class="mb-3 p-2 bg-amber-50 rounded text-xs text-amber-800 border border-amber-200">
-                                <strong>Strategia:</strong> Backend foundation → Frontend UI → Fullstack integration
-                            </div>
-
-                            <!-- Issue Sequence -->
-                            <div class="space-y-1">
-                                <div class="issue-row p1" onclick="openIssue(4208)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">1.</span>
-                                    <span class="font-semibold text-sm mr-2">#4208</span>
-                                    <span class="badge badge-be">BE</span>
-                                    <span class="badge badge-l">L</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">PDF State Machine & Error Handling</span>
-                                </div>
-
-                                <div class="issue-row p1" onclick="openIssue(4209)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">2.</span>
-                                    <span class="font-semibold text-sm mr-2">#4209</span>
-                                    <span class="badge badge-be">BE</span>
-                                    <span class="badge badge-l">L</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">SSE Progress Stream for Public PDFs</span>
-                                </div>
-
-                                <div class="issue-row p1" onclick="openIssue(4212)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">3.</span>
-                                    <span class="font-semibold text-sm mr-2">#4212</span>
-                                    <span class="badge badge-be">BE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Processing Duration Metrics & ETA</span>
-                                </div>
-
-                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 2: Frontend UI</div>
-
-                                <div class="issue-row p1" onclick="openIssue(4217)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">4.</span>
-                                    <span class="font-semibold text-sm mr-2">#4217</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-l">L</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Multi-Location Status UI Components</span>
-                                </div>
-
-                                <div class="issue-row p1" onclick="openIssue(4210)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">5.</span>
-                                    <span class="font-semibold text-sm mr-2">#4210</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-l">L</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Real-time Progress UI Components</span>
-                                </div>
-
-                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 3: Fullstack Integration</div>
-
-                                <div class="issue-row p1" onclick="openIssue(4218)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">6.</span>
-                                    <span class="font-semibold text-sm mr-2">#4218</span>
-                                    <span class="badge badge-fs">FS</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Real-Time SSE Updates + Polling</span>
-                                </div>
-
-                                <div class="issue-row p1" onclick="openIssue(4211)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">7.</span>
-                                    <span class="font-semibold text-sm mr-2">#4211</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">SSE Connection Management & Fallback</span>
-                                </div>
-
-                                <div class="issue-row p1" onclick="openIssue(4213)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">8.</span>
-                                    <span class="font-semibold text-sm mr-2">#4213</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-l">L</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Configurable Notifications System</span>
-                                </div>
-
-                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 4: Enhancement</div>
-
-                                <div class="issue-row p2" onclick="openIssue(4219)">
-                                    <span class="w-6 text-xs font-bold text-indigo-600">9.</span>
-                                    <span class="font-semibold text-sm mr-2">#4219</span>
-                                    <span class="badge badge-fs">FS</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Duration Metrics & ETA UI</span>
-                                </div>
-
-                                <div class="issue-row p2" onclick="openIssue(4220)">
-                                    <span class="w-6 text-xs font-bold text-indigo-600">10.</span>
-                                    <span class="font-semibold text-sm mr-2">#4220</span>
-                                    <span class="badge badge-fs">FS</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Multi-Channel Notification System</span>
-                                </div>
-                            </div>
-
-                            <div class="mt-4 p-3 bg-zinc-50 rounded-lg text-xs">
-                                <div class="font-semibold mb-1">📟 Terminal 1 Commands</div>
-                                <code class="text-emerald-600">cd apps/api/src/Api && dotnet run</code><br>
-                                <code class="text-blue-600">cd apps/web && pnpm dev</code>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TERMINAL 2 -->
-                    <div class="terminal-box">
-                        <div class="terminal-header">
-                            <div class="flex items-center gap-2">
-                                <span class="font-quicksand text-lg">Terminal 2: Permissions + Tests</span>
-                                <span class="ml-auto text-xs opacity-75">9 issues • ~12-18 days</span>
-                            </div>
-                        </div>
-                        <div class="p-4 bg-white">
-                            <div class="mb-3 p-2 bg-blue-50 rounded text-xs text-blue-800 border border-blue-200">
-                                <strong>Strategia:</strong> Permission backend → Frontend integration → A11y → Testing
-                            </div>
-
-                            <!-- Issue Sequence -->
-                            <div class="space-y-1">
-                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">Week 1: Permission Backend</div>
-
-                                <div class="issue-row p1" onclick="openIssue(4177)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">1.</span>
-                                    <span class="font-semibold text-sm mr-2">#4177</span>
-                                    <span class="badge badge-be">BE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Permission Data Model & Schema</span>
-                                </div>
-
-                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 1-2: Permission Frontend</div>
-
-                                <div class="issue-row p1" onclick="openIssue(4178)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">2.</span>
-                                    <span class="font-semibold text-sm mr-2">#4178</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Permission Hooks & Utilities</span>
-                                </div>
-
-                                <div class="issue-row p1" onclick="openIssue(4179)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">3.</span>
-                                    <span class="font-semibold text-sm mr-2">#4179</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">MeepleCard Permission Integration</span>
-                                </div>
-
-                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 2: Accessibility & UX</div>
-
-                                <div class="issue-row p1" onclick="openIssue(4180)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">4.</span>
-                                    <span class="font-semibold text-sm mr-2">#4180</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Tooltip Accessibility WCAG 2.1 AA</span>
-                                </div>
-
-                                <div class="issue-row p2" onclick="openIssue(4182)">
-                                    <span class="w-6 text-xs font-bold text-indigo-600">5.</span>
-                                    <span class="font-semibold text-sm mr-2">#4182</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Tag System Integration in MeepleCard</span>
-                                </div>
-
-                                <div class="issue-row p2" onclick="openIssue(4186)">
-                                    <span class="w-6 text-xs font-bold text-indigo-600">6.</span>
-                                    <span class="font-semibold text-sm mr-2">#4186</span>
-                                    <span class="badge badge-fe">FE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Tooltip Positioning System</span>
-                                </div>
-
-                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 3: Testing & Validation</div>
-
-                                <div class="issue-row p1" onclick="openIssue(4160)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">7.</span>
-                                    <span class="font-semibold text-sm mr-2">#4160</span>
-                                    <span class="badge badge-be">BE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Wizard Integration Tests (Epic #4136)</span>
-                                </div>
-
-                                <div class="issue-row p1" onclick="openIssue(4185)">
-                                    <span class="w-6 text-xs font-bold text-amber-600">8.</span>
-                                    <span class="font-semibold text-sm mr-2">#4185</span>
-                                    <span class="badge badge-be">BE</span>
-                                    <span class="badge badge-m">M</span>
-                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Integration Testing & Documentation</span>
-                                </div>
-
-                                <div class="my-2 text-xs text-emerald-600 font-semibold pl-2">✓ Buffer: 4-6 days → Support Terminal 1</div>
-                            </div>
-
-                            <div class="mt-4 p-3 bg-zinc-50 rounded-lg text-xs">
-                                <div class="font-semibold mb-1">📟 Terminal 2 Commands</div>
-                                <code class="text-emerald-600">cd apps/api/src/Api && dotnet run</code><br>
-                                <code class="text-blue-600">cd apps/web && pnpm dev</code>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Execution Strategy -->
-                <div class="mt-6 p-6 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200">
-                    <h3 class="font-quicksand font-bold text-lg mb-3 text-purple-900">⚡ Parallel Execution Strategy</h3>
-                    <div class="grid grid-cols-2 gap-6 text-sm">
-                        <div>
-                            <div class="font-semibold text-purple-800 mb-2">Terminal 1: PDF Pipeline</div>
-                            <ul class="text-xs text-purple-700 space-y-1">
-                                <li>→ Week 1: Backend (#4208, #4209, #4212)</li>
-                                <li>→ Week 2: Frontend (#4217, #4210)</li>
-                                <li>→ Week 3: Integration (#4218, #4211, #4213)</li>
-                                <li>→ Week 4: Enhancement (#4219, #4220)</li>
-                            </ul>
-                        </div>
-                        <div>
-                            <div class="font-semibold text-purple-800 mb-2">Terminal 2: Permissions + Tests</div>
-                            <ul class="text-xs text-purple-700 space-y-1">
-                                <li>→ Week 1: Permission BE+FE (#4177-4179)</li>
-                                <li>→ Week 2: Accessibility (#4180, #4182, #4186)</li>
-                                <li>→ Week 3: Testing (#4160, #4185)</li>
-                                <li>→ Week 4: Support Terminal 1 integration</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+        <div class="streams">
+            
+    <div class="stream">
+        <div class="stream-header" style="background: #FF6B6B;">
+            <div class="stream-title">📄 PDF Processing & Status Tracking</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P1</div>
+                <div class="stream-stat">12 issues</div>
+                <div class="stream-stat">12 days</div>
             </div>
         </div>
-
-        <!-- Issue Incomplete: Validation Required -->
-        <div class="mb-6">
-            <div class="section-toggle flex items-center gap-2 p-4 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg" onclick="toggleSection('validation')">
-                <svg class="w-6 h-6 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-                <h2 class="font-quicksand font-bold text-2xl">⚠️ Issue Incomplete - Validation Required</h2>
-                <span class="ml-auto text-sm">15+ issues • Closed last 2 months</span>
-            </div>
-
-            <div id="validation" class="collapsible mt-4">
-                <div class="p-6 rounded-xl bg-white shadow-lg border border-rose-200">
-                    <p class="text-sm text-rose-700 mb-4">
-                        Issue chiuse dal 2025-12-13 con possibili acceptance criteria non completamente validati.
-                        <strong>Click per aprire e verificare tutti i checkbox.</strong>
-                    </p>
-
-                    <div class="grid grid-cols-3 gap-6">
-                        <!-- Epic #4136: PDF Wizard -->
-                        <div>
-                            <h3 class="font-semibold mb-3 text-zinc-800 flex items-center gap-2">
-                                <span class="text-lg">📋</span>
-                                <span>Epic #4136: PDF Wizard (8)</span>
-                            </h3>
-                            <div class="space-y-2">
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4154)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4154</span>
-                                        <span class="text-zinc-600">Upload PDF Command</span>
-                                    </div>
-                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: CQRS, validation, tests</div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4155)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4155</span>
-                                        <span class="text-zinc-600">Extract Metadata Query</span>
-                                    </div>
-                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: AI accuracy ≥80%</div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4156)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4156</span>
-                                        <span class="text-zinc-600">BGG Match Command</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4157)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4157</span>
-                                        <span class="text-zinc-600">Wizard Endpoints</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4161)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4161</span>
-                                        <span class="text-zinc-600">Wizard Container</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4162)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4162</span>
-                                        <span class="text-zinc-600">Upload PDF UI</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4163)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4163</span>
-                                        <span class="text-zinc-600">Metadata Extraction</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4168)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4168</span>
-                                        <span class="text-zinc-600">E2E Tests</span>
-                                    </div>
-                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: Coverage ≥85%</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Epic #4071: PDF Status -->
-                        <div>
-                            <h3 class="font-semibold mb-3 text-zinc-800 flex items-center gap-2">
-                                <span class="text-lg">🔄</span>
-                                <span>Epic #4071: PDF Status (2)</span>
-                            </h3>
-                            <div class="space-y-2">
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4215)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4215</span>
-                                        <span class="text-zinc-600">7-State Pipeline</span>
-                                    </div>
-                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: All states working</div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4216)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4216</span>
-                                        <span class="text-zinc-600">Error Handling & Retry</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Agent System + Testing -->
-                        <div>
-                            <h3 class="font-semibold mb-3 text-zinc-800 flex items-center gap-2">
-                                <span class="text-lg">🤖</span>
-                                <span>Agent + Testing (5)</span>
-                            </h3>
-                            <div class="space-y-2">
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4228)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4228</span>
-                                        <span class="text-zinc-600">Agent Linking</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4229)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4229</span>
-                                        <span class="text-zinc-600">KB Documents Display</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4230)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4230</span>
-                                        <span class="text-zinc-600">Agent Builder Integration</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4231)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4231</span>
-                                        <span class="text-zinc-600">E2E Manual Creation Flow</span>
-                                    </div>
-                                </div>
-                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4232)">
-                                    <div class="flex items-center gap-2">
-                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
-                                        <span class="font-semibold">#4232</span>
-                                        <span class="text-zinc-600">Integration Tests Workflows</span>
-                                    </div>
-                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: Coverage ≥90%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Validation Commands -->
-                    <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <h4 class="text-sm font-semibold text-amber-900 mb-2">📝 Validation Commands</h4>
-                        <div class="grid grid-cols-2 gap-3 text-xs font-mono">
-                            <div>
-                                <div class="text-amber-700 mb-1">Frontend Validation:</div>
-                                <div class="space-y-1">
-                                    <div><code>cd apps/web && pnpm test</code></div>
-                                    <div><code>pnpm test:e2e</code></div>
-                                    <div><code>pnpm typecheck</code></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="text-amber-700 mb-1">Backend Validation:</div>
-                                <div class="space-y-1">
-                                    <div><code>cd apps/api/src/Api</code></div>
-                                    <div><code>dotnet test</code></div>
-                                    <div><code>dotnet test /p:CollectCoverage=true</code></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">backend (4 issues - 3 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4208</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Backend - PDF Processing State Machine & Error Handling</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4209</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Backend - SSE Progress Stream for Public PDFs</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3715</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] PDF Analytics</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/pdf</span><span class="label">frontend</span><span class="label">backend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4140</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Backend: Test Suite - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">testing</span></div>
+    </div>
+    
             </div>
         </div>
-
-        <!-- Backlog: Future Work -->
-        <div class="mb-6">
-            <div class="section-toggle flex items-center gap-2 p-4 rounded-xl bg-gradient-to-r from-zinc-700 to-slate-800 text-white shadow-lg" onclick="toggleSection('backlog')">
-                <svg class="w-6 h-6 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-                <h2 class="font-quicksand font-bold text-2xl">📦 Backlog: Future Work (68 issues)</h2>
-                <span class="ml-auto text-sm opacity-75">No assigned priority</span>
-            </div>
-
-            <div id="backlog" class="collapsible collapsed mt-4">
-                <div class="p-6 rounded-xl bg-white shadow-lg border border-zinc-200">
-                    <div class="grid grid-cols-4 gap-6">
-                        <div>
-                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
-                                <span>🎨</span>
-                                <span>Frontend (~20)</span>
-                            </h3>
-                            <div class="space-y-1 text-xs text-zinc-600">
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4253)">#4253 - Test setup fixes (15 files)</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4252)">#4252 - react-pdf migration (security)</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4197)">#4197 - API client production ready</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4196)">#4196 - Detail pages (collection, approvals)</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4195)">#4195 - User management UI</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4194)">#4194 - Approval queue block</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4193)">#4193 - Collection overview block</div>
-                                <div class="text-zinc-400 italic">+ 13 more frontend issues...</div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
-                                <span>⚙️</span>
-                                <span>Backend (~15)</span>
-                            </h3>
-                            <div class="space-y-1 text-xs text-zinc-600">
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4198)">#4198 - Admin stats endpoint</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4199)">#4199 - Approval queue API</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4200)">#4200 - User management API</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4201)">#4201 - Library stats endpoint</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4202)">#4202 - User badges endpoint</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4169)">#4169 - Bulk import JSON</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4170)">#4170 - Bulk import SSE</div>
-                                <div class="text-zinc-400 italic">+ 8 more backend issues...</div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
-                                <span>🧪</span>
-                                <span>Testing (~10)</span>
-                            </h3>
-                            <div class="space-y-1 text-xs text-zinc-600">
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4203)">#4203 - Frontend component tests</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4204)">#4204 - E2E workflow tests</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4205)">#4205 - API integration tests</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3779)">#3779 - E2E all agent workflows</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3082)">#3082 - Missing E2E flows (50 flows)</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4142)">#4142 - E2E tests PDF wizard</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4143)">#4143 - Performance testing PDF</div>
-                                <div class="text-zinc-400 italic">+ 3 more testing issues...</div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
-                                <span>🏗️</span>
-                                <span>Epics & Large (~23)</span>
-                            </h3>
-                            <div class="space-y-1 text-xs text-zinc-600">
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4136)">#4136 - Epic: PDF Wizard</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3490)">#3490 - Epic: Multi-Agent AI System</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3902)">#3902 - Epic: AI Insights</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3906)">#3906 - Epic: Gamification</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3688)">#3688 - Epic: Business & Simulations</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3356)">#3356 - Epic: Advanced RAG (9 variants)</div>
-                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3366)">#3366 - Epic: Infrastructure</div>
-                                <div class="text-zinc-400 italic">+ 16 more epic/large issues...</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 p-4 bg-zinc-50 rounded-lg text-xs text-zinc-600">
-                        <strong>Triage Needed:</strong> 68 backlog issues require priority assignment.
-                        Use <code class="bg-white px-1 rounded">gh issue edit [number] --add-label "p1-high"</code> to prioritize.
-                    </div>
-                </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">frontend (3 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4141</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Frontend: Wizard Components - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4142</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Frontend: E2E Tests - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">testing</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4252</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Migrate from @react-pdf-viewer to react-pdf for pdfjs-dist v4 support</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">security</span><span class="label">dependencies</span></div>
+    </div>
+    
             </div>
         </div>
-
-        <!-- Quick Reference -->
-        <div class="grid grid-cols-2 gap-6">
-            <div class="p-6 rounded-xl bg-white shadow-lg border border-zinc-200">
-                <h3 class="font-quicksand font-bold text-lg mb-3">🏷️ Legend</h3>
-                <div class="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                        <div class="font-semibold text-zinc-700 mb-2">Priority:</div>
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 rounded-full bg-amber-500"></div>
-                                <span>P1 High (15)</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
-                                <span>P2 Medium (4)</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="font-semibold text-zinc-700 mb-2">Type:</div>
-                        <div class="space-y-1">
-                            <div><span class="badge badge-fe">FE</span> Frontend</div>
-                            <div><span class="badge badge-be">BE</span> Backend</div>
-                            <div><span class="badge badge-fs">FS</span> Fullstack</div>
-                        </div>
-                    </div>
-                    <div class="col-span-2">
-                        <div class="font-semibold text-zinc-700 mb-2">Size:</div>
-                        <div class="grid grid-cols-4 gap-2">
-                            <div><span class="badge badge-s">S</span> 0.5-1d</div>
-                            <div><span class="badge badge-m">M</span> 1-2d</div>
-                            <div><span class="badge badge-l">L</span> 3-5d</div>
-                            <div><span class="badge badge-xl">XL</span> 5-10d</div>
-                        </div>
-                    </div>
-                </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">testing (5 issues - 3 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4218</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">PDF Pipeline - Real-Time Updates (SSE + Polling)</div>
+        <div class="issue-labels"><span class="label">p1-high</span><span class="label">size:M</span><span class="label">epic-4071</span><span class="label">fullstack</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4219</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">PDF Pipeline - Duration Metrics & ETA Calculation</div>
+        <div class="issue-labels"><span class="label">p2-medium</span><span class="label">size:M</span><span class="label">epic-4071</span><span class="label">fullstack</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4220</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">PDF Pipeline - Multi-Channel Notification System</div>
+        <div class="issue-labels"><span class="label">p2-medium</span><span class="label">size:M</span><span class="label">epic-4071</span><span class="label">fullstack</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4143</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Performance Testing - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">performance</span><span class="label">testing</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4144</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Documentation - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">documentation</span></div>
+    </div>
+    
             </div>
-
-            <div class="p-6 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-                <h3 class="font-quicksand font-bold text-xl mb-3">🎯 Immediate Actions</h3>
-                <div class="space-y-2 text-sm">
-                    <div class="flex gap-2">
-                        <span class="font-bold">1.</span>
-                        <span>Validate 15 closed issues (⚠️ section)</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <span class="font-bold">2.</span>
-                        <span>Start Terminal 1: #4208 PDF State Machine</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <span class="font-bold">3.</span>
-                        <span>Start Terminal 2: #4177 Permission Model</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <span class="font-bold">4.</span>
-                        <span>Triage backlog (68 issues need priority)</span>
-                    </div>
-                </div>
-            </div>
+        </div>
+        
         </div>
     </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #95E1D3;">
+            <div class="stream-title">✅ Testing & Quality Assurance</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P1</div>
+                <div class="stream-stat">10 issues</div>
+                <div class="stream-stat">10 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">performance (7 issues - 5 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4185</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Integration Testing & Documentation</div>
+        <div class="issue-labels"><span class="label">documentation</span><span class="label">testing</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3082</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">[Testing] Implement Missing E2E Test Flows (50 flows)</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">priority: high</span><span class="label">testing</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3718</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Testing - AI Platform</div>
+        <div class="issue-labels"><span class="label">area/ai</span><span class="label">kind/test</span><span class="label">tests</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3763</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Arbitro Agent] Testing & User Feedback Iteration</div>
+        <div class="issue-labels"><span class="label">area/ai</span><span class="label">kind/test</span><span class="label">priority: medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3779</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">[Integration] E2E Testing Suite - All Agent Workflows</div>
+        <div class="issue-labels"><span class="label">area/ai</span><span class="label">kind/test</span><span class="label">tests</span><span class="label">priority: high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3894</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">EntityListView - Test Coverage & Polish (Post-Epic Cleanup)</div>
+        <div class="issue-labels"></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4160</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Wizard Integration Tests</div>
+        <div class="issue-labels"><span class="label">area/admin</span><span class="label">kind/test</span><span class="label">area/api</span><span class="label">tests</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">unit (3 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3717</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] A/B Testing Framework</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4176</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import E2E Tests</div>
+        <div class="issue-labels"><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">kind/test</span><span class="label">tests</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4253</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Fix remaining frontend test setup issues (15 test files)</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">testing</span><span class="label">tech-debt</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #4ECDC4;">
+            <div class="stream-title">🎨 Frontend UI & Components</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">23 issues</div>
+                <div class="stream-stat">15 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">features (19 issues - 12 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4178</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Permission Hooks & Utilities</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4179</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">MeepleCard Permission Integration</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4180</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Tooltip Accessibility WCAG 2.1 AA</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4210</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Frontend - Real-time Progress UI Components</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4211</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Frontend - SSE Connection Management & Polling Fallback</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">p1-high</span><span class="label">size:M</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4213</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Frontend - Configurable Notifications System</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4182</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">Tag System Integration in MeepleCard</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p2-medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4186</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">Tooltip Positioning System</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p2-medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3355</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Editor] Game/Document Version History and Comparison UI</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">frontend</span><span class="label">priority: medium</span><span class="label">sp:3</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3710</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Agent Playground</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3711</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Strategy Editor</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3712</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Visual Pipeline Builder</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">complexity: large</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4172</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Upload UI</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4173</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Preview & Validation</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4174</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Progress (SSE)</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4175</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Results Summary</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4193</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] Collection Overview Block - Stats Display</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4194</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] Approval Queue Block - Shared Games Management</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4197</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] API Client Integration - Production Ready</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">components (4 issues - 2 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3713</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Agent Catalog & Usage Stats</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">backend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3714</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Epic 3] Chat Analytics</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">backend</span><span class="label">complexity: medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3716</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Model Performance Tracking</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">backend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3906</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">Epic: Gamification & Advanced Features</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">area/ui</span><span class="label">frontend</span><span class="label">backend</span><span class="label">priority: medium</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #AA96DA;">
+            <div class="stream-title">🔧 Backend API & Services</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">9 issues</div>
+                <div class="stream-stat">10 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">testing (3 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4169</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Bulk Import JSON Command</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">area/api</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4170</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Bulk Import SSE Progress Endpoint</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">area/api</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4171</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Bulk Import Endpoint</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">area/api</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">domain (6 issues - 4 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4177</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Permission Data Model & Schema</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">backend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4212</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Backend - Processing Duration Metrics & ETA Calculation</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">p1-high</span><span class="label">size:M</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4199</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify Approval Queue Endpoint - Add User Info</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4200</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify User Management Endpoints - Add Active Status</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4201</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify User Library Stats Endpoint</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4202</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify User Badges Endpoint</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #FCBAD3;">
+            <div class="stream-title">🤖 AI/RAG & Knowledge Base</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">5 issues</div>
+                <div class="stream-stat">14 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">backend (2 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3358</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[RAG] Implement Iterative RAG Strategy</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">backend</span><span class="label">priority: low</span><span class="label">sp:5</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3902</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Epic: AI Insights & Recommendations</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">priority: high</span><span class="label">backend</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">testing (1 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4124</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Backend: AI Insights Runtime Validation (Performance + Accuracy)</div>
+        <div class="issue-labels"></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">frontend (2 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4195</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] User Management Block - User Cards & Detail Panel</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4196</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] Detail Pages - Collection, Approvals, Users</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #A8D8EA;">
+            <div class="stream-title">🎲 Game Management & Catalog</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">1 issues</div>
+                <div class="stream-stat">8 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">testing (1 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3120</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">feat(UserLibrary): Private Games & Catalog Proposal System</div>
+        <div class="issue-labels"><span class="label">enhancement</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #F38181;">
+            <div class="stream-title">⚙️ Infrastructure & DevOps</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P3</div>
+                <div class="stream-stat">10 issues</div>
+                <div class="stream-stat">8 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">optimization (10 issues - 5 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2968</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 1.1] Oracle Cloud Setup & VM Provisioning</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">kind/infra</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2969</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 1.2] GitHub Actions Runner Installation & Configuration</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">kind/ci</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2970</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 1.3] Workflow Migration to Self-Hosted Runner</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">kind/ci</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2972</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 2.1] Performance Monitoring & Reliability Check</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/ci</span><span class="label">area/ops</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2973</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 2.2] Cost Validation on GitHub Billing</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/ci</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2974</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Optional] Setup Monitoring (Prometheus + Grafana)</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">area/ops</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2975</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Optional] Document Troubleshooting Procedures</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">area/docs</span><span class="label">kind/docs</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2976</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Optional] Create Maintenance Schedule Automation</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">area/ops</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3367</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Infra] Log Aggregation System (Beyond Structured Logs)</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/feature</span><span class="label">area/ops</span><span class="label">priority: medium</span><span class="label">sp:5</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3368</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Infra] k6 Load Testing Infrastructure</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/test</span><span class="label">priority: medium</span><span class="label">sp:3</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #FFFFD2;">
+            <div class="stream-title">👥 Admin & Enterprise Features</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P3</div>
+                <div class="stream-stat">5 issues</div>
+                <div class="stream-stat">12 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">testing (4 issues - 2 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3688</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">EPIC: Business & Simulations [Admin Enterprise]</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">complexity: large</span><span class="label">priority: medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4203</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Testing] Frontend Component Tests - Dashboard</div>
+        <div class="issue-labels"><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4204</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Testing] E2E Workflow Tests - Admin Actions</div>
+        <div class="issue-labels"><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4205</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Testing] API Integration Tests - Admin Endpoints</div>
+        <div class="issue-labels"><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">backend (1 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4198</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify Admin Stats Endpoint - Schema Adaptation</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+        </div>
 
-    <script>
-        function toggleSection(id) {
-            const content = document.getElementById(id);
-            content.classList.toggle('collapsed');
+        
+    <div class="epics">
+        <div class="epics-header">📋 Major Epics (10)</div>
+        <div class="epic-grid">
+            
+        <div class="epic">
+            <div class="issue-number">#2967</div>
+            <div class="issue-title">Epic: Implement Zero-Cost CI/CD Infrastructure</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3320</div>
+            <div class="issue-title">[EPIC] Gamification & Advanced Dashboard Features</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3341</div>
+            <div class="issue-title">[EPIC] Game Session Toolkit Phase 2 - Advanced Tools</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3348</div>
+            <div class="issue-title">[EPIC] Advanced Features - AI, Admin & Collaboration</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3356</div>
+            <div class="issue-title">[EPIC] Advanced RAG Strategies - 9 Variants Implementation</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3366</div>
+            <div class="issue-title">[EPIC] Infrastructure Enhancements - Observability & Testing</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3490</div>
+            <div class="issue-title">[EPIC] Multi-Agent Game AI System - Tutor, Arbitro, Decisore</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#4068</div>
+            <div class="issue-title">Epic #1: MeepleCard Enhancements</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#4071</div>
+            <div class="issue-title">Epic #4: PDF Status Tracking</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#4136</div>
+            <div class="issue-title">Epic: PDF Wizard per SharedGameCatalog con BGG Integration</div>
+        </div>
+        
+        </div>
+    </div>
+    
 
-            const toggle = content.previousElementSibling;
-            const icon = toggle.querySelector('.toggle-icon');
-            if (content.classList.contains('collapsed')) {
-                icon.style.transform = 'rotate(-90deg)';
-            } else {
-                icon.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function openIssue(number) {
-            window.open(`https://github.com/DegrassiAaron/meepleai-monorepo/issues/${number}`, '_blank');
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            const backlog = document.getElementById('backlog');
-            if (backlog) {
-                const icon = backlog.previousElementSibling.querySelector('.toggle-icon');
-                icon.style.transform = 'rotate(-90deg)';
-            }
-        });
-    </script>
+        <div class="footer">
+            <p>Generated on 2026-02-13 11:25:00</p>
+            <p>MeepleAI Monorepo - Comprehensive Development Plan</p>
+        </div>
+    </div>
 </body>
 </html>

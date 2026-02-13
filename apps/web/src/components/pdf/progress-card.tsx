@@ -29,8 +29,8 @@ import { ChevronDown, ChevronUp, Clock, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/data-display/badge';
 import { usePdfProgress } from '@/hooks/usePdfProgress';
-import { formatTimeSpan } from '@/lib/utils/formatTimeSpan';
 import { cn } from '@/lib/utils';
+import { formatTimeSpan } from '@/lib/utils/formatTimeSpan';
 
 // ============================================================================
 // Types

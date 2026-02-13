@@ -39,8 +39,8 @@ import {
   DialogDescription,
 } from '@/components/ui/overlays/dialog';
 import { usePdfProgress } from '@/hooks/usePdfProgress';
-import { formatTimeSpan } from '@/lib/utils/formatTimeSpan';
 import { cn } from '@/lib/utils';
+import { formatTimeSpan } from '@/lib/utils/formatTimeSpan';
 import { getStepLabel, getStepOrder, ProcessingStep } from '@/types/pdf';
 
 // ============================================================================

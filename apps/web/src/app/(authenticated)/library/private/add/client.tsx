@@ -13,15 +13,16 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { useRouter } from 'next/navigation';
 
+import { GameCreationStep } from '@/app/(authenticated)/admin/wizard/steps/GameCreationStep';
+import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
 import { toast } from '@/components/layout';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 
 // Reuse refactored admin wizard steps
-import { GameCreationStep } from '@/app/(authenticated)/admin/wizard/steps/GameCreationStep';
-import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
 
 // User-specific step
 import { ConfigAgentStep } from './steps/ConfigAgentStep';

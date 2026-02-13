@@ -217,6 +217,10 @@ internal static class InfrastructureServiceExtensions
         services.AddSingleton<IDynamicTtlStrategy, DynamicTtlStrategy>();
         services.AddSingleton<IRedisFrequencyTracker, RedisFrequencyTracker>();
 
+        // Issue #4275: BGG API tier-based rate limiting configuration
+        services.Configure<Api.Middleware.BggRateLimitOptions>(
+            configuration.GetSection("BggRateLimit"));
+
         // AI-10: Conditional cache warming service (disabled by default)
         var cacheWarmingEnabled = configuration
             .GetSection("CacheOptimization:WarmingEnabled")

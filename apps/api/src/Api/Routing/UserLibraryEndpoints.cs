@@ -12,6 +12,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
 using Api.Models;
+using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -73,6 +74,11 @@ internal static class UserLibraryEndpoints
         MapGetCollectionStatusEndpoint(group);
         MapAddToCollectionEndpoint(group);
         MapRemoveFromCollectionEndpoint(group);
+
+        // Bulk collection endpoints (Issue #4268)
+        MapBulkAddToCollectionEndpoint(group);
+        MapBulkRemoveFromCollectionEndpoint(group);
+        MapBulkGetCollectionAssociatedDataEndpoint(group);
 
         return group;
     }
@@ -1522,6 +1528,134 @@ internal static class UserLibraryEndpoints
         .WithDescription("Removes an entity from user's collection. Returns 404 if not in collection. Issue #4263.")
         .WithOpenApi();
     }
+
+    private static void MapBulkAddToCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/collections/{entityType}/bulk-add", async (
+            string entityType,
+            [FromBody] BulkAddToCollectionRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new BulkAddToCollectionCommand(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityIds: request.EntityIds,
+                IsFavorite: request.IsFavorite,
+                Notes: request.Notes
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<BulkOperationResult>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections", "Bulk")
+        .WithSummary("Bulk add entities to collection")
+        .WithDescription("Adds multiple entities to user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.")
+        .WithOpenApi();
+    }
+
+    private static void MapBulkRemoveFromCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/collections/{entityType}/bulk-remove", async (
+            string entityType,
+            [FromBody] BulkRemoveFromCollectionRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new BulkRemoveFromCollectionCommand(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityIds: request.EntityIds
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<BulkOperationResult>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections", "Bulk")
+        .WithSummary("Bulk remove entities from collection")
+        .WithDescription("Removes multiple entities from user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.")
+        .WithOpenApi();
+    }
+
+    private static void MapBulkGetCollectionAssociatedDataEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/collections/{entityType}/bulk-associated-data", async (
+            string entityType,
+            [FromBody] BulkGetAssociatedDataRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var query = new GetBulkCollectionAssociatedDataQuery(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityIds: request.EntityIds
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<BulkAssociatedDataDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections", "Bulk")
+        .WithSummary("Get bulk associated data")
+        .WithDescription("Returns aggregated counts of associated data for multiple collection entries. Used for bulk removal warnings. Issue #4268.")
+        .WithOpenApi();
+    }
 }
 
 /// <summary>
@@ -1618,4 +1752,30 @@ public record CreateCustomLabelRequest(
 public record AddToCollectionRequest(
     string? Notes = null,
     bool IsFavorite = false
+);
+
+/// <summary>
+/// Request body for bulk adding entities to collection.
+/// Issue #4268: Phase 3 - Bulk Collection Actions
+/// </summary>
+public record BulkAddToCollectionRequest(
+    IReadOnlyList<Guid> EntityIds,
+    string? Notes = null,
+    bool IsFavorite = false
+);
+
+/// <summary>
+/// Request body for bulk removing entities from collection.
+/// Issue #4268: Phase 3 - Bulk Collection Actions
+/// </summary>
+public record BulkRemoveFromCollectionRequest(
+    IReadOnlyList<Guid> EntityIds
+);
+
+/// <summary>
+/// Request body for getting bulk associated data.
+/// Issue #4268: Phase 3 - Bulk Collection Actions
+/// </summary>
+public record BulkGetAssociatedDataRequest(
+    IReadOnlyList<Guid> EntityIds
 );

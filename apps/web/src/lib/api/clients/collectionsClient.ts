@@ -7,6 +7,11 @@
 
 import type {
   AddToCollectionRequest,
+  BulkAddToCollectionRequest,
+  BulkAssociatedDataDto,
+  BulkGetAssociatedDataRequest,
+  BulkOperationResult,
+  BulkRemoveFromCollectionRequest,
   CollectionStatusDto,
   EntityType,
 } from '../schemas/collections.schemas';
@@ -92,4 +97,98 @@ export async function removeFromCollection(
     const error = await response.json();
     throw new Error(error.message || 'Failed to remove from collection');
   }
+}
+
+// ============================================================================
+// Bulk Operations (Issue #4268)
+// ============================================================================
+
+/**
+ * Add multiple entities to collection in bulk.
+ * Uses partial success pattern - some entities may succeed while others fail.
+ *
+ * @param entityType - Type of entities (game, player, event, etc.)
+ * @param request - Bulk add request with entity IDs and options
+ * @returns Promise with bulk operation result
+ */
+export async function bulkAddToCollection(
+  entityType: EntityType,
+  request: BulkAddToCollectionRequest
+): Promise<BulkOperationResult> {
+  const response = await fetch(
+    `/api/v1/library/collections/${entityType}/bulk-add`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to bulk add to collection');
+  }
+
+  return response.json();
+}
+
+/**
+ * Remove multiple entities from collection in bulk.
+ * Uses partial success pattern - some entities may succeed while others fail.
+ *
+ * @param entityType - Type of entities (game, player, event, etc.)
+ * @param request - Bulk remove request with entity IDs
+ * @returns Promise with bulk operation result
+ */
+export async function bulkRemoveFromCollection(
+  entityType: EntityType,
+  request: BulkRemoveFromCollectionRequest
+): Promise<BulkOperationResult> {
+  const response = await fetch(
+    `/api/v1/library/collections/${entityType}/bulk-remove`,
+    {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to bulk remove from collection');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get aggregated associated data for multiple entities.
+ * Used to display warning before bulk removal.
+ *
+ * @param entityType - Type of entities (game, player, event, etc.)
+ * @param request - Request with entity IDs to check
+ * @returns Promise with aggregated data
+ */
+export async function getBulkAssociatedData(
+  entityType: EntityType,
+  request: BulkGetAssociatedDataRequest
+): Promise<BulkAssociatedDataDto> {
+  const response = await fetch(
+    `/api/v1/library/collections/${entityType}/bulk-associated-data`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get bulk associated data');
+  }
+
+  return response.json();
 }

@@ -417,7 +417,6 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            totalEntities: 2,
             totalCustomAgents: 1,
             totalPrivatePdfs: 1,
             totalChatSessions: 5,

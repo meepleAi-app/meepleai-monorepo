@@ -170,7 +170,6 @@ describe('useBulkCollectionActions', () => {
 
   it('fetchAggregatedData fetches bulk associated data', async () => {
     const mockData = {
-      totalEntities: 3,
       totalCustomAgents: 2,
       totalPrivatePdfs: 1,
       totalChatSessions: 5,

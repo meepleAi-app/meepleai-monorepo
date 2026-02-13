@@ -6,7 +6,12 @@
  */
 
 import { getApiBase, type HttpClient } from '../core/httpClient';
-import { ProcessingProgressSchema, type ProcessingProgress } from '../schemas';
+import {
+  ProcessingProgressSchema,
+  type ProcessingProgress,
+  PdfMetricsSchema,
+  type PdfMetrics,
+} from '../schemas';
 
 export interface CreatePdfClientParams {
   httpClient: HttpClient;
@@ -27,6 +32,19 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
       return httpClient.get(
         `/api/v1/pdfs/${encodeURIComponent(pdfId)}/progress`,
         ProcessingProgressSchema
+      );
+    },
+
+    /**
+     * Get detailed processing metrics with per-state timing and ETA
+     * Issue #4219: Duration metrics and ETA calculation
+     * @param documentId Document ID (GUID format)
+     * @returns Metrics with timing, progress, and ETA
+     */
+    async getMetrics(documentId: string): Promise<PdfMetrics | null> {
+      return httpClient.get(
+        `/api/v1/documents/${encodeURIComponent(documentId)}/metrics`,
+        PdfMetricsSchema
       );
     },
 

@@ -74,3 +74,40 @@ export const ProcessingProgressSchema = z.object({
 });
 
 export type ProcessingProgress = z.infer<typeof ProcessingProgressSchema>;
+
+// ========== PDF Metrics (Issue #4219) ==========
+
+/**
+ * PDF processing metrics with per-state timing and ETA.
+ * Issue #4219: Duration metrics and ETA calculation.
+ * @see apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/DTOs/PdfMetricsDto.cs
+ */
+export const PdfMetricsSchema = z.object({
+  /** Document unique identifier */
+  documentId: z.string().uuid(),
+  /** Current processing state */
+  currentState: z.enum([
+    'Pending',
+    'Uploading',
+    'Extracting',
+    'Chunking',
+    'Embedding',
+    'Indexing',
+    'Ready',
+    'Failed',
+  ]),
+  /** Overall progress percentage (0-100) */
+  progressPercentage: z.number().int().min(0).max(100),
+  /** Total duration since upload (TimeSpan as "HH:mm:ss.fffffff" string), null if in progress */
+  totalDuration: z.string().nullable(),
+  /** Estimated time remaining (TimeSpan string), null if completed/failed */
+  estimatedTimeRemaining: z.string().nullable(),
+  /** Duration spent in each state (state name → TimeSpan string) */
+  stateDurations: z.record(z.string(), z.string()),
+  /** Number of retry attempts */
+  retryCount: z.number().int().nonnegative(),
+  /** Total page count, null if not yet extracted */
+  pageCount: z.number().int().positive().nullable(),
+});
+
+export type PdfMetrics = z.infer<typeof PdfMetricsSchema>;

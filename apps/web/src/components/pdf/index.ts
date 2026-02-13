@@ -28,3 +28,10 @@ export type { PdfErrorCardProps } from './PdfErrorCard';
 
 export { PdfStatusTimeline } from './PdfStatusTimeline';
 export type { PdfStatusTimelineProps } from './PdfStatusTimeline';
+
+// ============================================================================
+// Issue #4219 - Duration Metrics & ETA
+// ============================================================================
+
+export { PdfMetricsDisplay } from './PdfMetricsDisplay';
+export type { PdfMetricsDisplayProps } from './PdfMetricsDisplay';

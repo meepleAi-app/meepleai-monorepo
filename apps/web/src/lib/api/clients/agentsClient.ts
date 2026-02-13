@@ -352,6 +352,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
       try {
         while (true) {
+          // Check if aborted before reading
+          if (signal?.aborted) {
+            break;
+          }
+
           const { done, value } = await reader.read();
           if (done) break;
 
@@ -371,6 +376,12 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
             }
           }
         }
+      } catch (e) {
+        // Clean exit on abort
+        if (signal?.aborted) {
+          return;
+        }
+        throw e;
       } finally {
         reader.releaseLock();
       }

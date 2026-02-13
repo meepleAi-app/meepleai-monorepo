@@ -3,9 +3,10 @@
  * Showcases all 7 PDF states with variants
  */
 
+import { PdfStatusBadge } from './PdfStatusBadge';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { PdfStatusBadge } from './PdfStatusBadge';
 
 const meta: Meta<typeof PdfStatusBadge> = {
   title: 'Components/PDF/PdfStatusBadge',

@@ -15,9 +15,9 @@
 'use client';
 
 import { Progress } from '@/components/ui/feedback/progress';
+import { cn } from '@/lib/utils';
 import type { PdfState } from '@/types/pdf';
 import { getPdfStateLabel } from '@/types/pdf';
-import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types

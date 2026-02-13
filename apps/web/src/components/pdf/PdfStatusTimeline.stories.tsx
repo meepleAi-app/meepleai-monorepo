@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { PdfStatusTimeline } from './PdfStatusTimeline';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof PdfStatusTimeline> = {
   title: 'Components/PDF/PdfStatusTimeline',

@@ -3,11 +3,12 @@ import React from 'react';
 
 import { FileText, RotateCw } from 'lucide-react';
 
-import { PdfStatusBadge } from './PdfStatusBadge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { TableCell, TableRow } from '@/components/ui/data-display/table';
 import { Button } from '@/components/ui/primitives/button';
 import type { PdfState } from '@/types/pdf';
+
+import { PdfStatusBadge } from './PdfStatusBadge';
 
 interface PdfDocument {
   id: string;

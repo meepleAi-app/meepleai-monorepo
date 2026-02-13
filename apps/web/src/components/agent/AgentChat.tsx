@@ -21,7 +21,9 @@ import React, { useState, useCallback } from 'react';
 import { X, Bot, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AgentSelector, type AgentType } from '@/components/agent/AgentSelector';
 import { ChatMessageList, ChatInput } from '@/components/agent/chat';
+import { ChatErrorBoundary } from '@/components/agent/ChatErrorBoundary';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentChat } from '@/hooks/queries/useAgentChat';
@@ -49,6 +51,10 @@ export interface AgentChatProps {
   strategy?: 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
   /** Close callback (for modal/sidebar) */
   onClose?: () => void;
+  /** Enable agent selector (default: false) */
+  enableAgentSelector?: boolean;
+  /** Callback when agent changes */
+  onAgentChange?: (agentId: AgentType) => void;
   /** Additional class name */
   className?: string;
 }
@@ -99,11 +105,14 @@ export function AgentChat({
   agentName = 'AI Assistant',
   strategy = 'RetrievalOnly',
   onClose,
+  enableAgentSelector = false,
+  onAgentChange,
   className,
 }: AgentChatProps) {
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<AgentType>('auto');
 
   // Use real agent chat hook (Issue #4126)
   const { isStreaming, sendMessage: sendChatMessage } = useAgentChat(agentId, {
@@ -152,39 +161,60 @@ export function AgentChat({
     // Re-send last user message or reconnect SSE
   }, []);
 
+  // Handle agent change
+  const handleAgentChange = useCallback(
+    (newAgentId: AgentType) => {
+      setSelectedAgent(newAgentId);
+      onAgentChange?.(newAgentId);
+    },
+    [onAgentChange]
+  );
+
   // Render header
   const renderHeader = () => (
     <div
-      className="flex items-center justify-between p-4 border-b border-border/50 bg-background/95 backdrop-blur-sm"
+      className="flex flex-col gap-3 p-4 border-b border-border/50 bg-background/95 backdrop-blur-sm"
       data-testid="agent-chat-header"
     >
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
-          <Bot className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-sm truncate">{agentName}</h2>
-          {gameName && (
-            <p className="text-xs text-muted-foreground truncate">{gameName}</p>
+      {/* Top Row: Agent Info + Close */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
+            <Bot className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-sm truncate">{agentName}</h2>
+            {gameName && (
+              <p className="text-xs text-muted-foreground truncate">{gameName}</p>
+            )}
+          </div>
+          {strategy && STRATEGY_LABELS[strategy] && (
+            <Badge className={STRATEGY_COLORS[strategy]} data-testid="strategy-badge">
+              <Sparkles className="h-3 w-3 mr-1" />
+              {STRATEGY_LABELS[strategy]}
+            </Badge>
           )}
         </div>
-        {strategy && STRATEGY_LABELS[strategy] && (
-          <Badge className={STRATEGY_COLORS[strategy]} data-testid="strategy-badge">
-            <Sparkles className="h-3 w-3 mr-1" />
-            {STRATEGY_LABELS[strategy]}
-          </Badge>
+        {onClose && (layout === 'modal' || layout === 'sidebar') && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label="Close chat"
+            data-testid="close-chat-button"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         )}
       </div>
-      {onClose && (layout === 'modal' || layout === 'sidebar') && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label="Close chat"
-          data-testid="close-chat-button"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+
+      {/* Agent Selector (if enabled) */}
+      {enableAgentSelector && (
+        <AgentSelector
+          value={selectedAgent}
+          onChange={handleAgentChange}
+          className="mt-2"
+        />
       )}
     </div>
   );
@@ -208,45 +238,47 @@ export function AgentChat({
   };
 
   return (
-    <LayoutWrapper>
-      <div
-        className={cn(
-          'flex flex-col bg-background border border-border/50 rounded-lg shadow-lg',
-          config.width,
-          config.height,
-          layout === 'full-page' && 'my-8',
-          className
-        )}
-        role="region"
-        aria-label={`Chat with ${agentName}`}
-        data-testid="agent-chat"
-        data-layout={layout}
-      >
-        {/* Header */}
-        {renderHeader()}
+    <ChatErrorBoundary onReset={() => setError(null)}>
+      <LayoutWrapper>
+        <div
+          className={cn(
+            'flex flex-col bg-background border border-border/50 rounded-lg shadow-lg',
+            config.width,
+            config.height,
+            layout === 'full-page' && 'my-8',
+            className
+          )}
+          role="region"
+          aria-label={`Chat with ${agentName}`}
+          data-testid="agent-chat"
+          data-layout={layout}
+        >
+          {/* Header */}
+          {renderHeader()}
 
-        {/* Messages */}
-        <div className="flex-1 overflow-hidden">
-          <ChatMessageList
-            messages={messages}
-            isStreaming={isStreaming}
-            currentChunk={streamingContent}
-            className="h-full"
-          />
-        </div>
+          {/* Messages */}
+          <div className="flex-1 overflow-hidden">
+            <ChatMessageList
+              messages={messages}
+              isStreaming={isStreaming}
+              currentChunk={streamingContent}
+              className="h-full"
+            />
+          </div>
 
-        {/* Input */}
-        <div className="border-t border-border/50 p-4">
-          <ChatInput
-            isStreaming={isStreaming}
-            onSendMessage={handleSendMessage}
-            error={error}
-            onRetry={handleRetry}
-            placeholder={`Chiedi a ${agentName}...`}
-          />
+          {/* Input */}
+          <div className="border-t border-border/50 p-4">
+            <ChatInput
+              isStreaming={isStreaming}
+              onSendMessage={handleSendMessage}
+              error={error}
+              onRetry={handleRetry}
+              placeholder={`Chiedi a ${agentName}...`}
+            />
+          </div>
         </div>
-      </div>
-    </LayoutWrapper>
+      </LayoutWrapper>
+    </ChatErrorBoundary>
   );
 }
 

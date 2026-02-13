@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands.Labels;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
@@ -40,6 +41,7 @@ internal static class UserLibraryEndpoints
         MapConfigureGameAgentEndpoint(group);
         MapResetGameAgentEndpoint(group);
         MapSaveAgentConfigEndpoint(group); // Issue #3212
+        MapCreateGameAgentEndpoint(group); // Issue #5
 
         // Custom PDF endpoints
         MapUploadCustomGamePdfEndpoint(group);
@@ -1382,6 +1384,59 @@ internal static class UserLibraryEndpoints
         .WithOpenApi();
     }
 
+    /// <summary>
+    /// Maps POST endpoint for creating game agent with custom typology and strategy (Issue #5).
+    /// </summary>
+    private static void MapCreateGameAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/agent", async (
+            Guid gameId,
+            [FromBody] CreateGameAgentRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new CreateGameAgentCommand(
+                GameId: gameId,
+                TypologyId: request.TypologyId,
+                StrategyName: request.StrategyName,
+                StrategyParameters: request.StrategyParameters,
+                UserId: userId
+            );
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<CreateGameAgentResult>(200)
+        .Produces<ProblemDetails>(400)
+        .Produces<ProblemDetails>(401)
+        .Produces<ProblemDetails>(404)
+        .Produces<ProblemDetails>(409)
+        .WithName("CreateGameAgent")
+        .WithDescription("Create agent for game with custom typology and strategy (Issue #5)")
+        .WithOpenApi();
+    }
+
     private static void MapGetCollectionStatusEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/collections/{entityType}/{entityId:guid}/status", async (
@@ -1735,6 +1790,15 @@ public record SaveAgentConfigRequest(
     Guid TypologyId,
     string ModelName,
     double CostEstimate
+);
+
+/// <summary>
+/// Request body for creating game agent with custom typology and strategy (Issue #5).
+/// </summary>
+public record CreateGameAgentRequest(
+    Guid TypologyId,
+    string StrategyName,
+    string? StrategyParameters = null
 );
 
 /// <summary>

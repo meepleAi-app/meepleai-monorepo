@@ -1,5 +1,6 @@
 /**
  * E2E Authentication Tests - MIGRATED TO PAGE OBJECT MODEL + REAL BACKEND
+ * @slow - 65 test cases, real backend integration with complex auth flows
  *
  * ✅ CONVERTED: Uses real backend APIs instead of mocks (Issue #2299)
  * ✅ EXTENDED: Week 3 auth flows with real API integration (Issue #2307)

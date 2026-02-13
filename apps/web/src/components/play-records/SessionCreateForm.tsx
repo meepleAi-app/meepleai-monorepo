@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Calendar, Users, Trophy, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import {
   Form,
@@ -41,6 +42,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-gro
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { SessionCreateFormSchema, type SessionCreateForm as SessionCreateFormData } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
+import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
 
 import { GameCombobox } from './GameCombobox';
 
@@ -68,7 +71,8 @@ export function SessionCreateForm({
     resetSessionCreation,
   } = usePlayRecordsStore();
 
-  const [_showBggDialog, setShowBggDialog] = useState(false);
+  const [showBggDialog, setShowBggDialog] = useState(false);
+  const [isAddingGame, setIsAddingGame] = useState(false);
 
   const form = useForm<SessionCreateFormData>({
     resolver: zodResolver(SessionCreateFormSchema),
@@ -469,6 +473,51 @@ export function SessionCreateForm({
           </div>
         </form>
       </Form>
+
+      {/* BGG Search Dialog - Issue #4274 */}
+      <Dialog open={showBggDialog} onOpenChange={setShowBggDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Search BoardGameGeek</DialogTitle>
+          </DialogHeader>
+          <AddPrivateGameWithBgg
+            onSubmit={async (gameData, source, bggId) => {
+              setIsAddingGame(true);
+              try {
+                // Create private game via API
+                const response = await fetch('/api/v1/user-library/private-games', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    ...gameData,
+                    source,
+                    bggId,
+                  }),
+                });
+
+                if (!response.ok) throw new Error('Failed to add game');
+
+                const privateGame = await response.json();
+
+                // Auto-select in wizard
+                form.setValue('gameId', privateGame.id);
+                form.setValue('gameName', privateGame.title);
+
+                // Close dialog and show success
+                setShowBggDialog(false);
+                toast.success('Game added to library');
+              } catch (err) {
+                console.error('Add game error:', err);
+                toast.error('Failed to add game. Please try again.');
+              } finally {
+                setIsAddingGame(false);
+              }
+            }}
+            onCancel={() => setShowBggDialog(false)}
+            isSubmitting={isAddingGame}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -32,7 +32,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import type { PdfMetrics } from '@/lib/api';
 
-import { usePdfStatus, type UsePdfStatusOptions, type PdfStatusData } from './usePdfStatus';
+import { usePdfStatus, type UsePdfStatusOptions, type PdfStatusData, type ConnectionState, type ConnectionMetrics } from './usePdfStatus';
 
 // ============================================================================
 // Types
@@ -49,6 +49,8 @@ export interface UsePdfProgressReturn {
   // SSE Status (from usePdfStatus)
   /** Current status from SSE stream */
   status: PdfStatusData | null;
+  /** Connection state (connecting, connected, reconnecting, polling, failed) */
+  connectionState: ConnectionState;
   /** True if SSE is connected */
   isConnected: boolean;
   /** True if using polling fallback for status */
@@ -57,6 +59,8 @@ export interface UsePdfProgressReturn {
   isLoading: boolean;
   /** Error state for status */
   error: Error | null;
+  /** Connection metrics (uptime, reconnect count, fallback triggers) */
+  connectionMetrics: ConnectionMetrics;
   /** Manually reconnect SSE */
   reconnect: () => void;
 
@@ -190,10 +194,12 @@ export function usePdfProgress(
   return {
     // SSE Status
     status: pdfStatus.status,
+    connectionState: pdfStatus.connectionState,
     isConnected: pdfStatus.isConnected,
     isPolling: pdfStatus.isPolling,
     isLoading: pdfStatus.isLoading,
     error: pdfStatus.error,
+    connectionMetrics: pdfStatus.connectionMetrics,
     reconnect: pdfStatus.reconnect,
 
     // Metrics

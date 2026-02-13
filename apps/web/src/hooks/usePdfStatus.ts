@@ -1,14 +1,17 @@
 /**
- * usePdfStatus Hook (Issue #4218)
+ * usePdfStatus Hook (Issue #4218 + #4211)
  *
  * Real-time PDF status updates using Server-Sent Events with polling fallback.
- * Auto-reconnects SSE, falls back to polling on connection errors.
+ * Auto-reconnects SSE with exponential backoff, falls back to polling on connection errors.
  *
  * Features:
  * - SSE connection for real-time updates
+ * - Exponential backoff reconnection (1s, 2s, 4s, 8s, 16s, max 30s)
+ * - Network detection for slow-2g auto-fallback
  * - Automatic polling fallback (5s interval)
- * - Auto-reconnect with exponential backoff
- * - Connection cleanup on unmount
+ * - Connection state tracking
+ * - Connection metrics (uptime, reconnect count)
+ * - Last-Event-ID preservation (TODO: Issue #4211 Task #3)
  * - Callbacks: onStateChange, onComplete, onError
  */
 
@@ -20,8 +23,45 @@ import type { PdfState } from '@/types/pdf';
 import type { ProcessingStep } from '@/types/pdf';
 
 // ============================================================================
+// Network Information API Types
+// ============================================================================
+
+interface NetworkInformation extends EventTarget {
+  effectiveType: 'slow-2g' | '2g' | '3g' | '4g';
+  downlink: number;
+  rtt: number;
+  saveData: boolean;
+}
+
+declare global {
+  interface Navigator {
+    connection?: NetworkInformation;
+    mozConnection?: NetworkInformation;
+    webkitConnection?: NetworkInformation;
+  }
+}
+
+// ============================================================================
 // Types
 // ============================================================================
+
+export type ConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'polling'
+  | 'failed';
+
+export interface ConnectionMetrics {
+  /** Total uptime in milliseconds */
+  connectionUptime: number;
+  /** Number of reconnection attempts made */
+  reconnectionCount: number;
+  /** Number of times fallback to polling was triggered */
+  fallbackTriggers: number;
+  /** Timestamp of last successful connection */
+  lastConnectedAt: string | null;
+}
 
 export interface PdfStatusData {
   state: PdfState;
@@ -36,6 +76,8 @@ export interface UsePdfStatusOptions {
   enableSSE?: boolean;
   /** Polling interval in ms (default: 5000) */
   pollingInterval?: number;
+  /** Max reconnection attempts (default: 5) */
+  maxReconnectAttempts?: number;
   /** Callback when state changes */
   onStateChange?: (state: PdfState) => void;
   /** Callback when processing completes (ready or failed) */
@@ -47,6 +89,8 @@ export interface UsePdfStatusOptions {
 export interface UsePdfStatusReturn {
   /** Current status data */
   status: PdfStatusData | null;
+  /** Connection state */
+  connectionState: ConnectionState;
   /** True if SSE is connected */
   isConnected: boolean;
   /** True if using polling fallback */
@@ -55,6 +99,8 @@ export interface UsePdfStatusReturn {
   isLoading: boolean;
   /** Error state */
   error: Error | null;
+  /** Connection metrics */
+  connectionMetrics: ConnectionMetrics;
   /** Manually reconnect */
   reconnect: () => void;
 }
@@ -64,8 +110,9 @@ export interface UsePdfStatusReturn {
 // ============================================================================
 
 const DEFAULT_POLLING_INTERVAL = 5000;
-const SSE_RECONNECT_DELAY = 2000;
-const MAX_RECONNECT_ATTEMPTS = 3;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const MAX_BACKOFF_DELAY = 30000; // 30 seconds
+const INITIAL_BACKOFF_DELAY = 1000; // 1 second
 
 // ============================================================================
 // Helper Functions
@@ -73,6 +120,30 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 
 function isTerminalState(state: PdfState): boolean {
   return state === 'ready' || state === 'failed';
+}
+
+/**
+ * Calculate exponential backoff delay for reconnection attempts.
+ * Sequence: 1s, 2s, 4s, 8s, 16s, max 30s
+ */
+function calculateBackoffDelay(attempt: number): number {
+  const delay = INITIAL_BACKOFF_DELAY * Math.pow(2, attempt);
+  return Math.min(delay, MAX_BACKOFF_DELAY);
+}
+
+/**
+ * Check if network type requires polling fallback (slow-2g).
+ * Uses Network Information API if available.
+ */
+function shouldUsePollingForNetwork(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  
+  if (!connection) return false;
+  
+  // Auto-fallback to polling for slow-2g
+  return connection.effectiveType === 'slow-2g';
 }
 
 // ============================================================================
@@ -86,6 +157,7 @@ export function usePdfStatus(
   const {
     enableSSE = true,
     pollingInterval = DEFAULT_POLLING_INTERVAL,
+    maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS,
     onStateChange,
     onComplete,
     onError,
@@ -93,10 +165,17 @@ export function usePdfStatus(
 
   // State
   const [status, setStatus] = useState<PdfStatusData | null>(null);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [isConnected, setIsConnected] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [connectionMetrics, setConnectionMetrics] = useState<ConnectionMetrics>({
+    connectionUptime: 0,
+    reconnectionCount: 0,
+    fallbackTriggers: 0,
+    lastConnectedAt: null,
+  });
 
   // Refs
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -104,6 +183,7 @@ export function usePdfStatus(
   const reconnectAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
   const previousStateRef = useRef<PdfState | null>(null);
+  const lastEventIdRef = useRef<string | null>(null);
 
   // Store callbacks in refs to avoid effect dependencies
   const onStateChangeRef = useRef(onStateChange);
@@ -123,8 +203,15 @@ export function usePdfStatus(
   const startPolling = useCallback(() => {
     if (!documentId || !isMountedRef.current) return;
 
+    setConnectionState('polling');
     setIsPolling(true);
     setIsConnected(false);
+    
+    // Increment fallback triggers metric
+    setConnectionMetrics(prev => ({
+      ...prev,
+      fallbackTriggers: prev.fallbackTriggers + 1,
+    }));
 
     const poll = async () => {
       try {
@@ -184,23 +271,43 @@ export function usePdfStatus(
   const startSSE = useCallback(() => {
     if (!documentId || !isMountedRef.current) return;
 
+    // Set connecting state
+    setConnectionState(reconnectAttemptsRef.current > 0 ? 'reconnecting' : 'connecting');
+
     try {
-      const eventSource = new EventSource(
-        `/api/v1/pdfs/${documentId}/status/stream`
-      );
+      // Build URL with Last-Event-ID for stream resume
+      let url = `/api/v1/pdfs/${documentId}/status/stream`;
+      if (lastEventIdRef.current) {
+        url += `?lastEventId=${encodeURIComponent(lastEventIdRef.current)}`;
+      }
+
+      const eventSource = new EventSource(url);
 
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
         if (!isMountedRef.current) return;
+        setConnectionState('connected');
         setIsConnected(true);
         setIsPolling(false);
         setError(null);
         reconnectAttemptsRef.current = 0;
+        
+        // Update metrics
+        setConnectionMetrics(prev => ({
+          ...prev,
+          reconnectionCount: prev.reconnectionCount + (reconnectAttemptsRef.current > 0 ? 1 : 0),
+          lastConnectedAt: new Date().toISOString(),
+        }));
       };
 
       eventSource.onmessage = (e) => {
         if (!isMountedRef.current) return;
+
+        // Preserve Last-Event-ID for stream resume
+        if (e.lastEventId) {
+          lastEventIdRef.current = e.lastEventId;
+        }
 
         try {
           const data = JSON.parse(e.data) as {
@@ -244,23 +351,28 @@ export function usePdfStatus(
         setIsConnected(false);
 
         // Attempt reconnect or fallback to polling
-        if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current += 1;
+          setConnectionState('reconnecting');
+          
+          const delay = calculateBackoffDelay(reconnectAttemptsRef.current);
           setTimeout(() => {
             if (isMountedRef.current) {
               startSSE();
             }
-          }, SSE_RECONNECT_DELAY);
+          }, delay);
         } else {
           // Fallback to polling
+          setConnectionState('failed');
           startPolling();
         }
       };
     } catch (err) {
       // SSE not supported, fallback to polling
+      setConnectionState('failed');
       startPolling();
     }
-  }, [documentId, startPolling]);
+  }, [documentId, startPolling, maxReconnectAttempts]);
 
   // ============================================================================
   // Manual Reconnect
@@ -297,10 +409,13 @@ export function usePdfStatus(
 
     if (!documentId) return;
 
-    if (enableSSE) {
-      startSSE();
-    } else {
+    // Check network type - auto-fallback to polling for slow-2g
+    const usePolling = !enableSSE || shouldUsePollingForNetwork();
+
+    if (usePolling) {
       startPolling();
+    } else {
+      startSSE();
     }
 
     // Cleanup on unmount
@@ -321,10 +436,12 @@ export function usePdfStatus(
 
   return {
     status,
+    connectionState,
     isConnected,
     isPolling,
     isLoading,
     error,
+    connectionMetrics,
     reconnect,
   };
 }

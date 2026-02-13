@@ -67,6 +67,7 @@ import {
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { TierBadge } from '@/components/ui/feedback/tier-badge';
+import { UpgradePrompt } from '@/components/ui/feedback/upgrade-prompt';
 import { TagStrip } from '@/components/ui/tags/TagStrip';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
@@ -788,6 +789,11 @@ export const MeepleCard = React.memo(function MeepleCard({
   const showSelectCheckbox = selectable && canUseBulkSelect;
   const enableDrag = draggable && canUseDragDrop;
 
+  // Determine if upgrade prompt needed (feature requested but permission denied)
+  const needsUpgradeForBulkSelect = selectable && !canUseBulkSelect;
+  const needsUpgradeForDrag = draggable && !canUseDragDrop;
+  const showUpgradePrompt = needsUpgradeForBulkSelect || needsUpgradeForDrag;
+
   // Filter quick actions by permission (Epic #4068 - Issue #4179)
   const filteredQuickActions = quickActions?.filter(action => {
     // Admin-only actions require admin role
@@ -1014,6 +1020,20 @@ export const MeepleCard = React.memo(function MeepleCard({
         {permissions.tier !== 'free' && (
           <div className="absolute top-3 right-3 z-20">
             <TierBadge tier={permissions.tier} />
+          </div>
+        )}
+
+        {/* Upgrade Prompt (Epic #4068 - shown when locked features requested) */}
+        {showUpgradePrompt && (
+          <div className="absolute bottom-3 left-3 right-3 z-20">
+            <UpgradePrompt
+              requiredTier={needsUpgradeForBulkSelect ? 'pro' : 'normal'}
+              featureName={needsUpgradeForBulkSelect ? 'Bulk Selection' : 'Drag & Drop'}
+              variant="inline"
+              onUpgrade={() => {
+                console.log('Upgrade to:', needsUpgradeForBulkSelect ? 'Pro' : 'Normal');
+              }}
+            />
           </div>
         )}
 

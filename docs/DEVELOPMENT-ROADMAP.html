@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI Development Roadmap - Dual Fullstack Terminals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        quicksand: ['Quicksand', 'sans-serif'],
+                        nunito: ['Nunito', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+
+        .terminal-card {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        .terminal-header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .step-card {
+            padding: 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .step-card.p1 {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .step-card.p2 {
+            border-left: 4px solid #6366f1;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-frontend {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-backend {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-fullstack {
+            background: #fce7f3;
+            color: #9f1239;
+        }
+
+        .badge-test {
+            background: #f3e8ff;
+            color: #6b21a8;
+        }
+
+        .dependency-line {
+            position: absolute;
+            left: 17px;
+            top: 50px;
+            width: 2px;
+            height: calc(100% - 50px);
+            background: linear-gradient(to bottom, #e5e7eb, transparent);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-white to-zinc-50 min-h-screen p-8">
+
+    <div class="max-w-[1800px] mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-4xl font-quicksand font-bold text-zinc-900">MeepleAI Development Roadmap</h1>
+                    <p class="text-zinc-600 font-semibold">Dual Fullstack Terminals • 5 Active Issues • Optimized Dependencies</p>
+                    <p class="text-xs text-zinc-500 mt-1">Updated: 2026-02-13 • Epic #4136 (14/15 ✅) • Epic #4071 (2/6 ✅)</p>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-4 gap-4">
+                <div class="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-emerald-200/50">
+                    <div class="text-sm text-zinc-500">Terminal 1: Real-Time</div>
+                    <div class="text-3xl font-quicksand font-bold text-emerald-600">2</div>
+                    <div class="text-xs text-zinc-500 mt-1">tasks • 4-7 days</div>
+                </div>
+                <div class="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-blue-200/50">
+                    <div class="text-sm text-zinc-500">Terminal 2: Metrics</div>
+                    <div class="text-3xl font-quicksand font-bold text-blue-600">3</div>
+                    <div class="text-xs text-zinc-500 mt-1">tasks • 4-6 days</div>
+                </div>
+                <div class="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-purple-200/50">
+                    <div class="text-sm text-zinc-500">Completed</div>
+                    <div class="text-3xl font-quicksand font-bold text-purple-600">16</div>
+                    <div class="text-xs text-emerald-600 font-semibold mt-1">✅ issues closed</div>
+                </div>
+                <div class="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-amber-200/50">
+                    <div class="text-sm text-zinc-500">Overall Progress</div>
+                    <div class="text-3xl font-quicksand font-bold text-amber-600">76%</div>
+                    <div class="text-xs text-zinc-500 mt-1">16/21 total done</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievement Banner -->
+        <div class="mb-8 p-6 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-2 border-emerald-300">
+            <div class="flex items-center gap-4">
+                <div class="text-5xl">🎉</div>
+                <div class="flex-1">
+                    <h3 class="font-quicksand font-bold text-xl text-emerald-900 mb-1">Epic #4136 Quasi Completo!</h3>
+                    <p class="text-sm text-emerald-700">
+                        14/15 issue completate (93%) - PDF Wizard completamente funzionante.
+                        Solo testing di integrazione backend rimane (#4160).
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dual Terminal Layout -->
+        <div class="grid grid-cols-2 gap-8">
+
+            <!-- TERMINAL 1: Real-Time Pipeline & UI -->
+            <div class="terminal-card">
+                <div class="terminal-header">
+                    <div class="terminal-dot bg-red-500"></div>
+                    <div class="terminal-dot bg-yellow-500"></div>
+                    <div class="terminal-dot bg-green-500"></div>
+                    <span class="text-white font-quicksand font-bold text-lg flex-1">Terminal 1: Real-Time Pipeline</span>
+                    <span class="text-xs text-zinc-400 font-mono">Fullstack</span>
+                </div>
+
+                <div class="p-6 bg-white">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded">Priority 1 • Critical Path</span>
+                            <span class="text-xs text-zinc-500">Epic #4071 Core Features</span>
+                        </div>
+                        <p class="text-sm text-zinc-600">Focus: Real-time status tracking e aggiornamenti SSE</p>
+                    </div>
+
+                    <!-- Epic #4071: Real-Time Features -->
+                    <div class="mb-6">
+                        <h3 class="font-quicksand font-bold text-lg mb-3 text-emerald-700">
+                            Sequenza A: Real-Time Updates
+                        </h3>
+                        <div class="space-y-3 relative">
+
+                            <!-- Task 1: Multi-Location Status UI -->
+                            <div class="step-card p1 bg-white border border-amber-200 hover:border-amber-400">
+                                <div class="flex items-start gap-3">
+                                    <div class="step-number bg-amber-500 text-white">1</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <h4 class="font-semibold text-zinc-800">#4217 Multi-Location Status UI</h4>
+                                            <span class="badge badge-frontend">Frontend</span>
+                                            <span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full">P1 High</span>
+                                        </div>
+                                        <p class="text-sm text-zinc-600 mb-2">
+                                            UI components per visualizzare status PDF in diverse posizioni (dashboard, detail, list)
+                                        </p>
+                                        <div class="flex items-center gap-4 text-xs text-zinc-500">
+                                            <span><strong>Size:</strong> Large (3-5 days)</span>
+                                            <span><strong>Epic:</strong> #4071</span>
+                                        </div>
+                                        <div class="mt-2 p-2 bg-blue-50 rounded text-xs">
+                                            <strong>Stack:</strong> React components + shadcn/ui + real-time state management
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task 2: Real-Time SSE -->
+                            <div class="step-card p1 bg-white border border-amber-200 hover:border-amber-400">
+                                <div class="dependency-line"></div>
+                                <div class="flex items-start gap-3">
+                                    <div class="step-number bg-amber-500 text-white">2</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <h4 class="font-semibold text-zinc-800">#4218 Real-Time Updates (SSE)</h4>
+                                            <span class="badge badge-fullstack">Fullstack</span>
+                                            <span class="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full">P1 High</span>
+                                        </div>
+                                        <p class="text-sm text-zinc-600 mb-2">
+                                            Server-Sent Events per streaming real-time + polling fallback + frontend integration
+                                        </p>
+                                        <div class="flex items-center gap-4 text-xs text-zinc-500 mb-2">
+                                            <span><strong>Size:</strong> Medium (1-2 days)</span>
+                                            <span><strong>Depends:</strong> #4217</span>
+                                        </div>
+                                        <div class="p-2 bg-blue-50 rounded text-xs mb-2">
+                                            <strong>Backend:</strong> SSE endpoint + Redis pub/sub + HybridCache
+                                        </div>
+                                        <div class="p-2 bg-purple-50 rounded text-xs">
+                                            <strong>Frontend:</strong> EventSource API + reconnection logic + UI updates
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task 3: Integration Testing -->
+                            <div class="step-card bg-gradient-to-r from-emerald-50 to-white border border-emerald-200">
+                                <div class="flex items-start gap-3">
+                                    <div class="step-number bg-emerald-500 text-white">✓</div>
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-zinc-800 mb-1">E2E Real-Time Validation</h4>
+                                        <p class="text-sm text-zinc-600 mb-2">
+                                            Test completo: Upload PDF → Real-time progress → Status updates → Completion
+                                        </p>
+                                        <div class="text-xs text-zinc-500">
+                                            <code class="bg-zinc-100 px-2 py-1 rounded">pnpm test:e2e</code> + Manual QA
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Commands -->
+                    <div class="p-4 rounded-lg bg-zinc-50 border border-zinc-200">
+                        <h4 class="font-semibold text-sm text-zinc-700 mb-2">📟 Terminal 1 Commands</h4>
+                        <div class="space-y-1 text-xs font-mono">
+                            <div class="text-blue-600"># Frontend (apps/web/)</div>
+                            <div><code>pnpm dev</code> <span class="text-zinc-400">→ localhost:3000</span></div>
+                            <div><code>pnpm test && pnpm test:e2e</code></div>
+                            <div class="text-emerald-600 mt-2"># Backend (apps/api/src/Api/)</div>
+                            <div><code>dotnet run</code> <span class="text-zinc-400">→ localhost:8080</span></div>
+                            <div><code>dotnet test</code></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TERMINAL 2: Metrics & Notifications -->
+            <div class="terminal-card">
+                <div class="terminal-header">
+                    <div class="terminal-dot bg-red-500"></div>
+                    <div class="terminal-dot bg-yellow-500"></div>
+                    <div class="terminal-dot bg-green-500"></div>
+                    <span class="text-white font-quicksand font-bold text-lg flex-1">Terminal 2: Metrics & Testing</span>
+                    <span class="text-xs text-zinc-400 font-mono">Fullstack</span>
+                </div>
+
+                <div class="p-6 bg-white">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded">Priority 2 • Enhancement</span>
+                            <span class="text-xs text-zinc-500">Epic #4071 + #4136 Finalization</span>
+                        </div>
+                        <p class="text-sm text-zinc-600">Focus: Metriche, notifiche e completamento testing</p>
+                    </div>
+
+                    <!-- Epic #4071: Metrics & Notifications -->
+                    <div class="mb-6">
+                        <h3 class="font-quicksand font-bold text-lg mb-3 text-blue-700">
+                            Sequenza B: Metrics & Completion
+                        </h3>
+                        <div class="space-y-3 relative">
+
+                            <!-- Task 1: Duration Metrics -->
+                            <div class="step-card p2 bg-white border border-indigo-200 hover:border-indigo-400">
+                                <div class="flex items-start gap-3">
+                                    <div class="step-number bg-indigo-500 text-white">1</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <h4 class="font-semibold text-zinc-800">#4219 Duration Metrics & ETA</h4>
+                                            <span class="badge badge-fullstack">Fullstack</span>
+                                            <span class="text-xs bg-indigo-500 text-white px-2 py-0.5 rounded-full">P2 Medium</span>
+                                        </div>
+                                        <p class="text-sm text-zinc-600 mb-2">
+                                            Tracking durata pipeline + calcolo ETA + display frontend metriche performance
+                                        </p>
+                                        <div class="flex items-center gap-4 text-xs text-zinc-500 mb-2">
+                                            <span><strong>Size:</strong> Medium (1-2 days)</span>
+                                            <span><strong>Epic:</strong> #4071</span>
+                                        </div>
+                                        <div class="p-2 bg-blue-50 rounded text-xs mb-2">
+                                            <strong>Backend:</strong> StatsD metrics + duration tracking + ETA calculation
+                                        </div>
+                                        <div class="p-2 bg-purple-50 rounded text-xs">
+                                            <strong>Frontend:</strong> Metrics dashboard + progress bars con ETA
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task 2: Multi-Channel Notifications -->
+                            <div class="step-card p2 bg-white border border-indigo-200 hover:border-indigo-400">
+                                <div class="dependency-line"></div>
+                                <div class="flex items-start gap-3">
+                                    <div class="step-number bg-indigo-500 text-white">2</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <h4 class="font-semibold text-zinc-800">#4220 Multi-Channel Notifications</h4>
+                                            <span class="badge badge-fullstack">Fullstack</span>
+                                            <span class="text-xs bg-indigo-500 text-white px-2 py-0.5 rounded-full">P2 Medium</span>
+                                        </div>
+                                        <p class="text-sm text-zinc-600 mb-2">
+                                            Sistema notifiche multi-canale: in-app toasts + email + push (opzionale)
+                                        </p>
+                                        <div class="flex items-center gap-4 text-xs text-zinc-500 mb-2">
+                                            <span><strong>Size:</strong> Medium (1-2 days)</span>
+                                            <span><strong>Depends:</strong> #4219</span>
+                                        </div>
+                                        <div class="p-2 bg-blue-50 rounded text-xs mb-2">
+                                            <strong>Backend:</strong> UserNotifications BC + email templates + notification queue
+                                        </div>
+                                        <div class="p-2 bg-purple-50 rounded text-xs">
+                                            <strong>Frontend:</strong> Toast notifications + notification center UI
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task 3: Backend Integration Tests -->
+                            <div class="step-card bg-white border border-purple-200 hover:border-purple-400">
+                                <div class="dependency-line"></div>
+                                <div class="flex items-start gap-3">
+                                    <div class="step-number bg-purple-500 text-white">3</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <h4 class="font-semibold text-zinc-800">#4160 Wizard Integration Tests</h4>
+                                            <span class="badge badge-test">Backend Tests</span>
+                                            <span class="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full">Epic #4136</span>
+                                        </div>
+                                        <p class="text-sm text-zinc-600 mb-2">
+                                            Complete backend test coverage per wizard flow (Epic #4136 finale)
+                                        </p>
+                                        <div class="flex items-center gap-4 text-xs text-zinc-500 mb-2">
+                                            <span><strong>Size:</strong> Medium (1-2 days)</span>
+                                            <span><strong>Target:</strong> ≥90% coverage</span>
+                                        </div>
+                                        <div class="p-2 bg-blue-50 rounded text-xs">
+                                            <strong>Stack:</strong> xUnit + Testcontainers + Integration test patterns
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Final Validation -->
+                            <div class="step-card bg-gradient-to-r from-emerald-50 to-white border border-emerald-200">
+                                <div class="flex items-start gap-3">
+                                    <div class="step-number bg-emerald-500 text-white">✓</div>
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-zinc-800 mb-1">Final Validation</h4>
+                                        <p class="text-sm text-zinc-600 mb-2">
+                                            Run all test suites + manual QA + performance validation
+                                        </p>
+                                        <div class="text-xs text-zinc-500">
+                                            <code class="bg-zinc-100 px-2 py-1 rounded">dotnet test && pnpm test:e2e</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Commands -->
+                    <div class="p-4 rounded-lg bg-zinc-50 border border-zinc-200">
+                        <h4 class="font-semibold text-sm text-zinc-700 mb-2">📟 Terminal 2 Commands</h4>
+                        <div class="space-y-1 text-xs font-mono">
+                            <div class="text-blue-600"># Backend First</div>
+                            <div><code>cd apps/api/src/Api && dotnet run</code></div>
+                            <div><code>dotnet test --filter "Category=Integration"</code></div>
+                            <div class="text-emerald-600 mt-2"># Then Frontend</div>
+                            <div><code>cd apps/web && pnpm dev</code></div>
+                            <div><code>pnpm test:coverage</code></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parallel Execution Strategy -->
+        <div class="mt-8 p-8 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-2 border-amber-300">
+            <h2 class="font-quicksand font-bold text-2xl mb-4 text-amber-900">⚡ Strategia Parallela Fullstack</h2>
+
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div class="p-6 rounded-xl bg-white/70 backdrop-blur-md">
+                    <h3 class="font-semibold text-lg mb-3 text-emerald-700">🖥️ Terminal 1 Workflow</h3>
+                    <ul class="space-y-2 text-sm text-zinc-700">
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600">Day 1-5:</span>
+                            <span>#4217 Frontend - Multi-location UI components</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600">Day 6-7:</span>
+                            <span>#4218 Fullstack - SSE backend + frontend integration</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600">Day 8:</span>
+                            <span>E2E testing + QA validation</span>
+                        </li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-emerald-50 rounded-lg">
+                        <div class="text-xs font-semibold text-emerald-900">Estimated: 4-7 giorni lavorativi</div>
+                    </div>
+                </div>
+
+                <div class="p-6 rounded-xl bg-white/70 backdrop-blur-md">
+                    <h3 class="font-semibold text-lg mb-3 text-blue-700">⚙️ Terminal 2 Workflow</h3>
+                    <ul class="space-y-2 text-sm text-zinc-700">
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-600">Day 1-2:</span>
+                            <span>#4219 Fullstack - Duration metrics + ETA display</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-600">Day 3-4:</span>
+                            <span>#4220 Fullstack - Multi-channel notifications</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-600">Day 5-6:</span>
+                            <span>#4160 Backend - Integration tests completion</span>
+                        </li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                        <div class="text-xs font-semibold text-blue-900">Estimated: 4-6 giorni lavorativi</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 rounded-xl bg-white">
+                <h3 class="font-semibold text-lg mb-3 text-zinc-800">🔄 Why Fullstack Terminals?</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                        <div class="font-semibold text-sm text-amber-900 mb-1">Context Preservation</div>
+                        <div class="text-xs text-amber-700">Ogni developer mantiene context fullstack per una feature completa</div>
+                    </div>
+                    <div class="p-4 rounded-lg bg-purple-50 border border-purple-200">
+                        <div class="font-semibold text-sm text-purple-900 mb-1">Minimal Dependencies</div>
+                        <div class="text-xs text-purple-700">Le due sequenze non si bloccano a vicenda</div>
+                    </div>
+                    <div class="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                        <div class="font-semibold text-sm text-blue-900 mb-1">Faster Integration</div>
+                        <div class="text-xs text-blue-700">Frontend + backend insieme = testing immediato</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Metrics -->
+        <div class="mt-8 grid grid-cols-3 gap-6">
+            <div class="p-6 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-2 border-emerald-300">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-sm">✓</div>
+                    <h4 class="font-quicksand font-bold text-lg">Epic #4136</h4>
+                </div>
+                <p class="text-sm text-zinc-700 mb-2"><strong>93% Complete</strong> • PDF Wizard</p>
+                <ul class="text-xs text-zinc-600 space-y-1">
+                    <li>✓ Backend: 6/7 tasks done</li>
+                    <li>✓ Frontend: 8/8 tasks done</li>
+                    <li>⏳ Testing: 1 task remaining</li>
+                </ul>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-2 border-blue-300">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-sm">2</div>
+                    <h4 class="font-quicksand font-bold text-lg">Epic #4071</h4>
+                </div>
+                <p class="text-sm text-zinc-700 mb-2"><strong>33% Complete</strong> • PDF Status</p>
+                <ul class="text-xs text-zinc-600 space-y-1">
+                    <li>✓ Pipeline: 2/6 tasks done</li>
+                    <li>⏳ Real-Time: 2 tasks (P1)</li>
+                    <li>⏳ Enhancement: 2 tasks (P2)</li>
+                </ul>
+            </div>
+
+            <div class="p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-purple-300">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-purple-500 text-white flex items-center justify-center font-bold text-sm">AI</div>
+                    <h4 class="font-quicksand font-bold text-lg">Agent System</h4>
+                </div>
+                <p class="text-sm text-zinc-700 mb-2"><strong>100% Complete</strong> • Integration</p>
+                <ul class="text-xs text-zinc-600 space-y-1">
+                    <li>✓ Agent Builder (#3809)</li>
+                    <li>✓ KB Documents (#4229)</li>
+                    <li>✓ Integration (#4230)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Next Actions -->
+        <div class="mt-8 p-6 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+            <h3 class="font-quicksand font-bold text-2xl mb-4">🚀 Immediate Next Steps</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-semibold mb-2 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-xs">1</span>
+                        Terminal 1 Start
+                    </h4>
+                    <div class="space-y-2 text-sm pl-8">
+                        <div>→ Begin #4217: Multi-location status UI components</div>
+                        <div>→ Setup frontend workspace in <code class="bg-white/20 px-1 rounded">apps/web</code></div>
+                        <div>→ Reference: Epic #4071 spec for requirements</div>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-xs">2</span>
+                        Terminal 2 Start
+                    </h4>
+                    <div class="space-y-2 text-sm pl-8">
+                        <div>→ Begin #4219: Duration metrics backend</div>
+                        <div>→ Setup backend workspace in <code class="bg-white/20 px-1 rounded">apps/api</code></div>
+                        <div>→ Review existing metrics infrastructure</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Make cards clickable to open GitHub issues
+        document.querySelectorAll('.step-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const title = this.querySelector('h4').textContent;
+                const match = title.match(/#(\d+)/);
+                if (match) {
+                    window.open(`https://github.com/DegrassiAaron/meepleai-monorepo/issues/${match[1]}`, '_blank');
+                }
+            });
+        });
+
+        // Add hover effects
+        document.querySelectorAll('.step-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+</html>

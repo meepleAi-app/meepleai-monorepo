@@ -200,7 +200,12 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             privateGameId: entity.PrivateGameId,
             retryCount: entity.RetryCount,
             errorCategory: errorCategory,
-            failedAtState: failedAtState
+            failedAtState: failedAtState,
+            uploadingStartedAt: entity.UploadingStartedAt, // Issue #4219
+            extractingStartedAt: entity.ExtractingStartedAt, // Issue #4219
+            chunkingStartedAt: entity.ChunkingStartedAt, // Issue #4219
+            embeddingStartedAt: entity.EmbeddingStartedAt, // Issue #4219
+            indexingStartedAt: entity.IndexingStartedAt // Issue #4219
         );
     }
 
@@ -232,7 +237,12 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             PrivateGameId = domain.PrivateGameId, // Issue #3664
             RetryCount = domain.RetryCount, // Issue #4216
             ErrorCategory = domain.ErrorCategory?.ToString(), // Issue #4216
-            FailedAtState = domain.FailedAtState?.ToString() // Issue #4216
+            FailedAtState = domain.FailedAtState?.ToString(), // Issue #4216
+            UploadingStartedAt = domain.UploadingStartedAt, // Issue #4219
+            ExtractingStartedAt = domain.ExtractingStartedAt, // Issue #4219
+            ChunkingStartedAt = domain.ChunkingStartedAt, // Issue #4219
+            EmbeddingStartedAt = domain.EmbeddingStartedAt, // Issue #4219
+            IndexingStartedAt = domain.IndexingStartedAt // Issue #4219
         };
     }
 }

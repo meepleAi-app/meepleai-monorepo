@@ -55,6 +55,18 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; private set; }
 
+    // Issue #4219: Per-state timing tracking for metrics and ETA
+    public DateTime? UploadingStartedAt { get; private set; }
+    public DateTime? ExtractingStartedAt { get; private set; }
+    public DateTime? ChunkingStartedAt { get; private set; }
+    public DateTime? EmbeddingStartedAt { get; private set; }
+    public DateTime? IndexingStartedAt { get; private set; }
+
+    // Issue #4219: Progress tracking and ETA calculation
+    public int ProgressPercentage => CalculateProgressPercentage();
+    public TimeSpan? EstimatedTimeRemaining { get; private set; }
+    public TimeSpan? TotalDuration => ProcessedAt.HasValue ? ProcessedAt.Value - UploadedAt : null;
+
 #pragma warning disable CS8618
     private PdfDocument() : base() { }
 #pragma warning restore CS8618
@@ -105,6 +117,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Issue #3664: Added PrivateGameId
     /// Issue #4215: Added ProcessingState enum support
     /// Issue #4216: Added retry tracking fields
+    /// Issue #4219: Added per-state timing fields and ETA
     /// </summary>
     public static PdfDocument Reconstitute(
         Guid id,
@@ -130,7 +143,12 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         PdfProcessingState? processingState = null,
         int retryCount = 0,
         ErrorCategory? errorCategory = null,
-        PdfProcessingState? failedAtState = null)
+        PdfProcessingState? failedAtState = null,
+        DateTime? uploadingStartedAt = null,
+        DateTime? extractingStartedAt = null,
+        DateTime? chunkingStartedAt = null,
+        DateTime? embeddingStartedAt = null,
+        DateTime? indexingStartedAt = null)
     {
         var document = new PdfDocument
         {
@@ -167,8 +185,18 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             SharedGameId = sharedGameId,
             ContributorId = contributorId,
             SourceDocumentId = sourceDocumentId,
-            PrivateGameId = privateGameId
+            PrivateGameId = privateGameId,
+
+            // Issue #4219: Timing fields
+            UploadingStartedAt = uploadingStartedAt,
+            ExtractingStartedAt = extractingStartedAt,
+            ChunkingStartedAt = chunkingStartedAt,
+            EmbeddingStartedAt = embeddingStartedAt,
+            IndexingStartedAt = indexingStartedAt
         };
+
+        // Issue #4219: Calculate ETA after reconstitution
+        document.UpdateETA();
 
         return document;
     }
@@ -291,6 +319,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         // Update state
         ProcessingState = newState;
 
+        // Issue #4219: Record timing when entering a new state
+        RecordStateStartTime(newState);
+
         // Sync deprecated property for backward compatibility
         ProcessingStatus = newState switch
         {
@@ -338,6 +369,85 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             throw new InvalidOperationException(
                 $"Invalid state transition: {current} → {next}. Allowed: {string.Join(", ", validTransitions)}");
         }
+    }
+
+    /// <summary>
+    /// Calculates progress percentage based on current processing state.
+    /// Issue #4219: Progress tracking for UI display.
+    /// </summary>
+    /// <returns>Progress percentage (0-100)</returns>
+    private int CalculateProgressPercentage()
+    {
+        return ProcessingState switch
+        {
+            PdfProcessingState.Pending => 0,
+            PdfProcessingState.Uploading => 10,
+            PdfProcessingState.Extracting => 30,
+            PdfProcessingState.Chunking => 50,
+            PdfProcessingState.Embedding => 70,
+            PdfProcessingState.Indexing => 90,
+            PdfProcessingState.Ready => 100,
+            PdfProcessingState.Failed => 0,
+            _ => 0
+        };
+    }
+
+    /// <summary>
+    /// Updates the estimated time remaining based on current progress.
+    /// Issue #4219: ETA calculation for user expectation management.
+    /// MVP: Static calculation (2 seconds per page per remaining state).
+    /// Future: ML-based predictor using historical data (Phase 2).
+    /// </summary>
+    public void UpdateETA()
+    {
+        // Terminal states have no remaining time
+        if (ProcessingState == PdfProcessingState.Ready || ProcessingState == PdfProcessingState.Failed)
+        {
+            EstimatedTimeRemaining = TimeSpan.Zero;
+            return;
+        }
+
+        // MVP: Static calculation
+        // Assumptions:
+        // - 2 seconds per page per state
+        // - Remaining states = 6 - current state index
+        var stateIndex = (int)ProcessingState; // Pending=0, Uploading=1, ..., Indexing=5
+        var remainingStates = 6 - stateIndex;
+        var avgSecondsPerState = 2 * (PageCount ?? 10); // Default to 10 pages if unknown
+
+        EstimatedTimeRemaining = TimeSpan.FromSeconds(avgSecondsPerState * remainingStates);
+    }
+
+    /// <summary>
+    /// Records the start time for the current state transition.
+    /// Issue #4219: Per-state timing tracking.
+    /// </summary>
+    /// <param name="state">The state being transitioned to</param>
+    private void RecordStateStartTime(PdfProcessingState state)
+    {
+        var now = DateTime.UtcNow;
+
+        switch (state)
+        {
+            case PdfProcessingState.Uploading:
+                UploadingStartedAt = now;
+                break;
+            case PdfProcessingState.Extracting:
+                ExtractingStartedAt = now;
+                break;
+            case PdfProcessingState.Chunking:
+                ChunkingStartedAt = now;
+                break;
+            case PdfProcessingState.Embedding:
+                EmbeddingStartedAt = now;
+                break;
+            case PdfProcessingState.Indexing:
+                IndexingStartedAt = now;
+                break;
+        }
+
+        // Update ETA after state change
+        UpdateETA();
     }
 
     /// <summary>
@@ -462,8 +572,18 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             IsPublic = true, // Shared game documents are public by default
             SharedGameId = sharedGameId,
             ContributorId = contributorId,
-            SourceDocumentId = source.Id // Track lineage
+            SourceDocumentId = source.Id, // Track lineage
+
+            // Issue #4219: Copy timing fields for accurate metrics
+            UploadingStartedAt = source.UploadingStartedAt,
+            ExtractingStartedAt = source.ExtractingStartedAt,
+            ChunkingStartedAt = source.ChunkingStartedAt,
+            EmbeddingStartedAt = source.EmbeddingStartedAt,
+            IndexingStartedAt = source.IndexingStartedAt
         };
+
+        // Issue #4219: Calculate ETA for copied document
+        copy.UpdateETA();
 
         return copy;
     }

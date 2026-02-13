@@ -9,11 +9,11 @@
 
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Card } from '@/components/ui/data-display/card';
-import { Spinner } from '@/components/loading';
 import { TypologySelector, StrategySelector } from '@/components/agent/config';
 import { toast } from '@/components/layout';
+import { Spinner } from '@/components/loading';
+import { Card } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 
 interface ConfigAgentStepProps {
   gameId: string;

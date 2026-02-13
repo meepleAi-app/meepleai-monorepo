@@ -14,12 +14,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import { MessageSquare, History, Book, FileText, Loader2 } from 'lucide-react';
 
-import { AgentChat } from './AgentChat';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+import { AgentChat } from './AgentChat';
 
 // Tab types
 type TabType = 'chat' | 'history' | 'kb';

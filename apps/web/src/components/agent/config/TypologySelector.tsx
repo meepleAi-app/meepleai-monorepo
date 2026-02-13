@@ -8,7 +8,7 @@
 
 'use client';
 
-import { Check, ChevronDown, Loader2, Sparkles } from 'lucide-react';
+import { Check, Loader2, Sparkles } from 'lucide-react';
 
 import {
   Select,

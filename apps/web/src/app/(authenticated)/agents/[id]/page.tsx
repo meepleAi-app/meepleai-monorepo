@@ -10,8 +10,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { AgentInfoCard } from '@/components/agent/AgentInfoCard';
+import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { api } from '@/lib/api';
 
 interface AgentPageProps {

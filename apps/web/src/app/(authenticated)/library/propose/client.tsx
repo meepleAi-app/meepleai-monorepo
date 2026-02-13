@@ -11,16 +11,17 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { useRouter } from 'next/navigation';
 
+import { ChatSetupStep } from '@/app/(authenticated)/admin/wizard/steps/ChatSetupStep';
+import { GameCreationStep } from '@/app/(authenticated)/admin/wizard/steps/GameCreationStep';
+import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
+import { QAStep } from '@/app/(authenticated)/admin/wizard/steps/QAStep';
 import { toast } from '@/components/layout';
 import { Card } from '@/components/ui/data-display/card';
 
 // Reuse admin wizard steps
-import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
-import { GameCreationStep } from '@/app/(authenticated)/admin/wizard/steps/GameCreationStep';
-import { ChatSetupStep } from '@/app/(authenticated)/admin/wizard/steps/ChatSetupStep';
-import { QAStep } from '@/app/(authenticated)/admin/wizard/steps/QAStep';
 
 // New step for editor workflow
 import { RequestApprovalStep } from './steps/RequestApprovalStep';

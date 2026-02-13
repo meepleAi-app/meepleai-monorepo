@@ -6,9 +6,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+
 import { Bell, Mail, Smartphone, MessageSquare, Save, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/primitives/button';
+
 import { Switch } from '@/components/ui/forms/switch';
+import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/use-toast';
 
 interface NotificationPreferences {

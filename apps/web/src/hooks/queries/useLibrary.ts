@@ -133,6 +133,12 @@ export function useGameInLibraryStatus(
     },
     enabled: enabled && !!gameId && isAuthenticated,
     staleTime: 30 * 1000, // Status can change frequently (30s)
+
+    // Flickering fixes (Research: TanStack Query best practices)
+    retryOnMount: false, // Prevent retry loop on component mount/unmount cycles
+    structuralSharing: false, // Disable for simple status objects (performance)
+    notifyOnChangeProps: ['data', 'error'], // Only re-render on data/error changes (not isFetching)
+    retry: 1, // Reduce from 3 to 1 (minimize flickering on real failures)
   });
 }
 

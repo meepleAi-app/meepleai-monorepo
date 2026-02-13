@@ -15,7 +15,7 @@
 const { spawn } = require('child_process');
 const http = require('http');
 
-const SHARDS = 4;
+const SHARDS = 6;
 const SERVER_PORT = 3000;
 const SERVER_URL = `http://localhost:${SERVER_PORT}`;
 

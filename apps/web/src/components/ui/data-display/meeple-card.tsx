@@ -67,6 +67,7 @@ import {
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { TierBadge } from '@/components/ui/feedback/tier-badge';
+import { TagStrip } from '@/components/ui/tags/TagStrip';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
@@ -246,6 +247,15 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
     canAccess: (feature: string) => boolean;
     isAdmin: () => boolean;
   };
+
+  // ========== TAG SYSTEM (Epic #4068 - Issue #4182) ==========
+
+  /** Tags to display on card */
+  tags?: import('@/types/tags').Tag[];
+  /** Maximum visible tags before overflow (default: 3) */
+  maxVisibleTags?: number;
+  /** Show tag strip (default: true if tags provided) */
+  showTagStrip?: boolean;
 }
 
 // ============================================================================
@@ -748,6 +758,9 @@ export const MeepleCard = React.memo(function MeepleCard({
   infoHref,
   infoTooltip,
   permissions: permissionsOverride,
+  tags,
+  maxVisibleTags = 3,
+  showTagStrip = true,
 }: MeepleCardProps) {
   // Epic #4068 - Issue #4179: Permission integration
   const defaultPermissions = usePermissions();
@@ -849,6 +862,16 @@ export const MeepleCard = React.memo(function MeepleCard({
           status={status}
           showStatusIcon={showStatusIcon}
           badge={badge}
+        />
+      )}
+
+      {/* Tag Strip: entity-specific tags (Epic #4068 - Issue #4182) */}
+      {showTagStrip && tags && tags.length > 0 && (
+        <TagStrip
+          tags={tags}
+          maxVisible={maxVisibleTags}
+          variant={variant === 'compact' || variant === 'list' ? 'mobile' : 'desktop'}
+          position="left"
         />
       )}
 

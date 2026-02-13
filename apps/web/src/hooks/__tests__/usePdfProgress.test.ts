@@ -21,10 +21,17 @@ vi.mock('../usePdfStatus', () => ({
       eta: '5m 0s',
       timestamp: new Date().toISOString(),
     },
+    connectionState: 'connected',
     isConnected: true,
     isPolling: false,
     isLoading: false,
     error: null,
+    connectionMetrics: {
+      connectionUptime: 0,
+      reconnectionCount: 0,
+      fallbackTriggers: 0,
+      lastConnectedAt: new Date().toISOString(),
+    },
     reconnect: vi.fn(),
   })),
 }));

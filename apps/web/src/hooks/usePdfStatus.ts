@@ -291,12 +291,15 @@ export function usePdfStatus(
         setIsConnected(true);
         setIsPolling(false);
         setError(null);
+        
+        // Save reconnect attempts before resetting
+        const wasReconnecting = reconnectAttemptsRef.current > 0;
         reconnectAttemptsRef.current = 0;
         
         // Update metrics
         setConnectionMetrics(prev => ({
           ...prev,
-          reconnectionCount: prev.reconnectionCount + (reconnectAttemptsRef.current > 0 ? 1 : 0),
+          reconnectionCount: prev.reconnectionCount + (wasReconnecting ? 1 : 0),
           lastConnectedAt: new Date().toISOString(),
         }));
       };

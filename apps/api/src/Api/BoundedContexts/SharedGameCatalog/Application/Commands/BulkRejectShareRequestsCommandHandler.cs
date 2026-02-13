@@ -1,7 +1,7 @@
-using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;

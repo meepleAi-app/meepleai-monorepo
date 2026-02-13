@@ -373,3 +373,182 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await expect(userPage.locator('button:has-text("Seleziona")')).toBeVisible();
   });
 });
+
+// ============================================================================
+// Issue #4268 - Phase 3: Bulk Collection Actions
+// ============================================================================
+
+test.describe('Bulk Collection Actions (Issue #4268)', () => {
+  // Mock API for bulk operations
+  async function setupBulkCollectionMocks(page: Page) {
+    // Mock bulk-add endpoint
+    await page.route(`${API_BASE}/api/v1/library/collections/game/bulk-add`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          totalRequested: 3,
+          successCount: 3,
+          failedCount: 0,
+          errors: [],
+        }),
+      });
+    });
+
+    // Mock bulk-remove endpoint
+    await page.route(`${API_BASE}/api/v1/library/collections/game/bulk-remove`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          totalRequested: 2,
+          successCount: 2,
+          failedCount: 0,
+          errors: [],
+        }),
+      });
+    });
+
+    // Mock bulk-associated-data endpoint
+    await page.route(
+      `${API_BASE}/api/v1/library/collections/game/bulk-associated-data`,
+      async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            totalEntities: 2,
+            totalCustomAgents: 1,
+            totalPrivatePdfs: 1,
+            totalChatSessions: 5,
+            totalGameSessions: 8,
+            totalChecklistItems: 3,
+            totalLabels: 2,
+          }),
+        });
+      }
+    );
+  }
+
+  test('bulk add to collection - complete success', async ({ userPage }) => {
+    await setupLibraryBulkMocks(userPage, 5);
+    await setupBulkCollectionMocks(userPage);
+
+    await userPage.goto('/dashboard/library');
+    await userPage.waitForLoadState('networkidle');
+
+    // Enter multi-select and select 3 games
+    await userPage.locator('button:has-text("Seleziona")').click();
+    await userPage.locator('[data-testid="game-card"]').nth(0).click();
+    await userPage.locator('[data-testid="game-card"]').nth(1).click();
+    await userPage.locator('[data-testid="game-card"]').nth(2).click();
+
+    // Verify MultiSelectBar with count
+    await expect(userPage.locator('text=3 selezionati')).toBeVisible();
+
+    // Click Add to collection button (Plus icon)
+    await userPage.locator('button[aria-label="Aggiungi alla collezione"]').click();
+
+    // Verify success toast
+    await expect(userPage.locator('text=/3 giochi aggiunti/')).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test('bulk remove with aggregated warning modal', async ({ userPage }) => {
+    await setupLibraryBulkMocks(userPage, 4);
+    await setupBulkCollectionMocks(userPage);
+
+    await userPage.goto('/dashboard/library');
+    await userPage.waitForLoadState('networkidle');
+
+    // Enter multi-select and select 2 games
+    await userPage.locator('button:has-text("Seleziona")').click();
+    await userPage.locator('[data-testid="game-card"]').nth(0).click();
+    await userPage.locator('[data-testid="game-card"]').nth(1).click();
+
+    // Click Remove from collection button (Minus icon)
+    await userPage.locator('button[aria-label="Rimuovi dalla collezione"]').click();
+
+    // Verify aggregated warning modal
+    await expect(userPage.locator('text=/Rimuovi 2 giochi dalla Collezione/')).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Verify aggregated data items
+    await expect(userPage.locator('text=/1 agenti AI personalizzati/')).toBeVisible();
+    await expect(userPage.locator('text=/5 chat con l\'agente/')).toBeVisible();
+    await expect(userPage.locator('text=/1 PDF privati caricati/')).toBeVisible();
+    await expect(userPage.locator('text=/8 sessioni registrate/')).toBeVisible();
+
+    // Confirm removal
+    await userPage.locator('button:has-text("Rimuovi Definitivamente")').click();
+
+    // Verify success toast
+    await expect(userPage.locator('text=/2 giochi rimossi/')).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test('bulk add - partial success shows warning toast', async ({ userPage }) => {
+    await setupLibraryBulkMocks(userPage, 5);
+
+    // Mock partial success response
+    await userPage.route(`${API_BASE}/api/v1/library/collections/game/bulk-add`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          totalRequested: 5,
+          successCount: 3,
+          failedCount: 2,
+          errors: [
+            { entityId: 'game-4', error: 'Collection quota exceeded' },
+            { entityId: 'game-5', error: 'Entity not found' },
+          ],
+        }),
+      });
+    });
+
+    await userPage.goto('/dashboard/library');
+    await userPage.waitForLoadState('networkidle');
+
+    // Select 5 games
+    await userPage.locator('button:has-text("Seleziona")').click();
+    for (let i = 0; i < 5; i++) {
+      await userPage.locator('[data-testid="game-card"]').nth(i).click();
+    }
+
+    // Add to collection
+    await userPage.locator('button[aria-label="Aggiungi alla collezione"]').click();
+
+    // Verify partial success warning toast
+    await expect(userPage.locator('text=/3\\/5 giochi aggiunti. 2 falliti/')).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test('bulk remove - cancel warning modal keeps selection', async ({ userPage }) => {
+    await setupLibraryBulkMocks(userPage, 3);
+    await setupBulkCollectionMocks(userPage);
+
+    await userPage.goto('/dashboard/library');
+    await userPage.waitForLoadState('networkidle');
+
+    // Select 2 games
+    await userPage.locator('button:has-text("Seleziona")').click();
+    await userPage.locator('[data-testid="game-card"]').nth(0).click();
+    await userPage.locator('[data-testid="game-card"]').nth(1).click();
+
+    // Open removal warning
+    await userPage.locator('button[aria-label="Rimuovi dalla collezione"]').click();
+    await expect(userPage.locator('text=/Rimuovi 2 giochi/')).toBeVisible();
+
+    // Cancel
+    await userPage.locator('button:has-text("Annulla")').click();
+
+    // Verify modal closes and items still selected
+    await expect(userPage.locator('text=/Rimuovi 2 giochi/')).not.toBeVisible();
+    await expect(userPage.locator('text=2 selezionati')).toBeVisible();
+  });
+});

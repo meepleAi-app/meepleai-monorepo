@@ -24,7 +24,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
 using Api.Models;
-using Api.BoundedContexts.Administration.Application.Commands;
+using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

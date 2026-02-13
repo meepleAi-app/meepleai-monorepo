@@ -1,5 +1,6 @@
-import { apiClient } from './client';
 import type { UserPermissions, PermissionCheckResponse } from '@/types/permissions';
+
+import { apiClient } from './client';
 
 export async function getUserPermissions(): Promise<UserPermissions> {
   const response = await apiClient.get<UserPermissions>('/api/v1/permissions/me');

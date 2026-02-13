@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
+import type { TagStripProps } from '@/types/tags';
+
 import { TagBadge } from './TagBadge';
 import { TagOverflow } from './TagOverflow';
-import type { TagStripProps } from '@/types/tags';
 
 export function TagStrip({ tags, maxVisible = 3, variant = 'desktop', position = 'left' }: TagStripProps) {
   if (!tags || tags.length === 0) return null;

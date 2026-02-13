@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Users,
   Search,
   Filter,
   ChevronLeft,
@@ -14,15 +14,15 @@ import {
   Mail,
   Download,
   Eye,
-  X,
 } from 'lucide-react';
-import { adminClient } from '@/lib/api/admin-client';
+import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { Input } from '@/components/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/data-display/badge';
-import { toast } from 'sonner';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
+import { adminClient } from '@/lib/api/admin-client';
 
 interface User {
   id: string;

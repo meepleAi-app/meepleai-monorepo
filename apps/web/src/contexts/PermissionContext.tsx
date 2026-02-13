@@ -1,9 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, type ReactNode } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
+
 import { getUserPermissions } from '@/lib/api/permissions';
-import type { UserPermissions, UserTier, UserRole } from '@/types/permissions';
+import type { UserTier, UserRole } from '@/types/permissions';
 import { hasMinimumTier, isAdmin } from '@/types/permissions';
 
 interface PermissionContextValue {

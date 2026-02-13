@@ -8,7 +8,9 @@
 'use client';
 
 import React from 'react';
+
 import { Circle, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 export type AgentStatus = 'active' | 'idle' | 'training' | 'error';

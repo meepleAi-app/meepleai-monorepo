@@ -1,10 +1,12 @@
 import { Suspense } from 'react';
+
 import { Metadata } from 'next';
+
 import { DashboardShell } from '@/components/admin/dashboard/dashboard-shell';
-import { StatsOverview } from '@/components/admin/dashboard/stats-overview';
-import { SharedGamesSection } from '@/components/admin/dashboard/shared-games-section';
-import { UserManagementSection } from '@/components/admin/dashboard/user-management-section';
 import { DashboardSkeleton } from '@/components/admin/dashboard/dashboard-skeleton';
+import { SharedGamesSection } from '@/components/admin/dashboard/shared-games-section';
+import { StatsOverview } from '@/components/admin/dashboard/stats-overview';
+import { UserManagementSection } from '@/components/admin/dashboard/user-management-section';
 
 export const metadata: Metadata = {
   title: 'Admin Dashboard | MeepleAI',

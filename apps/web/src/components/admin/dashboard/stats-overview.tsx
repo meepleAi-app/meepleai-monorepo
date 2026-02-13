@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Users, Package, TrendingUp, CheckCircle } from 'lucide-react';
+
 import { adminClient } from '@/lib/api/admin-client';
 
 interface StatCardProps {

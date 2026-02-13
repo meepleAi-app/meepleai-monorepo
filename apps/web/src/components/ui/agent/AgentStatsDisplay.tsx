@@ -1,9 +1,11 @@
 'use client';
 
 import { MessageSquare, Clock, Brain, Eye, Code2 } from 'lucide-react';
-import type { AgentMetadata } from '@/types/agent';
-import { AgentStatusBadge } from './AgentStatusBadge';
+
 import { cn } from '@/lib/utils';
+import type { AgentMetadata } from '@/types/agent';
+
+import { AgentStatusBadge } from './AgentStatusBadge';
 
 const CAPABILITY_ICONS = {
   RAG: Brain,

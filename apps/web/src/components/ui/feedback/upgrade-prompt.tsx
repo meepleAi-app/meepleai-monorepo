@@ -8,7 +8,9 @@
 'use client';
 
 import React from 'react';
+
 import { Crown, ArrowRight, Sparkles } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 import type { UserTier } from '@/types/permissions';
 

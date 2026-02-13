@@ -17,6 +17,18 @@ describe('StatsOverview', () => {
   });
 
   it('renders block header with title and link', () => {
+    vi.mocked(adminClientModule.adminClient.getStats).mockResolvedValue({
+      totalGames: 0,
+      publishedGames: 0,
+      pendingGames: 0,
+      totalUsers: 0,
+      activeUsers: 0,
+      newUsers: 0,
+      approvalRate: 0,
+      pendingApprovals: 0,
+      recentSubmissions: 0,
+    });
+
     renderWithQuery(<StatsOverview />);
 
     expect(screen.getByRole('heading', { name: /collection overview/i })).toBeInTheDocument();
@@ -72,16 +84,26 @@ describe('StatsOverview', () => {
       totalUsers: 8542,
       activeUsers: 3891,
       pendingApprovals: 23,
+      approvalRate: 94,
+      pendingGames: 0,
+      newUsers: 0,
+      recentSubmissions: 47,
     });
 
     renderWithQuery(<StatsOverview />);
 
-    await screen.findByText(/1156 published/i);
-    await screen.findByText(/3891 active/i);
-    await screen.findByText(/23 pending/i);
+    // Verify main values are displayed
+    await screen.findByText('1247');
+    await screen.findByText('8542');
+    await screen.findByText('94%');
+
+    // Verify trend values are displayed (they appear in spans within trend divs)
+    expect(screen.getByText('1156 published')).toBeInTheDocument();
+    expect(screen.getByText('3891 active')).toBeInTheDocument();
+    expect(screen.getByText('23 pending')).toBeInTheDocument();
   });
 
-  it('handles API errors gracefully', async () => {
+  it('handles API errors gracefully', () => {
     vi.mocked(adminClientModule.adminClient.getStats).mockRejectedValue(new Error('API Error'));
 
     renderWithQuery(<StatsOverview />);
@@ -91,10 +113,19 @@ describe('StatsOverview', () => {
   });
 
   it('uses default values when data is missing', async () => {
-    vi.mocked(adminClientModule.adminClient.getStats).mockResolvedValue({});
+    vi.mocked(adminClientModule.adminClient.getStats).mockResolvedValue({
+      totalGames: undefined,
+      publishedGames: undefined,
+      totalUsers: undefined,
+      activeUsers: undefined,
+      approvalRate: undefined,
+      pendingApprovals: undefined,
+      recentSubmissions: undefined,
+    } as any);
 
     renderWithQuery(<StatsOverview />);
 
-    await screen.findByText('0'); // Should show 0 for missing values
+    const values = await screen.findAllByText('0');
+    expect(values.length).toBeGreaterThan(0); // Should show 0 for missing values
   });
 });

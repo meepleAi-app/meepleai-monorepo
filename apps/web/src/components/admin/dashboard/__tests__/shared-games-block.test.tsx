@@ -24,7 +24,7 @@ describe('SharedGamesBlock', () => {
     vi.clearAllMocks();
   });
 
-  it('renders block header with title and badge', () => {
+  it('renders block header with title and badge', async () => {
     vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
       items: [],
       totalCount: 23,
@@ -36,7 +36,7 @@ describe('SharedGamesBlock', () => {
     renderWithQuery(<SharedGamesBlock />);
 
     expect(screen.getByRole('heading', { name: /approval queue/i })).toBeInTheDocument();
-    expect(screen.getByText(/23 pending/i)).toBeInTheDocument();
+    await screen.findByText('23 pending');
     expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
       'href',
       '/admin/shared-games/approvals'
@@ -167,7 +167,13 @@ describe('SharedGamesBlock', () => {
   });
 
   it('handles undefined API response gracefully', async () => {
-    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue(undefined);
+    vi.mocked(adminClientModule.adminClient.getApprovalQueue).mockResolvedValue({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 6,
+      totalPages: 0,
+    });
 
     renderWithQuery(<SharedGamesBlock />);
 

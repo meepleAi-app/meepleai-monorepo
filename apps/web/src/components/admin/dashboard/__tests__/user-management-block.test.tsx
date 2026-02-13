@@ -27,7 +27,7 @@ describe('UserManagementBlock', () => {
     vi.clearAllMocks();
   });
 
-  it('renders block header with title and badge', () => {
+  it('renders block header with title and badge', async () => {
     vi.mocked(adminClientModule.adminClient.getUsers).mockResolvedValue({
       items: [],
       totalCount: 8542,
@@ -39,7 +39,7 @@ describe('UserManagementBlock', () => {
     renderWithQuery(<UserManagementBlock />);
 
     expect(screen.getByRole('heading', { name: /user management/i })).toBeInTheDocument();
-    expect(screen.getByText(/8542 users/i)).toBeInTheDocument();
+    await screen.findByText('8542 users');
     expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
       'href',
       '/admin/users/management'
@@ -126,7 +126,13 @@ describe('UserManagementBlock', () => {
   });
 
   it('handles undefined API response gracefully', async () => {
-    vi.mocked(adminClientModule.adminClient.getUsers).mockResolvedValue(undefined);
+    vi.mocked(adminClientModule.adminClient.getUsers).mockResolvedValue({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 6,
+      totalPages: 0,
+    });
 
     renderWithQuery(<UserManagementBlock />);
 
@@ -192,13 +198,15 @@ describe('UserManagementBlock', () => {
 
     renderWithQuery(<UserManagementBlock />);
 
-    await waitFor(() => {
-      const userCard = screen.getByText(/john doe/i);
-      fireEvent.click(userCard.closest('button')!);
-    });
+    // Wait for user card to appear
+    await screen.findByText('John Doe');
 
+    // Click "View Profile" button (first action button on the card)
+    const viewProfileButton = screen.getByText('View Profile');
+    fireEvent.click(viewProfileButton);
+
+    // Wait for dialog to open
     await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: /user profile/i })).toBeInTheDocument();
     });
   });

@@ -41,6 +41,12 @@ export function AgentStatsDisplay({ metadata }: { metadata: AgentMetadata }) {
             <span>{new Date(metadata.lastExecuted).toLocaleString()}</span>
           </div>
         )}
+        {metadata.avgResponseTime !== undefined && (
+          <div className="flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{metadata.avgResponseTime}ms avg</span>
+          </div>
+        )}
       </div>
 
       {/* Capabilities Tags (Epic #4068 - Issue #4184) */}

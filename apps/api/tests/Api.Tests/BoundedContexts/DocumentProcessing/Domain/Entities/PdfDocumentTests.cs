@@ -425,7 +425,9 @@ public class PdfDocumentTests
         Assert.Equal(2, document.RetryCount);
         Assert.Equal(PdfProcessingState.Chunking, document.ProcessingState);
 
-        // Success path - complete processing
+        // Success path - complete processing through state machine
+        document.TransitionTo(PdfProcessingState.Embedding);
+        document.TransitionTo(PdfProcessingState.Indexing);
         document.MarkAsCompleted(10);
         Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
         Assert.False(document.CanRetry()); // Can't retry completed document

@@ -1,7 +1,5 @@
 /**
  * BggPreviewCard - Issue #4141
- *
- * Preview card for selected BGG game details in wizard.
  */
 
 import { Users, Clock, Star } from 'lucide-react';
@@ -14,18 +12,11 @@ interface BggPreviewCardProps {
   game: BggGameDetailsDto;
 }
 
-/**
- * BggPreviewCard component
- *
- * Displays detailed information for a selected BGG game.
- * Shows players, time, age, rating, and optional description.
- */
 export function BggPreviewCard({ game }: BggPreviewCardProps) {
   return (
     <Card className="bg-white/70 backdrop-blur-md border-2 border-amber-200">
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          {/* Thumbnail */}
           {game.thumbnail ? (
             <img
               src={game.thumbnail}
@@ -39,7 +30,6 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
             </div>
           )}
 
-          {/* Title and year */}
           <div className="flex-1 min-w-0">
             <CardTitle className="font-quicksand text-xl text-gray-900 mb-1">
               {game.name}
@@ -52,9 +42,7 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Game stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Players */}
           <div className="flex items-center gap-2 text-sm">
             <Users className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <span className="font-nunito text-gray-700">
@@ -64,13 +52,11 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
             </span>
           </div>
 
-          {/* Playing time */}
           <div className="flex items-center gap-2 text-sm">
             <Clock className="w-4 h-4 text-gray-500" aria-hidden="true" />
             <span className="font-nunito text-gray-700">{game.playingTime} min</span>
           </div>
 
-          {/* Rating */}
           <div className="flex items-center gap-2 text-sm">
             <Star className="w-4 h-4 text-amber-500 fill-amber-500" aria-hidden="true" />
             <span className="font-nunito text-gray-700 font-semibold">
@@ -79,14 +65,12 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
           </div>
         </div>
 
-        {/* Age */}
         <div>
           <Badge variant="secondary" className="bg-amber-100 text-amber-900">
             Age {game.minAge}+
           </Badge>
         </div>
 
-        {/* Description */}
         {game.description && (
           <div>
             <p className="font-nunito text-sm text-gray-700 line-clamp-3">
@@ -95,7 +79,6 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
           </div>
         )}
 
-        {/* Categories and Mechanics */}
         {(game.categories || game.mechanics) && (
           <div className="space-y-2 pt-2 border-t border-gray-200">
             {game.categories && game.categories.length > 0 && (
@@ -138,7 +121,6 @@ export function BggPreviewCard({ game }: BggPreviewCardProps) {
           </div>
         )}
 
-        {/* BGG ID reference */}
         <div className="pt-2 border-t border-gray-200">
           <p className="font-nunito text-xs text-gray-500">
             BoardGameGeek ID: {game.id}

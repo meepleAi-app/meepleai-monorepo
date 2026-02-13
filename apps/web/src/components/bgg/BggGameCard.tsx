@@ -1,7 +1,5 @@
 /**
  * BggGameCard - Issue #4141
- *
- * Card component for BGG search results in wizard.
  */
 
 import { Check } from 'lucide-react';
@@ -15,12 +13,6 @@ interface BggGameCardProps {
   onSelect: (gameId: number) => void;
 }
 
-/**
- * BggGameCard component
- *
- * Displays a BGG game search result with thumbnail, name, and year.
- * Supports selection state with visual feedback.
- */
 export function BggGameCard({ game, selected = false, onSelect }: BggGameCardProps) {
   return (
     <button
@@ -37,7 +29,6 @@ export function BggGameCard({ game, selected = false, onSelect }: BggGameCardPro
       aria-pressed={selected}
       aria-label={`Select ${game.name} (${game.yearPublished})`}
     >
-      {/* Selection indicator */}
       {selected && (
         <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center">
           <Check className="w-4 h-4" aria-hidden="true" />
@@ -45,7 +36,6 @@ export function BggGameCard({ game, selected = false, onSelect }: BggGameCardPro
       )}
 
       <div className="flex items-start gap-3">
-        {/* Thumbnail */}
         {game.thumbnail ? (
           <img
             src={game.thumbnail}
@@ -59,7 +49,6 @@ export function BggGameCard({ game, selected = false, onSelect }: BggGameCardPro
           </div>
         )}
 
-        {/* Game info */}
         <div className="flex-1 text-left min-w-0">
           <h3 className="font-quicksand font-bold text-base text-gray-900 truncate">
             {game.name}

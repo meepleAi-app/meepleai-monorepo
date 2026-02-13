@@ -6,8 +6,8 @@ import type {
   TestCase,
   TestResult,
 } from '@playwright/test/reporter';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Custom Playwright Reporter - Test Duration Tracking
@@ -25,7 +25,7 @@ import path from 'path';
 interface TestMetric {
   file: string;
   duration: number;
-  status: 'passed' | 'failed' | 'skipped' | 'timedOut';
+  status: 'passed' | 'failed' | 'skipped' | 'timedOut' | 'interrupted';
   retries: number;
 }
 

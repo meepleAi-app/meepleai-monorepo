@@ -27,6 +27,9 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType AdminStaleShareRequests = new("admin_stale_share_requests");
     public static readonly NotificationType AdminReviewLockExpiring = new("admin_review_lock_expiring");
 
+    // ISSUE-4159: Admin notification for shared game submission (PDF Wizard)
+    public static readonly NotificationType AdminSharedGameSubmitted = new("admin_shared_game_submitted");
+
     // ISSUE-2741: Badge earned notification type
     public static readonly NotificationType BadgeEarned = new("badge_earned");
 
@@ -82,6 +85,7 @@ internal sealed class NotificationType : ValueObject
             "admin_new_share_request" => AdminNewShareRequest,
             "admin_stale_share_requests" => AdminStaleShareRequests,
             "admin_review_lock_expiring" => AdminReviewLockExpiring,
+            "admin_shared_game_submitted" => AdminSharedGameSubmitted,
             "badge_earned" => BadgeEarned,
             "rate_limit_approaching" => RateLimitApproaching,
             "rate_limit_reached" => RateLimitReached,

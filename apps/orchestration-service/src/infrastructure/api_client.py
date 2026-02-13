@@ -104,3 +104,102 @@ class MeepleAIApiClient:
     async def close(self) -> None:
         """Close HTTP client."""
         await self.client.aclose()
+
+    async def tutor_query(
+        self,
+        game_id: UUID,
+        session_id: UUID,
+        query: str,
+        conversation_history: Optional[list] = None,
+    ) -> dict:
+        """
+        Query Tutor agent for setup and rules questions.
+
+        Args:
+            game_id: Game identifier
+            session_id: Session identifier
+            query: User question
+            conversation_history: Optional conversation context
+
+        Returns:
+            Tutor response with citations and confidence
+
+        Raises:
+            httpx.HTTPError: If API call fails
+        """
+        try:
+            logger.debug(f"Tutor query: session={session_id}, query='{query[:50]}...'")
+
+            response = await self.client.post(
+                f"{self.base_url}/api/v1/kb/agents/tutor/query",
+                json={
+                    "gameId": str(game_id),
+                    "sessionId": str(session_id),
+                    "query": query,
+                },
+                timeout=3.0,
+            )
+
+            response.raise_for_status()
+            data = response.json()
+
+            logger.info(
+                f"Tutor response: confidence={data.get('confidence', 0):.2f}, "
+                f"time={data.get('executionTimeMs', 0):.1f}ms"
+            )
+            return data
+
+        except httpx.HTTPError as e:
+            logger.error(f"Tutor query API call failed: {e}")
+            raise
+
+    async def decisore_analyze(
+        self,
+        session_id: UUID,
+        player_name: str,
+        analysis_depth: str = "standard",
+        max_suggestions: int = 3,
+    ) -> dict:
+        """
+        Request strategic move analysis from Decisore agent.
+
+        Args:
+            session_id: Game session identifier
+            player_name: Player requesting analysis (e.g., "White", "Black")
+            analysis_depth: Analysis depth (standard|deep)
+            max_suggestions: Number of move suggestions to return
+
+        Returns:
+            Strategic analysis with move suggestions and reasoning
+
+        Raises:
+            httpx.HTTPError: If API call fails
+        """
+        try:
+            logger.debug(
+                f"Decisore analyze: session={session_id}, player={player_name}, depth={analysis_depth}"
+            )
+
+            response = await self.client.post(
+                f"{self.base_url}/api/v1/agents/decisore/analyze",
+                json={
+                    "gameSessionId": str(session_id),
+                    "playerName": player_name,
+                    "analysisDepth": analysis_depth,
+                    "maxSuggestions": max_suggestions,
+                },
+                timeout=5.0,  # Longer timeout for strategic analysis
+            )
+
+            response.raise_for_status()
+            data = response.json()
+
+            logger.info(
+                f"Decisore analysis: suggestions={len(data.get('suggestions', []))}, "
+                f"time={data.get('executionTimeMs', 0):.1f}ms"
+            )
+            return data
+
+        except httpx.HTTPError as e:
+            logger.error(f"Decisore analyze API call failed: {e}")
+            raise

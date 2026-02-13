@@ -216,6 +216,7 @@ internal class AiInsightsService : IAiInsightsService
             .AsNoTracking()
             .Where(c => c.UserId == userId &&
                         c.Status == "active" &&
+                        c.Title != null &&
                         (EF.Functions.ILike(c.Title, "%regole%") ||
                          EF.Functions.ILike(c.Title, "%rules%")))
             .OrderByDescending(c => c.CreatedAt)

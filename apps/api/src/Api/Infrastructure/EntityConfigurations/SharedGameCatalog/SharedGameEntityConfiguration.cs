@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -23,6 +24,9 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
 
         builder.Property(e => e.BggId)
             .HasColumnName("bgg_id");
+
+        builder.Property(e => e.AgentDefinitionId)
+            .HasColumnName("agent_definition_id");
 
         builder.Property(e => e.Title)
             .HasColumnName("title")
@@ -107,6 +111,12 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
 
         // Global query filter for soft deletes
         builder.HasQueryFilter(e => !e.IsDeleted);
+
+        // Relationships (Issue #4228)
+        builder.HasOne<AgentDefinition>()
+            .WithMany()
+            .HasForeignKey(e => e.AgentDefinitionId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Indexes
         builder.HasIndex(e => e.BggId)

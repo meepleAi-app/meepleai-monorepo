@@ -224,6 +224,10 @@ internal class PrivateGameRepository : RepositoryBase, IPrivateGameRepository
 
         if (entity.DeletedAt.HasValue)
             type.GetProperty("DeletedAt")?.GetSetMethod(true)?.Invoke(domainEntity, new object[] { entity.DeletedAt });
+
+        // Issue #4228: Map AgentDefinitionId
+        if (entity.AgentDefinitionId.HasValue)
+            type.GetProperty("AgentDefinitionId")?.GetSetMethod(true)?.Invoke(domainEntity, new object[] { entity.AgentDefinitionId });
 #pragma warning restore S3011
 
         // Clear domain events raised during construction
@@ -259,7 +263,8 @@ internal class PrivateGameRepository : RepositoryBase, IPrivateGameRepository
             CreatedAt = domainEntity.CreatedAt,
             UpdatedAt = domainEntity.UpdatedAt,
             IsDeleted = domainEntity.IsDeleted,
-            DeletedAt = domainEntity.DeletedAt
+            DeletedAt = domainEntity.DeletedAt,
+            AgentDefinitionId = domainEntity.AgentDefinitionId  // Issue #4228
         };
     }
 }

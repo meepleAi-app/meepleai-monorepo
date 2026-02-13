@@ -32,10 +32,10 @@
 | 1.2 | [#3690](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3690) | Admin Role System & Security | 3-4 giorni | #3689 | ⏳ Blocked |
 | 1.3 | [#3691](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3691) | Audit Log System | 4-5 giorni | #3689, #3690 | ⏳ Blocked |
 | 1.4 | 📝 | Overview Tab - Extended KPIs | 2-3 giorni | #3689 | 📝 To Create |
-| 1.5 | [#3692](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3692) | Token Management System | 3-4 giorni | #3689 | ⏳ Blocked |
+| 1.5 | [#3692](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3692) | Token Management System | 3-4 giorni | #3689 | ✅ CLOSED |
 | 1.6 | 📝 | Resources - DB/Cache/Vectors | 3-4 giorni | #3689 | 📝 To Create |
 | 1.7 | 📝 | Operations - Service Control | 3-4 giorni | #3689, #3690 | 📝 To Create |
-| 1.8 | [#3693](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3693) | Batch Job System | 4-5 giorni | #3689, #3691 | ⏳ Blocked |
+| 1.8 | [#3693](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3693) | Batch Job System | 4-5 giorni | #3689, #3691 | ✅ CLOSED |
 | 1.9 | 📝 | Testing & Integration | 3-4 giorni | All above | 📝 To Create |
 
 ### Deliverables

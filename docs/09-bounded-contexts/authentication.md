@@ -1,9 +1,6 @@
-# Authentication Bounded Context - Complete API Reference
+# Authentication Bounded Context - API Reference
 
 **Gestione autenticazione, sessioni, OAuth, 2FA, e API keys**
-
-> 📖 **Reference Implementation**: This document serves as the **complete reference** for Issue #3794.
-> Team members should use this as a template for documenting other bounded contexts.
 
 ---
 
@@ -25,126 +22,21 @@
 
 ### Aggregates
 
-**User** (Aggregate Root):
-```csharp
-public class User
-{
-    public Guid Id { get; private set; }
-    public Email Email { get; private set; }          // Value Object
-    public PasswordHash Password { get; private set; } // Value Object
-    public string DisplayName { get; private set; }
-    public string Role { get; private set; }          // "User" | "Admin"
-    public bool EmailConfirmed { get; private set; }
-    public bool TwoFactorEnabled { get; private set; }
-    public string? TwoFactorSecret { get; private set; }
-    public List<string> BackupCodes { get; private set; }
-    public List<RefreshToken> RefreshTokens { get; private set; }
-    public List<ApiKey> ApiKeys { get; private set; }
-    public List<OAuthAccount> OAuthAccounts { get; private set; }
-    public DateTime CreatedAt { get; private set; }
-    public DateTime? LastLoginAt { get; private set; }
-    public bool IsLocked { get; private set; }
-    public DateTime? LockedUntil { get; private set; }
-    public int FailedLoginAttempts { get; private set; }
-
-    // Domain methods
-    public void EnableTwoFactor(string secret, List<string> backupCodes) { }
-    public void DisableTwoFactor() { }
-    public void ConfirmEmail() { }
-    public ApiKey GenerateApiKey(string name, DateTime? expiresAt) { }
-    public void RecordLoginSuccess() { }
-    public void RecordLoginFailure() { }
-    public void LockAccount(TimeSpan duration) { }
-    public void UnlockAccount() { }
-}
-```
-
-**ApiKey** (Entity):
-```csharp
-public class ApiKey
-{
-    public Guid Id { get; private set; }
-    public Guid UserId { get; private set; }
-    public string Key { get; private set; }        // "mpl_{env}_{base64}"
-    public string KeyHash { get; private set; }    // PBKDF2 hash
-    public string Name { get; private set; }
-    public string Scopes { get; private set; }     // Comma-separated
-    public DateTime CreatedAt { get; private set; }
-    public DateTime? ExpiresAt { get; private set; }
-    public DateTime? LastUsedAt { get; private set; }
-    public bool IsRevoked { get; private set; }
-    public DateTime? RevokedAt { get; private set; }
-    public string? Metadata { get; private set; }  // JSON
-
-    public void Revoke() { }
-    public void RecordUsage() { }
-}
-```
-
-**Session** (Entity):
-```csharp
-public class Session
-{
-    public Guid Id { get; private set; }
-    public Guid UserId { get; private set; }
-    public string SessionToken { get; private set; }    // SHA256 hash
-    public string? DeviceInfo { get; private set; }
-    public string? IpAddress { get; private set; }
-    public string? UserAgent { get; private set; }
-    public DateTime CreatedAt { get; private set; }
-    public DateTime ExpiresAt { get; private set; }
-    public DateTime? LastSeenAt { get; private set; }
-    public bool IsRevoked { get; private set; }
-
-    public void Extend(TimeSpan duration) { }
-    public void Revoke() { }
-    public void RecordActivity() { }
-}
-```
-
-**OAuthAccount** (Entity):
-```csharp
-public class OAuthAccount
-{
-    public Guid Id { get; private set; }
-    public Guid UserId { get; private set; }
-    public string Provider { get; private set; }    // "google" | "github" | "discord"
-    public string ProviderUserId { get; private set; }
-    public string? Email { get; private set; }
-    public DateTime LinkedAt { get; private set; }
-}
-```
+| Aggregate/Entity | Key Properties | Factory Methods |
+|------------------|----------------|-----------------|
+| **User** (Root) | Id, Email, PasswordHash, DisplayName, Role, EmailConfirmed, TwoFactorEnabled, BackupCodes | `Create()`, `EnableTwoFactor()`, `DisableTwoFactor()`, `GenerateApiKey()`, `LockAccount()` |
+| **ApiKey** | Id, UserId, KeyHash, Name, Scopes, ExpiresAt, IsRevoked | `Create()`, `Revoke()`, `RecordUsage()` |
+| **Session** | Id, UserId, SessionToken, DeviceInfo, ExpiresAt, IsRevoked | `Create()`, `Extend()`, `Revoke()` |
+| **OAuthAccount** | Id, UserId, Provider, ProviderUserId, Email | `Link()`, `Unlink()` |
 
 ### Value Objects
 
-**Email**:
-```csharp
-public record Email
-{
-    public string Value { get; init; }
+| Value Object | Purpose | Validation |
+|--------------|---------|------------|
+| **Email** | Email address with validation | RFC 5322 format, lowercase normalization |
+| **PasswordHash** | PBKDF2 password hash | 210,000 iterations, per-password salt |
 
-    public static Email Create(string value)
-    {
-        // Validation: email format, lowercase normalization
-        // Throws: ArgumentException if invalid
-    }
-}
-```
-
-**PasswordHash**:
-```csharp
-public record PasswordHash
-{
-    public string Value { get; init; }
-
-    public static PasswordHash Create(string plaintext)
-    {
-        // PBKDF2 hashing with 210,000 iterations
-    }
-
-    public bool Verify(string plaintext) { }
-}
-```
+**Implementation Examples**: See `tests/Api.Tests/BoundedContexts/Authentication/Domain/`
 
 ---
 
@@ -168,89 +60,21 @@ public record PasswordHash
 | `LogoutApiKeyCommand` | POST | `/api/v1/auth/apikey/logout` | API Key Cookie | None | `{ ok: bool, message }` |
 
 **RegisterCommand**:
-- **Purpose**: Register new user with email/password
-- **Request Schema**:
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "SecurePass123!",
-    "displayName": "John Doe",
-    "role": "User"
-  }
-  ```
-- **Response Schema**:
-  ```json
-  {
-    "user": {
-      "id": "guid",
-      "email": "user@example.com",
-      "displayName": "John Doe",
-      "role": "User",
-      "emailConfirmed": false
-    },
-    "expiresAt": "2026-03-09T12:00:00Z"
-  }
-  ```
-- **Validation Rules**:
-  - Email: Valid format, unique in database
-  - Password: Min 8 chars, uppercase, lowercase, digit, special char
-  - DisplayName: 2-50 chars, or defaults to email username
-  - Role: "User" | "Admin" (defaults to "User")
-- **Side Effects**:
-  - Creates session cookie (httpOnly, secure, sameSite=Lax)
-  - Creates role cookie for client-side routing
-  - Sends verification email (if email service configured)
-- **Error Codes**:
-  - `400`: Validation failed (weak password, invalid email)
-  - `409`: Email already exists
-- **Domain Events Raised**:
-  - `UserCreatedEvent`: When user successfully created
-  - `UserRegisteredEvent`: After session creation
+- Request: email, password, displayName, role
+- Response: UserDto + expiresAt
+- Validation: Email format/unique, password strength (min 8 chars, uppercase, lowercase, digit, special)
+- Side Effects: Session cookie created, verification email sent, UserCreatedEvent raised
+- Errors: 400 (validation), 409 (duplicate email)
 
 **LoginCommand**:
-- **Purpose**: Authenticate user with email/password
-- **Request Schema**:
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "SecurePass123!"
-  }
-  ```
-- **Response Schema (Normal)**:
-  ```json
-  {
-    "user": {
-      "id": "guid",
-      "email": "user@example.com",
-      "role": "User"
-    },
-    "expiresAt": "2026-03-09T12:00:00Z"
-  }
-  ```
-- **Response Schema (2FA Required)**:
-  ```json
-  {
-    "requiresTwoFactor": true,
-    "sessionToken": "temp_token_for_2fa_verification",
-    "message": "Two-factor authentication required"
-  }
-  ```
-- **Validation Rules**:
-  - Email and password required
-  - Account must not be locked
-  - Password must match hash
-- **Side Effects**:
-  - Increments failed login attempts on failure (triggers lockout after 5 failures)
-  - Resets failed attempts on success
-  - Updates LastLoginAt timestamp
-  - Creates session cookie (if 2FA not required)
-- **Error Codes**:
-  - `400`: Missing email or password
-  - `401`: Invalid credentials
-  - `403`: Account locked (includes LockedUntil timestamp)
-- **Domain Events Raised**:
-  - `UserLoggedInEvent`: On successful authentication
-  - `LoginFailedEvent`: On invalid credentials (for security monitoring)
+- Request: email, password
+- Response: UserDto + expiresAt OR requiresTwoFactor + sessionToken (if 2FA enabled)
+- Validation: Account not locked, password matches hash
+- Side Effects: Failed login count incremented/reset, LastLoginAt updated, session cookie created
+- Errors: 400 (missing fields), 401 (invalid credentials), 403 (account locked)
+- Events: UserLoggedInEvent, LoginFailedEvent
+
+**Implementation Examples**: See `tests/Api.Tests/BoundedContexts/Authentication/Application/`
 
 ---
 
@@ -270,42 +94,10 @@ public record PasswordHash
 | `RevokeInactiveSessionsCommand` | POST | `/api/v1/admin/sessions/cleanup` | Cookie + Admin | Query: inactiveDays? | `{ ok, revokedCount }` |
 | `GetAllSessionsQuery` | GET | `/api/v1/admin/sessions` | Cookie + Admin | Query: userId?, isActive?, page, pageSize | `PaginatedList<SessionDto>` |
 
-**GetSessionStatusQuery**:
-- **Purpose**: Check current session validity and remaining time
-- **Response Schema**:
-  ```json
-  {
-    "expiresAt": "2026-03-09T12:00:00Z",
-    "lastSeenAt": "2026-02-07T10:30:00Z",
-    "remainingMinutes": 43200
-  }
-  ```
-- **Caching**: Redis cached for 1 minute (reduces DB load)
-
-**ExtendSessionCommand**:
-- **Purpose**: Extend session expiration (sliding window authentication)
-- **Behavior**: Adds 30 days from current time (configurable via SystemConfiguration)
-- **Side Effects**: Updates session cookie with new expiration
-
-**LogoutAllDevicesCommand**:
-- **Purpose**: Revoke all user sessions (useful after password change or security incident)
-- **Request Schema**:
-  ```json
-  {
-    "includeCurrentSession": false,
-    "password": "CurrentPassword123!"
-  }
-  ```
-- **Validation**: Requires password confirmation for security
-- **Response Schema**:
-  ```json
-  {
-    "ok": true,
-    "revokedCount": 3,
-    "currentSessionRevoked": false,
-    "message": "3 sessions revoked successfully"
-  }
-  ```
+**Key Session Operations**:
+- **GetSessionStatus**: Returns expiresAt, lastSeenAt, remainingMinutes (Redis cached 1 min)
+- **ExtendSession**: Adds 30 days from now (sliding window, configurable)
+- **LogoutAllDevices**: Revokes all sessions, requires password confirmation, returns revokedCount
 
 ---
 
@@ -320,63 +112,11 @@ public record PasswordHash
 | `Get2FAStatusQuery` | GET | `/api/v1/users/me/2fa/status` | Cookie | None | `TwoFactorStatusDto` |
 | `AdminDisable2FACommand` | POST | `/api/v1/auth/admin/2fa/disable` | Cookie + Admin | `AdminDisable2FARequest` | `{ message }` |
 
-**GenerateTotpSetupCommand**:
-- **Purpose**: Generate TOTP secret and QR code for 2FA enrollment
-- **Response Schema**:
-  ```json
-  {
-    "qrCode": "data:image/png;base64,iVBORw0KGgoAAAA...",
-    "secret": "JBSWY3DPEHPK3PXP",
-    "backupCodes": ["12345678", "87654321", ...]
-  }
-  ```
-- **Security**: Secret is NOT stored until Enable2FACommand confirms valid code
-- **Backup Codes**: 8 codes generated, 8 digits each, single-use
-
-**Enable2FACommand**:
-- **Purpose**: Confirm TOTP setup by verifying initial code
-- **Request Schema**:
-  ```json
-  {
-    "code": "123456"
-  }
-  ```
-- **Validation**:
-  - Code must be valid for generated secret
-  - Code must be 6 digits
-  - Rate limited: 3 attempts per minute
-- **Side Effects**:
-  - Stores TOTP secret encrypted in User entity
-  - Stores backup codes hashed (PBKDF2)
-  - Sets TwoFactorEnabled = true
-- **Domain Events**: `TwoFactorEnabledEvent`
-
-**Verify2FACommand**:
-- **Purpose**: Complete login flow when 2FA is required
-- **Request Schema**:
-  ```json
-  {
-    "sessionToken": "temp_token_from_login",
-    "code": "123456"
-  }
-  ```
-- **Flow**:
-  1. Login returns `requiresTwoFactor: true` with temp token
-  2. User submits TOTP code with temp token
-  3. If valid, temp token exchanged for permanent session
-- **Response**: Same as LoginCommand (user + session)
-- **Backup Code Support**: If code format is 8 digits, validates against backup codes
-
-**AdminDisable2FACommand**:
-- **Purpose**: Admin can disable 2FA for user (e.g., lost device recovery)
-- **Request Schema**:
-  ```json
-  {
-    "targetUserId": "guid"
-  }
-  ```
-- **Authorization**: Requires Admin role
-- **Audit**: Logs admin action in AuditLog
+**2FA Workflow**:
+1. **GenerateTotpSetup**: Returns QR code + secret + 8 backup codes (8 digits each, single-use)
+2. **Enable2FA**: Validates 6-digit TOTP code, stores encrypted secret, raises TwoFactorEnabledEvent (rate limited: 3 attempts/min)
+3. **Verify2FA**: Exchanges temp login token for permanent session using TOTP code or backup code (8 digits)
+4. **AdminDisable2FA**: Admin-only emergency recovery (requires Admin role, creates audit log)
 
 ---
 
@@ -390,56 +130,16 @@ public record PasswordHash
 | `UnlinkOAuthAccountCommand` | DELETE | `/api/v1/auth/oauth/{provider}/unlink` | Cookie | Path: provider | 204 No Content |
 | `GetLinkedOAuthAccountsQuery` | GET | `/api/v1/users/me/oauth-accounts` | Cookie | None | `List<OAuthAccountDto>` |
 
-**Supported Providers**:
-- `google`: Google OAuth 2.0
-- `github`: GitHub OAuth Apps
-- `discord`: Discord OAuth 2.0
+**OAuth Providers**: Google, GitHub, Discord
 
-**InitiateOAuthLoginCommand**:
-- **Purpose**: Start OAuth flow by redirecting to provider
-- **Flow**:
-  1. Generates random state parameter (CSRF protection, 10-min expiry)
-  2. Stores state in Redis with IP address
-  3. Redirects to provider authorization URL
-- **Redirect URL Example**:
-  ```
-  https://accounts.google.com/o/oauth2/v2/auth?
-    client_id={CLIENT_ID}&
-    redirect_uri={CALLBACK_URL}&
-    response_type=code&
-    scope=email+profile&
-    state={STATE_TOKEN}
-  ```
+**OAuth Flow**:
+1. **InitiateOAuth**: Generates state token (10-min expiry, IP-bound), stores in Redis, redirects to provider
+2. **HandleCallback**: Validates state, exchanges code for token, fetches profile, creates/links user, creates session, redirects to frontend
+3. **LinkOAuthAccount**: Links OAuth to existing authenticated user (requires active session)
+4. **UnlinkOAuthAccount**: Removes OAuth link (validation: cannot unlink last auth method)
 
-**HandleOAuthCallbackCommand**:
-- **Purpose**: Handle OAuth provider callback and create/login user
-- **Flow**:
-  1. Validates state parameter (checks Redis, matches IP)
-  2. Exchanges code for access token (provider API call)
-  3. Fetches user profile from provider
-  4. Creates new user OR links existing user (by email matching)
-  5. Creates session and redirects to frontend
-- **Response**: 302 redirect to frontend
-  - Success: `{FRONTEND_URL}/auth/callback?success=true`
-  - Error: `{FRONTEND_URL}/auth/callback?error={message}`
-- **Security**:
-  - State expires in 10 minutes
-  - State tied to IP address (prevents replay attacks)
-  - Defensive transaction handling (manual rollback on error, Issue #2600)
-- **Edge Cases**:
-  - Email already exists: Links OAuth account to existing user
-  - OAuth account already linked: Returns existing session
-  - Provider email mismatch: Rejects linking (security)
-
-**LinkOAuthAccountCommand**:
-- **Purpose**: Link OAuth account to existing authenticated user
-- **Difference from HandleOAuthCallback**: User must be already logged in
-- **Use Case**: Add Google login to existing email/password account
-
-**UnlinkOAuthAccountCommand**:
-- **Purpose**: Remove OAuth account linking
-- **Validation**: Cannot unlink if it's the only authentication method (must have password OR another OAuth)
-- **Error**: 400 "Cannot unlink last authentication method"
+**Security**: State expires in 10 min, tied to IP (replay protection), defensive transactions (Issue #2600)
+**Edge Cases**: Email exists → link account; OAuth exists → return session; email mismatch → reject
 
 ---
 
@@ -452,55 +152,10 @@ public record PasswordHash
 | `ValidatePasswordResetTokenQuery` | GET | `/api/v1/auth/password-reset/verify` | None | Query: token | `{ ok, message }` |
 | `ResetPasswordCommand` | PUT | `/api/v1/auth/password-reset/confirm` | None | `PasswordResetConfirmPayload` | `{ ok, message }` |
 
-**ChangePasswordCommand**:
-- **Purpose**: Authenticated user changes own password
-- **Request Schema**:
-  ```json
-  {
-    "currentPassword": "OldPass123!",
-    "newPassword": "NewPass456!"
-  }
-  ```
-- **Validation**:
-  - Current password must match
-  - New password must meet strength requirements
-  - New password cannot match current password
-- **Side Effects**:
-  - Invalidates all sessions except current (forces re-login on other devices)
-  - Records password change in audit log
-
-**RequestPasswordResetCommand**:
-- **Purpose**: Initiate password reset flow for forgotten password
-- **Request Schema**:
-  ```json
-  {
-    "email": "user@example.com"
-  }
-  ```
-- **Behavior**:
-  - Generates secure reset token (256-bit random, 1-hour expiry)
-  - Sends email with reset link
-  - Always returns success (prevents user enumeration)
-- **Rate Limiting**: 1 request per minute per email
-- **Security**: Token single-use, expires in 1 hour
-
-**ResetPasswordCommand**:
-- **Purpose**: Complete password reset with token from email
-- **Request Schema**:
-  ```json
-  {
-    "token": "base64_token_from_email",
-    "newPassword": "NewSecurePass123!"
-  }
-  ```
-- **Validation**:
-  - Token must be valid and not expired
-  - Token must not have been used
-  - New password must meet strength requirements
-- **Side Effects**:
-  - Marks token as used (prevents replay)
-  - Invalidates ALL user sessions (requires re-login everywhere)
-  - Records password reset in audit log
+**Password Management**:
+- **ChangePassword**: Requires current password, validates strength, invalidates all other sessions, creates audit log
+- **RequestPasswordReset**: Generates 256-bit token (1-hour expiry), sends email, always returns success (anti-enumeration), rate limited (1/min per email)
+- **ResetPassword**: Validates token (single-use), enforces strength requirements, invalidates ALL sessions, creates audit log
 
 ---
 
@@ -511,23 +166,9 @@ public record PasswordHash
 | `VerifyEmailCommand` | POST | `/api/v1/auth/email/verify` | None | `VerifyEmailPayload` | `{ ok, message }` |
 | `ResendVerificationCommand` | POST | `/api/v1/auth/email/resend` | None | `ResendVerificationPayload` | `{ ok, message }` |
 
-**VerifyEmailCommand**:
-- **Purpose**: Confirm email ownership via token from verification email
-- **Request Schema**:
-  ```json
-  {
-    "token": "base64_token_from_email"
-  }
-  ```
-- **Side Effects**:
-  - Sets EmailConfirmed = true
-  - Marks verification token as used
-- **Domain Events**: `EmailVerifiedEvent`
-
-**ResendVerificationCommand**:
-- **Purpose**: Resend verification email if user didn't receive original
-- **Rate Limiting**: 1 request per minute per email
-- **Security**: Always returns success (prevents user enumeration)
+**Email Verification**:
+- **VerifyEmail**: Validates token, sets EmailConfirmed = true, raises EmailVerifiedEvent
+- **ResendVerification**: Rate limited (1/min per email), always returns success (anti-enumeration)
 
 ---
 
@@ -545,66 +186,10 @@ public record PasswordHash
 | `GetApiKeyUsageStatsQuery` | GET | `/api/v1/api-keys/{keyId}/stats` | Cookie | None | `ApiKeyUsageStatsDto` |
 | `GetApiKeyUsageLogsQuery` | GET | `/api/v1/api-keys/{keyId}/logs` | Cookie | Query: skip, take | `{ logs: List<ApiKeyUsageLogDto>, pagination }` |
 
-**CreateApiKeyManagementCommand**:
-- **Purpose**: Generate new API key for programmatic access
-- **Request Schema**:
-  ```json
-  {
-    "keyName": "Production API",
-    "expiresAt": "2027-02-07T00:00:00Z"
-  }
-  ```
-- **Response Schema**:
-  ```json
-  {
-    "apiKey": {
-      "id": "guid",
-      "name": "Production API",
-      "keyPreview": "mpl_prod_abc...xyz",
-      "expiresAt": "2027-02-07T00:00:00Z",
-      "createdAt": "2026-02-07T12:00:00Z"
-    },
-    "rawKey": "mpl_prod_abcdefghijklmnopqrstuvwxyz123456"
-  }
-  ```
-- **Security**:
-  - Raw key shown ONLY once (cannot retrieve later)
-  - Key hash stored using PBKDF2 (10,000 iterations)
-  - Format: `mpl_{env}_{base64}` (32 bytes random)
-- **Validation**:
-  - Key name: 3-100 chars
-  - Expiration: Optional, max 2 years from creation
-- **Side Effects**:
-  - Creates ApiKeyUsageLog entry
-  - Records creation in audit log
-
-**RotateApiKeyCommand**:
-- **Purpose**: Generate new key and revoke old one atomically
-- **Use Case**: Periodic rotation (recommended every 90 days)
-- **Response**: Returns both old (revoked) and new key info
-- **Security**: Old key immediately revoked (grace period: 0 seconds)
-
-**GetApiKeyUsageStatsQuery**:
-- **Purpose**: Detailed usage analytics for monitoring
-- **Response Schema**:
-  ```json
-  {
-    "totalRequests": 15234,
-    "lastUsedAt": "2026-02-07T11:30:00Z",
-    "status": "Active",
-    "dailyUsage": {
-      "2026-02-07": 1523,
-      "2026-02-06": 1401
-    },
-    "weeklyUsage": 8432,
-    "topEndpoints": [
-      { "path": "/api/v1/games", "count": 5234 },
-      { "path": "/api/v1/chat", "count": 3421 }
-    ],
-    "errorRate": 0.02,
-    "avgResponseTime": 145
-  }
-  ```
+**API Key Management**:
+- **CreateApiKey**: Generates `mpl_{env}_{base64}` (32 bytes), PBKDF2 hash (10K iterations), returns raw key ONCE, validates name (3-100 chars), expiry (max 2 years)
+- **RotateApiKey**: Atomic rotation, immediate revocation (0s grace period), recommended every 90 days
+- **GetApiKeyUsageStats**: Returns totalRequests, dailyUsage, topEndpoints, errorRate, avgResponseTime
 
 ---
 
@@ -617,20 +202,9 @@ public record PasswordHash
 | `BulkExportApiKeysQuery` | GET | `/api/v1/admin/api-keys/bulk/export` | Cookie + Admin | Query: userId?, isActive?, searchTerm? | CSV File |
 | `BulkImportApiKeysCommand` | POST | `/api/v1/admin/api-keys/bulk/import` | Cookie + Admin | CSV content (raw text) | `{ SuccessCount, FailedCount, Errors }` |
 
-**BulkExportApiKeysQuery**:
-- **Purpose**: Export API keys to CSV for backup or audit
-- **Response**: CSV file with headers
-  ```csv
-  UserId,KeyName,KeyPreview,CreatedAt,ExpiresAt,IsRevoked,TotalRequests
-  guid,Production API,mpl_prod_abc...xyz,2026-01-15,2027-01-15,false,15234
-  ```
-- **Use Case**: Compliance audits, backup, migration
-
-**BulkImportApiKeysCommand**:
-- **Purpose**: Import API keys from CSV (e.g., migration, restore)
-- **Validation**: Validates each row, reports errors
-- **Response**: Success count + error details for failed rows
-- **Security**: Requires Admin role + password confirmation
+**Bulk Operations** (Admin only):
+- **BulkExportApiKeys**: CSV export with UserId, KeyName, KeyPreview, CreatedAt, ExpiresAt, IsRevoked, TotalRequests
+- **BulkImportApiKeys**: CSV import with row validation, requires Admin + password confirmation, returns successCount + error details
 
 ---
 
@@ -648,46 +222,9 @@ public record PasswordHash
 | `GetUserDetailedAiUsageQuery` | GET | `/api/v1/users/me/ai-usage` | Cookie | Query: days? | `UserAiUsageDto` |
 | `GetUserAvailableFeaturesQuery` | GET | `/api/v1/users/me/features` | Cookie | None | `List<UserFeatureDto>` |
 
-**UpdatePreferencesCommand**:
-- **Purpose**: Update user UI/UX preferences
-- **Request Schema**:
-  ```json
-  {
-    "language": "it",
-    "theme": "dark",
-    "emailNotifications": true,
-    "dataRetentionDays": 90
-  }
-  ```
-- **Supported Options**:
-  - Language: "it" | "en"
-  - Theme: "light" | "dark" | "auto"
-  - DataRetentionDays: 30-365 (GDPR compliance)
-- **Side Effects**: Updates UserPreferences entity
-
-**GetUserDetailedAiUsageQuery**:
-- **Purpose**: AI token usage and cost breakdown for user
-- **Response Schema**:
-  ```json
-  {
-    "totalTokens": 1250000,
-    "totalCostUsd": 15.50,
-    "byModel": {
-      "gpt-4": { "tokens": 800000, "cost": 12.00 },
-      "claude-3": { "tokens": 450000, "cost": 3.50 }
-    },
-    "byOperationType": {
-      "rag_query": { "tokens": 600000, "cost": 7.20 },
-      "agent_invoke": { "tokens": 650000, "cost": 8.30 }
-    },
-    "dailyTimeSeries": [
-      { "date": "2026-02-07", "tokens": 15000, "cost": 0.18 },
-      { "date": "2026-02-06", "tokens": 12000, "cost": 0.14 }
-    ]
-  }
-  ```
-- **Query Parameters**:
-  - `days`: Time window (default: 30, max: 365)
+**User Preferences & Usage**:
+- **UpdatePreferences**: Language (it/en), Theme (light/dark/auto), DataRetentionDays (30-365, GDPR)
+- **GetUserDetailedAiUsage**: Returns totalTokens, totalCostUsd, breakdown by model/operationType, dailyTimeSeries (days param: 30-365)
 
 ---
 
@@ -698,16 +235,11 @@ public record PasswordHash
 | `GetAccountLockoutStatusQuery` | GET | `/api/v1/users/me/lockout-status` | Cookie | None | `AccountLockoutDto` |
 | `UnlockAccountCommand` | POST | `/api/v1/auth/admin/unlock-account` | Cookie + Admin | `UnlockAccountRequest` | `{ ok, message }` |
 
-**Account Lockout Logic**:
-- **Trigger**: 5 failed login attempts within 15 minutes
-- **Duration**: 15 minutes lockout
-- **Reset**: Automatic after lockout expires OR admin unlock
-- **Notification**: Email sent to user when locked
-
-**UnlockAccountCommand**:
-- **Purpose**: Admin manually unlocks user account
-- **Use Case**: User locked out but needs immediate access
-- **Audit**: Logs admin action with reason
+**Account Lockout**:
+- **Trigger**: 5 failed logins in 15 min
+- **Duration**: 15 min (auto-reset OR admin unlock)
+- **Notification**: Email sent on lockout
+- **UnlockAccount**: Admin-only, creates audit log with reason
 
 ---
 
@@ -719,21 +251,10 @@ public record PasswordHash
 | `ValidateShareLinkQuery` | GET | `/api/v1/share-links/{token}/validate` | None | None | `{ ok, document }` |
 | `RevokeShareLinkCommand` | DELETE | `/api/v1/share-links/{linkId}` | Cookie | None | 204 No Content |
 
-**CreateShareLinkCommand**:
-- **Purpose**: Generate shareable link for PDF document
-- **Request Schema**:
-  ```json
-  {
-    "documentId": "guid",
-    "expiresAt": "2026-03-07T00:00:00Z",
-    "maxUses": 10
-  }
-  ```
-- **Response**: Shareable token that grants temporary access
-- **Security**:
-  - Token expires after time OR usage limit
-  - Cannot access other user's documents
-  - Read-only access via share link
+**Share Links**:
+- **CreateShareLink**: Generates token for PDF document, supports expiresAt + maxUses, read-only access, cannot cross users
+- **ValidateShareLink**: Validates token, returns document if valid
+- **RevokeShareLink**: Immediately invalidates token
 
 ---
 
@@ -761,40 +282,15 @@ public record PasswordHash
 
 ## 🔗 Integration Points
 
-### Inbound Dependencies
+### Dependencies
 
-**Administration Context**:
-- Subscribes to all authentication events for audit logging
-- Queries user role/permissions for admin operations
-- Example: `UserCreatedEvent` → Create audit log entry
+**Inbound** (Events Published To):
+- Administration: All auth events for audit logging
+- SessionTracking: Session lifecycle events for analytics
+- UserLibrary: UserId from session for collections
+- UserNotifications: Security events for email alerts
 
-**SessionTracking Context**:
-- Tracks active sessions for analytics
-- Monitors session lifecycle events
-- Example: `SessionCreatedEvent` → Record in session tracking table
-
-**UserLibrary Context**:
-- Requires authenticated user context
-- Uses UserId from session for collection operations
-
-**UserNotifications Context**:
-- Sends emails on security events (password change, account locked)
-- Example: `PasswordChangedEvent` → Send security notification email
-
-### Outbound Dependencies
-
-**None** - Authentication is a foundational context with no outbound dependencies (other contexts depend on it).
-
-### Event-Driven Communication
-
-```mermaid
-graph LR
-    Auth[Authentication] -->|UserCreatedEvent| Admin[Administration]
-    Auth -->|SessionCreatedEvent| Session[SessionTracking]
-    Auth -->|PasswordChangedEvent| Notif[UserNotifications]
-    Auth -->|AccountLockedEvent| Notif
-    Admin -.->|Query User Role| Auth
-```
+**Outbound**: None (foundational context)
 
 ---
 
@@ -816,283 +312,36 @@ graph LR
 | **Authenticated** | Valid session OR API key | Profile, preferences, API key CRUD, 2FA, sessions |
 | **Admin** | Cookie + Admin role | User management, bulk operations, unlock accounts |
 
-### Password Security
+### Security Configuration
 
-**Hashing Algorithm**: PBKDF2
-- **Iterations**: 210,000 (OWASP 2023 recommendation)
-- **Salt**: Per-password random salt (128-bit)
-- **Key Size**: 256-bit derived key
+| Component | Specification |
+|-----------|---------------|
+| **Password Hash** | PBKDF2, 210K iterations, 128-bit salt, 256-bit key |
+| **Password Strength** | Min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special |
+| **API Key** | 256-bit random, Base64 URL-safe, `mpl_{env}_{token}`, PBKDF2 hash (10K iter) |
+| **Session Cookie** | HttpOnly, Secure, SameSite=Lax, 30-day sliding window, SHA256 hash |
+| **Session Storage** | Redis-backed, configurable expiry via config |
 
-**Strength Requirements**:
-- Minimum 8 characters
-- At least 1 uppercase letter
-- At least 1 lowercase letter
-- At least 1 digit
-- At least 1 special character
+**Rate Limits**:
+- Login: 5 attempts/5min (per IP+Email)
+- 2FA Verify: 3 attempts/1min (per session)
+- OAuth: 10 requests/1min (per IP)
+- Email Resend: 1 request/1min (per email)
+- Password Reset: 1 request/1min (per email)
 
-**Validation**: `PasswordStrengthValidator` in FluentValidation
+## 🎯 Usage Examples
 
-### API Key Security
+**Implementation Examples**: See comprehensive test suite for detailed usage patterns:
+- **E2E Flows**: `apps/web/__tests__/e2e/authentication/`
+- **Integration Tests**: `tests/Api.Tests/BoundedContexts/Authentication/Integration/`
+- **Unit Tests**: `tests/Api.Tests/BoundedContexts/Authentication/Application/`
 
-**Generation**:
-- 256-bit random bytes via `RandomNumberGenerator.GetBytes(32)`
-- Base64-encoded with URL-safe alphabet
-- Format: `mpl_{environment}_{base64_token}`
-
-**Storage**:
-- Raw key: Shown once, never stored
-- Key hash: PBKDF2 with 10,000 iterations + unique salt
-
-**Scopes** (Future): Currently not enforced, placeholder for role-based API access
-
-### Session Security
-
-**Cookie Configuration**:
-```csharp
-// Cookie settings
-HttpOnly = true,           // Prevents XSS attacks
-Secure = true,             // HTTPS only
-SameSite = SameSiteMode.Lax,  // CSRF protection
-Path = "/",
-MaxAge = TimeSpan.FromDays(30),
-IsEssential = true
-```
-
-**Token Format**:
-- 256-bit random token
-- Stored hashed (SHA256) in database
-- Redis-backed for distributed systems
-
-**Expiration**:
-- Default: 30 days sliding window
-- Configurable: `Authentication:SessionManagement:SessionExpirationDays`
-- Activity extends expiration automatically
-
-### Rate Limiting
-
-| Endpoint Pattern | Limit | Window | Enforcement |
-|------------------|-------|--------|-------------|
-| `/auth/login` | 5 attempts | 5 minutes | Per IP + Email |
-| `/auth/2fa/verify` | 3 attempts | 1 minute | Per session token |
-| `/auth/oauth/*` | 10 requests | 1 minute | Per IP |
-| `/auth/email/resend` | 1 request | 1 minute | Per email |
-| `/auth/password-reset/request` | 1 request | 1 minute | Per email |
-
-**Implementation**: In-memory sliding window + Redis for distributed enforcement
-
----
-
-## 🎯 Common Usage Examples
-
-### Example 1: Standard Email/Password Registration
-
-**Scenario**: New user registers with email and password
-
-**API Call**:
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "alice@example.com",
-    "password": "SecurePass123!",
-    "displayName": "Alice Johnson"
-  }'
-```
-
-**Response**:
-```json
-{
-  "user": {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "email": "alice@example.com",
-    "displayName": "Alice Johnson",
-    "role": "User",
-    "emailConfirmed": false,
-    "twoFactorEnabled": false
-  },
-  "expiresAt": "2026-03-09T12:00:00Z"
-}
-```
-
-**Side Effects**:
-- Session cookie created automatically
-- Verification email sent (if configured)
-- User can immediately use app (emailConfirmed not required for basic access)
-
----
-
-### Example 2: Login with 2FA Enabled
-
-**Step 1: Initial Login**
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "bob@example.com",
-    "password": "SecurePass456!"
-  }'
-```
-
-**Response**:
-```json
-{
-  "requiresTwoFactor": true,
-  "sessionToken": "temp_abc123...",
-  "message": "Two-factor authentication required"
-}
-```
-
-**Step 2: Submit TOTP Code**
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/2fa/verify \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionToken": "temp_abc123...",
-    "code": "123456"
-  }'
-```
-
-**Response**:
-```json
-{
-  "message": "Authentication successful",
-  "user": {
-    "id": "guid",
-    "email": "bob@example.com",
-    "twoFactorEnabled": true
-  }
-}
-```
-
-**Side Effects**:
-- Temp token invalidated
-- Permanent session cookie created
-- LastLoginAt updated
-
----
-
-### Example 3: API Key Authentication
-
-**Step 1: Generate API Key**
-```bash
-curl -X POST http://localhost:8080/api/v1/api-keys \
-  -H "Content-Type: application/json" \
-  -H "Cookie: meepleai_session_dev={session_token}" \
-  -d '{
-    "keyName": "Production API",
-    "expiresAt": "2027-02-07T00:00:00Z"
-  }'
-```
-
-**Response**:
-```json
-{
-  "apiKey": {
-    "id": "guid",
-    "name": "Production API",
-    "keyPreview": "mpl_prod_abc...xyz",
-    "expiresAt": "2027-02-07T00:00:00Z"
-  },
-  "rawKey": "mpl_prod_abcdefghijklmnopqrstuvwxyz123456"
-}
-```
-
-⚠️ **Important**: Save `rawKey` immediately - it's shown only once!
-
-**Step 2: Use API Key for Requests**
-```bash
-# Option A: Authorization Header (recommended)
-curl -X GET http://localhost:8080/api/v1/games \
-  -H "Authorization: ApiKey mpl_prod_abcdefghijklmnopqrstuvwxyz123456"
-
-# Option B: Login to get API key cookie
-curl -X POST http://localhost:8080/api/v1/auth/apikey/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "apiKey": "mpl_prod_abcdefghijklmnopqrstuvwxyz123456"
-  }'
-# Returns session-like cookie for subsequent requests
-```
-
----
-
-### Example 4: OAuth Login (Google)
-
-**Step 1: Initiate OAuth Flow**
-```bash
-# User clicks "Login with Google" button
-# Frontend redirects to:
-GET http://localhost:8080/api/v1/auth/oauth/google/login
-
-# API redirects to Google with state parameter
-```
-
-**Step 2: Google Callback** (Automatic)
-```
-# After user approves, Google redirects to:
-GET http://localhost:8080/api/v1/auth/oauth/google/callback?code={auth_code}&state={state_token}
-
-# API validates, creates/links account, redirects to frontend:
-302 Redirect → https://meepleai.dev/auth/callback?success=true
-```
-
-**Step 3: Frontend Handling**
-- Frontend receives redirect with success=true
-- Session cookie already set by backend
-- User is authenticated, redirect to dashboard
-
----
-
-### Example 5: Password Reset Flow
-
-**Step 1: Request Reset**
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/password-reset/request \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com"
-  }'
-```
-
-**Response**:
-```json
-{
-  "ok": true,
-  "message": "If the email exists, a reset link has been sent"
-}
-```
-
-**Step 2: User Clicks Email Link**
-```
-# Email contains link:
-https://meepleai.dev/reset-password?token=base64_token_here
-
-# Frontend validates token:
-GET /api/v1/auth/password-reset/verify?token={token}
-```
-
-**Step 3: Submit New Password**
-```bash
-curl -X PUT http://localhost:8080/api/v1/auth/password-reset/confirm \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "base64_token_here",
-    "newPassword": "NewSecurePass789!"
-  }'
-```
-
-**Response**:
-```json
-{
-  "ok": true,
-  "message": "Password reset successfully. Please login with your new password."
-}
-```
-
-**Side Effects**:
-- All sessions invalidated (user must login again)
-- Audit log entry created
-- Notification email sent
+**Key Flows**:
+1. **Registration**: Email/password → Session cookie → Verification email
+2. **Login with 2FA**: Credentials → Temp token → TOTP code → Session
+3. **API Key**: Generate (save raw key immediately) → Use via Header OR Cookie
+4. **OAuth**: Initiate → Provider redirect → Callback → Session creation
+5. **Password Reset**: Request → Email link → Validate token → Set new password → Invalidate all sessions
 
 ---
 
@@ -1110,25 +359,16 @@ curl -X PUT http://localhost:8080/api/v1/auth/password-reset/confirm \
 
 ### Database Indexes
 
-```sql
--- User lookup performance
-CREATE INDEX idx_users_email ON Users(Email) WHERE NOT IsDeleted;
-CREATE INDEX idx_users_role ON Users(Role) WHERE NOT IsDeleted;
-
--- Session queries
-CREATE INDEX idx_sessions_userid_active ON Sessions(UserId, ExpiresAt)
-  WHERE NOT IsRevoked;
-CREATE INDEX idx_sessions_token_hash ON Sessions(SessionToken);
-
--- API Key queries
-CREATE INDEX idx_apikeys_userid_active ON ApiKeys(UserId, ExpiresAt)
-  WHERE NOT IsRevoked;
-CREATE INDEX idx_apikeys_hash ON ApiKeys(KeyHash);
-
--- OAuth account lookup
-CREATE INDEX idx_oauth_userid_provider ON OAuthAccounts(UserId, Provider);
-CREATE UNIQUE INDEX idx_oauth_provider_userid ON OAuthAccounts(Provider, ProviderUserId);
-```
+| Index | Columns | Filter | Purpose |
+|-------|---------|--------|---------|
+| `idx_users_email` | Email | NOT IsDeleted | User lookup by email |
+| `idx_users_role` | Role | NOT IsDeleted | Role-based queries |
+| `idx_sessions_userid_active` | UserId, ExpiresAt | NOT IsRevoked | Active session queries |
+| `idx_sessions_token_hash` | SessionToken | - | Session validation |
+| `idx_apikeys_userid_active` | UserId, ExpiresAt | NOT IsRevoked | Active API key queries |
+| `idx_apikeys_hash` | KeyHash | - | API key validation |
+| `idx_oauth_userid_provider` | UserId, Provider | - | OAuth account lookup |
+| `idx_oauth_provider_userid` | Provider, ProviderUserId | - | Unique constraint |
 
 ### Query Performance Targets
 
@@ -1144,202 +384,60 @@ CREATE UNIQUE INDEX idx_oauth_provider_userid ON OAuthAccounts(Provider, Provide
 
 ## 🧪 Testing Strategy
 
-### Unit Tests
+**Coverage Target**: 90%+ (unit), 85%+ (integration), 50+ (E2E flows)
 
-**Location**: `tests/Api.Tests/Authentication/`
-**Coverage Target**: 90%+
+### Test Locations
 
-**Test Categories**:
-1. **Domain Logic** (`Domain/Entities/User_Tests.cs`):
-   - Password verification
-   - 2FA secret validation
-   - Account lockout logic
-   - API key generation
+| Test Type | Location | Tools |
+|-----------|----------|-------|
+| **Unit Tests** | `tests/Api.Tests/BoundedContexts/Authentication/` | xUnit, FluentAssertions |
+| **Integration Tests** | `tests/Api.Tests/BoundedContexts/Authentication/Integration/` | Testcontainers (PostgreSQL, Redis) |
+| **E2E Tests** | `apps/web/__tests__/e2e/authentication/` | Playwright |
 
-2. **Validators** (`Application/Validators/*_Tests.cs`):
-   - RegisterCommandValidator (email, password strength)
-   - LoginCommandValidator (required fields)
-   - Enable2FACommandValidator (code format)
+### Test Categories
 
-3. **Handlers** (`Application/Handlers/*_Tests.cs`):
-   - RegisterCommandHandler (success, duplicate email)
-   - LoginCommandHandler (success, invalid password, 2FA required, locked account)
-   - Enable2FACommandHandler (valid/invalid codes, backup codes)
+**Unit Tests**:
+- Domain: Password verification, 2FA secret validation, account lockout logic, API key generation
+- Validators: Email format, password strength, required fields, code format validation
+- Handlers: Success/failure scenarios, duplicate emails, 2FA flows, lockout behavior
 
-**Example Test**:
-```csharp
-[Fact]
-public async Task LoginCommand_WithValidCredentials_ReturnsUserAndSession()
-{
-    // Arrange
-    var user = await CreateUserAsync("test@example.com", "Pass123!");
-    var command = new LoginCommand("test@example.com", "Pass123!", null, null);
+**Integration Tests**:
+- Session persistence (Redis caching, expiration cleanup)
+- OAuth flow (state validation, account linking, mocked provider)
+- Account lockout (5 failed logins, auto-unlock, admin unlock)
+- API key rotation (create, use, rotate, verify revocation)
 
-    // Act
-    var result = await _handler.Handle(command, CancellationToken.None);
+**E2E Tests**:
+- Registration flow (form → submit → session cookie → redirect)
+- Login with 2FA (credentials → TOTP prompt → code entry → session)
+- OAuth login (Google redirect → callback → session creation)
+- Password reset (request → email link → new password → login)
 
-    // Assert
-    result.User.Should().NotBeNull();
-    result.SessionToken.Should().NotBeNullOrEmpty();
-    result.RequiresTwoFactor.Should().BeFalse();
-}
-```
-
----
-
-### Integration Tests
-
-**Tools**: Testcontainers (PostgreSQL, Redis)
-**Location**: `tests/Api.Tests/Authentication/Integration/`
-
-**Test Scenarios**:
-1. **Session Persistence**:
-   - Create session → Query from Redis → Validate
-   - Session expiration cleanup job
-
-2. **OAuth Flow** (Mocked):
-   - Initiate OAuth → Verify state in Redis → Handle callback
-   - Account linking for existing users
-
-3. **Account Lockout**:
-   - 5 failed logins → Verify locked → Wait 15 min → Verify unlocked
-   - Admin unlock before expiration
-
-4. **API Key Rotation**:
-   - Create key → Use key → Rotate → Verify old revoked + new active
-
----
-
-### E2E Tests
-
-**Tools**: Playwright
-**Location**: `apps/web/__tests__/e2e/authentication/`
-
-**Critical Flows**:
-1. **Complete Registration Flow**:
-   - Navigate to /register
-   - Fill form, submit
-   - Verify session cookie set
-   - Redirect to dashboard
-
-2. **Login with 2FA**:
-   - Navigate to /login
-   - Enter credentials
-   - See 2FA prompt
-   - Enter TOTP code
-   - Verify session created
-
-3. **OAuth Login**:
-   - Click "Login with Google"
-   - Redirected to Google (mock)
-   - Callback handled
-   - Session created, dashboard shown
-
-4. **Password Reset**:
-   - Request reset
-   - Click email link (intercept)
-   - Submit new password
-   - Login with new credentials
-
-**Test Data**: Use Testcontainers seeded data, not production database
+**Test Examples**: See test suite for comprehensive implementation examples
 
 ---
 
 ## 📂 Code Location
 
-```
-apps/api/src/Api/BoundedContexts/Authentication/
-├── Domain/
-│   ├── Entities/
-│   │   ├── User.cs                      # Aggregate root
-│   │   ├── ApiKey.cs                    # Entity
-│   │   ├── Session.cs                   # Entity
-│   │   ├── OAuthAccount.cs              # Entity
-│   │   └── RefreshToken.cs              # Entity
-│   ├── ValueObjects/
-│   │   ├── Email.cs                     # Email value object
-│   │   └── PasswordHash.cs              # Password hashing
-│   ├── Repositories/
-│   │   ├── IUserRepository.cs
-│   │   ├── IApiKeyRepository.cs
-│   │   └── ISessionRepository.cs
-│   └── Events/
-│       ├── UserCreatedEvent.cs
-│       ├── UserLoggedInEvent.cs
-│       └── ... (15+ events)
-│
-├── Application/
-│   ├── Commands/
-│   │   ├── Registration/RegisterCommand.cs
-│   │   ├── Login/LoginCommand.cs
-│   │   ├── Logout/LogoutCommand.cs
-│   │   ├── TwoFactor/Enable2FACommand.cs
-│   │   ├── ApiKeys/CreateApiKeyCommand.cs
-│   │   ├── Sessions/ExtendSessionCommand.cs
-│   │   ├── OAuth/HandleOAuthCallbackCommand.cs
-│   │   ├── PasswordReset/ResetPasswordCommand.cs
-│   │   └── ... (36 total commands)
-│   │
-│   ├── Queries/
-│   │   ├── GetUserProfileQuery.cs
-│   │   ├── GetSessionStatusQuery.cs
-│   │   ├── Get2FAStatusQuery.cs
-│   │   ├── ListApiKeysQuery.cs
-│   │   └── ... (21 total queries)
-│   │
-│   ├── Handlers/
-│   │   └── ... (57 total handlers)
-│   │
-│   ├── DTOs/
-│   │   ├── UserDto.cs
-│   │   ├── SessionDto.cs
-│   │   ├── ApiKeyDto.cs
-│   │   └── ... (25+ DTOs)
-│   │
-│   └── Validators/
-│       ├── RegisterCommandValidator.cs
-│       ├── LoginCommandValidator.cs
-│       └── ... (20+ validators)
-│
-└── Infrastructure/
-    ├── Persistence/
-    │   ├── UserRepository.cs
-    │   ├── ApiKeyRepository.cs
-    │   └── SessionRepository.cs
-    ├── Services/
-    │   ├── OAuthProviderFactory.cs
-    │   ├── GoogleOAuthProvider.cs
-    │   ├── GitHubOAuthProvider.cs
-    │   └── DiscordOAuthProvider.cs
-    └── DependencyInjection/
-        └── AuthenticationServiceRegistration.cs
-```
+**Source**: `apps/api/src/Api/BoundedContexts/Authentication/`
+- **Domain**: Entities (User, ApiKey, Session, OAuthAccount), ValueObjects (Email, PasswordHash), Repositories, Events (15+)
+- **Application**: Commands (36), Queries (21), Handlers (57), DTOs (25+), Validators (20+)
+- **Infrastructure**: Persistence (Repositories), Services (OAuth providers), DependencyInjection
 
 **Routing**: `apps/api/src/Api/Routing/AuthenticationEndpoints.cs`
-**Tests**: `tests/Api.Tests/Authentication/`
+**Tests**: `tests/Api.Tests/BoundedContexts/Authentication/`
 
 ---
 
 ## 🔗 Related Documentation
 
-### Architecture Decision Records
-- [ADR-027: Infrastructure Services Policy](../01-architecture/adr/adr-027-infrastructure-services-policy.md) - OAuth provider pattern
-- [ADR-009: Centralized Error Handling](../01-architecture/adr/adr-009-centralized-error-handling.md) - Error response format
-- [ADR-008: Streaming CQRS Migration](../01-architecture/adr/adr-008-streaming-cqrs-migration.md) - CQRS pattern
+**ADRs**: [ADR-027 Infrastructure Services](../01-architecture/adr/adr-027-infrastructure-services-policy.md), [ADR-009 Error Handling](../01-architecture/adr/adr-009-centralized-error-handling.md), [ADR-008 CQRS](../01-architecture/adr/adr-008-streaming-cqrs-migration.md)
 
-### Other Bounded Contexts
-- [Administration](./administration.md) - Receives authentication events for audit logging
-- [SessionTracking](../03-api/session-tracking/sse-integration.md) - Session lifecycle tracking
-- [UserNotifications](./user-notifications.md) - Security notification emails
+**Bounded Contexts**: [Administration](./administration.md), [SessionTracking](../03-api/session-tracking/sse-integration.md), [UserNotifications](./user-notifications.md)
 
-### Security Documentation
-- [OAuth Testing Guide](../05-testing/backend/oauth-testing.md) - OAuth flow testing patterns
-- [TOTP Vulnerability Analysis](../06-security/totp-vulnerability-analysis.md) - 2FA security review
-- [Secrets Management](../04-deployment/secrets-management.md) - OAuth client secrets
+**Security**: [OAuth Testing](../05-testing/backend/oauth-testing.md), [TOTP Analysis](../06-security/totp-vulnerability-analysis.md), [Secrets Management](../04-deployment/secrets-management.md)
 
-### API Reference
-- [Scalar API Docs](http://localhost:8080/scalar/v1) - Interactive API explorer
-- [Authentication API Endpoints](../03-api/endpoints/) - Detailed endpoint documentation
+**API**: [Scalar Docs](http://localhost:8080/scalar/v1), [Endpoints](../03-api/endpoints/)
 
 ---
 
@@ -1357,59 +455,29 @@ apps/api/src/Api/BoundedContexts/Authentication/
 
 ### Monitoring Queries
 
-**Active Sessions**:
-```sql
-SELECT COUNT(*) FROM Sessions
-WHERE NOT IsRevoked AND ExpiresAt > NOW();
-```
-
-**Failed Login Rate**:
-```sql
-SELECT COUNT(*) FROM AuditLogs
-WHERE Action = 'LoginFailed'
-  AND Timestamp > NOW() - INTERVAL '1 hour';
-```
-
-**Locked Accounts**:
-```sql
-SELECT COUNT(*) FROM Users
-WHERE IsLocked AND LockedUntil > NOW();
-```
+| Metric | Query |
+|--------|-------|
+| **Active Sessions** | `SELECT COUNT(*) FROM Sessions WHERE NOT IsRevoked AND ExpiresAt > NOW()` |
+| **Failed Login Rate** | `SELECT COUNT(*) FROM AuditLogs WHERE Action = 'LoginFailed' AND Timestamp > NOW() - INTERVAL '1 hour'` |
+| **Locked Accounts** | `SELECT COUNT(*) FROM Users WHERE IsLocked AND LockedUntil > NOW()` |
 
 ---
 
 ## 🚨 Known Issues & Limitations
 
-### Current Blockers
-
-**Issue #3782** (priority:critical):
-- **Problem**: POST `/api/v1/auth/*` endpoints fail with JSON deserialization error
-- **Impact**: Login and registration completely broken
-- **Status**: Under investigation
-- **Workaround**: Use API key authentication OR manual session cookies
-
 ### Limitations
 
-1. **OAuth Email Mismatch**: Cannot link OAuth account if provider email differs from user email
-2. **API Key Scopes**: Scopes field exists but not enforced (planned for future)
-3. **Session Revocation**: Revoked sessions may remain valid for up to 1 minute (cache TTL)
-4. **Backup Codes**: Single-use only, cannot regenerate without re-enabling 2FA
+| Issue | Impact | Workaround/Plan |
+|-------|--------|-----------------|
+| OAuth Email Mismatch | Cannot link OAuth if provider email differs from user | Planned enhancement |
+| API Key Scopes | Scopes field exists but not enforced | Future roadmap |
+| Session Revocation Cache | Revoked sessions valid up to 1 min (cache TTL) | Acceptable trade-off |
+| Backup Codes | Single-use, cannot regenerate without re-enabling 2FA | Design limitation |
 
----
+### Future Enhancements
 
-## 📋 Future Enhancements
-
-### Planned (Roadmap)
-- WebAuthn/Passkeys support (Issue TBD)
-- API key scope enforcement (granular permissions)
-- Session device fingerprinting (improved security)
-- Passwordless authentication (magic links)
-
-### Under Consideration
-- Multi-tenancy support (organization-level auth)
-- SSO integration (SAML, LDAP)
-- Audit log retention policies (configurable)
-- Geolocation-based security (suspicious login detection)
+**Planned**: WebAuthn/Passkeys, API key scope enforcement, session device fingerprinting, passwordless auth (magic links)
+**Under Consideration**: Multi-tenancy, SSO (SAML/LDAP), audit retention policies, geolocation-based security
 
 ---
 

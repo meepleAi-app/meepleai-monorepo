@@ -32,8 +32,8 @@ public sealed class GetAllAgentDefinitionsQueryHandlerTests
         // Arrange
         var agents = new List<AgentDefinitionEntity>
         {
-            AgentDefinitionEntity.Create("Agent1", "Desc1", AgentDefinitionConfig.Default()),
-            AgentDefinitionEntity.Create("Agent2", "Desc2", AgentDefinitionConfig.Default())
+            AgentDefinitionEntity.Create("Agent1", "Desc1", AgentType.RagAgent, AgentDefinitionConfig.Default()),
+            AgentDefinitionEntity.Create("Agent2", "Desc2", AgentType.RagAgent, AgentDefinitionConfig.Default())
         };
 
         _mockRepository

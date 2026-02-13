@@ -152,6 +152,7 @@ internal static class PdfEndpoints
     {
         MapProcessingProgressEndpoint(group);
         MapProcessingCancelEndpoint(group);
+        MapProcessingStatusStreamEndpoint(group); // Issue #4218: SSE streaming
     }
 
     private static void MapProcessingProgressEndpoint(RouteGroupBuilder group)
@@ -172,6 +173,16 @@ internal static class PdfEndpoints
         .WithName("CancelPdfProcessing");
     }
 
+    private static void MapProcessingStatusStreamEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4218: Real-time PDF status updates via Server-Sent Events
+        group.MapGet("/pdfs/{pdfId:guid}/status/stream", HandleStreamPdfStatus)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("StreamPdfStatus")
+        .WithDescription("Stream real-time PDF processing status updates via SSE");
+    }
+
     private static void MapProcessingActionsEndpoints(RouteGroupBuilder group)
     {
         MapPdfRuleSpecEndpoints(group);
@@ -187,6 +198,7 @@ internal static class PdfEndpoints
     {
         MapPdfIndexEndpoint(group);
         MapPdfExtractEndpoint(group);
+        MapPdfRetryEndpoint(group); // Issue #4216: Manual retry
     }
 
     private static void MapPdfIndexEndpoint(RouteGroupBuilder group)
@@ -199,6 +211,73 @@ internal static class PdfEndpoints
     {
         // BGAI-081: Extract text from existing PDF (reprocess stuck PDFs)
         group.MapPost("/ingest/pdf/{pdfId:guid}/extract", HandleExtractPdfText);
+    }
+
+    private static void MapPdfRetryEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4216: Retry failed PDF processing
+        group.MapPost("/documents/{pdfId:guid}/retry", HandleRetryPdfProcessing)
+            .RequireSession()
+            .WithName("RetryPdfProcessing")
+            .WithOpenApi(operation =>
+            {
+                operation.Summary = "Retry processing of a failed PDF document";
+                operation.Description = "Attempts to retry processing of a PDF that failed. Maximum 3 retries allowed. Only the document owner can initiate retry.";
+                return operation;
+            });
+    }
+
+    private static async Task<IResult> HandleRetryPdfProcessing(
+        Guid pdfId,
+        IMediator mediator,
+        HttpContext context,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Validate session
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var command = new RetryPdfProcessingCommand(
+            PdfId: pdfId,
+            UserId: session!.User!.Id
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            // Determine appropriate status code
+            var statusCode = result.Message?.Contains("not found") == true ? 404
+                : result.Message?.Contains("not authorized") == true ? 403
+                : result.Message?.Contains("Maximum retry") == true ? 429 // Too Many Requests
+                : 400; // Bad Request
+
+            return Results.Json(
+                new
+                {
+                    success = false,
+                    message = result.Message,
+                    currentState = result.CurrentState,
+                    retryCount = result.RetryCount
+                },
+                statusCode: statusCode
+            );
+        }
+
+        logger.LogInformation(
+            "User {UserId} initiated retry for PDF {PdfId}: {Message}",
+            session!.User!.Id,
+            pdfId,
+            result.Message);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = result.Message,
+            currentState = result.CurrentState,
+            retryCount = result.RetryCount
+        });
     }
 
     private static async Task<IResult> HandleStandardUpload(
@@ -650,6 +729,29 @@ internal static class PdfEndpoints
         }
 
         return Results.Ok(progress);
+    }
+
+    private static async Task HandleStreamPdfStatus(Guid pdfId, HttpContext httpContext, IMediator mediator, CancellationToken ct)
+    {
+        // Issue #4218: Real-time PDF status updates via Server-Sent Events
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        bool isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        // Set SSE headers
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+        var query = new StreamPdfStatusQuery(pdfId, userId, isAdmin);
+
+        await foreach (var statusEvent in mediator.CreateStream(query, ct).ConfigureAwait(false))
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(statusEvent);
+            await httpContext.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+            await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+        }
     }
 
     private static async Task<IResult> HandleCancelPdfProcessing(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)

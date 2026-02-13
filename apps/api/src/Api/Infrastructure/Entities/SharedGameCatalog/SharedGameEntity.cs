@@ -8,6 +8,7 @@ public class SharedGameEntity
 {
     public Guid Id { get; set; }
     public int? BggId { get; set; }
+    public Guid? AgentDefinitionId { get; set; } // Issue #4228
     public string Title { get; set; } = string.Empty;
     public int YearPublished { get; set; }
     public string Description { get; set; } = string.Empty;

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -165,6 +166,17 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         // Issue #2140: Use Reconstitute factory method instead of reflection
         // Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
         // Issue #3664: Added PrivateGameId
+        // Issue #4216: Added retry tracking fields
+
+        // Parse retry-specific enums
+        var errorCategory = string.IsNullOrWhiteSpace(entity.ErrorCategory)
+            ? (ErrorCategory?)null
+            : Enum.Parse<ErrorCategory>(entity.ErrorCategory);
+
+        var failedAtState = string.IsNullOrWhiteSpace(entity.FailedAtState)
+            ? (PdfProcessingState?)null
+            : Enum.Parse<PdfProcessingState>(entity.FailedAtState);
+
         return PdfDocument.Reconstitute(
             id: entity.Id,
             gameId: entity.GameId,
@@ -185,7 +197,10 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             sharedGameId: entity.SharedGameId,
             contributorId: entity.ContributorId,
             sourceDocumentId: entity.SourceDocumentId,
-            privateGameId: entity.PrivateGameId
+            privateGameId: entity.PrivateGameId,
+            retryCount: entity.RetryCount,
+            errorCategory: errorCategory,
+            failedAtState: failedAtState
         );
     }
 
@@ -202,6 +217,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             UploadedByUserId = domain.UploadedByUserId,
             UploadedAt = domain.UploadedAt,
             ProcessingStatus = domain.ProcessingStatus,
+            ProcessingState = domain.ProcessingState.ToString(), // Issue #4215
             ProcessedAt = domain.ProcessedAt,
             PageCount = domain.PageCount,
             ProcessingError = domain.ProcessingError,
@@ -213,7 +229,10 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             SharedGameId = domain.SharedGameId, // Issue #2732
             ContributorId = domain.ContributorId, // Issue #2732
             SourceDocumentId = domain.SourceDocumentId, // Issue #2732
-            PrivateGameId = domain.PrivateGameId // Issue #3664
+            PrivateGameId = domain.PrivateGameId, // Issue #3664
+            RetryCount = domain.RetryCount, // Issue #4216
+            ErrorCategory = domain.ErrorCategory?.ToString(), // Issue #4216
+            FailedAtState = domain.FailedAtState?.ToString() // Issue #4216
         };
     }
 }

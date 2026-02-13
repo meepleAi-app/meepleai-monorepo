@@ -1,4 +1,5 @@
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
+using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.UserLibrary.Domain.Entities;
@@ -19,6 +20,12 @@ public sealed class PrivateGame : AggregateRoot<Guid>
     /// BoardGameGeek ID if imported from BGG. Null for manual entries.
     /// </summary>
     public int? BggId { get; private set; }
+
+    /// <summary>
+    /// Gets the ID of the linked AgentDefinition, if any.
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    public Guid? AgentDefinitionId { get; private set; }
 
     /// <summary>
     /// The title of the game.
@@ -352,6 +359,46 @@ public sealed class PrivateGame : AggregateRoot<Guid>
             OriginalOwnerId: OwnerId,
             PrivateGameId: Id
         );
+    }
+
+    // Agent Linking Methods (Issue #4228)
+
+    /// <summary>
+    /// Links an AI agent to this private game.
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    /// <param name="agentId">The ID of the agent to link</param>
+    /// <exception cref="ArgumentException">Thrown when agentId is empty</exception>
+    /// <exception cref="InvalidOperationException">Thrown when an agent is already linked</exception>
+    public void LinkAgent(Guid agentId)
+    {
+        if (agentId == Guid.Empty)
+            throw new ArgumentException("AgentId cannot be empty", nameof(agentId));
+
+        if (AgentDefinitionId.HasValue)
+            throw new InvalidOperationException("An agent is already linked to this game");
+
+        AgentDefinitionId = agentId;
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentLinkedToPrivateGameEvent(Id, agentId));
+    }
+
+    /// <summary>
+    /// Unlinks the AI agent from this private game.
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when no agent is linked</exception>
+    public void UnlinkAgent()
+    {
+        if (!AgentDefinitionId.HasValue)
+            throw new InvalidOperationException("No agent is currently linked to this game");
+
+        var oldAgentId = AgentDefinitionId.Value;
+        AgentDefinitionId = null;
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentUnlinkedFromPrivateGameEvent(Id, oldAgentId));
     }
 
     // Validation methods

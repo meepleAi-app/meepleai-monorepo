@@ -157,4 +157,14 @@ internal class NoOpEmailService : IEmailService
         Guid sharedGameId,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    // ISSUE-4159: Shared game approval workflow - Admin notification
+    public Task SendSharedGameSubmittedForApprovalEmailAsync(
+        string toEmail,
+        string toName,
+        string gameTitle,
+        string submitterName,
+        Guid gameId,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

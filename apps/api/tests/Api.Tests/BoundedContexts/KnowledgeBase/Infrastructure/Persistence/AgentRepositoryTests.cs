@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Issue #2577: Migrated to SharedDatabaseTestBase for connection pool stability.
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", TestCategories.Unit)]
+[Trait("Category", TestCategories.Integration)]
 internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 {
     public AgentRepositoryTests(SharedTestcontainersFixture fixture) : base(fixture)

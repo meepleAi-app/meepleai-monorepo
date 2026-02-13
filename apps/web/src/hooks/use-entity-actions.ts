@@ -6,20 +6,28 @@
  *
  * @module hooks/use-entity-actions
  * @see Issue #4031 - Entity-Specific Quick Actions
+ * @see Issue #4259 - Collection Quick Actions for MeepleCard
  */
 
 import { useMemo } from 'react';
 
 import {
   BarChart3,
+  Bookmark,
   CheckCircle,
   Download,
   FileDown,
+  Heart,
+  HeartHandshake,
   Mail,
   MessageSquare,
+  Pin,
   Play,
   PlayCircle,
+  Plus,
   Share2,
+  Star,
+  Trash2,
   UserPlus,
   Wrench,
 } from 'lucide-react';
@@ -27,6 +35,13 @@ import { useRouter } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
+import { useCollectionActions, type AssociatedData } from './use-collection-actions';
+import {
+  useAddToCollection,
+  useCollectionStatus,
+  useRemoveFromCollection,
+} from './queries/useCollections';
+import type { EntityType } from '@/lib/api/schemas/collections.schemas';
 
 // ============================================================================
 // Types
@@ -37,6 +52,8 @@ export interface UseEntityActionsProps {
   entity: MeepleEntityType;
   /** Entity ID */
   id: string;
+  /** Entity name (for warning modal) */
+  entityName?: string;
   /** Current user ID (for ownership checks) */
   userId?: string;
   /** User role (for role-gated actions) */
@@ -48,6 +65,8 @@ export interface UseEntityActionsProps {
     status?: string;
     [key: string]: unknown;
   };
+  /** Callback to show removal warning modal (Issue #4259) */
+  onShowRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void;
 }
 
 export interface EntityActions {
@@ -71,9 +90,11 @@ export interface EntityActions {
 export function useEntityActions({
   entity,
   id,
+  entityName,
   userId,
   userRole = 'user',
   data,
+  onShowRemovalWarning,
 }: UseEntityActionsProps): EntityActions {
   const router = useRouter();
 
@@ -81,11 +102,57 @@ export function useEntityActions({
   const _isAdmin = userRole === 'admin' || userRole === 'superadmin';
   const _isOwner = userId && data?.ownerId && userId === data.ownerId;
 
+  // Issue #4259: Collection actions for game entity (Phase 1)
+  // Call hook unconditionally (hooks rules), but only use for entity='game'
+  const gameCollection = useCollectionActions(
+    entity === 'game' ? id : '',
+    onShowRemovalWarning
+  );
+
+  // Issue #4263: Generic collection actions for other entities (Phase 2)
+  // Map MeepleEntityType to backend EntityType
+  const genericEntityType: EntityType | null =
+    entity === 'game'
+      ? null // Use Phase 1 hooks for games
+      : (entity as EntityType);
+
+  // Generic collection status (disabled for games)
+  const { data: genericStatus } = useCollectionStatus(
+    genericEntityType || 'player', // Fallback to prevent type error
+    id,
+    { enabled: genericEntityType !== null }
+  );
+
+  // Generic collection mutations (disabled for games)
+  const addToGenericCollection = useAddToCollection(
+    genericEntityType || 'player',
+    id
+  );
+  const removeFromGenericCollection = useRemoveFromCollection(
+    genericEntityType || 'player',
+    id,
+    onShowRemovalWarning
+  );
+
   return useMemo(() => {
     switch (entity) {
-      case 'game':
+      case 'game': {
+        // Build collection action (conditional: Add or Remove)
+        const collectionAction: QuickAction = gameCollection.isInCollection
+          ? {
+              icon: Trash2,
+              label: 'Rimuovi da Collezione',
+              onClick: () => gameCollection.remove(),
+            }
+          : {
+              icon: Plus,
+              label: 'Aggiungi a Collezione',
+              onClick: () => gameCollection.add(),
+            };
+
         return {
           quickActions: [
+            collectionAction, // Issue #4259: First action
             {
               icon: MessageSquare,
               label: 'Chat con Agent',
@@ -107,10 +174,26 @@ export function useEntityActions({
           ],
           // More menu actions can be added later
         };
+      }
 
-      case 'session':
+      case 'session': {
+        // Issue #4263: Collection action for session (Save/Remove)
+        const saveAction: QuickAction =
+          genericStatus?.inCollection ?? false
+            ? {
+                icon: Bookmark,
+                label: 'Rimuovi dai Salvati',
+                onClick: () => removeFromGenericCollection.remove(undefined),
+              }
+            : {
+                icon: Bookmark,
+                label: 'Salva',
+                onClick: () => addToGenericCollection.mutate(undefined),
+              };
+
         return {
           quickActions: [
+            saveAction, // Issue #4263: First action
             {
               icon: PlayCircle,
               label: 'Riprendi',
@@ -132,10 +215,26 @@ export function useEntityActions({
             },
           ],
         };
+      }
 
-      case 'agent':
+      case 'agent': {
+        // Issue #4263: Collection action for agent (Favorite/Unfavorite)
+        const favoriteAction: QuickAction =
+          genericStatus?.inCollection ?? false
+            ? {
+                icon: Heart,
+                label: 'Rimuovi dai Preferiti',
+                onClick: () => removeFromGenericCollection.remove(undefined),
+              }
+            : {
+                icon: Heart,
+                label: 'Aggiungi ai Preferiti',
+                onClick: () => addToGenericCollection.mutate(undefined),
+              };
+
         return {
           quickActions: [
+            favoriteAction, // Issue #4263: First action
             {
               icon: MessageSquare,
               label: 'Chat',
@@ -148,10 +247,26 @@ export function useEntityActions({
             },
           ],
         };
+      }
 
-      case 'document':
+      case 'document': {
+        // Issue #4263: Collection action for document (Save/Remove)
+        const saveAction: QuickAction =
+          genericStatus?.inCollection ?? false
+            ? {
+                icon: Bookmark,
+                label: 'Rimuovi dai Salvati',
+                onClick: () => removeFromGenericCollection.remove(undefined),
+              }
+            : {
+                icon: Bookmark,
+                label: 'Salva',
+                onClick: () => addToGenericCollection.mutate(undefined),
+              };
+
         return {
           quickActions: [
+            saveAction, // Issue #4263: First action
             {
               icon: Download,
               label: 'Download',
@@ -167,10 +282,26 @@ export function useEntityActions({
             },
           ],
         };
+      }
 
-      case 'chatSession':
+      case 'chatSession': {
+        // Issue #4263: Collection action for chatSession (Pin/Unpin)
+        const pinAction: QuickAction =
+          genericStatus?.inCollection ?? false
+            ? {
+                icon: Pin,
+                label: 'Rimuovi Pin',
+                onClick: () => removeFromGenericCollection.remove(undefined),
+              }
+            : {
+                icon: Pin,
+                label: 'Fissa',
+                onClick: () => addToGenericCollection.mutate(undefined),
+              };
+
         return {
           quickActions: [
+            pinAction, // Issue #4263: First action
             {
               icon: MessageSquare,
               label: 'Continua Chat',
@@ -186,10 +317,26 @@ export function useEntityActions({
             },
           ],
         };
+      }
 
-      case 'player':
+      case 'player': {
+        // Issue #4263: Collection action for player (Follow/Unfollow)
+        const followAction: QuickAction =
+          genericStatus?.inCollection ?? false
+            ? {
+                icon: HeartHandshake,
+                label: 'Smetti di Seguire',
+                onClick: () => removeFromGenericCollection.remove(undefined),
+              }
+            : {
+                icon: HeartHandshake,
+                label: 'Segui',
+                onClick: () => addToGenericCollection.mutate(undefined),
+              };
+
         return {
           quickActions: [
+            followAction, // Issue #4263: First action
             {
               icon: Mail,
               label: 'Messaggia',
@@ -205,10 +352,26 @@ export function useEntityActions({
             },
           ],
         };
+      }
 
-      case 'event':
+      case 'event': {
+        // Issue #4263: Collection action for event (Interested/Remove)
+        const interestedAction: QuickAction =
+          genericStatus?.inCollection ?? false
+            ? {
+                icon: Star,
+                label: 'Rimuovi Interesse',
+                onClick: () => removeFromGenericCollection.remove(undefined),
+              }
+            : {
+                icon: Star,
+                label: 'Interessato',
+                onClick: () => addToGenericCollection.mutate(undefined),
+              };
+
         return {
           quickActions: [
+            interestedAction, // Issue #4263: First action
             {
               icon: CheckCircle,
               label: 'Partecipa',
@@ -226,6 +389,7 @@ export function useEntityActions({
             },
           ],
         };
+      }
 
       case 'custom':
       default:
@@ -233,5 +397,14 @@ export function useEntityActions({
           quickActions: [],
         };
     }
-  }, [entity, id, router, data]);
+  }, [
+    entity,
+    id,
+    router,
+    data,
+    gameCollection,
+    genericStatus,
+    addToGenericCollection,
+    removeFromGenericCollection,
+  ]);
 }

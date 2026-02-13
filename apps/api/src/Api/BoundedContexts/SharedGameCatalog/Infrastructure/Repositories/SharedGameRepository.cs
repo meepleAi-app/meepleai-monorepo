@@ -112,7 +112,8 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             entity.CreatedAt,
             entity.ModifiedAt,
             entity.IsDeleted,
-            entity.BggId);
+            entity.BggId,
+            entity.AgentDefinitionId); // Issue #4228
     }
 
     private static SharedGameEntity MapToEntity(SharedGame game)
@@ -140,7 +141,8 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             ModifiedBy = game.ModifiedBy,
             CreatedAt = game.CreatedAt,
             ModifiedAt = game.ModifiedAt,
-            IsDeleted = game.IsDeleted  // Fix: Use aggregate value, not hardcoded false (Issue #2514 code review)
+            IsDeleted = game.IsDeleted,  // Fix: Use aggregate value, not hardcoded false (Issue #2514 code review)
+            AgentDefinitionId = game.AgentDefinitionId  // Issue #4228
         };
     }
 

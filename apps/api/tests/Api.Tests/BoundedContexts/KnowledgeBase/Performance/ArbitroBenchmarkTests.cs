@@ -19,9 +19,9 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Performance;
 [Trait("Issue", "3874")]
 public sealed class ArbitroBenchmarkTests
 {
-    private readonly ITestOutputHelper _output;
+    private readonly Xunit.Abstractions.ITestOutputHelper _output;
 
-    public ArbitroBenchmarkTests(ITestOutputHelper output)
+    public ArbitroBenchmarkTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         _output = output;
     }

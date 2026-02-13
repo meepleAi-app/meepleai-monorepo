@@ -408,7 +408,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             ? await _pdfDocumentRepository.GetByIdsAsync(documentIds, ct).ConfigureAwait(false)
             : await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
 
-        if (documents.Count == 0) return (true, 0, 0);
+        // Defensive: Handle null or empty collection
+        if (documents is null or { Count: 0 }) return (true, 0, 0);
 
         var notCompleted = documents.Count(d =>
             !string.Equals(d.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase));

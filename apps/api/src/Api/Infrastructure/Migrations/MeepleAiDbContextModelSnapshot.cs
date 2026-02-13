@@ -3324,6 +3324,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("base");
 
+                    b.Property<string>("ErrorCategory")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("error_category");
+
                     b.Property<string>("ExtractedDiagrams")
                         .HasMaxLength(8192)
                         .HasColumnType("character varying(8192)");
@@ -3334,6 +3339,11 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<string>("ExtractedText")
                         .HasColumnType("text");
+
+                    b.Property<string>("FailedAtState")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("failed_at_state");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -3380,10 +3390,24 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("ProcessingProgressJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("ProcessingState")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("processing_state");
+
                     b.Property<string>("ProcessingStatus")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("retry_count");
 
                     b.Property<Guid?>("SharedGameId")
                         .HasColumnType("uuid");
@@ -5441,6 +5465,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("AgentDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_definition_id");
+
                     b.Property<decimal?>("AverageRating")
                         .HasColumnType("decimal(4,2)")
                         .HasColumnName("average_rating");
@@ -5536,6 +5564,8 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("year_published");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AgentDefinitionId");
 
                     b.HasIndex("BggId")
                         .IsUnique()
@@ -6293,6 +6323,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("AgentDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_definition_id");
+
                     b.Property<int?>("BggId")
                         .HasColumnType("integer")
                         .HasColumnName("bgg_id");
@@ -6377,6 +6411,8 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AgentDefinitionId");
+
                     b.HasIndex("OwnerId")
                         .HasDatabaseName("ix_private_games_owner_id")
                         .HasFilter("is_deleted = false");
@@ -6455,6 +6491,63 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_ProposalMigrations_UserId_Choice");
 
                     b.ToTable("ProposalMigrations", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserCollectionEntryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_UserCollectionEntries_UserId_Favorites")
+                        .HasFilter("[IsFavorite] = 1");
+
+                    b.HasIndex("EntityType", "EntityId")
+                        .HasDatabaseName("IX_UserCollectionEntries_EntityType_EntityId");
+
+                    b.HasIndex("UserId", "EntityType", "EntityId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserCollectionEntries_UserId_EntityType_EntityId");
+
+                    b.ToTable("user_collection_entries", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
+                        });
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameChecklistEntity", b =>
@@ -8270,6 +8363,14 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("SharedGame");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("AgentDefinitionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.UserBadgeEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.BadgeEntity", "Badge")
@@ -8378,6 +8479,11 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", b =>
                 {
+                    b.HasOne("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("AgentDefinitionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
@@ -8396,6 +8502,17 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("PrivateGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserCollectionEntryEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameChecklistEntity", b =>

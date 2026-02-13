@@ -21,11 +21,22 @@ public class PdfDocumentEntity
 
     // PDF-02: Text extraction fields
     public string? ExtractedText { get; set; }
+
+    // Issue #4215: Granular 7-state tracking
+    public string ProcessingState { get; set; } = "Pending"; // Enum stored as string: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed
+
+    // Deprecated: Keep for backward compatibility (migrate in Issue #4216)
     public string ProcessingStatus { get; set; } = "pending"; // pending, processing, completed, failed
+
     public DateTime? ProcessedAt { get; set; }
     public int? PageCount { get; set; }
     public int? CharacterCount { get; set; }
     public string? ProcessingError { get; set; }
+
+    // Issue #4216: Retry mechanism tracking
+    public int RetryCount { get; set; }
+    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, Unknown
+    public string? FailedAtState { get; set; } // PdfProcessingState where failure occurred
 
     // PDF-03: Structured data extraction fields
     public string? ExtractedTables { get; set; } // JSON array of tables

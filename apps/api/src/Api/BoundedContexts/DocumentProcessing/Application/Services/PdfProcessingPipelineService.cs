@@ -79,7 +79,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return;
             }
 
-            // Mark as processing
+            // Issue #4215: Transition to Extracting state
+            pdfDoc.ProcessingState = "Extracting";
             pdfDoc.ProcessingStatus = "processing";
             pdfDoc.ProcessingError = null;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -92,6 +93,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogInformation("[PdfPipeline] Step 2/4: Extracting structured content from {PdfId}", pdfId);
             await ExtractStructuredContentAsync(pdfDoc, filePath, cancellationToken).ConfigureAwait(false);
 
+            // Issue #4215: Transition to Chunking state
+            pdfDoc.ProcessingState = "Chunking";
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
             // Step 3: Chunk text
             _logger.LogInformation("[PdfPipeline] Step 3/4: Chunking text for {PdfId} ({CharCount} chars)", pdfId, fullText.Length);
             var chunks = ChunkText(fullText, extractResult);
@@ -103,13 +108,25 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return;
             }
 
-            // Step 4: Embed + Index
-            _logger.LogInformation("[PdfPipeline] Step 4/4: Embedding and indexing {ChunkCount} chunks for {PdfId}", chunks.Count, pdfId);
+            // Issue #4215: Transition to Embedding state
+            pdfDoc.ProcessingState = "Embedding";
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Step 4a: Generate embeddings
+            _logger.LogInformation("[PdfPipeline] Step 4a/5: Generating embeddings for {ChunkCount} chunks for {PdfId}", chunks.Count, pdfId);
             var embeddings = await GenerateEmbeddingsAsync(pdfDoc, chunks, cancellationToken).ConfigureAwait(false);
+
+            // Issue #4215: Transition to Indexing state
+            pdfDoc.ProcessingState = "Indexing";
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Step 4b: Index in Qdrant
+            _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", chunks.Count, pdfId);
             await IndexInQdrantAsync(pdfDoc, chunks, embeddings, cancellationToken).ConfigureAwait(false);
             await SaveTextChunksAsync(pdfDoc, chunks, cancellationToken).ConfigureAwait(false);
 
-            // Mark completed
+            // Issue #4215: Mark as Ready (final state)
+            pdfDoc.ProcessingState = "Ready";
             pdfDoc.ProcessingStatus = "completed";
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -387,7 +404,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)
     {
+        // Issue #4215: Use Failed state
+        pdfDoc.ProcessingState = "Failed";
+#pragma warning disable CS0618
         pdfDoc.ProcessingStatus = "failed";
+#pragma warning restore CS0618
         pdfDoc.ProcessingError = errorMessage;
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
@@ -406,8 +427,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .ConfigureAwait(false);
 
             if (pdfDoc != null
-                && !string.Equals(pdfDoc.ProcessingStatus, "completed", StringComparison.Ordinal))
+                && !string.Equals(pdfDoc.ProcessingState, "Ready", StringComparison.Ordinal))
             {
+                // Issue #4215: Use Failed state
+                pdfDoc.ProcessingState = "Failed";
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = errorMessage.Length > 500
                     ? errorMessage[..500]

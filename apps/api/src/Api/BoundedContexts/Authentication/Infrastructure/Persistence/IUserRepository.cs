@@ -42,4 +42,10 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Returns domain entities for autocomplete scenarios (e.g., @mentions).
     /// </summary>
     Task<IReadOnlyList<User>> SearchAsync(string query, int maxResults, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all admin users (Admin and SuperAdmin roles) for notification purposes.
+    /// Issue #4159: Approval workflow extension - Admin notifications
+    /// </summary>
+    Task<IReadOnlyList<User>> GetAdminUsersAsync(CancellationToken cancellationToken = default);
 }

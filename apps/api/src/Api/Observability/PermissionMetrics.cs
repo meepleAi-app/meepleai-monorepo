@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace Api.Observability;
@@ -42,7 +43,7 @@ public static class PermissionMetrics
         "Duration of cache access operations");
 
     // Gauges
-    private static long _activePermissionChecks = 0;
+    private static long _activePermissionChecks;
 
     public static readonly ObservableGauge<long> ActiveChecks = Meter.CreateObservableGauge(
         "permission_active_checks",
@@ -57,10 +58,10 @@ public static class PermissionMetrics
     // Labeled metrics (per feature)
     public static void RecordCheck(string feature, bool granted, double durationMs)
     {
-        var tags = new TagList
+        var tags = new KeyValuePair<string, object?>[]
         {
-            { "feature", feature },
-            { "result", granted ? "granted" : "denied" }
+            new("feature", feature),
+            new("result", granted ? "granted" : "denied")
         };
 
         CheckTotal.Add(1, tags);
@@ -76,7 +77,7 @@ public static class PermissionMetrics
     // Cache metrics
     public static void RecordCacheAccess(bool hit, double durationMs)
     {
-        var tags = new TagList { { "result", hit ? "hit" : "miss" } };
+        var tags = new KeyValuePair<string, object?>[] { new("result", hit ? "hit" : "miss") };
 
         if (hit)
         {

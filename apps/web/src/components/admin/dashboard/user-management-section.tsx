@@ -18,11 +18,11 @@ import {
 } from 'lucide-react';
 import { adminClient } from '@/lib/api/admin-client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/data-display/badge';
+import { toast } from 'sonner';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 
 interface User {
   id: string;
@@ -235,7 +235,6 @@ export function UserManagementSection() {
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -254,10 +253,7 @@ export function UserManagementSection() {
     mutationFn: (userId: string) => adminClient.suspendUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: 'User suspended',
-        description: 'User account has been suspended',
-      });
+      toast.warning('User account has been suspended');
     },
   });
 
@@ -265,10 +261,7 @@ export function UserManagementSection() {
     mutationFn: (userId: string) => adminClient.unsuspendUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: 'User unsuspended',
-        description: 'User account has been reactivated',
-      });
+      toast.success('User account has been reactivated');
     },
   });
 
@@ -294,7 +287,7 @@ export function UserManagementSection() {
             <Input
               placeholder="Search by name or email..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className="pl-10 bg-white/80 border-amber-200/60 focus:border-amber-400"
             />
           </div>
@@ -438,7 +431,7 @@ export function UserManagementSection() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={(e) => {
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
                             setSelectedUserId(user.id);
                           }}

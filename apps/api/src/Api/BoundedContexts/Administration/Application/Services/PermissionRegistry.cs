@@ -14,7 +14,7 @@ public sealed class PermissionRegistry
 
     public PermissionRegistry()
     {
-        _permissions = new Dictionary<string, Permission>
+        _permissions = new Dictionary<string, Permission>(StringComparer.OrdinalIgnoreCase)
         {
             // Wishlist - available to all tiers
             ["wishlist"] = Permission.CreateOr("wishlist", UserTier.Free, Role.User),

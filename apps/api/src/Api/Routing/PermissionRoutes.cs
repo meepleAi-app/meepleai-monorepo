@@ -19,7 +19,7 @@ public static class PermissionRoutes
         group.MapGet("/me", async (HttpContext ctx, IMediator m) =>
         {
             var userId = ctx.User.GetUserId();
-            var result = await m.Send(new GetUserPermissionsQuery(userId));
+            var result = await m.Send(new GetUserPermissionsQuery(userId)).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("GetMyPermissions")
@@ -29,7 +29,7 @@ public static class PermissionRoutes
         group.MapGet("/check", async (HttpContext ctx, IMediator m, string feature, string? state = null) =>
         {
             var userId = ctx.User.GetUserId();
-            var result = await m.Send(new CheckPermissionQuery(userId, feature, state));
+            var result = await m.Send(new CheckPermissionQuery(userId, feature, state)).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("CheckPermission")

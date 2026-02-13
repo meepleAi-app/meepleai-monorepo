@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -30,20 +31,26 @@ public sealed class GetUserPermissionsHandler
             .Where(u => u.Id == request.UserId)
             .Select(u => new { u.Tier, u.Role, u.Status })
             .FirstOrDefaultAsync(cancellationToken)
-            ?? throw new NotFoundException("User", request.UserId);
+            .ConfigureAwait(false)
+            ?? throw new NotFoundException("User", request.UserId.ToString());
+
+        // Parse string values to domain value objects
+        var userTier = UserTier.Parse(user.Tier);
+        var userRole = Role.Parse(user.Role);
+        var userStatus = Enum.Parse<UserAccountStatus>(user.Status);
 
         var permissionContext = new PermissionContext(
-            user.Tier,
-            user.Role,
-            user.Status);
+            userTier,
+            userRole,
+            userStatus);
 
         var accessibleFeatures = _permissionRegistry.GetAccessibleFeatures(permissionContext);
 
         return new GetUserPermissionsResponse(
-            user.Tier.Value,
-            user.Role.Value,
-            user.Status,
-            user.Tier.GetLimits(),
-            accessibleFeatures);
+            userTier.Value,
+            userRole.Value,
+            userStatus,
+            userTier.GetLimits(),
+            accessibleFeatures.ToList());
     }
 }

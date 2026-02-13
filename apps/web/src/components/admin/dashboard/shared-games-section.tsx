@@ -5,11 +5,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, X, Eye, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { adminClient } from '@/lib/api/admin-client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/data-display/badge';
 
 interface ApprovalQueueItem {
   gameId: string;
@@ -25,7 +25,6 @@ export function SharedGamesSection() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGames, setSelectedGames] = useState<Set<string>>(new Set());
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -45,10 +44,7 @@ export function SharedGamesSection() {
       queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       setSelectedGames(new Set());
-      toast({
-        title: 'Games approved',
-        description: 'Selected games have been published to the catalog',
-      });
+      toast.success('Selected games have been published to the catalog');
     },
   });
 
@@ -58,11 +54,7 @@ export function SharedGamesSection() {
       queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       setSelectedGames(new Set());
-      toast({
-        title: 'Games rejected',
-        description: 'Selected games have been removed from the queue',
-        variant: 'destructive',
-      });
+      toast.error('Selected games have been removed from the queue');
     },
   });
 
@@ -106,7 +98,7 @@ export function SharedGamesSection() {
             <Input
               placeholder="Search by game title..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className="pl-10 bg-white/80 border-amber-200/60 focus:border-amber-400"
             />
           </div>

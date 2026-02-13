@@ -38,6 +38,9 @@ public class UserEntity
     public DateTime? SuspendedAt { get; set; }
     public string? SuspendReason { get; set; }
 
+    // Epic #4068: User Account Status (Active/Suspended/Banned)
+    public string Status { get; set; } = "Active";
+
     // ISSUE-3141: Gamification (Level/XP)
     public int Level { get; set; } = 1;
     public int ExperiencePoints { get; set; }

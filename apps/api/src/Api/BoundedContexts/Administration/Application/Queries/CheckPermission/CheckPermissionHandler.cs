@@ -32,12 +32,18 @@ public sealed class CheckPermissionHandler
             .Where(u => u.Id == request.UserId)
             .Select(u => new { u.Tier, u.Role, u.Status })
             .FirstOrDefaultAsync(cancellationToken)
-            ?? throw new NotFoundException("User", request.UserId);
+            .ConfigureAwait(false)
+            ?? throw new NotFoundException("User", request.UserId.ToString());
+
+        // Parse string values to domain value objects
+        var userTier = UserTier.Parse(user.Tier);
+        var userRole = Role.Parse(user.Role);
+        var userStatus = Enum.Parse<UserAccountStatus>(user.Status);
 
         var permissionContext = new PermissionContext(
-            user.Tier,
-            user.Role,
-            user.Status,
+            userTier,
+            userRole,
+            userStatus,
             request.ResourceState);
 
         var result = _permissionRegistry.CheckAccess(request.FeatureName, permissionContext);
@@ -47,12 +53,12 @@ public sealed class CheckPermissionHandler
             result.HasAccess,
             result.Reason,
             new PermissionDetails(
-                user.Tier.GetDisplayName(),
-                user.Role.GetDisplayName(),
-                user.Status.ToString(),
+                userTier.Value,
+                userRole.Value,
+                userStatus.ToString(),
                 new RequiredPermissions(
-                    permission?.RequiredTier?.GetDisplayName(),
-                    permission?.RequiredRole?.GetDisplayName(),
+                    permission?.RequiredTier?.Value,
+                    permission?.RequiredRole?.Value,
                     permission?.AllowedStates?.ToList()),
                 permission?.Logic.ToString() ?? "Unknown"));
     }

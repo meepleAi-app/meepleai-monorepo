@@ -153,6 +153,7 @@ internal static class PdfEndpoints
         MapProcessingProgressEndpoint(group);
         MapProcessingCancelEndpoint(group);
         MapProcessingStatusStreamEndpoint(group); // Issue #4218: SSE streaming
+        MapMetricsEndpoint(group); // Issue #4219: Duration metrics and ETA
     }
 
     private static void MapProcessingProgressEndpoint(RouteGroupBuilder group)
@@ -181,6 +182,30 @@ internal static class PdfEndpoints
         .RequireAuthorization()
         .WithName("StreamPdfStatus")
         .WithDescription("Stream real-time PDF processing status updates via SSE");
+    }
+
+    private static void MapMetricsEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4219: Get PDF processing metrics (timing, ETA, progress)
+        group.MapGet("/documents/{id:guid}/metrics", HandleGetPdfMetrics)
+        .RequireSession()
+        .WithName("GetPdfMetrics")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Get PDF processing metrics and ETA";
+            operation.Description = "Retrieves detailed processing metrics including per-state timing, progress percentage, and estimated time remaining.";
+            return operation;
+        });
+    }
+
+    private static async Task<IResult> HandleGetPdfMetrics(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetPdfMetricsQuery(id);
+        var metrics = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(metrics);
     }
 
     private static void MapProcessingActionsEndpoints(RouteGroupBuilder group)

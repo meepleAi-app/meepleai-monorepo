@@ -80,5 +80,26 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         // Issue #3664: Private game PDF support
         builder.Property(e => e.PrivateGameId).HasMaxLength(64).IsRequired(false);
         builder.HasIndex(e => e.PrivateGameId);
+
+        // Issue #4219: Per-state timing fields for metrics and ETA
+        builder.Property(e => e.UploadingStartedAt)
+            .HasColumnName("uploading_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.ExtractingStartedAt)
+            .HasColumnName("extracting_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.ChunkingStartedAt)
+            .HasColumnName("chunking_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.EmbeddingStartedAt)
+            .HasColumnName("embedding_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.IndexingStartedAt)
+            .HasColumnName("indexing_started_at")
+            .IsRequired(false);
     }
 }

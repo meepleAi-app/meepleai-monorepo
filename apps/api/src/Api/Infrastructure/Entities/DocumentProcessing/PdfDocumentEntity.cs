@@ -73,6 +73,13 @@ public class PdfDocumentEntity
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; set; }
 
+    // Issue #4219: Per-state timing tracking for metrics and ETA
+    public DateTime? UploadingStartedAt { get; set; }
+    public DateTime? ExtractingStartedAt { get; set; }
+    public DateTime? ChunkingStartedAt { get; set; }
+    public DateTime? EmbeddingStartedAt { get; set; }
+    public DateTime? IndexingStartedAt { get; set; }
+
     [NotMapped]
     public ProcessingProgress? ProcessingProgress
     {

@@ -271,9 +271,6 @@ export function usePdfStatus(
   const startSSE = useCallback(() => {
     if (!documentId || !isMountedRef.current) return;
 
-    // Set connecting state
-    setConnectionState(reconnectAttemptsRef.current > 0 ? 'reconnecting' : 'connecting');
-
     try {
       // Build URL with Last-Event-ID for stream resume
       let url = `/api/v1/pdfs/${documentId}/status/stream`;

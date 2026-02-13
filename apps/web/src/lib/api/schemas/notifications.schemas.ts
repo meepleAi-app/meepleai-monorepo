@@ -47,6 +47,21 @@ export const GetUnreadCountResponseSchema = z.object({
 });
 export type GetUnreadCountResponse = z.infer<typeof GetUnreadCountResponseSchema>;
 
+// Issue #4220: Notification Preferences
+export const NotificationPreferencesSchema = z.object({
+  userId: z.string().uuid(),
+  emailOnDocumentReady: z.boolean(),
+  emailOnDocumentFailed: z.boolean(),
+  emailOnRetryAvailable: z.boolean(),
+  pushOnDocumentReady: z.boolean(),
+  pushOnDocumentFailed: z.boolean(),
+  pushOnRetryAvailable: z.boolean(),
+  inAppOnDocumentReady: z.boolean(),
+  inAppOnDocumentFailed: z.boolean(),
+  inAppOnRetryAvailable: z.boolean(),
+});
+export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>;
+
 export const MarkNotificationReadResponseSchema = z.object({
   success: z.boolean(),
 });

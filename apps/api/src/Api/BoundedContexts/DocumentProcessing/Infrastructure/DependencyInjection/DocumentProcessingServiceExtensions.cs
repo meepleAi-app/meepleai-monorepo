@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
+using Quartz;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 
@@ -109,7 +110,34 @@ internal static class DocumentProcessingServiceExtensions
         // Stale PDF recovery: runs once on startup to reprocess stuck PDFs
         services.AddHostedService<StalePdfRecoveryService>();
 
+        // Issue #4208: Register Quartz job for automatic PDF retry (every 5 minutes)
+        RegisterRetryFailedPdfsJob(services);
+
         return services;
+    }
+
+    /// <summary>
+    /// Issue #4208: Register RetryFailedPdfsJob with Quartz scheduler.
+    /// Runs every 5 minutes to automatically retry failed PDFs with retriable errors.
+    /// </summary>
+    private static void RegisterRetryFailedPdfsJob(IServiceCollection services)
+    {
+        // Only register job definition here - do NOT call AddQuartzHostedService (would duplicate).
+        // The AddQuartzHostedService is called once in Administration context.
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("RetryFailedPdfsJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.RetryFailedPdfsJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("RetryFailedPdfsTrigger", "DocumentProcessing")
+                .WithCronSchedule("0 */5 * * * ?") // Every 5 minutes
+                .WithDescription("Automatically retries failed PDF processing with exponential backoff")
+            );
+        });
     }
 
     /// <summary>

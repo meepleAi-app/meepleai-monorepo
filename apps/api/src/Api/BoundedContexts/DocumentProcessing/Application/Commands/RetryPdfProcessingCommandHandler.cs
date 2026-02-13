@@ -1,30 +1,34 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
 /// Handler for RetryPdfProcessingCommand.
 /// Issue #4216: Manual retry mechanism for failed PDF processing.
-/// Simplified approach: Work directly with entity, apply domain logic inline.
+/// Refactored to use domain method for proper DDD architecture.
 /// </summary>
 internal sealed class RetryPdfProcessingCommandHandler
     : ICommandHandler<RetryPdfProcessingCommand, RetryPdfProcessingResult>
 {
-    private readonly MeepleAiDbContext _db;
+    private readonly IPdfDocumentRepository _pdfRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMediator _mediator;
     private readonly ILogger<RetryPdfProcessingCommandHandler> _logger;
 
     public RetryPdfProcessingCommandHandler(
-        MeepleAiDbContext db,
+        IPdfDocumentRepository pdfRepository,
+        IUnitOfWork unitOfWork,
         IMediator mediator,
         ILogger<RetryPdfProcessingCommandHandler> logger)
     {
-        _db = db ?? throw new ArgumentNullException(nameof(db));
+        _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -35,9 +39,8 @@ internal sealed class RetryPdfProcessingCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Load PDF document
-        var pdf = await _db.PdfDocuments
-            .FirstOrDefaultAsync(p => p.Id == command.PdfId, cancellationToken)
+        // Load PDF document using repository (returns domain model)
+        var pdf = await _pdfRepository.GetByIdAsync(command.PdfId, cancellationToken)
             .ConfigureAwait(false);
 
         if (pdf == null)
@@ -55,93 +58,57 @@ internal sealed class RetryPdfProcessingCommandHandler
         {
             return new RetryPdfProcessingResult(
                 Success: false,
-                CurrentState: pdf.ProcessingState,
+                CurrentState: pdf.ProcessingState.ToString(),
                 RetryCount: pdf.RetryCount,
                 Message: $"User {command.UserId} is not authorized to retry this PDF"
             );
         }
 
-        // Apply domain business logic inline
-        const int MaxRetries = 3;
-        var currentState = Enum.Parse<PdfProcessingState>(pdf.ProcessingState);
-
-        // Check if retry is allowed
-        if (pdf.RetryCount >= MaxRetries)
+        // Apply domain retry logic with proper validation and state transitions
+        try
         {
-            _logger.LogWarning(
-                "Retry not allowed for PDF {PdfId}: Maximum retries ({MaxRetries}) reached",
+            pdf.Retry();
+
+            // Update via repository (handles mapping and persistence)
+            await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Publish domain event
+            var retryEvent = new PdfRetryInitiatedEvent(
+                pdf.Id,
+                pdf.RetryCount,
+                pdf.UploadedByUserId
+            );
+            await _mediator.Publish(retryEvent, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "PDF {PdfId} retry initiated: RetryCount={RetryCount}, State={State}",
                 command.PdfId,
-                MaxRetries);
+                pdf.RetryCount,
+                pdf.ProcessingState);
+
+            return new RetryPdfProcessingResult(
+                Success: true,
+                CurrentState: pdf.ProcessingState.ToString(),
+                RetryCount: pdf.RetryCount,
+                Message: $"Retry {pdf.RetryCount} initiated"
+            );
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Domain validation failed (max retries reached, wrong state, etc.)
+            _logger.LogWarning(
+                ex,
+                "Retry not allowed for PDF {PdfId}: {Reason}",
+                command.PdfId,
+                ex.Message);
 
             return new RetryPdfProcessingResult(
                 Success: false,
-                CurrentState: pdf.ProcessingState,
+                CurrentState: pdf.ProcessingState.ToString(),
                 RetryCount: pdf.RetryCount,
-                Message: $"Maximum retry limit ({MaxRetries}) reached"
+                Message: ex.Message
             );
         }
-
-        if (currentState != PdfProcessingState.Failed)
-        {
-            _logger.LogWarning(
-                "Retry not allowed for PDF {PdfId}: Current state is {State}, not Failed",
-                command.PdfId,
-                currentState);
-
-            return new RetryPdfProcessingResult(
-                Success: false,
-                CurrentState: pdf.ProcessingState,
-                RetryCount: pdf.RetryCount,
-                Message: $"Cannot retry: document is in {currentState} state, not Failed"
-            );
-        }
-
-        // Increment retry count
-        pdf.RetryCount++;
-
-        // Resume from failed state or restart from Extracting
-        var resumeState = pdf.FailedAtState != null
-            ? Enum.Parse<PdfProcessingState>(pdf.FailedAtState)
-            : PdfProcessingState.Extracting;
-
-        pdf.ProcessingState = resumeState.ToString();
-
-        // Sync backward compatibility field
-        pdf.ProcessingStatus = resumeState switch
-        {
-            PdfProcessingState.Pending => "pending",
-            PdfProcessingState.Uploading or PdfProcessingState.Extracting or
-            PdfProcessingState.Chunking or PdfProcessingState.Embedding or
-            PdfProcessingState.Indexing => "processing",
-            _ => "pending"
-        };
-
-        // Clear error state
-        pdf.ProcessingError = null;
-        pdf.ProcessedAt = null;
-
-        // Save changes
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        // Publish domain event
-        var retryEvent = new PdfRetryInitiatedEvent(
-            pdf.Id,
-            pdf.RetryCount,
-            pdf.UploadedByUserId
-        );
-        await _mediator.Publish(retryEvent, cancellationToken).ConfigureAwait(false);
-
-        _logger.LogInformation(
-            "PDF {PdfId} retry initiated: RetryCount={RetryCount}, ResumeState={State}",
-            command.PdfId,
-            pdf.RetryCount,
-            resumeState);
-
-        return new RetryPdfProcessingResult(
-            Success: true,
-            CurrentState: pdf.ProcessingState,
-            RetryCount: pdf.RetryCount,
-            Message: $"Retry {pdf.RetryCount} initiated, resuming from {resumeState}"
-        );
     }
 }

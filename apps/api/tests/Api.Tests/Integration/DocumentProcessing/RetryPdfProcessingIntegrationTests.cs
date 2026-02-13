@@ -247,7 +247,8 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("Maximum retry", result.Message);
+        Assert.Contains("Cannot retry", result.Message); // Domain exception message
+        Assert.Contains("MaxRetries=3", result.Message);
         Assert.Equal(3, result.RetryCount);
 
         // Verify database was NOT modified
@@ -295,7 +296,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("not Failed", result.Message);
+        Assert.Contains("Cannot retry", result.Message); // Domain exception message
         Assert.Equal(0, result.RetryCount);
     }
 

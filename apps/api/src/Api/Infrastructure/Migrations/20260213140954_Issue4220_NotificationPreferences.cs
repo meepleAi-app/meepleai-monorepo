@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1707 // Identifiers should not contain underscores (EF Core migration naming convention)
+
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />

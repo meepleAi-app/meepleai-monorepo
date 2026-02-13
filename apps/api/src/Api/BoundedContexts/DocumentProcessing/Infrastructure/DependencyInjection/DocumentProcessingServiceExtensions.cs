@@ -56,6 +56,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #3653: Private PDF progress streaming service (singleton for in-memory subscriber management)
         services.AddSingleton<IPrivatePdfProgressStreamService, PrivatePdfProgressStreamService>();
 
+        // Issue #4209: Generic PDF progress streaming service (supports both public and private PDFs)
+        services.AddSingleton<IPdfProgressStreamService, PdfProgressStreamService>();
+
         // Issue #2732: Share request document services
         services.AddScoped<IShareRequestDocumentService, ShareRequestDocumentService>();
         services.AddScoped<IStorageQuotaService, StorageQuotaService>();

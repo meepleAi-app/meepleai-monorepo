@@ -11,6 +11,7 @@ using Api.Observability;
 using Api.Routing;
 using Api.Routing.GameManagement;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
+using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection; // Issue #4220
 using Api.Services;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -271,6 +272,8 @@ builder.Services.AddApplicationServices(builder.Configuration);
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
 builder.Services.AddAuthenticationServices(builder.Configuration);
 
+// User Notifications bounded context (Issue #4220)
+builder.Services.AddUserNotificationsContext();
 
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);

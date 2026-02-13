@@ -2488,7 +2488,7 @@ internal static class SharedGameCatalogEndpoints
             .DisableAntiforgery() // Required for multipart/form-data file uploads
             .RequireAuthorization("AdminOrEditorPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
-            .WithName("WizardUploadPdf")
+            .WithName("SharedGamesWizardUploadPdf")
             .WithSummary("Upload PDF for wizard (Admin/Editor)")
             .WithDescription("Uploads PDF to temporary storage for metadata extraction. File path returned for subsequent wizard steps.")
             .Produces<TempPdfUploadResult>(StatusCodes.Status200OK)

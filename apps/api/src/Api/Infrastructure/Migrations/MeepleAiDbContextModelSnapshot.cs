@@ -6158,6 +6158,10 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("SuspendReason")
                         .HasColumnType("text");
 
@@ -6487,6 +6491,63 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_ProposalMigrations_UserId_Choice");
 
                     b.ToTable("ProposalMigrations", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserCollectionEntryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_UserCollectionEntries_UserId_Favorites")
+                        .HasFilter("[IsFavorite] = 1");
+
+                    b.HasIndex("EntityType", "EntityId")
+                        .HasDatabaseName("IX_UserCollectionEntries_EntityType_EntityId");
+
+                    b.HasIndex("UserId", "EntityType", "EntityId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserCollectionEntries_UserId_EntityType_EntityId");
+
+                    b.ToTable("user_collection_entries", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UserCollectionEntries_EntityType", "[EntityType] IN ('Player', 'Event', 'Session', 'Agent', 'Document', 'ChatSession')");
+                        });
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameChecklistEntity", b =>
@@ -8441,6 +8502,17 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("PrivateGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserCollectionEntryEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameChecklistEntity", b =>

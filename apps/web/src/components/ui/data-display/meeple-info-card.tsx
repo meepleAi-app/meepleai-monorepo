@@ -31,6 +31,7 @@ import {
 import Link from 'next/link';
 
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
+import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { PdfDocumentDto } from '@/lib/api';
@@ -157,6 +158,7 @@ export function MeepleInfoCard({
 
   const [activeTab, setActiveTab] = useState<TabType>(availableTabs[0] || 'kb');
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [selectedPdfForPreview, setSelectedPdfForPreview] = useState<{ url: string; name: string } | null>(null);
 
   // Documents state
   const [documents, setDocuments] = useState<PdfDocumentDto[]>([]);
@@ -327,19 +329,39 @@ export function MeepleInfoCard({
                             )}
                           </div>
                         </div>
-                        <a
-                          href={api.pdf.getPdfDownloadUrl(doc.id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                        <div className="flex items-center gap-1">
+                          {/* Preview button - Issue #3 */}
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() =>
+                              setSelectedPdfForPreview({
+                                url: api.pdf.getPdfDownloadUrl(doc.id),
+                                name: doc.fileName,
+                              })
+                            }
                             className="text-[#6B665C] hover:text-[hsl(25,95%,38%)]"
+                            title="Anteprima PDF"
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <FileText className="h-4 w-4" />
                           </Button>
-                        </a>
+
+                          {/* Download button */}
+                          <a
+                            href={api.pdf.getPdfDownloadUrl(doc.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-[#6B665C] hover:text-[hsl(25,95%,38%)]"
+                              title="Apri in nuova tab"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          </a>
+                        </div>
                       </div>
                     );
                   })}
@@ -559,6 +581,16 @@ export function MeepleInfoCard({
           gameId={gameId}
           gameTitle={gameTitle}
           onUploadSuccess={fetchDocuments}
+        />
+      )}
+
+      {/* PDF Viewer Modal - Issue #3 */}
+      {selectedPdfForPreview && (
+        <PdfViewerModal
+          open={!!selectedPdfForPreview}
+          onOpenChange={(open) => !open && setSelectedPdfForPreview(null)}
+          pdfUrl={selectedPdfForPreview.url}
+          documentName={selectedPdfForPreview.name}
         />
       )}
     </>

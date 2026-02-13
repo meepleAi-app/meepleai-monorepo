@@ -30,6 +30,8 @@ import type {
   SharedLibrary,
 } from '@/lib/api/schemas/library.schemas';
 
+import { sharedGamesKeys } from './useSharedGames';
+
 /**
  * Query key factory for library queries
  */
@@ -211,6 +213,14 @@ export function useAddGameToLibrary(): UseMutationResult<
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+
+      // Issue #4: Invalidate game search cache to show updated library status
+      queryClient.invalidateQueries({ queryKey: ['games', 'search'] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+
+      // Issue #1: Invalidate tag/genre filters sidebar (CatalogFilters)
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.categories() });
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.mechanics() });
     },
   });
 }
@@ -320,6 +330,14 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+
+      // Issue #4: Invalidate game search cache to show updated library status
+      queryClient.invalidateQueries({ queryKey: ['games', 'search'] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+
+      // Issue #1: Invalidate tag/genre filters sidebar (CatalogFilters)
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.categories() });
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.mechanics() });
     },
   });
 }

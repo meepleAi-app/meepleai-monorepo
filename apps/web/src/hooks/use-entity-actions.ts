@@ -6,6 +6,7 @@
  *
  * @module hooks/use-entity-actions
  * @see Issue #4031 - Entity-Specific Quick Actions
+ * @see Issue #4259 - Collection Quick Actions for MeepleCard
  */
 
 import { useMemo } from 'react';
@@ -19,7 +20,9 @@ import {
   MessageSquare,
   Play,
   PlayCircle,
+  Plus,
   Share2,
+  Trash2,
   UserPlus,
   Wrench,
 } from 'lucide-react';
@@ -27,6 +30,7 @@ import { useRouter } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
+import { useCollectionActions, type AssociatedData } from './use-collection-actions';
 
 // ============================================================================
 // Types
@@ -37,6 +41,8 @@ export interface UseEntityActionsProps {
   entity: MeepleEntityType;
   /** Entity ID */
   id: string;
+  /** Entity name (for warning modal) */
+  entityName?: string;
   /** Current user ID (for ownership checks) */
   userId?: string;
   /** User role (for role-gated actions) */
@@ -48,6 +54,8 @@ export interface UseEntityActionsProps {
     status?: string;
     [key: string]: unknown;
   };
+  /** Callback to show removal warning modal (Issue #4259) */
+  onShowRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void;
 }
 
 export interface EntityActions {
@@ -71,9 +79,11 @@ export interface EntityActions {
 export function useEntityActions({
   entity,
   id,
+  entityName,
   userId,
   userRole = 'user',
   data,
+  onShowRemovalWarning,
 }: UseEntityActionsProps): EntityActions {
   const router = useRouter();
 
@@ -81,11 +91,32 @@ export function useEntityActions({
   const _isAdmin = userRole === 'admin' || userRole === 'superadmin';
   const _isOwner = userId && data?.ownerId && userId === data.ownerId;
 
+  // Issue #4259: Collection actions for game entity
+  // Call hook unconditionally (hooks rules), but only use for entity='game'
+  const collection = useCollectionActions(
+    entity === 'game' ? id : '',
+    onShowRemovalWarning
+  );
+
   return useMemo(() => {
     switch (entity) {
-      case 'game':
+      case 'game': {
+        // Build collection action (conditional: Add or Remove)
+        const collectionAction: QuickAction = collection.isInCollection
+          ? {
+              icon: Trash2,
+              label: 'Rimuovi da Collezione',
+              onClick: () => collection.remove(),
+            }
+          : {
+              icon: Plus,
+              label: 'Aggiungi a Collezione',
+              onClick: () => collection.add(),
+            };
+
         return {
           quickActions: [
+            collectionAction, // Issue #4259: First action
             {
               icon: MessageSquare,
               label: 'Chat con Agent',
@@ -107,6 +138,7 @@ export function useEntityActions({
           ],
           // More menu actions can be added later
         };
+      }
 
       case 'session':
         return {
@@ -233,5 +265,5 @@ export function useEntityActions({
           quickActions: [],
         };
     }
-  }, [entity, id, router, data]);
+  }, [entity, id, router, data, collection]);
 }

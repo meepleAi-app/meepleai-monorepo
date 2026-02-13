@@ -320,8 +320,8 @@ internal static class UserLibraryEndpoints
         .Produces<GameInLibraryStatusDto>(200)
         .Produces(401)
         .WithTags("Library")
-        .WithSummary("Check if game is in library")
-        .WithDescription("Returns whether a game is in user's library and if it's marked as favorite.")
+        .WithSummary("Check if game is in library with associated data")
+        .WithDescription("Returns whether a game is in user's library, favorite status, and detailed counts of associated data (agent config, PDFs, chat sessions, game sessions, checklists, labels). Used by collection quick actions to display Add/Remove buttons and pre-removal warnings.")
         .WithOpenApi();
     }
 

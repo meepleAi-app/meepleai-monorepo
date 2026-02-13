@@ -63,6 +63,9 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<IShareRequestDocumentService, ShareRequestDocumentService>();
         services.AddScoped<IStorageQuotaService, StorageQuotaService>();
 
+        // Issue #4212: Processing metrics and ETA calculation service
+        services.AddScoped<IProcessingMetricsService, ProcessingMetricsService>();
+
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
         services.AddScoped<IPdfValidator, DocnetPdfValidator>(); // PDF-09: DDD validation adapter
@@ -116,6 +119,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #4208: Register Quartz job for automatic PDF retry (every 5 minutes)
         RegisterRetryFailedPdfsJob(services);
 
+        // Issue #4212: Register Quartz job for metrics maintenance (hourly)
+        RegisterMetricsMaintenanceJob(services);
+
         return services;
     }
 
@@ -139,6 +145,30 @@ internal static class DocumentProcessingServiceExtensions
                 .WithIdentity("RetryFailedPdfsTrigger", "DocumentProcessing")
                 .WithCronSchedule("0 */5 * * * ?") // Every 5 minutes
                 .WithDescription("Automatically retries failed PDF processing with exponential backoff")
+            );
+        });
+    }
+
+    /// <summary>
+    /// Issue #4212: Register MetricsMaintenanceJob with Quartz scheduler.
+    /// Runs hourly to cleanup old metrics and maintain historical data.
+    /// </summary>
+    private static void RegisterMetricsMaintenanceJob(IServiceCollection services)
+    {
+        // Only register job definition here - do NOT call AddQuartzHostedService (would duplicate).
+        // The AddQuartzHostedService is called once in Administration context.
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("MetricsMaintenanceJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.MetricsMaintenanceJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("MetricsMaintenanceTrigger", "DocumentProcessing")
+                .WithCronSchedule("0 0 * * * ?") // Hourly (at the top of every hour)
+                .WithDescription("Cleans up old metrics and maintains historical data for ETA calculation")
             );
         });
     }

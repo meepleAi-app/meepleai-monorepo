@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -18,17 +19,28 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// <summary>
 /// Tests for GetPdfMetricsQueryHandler.
 /// Issue #4219: Duration metrics and ETA calculation tests.
+/// Issue #4212: Updated for data-driven ETA calculation.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class GetPdfMetricsQueryHandlerTests
 {
     private readonly Mock<IPdfDocumentRepository> _repositoryMock;
+    private readonly Mock<IProcessingMetricsService> _metricsServiceMock;
     private readonly Mock<ILogger<GetPdfMetricsQueryHandler>> _loggerMock;
 
     public GetPdfMetricsQueryHandlerTests()
     {
         _repositoryMock = new Mock<IPdfDocumentRepository>();
+        _metricsServiceMock = new Mock<IProcessingMetricsService>();
         _loggerMock = new Mock<ILogger<GetPdfMetricsQueryHandler>>();
+
+        // Issue #4212: Default mock behavior for ETA calculation (returns null = use fallback)
+        _metricsServiceMock
+            .Setup(s => s.CalculateETAAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<PdfProcessingState>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TimeSpan?)null);
     }
 
     [Fact]
@@ -37,6 +49,7 @@ public class GetPdfMetricsQueryHandlerTests
         // Act
         var handler = new GetPdfMetricsQueryHandler(
             _repositoryMock.Object,
+            _metricsServiceMock.Object,
             _loggerMock.Object);
 
         // Assert
@@ -110,6 +123,7 @@ public class GetPdfMetricsQueryHandlerTests
 
         var handler = new GetPdfMetricsQueryHandler(
             _repositoryMock.Object,
+            _metricsServiceMock.Object,
             _loggerMock.Object);
 
         var query = new GetPdfMetricsQuery(documentId);
@@ -139,6 +153,7 @@ public class GetPdfMetricsQueryHandlerTests
 
         var handler = new GetPdfMetricsQueryHandler(
             _repositoryMock.Object,
+            _metricsServiceMock.Object,
             _loggerMock.Object);
 
         var query = new GetPdfMetricsQuery(documentId);
@@ -182,6 +197,7 @@ public class GetPdfMetricsQueryHandlerTests
 
         var handler = new GetPdfMetricsQueryHandler(
             _repositoryMock.Object,
+            _metricsServiceMock.Object,
             _loggerMock.Object);
 
         var query = new GetPdfMetricsQuery(documentId);
@@ -220,6 +236,7 @@ public class GetPdfMetricsQueryHandlerTests
 
         var handler = new GetPdfMetricsQueryHandler(
             _repositoryMock.Object,
+            _metricsServiceMock.Object,
             _loggerMock.Object);
 
         var query = new GetPdfMetricsQuery(documentId);

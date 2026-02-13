@@ -22,11 +22,11 @@ import {
   SortDesc,
   Gamepad2,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
-import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
 import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -66,6 +66,8 @@ type SortByOption = 'title' | 'createdAt' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
 
 export default function PrivateGamesClient() {
+  const router = useRouter();
+
   // Data state
   const [games, setGames] = useState<PrivateGameDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -82,7 +84,6 @@ export default function PrivateGamesClient() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Dialog state
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [proposeDialogOpen, setProposeDialogOpen] = useState(false);
@@ -149,37 +150,6 @@ export default function PrivateGamesClient() {
     loadGames({ page: newPage });
   };
 
-  const handleAddGame = async (
-    data: AddPrivateGameFormData,
-    source: 'Manual' | 'Bgg' = 'Manual',
-    bggId?: number,
-    thumbnailUrl?: string,
-  ) => {
-    setIsSubmitting(true);
-    try {
-      await api.library.addPrivateGame({
-        source,
-        bggId: bggId ?? null,
-        title: data.title,
-        minPlayers: data.minPlayers,
-        maxPlayers: data.maxPlayers,
-        yearPublished: data.yearPublished ?? null,
-        playingTimeMinutes: data.playingTimeMinutes ?? null,
-        minAge: data.minAge ?? null,
-        complexityRating: data.complexityRating ?? null,
-        description: data.description ?? null,
-        imageUrl: data.imageUrl || null,
-        thumbnailUrl: thumbnailUrl ?? null,
-      });
-      setAddDialogOpen(false);
-      await loadGames();
-    } catch (err) {
-      console.error('Failed to add private game:', err);
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleEditGame = async (data: AddPrivateGameFormData) => {
     if (!selectedGame) return;
@@ -260,7 +230,10 @@ export default function PrivateGamesClient() {
             Manage your personal game collection ({totalCount} {totalCount === 1 ? 'game' : 'games'})
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)} data-testid="add-private-game-btn">
+        <Button
+          onClick={() => router.push('/library/private/add')}
+          data-testid="add-private-game-btn"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Game
         </Button>
@@ -339,7 +312,7 @@ export default function PrivateGamesClient() {
           </CardHeader>
           {!search && (
             <CardContent className="text-center">
-              <Button onClick={() => setAddDialogOpen(true)}>
+              <Button onClick={() => router.push('/library/private/add')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Game
               </Button>
@@ -394,23 +367,6 @@ export default function PrivateGamesClient() {
           )}
         </>
       )}
-
-      {/* Add Game Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Private Game</DialogTitle>
-            <DialogDescription>
-              Search BoardGameGeek to auto-fill or enter details manually.
-            </DialogDescription>
-          </DialogHeader>
-          <AddPrivateGameWithBgg
-            onSubmit={handleAddGame}
-            onCancel={() => setAddDialogOpen(false)}
-            isSubmitting={isSubmitting}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Game Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(open: boolean) => {

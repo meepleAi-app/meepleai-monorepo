@@ -52,7 +52,7 @@ const mockFetchDashboardData = vi.mocked(fetchDashboardData);
 
 const mockDashboardData: DashboardData = {
   user: {
-    id: 'user-123',
+    id: '550e8400-e29b-41d4-a716-446655440000', // Valid UUID
     username: 'TestUser',
     email: 'test@example.com',
   },

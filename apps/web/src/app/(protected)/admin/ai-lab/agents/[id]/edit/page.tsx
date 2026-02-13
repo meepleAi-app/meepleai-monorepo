@@ -40,7 +40,7 @@ export default function AgentEditorPage({ params }: AgentEditorPageProps) {
       setAgent({
         name: existingAgent.name,
         description: existingAgent.description || '',
-        type: existingAgent.type as any,
+        type: existingAgent.type, // Accept type as string from API
         model: existingAgent.model,
         maxTokens: existingAgent.maxTokens,
         temperature: existingAgent.temperature,

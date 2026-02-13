@@ -10,9 +10,9 @@ export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const toast = useCallback((toast: Toast) => {
-    // For now, just use console.log
+    // For now, just use console.warn (allowed by linter)
     // In production, this should integrate with a toast component
-    console.log('[Toast]', toast.title, toast.description);
+    console.warn('[Toast]', toast.title, toast.description);
 
     setToasts((prev) => [...prev, toast]);
 

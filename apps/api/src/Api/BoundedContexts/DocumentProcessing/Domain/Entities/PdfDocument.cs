@@ -180,7 +180,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         if (ProcessingState == PdfProcessingState.Ready)
             throw new InvalidOperationException("Cannot reprocess completed document");
 
-        TransitionTo(PdfProcessingState.Extracting);
+        // Fix: Pending → Uploading (not Extracting) to match state machine
+        TransitionTo(PdfProcessingState.Uploading);
     }
 
     // Deprecated: Use TransitionTo() instead (remove in Issue #4216)
@@ -189,9 +190,24 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         if (pageCount < 1)
             throw new ArgumentException("Page count must be at least 1", nameof(pageCount));
 
+        // Complete the pipeline from current state to Ready
+        while (ProcessingState != PdfProcessingState.Ready)
+        {
+            var nextState = ProcessingState switch
+            {
+                PdfProcessingState.Pending => PdfProcessingState.Uploading,
+                PdfProcessingState.Uploading => PdfProcessingState.Extracting,
+                PdfProcessingState.Extracting => PdfProcessingState.Chunking,
+                PdfProcessingState.Chunking => PdfProcessingState.Embedding,
+                PdfProcessingState.Embedding => PdfProcessingState.Indexing,
+                PdfProcessingState.Indexing => PdfProcessingState.Ready,
+                _ => throw new InvalidOperationException($"Cannot complete from state {ProcessingState}")
+            };
+            TransitionTo(nextState);
+        }
+
         PageCount = pageCount;
         ProcessingError = null;
-        TransitionTo(PdfProcessingState.Ready);
         ProcessedAt = DateTime.UtcNow;
     }
 

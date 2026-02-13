@@ -20,14 +20,15 @@ namespace Api.Infrastructure.Migrations
                 maxLength: 32,
                 nullable: true);
 
-            // Step 2: Migrate existing data from processing_status to processing_state
-            // Only if processing_status column exists (for backward compatibility)
+            // Step 2: Migrate existing data from ProcessingStatus to processing_state
+            // Only if ProcessingStatus column exists (it might not in test databases)
             migrationBuilder.Sql(@"
                 DO $$
                 BEGIN
                     IF EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name = 'pdf_documents' AND column_name = 'processing_status'
+                        SELECT FROM information_schema.columns
+                        WHERE table_name = 'pdf_documents'
+                        AND column_name = 'processing_status'
                     ) THEN
                         UPDATE pdf_documents SET processing_state =
                             CASE processing_status
@@ -37,6 +38,9 @@ namespace Api.Infrastructure.Migrations
                                 WHEN 'failed' THEN 'Failed'
                                 ELSE 'Pending'
                             END;
+                    ELSE
+                        -- Column doesn't exist, set all to default
+                        UPDATE pdf_documents SET processing_state = 'Pending';
                     END IF;
                 END $$;
             ");

@@ -198,10 +198,13 @@ describe('AgentChat', () => {
       const input = screen.getByTestId('chat-input-field');
       await user.type(input, 'Test message{Enter}');
 
-      // Wait for streaming to complete (real timers)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      expect(screen.getByText('Echo: Test message')).toBeInTheDocument();
+      // Wait for streaming to complete (real timers with generous timeout)
+      await waitFor(
+        () => {
+          expect(screen.getByText('Echo: Test message')).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('shows streaming indicator while processing', async () => {

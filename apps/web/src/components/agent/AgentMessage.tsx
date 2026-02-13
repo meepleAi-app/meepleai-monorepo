@@ -121,9 +121,9 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
                   className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-[#dadce0] rounded text-xs hover:bg-[#f8f9fa] transition-colors"
                   title={citation.snippet ?? undefined}
                   onClick={() => {
-                    // PDF viewer integration (Issue #4130)
-                    // Note: Requires useAgentStore integration in parent component
-                    console.log('Citation clicked:', citation);
+                    // TODO Issue #4130: PDF viewer integration
+                    // Requires useAgentStore integration in parent component
+                    // Citation click handler will be implemented
                   }}
                 >
                   <span className="text-[#1a73e8]">

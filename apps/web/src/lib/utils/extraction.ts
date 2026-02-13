@@ -52,7 +52,7 @@ export async function pollExtractionStatus(
       // Continue polling for pending/processing states
       attempts++;
 
-      // Exponential backoff (2s, 4s, 6s, 8s, 10s, 10s, ...)
+      // Linear backoff with cap (2s, 4s, 6s, 8s, 10s max, then 10s...)
       const currentInterval = Math.min(interval * (attempts + 1), MAX_BACKOFF);
       await delay(currentInterval);
     } catch (error) {
@@ -61,7 +61,7 @@ export async function pollExtractionStatus(
         throw error;
       }
 
-      // Otherwise, retry with backoff
+      // Otherwise, retry with linear backoff
       attempts++;
       const currentInterval = Math.min(interval * (attempts + 1), MAX_BACKOFF);
       await delay(currentInterval);

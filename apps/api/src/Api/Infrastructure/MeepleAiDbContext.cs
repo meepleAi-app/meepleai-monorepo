@@ -1,6 +1,7 @@
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -54,6 +55,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatThreadEntity> ChatThreads => Set<ChatThreadEntity>(); // DDD-PHASE3: KnowledgeBase ChatThread aggregate
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
+    public DbSet<ProcessingMetricEntity> ProcessingMetrics => Set<ProcessingMetricEntity>(); // ISSUE-4212: Historical metrics storage
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();

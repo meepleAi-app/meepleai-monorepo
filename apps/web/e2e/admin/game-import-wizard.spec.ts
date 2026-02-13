@@ -349,56 +349,82 @@ test.describe('Game Import Wizard E2E', () => {
   });
 
   test.describe('Approval Workflow', () => {
-    test.skip('editor creates draft, admin approves', async ({ page, context }) => {
-      // NOTE: Questo test richiede approval workflow endpoints
-      // Da verificare se esistono in Epic #4136 backend
-      // Se non esistono, questo test va spostato in una issue separata
-
-      // Part A: Editor creates draft
+    test('editor creates draft, admin approves', async ({ page, context }) => {
+      // Part A: Editor creates draft via wizard
       await loginAsEditor(page);
       await page.goto(WIZARD_URL);
 
       // Complete wizard steps 1-4
       const fileInput = page.locator('input[type="file"]');
       await fileInput.setInputFiles(TEST_PDF_PATH);
-      await page.waitForTimeout(2000);
 
-      await page.getByRole('button', { name: /next/i }).click();
+      // Click Upload PDF button
+      const uploadButton = page.getByRole('button', { name: 'Upload PDF', exact: true });
+      await uploadButton.click();
+
+      // Wait for upload and Next button
+      const nextButton = page.getByRole('button', { name: 'Next →', exact: true });
+      await expect(nextButton).toBeEnabled({ timeout: 30000 });
+      await nextButton.click();
+
+      // Step 2: Metadata review
       await page.waitForTimeout(3000);
+      await nextButton.click();
 
-      await page.getByRole('button', { name: /next/i }).click();
+      // Step 3: BGG match - select first result
       await page.waitForTimeout(1000);
-
       const firstResult = page.locator('[data-testid^="bgg-result-"]').first();
-      await firstResult.click();
+      if (await firstResult.isVisible({ timeout: 5000 })) {
+        await firstResult.click();
+      }
+      await nextButton.click();
 
-      await page.getByRole('button', { name: /next/i }).click();
+      // Step 4: Confirm and create game
+      const submitButton = page.getByRole('button', { name: /submit.*import/i });
+      await expect(submitButton).toBeEnabled({ timeout: 5000 });
+      await submitButton.click();
 
-      await page.getByTestId('confirm-import-btn').click();
+      // Wait for redirect to detail page
+      await page.waitForURL(/\/admin\/shared-games\/[a-f0-9-]+$/, { timeout: 10000 });
 
-      // Assert: Game created with status "Draft"
-      // await expect(page.getByText(/draft|pending approval/i)).toBeVisible();
+      // Extract game ID from URL
+      const gameUrl = page.url();
+      const gameId = gameUrl.split('/').pop();
 
-      // Part B: Admin approves (new page context)
+      // Assert: Game created with Draft status
+      await expect(page.getByText(/draft/i).first()).toBeVisible({ timeout: 5000 });
+
+      // Editor submits for approval
+      const submitForApprovalButton = page.getByRole('button', { name: /submit.*approval/i });
+      if (await submitForApprovalButton.isVisible({ timeout: 2000 })) {
+        await submitForApprovalButton.click();
+        await page.waitForTimeout(1000);
+
+        // Assert: Status changed to PendingApproval
+        await expect(page.getByText(/pending approval/i).first()).toBeVisible({ timeout: 5000 });
+      }
+
+      // Part B: Admin approves
       const adminPage = await context.newPage();
       await loginAsAdmin(adminPage);
 
-      // Navigate to approval queue (URL TBD - depends on backend)
-      // await page.goto('/admin/games/approval-queue');
+      // Navigate to game detail page
+      await adminPage.goto(`/admin/shared-games/${gameId}`);
+      await adminPage.waitForLoadState('networkidle');
 
-      // Find draft game
-      // const draftGame = page.getByText(/wingspan/i).first();
-      // await draftGame.click();
+      // Assert: Approve button visible for admin
+      const approveButton = adminPage.getByRole('button', { name: /approve/i });
+      await expect(approveButton).toBeVisible({ timeout: 5000 });
 
-      // Click Approve button
-      // await page.getByRole('button', { name: /approve|publish/i }).click();
+      // Click Approve
+      await approveButton.click();
+      await adminPage.waitForTimeout(2000);
 
-      // Assert: Status changed to "Published"
-      // await expect(page.getByText(/published|approved/i)).toBeVisible();
+      // Assert: Status changed to Published
+      await expect(adminPage.getByText(/published/i).first()).toBeVisible({ timeout: 5000 });
 
-      // Assert: Game visible in public catalog
-      // await page.goto('/games');
-      // await expect(page.getByText(/wingspan/i)).toBeVisible();
+      // Cleanup
+      await adminPage.close();
     });
   });
 

@@ -420,7 +420,7 @@ internal static class AgentEndpoints
             // Session validated by RequireSessionFilter
             _ = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
 
-            var command = new ChatWithAgentCommand(
+            var command = new SendAgentMessageCommand(
                 AgentId: id,
                 UserQuestion: request.Message
             );

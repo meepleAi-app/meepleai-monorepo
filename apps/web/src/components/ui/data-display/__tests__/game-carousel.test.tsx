@@ -9,8 +9,9 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { Users, Clock } from 'lucide-react';
 import {
   GameCarousel,
@@ -19,6 +20,16 @@ import {
   type CarouselSortValue,
   CAROUSEL_SORT_OPTIONS,
 } from '../game-carousel';
+
+// Mock Next.js navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/library/games',
+}));
 
 // Mock Next.js Image component
 vi.mock('next/image', () => ({
@@ -91,7 +102,7 @@ describe('GameCarousel', () => {
 
   describe('Rendering', () => {
     it('should render with games', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       expect(screen.getByRole('region')).toBeInTheDocument();
       expect(screen.getByText('Test Game 1')).toBeInTheDocument();
@@ -111,7 +122,7 @@ describe('GameCarousel', () => {
     });
 
     it('should render without title when not provided', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       // The carousel should still render games without a separate title heading
       // Game card titles are still present
@@ -119,35 +130,35 @@ describe('GameCarousel', () => {
     });
 
     it('should render navigation dots when showDots is true', () => {
-      render(<GameCarousel games={MOCK_GAMES} showDots />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} showDots />);
 
       const dots = screen.getAllByRole('tab', { name: /go to game/i });
       expect(dots.length).toBe(MOCK_GAMES.length);
     });
 
     it('should not render navigation dots when showDots is false', () => {
-      render(<GameCarousel games={MOCK_GAMES} showDots={false} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} showDots={false} />);
 
       const dots = screen.queryAllByRole('tab', { name: /go to game/i });
       expect(dots.length).toBe(0);
     });
 
     it('should render navigation arrows', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       expect(screen.getByRole('button', { name: /previous/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
     });
 
     it('should render empty state when no games provided', () => {
-      render(<GameCarousel games={[]} title="No Games" />);
+      renderWithQuery(<GameCarousel games={[]} title="No Games" />);
 
       // The empty state text varies - check for common patterns
       expect(screen.getByText(/no games/i)).toBeInTheDocument();
     });
 
     it('should render with single game', () => {
-      render(<GameCarousel games={[MOCK_GAMES[0]]} />);
+      renderWithQuery(<GameCarousel games={[MOCK_GAMES[0]]} />);
 
       expect(screen.getByText('Test Game 1')).toBeInTheDocument();
     });
@@ -159,7 +170,7 @@ describe('GameCarousel', () => {
 
   describe('Navigation', () => {
     it('should navigate to next game on next button click', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       const nextButton = screen.getByRole('button', { name: /next/i });
       fireEvent.click(nextButton);
@@ -169,7 +180,7 @@ describe('GameCarousel', () => {
     });
 
     it('should navigate to previous game on previous button click', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       const prevButton = screen.getByRole('button', { name: /previous/i });
       fireEvent.click(prevButton);
@@ -178,7 +189,7 @@ describe('GameCarousel', () => {
     });
 
     it('should navigate to specific game on dot click', () => {
-      render(<GameCarousel games={MOCK_GAMES} showDots />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} showDots />);
 
       const dots = screen.getAllByRole('tab', { name: /go to game/i });
       fireEvent.click(dots[3]);
@@ -188,7 +199,7 @@ describe('GameCarousel', () => {
     });
 
     it('should loop from last to first game', () => {
-      render(<GameCarousel games={createMockGames(3)} />);
+      renderWithQuery(<GameCarousel games={createMockGames(3)} />);
 
       const nextButton = screen.getByRole('button', { name: /next/i });
 
@@ -202,7 +213,7 @@ describe('GameCarousel', () => {
     });
 
     it('should loop from first to last game going backwards', () => {
-      render(<GameCarousel games={createMockGames(3)} />);
+      renderWithQuery(<GameCarousel games={createMockGames(3)} />);
 
       const prevButton = screen.getByRole('button', { name: /previous/i });
       fireEvent.click(prevButton);
@@ -218,7 +229,7 @@ describe('GameCarousel', () => {
 
   describe('Keyboard Navigation', () => {
     it('should navigate to next on ArrowRight key', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       const carousel = screen.getByRole('region');
       fireEvent.keyDown(carousel, { key: 'ArrowRight' });
@@ -227,7 +238,7 @@ describe('GameCarousel', () => {
     });
 
     it('should navigate to previous on ArrowLeft key', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       const carousel = screen.getByRole('region');
       fireEvent.keyDown(carousel, { key: 'ArrowLeft' });
@@ -237,7 +248,7 @@ describe('GameCarousel', () => {
 
     it('should call onGameSelect on Enter key when game card is focused', () => {
       const onGameSelect = vi.fn();
-      render(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
 
       // Focus on a game card and press Enter
       const gameCard = screen.getAllByRole('button', { name: /game:/i })[0];
@@ -249,7 +260,7 @@ describe('GameCarousel', () => {
 
     it('should call onGameSelect on Space key when game card is focused', () => {
       const onGameSelect = vi.fn();
-      render(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
 
       // Focus on a game card and press Space
       const gameCard = screen.getAllByRole('button', { name: /game:/i })[0];
@@ -261,7 +272,7 @@ describe('GameCarousel', () => {
 
     it('should ignore other key presses', () => {
       const onGameSelect = vi.fn();
-      render(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
 
       const carousel = screen.getByRole('region');
       fireEvent.keyDown(carousel, { key: 'Tab' });
@@ -292,7 +303,7 @@ describe('GameCarousel', () => {
     });
 
     it('should not auto-advance when autoPlay is disabled', () => {
-      render(<GameCarousel games={MOCK_GAMES} autoPlay={false} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} autoPlay={false} />);
 
       act(() => {
         vi.advanceTimersByTime(10000);
@@ -371,7 +382,7 @@ describe('GameCarousel', () => {
   describe('Game Selection', () => {
     it('should call onGameSelect when center game is clicked', () => {
       const onGameSelect = vi.fn();
-      render(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
 
       // Click on a game card
       const gameCard = screen.getByText('Test Game 1').closest('button');
@@ -386,7 +397,7 @@ describe('GameCarousel', () => {
 
     it('should not call onGameSelect when side game is clicked', () => {
       const onGameSelect = vi.fn();
-      render(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} onGameSelect={onGameSelect} />);
 
       // Side games should navigate, not select
       expect(screen.getByRole('region')).toBeInTheDocument();
@@ -399,20 +410,20 @@ describe('GameCarousel', () => {
 
   describe('Sorting', () => {
     it('should render sort dropdown when sortable is true', () => {
-      render(<GameCarousel games={MOCK_GAMES} sortable />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} sortable />);
 
       // Sort control uses a button with aria-haspopup="listbox"
       expect(screen.getByRole('button', { name: /sort by/i })).toBeInTheDocument();
     });
 
     it('should not render sort dropdown when sortable is false', () => {
-      render(<GameCarousel games={MOCK_GAMES} sortable={false} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} sortable={false} />);
 
       expect(screen.queryByRole('button', { name: /sort by/i })).not.toBeInTheDocument();
     });
 
     it('should display default sort value', () => {
-      render(<GameCarousel games={MOCK_GAMES} sortable defaultSort="rating" />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} sortable defaultSort="rating" />);
 
       expect(screen.getByRole('button', { name: /sort by rating/i })).toBeInTheDocument();
     });
@@ -440,7 +451,7 @@ describe('GameCarousel', () => {
 
     it('should use controlled sort value when provided', () => {
       const sort: CarouselSortValue = 'popularity';
-      render(<GameCarousel games={MOCK_GAMES} sortable sort={sort} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} sortable sort={sort} />);
 
       expect(screen.getByRole('button', { name: /sort by/i })).toBeInTheDocument();
     });
@@ -460,7 +471,7 @@ describe('GameCarousel', () => {
     });
 
     it('should have aria-label for navigation buttons', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       expect(
         screen.getByRole('button', { name: /previous/i })
@@ -471,7 +482,7 @@ describe('GameCarousel', () => {
     });
 
     it('should have aria-label for dot tabs', () => {
-      render(<GameCarousel games={MOCK_GAMES} showDots />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} showDots />);
 
       // Dots have role="tab" as they are part of tab-like navigation
       const dots = screen.getAllByRole('tab', { name: /go to game/i });
@@ -481,7 +492,7 @@ describe('GameCarousel', () => {
     });
 
     it('should announce current game position via aria-live region', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       // Uses aria-live="polite" for announcements
       const liveRegion = document.querySelector('[aria-live="polite"]');
@@ -489,7 +500,7 @@ describe('GameCarousel', () => {
     });
 
     it('should have focusable game cards', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       // Game cards are focusable
       const gameCards = screen.getAllByRole('button', { name: /game:/i });
@@ -504,7 +515,7 @@ describe('GameCarousel', () => {
 
   describe('Touch Gestures', () => {
     it('should handle swipe left gesture', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       const carousel = screen.getByRole('region');
 
@@ -520,7 +531,7 @@ describe('GameCarousel', () => {
     });
 
     it('should handle swipe right gesture', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       const carousel = screen.getByRole('region');
 
@@ -536,7 +547,7 @@ describe('GameCarousel', () => {
     });
 
     it('should ignore small swipe gestures', () => {
-      render(<GameCarousel games={MOCK_GAMES} />);
+      renderWithQuery(<GameCarousel games={MOCK_GAMES} />);
 
       const carousel = screen.getByRole('region');
 
@@ -560,20 +571,20 @@ describe('GameCarousel', () => {
 
 describe('GameCarouselSkeleton', () => {
   it('should render loading skeleton', () => {
-    render(<GameCarouselSkeleton />);
+    renderWithQuery(<GameCarouselSkeleton />);
 
     expect(screen.getByTestId('game-carousel-skeleton')).toBeInTheDocument();
   });
 
   it('should have animate-pulse class', () => {
-    render(<GameCarouselSkeleton />);
+    renderWithQuery(<GameCarouselSkeleton />);
 
     const skeleton = screen.getByTestId('game-carousel-skeleton');
     expect(skeleton.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('should render multiple skeleton cards', () => {
-    render(<GameCarouselSkeleton />);
+    renderWithQuery(<GameCarouselSkeleton />);
 
     const skeletonCards = screen
       .getByTestId('game-carousel-skeleton')

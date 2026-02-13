@@ -25,6 +25,7 @@ import {
   Calendar,
   ChevronDown,
   Clock,
+  Database,
   ExternalLink,
   FileText,
   HelpCircle,
@@ -49,6 +50,8 @@ import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { api } from '@/lib/api';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';
+
+import { KnowledgeBaseTab } from './KnowledgeBaseTab';
 
 // ============================================================================
 // Types
@@ -249,6 +252,10 @@ export function SharedGameDetailModal({
                       Errata ({game.erratas.length})
                     </TabsTrigger>
                   )}
+                  <TabsTrigger value="knowledge-base" className="gap-2">
+                    <Database className="h-4 w-4" />
+                    Knowledge Base
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -279,6 +286,11 @@ export function SharedGameDetailModal({
                     <ErrataTab erratas={game.erratas} />
                   </TabsContent>
                 )}
+
+                {/* Knowledge Base Tab */}
+                <TabsContent value="knowledge-base" className="p-6 pt-4 m-0">
+                  <KnowledgeBaseTab gameId={game.id} />
+                </TabsContent>
               </ScrollArea>
             </Tabs>
 

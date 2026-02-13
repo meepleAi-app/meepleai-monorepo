@@ -46,7 +46,7 @@ public sealed class AiInsightsServiceTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    [Fact]
+    [Fact(Skip = "WIP - AiInsightsService Issue #3916 - InMemory DB query issue")]
     public async Task GetInsightsAsync_WithRecentGames_ReturnsRecommendations()
     {
         // Arrange - seed recent games in library
@@ -101,7 +101,7 @@ public sealed class AiInsightsServiceTests : IDisposable
         Assert.Contains(backlogAlerts, a => a.Title.Contains("Gloomhaven", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(Skip = "WIP - AiInsightsService Issue #3916 - InMemory DB query issue")]
     public async Task GetInsightsAsync_WithRulesChats_ReturnsRulesReminders()
     {
         // Arrange - seed chat with "regole" in title

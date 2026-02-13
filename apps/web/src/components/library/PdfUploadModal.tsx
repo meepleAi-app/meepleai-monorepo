@@ -18,9 +18,8 @@ import { useState, ChangeEvent, FormEvent, useCallback, useEffect } from 'react'
 import { Loader2, Upload, FileText, X, Check, Eye, ChevronLeft } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
-import { PdfPreview } from '@/components/pdf/PdfPreview';
+import { PdfPreview, PdfProgressBar, PdfErrorCard } from '@/components/pdf';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { Progress } from '@/components/ui/feedback/progress';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +53,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
   const [uploadProgress, setUploadProgress] = useState(0);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -64,6 +64,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
       setUploadProgress(0);
       setValidationErrors([]);
       setIsValidating(false);
+      setUploadError(null);
     }
   }, [isOpen]);
 
@@ -128,8 +129,15 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
     setUploadProgress(0);
     setValidationErrors([]);
     setIsValidating(false);
+    setUploadError(null);
     onClose();
   }, [onClose]);
+
+  // Retry upload after error
+  const handleRetryUpload = useCallback(() => {
+    setUploadError(null);
+    setStep('preview');
+  }, []);
 
   // Confirm upload from preview
   const handleConfirmUpload = useCallback(async () => {
@@ -137,6 +145,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
 
     setStep('uploading');
     setUploadProgress(0);
+    setUploadError(null);
 
     try {
       await api.pdf.uploadPdf(gameId, file, (percent) => {
@@ -152,11 +161,10 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
         handleClose();
       }, 500);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Errore durante il caricamento del PDF'
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Errore durante il caricamento del PDF';
+      setUploadError(errorMessage);
+      toast.error(errorMessage);
       setUploadProgress(0);
-      setStep('preview'); // Go back to preview on error
     }
   }, [file, gameId, gameTitle, handleClose, onUploadSuccess]);
 
@@ -315,29 +323,42 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
         {step === 'uploading' && (
           <>
             <div className="space-y-4 py-8" data-testid="uploading-state">
-              <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                <div className="text-center">
-                  <p className="font-medium" data-testid="uploading-filename">{file?.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Caricamento in corso...
-                  </p>
-                </div>
-              </div>
+              {!uploadError ? (
+                <>
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                    <div className="text-center">
+                      <p className="font-medium" data-testid="uploading-filename">{file?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Caricamento in corso...
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-medium" data-testid="upload-progress">{uploadProgress}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-2" data-testid="upload-progress-bar" />
-              </div>
+                  {/* New: PdfProgressBar with state (Issue #4217) */}
+                  <PdfProgressBar
+                    state="uploading"
+                    progress={uploadProgress}
+                    showLabel
+                    className="mt-4"
+                  />
+                </>
+              ) : (
+                /* New: PdfErrorCard on upload failure (Issue #4217) */
+                <PdfErrorCard
+                  error={uploadError}
+                  category="network"
+                  canRetry
+                  onRetry={handleRetryUpload}
+                  className="mt-4"
+                />
+              )}
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose} disabled data-testid="cancel-button-uploading">
+              <Button variant="outline" onClick={handleClose} disabled={!uploadError} data-testid="cancel-button-uploading">
                 <X className="mr-2 h-4 w-4" />
-                Annulla
+                {uploadError ? 'Chiudi' : 'Annulla'}
               </Button>
             </DialogFooter>
           </>

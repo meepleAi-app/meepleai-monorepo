@@ -15,7 +15,7 @@ namespace Api.Tests.BoundedContexts.BusinessSimulations.Infrastructure;
 /// <summary>
 /// Unit tests for LedgerEntryRepository using InMemory database (Issue #3720)
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 [Trait("BoundedContext", "BusinessSimulations")]
 public sealed class LedgerEntryRepositoryTests
 {

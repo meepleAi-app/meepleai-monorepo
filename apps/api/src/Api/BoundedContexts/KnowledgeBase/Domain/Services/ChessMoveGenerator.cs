@@ -341,6 +341,6 @@ internal sealed class ChessMoveGenerator : IMoveGeneratorService
             priority: MovePriority.Low,  // Classified later after scoring
             isCheck: false,  // Detected by validator
             isPromotion: isPromotion,
-            promotionPiece: promotionPiece);
+            promotionPiece: isPromotion ? promotionPiece : null);  // Fix: null when not promoting
     }
 }

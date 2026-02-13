@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -29,6 +30,7 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<QualityTrackingDomainService> _mockQualityService;
     private readonly Mock<ChatContextDomainService> _mockChatContextService;
     private readonly Mock<IChatThreadRepository> _mockThreadRepository;
+    private readonly Mock<IPdfDocumentRepository> _mockPdfDocumentRepository;
     private readonly Mock<ILlmService> _mockLlmService;
     private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
@@ -107,6 +109,7 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockQualityService = new Mock<QualityTrackingDomainService>();
         _mockChatContextService = new Mock<ChatContextDomainService>();
         _mockThreadRepository = new Mock<IChatThreadRepository>();
+        _mockPdfDocumentRepository = new Mock<IPdfDocumentRepository>();
         _mockLlmService = new Mock<ILlmService>();
         _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
@@ -188,6 +191,7 @@ public class AskQuestionQueryHandlerSecurityTests
             _mockQualityService.Object,
             _mockChatContextService.Object,
             _mockThreadRepository.Object,
+            _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
             _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,

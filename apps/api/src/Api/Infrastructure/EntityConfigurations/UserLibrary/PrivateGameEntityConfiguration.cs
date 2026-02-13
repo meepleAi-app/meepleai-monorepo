@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.Infrastructure.Entities.UserLibrary;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,9 @@ internal class PrivateGameEntityConfiguration : IEntityTypeConfiguration<Private
 
         builder.Property(e => e.BggId)
             .HasColumnName("bgg_id");
+
+        builder.Property(e => e.AgentDefinitionId)
+            .HasColumnName("agent_definition_id");
 
         builder.Property(e => e.Title)
             .HasColumnName("title")
@@ -137,6 +141,12 @@ internal class PrivateGameEntityConfiguration : IEntityTypeConfiguration<Private
         builder.HasMany(e => e.LibraryEntries)
             .WithOne(e => e.PrivateGame)
             .HasForeignKey(e => e.PrivateGameId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Issue #4228: Agent linking relationship
+        builder.HasOne<AgentDefinition>()
+            .WithMany()
+            .HasForeignKey(e => e.AgentDefinitionId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

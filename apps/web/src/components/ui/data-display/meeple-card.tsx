@@ -58,16 +58,12 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import Image from 'next/image';
 
-import { TierBadge } from '@/components/ui/feedback/tier-badge';
-import { UpgradePrompt } from '@/components/ui/feedback/upgrade-prompt';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
-import { TagStrip } from '@/components/ui/tags/TagStrip';
-import { usePermissions } from '@/contexts/PermissionContext';
 import { cn } from '@/lib/utils';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
@@ -76,6 +72,8 @@ import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCa
 import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 import { StatusBadge } from './meeple-card-features/StatusBadge';
+import { type TagConfig, type TagPresetKey } from './meeple-card-features/tag-presets';
+import { TagStrip } from './meeple-card-features/TagStrip';
 import { WishlistButton } from './meeple-card-features/WishlistButton';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
@@ -239,23 +237,13 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   infoHref?: string;
   infoTooltip?: string;
 
-  // ========== PERMISSION SYSTEM (Epic #4068 - Issue #4179) ==========
+  // ========== FEATURE: VERTICAL TAG STRIP (Issue #4181) ==========
 
-  /** Permission override for testing/preview (optional) */
-  permissions?: {
-    tier: import('@/types/permissions').UserTier;
-    role: import('@/types/permissions').UserRole;
-    canAccess: (feature: string) => boolean;
-    isAdmin: () => boolean;
-  };
-
-  // ========== TAG SYSTEM (Epic #4068 - Issue #4182) ==========
-
-  /** Tags to display on card */
-  tags?: import('@/types/tags').Tag[];
-  /** Maximum visible tags before overflow (default: 3) */
+  /** Feature: Vertical Tag Strip (left-edge tag display) */
+  tags?: (TagPresetKey | TagConfig)[];
+  /** Max visible tags before overflow (default: 3) */
   maxVisibleTags?: number;
-  /** Show tag strip (default: true if tags provided) */
+  /** Show tag strip (default: auto-detect from tags prop) */
   showTagStrip?: boolean;
 }
 
@@ -758,15 +746,11 @@ export const MeepleCard = React.memo(function MeepleCard({
   showInfoButton,
   infoHref,
   infoTooltip,
-  permissions: permissionsOverride,
+  // Issue #4181: Vertical Tag Strip
   tags,
   maxVisibleTags = 3,
-  showTagStrip = true,
+  showTagStrip,
 }: MeepleCardProps) {
-  // Epic #4068 - Issue #4179: Permission integration
-  const defaultPermissions = usePermissions();
-  const permissions = permissionsOverride ?? defaultPermissions;
-
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
   const isHeroOrFeatured = variant === 'hero' || variant === 'featured';
@@ -775,36 +759,11 @@ export const MeepleCard = React.memo(function MeepleCard({
   // Avoid nested-interactive: don't make card clickable when it has action buttons
   const isInteractive = !!onClick && !showActions;
 
-  // Feature visibility logic (Issue #3820 + Epic #4068)
+  // Feature visibility logic (Issue #3820)
   // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = quickActions && quickActions.length > 0;
-
-  // Permission-aware feature visibility (Epic #4068 - Issue #4179)
-  const canUseWishlist = permissions.canAccess('wishlist');
-  const canUseBulkSelect = permissions.canAccess('bulk-select');
-  const canUseDragDrop = permissions.canAccess('drag-drop');
-
-  const showWishlistBtn = showWishlist && canUseWishlist && !hasQuickActions; // Permission check added
-  const showSelectCheckbox = selectable && canUseBulkSelect;
-  const enableDrag = draggable && canUseDragDrop;
-
-  // Determine if upgrade prompt needed (feature requested but permission denied)
-  const needsUpgradeForBulkSelect = selectable && !canUseBulkSelect;
-  const needsUpgradeForDrag = draggable && !canUseDragDrop;
-  const showUpgradePrompt = needsUpgradeForBulkSelect || needsUpgradeForDrag;
-
-  // Filter quick actions by permission (Epic #4068 - Issue #4179)
-  const filteredQuickActions = quickActions?.filter(action => {
-    // Admin-only actions require admin role
-    if (action.adminOnly && !permissions.isAdmin()) {
-      return false;
-    }
-    // Respect hidden flag
-    return !action.hidden;
-  });
-
-  const hasFilteredQuickActions = filteredQuickActions && filteredQuickActions.length > 0;
+  const showWishlistBtn = showWishlist && !hasQuickActions; // Priority: quickActions > wishlist
 
   if (loading) {
     return <MeepleCardSkeleton variant={variant} />;
@@ -842,10 +801,10 @@ export const MeepleCard = React.memo(function MeepleCard({
       data-entity={entity}
       data-variant={variant}
     >
-      {/* Feature: Bulk Selection Checkbox (highest z-index) - Permission checked */}
-      {showSelectCheckbox && (
+      {/* Feature: Bulk Selection Checkbox (highest z-index) */}
+      {selectable && (
         <BulkSelectCheckbox
-          selectable={showSelectCheckbox}
+          selectable={selectable}
           selected={!!selected}
           onSelect={onSelect || (() => {})}
           id={testId || 'card'}
@@ -860,6 +819,21 @@ export const MeepleCard = React.memo(function MeepleCard({
         customColor={customColor}
       />
 
+      {/* Feature: Vertical Tag Strip (Issue #4181) - left-edge tag display */}
+      {(showTagStrip || (tags && tags.length > 0)) && (
+        <TagStrip
+          tags={tags || []}
+          maxVisible={maxVisibleTags}
+          variant={
+            variant === 'grid' || variant === 'featured'
+              ? 'desktop'
+              : variant === 'list'
+                ? 'tablet'
+                : 'mobile'
+          }
+        />
+      )}
+
       {/* Vertical tag stack: entity badge + status + custom badge (grid/featured only) */}
       {(variant === 'grid' || variant === 'featured') && (
         <VerticalTagStack
@@ -868,16 +842,6 @@ export const MeepleCard = React.memo(function MeepleCard({
           status={status}
           showStatusIcon={showStatusIcon}
           badge={badge}
-        />
-      )}
-
-      {/* Tag Strip: entity-specific tags (Epic #4068 - Issue #4182) */}
-      {showTagStrip && tags && tags.length > 0 && (
-        <TagStrip
-          tags={tags}
-          maxVisible={maxVisibleTags}
-          variant={variant === 'compact' || variant === 'list' ? 'mobile' : 'desktop'}
-          position="left"
         />
       )}
 
@@ -890,10 +854,10 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       )}
 
-      {/* Feature: Drag Handle (list variant, left side) - Permission checked */}
-      {enableDrag && variant === 'list' && dragData && (
+      {/* Feature: Drag Handle (list variant, left side) */}
+      {draggable && variant === 'list' && dragData && (
         <DragHandle
-          draggable={enableDrag}
+          draggable={draggable}
           dragData={dragData as DragData}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
@@ -927,9 +891,9 @@ export const MeepleCard = React.memo(function MeepleCard({
               />
             )}
 
-            {/* Legacy quick actions menu (Issue #3825) - Permission filtered */}
-            {hasFilteredQuickActions && !entityQuickActions && (
-              <QuickActionsMenu actions={filteredQuickActions} userRole={userRole} size="sm" />
+            {/* Legacy quick actions menu (Issue #3825) */}
+            {hasQuickActions && !entityQuickActions && (
+              <QuickActionsMenu actions={quickActions} userRole={userRole} size="sm" />
             )}
 
             {/* Wishlist button (if no entity quick actions) */}
@@ -1016,30 +980,9 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
-        {/* Tier Badge (Epic #4068 - top-right, always visible for non-free tiers) */}
-        {permissions.tier !== 'free' && (
-          <div className="absolute top-3 right-3 z-20">
-            <TierBadge tier={permissions.tier} />
-          </div>
-        )}
-
-        {/* Upgrade Prompt (Epic #4068 - shown when locked features requested) */}
-        {showUpgradePrompt && (
-          <div className="absolute bottom-3 left-3 right-3 z-20">
-            <UpgradePrompt
-              requiredTier={needsUpgradeForBulkSelect ? 'pro' : 'normal'}
-              featureName={needsUpgradeForBulkSelect ? 'Bulk Selection' : 'Drag & Drop'}
-              variant="inline"
-              onUpgrade={() => {
-                // TODO: Navigate to upgrade page or show upgrade modal
-              }}
-            />
-          </div>
-        )}
-
         {/* Badge overlay (only for non-grid/non-featured variants without VerticalTagStack) */}
         {badge && variant !== 'grid' && variant !== 'featured' && !isHeroOrFeatured && (
-          <span className="absolute top-12 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
+          <span className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
             {badge}
           </span>
         )}

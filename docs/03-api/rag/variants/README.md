@@ -28,18 +28,18 @@ TOMAC-RAG routes queries to one of 6 strategies, each combining multiple variant
 
 ## Priority P1 (High Value)
 
-7. **[Sentence Window](07-sentence-window.md)** - 3,250 tokens | $0.012 | +7% accuracy | Granular retrieval
-8. **[ColBERT Reranking](08-colbert-reranking.md)** - 3,250 tokens | $0.014 | +12% accuracy | Late interaction
-9. **[Chain-of-Thought RAG](09-cot-rag.md)** - 3,650 tokens | $0.016 | +18% accuracy | Reasoning transparency
-10. **[Query Decomposition](10-query-decomposition.md)** - 6,550 tokens | $0.026 | +12% accuracy | Multi-concept queries
-11. **[Iterative RAG](11-iterative-rag.md)** - 6,736 tokens | $0.025 | +14% accuracy | Feedback loops
+7. **[Sentence Window](sentence-window.md)** - 3,250 tokens | $0.012 | +7% accuracy | Granular retrieval
+8. **[ColBERT Reranking](colbert-reranking.md)** - 3,250 tokens | $0.014 | +12% accuracy | Late interaction
+9. **[Chain-of-Thought RAG](chain-of-thought-rag.md)** - 3,650 tokens | $0.016 | +18% accuracy | Reasoning transparency
+10. **[Query Decomposition](query-decomposition.md)** - 6,550 tokens | $0.026 | +12% accuracy | Multi-concept queries
+11. **[Iterative RAG](iterative-rag.md)** - 6,736 tokens | $0.025 | +14% accuracy | Feedback loops
 
 ## Priority P2 (Specialized Use Cases)
 
-12. **[Multi-Agent RAG](12-multi-agent-rag.md)** - 12,900 tokens | $0.043 | +20% accuracy | PRECISE tier
-13. **[RAG-Fusion](13-rag-fusion.md)** - 11,550 tokens | $0.041 | +11% accuracy | Query reformulation
-14. **[Step-Back Prompting](14-step-back-prompting.md)** - 5,740 tokens | $0.022 | +10% accuracy | Conceptual grounding
-15. **[Query Expansion](15-query-expansion.md)** - 4,110 tokens | $0.016 | +7% accuracy | Synonym matching
+12. **[Multi-Agent RAG](multi-agent-rag.md)** - 12,900 tokens | $0.043 | +20% accuracy | PRECISE tier
+13. **[RAG-Fusion](rag-fusion.md)** - 11,550 tokens | $0.041 | +11% accuracy | Query reformulation
+14. **[Step-Back Prompting](step-back-prompting.md)** - 5,740 tokens | $0.022 | +10% accuracy | Conceptual grounding
+15. **[Query Expansion](query-expansion.md)** - 4,110 tokens | $0.016 | +7% accuracy | Synonym matching
 
 ## Quick Reference
 

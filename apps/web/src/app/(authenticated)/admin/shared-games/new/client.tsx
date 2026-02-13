@@ -27,8 +27,6 @@ export function NewGameClient() {
     router.push('/admin/shared-games');
   };
 
-  if (!user) return null;
-
   return (
     <AdminAuthGuard loading={authLoading} user={user}>
       <div className="container mx-auto py-8 px-4">

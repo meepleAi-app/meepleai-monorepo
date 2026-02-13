@@ -53,6 +53,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         var agent = AgentDefinition.Create(
             "TestAgent",
             "Test description",
+            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
 
         // Act
@@ -215,7 +216,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         {
             AgentToolConfig.Create("web_search", new Dictionary<string, object> { ["max"] = 10 })
         };
-        var agent = AgentDefinition.Create("ComplexAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default(), prompts, tools);
+        var agent = AgentDefinition.Create("ComplexAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default(), null, prompts, tools);
 
         // Act
         await repository.AddAsync(agent);

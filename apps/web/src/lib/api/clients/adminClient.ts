@@ -1291,6 +1291,30 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
     },
 
+    // ========== Game Import Wizard (Issue #4163) ==========
+
+    /**
+     * Extract game metadata from uploaded PDF using AI
+     * POST /api/v1/admin/games/wizard/extract-metadata
+     *
+     * Issue #4163: Step 2 - Metadata Extraction
+     */
+    async extractGameMetadata(filePath: string) {
+      return httpClient.post<{
+        title?: string;
+        year?: number;
+        minPlayers?: number;
+        maxPlayers?: number;
+        playingTime?: number;
+        minAge?: number;
+        description?: string;
+        confidenceScore: number; // 0.0-1.0
+      }>(
+        '/api/v1/admin/games/wizard/extract-metadata',
+        { filePath }
+      );
+    },
+
     // ========== Audit Log (Issue #3691) ==========
 
     /**

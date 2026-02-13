@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharedGame Workflows - 2 Tracciati Paralleli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .checkpoint {
+            border: 4px dashed #fbbf24;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+        }
+        .track-alpha { border-left: 6px solid #dc2626; }
+        .track-beta { border-left: 6px solid #2563eb; }
+        .track-gamma { border-left: 6px solid #059669; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-10 px-4 shadow-2xl">
+        <div class="max-w-7xl mx-auto">
+            <h1 class="text-5xl font-bold mb-3">🎲 SharedGame Workflows</h1>
+            <h2 class="text-2xl text-purple-100 mb-2">2 Tracciati Paralleli per Priorità</h2>
+            <p class="text-purple-200 text-sm">Updated: 2026-02-12 | PM Agent Analysis | 23 Issues Total</p>
+        </div>
+    </header>
+
+    <!-- Stats Overview -->
+    <div class="max-w-7xl mx-auto px-4 -mt-8 mb-10">
+        <div class="bg-white rounded-xl shadow-2xl p-8 grid grid-cols-2 md:grid-cols-6 gap-6">
+            <div class="text-center">
+                <div class="text-4xl font-bold text-purple-600">23</div>
+                <div class="text-sm text-gray-600 font-medium">Total Issues</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-red-600">9</div>
+                <div class="text-sm text-gray-600 font-medium">P0 Critical</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-orange-600">11</div>
+                <div class="text-sm text-gray-600 font-medium">P1 High</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-yellow-600">3</div>
+                <div class="text-sm text-gray-600 font-medium">P2 Medium</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-blue-600">29</div>
+                <div class="text-sm text-gray-600 font-medium">Days Total</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-green-600">5</div>
+                <div class="text-sm text-gray-600 font-medium">New Today</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flussi Status -->
+    <div class="max-w-7xl mx-auto px-4 mb-10">
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-gradient-to-br from-green-50 to-emerald-100 border-4 border-green-500 p-8 rounded-xl shadow-lg">
+                <h3 class="text-2xl font-bold text-green-900 mb-3">✅ Flusso 1: Manuale</h3>
+                <p class="text-green-800 mb-4">Login → Dashboard → Gestisci SharedGame → Crea Manuale → Visualizza</p>
+                <div class="bg-green-200 px-6 py-4 rounded-lg">
+                    <div class="text-4xl font-bold text-green-800">100%</div>
+                    <div class="text-sm text-green-700 mt-1">✅ Implementato | Solo test E2E (#4231)</div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-orange-50 to-amber-100 border-4 border-orange-500 p-8 rounded-xl shadow-lg">
+                <h3 class="text-2xl font-bold text-orange-900 mb-3">⚠️ Flusso 2: PDF + KB + Agent</h3>
+                <p class="text-orange-800 mb-4">Login → Dashboard → PDF → Embedding → KB → Agent → Visualizza</p>
+                <div class="bg-orange-200 px-6 py-4 rounded-lg">
+                    <div class="text-4xl font-bold text-orange-800">60%</div>
+                    <div class="text-sm text-orange-700 mt-1">⚠️ 19 issue aperte (3 waves)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Overview -->
+    <div class="max-w-7xl mx-auto px-4 mb-10">
+        <div class="bg-gradient-to-r from-indigo-100 via-purple-100 to-pink-100 border-l-8 border-indigo-600 p-8 rounded-r-2xl shadow-xl">
+            <h3 class="text-2xl font-bold text-indigo-900 mb-4">💡 Strategia Esecutiva: 2 Tracciati Paralleli</h3>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-4 h-4 bg-red-600 rounded"></div>
+                        <span class="font-bold text-red-900">Track Alpha (Critical Path - P0)</span>
+                    </div>
+                    <p class="text-gray-700 text-sm pl-7">Wizard foundation + Pipeline → 10 issue critiche</p>
+                </div>
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-4 h-4 bg-blue-600 rounded"></div>
+                        <span class="font-bold text-blue-900">Track Beta (Integration - P1)</span>
+                    </div>
+                    <p class="text-gray-700 text-sm pl-7">Agent + KB + Testing → 6 issue integrazione</p>
+                </div>
+            </div>
+            <div class="mt-6 bg-white/60 backdrop-blur rounded-lg p-4">
+                <p class="text-sm text-indigo-800">
+                    <strong>⚡ Esecuzione Parallela:</strong> Alpha e Beta procedono contemporaneamente.
+                    Checkpoint di merge alla fine di Week 2 e Week 3 per sincronizzazione.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-12">
+
+        <!-- ========================================= -->
+        <!-- TRACK ALPHA: Critical Path (P0) -->
+        <!-- ========================================= -->
+        <div class="mb-12">
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border-t-8 border-red-600">
+                <div class="bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white px-8 py-6">
+                    <h2 class="text-3xl font-bold mb-2">🔥 Track Alpha: Critical Path</h2>
+                    <p class="text-red-50 text-lg mb-3">Wizard Frontend + Pipeline Foundation (P0-Critical)</p>
+                    <div class="flex flex-wrap gap-4 text-sm">
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">10</span> issues
+                        </div>
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">11.5</span> giorni
+                        </div>
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">Week 1-4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8">
+                    <!-- Week 1-2: Wizard Frontend -->
+                    <div class="mb-10">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-red-600 text-white px-6 py-3 rounded-full font-bold text-lg">Week 1-2</div>
+                            <h3 class="text-2xl font-bold text-gray-900">Epic #4136: Wizard Frontend</h3>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Issue #4161 -->
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 1</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4161" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4161 - Wizard Container & State
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                            <span class="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">size:M</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> None → <span class="text-green-600 font-bold">START HERE</span></p>
+                                    </div>
+                                    <div class="text-right ml-6">
+                                        <div class="text-3xl font-bold text-red-600">1d</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Issue #4162 -->
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 2</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4162" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4162 - Step 1: Upload PDF
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                            <span class="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">size:M</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4161</p>
+                                    </div>
+                                    <div class="text-right ml-6">
+                                        <div class="text-3xl font-bold text-red-600">1d</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Issue #4163 -->
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 3-4</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4163" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4163 - Step 2: Metadata Extraction
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                            <span class="bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full">size:L</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4162</p>
+                                    </div>
+                                    <div class="text-right ml-6">
+                                        <div class="text-3xl font-bold text-red-600">1.5d</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Issue #4166 (PARALLEL) -->
+                            <div class="track-alpha bg-gradient-to-r from-purple-50 to-violet-50 p-6 rounded-xl shadow-md hover:shadow-lg transition border-2 border-purple-400">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">⚡ Day 1-2</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4166" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4166 - Navigation & Progress (PARALLEL)
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                            <span class="bg-purple-200 text-purple-800 text-xs px-3 py-1 rounded-full font-bold">⚡ PARALLEL</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4161 | Può essere eseguito in parallelo con #4162-4163</p>
+                                    </div>
+                                    <div class="text-right ml-6">
+                                        <div class="text-3xl font-bold text-purple-600">1d</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Remaining issues -->
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 5</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4164" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4164 - Step 3: BGG Match
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4163</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-red-600">1d</div></div>
+                                </div>
+                            </div>
+
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 6</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4165" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4165 - Step 4: Enrich & Confirm
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4164</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-red-600">1d</div></div>
+                                </div>
+                            </div>
+
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 7</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4167" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4167 - Error Handling
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4161-4166</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-red-600">1d</div></div>
+                                </div>
+                            </div>
+
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 8-9</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4168" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4168 - Wizard E2E Tests
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">tests</span>
+                                            <span class="bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full">size:L</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4161-4167</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-red-600">2d</div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subtotal Week 1-2 -->
+                        <div class="mt-6 bg-red-100 border-2 border-red-300 rounded-lg p-4">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-red-900">Subtotal Week 1-2:</span>
+                                <span class="text-2xl font-bold text-red-700">9.5 giorni</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Week 4: Pipeline Foundation -->
+                    <div class="mb-10">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-red-600 text-white px-6 py-3 rounded-full font-bold text-lg">Week 4</div>
+                            <h3 class="text-2xl font-bold text-gray-900">Epic #4071: Pipeline Foundation</h3>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="track-alpha bg-gradient-to-r from-red-50 to-rose-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 1</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4215" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4215 - 7-State Pipeline Enhancement
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-semibold">P0-Critical</span>
+                                            <span class="bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full">backend</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4168 (dopo CHECKPOINT 1)</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-red-600">1d</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Track Alpha Summary -->
+                    <div class="bg-gradient-to-r from-red-600 to-rose-600 text-white p-6 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-2xl font-bold mb-1">Track Alpha Totale</div>
+                                <div class="text-red-100">Critical Path completo</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-4xl font-bold">10 issues</div>
+                                <div class="text-red-100 text-lg">11.5 giorni | 2-4 settimane</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================= -->
+        <!-- CHECKPOINT 1 -->
+        <!-- ========================================= -->
+        <div class="checkpoint p-10 rounded-2xl my-12 shadow-2xl">
+            <div class="text-center">
+                <div class="text-5xl font-bold text-yellow-900 mb-4">🔀 CHECKPOINT 1</div>
+                <div class="text-2xl font-semibold text-yellow-800 mb-4">End of Week 2: Wizard Base Complete</div>
+                <div class="bg-white/70 backdrop-blur rounded-lg p-6 mb-4">
+                    <p class="text-lg text-yellow-900 mb-3">
+                        <strong>Merge Point:</strong> Track Alpha (#4161-4168) + Track Beta (#4228, #3809, #4229, #4231)
+                    </p>
+                    <div class="grid md:grid-cols-2 gap-4 text-left">
+                        <div>
+                            <p class="font-bold text-yellow-900 mb-2">✅ Validation Checklist:</p>
+                            <ul class="text-sm text-yellow-800 space-y-1">
+                                <li>✓ Wizard E2E test (#4168) passa</li>
+                                <li>✓ Tutti 4 step wizard funzionanti</li>
+                                <li>✓ Upload → Metadata → BGG → Confirm OK</li>
+                                <li>✓ Backend linking API disponibile</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="font-bold text-yellow-900 mb-2">📦 Deliverable:</p>
+                            <ul class="text-sm text-yellow-800 space-y-1">
+                                <li>→ Flusso 2 step 1-6 completi</li>
+                                <li>→ Wizard funzionante end-to-end</li>
+                                <li>→ PDF upload → SharedGame creation OK</li>
+                                <li>→ Ready for agent integration</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-yellow-300 px-8 py-4 rounded-xl inline-block">
+                    <span class="text-2xl font-bold text-yellow-900">⏸️ PAUSE & MERGE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================= -->
+        <!-- TRACK BETA: Integration Path (P1) -->
+        <!-- ========================================= -->
+        <div class="mb-12">
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border-t-8 border-blue-600">
+                <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white px-8 py-6">
+                    <h2 class="text-3xl font-bold mb-2">🔗 Track Beta: Integration Path</h2>
+                    <p class="text-blue-50 text-lg mb-3">Agent + KB + Testing (P1-High) - Esecuzione Parallela con Alpha</p>
+                    <div class="flex flex-wrap gap-4 text-sm">
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">6</span> issues
+                        </div>
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">9.5</span> giorni
+                        </div>
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">Week 1-3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8">
+                    <!-- Week 1: Backend + Agent -->
+                    <div class="mb-10">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-blue-600 text-white px-6 py-3 rounded-full font-bold text-lg">Week 1</div>
+                            <h3 class="text-2xl font-bold text-gray-900">Backend Linking + Agent Builder</h3>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Issue #4228 NEW -->
+                            <div class="track-beta bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition border-4 border-green-400">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 1</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4228" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4228 - Backend: SharedGame → Agent Linking
+                                            </a>
+                                            <span class="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-bold animate-pulse">🆕 NEW</span>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">P1-High</span>
+                                            <span class="bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full">backend</span>
+                                            <span class="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">size:M</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> None → <span class="text-green-600 font-bold">START PARALLEL</span></p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-blue-600">1d</div></div>
+                                </div>
+                            </div>
+
+                            <!-- Issue #3809 -->
+                            <div class="track-beta bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 1-3</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #3809 - Agent Builder UI Form
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">P1-High</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                            <span class="bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full">size:L</span>
+                                            <span class="bg-pink-100 text-pink-800 text-xs px-3 py-1 rounded-full">ai/nlp</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> None → <span class="text-purple-600 font-bold">PARALLEL con #4228</span></p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-blue-600">3d</div></div>
+                                </div>
+                            </div>
+
+                            <!-- Issue #4229 NEW -->
+                            <div class="track-beta bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition border-4 border-green-400">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 4</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4229" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4229 - KB Documents Display
+                                            </a>
+                                            <span class="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-bold animate-pulse">🆕 NEW</span>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">P1-High</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                            <span class="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">size:M</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> None → <span class="text-purple-600 font-bold">PARALLEL</span></p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-blue-600">1d</div></div>
+                                </div>
+                            </div>
+
+                            <!-- Issue #4231 NEW -->
+                            <div class="track-beta bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition border-4 border-green-400">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Anytime</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4231" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4231 - E2E Test Flusso Manuale
+                                            </a>
+                                            <span class="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-bold animate-pulse">🆕 NEW</span>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">P1-High</span>
+                                            <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">tests</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> None → Può essere fatto quando vuoi</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-blue-600">1d</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Week 3: Integration -->
+                    <div class="mb-10">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-blue-600 text-white px-6 py-3 rounded-full font-bold text-lg">Week 3</div>
+                            <h3 class="text-2xl font-bold text-gray-900">Agent Integration Complete</h3>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Issue #4230 NEW -->
+                            <div class="track-beta bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition border-4 border-green-400">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 1-2</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4230" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4230 - Agent Integration Frontend
+                                            </a>
+                                            <span class="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-bold animate-pulse">🆕 NEW</span>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">P1-High</span>
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">frontend</span>
+                                            <span class="bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full">size:L</span>
+                                            <span class="bg-pink-100 text-pink-800 text-xs px-3 py-1 rounded-full">ai/nlp</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4228 (Backend API) + #3809 (Agent Builder UI)</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-blue-600">2d</div></div>
+                                </div>
+                            </div>
+
+                            <!-- Issue #4232 NEW -->
+                            <div class="track-beta bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl shadow-md hover:shadow-lg transition border-4 border-green-400">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Day 3-4</span>
+                                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4232" target="_blank"
+                                               class="text-xl font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                                #4232 - Integration Tests Complete Workflows
+                                            </a>
+                                            <span class="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-bold animate-pulse">🆕 NEW</span>
+                                        </div>
+                                        <div class="flex gap-2 flex-wrap mb-3">
+                                            <span class="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-semibold">P1-High</span>
+                                            <span class="bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full">backend</span>
+                                            <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">tests</span>
+                                        </div>
+                                        <p class="text-gray-700 text-sm"><strong>Dependencies:</strong> #4228 (Backend linking deve esistere)</p>
+                                    </div>
+                                    <div class="text-right ml-6"><div class="text-3xl font-bold text-blue-600">1.5d</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Track Beta Summary -->
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-2xl font-bold mb-1">Track Beta Totale</div>
+                                <div class="text-blue-100">Integration path completo</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-4xl font-bold">6 issues</div>
+                                <div class="text-blue-100 text-lg">9.5 giorni | 2 settimane</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================= -->
+        <!-- CHECKPOINT 2 -->
+        <!-- ========================================= -->
+        <div class="checkpoint p-10 rounded-2xl my-12 shadow-2xl">
+            <div class="text-center">
+                <div class="text-5xl font-bold text-yellow-900 mb-4">🔀 CHECKPOINT 2</div>
+                <div class="text-2xl font-semibold text-yellow-800 mb-4">End of Week 3: Agent Integration Complete</div>
+                <div class="bg-white/70 backdrop-blur rounded-lg p-6 mb-4">
+                    <p class="text-lg text-yellow-900 mb-3">
+                        <strong>Merge Point:</strong> Track Alpha + Track Beta → Flusso 2 100% Funzionante
+                    </p>
+                    <div class="grid md:grid-cols-2 gap-4 text-left">
+                        <div>
+                            <p class="font-bold text-yellow-900 mb-2">✅ Validation Checklist:</p>
+                            <ul class="text-sm text-yellow-800 space-y-1">
+                                <li>✓ Wizard completo (#4168 pass)</li>
+                                <li>✓ Agent Builder funzionante (#3809 OK)</li>
+                                <li>✓ KB documents visibili (#4229 OK)</li>
+                                <li>✓ Agent linkabile a SharedGame (#4230 OK)</li>
+                                <li>✓ Integration tests pass (#4232)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="font-bold text-yellow-900 mb-2">📦 Deliverable:</p>
+                            <ul class="text-sm text-yellow-800 space-y-1">
+                                <li>→ Flusso 1: 100% validato</li>
+                                <li>→ Flusso 2: 100% completo</li>
+                                <li>→ PDF → Embedding → KB → Agent OK</li>
+                                <li>→ Tutti test E2E green</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-green-500 px-8 py-4 rounded-xl inline-block">
+                    <span class="text-2xl font-bold text-white">✅ RELEASE CANDIDATE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================= -->
+        <!-- TRACK GAMMA: Enhancement (P2 - Optional) -->
+        <!-- ========================================= -->
+        <div class="mb-12">
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border-t-8 border-green-600">
+                <div class="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white px-8 py-6">
+                    <h2 class="text-3xl font-bold mb-2">✨ Track Gamma: Enhancement</h2>
+                    <p class="text-green-50 text-lg mb-3">Real-Time Tracking Advanced (P1/P2) - Opzionale</p>
+                    <div class="flex flex-wrap gap-4 text-sm">
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">5</span> issues
+                        </div>
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">7.5</span> giorni
+                        </div>
+                        <div class="bg-white/25 backdrop-blur px-4 py-2 rounded-lg">
+                            <span class="font-bold">Week 4-5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8">
+                    <div class="bg-yellow-50 border-2 border-yellow-400 p-6 rounded-lg mb-6">
+                        <p class="text-yellow-900 text-center">
+                            <strong>⚠️ Opzionale:</strong> Queste issue migliorano l'UX ma non sono necessarie per i flussi base.
+                            Possono essere implementate dopo CHECKPOINT 2 o in parallelo se c'è capacità.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Issues #4216-4220 -->
+                        <div class="track-gamma bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-xl shadow-md">
+                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4216" class="text-lg font-bold text-blue-600 hover:underline">
+                                #4216 - Error Handling & Retry
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">P1</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">backend</span>
+                            </div>
+                        </div>
+
+                        <div class="track-gamma bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-xl shadow-md">
+                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4217" class="text-lg font-bold text-blue-600 hover:underline">
+                                #4217 - Multi-Location Status UI
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">P1</span>
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
+                            </div>
+                        </div>
+
+                        <div class="track-gamma bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-xl shadow-md">
+                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4218" class="text-lg font-bold text-blue-600 hover:underline">
+                                #4218 - Real-Time SSE Updates
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">P1</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">fullstack</span>
+                            </div>
+                        </div>
+
+                        <div class="track-gamma bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-xl shadow-md">
+                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4219" class="text-lg font-bold text-blue-600 hover:underline">
+                                #4219 - Duration Metrics & ETA
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">P2</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">fullstack</span>
+                            </div>
+                        </div>
+
+                        <div class="track-gamma bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-xl shadow-md">
+                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4220" class="text-lg font-bold text-blue-600 hover:underline">
+                                #4220 - Multi-Channel Notifications
+                            </a>
+                            <div class="flex gap-2 mt-2">
+                                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">P2</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">fullstack</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================= -->
+        <!-- Gantt Timeline Visual -->
+        <!-- ========================================= -->
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-12">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
+                <h2 class="text-3xl font-bold mb-2">⚡ Parallel Execution Timeline</h2>
+                <p class="text-slate-200">Gantt view: 2 track in parallelo con checkpoint di sincronizzazione</p>
+            </div>
+
+            <div class="p-8">
+                <!-- Week 1-2 -->
+                <div class="mb-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                        <span class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full mr-4">Week 1-2</span>
+                        Wizard Foundation
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Alpha -->
+                        <div class="bg-red-50 border-4 border-red-300 rounded-xl p-6 shadow-lg">
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="w-6 h-6 bg-red-600 rounded-full"></div>
+                                <span class="font-bold text-red-900 text-lg">Track Alpha</span>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between py-2 border-b border-red-200">
+                                    <span>Day 1:</span>
+                                    <span class="font-semibold">#4161 Container</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b border-red-200">
+                                    <span>Day 2:</span>
+                                    <span class="font-semibold">#4162 Upload</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b border-red-200">
+                                    <span>Day 3-4:</span>
+                                    <span class="font-semibold">#4163 Metadata</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b border-red-200">
+                                    <span>Day 5:</span>
+                                    <span class="font-semibold">#4164 BGG</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b border-red-200">
+                                    <span>Day 6:</span>
+                                    <span class="font-semibold">#4165 Confirm</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b border-red-200">
+                                    <span>Day 7:</span>
+                                    <span class="font-semibold">#4167 Errors</span>
+                                </div>
+                                <div class="flex justify-between py-2">
+                                    <span>Day 8-9:</span>
+                                    <span class="font-semibold">#4168 E2E</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 bg-red-200 text-red-900 px-4 py-2 rounded-lg text-sm font-semibold">
+                                ⚡ #4166 Navigation (parallel Day 1-2)
+                            </div>
+                        </div>
+
+                        <!-- Beta -->
+                        <div class="bg-blue-50 border-4 border-blue-300 rounded-xl p-6 shadow-lg">
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="w-6 h-6 bg-blue-600 rounded-full"></div>
+                                <span class="font-bold text-blue-900 text-lg">Track Beta</span>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between py-2 border-b border-blue-200">
+                                    <span>Day 1:</span>
+                                    <span class="font-semibold">#4228 Backend Link 🆕</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b border-blue-200">
+                                    <span>Day 1-3:</span>
+                                    <span class="font-semibold">#3809 Agent Builder</span>
+                                </div>
+                                <div class="flex justify-between py-2 border-b border-blue-200">
+                                    <span>Day 4:</span>
+                                    <span class="font-semibold">#4229 KB Docs 🆕</span>
+                                </div>
+                                <div class="flex justify-between py-2">
+                                    <span>Anytime:</span>
+                                    <span class="font-semibold">#4231 E2E Flusso1 🆕</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 bg-blue-200 text-blue-900 px-4 py-2 rounded-lg text-sm font-semibold">
+                                ✅ Indipendente da Alpha
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHECKPOINT 1 Visual -->
+                <div class="my-10 relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 opacity-20 blur-xl"></div>
+                    <div class="relative checkpoint p-10 rounded-2xl">
+                        <div class="text-center">
+                            <div class="text-5xl mb-2">🔀</div>
+                            <div class="text-3xl font-bold text-yellow-900 mb-3">CHECKPOINT 1</div>
+                            <div class="text-xl text-yellow-800 mb-4">End of Week 2: Wizard Complete</div>
+                            <div class="bg-white rounded-lg p-4 inline-block">
+                                <p class="text-yellow-900 font-semibold">Merge: Alpha + Beta → Wizard funzionante</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 3 -->
+                <div class="mb-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                        <span class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full mr-4">Week 3</span>
+                        Integration Complete
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 border-4 border-blue-300 rounded-xl p-6">
+                            <div class="font-bold text-blue-900 text-lg mb-3">Track Beta (Continue)</div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between py-2 border-b border-blue-200">
+                                    <span>Day 1-2:</span>
+                                    <span class="font-semibold">#4230 Agent Integration 🆕</span>
+                                </div>
+                                <div class="flex justify-between py-2">
+                                    <span>Day 3-4:</span>
+                                    <span class="font-semibold">#4232 Integration Tests 🆕</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 border-4 border-green-300 rounded-xl p-6">
+                            <div class="font-bold text-green-900 text-lg mb-3">Track Gamma (Optional)</div>
+                            <div class="text-sm text-green-800">
+                                <p>Può iniziare se c'è capacità, oppure attendere CHECKPOINT 2</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHECKPOINT 2 Visual -->
+                <div class="my-10 relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 opacity-20 blur-xl"></div>
+                    <div class="relative checkpoint p-10 rounded-2xl">
+                        <div class="text-center">
+                            <div class="text-5xl mb-2">🎉</div>
+                            <div class="text-3xl font-bold text-yellow-900 mb-3">CHECKPOINT 2</div>
+                            <div class="text-xl text-yellow-800 mb-4">End of Week 3: RELEASE CANDIDATE</div>
+                            <div class="bg-white rounded-lg p-6 inline-block">
+                                <p class="text-yellow-900 font-bold text-lg mb-2">✅ Entrambi i flussi operativi al 100%</p>
+                                <p class="text-yellow-800 text-sm">Wizard + Agent + KB integration completi</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Week 4-5 Enhancement -->
+                <div class="mb-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                        <span class="bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-2 rounded-full mr-4">Week 4-5</span>
+                        Enhancement Features
+                    </h3>
+                    <div class="bg-green-50 border-4 border-green-300 rounded-xl p-6">
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between py-2 border-b border-green-200">
+                                <span>Day 1:</span>
+                                <span class="font-semibold">#4215 Pipeline (già in Alpha)</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-green-200">
+                                <span>Day 2-4:</span>
+                                <span class="font-semibold">#4216 + #4217 (parallel)</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-green-200">
+                                <span>Day 5-6:</span>
+                                <span class="font-semibold">#4218 SSE + #4219 Metrics</span>
+                            </div>
+                            <div class="flex justify-between py-2">
+                                <span>Day 7:</span>
+                                <span class="font-semibold">#4220 Notifications</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Table -->
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-12">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
+                <h2 class="text-3xl font-bold">📊 Summary Table: All 23 Issues</h2>
+            </div>
+
+            <div class="p-8 overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 text-left font-bold">Issue</th>
+                            <th class="px-6 py-4 text-left font-bold">Titolo</th>
+                            <th class="px-6 py-4 text-center font-bold">Track</th>
+                            <th class="px-6 py-4 text-center font-bold">Priority</th>
+                            <th class="px-6 py-4 text-center font-bold">Estimate</th>
+                            <th class="px-6 py-4 text-center font-bold">Week</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y-2">
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4161" class="text-blue-600 hover:underline">#4161</a></td>
+                            <td class="px-6 py-4">Wizard Container & State</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W1</td>
+                        </tr>
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4162" class="text-blue-600 hover:underline">#4162</a></td>
+                            <td class="px-6 py-4">Step 1: Upload PDF</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W1</td>
+                        </tr>
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4163" class="text-blue-600 hover:underline">#4163</a></td>
+                            <td class="px-6 py-4">Step 2: Metadata Extraction</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1.5d</td>
+                            <td class="px-6 py-4 text-center">W1</td>
+                        </tr>
+                        <tr class="bg-purple-50 hover:bg-purple-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4166" class="text-blue-600 hover:underline">#4166</a></td>
+                            <td class="px-6 py-4">Navigation & Progress ⚡</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W1</td>
+                        </tr>
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4164" class="text-blue-600 hover:underline">#4164</a></td>
+                            <td class="px-6 py-4">Step 3: BGG Match</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W2</td>
+                        </tr>
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4165" class="text-blue-600 hover:underline">#4165</a></td>
+                            <td class="px-6 py-4">Step 4: Enrich & Confirm</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W2</td>
+                        </tr>
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4167" class="text-blue-600 hover:underline">#4167</a></td>
+                            <td class="px-6 py-4">Error Handling</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W2</td>
+                        </tr>
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4168" class="text-blue-600 hover:underline">#4168</a></td>
+                            <td class="px-6 py-4">Wizard E2E Tests</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">2d</td>
+                            <td class="px-6 py-4 text-center">W2</td>
+                        </tr>
+
+                        <!-- Beta Week 1-2 -->
+                        <tr class="bg-blue-50 hover:bg-blue-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4228" class="text-blue-600 hover:underline">#4228</a> 🆕</td>
+                            <td class="px-6 py-4 font-semibold">Backend Agent Linking</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Beta</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W1</td>
+                        </tr>
+                        <tr class="bg-blue-50 hover:bg-blue-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809" class="text-blue-600 hover:underline">#3809</a></td>
+                            <td class="px-6 py-4">Agent Builder UI</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Beta</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">3d</td>
+                            <td class="px-6 py-4 text-center">W1</td>
+                        </tr>
+                        <tr class="bg-blue-50 hover:bg-blue-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4229" class="text-blue-600 hover:underline">#4229</a> 🆕</td>
+                            <td class="px-6 py-4 font-semibold">KB Documents Display</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Beta</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W1</td>
+                        </tr>
+                        <tr class="bg-blue-50 hover:bg-blue-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4231" class="text-blue-600 hover:underline">#4231</a> 🆕</td>
+                            <td class="px-6 py-4 font-semibold">E2E Flusso Manuale</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Beta</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">Anytime</td>
+                        </tr>
+
+                        <!-- Beta Week 3 -->
+                        <tr class="bg-blue-50 hover:bg-blue-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4230" class="text-blue-600 hover:underline">#4230</a> 🆕</td>
+                            <td class="px-6 py-4 font-semibold">Agent Integration Frontend</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Beta</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">2d</td>
+                            <td class="px-6 py-4 text-center">W3</td>
+                        </tr>
+                        <tr class="bg-blue-50 hover:bg-blue-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4232" class="text-blue-600 hover:underline">#4232</a> 🆕</td>
+                            <td class="px-6 py-4 font-semibold">Integration Tests Workflows</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">Beta</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1.5d</td>
+                            <td class="px-6 py-4 text-center">W3</td>
+                        </tr>
+
+                        <!-- Alpha Week 4 -->
+                        <tr class="bg-red-50 hover:bg-red-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4215" class="text-blue-600 hover:underline">#4215</a></td>
+                            <td class="px-6 py-4">7-State Pipeline</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">Alpha</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">P0</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W4</td>
+                        </tr>
+
+                        <!-- Gamma Week 4-5 -->
+                        <tr class="bg-green-50 hover:bg-green-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4216" class="text-blue-600 hover:underline">#4216</a></td>
+                            <td class="px-6 py-4">Error Handling & Retry</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">Gamma</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1.5d</td>
+                            <td class="px-6 py-4 text-center">W4</td>
+                        </tr>
+                        <tr class="bg-green-50 hover:bg-green-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4217" class="text-blue-600 hover:underline">#4217</a></td>
+                            <td class="px-6 py-4">Multi-Location Status UI</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">Gamma</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">2d</td>
+                            <td class="px-6 py-4 text-center">W4</td>
+                        </tr>
+                        <tr class="bg-green-50 hover:bg-green-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4218" class="text-blue-600 hover:underline">#4218</a></td>
+                            <td class="px-6 py-4">Real-Time SSE Updates</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">Gamma</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">P1</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1.5d</td>
+                            <td class="px-6 py-4 text-center">W5</td>
+                        </tr>
+                        <tr class="bg-green-50 hover:bg-green-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4219" class="text-blue-600 hover:underline">#4219</a></td>
+                            <td class="px-6 py-4">Duration Metrics & ETA</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">Gamma</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">P2</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1.5d</td>
+                            <td class="px-6 py-4 text-center">W5</td>
+                        </tr>
+                        <tr class="bg-green-50 hover:bg-green-100">
+                            <td class="px-6 py-4 font-mono font-bold"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4220" class="text-blue-600 hover:underline">#4220</a></td>
+                            <td class="px-6 py-4">Multi-Channel Notifications</td>
+                            <td class="px-6 py-4 text-center"><span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">Gamma</span></td>
+                            <td class="px-6 py-4 text-center"><span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">P2</span></td>
+                            <td class="px-6 py-4 text-center font-semibold">1d</td>
+                            <td class="px-6 py-4 text-center">W5</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="mt-6 flex gap-6 justify-center text-sm">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-green-500 rounded"></div>
+                        <span>🆕 = Nuove issue (create oggi)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 bg-purple-500 rounded"></div>
+                        <span>⚡ = Esecuzione parallela</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Start -->
+        <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-4 border-indigo-500 rounded-2xl p-8 mb-12 shadow-xl">
+            <h2 class="text-3xl font-bold text-indigo-900 mb-6">🚀 Quick Start Commands</h2>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-bold text-red-900 text-lg mb-3 flex items-center">
+                        <div class="w-6 h-6 bg-red-600 rounded-full mr-2"></div>
+                        Track Alpha
+                    </h3>
+                    <div class="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-sm">
+                        git checkout frontend-dev<br/>
+                        git checkout -b feature/issue-4161-wizard-container<br/>
+                        # Start #4161
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-blue-900 text-lg mb-3 flex items-center">
+                        <div class="w-6 h-6 bg-blue-600 rounded-full mr-2"></div>
+                        Track Beta
+                    </h3>
+                    <div class="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-sm">
+                        git checkout main-dev<br/>
+                        git checkout -b feature/issue-4228-agent-linking<br/>
+                        # Start #4228
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 bg-white/70 backdrop-blur rounded-lg p-6">
+                <h3 class="font-bold text-purple-900 mb-3">Validate Flusso 1 (Immediate)</h3>
+                <div class="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-sm">
+                    cd apps/web && pnpm dev<br/>
+                    # Open: localhost:3000/admin/shared-games/new<br/>
+                    # Test manual creation flow
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-gray-600 py-8">
+            <p class="text-lg font-semibold mb-2">Generated by PM Agent | 2026-02-12</p>
+            <p class="text-sm">📚 Docs: <code class="bg-gray-200 px-2 py-1 rounded">docs/claudedocs/roadmap-shared-game-workflows.md</code></p>
+            <p class="text-sm mt-2">🆕 New Issues: #4228, #4229, #4230, #4231, #4232</p>
+        </div>
+    </div>
+</body>
+</html>

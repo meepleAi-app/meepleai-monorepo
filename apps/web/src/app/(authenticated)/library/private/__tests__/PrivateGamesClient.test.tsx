@@ -15,9 +15,10 @@
  * - Delete game dialog
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, Mock } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { api } from '@/lib/api';
 import type { PrivateGameDto, PaginatedPrivateGamesResponse } from '@/lib/api/schemas/private-games.schemas';
@@ -163,7 +164,7 @@ describe('PrivateGamesClient', () => {
     it('should show loading spinner on initial render', () => {
       mockGetPrivateGames.mockReturnValue(new Promise(() => {})); // Never resolves
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       expect(screen.getByTestId('loading-state')).toBeInTheDocument();
       expect(screen.getByText('Loading games...')).toBeInTheDocument();
@@ -172,7 +173,7 @@ describe('PrivateGamesClient', () => {
     it('should show header and controls during loading', () => {
       mockGetPrivateGames.mockReturnValue(new Promise(() => {}));
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       expect(screen.getByText('Private Games')).toBeInTheDocument();
       expect(screen.getByTestId('add-private-game-btn')).toBeInTheDocument();
@@ -184,7 +185,7 @@ describe('PrivateGamesClient', () => {
     it('should show error message when API fails', async () => {
       mockGetPrivateGames.mockRejectedValueOnce(new Error('Network error'));
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('error-state')).toBeInTheDocument();
@@ -201,7 +202,7 @@ describe('PrivateGamesClient', () => {
         .mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('error-state')).toBeInTheDocument();
@@ -221,7 +222,7 @@ describe('PrivateGamesClient', () => {
     it('should show empty state when no games exist', async () => {
       mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse([]));
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('empty-state')).toBeInTheDocument();
@@ -243,7 +244,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -265,7 +266,7 @@ describe('PrivateGamesClient', () => {
         createPaginatedResponse(mockGames)
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -281,7 +282,7 @@ describe('PrivateGamesClient', () => {
         createPaginatedResponse(mockGames, { totalCount: 3 })
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByText(/3 games/)).toBeInTheDocument();
@@ -293,7 +294,7 @@ describe('PrivateGamesClient', () => {
         createPaginatedResponse([mockGames[0]], { totalCount: 1 })
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByText(/1 game\b/)).toBeInTheDocument();
@@ -308,7 +309,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -333,7 +334,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -353,7 +354,7 @@ describe('PrivateGamesClient', () => {
     it('should have search input with correct aria-label', () => {
       mockGetPrivateGames.mockReturnValue(new Promise(() => {}));
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       expect(
         screen.getByLabelText('Search private games')
@@ -368,7 +369,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -393,7 +394,7 @@ describe('PrivateGamesClient', () => {
         createPaginatedResponse(mockGames)
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -408,7 +409,7 @@ describe('PrivateGamesClient', () => {
     it('should have sort by select with correct aria-label', () => {
       mockGetPrivateGames.mockReturnValue(new Promise(() => {}));
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       expect(screen.getByLabelText('Sort by')).toBeInTheDocument();
     });
@@ -425,7 +426,7 @@ describe('PrivateGamesClient', () => {
         })
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('pagination')).toBeInTheDocument();
@@ -439,7 +440,7 @@ describe('PrivateGamesClient', () => {
         createPaginatedResponse(mockGames, { totalPages: 1 })
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -457,7 +458,7 @@ describe('PrivateGamesClient', () => {
         })
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('pagination')).toBeInTheDocument();
@@ -476,7 +477,7 @@ describe('PrivateGamesClient', () => {
         })
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('pagination')).toBeInTheDocument();
@@ -496,7 +497,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('pagination')).toBeInTheDocument();
@@ -521,7 +522,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -544,7 +545,7 @@ describe('PrivateGamesClient', () => {
       mockAddPrivateGame.mockResolvedValueOnce({});
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -567,7 +568,7 @@ describe('PrivateGamesClient', () => {
       mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse([]));
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('empty-state')).toBeInTheDocument();
@@ -588,7 +589,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -609,7 +610,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -632,7 +633,7 @@ describe('PrivateGamesClient', () => {
       mockDeletePrivateGame.mockResolvedValueOnce({});
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -657,7 +658,7 @@ describe('PrivateGamesClient', () => {
       );
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -677,7 +678,7 @@ describe('PrivateGamesClient', () => {
         createPaginatedResponse(mockGames)
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(mockGetPrivateGames).toHaveBeenCalledWith({
@@ -697,7 +698,7 @@ describe('PrivateGamesClient', () => {
       mockAddPrivateGame.mockResolvedValueOnce({});
 
       const user = userEvent.setup();
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -725,7 +726,7 @@ describe('PrivateGamesClient', () => {
         createPaginatedResponse(mockGames)
       );
 
-      render(<PrivateGamesClient />);
+      renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -739,7 +740,7 @@ describe('PrivateGamesClient', () => {
     it('should have search icon as aria-hidden', () => {
       mockGetPrivateGames.mockReturnValue(new Promise(() => {}));
 
-      const { container } = render(<PrivateGamesClient />);
+      const { container } = renderWithQuery(<PrivateGamesClient />);
 
       const searchContainer = container.querySelector('.relative.flex-1');
       const svg = searchContainer?.querySelector('svg');

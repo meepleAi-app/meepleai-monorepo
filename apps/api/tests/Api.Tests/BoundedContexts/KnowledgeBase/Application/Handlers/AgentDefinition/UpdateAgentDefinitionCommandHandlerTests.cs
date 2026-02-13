@@ -38,6 +38,7 @@ public sealed class UpdateAgentDefinitionCommandHandlerTests
         var existingAgent = AgentDefinitionEntity.Create(
             "OriginalName",
             "Original desc",
+            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
 
         _mockRepository
@@ -48,6 +49,7 @@ public sealed class UpdateAgentDefinitionCommandHandlerTests
             Id: existingAgent.Id,
             Name: "UpdatedName",
             Description: "Updated description",
+            Type: "RAG",
             Model: "claude-3",
             MaxTokens: 4096,
             Temperature: 0.9f);
@@ -74,6 +76,7 @@ public sealed class UpdateAgentDefinitionCommandHandlerTests
             Id: Guid.NewGuid(),
             Name: "Name",
             Description: "Desc",
+            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f);

@@ -46,6 +46,7 @@ internal static class SharedGameCatalogEndpoints
         MapContributorEndpoints(group);
         MapBadgeEndpoints(group);
         MapTrendingEndpoints(group);
+        MapWizardEndpoints(group); // Issue #4139: PDF Wizard endpoints
 
         return group;
     }
@@ -396,6 +397,25 @@ internal static class SharedGameCatalogEndpoints
             .WithName("RemoveGameDocument")
             .WithSummary("Remove document from game (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent);
+
+        // Agent Linking (Issue #4228)
+        group.MapPost("/admin/shared-games/{id:guid}/link-agent/{agentId:guid}", HandleLinkAgent)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("LinkAgentToSharedGame")
+            .WithSummary("Link AI agent to shared game (Admin/Editor)")
+            .WithDescription("Links an AI agent definition to a shared game for personalized assistance.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapDelete("/admin/shared-games/{id:guid}/unlink-agent", HandleUnlinkAgent)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UnlinkAgentFromSharedGame")
+            .WithSummary("Unlink AI agent from shared game (Admin/Editor)")
+            .WithDescription("Removes the AI agent link from a shared game.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
 
         // Game State Template Management (Issue #2400)
         group.MapGet("/admin/shared-games/{id:guid}/state-template", HandleGetActiveStateTemplate)
@@ -1446,6 +1466,65 @@ internal static class SharedGameCatalogEndpoints
             return Results.BadRequest(new { error = ex.Message });
         }
     }
+
+    // ========================================
+    // AGENT LINKING HANDLERS (Issue #4228)
+    // ========================================
+
+    private static async Task<IResult> HandleLinkAgent(
+        Guid id,
+        Guid agentId,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new LinkAgentToSharedGameCommand(id, agentId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Agent already linked
+            return Results.Conflict(new { error = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> HandleUnlinkAgent(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new UnlinkAgentFromSharedGameCommand(id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            // No agent linked
+            return Results.Conflict(new { error = ex.Message });
+        }
+    }
 #pragma warning restore S1172
 
     // ========================================
@@ -2397,6 +2476,76 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status400BadRequest);
     }
 
+    // ========================================
+    // PDF WIZARD ENDPOINTS (Admin/Editor)
+    // Issue #4139: Backend - API Endpoints PDF Wizard
+    // ========================================
+
+    private static void MapWizardEndpoints(RouteGroupBuilder group)
+    {
+        // Step 1: Upload PDF for temporary storage (no processing)
+        group.MapPost("/admin/shared-games/wizard/upload-pdf", HandleWizardUploadPdf)
+            .DisableAntiforgery() // Required for multipart/form-data file uploads
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("SharedGamesWizardUploadPdf")
+            .WithSummary("Upload PDF for wizard (Admin/Editor)")
+            .WithDescription("Uploads PDF to temporary storage for metadata extraction. File path returned for subsequent wizard steps.")
+            .Produces<TempPdfUploadResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Step 2: Get PDF preview with extracted metadata and BGG suggestions
+        group.MapGet("/admin/shared-games/wizard/pdf/preview", HandleWizardPreview)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("WizardGetPdfPreview")
+            .WithSummary("Get PDF preview with metadata (Admin/Editor)")
+            .WithDescription("Extracts game metadata from uploaded PDF, fetches BGG match suggestions (top 5), and checks for duplicate games by title.")
+            .Produces<PdfGamePreviewDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Step 3a: Search BGG games by title
+        group.MapGet("/admin/shared-games/wizard/bgg/search", HandleWizardBggSearch)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("WizardSearchBgg")
+            .WithSummary("Search BGG games (Admin/Editor)")
+            .WithDescription("Searches BoardGameGeek API for games matching the query. Returns top matching results for manual BGG ID selection.")
+            .Produces<List<BggSearchResultDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status429TooManyRequests);
+
+        // Step 3b: Get BGG game details by ID
+        group.MapGet("/admin/shared-games/wizard/bgg/{bggId:int}", HandleWizardBggDetails)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("WizardGetBggDetails")
+            .WithSummary("Get BGG game details (Admin/Editor)")
+            .WithDescription("Fetches detailed game information from BoardGameGeek API for preview and data merge.")
+            .Produces<BggGameDetailsDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Step 4: Create SharedGame from PDF metadata (final wizard step)
+        group.MapPost("/admin/shared-games/wizard/create", HandleWizardCreateGame)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("WizardCreateGame")
+            .WithSummary("Create game from PDF wizard (Admin/Editor)")
+            .WithDescription("Creates SharedGame from extracted metadata with optional BGG enrichment. Admin users publish immediately, Editor users create draft requiring approval.")
+            .Produces<CreateGameFromPdfResult>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status409Conflict);
+    }
+
     private static async Task<IResult> HandleGetCatalogTrending(
         [FromQuery] int limit,
         IMediator mediator,
@@ -2419,6 +2568,192 @@ internal static class SharedGameCatalogEndpoints
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    // ========================================
+    // PDF WIZARD HANDLERS (Issue #4139)
+    // ========================================
+
+    /// <summary>
+    /// Handler for wizard PDF upload endpoint.
+    /// Uploads PDF to temporary storage without processing.
+    /// </summary>
+    private static async Task<IResult> HandleWizardUploadPdf(
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var userId = context.User.GetUserId();
+
+        // Read multipart/form-data
+        var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
+
+        // Defensive check: form.Files could be null or empty
+        if (form.Files == null || form.Files.Count == 0)
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided" } });
+        }
+
+        var file = form.Files.GetFile("file");
+
+        // Null check BEFORE accessing file.Length
+        if (file == null)
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided" } });
+        }
+
+        if (file.Length == 0)
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "File is empty" } });
+        }
+
+        var command = new UploadPdfForGameExtractionCommand(file, userId);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            logger.LogWarning("Wizard PDF upload failed: {Error}", result.ErrorMessage);
+            return Results.BadRequest(new { error = result.ErrorMessage });
+        }
+
+        logger.LogInformation("Wizard PDF uploaded successfully: FileId={FileId}, FilePath={FilePath}", result.FileId, result.FilePath);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Handler for wizard PDF preview endpoint.
+    /// Extracts metadata, fetches BGG suggestions, and checks duplicates.
+    /// </summary>
+    private static async Task<IResult> HandleWizardPreview(
+        [FromQuery] string filePath,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var userId = context.User.GetUserId();
+
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["filePath"] = "File path is required" } });
+        }
+
+        logger.LogInformation("Generating wizard preview for FilePath={FilePath}, UserId={UserId}", filePath, userId);
+
+        var query = new GetPdfPreviewForWizardQuery(filePath, userId);
+        var preview = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Ok(preview);
+    }
+
+    /// <summary>
+    /// Handler for wizard BGG search endpoint.
+    /// Searches BoardGameGeek API for games matching query.
+    /// </summary>
+    private static async Task<IResult> HandleWizardBggSearch(
+        [FromQuery] string query,
+        [FromQuery] bool exact,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["query"] = "Search query is required" } });
+        }
+
+        logger.LogInformation("Wizard BGG search: Query={Query}, Exact={Exact}", query, exact);
+
+        try
+        {
+            var searchQuery = new SearchBggGamesQuery(query, exact);
+            var results = await mediator.Send(searchQuery, ct).ConfigureAwait(false);
+            return Results.Ok(results);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))
+        {
+            logger.LogWarning(ex, "BGG API rate limit exceeded for wizard search");
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+    }
+
+    /// <summary>
+    /// Handler for wizard BGG game details endpoint.
+    /// Fetches detailed game information from BoardGameGeek API.
+    /// </summary>
+    private static async Task<IResult> HandleWizardBggDetails(
+        int bggId,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        if (bggId <= 0)
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["bggId"] = "BGG ID must be a positive integer" } });
+        }
+
+        logger.LogInformation("Fetching wizard BGG details: BggId={BggId}", bggId);
+
+        var query = new GetBggGameDetailsQuery(bggId);
+        var details = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (details == null)
+        {
+            logger.LogWarning("BGG game not found: BggId={BggId}", bggId);
+            return Results.NotFound(new { error = "BGG game not found", bggId });
+        }
+
+        return Results.Ok(details);
+    }
+
+    /// <summary>
+    /// Handler for wizard game creation endpoint (final step).
+    /// Creates SharedGame from extracted metadata with optional BGG enrichment.
+    /// </summary>
+    private static async Task<IResult> HandleWizardCreateGame(
+        CreateGameFromPdfRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var userId = context.User.GetUserId();
+
+        // Determine if user is Admin (auto-publish) or Editor (requires approval)
+        var isAdmin = context.User.IsInRole("Admin");
+        var requiresApproval = !isAdmin; // Editors require approval, Admins auto-publish
+
+        logger.LogInformation(
+            "Wizard create game: PdfId={PdfId}, Title='{Title}', BggId={BggId}, UserId={UserId}, RequiresApproval={RequiresApproval}",
+            request.PdfDocumentId, request.ExtractedTitle, request.SelectedBggId, userId, requiresApproval);
+
+        var command = new CreateSharedGameFromPdfCommand(
+            request.PdfDocumentId,
+            userId,
+            request.ExtractedTitle,
+            request.MinPlayers,
+            request.MaxPlayers,
+            request.PlayingTimeMinutes,
+            request.MinAge,
+            request.SelectedBggId,
+            requiresApproval);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Wizard game created successfully: GameId={GameId}, Status={Status}, BggEnriched={BggEnriched}",
+                result.GameId, result.ApprovalStatus, result.BggEnrichmentApplied);
+
+            return Results.Created($"/api/v1/admin/shared-games/{result.GameId}", result);
+        }
+        catch (ConflictException ex)
+        {
+            logger.LogWarning(ex, "Wizard create game conflict: {Message}", ex.Message);
+            return Results.Conflict(new { error = ex.Message });
+        }
     }
 }
 

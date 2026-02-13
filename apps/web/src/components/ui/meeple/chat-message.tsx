@@ -34,6 +34,8 @@ export interface ChatMessageProps {
   role: 'user' | 'assistant';
   /** Message content text */
   content: string;
+  /** ISSUE-3777: Agent type that generated this message */
+  agentType?: 'tutor' | 'arbitro' | 'decisore';
   /** AI confidence score (0-100) - only for assistant messages */
   confidence?: number;
   /** Citations for the message - only for assistant messages */
@@ -193,6 +195,7 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
     {
       role,
       content,
+      agentType,
       confidence,
       citations,
       timestamp,
@@ -250,6 +253,17 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
               <TypingIndicator />
             ) : (
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+            )}
+
+            {/* ISSUE-3777: Agent Type Badge */}
+            {isAssistant && agentType && !isTyping && (
+              <div className="mt-2">
+                <span className="text-xs text-muted-foreground">
+                  {agentType === 'tutor' && '📚 Tutor'}
+                  {agentType === 'arbitro' && '⚖️ Arbitro'}
+                  {agentType === 'decisore' && '♟️ Decisore'}
+                </span>
+              </div>
             )}
 
             {/* Confidence Badge (AI only) */}

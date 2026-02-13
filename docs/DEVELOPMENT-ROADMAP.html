@@ -1216,5 +1216,49 @@
             <p>MeepleAI Monorepo - Comprehensive Development Plan</p>
         </div>
     </div>
+
+    <script>
+        // Make all issues clickable to open GitHub
+        function openIssue(number) {
+            window.open(`https://github.com/DegrassiAaron/meepleai-monorepo/issues/${number}`, '_blank');
+        }
+
+        // Add click handlers to all issue cards
+        document.addEventListener('DOMContentLoaded', () => {
+            // Issue cards
+            document.querySelectorAll('.issue').forEach(issue => {
+                const numberEl = issue.querySelector('.issue-number');
+                if (numberEl) {
+                    const number = numberEl.textContent.replace('#', '');
+                    issue.style.cursor = 'pointer';
+                    issue.addEventListener('click', () => openIssue(number));
+                }
+            });
+
+            // Epic cards
+            document.querySelectorAll('.epic').forEach(epic => {
+                const numberEl = epic.querySelector('.issue-number');
+                if (numberEl) {
+                    const number = numberEl.textContent.replace('#', '');
+                    epic.style.cursor = 'pointer';
+                    epic.addEventListener('click', () => openIssue(number));
+                }
+            });
+
+            // Add hover effect
+            const style = document.createElement('style');
+            style.textContent = `
+                .issue:hover, .epic:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    background-color: #f8f9fa;
+                }
+                .issue, .epic {
+                    transition: all 0.2s ease;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
 </body>
 </html>

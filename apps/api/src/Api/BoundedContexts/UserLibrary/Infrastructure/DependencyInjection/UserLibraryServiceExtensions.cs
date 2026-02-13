@@ -23,6 +23,7 @@ internal static class UserLibraryServiceExtensions
         services.AddScoped<IPrivateGameRepository, PrivateGameRepository>(); // Issue #3662: Private games
         services.AddScoped<IProposalMigrationRepository, ProposalMigrationRepository>(); // Issue #3666: Migration choice flow
         services.AddScoped<IWishlistRepository, WishlistRepository>(); // Issue #3917: Wishlist management
+        services.AddScoped<IUserCollectionRepository, UserCollectionRepository>(); // Issue #4263: Generic user collections
 
         // Register domain services
         services.AddScoped<IGameLibraryQuotaService, GameLibraryQuotaService>();

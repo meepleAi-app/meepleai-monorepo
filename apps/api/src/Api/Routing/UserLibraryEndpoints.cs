@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserLibrary.Application.Commands.Labels;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Application.Queries.Labels;
+using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
@@ -67,6 +68,11 @@ internal static class UserLibraryEndpoints
         MapRemoveLabelFromGameEndpoint(group);
         MapCreateCustomLabelEndpoint(group);
         MapDeleteCustomLabelEndpoint(group);
+
+        // Generic collection endpoints (Issue #4263)
+        MapGetCollectionStatusEndpoint(group);
+        MapAddToCollectionEndpoint(group);
+        MapRemoveFromCollectionEndpoint(group);
 
         return group;
     }
@@ -1369,6 +1375,153 @@ internal static class UserLibraryEndpoints
         .WithDescription("Save simplified agent configuration for a game (Issue #3212)")
         .WithOpenApi();
     }
+
+    private static void MapGetCollectionStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/collections/{entityType}/{entityId:guid}/status", async (
+            string entityType,
+            Guid entityId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var query = new GetCollectionStatusQuery(userId, parsedEntityType, entityId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<CollectionStatusDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections")
+        .WithSummary("Check collection status")
+        .WithDescription("Returns whether an entity is in user's collection with associated data counts. Issue #4263.")
+        .WithOpenApi();
+    }
+
+    private static void MapAddToCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/collections/{entityType}/{entityId:guid}", async (
+            string entityType,
+            Guid entityId,
+            [FromBody] AddToCollectionRequest? request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new AddToCollectionCommand(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityId: entityId,
+                IsFavorite: request?.IsFavorite ?? false,
+                Notes: request?.Notes
+            );
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Created($"/api/v1/collections/{entityType}/{entityId}/status",
+                    new { message = "Entity added to collection" });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("already in collection"))
+            {
+                return Results.Conflict(new { error = "Entity is already in collection" });
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Collections")
+        .WithSummary("Add entity to collection")
+        .WithDescription("Adds an entity to user's collection with optional favorite status and notes. Returns 409 if already in collection. Issue #4263.")
+        .WithOpenApi();
+    }
+
+    private static void MapRemoveFromCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/collections/{entityType}/{entityId:guid}", async (
+            string entityType,
+            Guid entityId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new RemoveFromCollectionCommand(userId, parsedEntityType, entityId);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (DomainException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Collections")
+        .WithSummary("Remove entity from collection")
+        .WithDescription("Removes an entity from user's collection. Returns 404 if not in collection. Issue #4263.")
+        .WithOpenApi();
+    }
 }
 
 /// <summary>
@@ -1456,4 +1609,13 @@ public record SaveAgentConfigRequest(
 public record CreateCustomLabelRequest(
     string Name,
     string Color
+);
+
+/// <summary>
+/// Request body for adding an entity to collection.
+/// Issue #4263: Phase 2 - Generic UserCollection System
+/// </summary>
+public record AddToCollectionRequest(
+    string? Notes = null,
+    bool IsFavorite = false
 );

@@ -36,8 +36,8 @@ export function ConfigAgentStep({
   const [strategyName, setStrategyName] = useState<string>('Balanced');
   const [isCreating, setIsCreating] = useState(false);
 
-  // TODO: Get user tier from user profile (Issue #9)
-  const userTier = 'Free'; // Hardcoded for now
+  // TODO Issue #9: Fetch from user profile
+  const userTier = 'Free'; // Hardcoded for MVP
 
   const handleCreate = async () => {
     if (!typologyId) {
@@ -47,9 +47,24 @@ export function ConfigAgentStep({
 
     setIsCreating(true);
     try {
-      // TODO: Call POST /api/v1/games/:gameId/agent (Issue #5)
-      // For now, just complete the wizard
-      toast.success('Agente configurato!');
+      // Issue #5: Create agent via API
+      const response = await fetch(`/api/v1/library/games/${gameId}/agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          typologyId,
+          strategyName,
+          strategyParameters: null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed' }));
+        throw new Error(error.message || 'Creazione agente fallita');
+      }
+
+      toast.success('Agente creato con successo!');
       onComplete();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore sconosciuto';

@@ -210,7 +210,7 @@ internal static class UserLibraryEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Created($"/api/v1/library/games/{gameId}", result);
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("already in library"))
+            catch (DomainException ex) when (ex.Message.Contains("already in"))
             {
                 return Results.Conflict(new { error = "Game is already in library" });
             }
@@ -1458,7 +1458,7 @@ internal static class UserLibraryEndpoints
                 return Results.Created($"/api/v1/collections/{entityType}/{entityId}/status",
                     new { message = "Entity added to collection" });
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("already in collection"))
+            catch (DomainException ex) when (ex.Message.Contains("already in"))
             {
                 return Results.Conflict(new { error = "Entity is already in collection" });
             }

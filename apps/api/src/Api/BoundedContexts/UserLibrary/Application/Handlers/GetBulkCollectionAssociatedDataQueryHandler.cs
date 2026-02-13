@@ -3,7 +3,9 @@ using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
@@ -11,19 +13,16 @@ namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 /// Handler for getting aggregated associated data counts for multiple collection entries.
 /// Used for bulk removal warnings.
 /// Issue #4268: Phase 3 - Bulk Collection Actions
+/// Performance: Uses batch queries to avoid N+1 problem (2-3 queries vs 100 for 50 entities)
 /// </summary>
 internal class GetBulkCollectionAssociatedDataQueryHandler
     : IQueryHandler<GetBulkCollectionAssociatedDataQuery, BulkAssociatedDataDto>
 {
-    private readonly IUserLibraryRepository _libraryRepository;
-    private readonly IChatSessionRepository _chatSessionRepository;
+    private readonly MeepleAiDbContext _dbContext;
 
-    public GetBulkCollectionAssociatedDataQueryHandler(
-        IUserLibraryRepository libraryRepository,
-        IChatSessionRepository chatSessionRepository)
+    public GetBulkCollectionAssociatedDataQueryHandler(MeepleAiDbContext dbContext)
     {
-        _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
-        _chatSessionRepository = chatSessionRepository ?? throw new ArgumentNullException(nameof(chatSessionRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<BulkAssociatedDataDto> Handle(
@@ -46,40 +45,31 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
             );
         }
 
-        // Aggregate counts across all game entities
-        var totalCustomAgents = 0;
-        var totalPrivatePdfs = 0;
-        var totalChatSessions = 0;
-        var totalGameSessions = 0;
-        var totalChecklistItems = 0;
-        var totalLabels = 0;
+        // Performance optimization: Batch query to avoid N+1 problem
+        // Single query loads all entries with navigation properties (2-3 queries vs 100 for 50 entities)
+        var entries = await _dbContext.UserLibraryEntries
+            .Include(e => e.Sessions)
+            .Include(e => e.Checklist)
+            .Include(e => e.Labels)
+            .Where(e => e.UserId == query.UserId && query.EntityIds.Contains(e.GameId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        foreach (var entityId in query.EntityIds)
-        {
-            // Get library entry with stats
-            var entry = await _libraryRepository
-                .GetUserGameWithStatsAsync(query.UserId, entityId, cancellationToken)
-                .ConfigureAwait(false);
+        // Aggregate counts
+        var totalCustomAgents = entries.Count(e => !string.IsNullOrEmpty(e.CustomAgentConfigJson));
+        var totalPrivatePdfs = entries.Count(e => e.PrivatePdfId.HasValue);
+        var totalGameSessions = entries.Sum(e => e.Sessions?.Count ?? 0);
+        var totalChecklistItems = entries.Sum(e => e.Checklist?.Count ?? 0);
+        var totalLabels = entries.Sum(e => e.Labels?.Count ?? 0);
 
-            if (entry == null)
-                continue;
-
-            // Aggregate counts
-            if (entry.CustomAgentConfig != null)
-                totalCustomAgents++;
-
-            if (entry.HasPrivatePdf)
-                totalPrivatePdfs++;
-
-            var chatSessionsCount = await _chatSessionRepository
-                .CountByUserAndGameAsync(query.UserId, entityId, cancellationToken)
-                .ConfigureAwait(false);
-            totalChatSessions += chatSessionsCount;
-
-            totalGameSessions += entry.Sessions.Count;
-            totalChecklistItems += entry.Checklist.Count;
-            totalLabels += entry.Labels.Count;
-        }
+        // Batch chat sessions count (single query for all game IDs)
+        var gameIds = entries.Select(e => e.GameId).ToList();
+        var totalChatSessions = gameIds.Count > 0
+            ? await _dbContext.ChatSessions
+                .Where(cs => cs.UserId == query.UserId && gameIds.Contains(cs.GameId))
+                .CountAsync(cancellationToken)
+                .ConfigureAwait(false)
+            : 0;
 
         return new BulkAssociatedDataDto(
             TotalCustomAgents: totalCustomAgents,

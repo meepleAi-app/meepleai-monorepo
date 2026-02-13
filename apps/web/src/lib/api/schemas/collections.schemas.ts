@@ -75,8 +75,6 @@ export interface AddToCollectionRequest {
  * Used to show total data loss across multiple entities.
  */
 export interface BulkAssociatedDataDto {
-  /** Total number of entities being removed */
-  totalEntities: number;
   /** Total custom AI agents that will be deleted */
   totalCustomAgents: number;
   /** Total private PDFs that will be deleted */

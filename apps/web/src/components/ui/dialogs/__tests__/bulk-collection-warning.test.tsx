@@ -13,7 +13,6 @@ import type { BulkAssociatedDataDto } from '@/lib/api/schemas/collections.schema
 
 describe('BulkCollectionWarning', () => {
   const mockAggregatedData: BulkAssociatedDataDto = {
-    totalEntities: 12,
     totalCustomAgents: 5,
     totalPrivatePdfs: 3,
     totalChatSessions: 18,
@@ -23,7 +22,6 @@ describe('BulkCollectionWarning', () => {
   };
 
   const emptyAggregatedData: BulkAssociatedDataDto = {
-    totalEntities: 5,
     totalCustomAgents: 0,
     totalPrivatePdfs: 0,
     totalChatSessions: 0,

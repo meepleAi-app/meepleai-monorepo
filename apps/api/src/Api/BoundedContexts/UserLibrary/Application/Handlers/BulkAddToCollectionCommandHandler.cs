@@ -88,7 +88,15 @@ internal class BulkAddToCollectionCommandHandler : ICommandHandler<BulkAddToColl
                 await _collectionRepository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
                 successCount++;
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+            // HANDLER BOUNDARY: BULK OPERATION PATTERN - Individual collection operation failure handling
+            // Catches all exceptions during collection add (validation, DB constraints, quota exceeded, etc.)
+            // to collect errors without stopping batch processing. Each failure is tracked in error list
+            // for reporting. Allows partial success in bulk operation.
+#pragma warning restore S125
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 errors.Add($"{command.EntityType} {entityId}: {ex.Message}");
             }

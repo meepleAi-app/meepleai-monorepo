@@ -167,7 +167,7 @@ test.describe('SharedGame Manual Creation Flow', () => {
 
   // ========== Scenario 3: Duplicate Detection ==========
 
-  test('Duplicate warning prevents conflicts', async ({ page, context }) => {
+  test('Duplicate warning prevents conflicts', async ({ page, context: _context }) => {
     // Arrange: Create first game
     const gameName = `Duplicate Test ${Date.now()}`;
     const firstGame = createTestGameData({ title: gameName });

@@ -17,7 +17,6 @@ import { AgentBuilderModal } from '@/components/admin/shared-games/AgentBuilderM
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Command,
   CommandEmpty,
@@ -31,8 +30,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/overlays/popover';
-import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
+import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 
 import { LinkedAgentCard } from './LinkedAgentCard';
 

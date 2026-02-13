@@ -11,8 +11,9 @@
  * - Visual regression tests
  */
 
-import { test, expect } from '@playwright/test';
 import path from 'path';
+
+import { test, expect } from '@playwright/test';
 
 // Test data paths
 const TEST_PDF_PATH = path.join(__dirname, '..', 'test-data', 'wingspan_rulebook.pdf');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MeepleAI Development Roadmap - Complete Issue Overview</title>
+    <title>MeepleAI Roadmap - 87 Issue • Dual Fullstack Terminals</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -21,504 +21,376 @@
     <style>
         body { font-family: 'Nunito', sans-serif; }
 
-        .terminal-card {
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-        }
-
-        .terminal-header {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            padding: 12px 20px;
+        .issue-row {
             display: flex;
             align-items: center;
-            gap: 12px;
-        }
-
-        .terminal-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .step-card {
-            padding: 14px;
-            border-radius: 8px;
-            transition: all 0.2s;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 6px;
             cursor: pointer;
-            position: relative;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
         }
 
-        .step-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        .issue-row:hover {
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        .step-card.p0 { border-left: 4px solid #dc2626; }
-        .step-card.p1 { border-left: 4px solid #f59e0b; }
-        .step-card.p2 { border-left: 4px solid #6366f1; }
-        .step-card.p3 { border-left: 4px solid #10b981; }
+        .issue-row.p1 {
+            background: linear-gradient(to right, #fef3c7, #ffffff);
+            border-left-color: #f59e0b;
+        }
 
-        .step-number {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-            flex-shrink: 0;
+        .issue-row.p2 {
+            background: linear-gradient(to right, #e0e7ff, #ffffff);
+            border-left-color: #6366f1;
         }
 
         .badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
             font-weight: 600;
+            text-transform: uppercase;
         }
 
-        .badge-fe { background: #dbeafe; color: #1e40af; }
-        .badge-be { background: #dcfce7; color: #15803d; }
-        .badge-fs { background: #fce7f3; color: #9f1239; }
-        .badge-test { background: #f3e8ff; color: #6b21a8; }
+        .badge-fe { background: #bfdbfe; color: #1e40af; }
+        .badge-be { background: #bbf7d0; color: #15803d; }
+        .badge-fs { background: #fbcfe8; color: #9f1239; }
         .badge-s { background: #d1fae5; color: #065f46; }
-        .badge-m { background: #fef3c7; color: #92400e; }
-        .badge-l { background: #fee2e2; color: #991b1b; }
-        .badge-xl { background: #ddd6fe; color: #5b21b6; }
+        .badge-m { background: #fde68a; color: #78350f; }
+        .badge-l { background: #fecaca; color: #991b1b; }
+
+        .terminal-box {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+        }
 
         .section-toggle {
             cursor: pointer;
             user-select: none;
+            transition: opacity 0.2s;
         }
 
         .section-toggle:hover {
-            opacity: 0.8;
+            opacity: 0.7;
         }
 
-        .collapsible-content {
-            max-height: 2000px;
+        .collapsible {
+            max-height: 3000px;
             overflow: hidden;
             transition: max-height 0.3s ease;
         }
 
-        .collapsible-content.collapsed {
+        .collapsible.collapsed {
             max-height: 0;
         }
 
-        .validation-item {
-            transition: all 0.2s;
-        }
-
-        .validation-item:hover {
-            background: #ffe4e6 !important;
-            border-color: #fb7185 !important;
-        }
-
-        .validation-item input[type="checkbox"] {
+        .validation-checkbox {
             cursor: pointer;
             accent-color: #f43f5e;
         }
-
-        .dependency-arrow {
-            color: #9ca3af;
-            font-size: 12px;
-            margin: 0 8px;
-        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-50 via-white to-zinc-50 min-h-screen p-6">
+<body class="bg-gradient-to-br from-slate-100 via-white to-zinc-100 min-h-screen p-6">
 
-    <div class="max-w-[1900px] mx-auto">
+    <div class="max-w-[1600px] mx-auto">
         <!-- Header -->
-        <div class="mb-6">
-            <div class="flex items-center gap-4 mb-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg flex items-center justify-center">
-                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        <div class="mb-6 p-6 rounded-2xl bg-white shadow-lg border border-zinc-200">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-quicksand font-bold text-zinc-900">MeepleAI Development Roadmap</h1>
-                    <p class="text-zinc-600 font-semibold">87 Open Issues • Dual Fullstack Terminals • Optimized Parallel Execution</p>
-                    <p class="text-xs text-zinc-500 mt-1">Updated: 2026-02-13 | PM Agent Orchestrated</p>
+                    <h1 class="text-2xl font-quicksand font-bold text-zinc-900">MeepleAI Development Roadmap</h1>
+                    <p class="text-sm text-zinc-600">87 Open Issues • Dual Fullstack Terminals • PM Agent Orchestrated</p>
                 </div>
             </div>
 
-            <!-- Stats Overview -->
+            <!-- Stats Cards -->
             <div class="grid grid-cols-6 gap-3">
-                <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-red-200/50">
-                    <div class="text-xs text-zinc-500">P0 Critical</div>
-                    <div class="text-2xl font-quicksand font-bold text-red-600">0</div>
-                    <div class="text-xs text-zinc-500 mt-1">urgent</div>
+                <div class="p-3 rounded-lg bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-300">
+                    <div class="text-xs text-amber-700 font-semibold">P1 High</div>
+                    <div class="text-3xl font-quicksand font-bold text-amber-600">15</div>
                 </div>
-                <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-amber-200/50">
-                    <div class="text-xs text-zinc-500">P1 High</div>
-                    <div class="text-2xl font-quicksand font-bold text-amber-600">15</div>
-                    <div class="text-xs text-zinc-500 mt-1">critical path</div>
+                <div class="p-3 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-300">
+                    <div class="text-xs text-indigo-700 font-semibold">P2 Medium</div>
+                    <div class="text-3xl font-quicksand font-bold text-indigo-600">4</div>
                 </div>
-                <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-indigo-200/50">
-                    <div class="text-xs text-zinc-500">P2 Medium</div>
-                    <div class="text-2xl font-quicksand font-bold text-indigo-600">4</div>
-                    <div class="text-xs text-zinc-500 mt-1">enhancement</div>
+                <div class="p-3 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-300">
+                    <div class="text-xs text-emerald-700 font-semibold">Backlog</div>
+                    <div class="text-3xl font-quicksand font-bold text-emerald-600">68</div>
                 </div>
-                <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-emerald-200/50">
-                    <div class="text-xs text-zinc-500">Backlog</div>
-                    <div class="text-2xl font-quicksand font-bold text-emerald-600">68</div>
-                    <div class="text-xs text-zinc-500 mt-1">future work</div>
+                <div class="p-3 rounded-lg bg-gradient-to-br from-rose-50 to-rose-100 border border-rose-300">
+                    <div class="text-xs text-rose-700 font-semibold">Validate</div>
+                    <div class="text-3xl font-quicksand font-bold text-rose-600">20+</div>
                 </div>
-                <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-rose-200/50">
-                    <div class="text-xs text-zinc-500">Need Validation</div>
-                    <div class="text-2xl font-quicksand font-bold text-rose-600">20+</div>
-                    <div class="text-xs text-rose-600 font-semibold mt-1">⚠️ verify</div>
+                <div class="p-3 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-300">
+                    <div class="text-xs text-purple-700 font-semibold">Total Open</div>
+                    <div class="text-3xl font-quicksand font-bold text-purple-600">87</div>
                 </div>
-                <div class="p-4 rounded-xl bg-white/70 backdrop-blur-md border border-purple-200/50">
-                    <div class="text-xs text-zinc-500">Total Open</div>
-                    <div class="text-2xl font-quicksand font-bold text-purple-600">87</div>
-                    <div class="text-xs text-zinc-500 mt-1">issues</div>
+                <div class="p-3 rounded-lg bg-gradient-to-br from-cyan-50 to-cyan-100 border border-cyan-300">
+                    <div class="text-xs text-cyan-700 font-semibold">Terminals</div>
+                    <div class="text-3xl font-quicksand font-bold text-cyan-600">2</div>
                 </div>
             </div>
         </div>
 
-        <!-- Dual Terminal Priority Work (P1 + P2) -->
+        <!-- Priority Work: Dual Terminal Sequences -->
         <div class="mb-6">
-            <div class="section-toggle flex items-center gap-2 mb-3 p-3 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200" onclick="toggleSection('priority-work')">
-                <svg class="w-5 h-5 text-amber-600 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="section-toggle flex items-center gap-2 p-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg" onclick="toggleSection('terminals')">
+                <svg class="w-6 h-6 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-                <h2 class="font-quicksand font-bold text-xl text-amber-900">🎯 Priority Work: Dual Terminal Sequences (19 issues)</h2>
-                <span class="ml-auto text-xs text-amber-700 font-semibold">P1: 15 | P2: 4</span>
+                <h2 class="font-quicksand font-bold text-2xl">🚀 Dual Terminal Sequences (19 issues P1+P2)</h2>
+                <span class="ml-auto text-sm font-mono">Terminal 1: 10 • Terminal 2: 9</span>
             </div>
 
-            <div id="priority-work" class="collapsible-content">
+            <div id="terminals" class="collapsible mt-4">
                 <div class="grid grid-cols-2 gap-6">
 
-                    <!-- TERMINAL 1: PDF Pipeline -->
-                    <div class="terminal-card">
+                    <!-- TERMINAL 1 -->
+                    <div class="terminal-box">
                         <div class="terminal-header">
-                            <div class="terminal-dot bg-red-500"></div>
-                            <div class="terminal-dot bg-yellow-500"></div>
-                            <div class="terminal-dot bg-green-500"></div>
-                            <span class="text-white font-quicksand font-bold flex-1">Terminal 1: PDF Pipeline</span>
-                            <span class="text-xs text-zinc-400 font-mono">10 issues • 18-22d</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-quicksand text-lg">Terminal 1: PDF Pipeline</span>
+                                <span class="ml-auto text-xs opacity-75">10 issues • ~18-22 days</span>
+                            </div>
                         </div>
-
                         <div class="p-4 bg-white">
-                            <div class="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                                <div class="text-xs font-semibold text-amber-900">Focus: Real-time PDF status tracking + streaming</div>
-                                <div class="text-xs text-amber-700 mt-1">Backend → Frontend → Fullstack integration</div>
+                            <div class="mb-3 p-2 bg-amber-50 rounded text-xs text-amber-800 border border-amber-200">
+                                <strong>Strategia:</strong> Backend foundation → Frontend UI → Fullstack integration
                             </div>
 
-                            <div class="space-y-2 text-sm">
-                                <!-- Phase 1: Backend Foundation -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 1: Backend Foundation</div>
-
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4208)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">1</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4208</span>
-                                                <span class="badge badge-be">BE</span>
-                                                <span class="badge badge-l">L</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">PDF State Machine & Error Handling</div>
-                                        </div>
-                                    </div>
+                            <!-- Issue Sequence -->
+                            <div class="space-y-1">
+                                <div class="issue-row p1" onclick="openIssue(4208)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">1.</span>
+                                    <span class="font-semibold text-sm mr-2">#4208</span>
+                                    <span class="badge badge-be">BE</span>
+                                    <span class="badge badge-l">L</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">PDF State Machine & Error Handling</span>
                                 </div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4209)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">2</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4209</span>
-                                                <span class="badge badge-be">BE</span>
-                                                <span class="badge badge-l">L</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">SSE Progress Stream for PDFs</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4209)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">2.</span>
+                                    <span class="font-semibold text-sm mr-2">#4209</span>
+                                    <span class="badge badge-be">BE</span>
+                                    <span class="badge badge-l">L</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">SSE Progress Stream for Public PDFs</span>
                                 </div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4212)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">3</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4212</span>
-                                                <span class="badge badge-be">BE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Duration Metrics & ETA Calculation</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4212)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">3.</span>
+                                    <span class="font-semibold text-sm mr-2">#4212</span>
+                                    <span class="badge badge-be">BE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Processing Duration Metrics & ETA</span>
                                 </div>
 
-                                <!-- Phase 2: Frontend UI -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 2: Frontend UI</div>
+                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 2: Frontend UI</div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4217)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">4</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4217</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-l">L</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Multi-Location Status UI</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4217)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">4.</span>
+                                    <span class="font-semibold text-sm mr-2">#4217</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-l">L</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Multi-Location Status UI Components</span>
                                 </div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4210)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">5</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4210</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-l">L</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Real-time Progress UI Components</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4210)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">5.</span>
+                                    <span class="font-semibold text-sm mr-2">#4210</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-l">L</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Real-time Progress UI Components</span>
                                 </div>
 
-                                <!-- Phase 3: Fullstack Integration -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 3: Fullstack Integration</div>
+                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 3: Fullstack Integration</div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4218)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">6</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4218</span>
-                                                <span class="badge badge-fs">FS</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Real-Time SSE Updates + Polling</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4218)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">6.</span>
+                                    <span class="font-semibold text-sm mr-2">#4218</span>
+                                    <span class="badge badge-fs">FS</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Real-Time SSE Updates + Polling</span>
                                 </div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4211)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">7</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4211</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">SSE Connection Management</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4211)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">7.</span>
+                                    <span class="font-semibold text-sm mr-2">#4211</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">SSE Connection Management & Fallback</span>
                                 </div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4213)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">8</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4213</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-l">L</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Configurable Notifications System</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4213)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">8.</span>
+                                    <span class="font-semibold text-sm mr-2">#4213</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-l">L</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Configurable Notifications System</span>
                                 </div>
 
-                                <!-- Phase 4: Enhancement -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 4: Enhancement</div>
+                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 4: Enhancement</div>
 
-                                <div class="step-card p2 bg-white border border-indigo-200" onclick="openIssue(4219)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-indigo-500 text-white text-xs">9</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4219</span>
-                                                <span class="badge badge-fs">FS</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Duration Metrics & ETA UI</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p2" onclick="openIssue(4219)">
+                                    <span class="w-6 text-xs font-bold text-indigo-600">9.</span>
+                                    <span class="font-semibold text-sm mr-2">#4219</span>
+                                    <span class="badge badge-fs">FS</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Duration Metrics & ETA UI</span>
                                 </div>
 
-                                <div class="step-card p2 bg-white border border-indigo-200" onclick="openIssue(4220)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-indigo-500 text-white text-xs">10</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4220</span>
-                                                <span class="badge badge-fs">FS</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Multi-Channel Notifications</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p2" onclick="openIssue(4220)">
+                                    <span class="w-6 text-xs font-bold text-indigo-600">10.</span>
+                                    <span class="font-semibold text-sm mr-2">#4220</span>
+                                    <span class="badge badge-fs">FS</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Multi-Channel Notification System</span>
                                 </div>
                             </div>
 
-                            <div class="mt-4 p-3 rounded-lg bg-zinc-50 text-xs">
-                                <div class="font-semibold text-zinc-700 mb-1">📟 Commands</div>
+                            <div class="mt-4 p-3 bg-zinc-50 rounded-lg text-xs">
+                                <div class="font-semibold mb-1">📟 Terminal 1 Commands</div>
                                 <code class="text-emerald-600">cd apps/api/src/Api && dotnet run</code><br>
                                 <code class="text-blue-600">cd apps/web && pnpm dev</code>
                             </div>
                         </div>
                     </div>
 
-                    <!-- TERMINAL 2: Permissions + MeepleCard -->
-                    <div class="terminal-card">
+                    <!-- TERMINAL 2 -->
+                    <div class="terminal-box">
                         <div class="terminal-header">
-                            <div class="terminal-dot bg-red-500"></div>
-                            <div class="terminal-dot bg-yellow-500"></div>
-                            <div class="terminal-dot bg-green-500"></div>
-                            <span class="text-white font-quicksand font-bold flex-1">Terminal 2: Permissions</span>
-                            <span class="text-xs text-zinc-400 font-mono">9 issues • 12-18d</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-quicksand text-lg">Terminal 2: Permissions + Tests</span>
+                                <span class="ml-auto text-xs opacity-75">9 issues • ~12-18 days</span>
+                            </div>
                         </div>
-
                         <div class="p-4 bg-white">
-                            <div class="mb-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                                <div class="text-xs font-semibold text-blue-900">Focus: Permission system + MeepleCard enhancements</div>
-                                <div class="text-xs text-blue-700 mt-1">Backend security → Frontend integration → Testing</div>
+                            <div class="mb-3 p-2 bg-blue-50 rounded text-xs text-blue-800 border border-blue-200">
+                                <strong>Strategia:</strong> Permission backend → Frontend integration → A11y → Testing
                             </div>
 
-                            <div class="space-y-2 text-sm">
-                                <!-- Phase 1: Permission Backend -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 1: Permission Backend</div>
+                            <!-- Issue Sequence -->
+                            <div class="space-y-1">
+                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">Week 1: Permission Backend</div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4177)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">1</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4177</span>
-                                                <span class="badge badge-be">BE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Permission Data Model & Schema</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4177)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">1.</span>
+                                    <span class="font-semibold text-sm mr-2">#4177</span>
+                                    <span class="badge badge-be">BE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Permission Data Model & Schema</span>
                                 </div>
 
-                                <!-- Phase 2: Permission Frontend -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 1-2: Permission Frontend</div>
+                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 1-2: Permission Frontend</div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4178)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">2</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4178</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Permission Hooks & Utilities</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4178)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">2.</span>
+                                    <span class="font-semibold text-sm mr-2">#4178</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Permission Hooks & Utilities</span>
                                 </div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4179)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">3</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4179</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">MeepleCard Permission Integration</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4179)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">3.</span>
+                                    <span class="font-semibold text-sm mr-2">#4179</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">MeepleCard Permission Integration</span>
                                 </div>
 
-                                <!-- Phase 3: Accessibility & UX -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 2: Accessibility & UX</div>
+                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 2: Accessibility & UX</div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4180)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">4</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4180</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Tooltip Accessibility WCAG 2.1 AA</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4180)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">4.</span>
+                                    <span class="font-semibold text-sm mr-2">#4180</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Tooltip Accessibility WCAG 2.1 AA</span>
                                 </div>
 
-                                <div class="step-card p2 bg-white border border-indigo-200" onclick="openIssue(4182)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-indigo-500 text-white text-xs">5</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4182</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Tag System Integration</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p2" onclick="openIssue(4182)">
+                                    <span class="w-6 text-xs font-bold text-indigo-600">5.</span>
+                                    <span class="font-semibold text-sm mr-2">#4182</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Tag System Integration in MeepleCard</span>
                                 </div>
 
-                                <div class="step-card p2 bg-white border border-indigo-200" onclick="openIssue(4186)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-indigo-500 text-white text-xs">6</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4186</span>
-                                                <span class="badge badge-fe">FE</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Tooltip Positioning System</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p2" onclick="openIssue(4186)">
+                                    <span class="w-6 text-xs font-bold text-indigo-600">6.</span>
+                                    <span class="font-semibold text-sm mr-2">#4186</span>
+                                    <span class="badge badge-fe">FE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Tooltip Positioning System</span>
                                 </div>
 
-                                <!-- Phase 4: Testing -->
-                                <div class="font-semibold text-xs text-zinc-500 mt-3 mb-2">Week 3: Testing & Validation</div>
+                                <div class="my-2 text-xs text-zinc-400 font-semibold pl-2">↓ Week 3: Testing & Validation</div>
 
-                                <div class="step-card bg-white border border-purple-200" onclick="openIssue(4160)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-purple-500 text-white text-xs">7</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4160</span>
-                                                <span class="badge badge-test">Test</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Wizard Integration Tests (Epic #4136)</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4160)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">7.</span>
+                                    <span class="font-semibold text-sm mr-2">#4160</span>
+                                    <span class="badge badge-be">BE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Wizard Integration Tests (Epic #4136)</span>
                                 </div>
 
-                                <div class="step-card p1 bg-white border border-amber-200" onclick="openIssue(4185)">
-                                    <div class="flex items-start gap-2">
-                                        <div class="step-number bg-amber-500 text-white text-xs">8</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1 mb-1 flex-wrap">
-                                                <span class="font-semibold text-zinc-800">#4185</span>
-                                                <span class="badge badge-test">Test</span>
-                                                <span class="badge badge-m">M</span>
-                                            </div>
-                                            <div class="text-xs text-zinc-600">Integration Testing & Documentation</div>
-                                        </div>
-                                    </div>
+                                <div class="issue-row p1" onclick="openIssue(4185)">
+                                    <span class="w-6 text-xs font-bold text-amber-600">8.</span>
+                                    <span class="font-semibold text-sm mr-2">#4185</span>
+                                    <span class="badge badge-be">BE</span>
+                                    <span class="badge badge-m">M</span>
+                                    <span class="text-xs text-zinc-700 ml-2 flex-1">Integration Testing & Documentation</span>
                                 </div>
+
+                                <div class="my-2 text-xs text-emerald-600 font-semibold pl-2">✓ Buffer: 4-6 days → Support Terminal 1</div>
                             </div>
 
-                            <div class="mt-4 p-3 rounded-lg bg-zinc-50 text-xs">
-                                <div class="font-semibold text-zinc-700 mb-1">📟 Commands</div>
+                            <div class="mt-4 p-3 bg-zinc-50 rounded-lg text-xs">
+                                <div class="font-semibold mb-1">📟 Terminal 2 Commands</div>
                                 <code class="text-emerald-600">cd apps/api/src/Api && dotnet run</code><br>
                                 <code class="text-blue-600">cd apps/web && pnpm dev</code>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Execution Strategy -->
+                <div class="mt-6 p-6 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200">
+                    <h3 class="font-quicksand font-bold text-lg mb-3 text-purple-900">⚡ Parallel Execution Strategy</h3>
+                    <div class="grid grid-cols-2 gap-6 text-sm">
+                        <div>
+                            <div class="font-semibold text-purple-800 mb-2">Terminal 1: PDF Pipeline</div>
+                            <ul class="text-xs text-purple-700 space-y-1">
+                                <li>→ Week 1: Backend (#4208, #4209, #4212)</li>
+                                <li>→ Week 2: Frontend (#4217, #4210)</li>
+                                <li>→ Week 3: Integration (#4218, #4211, #4213)</li>
+                                <li>→ Week 4: Enhancement (#4219, #4220)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-purple-800 mb-2">Terminal 2: Permissions + Tests</div>
+                            <ul class="text-xs text-purple-700 space-y-1">
+                                <li>→ Week 1: Permission BE+FE (#4177-4179)</li>
+                                <li>→ Week 2: Accessibility (#4180, #4182, #4186)</li>
+                                <li>→ Week 3: Testing (#4160, #4185)</li>
+                                <li>→ Week 4: Support Terminal 1 integration</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -527,101 +399,111 @@
 
         <!-- Issue Incomplete: Validation Required -->
         <div class="mb-6">
-            <div class="section-toggle flex items-center gap-2 mb-3 p-3 rounded-lg bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200" onclick="toggleSection('incomplete-issues')">
-                <svg class="w-5 h-5 text-rose-600 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="section-toggle flex items-center gap-2 p-4 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg" onclick="toggleSection('validation')">
+                <svg class="w-6 h-6 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-                <h2 class="font-quicksand font-bold text-xl text-rose-900">⚠️ Issue Incomplete - Validation Required (20+ issues)</h2>
-                <span class="ml-auto text-xs text-rose-700 font-semibold">Closed last 2 months</span>
+                <h2 class="font-quicksand font-bold text-2xl">⚠️ Issue Incomplete - Validation Required</h2>
+                <span class="ml-auto text-sm">15+ issues • Closed last 2 months</span>
             </div>
 
-            <div id="incomplete-issues" class="collapsible-content">
-                <div class="p-6 rounded-xl bg-white/70 backdrop-blur-md border border-rose-200">
+            <div id="validation" class="collapsible mt-4">
+                <div class="p-6 rounded-xl bg-white shadow-lg border border-rose-200">
                     <p class="text-sm text-rose-700 mb-4">
-                        Issue chiuse negli ultimi 2 mesi (dal 2025-12-13) che potrebbero avere acceptance criteria non completamente validati.
-                        Click per aprire su GitHub e verificare tutti i checkbox.
+                        Issue chiuse dal 2025-12-13 con possibili acceptance criteria non completamente validati.
+                        <strong>Click per aprire e verificare tutti i checkbox.</strong>
                     </p>
 
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-3 gap-6">
                         <!-- Epic #4136: PDF Wizard -->
                         <div>
-                            <h3 class="font-semibold text-sm mb-3 text-zinc-800">📋 Epic #4136: PDF Wizard</h3>
+                            <h3 class="font-semibold mb-3 text-zinc-800 flex items-center gap-2">
+                                <span class="text-lg">📋</span>
+                                <span>Epic #4136: PDF Wizard (8)</span>
+                            </h3>
                             <div class="space-y-2">
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4154)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4154)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4154</span>
-                                        <span class="text-zinc-600">Upload Command</span>
+                                        <span class="text-zinc-600">Upload PDF Command</span>
                                     </div>
+                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: CQRS, validation, tests</div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4155)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4155)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4155</span>
-                                        <span class="text-zinc-600">Extract Metadata</span>
+                                        <span class="text-zinc-600">Extract Metadata Query</span>
                                     </div>
+                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: AI accuracy ≥80%</div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4156)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4156)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4156</span>
-                                        <span class="text-zinc-600">BGG Match</span>
+                                        <span class="text-zinc-600">BGG Match Command</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4157)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4157)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4157</span>
-                                        <span class="text-zinc-600">Endpoints</span>
+                                        <span class="text-zinc-600">Wizard Endpoints</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4161)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4161)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4161</span>
                                         <span class="text-zinc-600">Wizard Container</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4162)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4162)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4162</span>
-                                        <span class="text-zinc-600">Upload UI</span>
+                                        <span class="text-zinc-600">Upload PDF UI</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4163)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4163)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4163</span>
-                                        <span class="text-zinc-600">Metadata Step</span>
+                                        <span class="text-zinc-600">Metadata Extraction</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4168)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4168)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4168</span>
                                         <span class="text-zinc-600">E2E Tests</span>
                                     </div>
+                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: Coverage ≥85%</div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Epic #4071: PDF Status -->
                         <div>
-                            <h3 class="font-semibold text-sm mb-3 text-zinc-800">🔄 Epic #4071: PDF Status</h3>
+                            <h3 class="font-semibold mb-3 text-zinc-800 flex items-center gap-2">
+                                <span class="text-lg">🔄</span>
+                                <span>Epic #4071: PDF Status (2)</span>
+                            </h3>
                             <div class="space-y-2">
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4215)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4215)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4215</span>
                                         <span class="text-zinc-600">7-State Pipeline</span>
                                     </div>
+                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: All states working</div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4216)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4216)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4216</span>
-                                        <span class="text-zinc-600">Error Handling</span>
+                                        <span class="text-zinc-600">Error Handling & Retry</span>
                                     </div>
                                 </div>
                             </div>
@@ -629,60 +511,71 @@
 
                         <!-- Agent System + Testing -->
                         <div>
-                            <h3 class="font-semibold text-sm mb-3 text-zinc-800">🤖 Agent + Testing</h3>
+                            <h3 class="font-semibold mb-3 text-zinc-800 flex items-center gap-2">
+                                <span class="text-lg">🤖</span>
+                                <span>Agent + Testing (5)</span>
+                            </h3>
                             <div class="space-y-2">
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4228)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4228)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4228</span>
                                         <span class="text-zinc-600">Agent Linking</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4229)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4229)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4229</span>
-                                        <span class="text-zinc-600">KB Documents</span>
+                                        <span class="text-zinc-600">KB Documents Display</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4230)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4230)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4230</span>
-                                        <span class="text-zinc-600">Agent Builder</span>
+                                        <span class="text-zinc-600">Agent Builder Integration</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4231)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4231)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4231</span>
-                                        <span class="text-zinc-600">E2E Manual Flow</span>
+                                        <span class="text-zinc-600">E2E Manual Creation Flow</span>
                                     </div>
                                 </div>
-                                <div class="validation-item p-2 rounded-lg bg-rose-50 border border-rose-200 text-xs" onclick="openIssue(4232)">
+                                <div class="validation-item p-2 rounded bg-rose-50 border border-rose-200 text-xs hover:bg-rose-100 cursor-pointer" onclick="openIssue(4232)">
                                     <div class="flex items-center gap-2">
-                                        <input type="checkbox" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="validation-checkbox" onclick="event.stopPropagation()">
                                         <span class="font-semibold">#4232</span>
-                                        <span class="text-zinc-600">Integration Tests</span>
+                                        <span class="text-zinc-600">Integration Tests Workflows</span>
                                     </div>
+                                    <div class="text-[10px] text-zinc-500 ml-6 mt-1">Verify: Coverage ≥90%</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Validation Commands -->
                     <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <h4 class="text-sm font-semibold text-amber-900 mb-2">📝 Validation Process</h4>
-                        <div class="grid grid-cols-2 gap-3 text-xs text-amber-800">
-                            <ul class="space-y-1">
-                                <li>→ Open issue on GitHub</li>
-                                <li>→ Check all acceptance criteria checkboxes</li>
-                                <li>→ Run tests mentioned in AC</li>
-                            </ul>
-                            <ul class="space-y-1">
-                                <li>→ Verify feature works in dev</li>
-                                <li>→ Check PR was merged</li>
-                                <li>→ Reopen if incomplete</li>
-                            </ul>
+                        <h4 class="text-sm font-semibold text-amber-900 mb-2">📝 Validation Commands</h4>
+                        <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+                            <div>
+                                <div class="text-amber-700 mb-1">Frontend Validation:</div>
+                                <div class="space-y-1">
+                                    <div><code>cd apps/web && pnpm test</code></div>
+                                    <div><code>pnpm test:e2e</code></div>
+                                    <div><code>pnpm typecheck</code></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-amber-700 mb-1">Backend Validation:</div>
+                                <div class="space-y-1">
+                                    <div><code>cd apps/api/src/Api</code></div>
+                                    <div><code>dotnet test</code></div>
+                                    <div><code>dotnet test /p:CollectCoverage=true</code></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -691,83 +584,110 @@
 
         <!-- Backlog: Future Work -->
         <div class="mb-6">
-            <div class="section-toggle flex items-center gap-2 mb-3 p-3 rounded-lg bg-gradient-to-r from-zinc-50 to-slate-50 border border-zinc-200" onclick="toggleSection('backlog')">
-                <svg class="w-5 h-5 text-zinc-600 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="section-toggle flex items-center gap-2 p-4 rounded-xl bg-gradient-to-r from-zinc-700 to-slate-800 text-white shadow-lg" onclick="toggleSection('backlog')">
+                <svg class="w-6 h-6 toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
-                <h2 class="font-quicksand font-bold text-xl text-zinc-800">📦 Backlog: Future Work (68 issues)</h2>
-                <span class="ml-auto text-xs text-zinc-600 font-semibold">No assigned priority</span>
+                <h2 class="font-quicksand font-bold text-2xl">📦 Backlog: Future Work (68 issues)</h2>
+                <span class="ml-auto text-sm opacity-75">No assigned priority</span>
             </div>
 
-            <div id="backlog" class="collapsible-content collapsed">
-                <div class="p-6 rounded-xl bg-white/70 backdrop-blur-md border border-zinc-200">
-                    <div class="grid grid-cols-4 gap-4 text-sm">
+            <div id="backlog" class="collapsible collapsed mt-4">
+                <div class="p-6 rounded-xl bg-white shadow-lg border border-zinc-200">
+                    <div class="grid grid-cols-4 gap-6">
                         <div>
-                            <h3 class="font-semibold text-sm mb-2 text-zinc-700">🎨 Frontend (Est. 20+)</h3>
-                            <div class="text-xs text-zinc-500 space-y-1">
-                                <div>#4253 - Test setup fixes</div>
-                                <div>#4252 - react-pdf migration</div>
-                                <div>#4197 - API client</div>
-                                <div>#4196 - Detail pages</div>
-                                <div>#4195 - User cards</div>
-                                <div>+ 15 more issues...</div>
+                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
+                                <span>🎨</span>
+                                <span>Frontend (~20)</span>
+                            </h3>
+                            <div class="space-y-1 text-xs text-zinc-600">
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4253)">#4253 - Test setup fixes (15 files)</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4252)">#4252 - react-pdf migration (security)</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4197)">#4197 - API client production ready</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4196)">#4196 - Detail pages (collection, approvals)</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4195)">#4195 - User management UI</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4194)">#4194 - Approval queue block</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4193)">#4193 - Collection overview block</div>
+                                <div class="text-zinc-400 italic">+ 13 more frontend issues...</div>
                             </div>
                         </div>
+
                         <div>
-                            <h3 class="font-semibold text-sm mb-2 text-zinc-700">⚙️ Backend (Est. 15+)</h3>
-                            <div class="text-xs text-zinc-500 space-y-1">
-                                <div>#4198-4202 - Admin endpoints</div>
-                                <div>#4169-4171 - Bulk import</div>
-                                <div>#4140 - Test suite</div>
-                                <div>#4124 - AI validation</div>
-                                <div>+ 10 more issues...</div>
+                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
+                                <span>⚙️</span>
+                                <span>Backend (~15)</span>
+                            </h3>
+                            <div class="space-y-1 text-xs text-zinc-600">
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4198)">#4198 - Admin stats endpoint</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4199)">#4199 - Approval queue API</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4200)">#4200 - User management API</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4201)">#4201 - Library stats endpoint</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4202)">#4202 - User badges endpoint</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4169)">#4169 - Bulk import JSON</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4170)">#4170 - Bulk import SSE</div>
+                                <div class="text-zinc-400 italic">+ 8 more backend issues...</div>
                             </div>
                         </div>
+
                         <div>
-                            <h3 class="font-semibold text-sm mb-2 text-zinc-700">🧪 Testing (Est. 10+)</h3>
-                            <div class="text-xs text-zinc-500 space-y-1">
-                                <div>#4203-4205 - Test suites</div>
-                                <div>#3779 - E2E workflows</div>
-                                <div>#3082 - Missing E2E flows</div>
-                                <div>#4142-4143 - PDF tests</div>
-                                <div>+ 5 more issues...</div>
+                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
+                                <span>🧪</span>
+                                <span>Testing (~10)</span>
+                            </h3>
+                            <div class="space-y-1 text-xs text-zinc-600">
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4203)">#4203 - Frontend component tests</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4204)">#4204 - E2E workflow tests</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4205)">#4205 - API integration tests</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3779)">#3779 - E2E all agent workflows</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3082)">#3082 - Missing E2E flows (50 flows)</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4142)">#4142 - E2E tests PDF wizard</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4143)">#4143 - Performance testing PDF</div>
+                                <div class="text-zinc-400 italic">+ 3 more testing issues...</div>
                             </div>
                         </div>
+
                         <div>
-                            <h3 class="font-semibold text-sm mb-2 text-zinc-700">🏗️ Epics (Est. 10+)</h3>
-                            <div class="text-xs text-zinc-500 space-y-1">
-                                <div>#3490 - Multi-Agent AI</div>
-                                <div>#3688 - Business & Sims</div>
-                                <div>#3902 - AI Insights</div>
-                                <div>#3906 - Gamification</div>
-                                <div>#3356 - Advanced RAG</div>
-                                <div>+ 5 more epics...</div>
+                            <h3 class="font-semibold mb-2 text-zinc-700 flex items-center gap-2">
+                                <span>🏗️</span>
+                                <span>Epics & Large (~23)</span>
+                            </h3>
+                            <div class="space-y-1 text-xs text-zinc-600">
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(4136)">#4136 - Epic: PDF Wizard</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3490)">#3490 - Epic: Multi-Agent AI System</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3902)">#3902 - Epic: AI Insights</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3906)">#3906 - Epic: Gamification</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3688)">#3688 - Epic: Business & Simulations</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3356)">#3356 - Epic: Advanced RAG (9 variants)</div>
+                                <div class="hover:text-blue-600 cursor-pointer" onclick="openIssue(3366)">#3366 - Epic: Infrastructure</div>
+                                <div class="text-zinc-400 italic">+ 16 more epic/large issues...</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-4 p-4 bg-zinc-50 rounded-lg">
-                        <p class="text-xs text-zinc-600">
-                            <strong>Note:</strong> Backlog issues have no assigned priority. These will be prioritized after current P1/P2 work completes.
-                            Use <code class="bg-white px-1 rounded">gh issue view [number]</code> to review details.
-                        </p>
+                    <div class="mt-4 p-4 bg-zinc-50 rounded-lg text-xs text-zinc-600">
+                        <strong>Triage Needed:</strong> 68 backlog issues require priority assignment.
+                        Use <code class="bg-white px-1 rounded">gh issue edit [number] --add-label "p1-high"</code> to prioritize.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Legend & Quick Reference -->
+        <!-- Quick Reference -->
         <div class="grid grid-cols-2 gap-6">
-            <div class="p-6 rounded-xl bg-white/70 backdrop-blur-md border border-zinc-200">
-                <h3 class="font-semibold text-lg mb-3">🏷️ Legend</h3>
-                <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="p-6 rounded-xl bg-white shadow-lg border border-zinc-200">
+                <h3 class="font-quicksand font-bold text-lg mb-3">🏷️ Legend</h3>
+                <div class="grid grid-cols-2 gap-4 text-xs">
                     <div>
                         <div class="font-semibold text-zinc-700 mb-2">Priority:</div>
                         <div class="space-y-1">
-                            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500"></div> P0 - Critical</div>
-                            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-500"></div> P1 - High</div>
-                            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-indigo-500"></div> P2 - Medium</div>
-                            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-emerald-500"></div> P3 - Low</div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                                <span>P1 High (15)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
+                                <span>P2 Medium (4)</span>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -776,39 +696,38 @@
                             <div><span class="badge badge-fe">FE</span> Frontend</div>
                             <div><span class="badge badge-be">BE</span> Backend</div>
                             <div><span class="badge badge-fs">FS</span> Fullstack</div>
-                            <div><span class="badge badge-test">Test</span> Testing</div>
                         </div>
                     </div>
-                    <div class="col-span-2 mt-2">
-                        <div class="font-semibold text-zinc-700 mb-2">Size Estimates:</div>
+                    <div class="col-span-2">
+                        <div class="font-semibold text-zinc-700 mb-2">Size:</div>
                         <div class="grid grid-cols-4 gap-2">
-                            <div><span class="badge badge-s">S</span> ~0.5-1d</div>
-                            <div><span class="badge badge-m">M</span> ~1-2d</div>
-                            <div><span class="badge badge-l">L</span> ~3-5d</div>
-                            <div><span class="badge badge-xl">XL</span> ~5-10d</div>
+                            <div><span class="badge badge-s">S</span> 0.5-1d</div>
+                            <div><span class="badge badge-m">M</span> 1-2d</div>
+                            <div><span class="badge badge-l">L</span> 3-5d</div>
+                            <div><span class="badge badge-xl">XL</span> 5-10d</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="p-6 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
-                <h3 class="font-quicksand font-bold text-xl mb-3">🚀 Next Steps</h3>
-                <div class="space-y-3 text-sm">
-                    <div class="flex items-start gap-2">
+            <div class="p-6 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
+                <h3 class="font-quicksand font-bold text-xl mb-3">🎯 Immediate Actions</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex gap-2">
                         <span class="font-bold">1.</span>
-                        <span>Validate closed issues (⚠️ section) - verify all checkboxes</span>
+                        <span>Validate 15 closed issues (⚠️ section)</span>
                     </div>
-                    <div class="flex items-start gap-2">
+                    <div class="flex gap-2">
                         <span class="font-bold">2.</span>
-                        <span>Start Terminal 1: #4208 PDF State Machine (Backend)</span>
+                        <span>Start Terminal 1: #4208 PDF State Machine</span>
                     </div>
-                    <div class="flex items-start gap-2">
+                    <div class="flex gap-2">
                         <span class="font-bold">3.</span>
-                        <span>Start Terminal 2: #4177 Permission Model (Backend)</span>
+                        <span>Start Terminal 2: #4177 Permission Model</span>
                     </div>
-                    <div class="flex items-start gap-2">
+                    <div class="flex gap-2">
                         <span class="font-bold">4.</span>
-                        <span>Review backlog (📦) for future sprint planning</span>
+                        <span>Triage backlog (68 issues need priority)</span>
                     </div>
                 </div>
             </div>
@@ -817,13 +736,12 @@
 
     <script>
         function toggleSection(id) {
-            const element = document.getElementById(id);
-            element.classList.toggle('collapsed');
+            const content = document.getElementById(id);
+            content.classList.toggle('collapsed');
 
-            // Rotate toggle icon
-            const toggle = element.previousElementSibling;
+            const toggle = content.previousElementSibling;
             const icon = toggle.querySelector('.toggle-icon');
-            if (element.classList.contains('collapsed')) {
+            if (content.classList.contains('collapsed')) {
                 icon.style.transform = 'rotate(-90deg)';
             } else {
                 icon.style.transform = 'rotate(0deg)';
@@ -834,24 +752,12 @@
             window.open(`https://github.com/DegrassiAaron/meepleai-monorepo/issues/${number}`, '_blank');
         }
 
-        // Make cards clickable
-        document.querySelectorAll('.step-card').forEach(card => {
-            card.style.cursor = 'pointer';
-        });
-
-        // Prevent checkbox clicks from triggering card click
-        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        });
-
-        // Initialize collapsed sections
+        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            const backlogSection = document.getElementById('backlog');
-            if (backlogSection) {
-                const toggle = backlogSection.previousElementSibling.querySelector('.toggle-icon');
-                toggle.style.transform = 'rotate(-90deg)';
+            const backlog = document.getElementById('backlog');
+            if (backlog) {
+                const icon = backlog.previousElementSibling.querySelector('.toggle-icon');
+                icon.style.transform = 'rotate(-90deg)';
             }
         });
     </script>

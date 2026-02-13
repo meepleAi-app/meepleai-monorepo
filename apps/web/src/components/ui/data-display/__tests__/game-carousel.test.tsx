@@ -21,6 +21,16 @@ import {
   CAROUSEL_SORT_OPTIONS,
 } from '../game-carousel';
 
+// Mock Next.js navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/library/games',
+}));
+
 // Mock Next.js Image component
 vi.mock('next/image', () => ({
   default: ({ src, alt, ...props }: { src: string; alt: string }) => (

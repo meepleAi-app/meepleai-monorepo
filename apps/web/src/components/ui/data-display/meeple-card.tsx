@@ -72,6 +72,8 @@ import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCa
 import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 import { StatusBadge } from './meeple-card-features/StatusBadge';
+import { type TagConfig, type TagPresetKey } from './meeple-card-features/tag-presets';
+import { TagStrip } from './meeple-card-features/TagStrip';
 import { WishlistButton } from './meeple-card-features/WishlistButton';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
@@ -234,6 +236,15 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   showInfoButton?: boolean;
   infoHref?: string;
   infoTooltip?: string;
+
+  // ========== FEATURE: VERTICAL TAG STRIP (Issue #4181) ==========
+
+  /** Feature: Vertical Tag Strip (left-edge tag display) */
+  tags?: (TagPresetKey | TagConfig)[];
+  /** Max visible tags before overflow (default: 3) */
+  maxVisibleTags?: number;
+  /** Show tag strip (default: auto-detect from tags prop) */
+  showTagStrip?: boolean;
 }
 
 // ============================================================================
@@ -735,6 +746,10 @@ export const MeepleCard = React.memo(function MeepleCard({
   showInfoButton,
   infoHref,
   infoTooltip,
+  // Issue #4181: Vertical Tag Strip
+  tags,
+  maxVisibleTags = 3,
+  showTagStrip,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -803,6 +818,21 @@ export const MeepleCard = React.memo(function MeepleCard({
         variant={variant}
         customColor={customColor}
       />
+
+      {/* Feature: Vertical Tag Strip (Issue #4181) - left-edge tag display */}
+      {(showTagStrip || (tags && tags.length > 0)) && (
+        <TagStrip
+          tags={tags || []}
+          maxVisible={maxVisibleTags}
+          variant={
+            variant === 'grid' || variant === 'featured'
+              ? 'desktop'
+              : variant === 'list'
+                ? 'tablet'
+                : 'mobile'
+          }
+        />
+      )}
 
       {/* Vertical tag stack: entity badge + status + custom badge (grid/featured only) */}
       {(variant === 'grid' || variant === 'featured') && (

@@ -8,6 +8,7 @@
 import { z } from 'zod';
 
 import { type HttpClient } from '../core/httpClient';
+import { type AgentDefinitionDto } from '../schemas/agent-definitions.schemas';
 import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
@@ -47,7 +48,6 @@ import {
   type UpdateFromBggRequest,
   type BatchApprovalResult,
 } from '../schemas/shared-games.schemas';
-import { type AgentDefinitionDto } from '../schemas/agent-definitions.schemas';
 
 export interface CreateSharedGamesClientParams {
   httpClient: HttpClient;
@@ -684,7 +684,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
               const response = JSON.parse(xhr.responseText);
               const validated = WizardUploadResultSchema.parse(response);
               resolve(validated);
-            } catch (error) {
+            } catch (_error) {
               reject(new Error('Invalid response format'));
             }
           } else {

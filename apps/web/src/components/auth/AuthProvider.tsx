@@ -91,7 +91,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } else {
         localStorage.removeItem('meepleai_has_session');
       }
-    } catch (err) {
+    } catch (_err) {
       // 401 expected for anonymous users - not an error
       setUser(null);
       localStorage.removeItem('meepleai_has_session');

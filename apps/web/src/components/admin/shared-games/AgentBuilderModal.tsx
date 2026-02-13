@@ -12,8 +12,8 @@ import { toast } from 'sonner';
 
 import { AgentBuilderForm } from '@/components/admin/agent-definitions/AgentBuilderForm';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
-import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 import { api } from '@/lib/api';
+import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 import type { AgentDefinitionDto, CreateAgentDefinition } from '@/lib/api/schemas/agent-definitions.schemas';
 
 interface SharedGameContext {

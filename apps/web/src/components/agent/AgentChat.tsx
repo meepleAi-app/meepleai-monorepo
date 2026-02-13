@@ -93,7 +93,7 @@ const STRATEGY_COLORS: Record<string, string> = {
 
 export function AgentChat({
   agentId,
-  gameId,
+  gameId: _gameId,
   layout = 'full-page',
   gameName,
   agentName = 'AI Assistant',

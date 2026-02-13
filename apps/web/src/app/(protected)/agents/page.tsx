@@ -35,7 +35,7 @@ export default function AgentsPage() {
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
 
   // Use real API (Issue #4126)
-  const { data: agents = [], isLoading } = useAgents({
+  const { data: agents = [], isLoading: _isLoading } = useAgents({
     activeOnly: true,
     type: typeFilter === 'all' ? undefined : typeFilter,
   });

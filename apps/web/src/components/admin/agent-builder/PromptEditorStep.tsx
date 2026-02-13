@@ -29,7 +29,7 @@ interface PromptEditorStepProps {
 export function PromptEditorStep({ agent, onChange }: PromptEditorStepProps) {
   const [activePromptIndex, setActivePromptIndex] = useState(0);
 
-  const activePrompt = agent.prompts[activePromptIndex];
+  const _activePrompt = agent.prompts[activePromptIndex];
 
   const updatePrompt = (index: number, updates: Partial<PromptTemplate>) => {
     const newPrompts = [...agent.prompts];

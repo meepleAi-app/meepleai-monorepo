@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Tests.Constants;
 
@@ -123,19 +124,31 @@ internal class PdfDocumentBuilder
             _fileSize,
             _uploadedByUserId);
 
+        // Issue #4215: Use TransitionTo() for 7-state pipeline compatibility
         if (_processingStatus == "processing")
         {
-            document.MarkAsProcessing();
+            // Transition to mid-pipeline state (Extracting)
+            document.TransitionTo(PdfProcessingState.Uploading);
+            document.TransitionTo(PdfProcessingState.Extracting);
         }
         else if (_processingStatus == "completed" && _pageCount.HasValue)
         {
-            document.MarkAsProcessing();
-            document.MarkAsCompleted(_pageCount.Value);
+            // Complete full pipeline: Uploading → Ready
+            document.TransitionTo(PdfProcessingState.Uploading);
+            document.TransitionTo(PdfProcessingState.Extracting);
+            document.TransitionTo(PdfProcessingState.Chunking);
+            document.TransitionTo(PdfProcessingState.Embedding);
+            document.TransitionTo(PdfProcessingState.Indexing);
+            document.TransitionTo(PdfProcessingState.Ready);
+            document.GetType().GetProperty("PageCount")!.SetValue(document, _pageCount.Value);
+            document.GetType().GetProperty("ProcessedAt")!.SetValue(document, DateTime.UtcNow);
         }
         else if (_processingStatus == "failed" && _processingError != null)
         {
-            document.MarkAsProcessing();
-            document.MarkAsFailed(_processingError);
+            // Can transition to Failed from any state
+            document.TransitionTo(PdfProcessingState.Failed);
+            document.GetType().GetProperty("ProcessingError")!.SetValue(document, _processingError);
+            document.GetType().GetProperty("ProcessedAt")!.SetValue(document, DateTime.UtcNow);
         }
 
         return document;

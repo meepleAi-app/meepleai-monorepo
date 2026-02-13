@@ -4,11 +4,12 @@
  * Issue #4055: Updated for LibraryNavTabs integration
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { vi, Mock } from 'vitest';
 
 import { getCurrentUser } from '@/actions/auth';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import MyProposalsPage from '../page';
 
@@ -49,7 +50,7 @@ describe('MyProposalsPage', () => {
     // getCurrentUser is not resolved yet - RequireRole shows loading
     mockGetCurrentUser.mockReturnValue(new Promise(() => {})); // Never resolves
 
-    render(<MyProposalsPage />);
+    renderWithQuery(<MyProposalsPage />);
 
     // RequireRole shows loading indicator
     expect(screen.getByText('Verifica autorizzazioni...')).toBeInTheDocument();
@@ -61,7 +62,7 @@ describe('MyProposalsPage', () => {
       user: { id: '1', email: 'test@test.com', role: 'User' },
     });
 
-    render(<MyProposalsPage />);
+    renderWithQuery(<MyProposalsPage />);
 
     // Wait for RequireRole to complete auth check
     expect(await screen.findByText('My Proposals')).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe('MyProposalsPage', () => {
       user: undefined,
     });
 
-    render(<MyProposalsPage />);
+    renderWithQuery(<MyProposalsPage />);
 
     // RequireRole redirects to login
     await vi.waitFor(() => {
@@ -89,7 +90,7 @@ describe('MyProposalsPage', () => {
       user: { id: '1', email: 'admin@test.com', role: 'Admin' },
     });
 
-    render(<MyProposalsPage />);
+    renderWithQuery(<MyProposalsPage />);
 
     expect(await screen.findByText('My Proposals')).toBeInTheDocument();
   });
@@ -100,7 +101,7 @@ describe('MyProposalsPage', () => {
       user: { id: '1', email: 'editor@test.com', role: 'Editor' },
     });
 
-    render(<MyProposalsPage />);
+    renderWithQuery(<MyProposalsPage />);
 
     expect(await screen.findByText('My Proposals')).toBeInTheDocument();
   });
@@ -111,7 +112,7 @@ describe('MyProposalsPage', () => {
       user: { id: '1', email: 'test@test.com', role: 'User' },
     });
 
-    render(<MyProposalsPage />);
+    renderWithQuery(<MyProposalsPage />);
 
     expect(await screen.findByTestId('library-nav-tabs')).toBeInTheDocument();
   });

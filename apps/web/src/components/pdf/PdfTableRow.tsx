@@ -3,9 +3,11 @@ import React from 'react';
 
 import { FileText, RotateCw } from 'lucide-react';
 
+import { PdfStatusBadge } from './PdfStatusBadge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { TableCell, TableRow } from '@/components/ui/data-display/table';
 import { Button } from '@/components/ui/primitives/button';
+import type { PdfState } from '@/types/pdf';
 
 interface PdfDocument {
   id: string;
@@ -76,6 +78,16 @@ export const PdfTableRow = React.memo(function PdfTableRow({
 }: PdfTableRowProps) {
   const { code, name } = getLanguageDisplay(pdf.language);
 
+  // Map status string to PdfState (Issue #4217)
+  const getPdfState = (status?: string | null): PdfState | null => {
+    const statusLower = status?.toLowerCase();
+    const validStates: PdfState[] = ['pending', 'uploading', 'extracting', 'chunking', 'embedding', 'indexing', 'ready', 'failed'];
+    if (statusLower === 'completed') return 'ready';
+    return validStates.find(s => s === statusLower) || null;
+  };
+
+  const pdfState = getPdfState(pdf.status);
+
   return (
     <TableRow>
       <TableCell className="font-medium">{pdf.fileName}</TableCell>
@@ -87,17 +99,22 @@ export const PdfTableRow = React.memo(function PdfTableRow({
       <TableCell>{formatFileSize(pdf.fileSizeBytes)}</TableCell>
       <TableCell className="text-sm">{formatDate(pdf.uploadedAt)}</TableCell>
       <TableCell>
-        <Badge
-          variant={
-            pdf.status === 'completed'
-              ? 'default'
-              : pdf.status === 'failed'
-                ? 'destructive'
-                : 'secondary'
-          }
-        >
-          {pdf.status ?? 'Pending'}
-        </Badge>
+        {/* New: Use PdfStatusBadge if state matches (Issue #4217) */}
+        {pdfState ? (
+          <PdfStatusBadge state={pdfState} variant="compact" />
+        ) : (
+          <Badge
+            variant={
+              pdf.status === 'completed'
+                ? 'default'
+                : pdf.status === 'failed'
+                  ? 'destructive'
+                  : 'secondary'
+            }
+          >
+            {pdf.status ?? 'Pending'}
+          </Badge>
+        )}
       </TableCell>
       <TableCell>
         <div className="flex gap-2">

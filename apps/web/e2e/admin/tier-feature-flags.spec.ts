@@ -1,6 +1,7 @@
 /**
  * ADM-13: Tier Feature Flags UI
  * Issue #3082 - P1 High
+ * @slow - 37 test cases, complex feature flag inheritance logic
  *
  * Tests admin configuration of feature flags per tier:
  * - View feature flags by tier

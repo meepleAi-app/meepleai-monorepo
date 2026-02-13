@@ -1,5 +1,6 @@
 /**
  * Admin Infrastructure Monitoring E2E - Issue #902
+ * @slow - 62 test cases, real-time polling and Prometheus integration
  *
  * Tests complete infrastructure monitoring dashboard with:
  * - Real-time service health matrix (30s polling)

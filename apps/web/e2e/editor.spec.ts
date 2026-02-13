@@ -1,5 +1,6 @@
 /**
  * Editor E2E Tests - MIGRATED TO POM
+ * @slow - 58 test cases, rich text editing and content management
  *
  * @see apps/web/e2e/pages/
  */

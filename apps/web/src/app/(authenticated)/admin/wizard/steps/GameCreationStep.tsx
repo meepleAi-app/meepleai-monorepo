@@ -20,9 +20,11 @@ import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 
 interface GameCreationStepProps {
-  pdfId: string;
-  pdfFileName: string;
+  pdfId?: string | null;  // Optional for user wizard (Issue #4)
+  pdfFileName?: string | null;  // Optional for user wizard
+  allowSkipPdf?: boolean;  // Show "Skip PDF" button for user wizard
   onComplete: (gameId: string, gameName: string) => void;
+  onSkipPdf?: () => void;  // Callback for skip PDF button
   onBack: () => void;
 }
 
@@ -31,7 +33,9 @@ type ImageInputMode = 'url' | 'upload';
 export function GameCreationStep({
   pdfId,
   pdfFileName,
+  allowSkipPdf = false,
   onComplete,
+  onSkipPdf,
   onBack,
 }: GameCreationStepProps) {
   const [gameName, setGameName] = useState('');
@@ -117,7 +121,7 @@ export function GameCreationStep({
         yearPublished: yearPublished ?? null,
         iconUrl: null,
         imageUrl: null,
-        pdfId: pdfId,
+        pdfId: pdfId || null,
       });
 
       // Step 2: Upload files if provided and link to game (Issue #2255)
@@ -192,7 +196,9 @@ export function GameCreationStep({
           Crea il Gioco
         </h2>
         <p className="text-slate-600 dark:text-slate-400">
-          Inserisci i dettagli del gioco. Il PDF "{pdfFileName}" verra' associato a questo gioco.
+          {pdfFileName
+            ? `Inserisci i dettagli del gioco. Il PDF "${pdfFileName}" verra' associato a questo gioco.`
+            : 'Inserisci i dettagli del gioco. Potrai aggiungere un PDF in seguito.'}
         </p>
       </div>
 
@@ -347,16 +353,27 @@ export function GameCreationStep({
         <Button variant="outline" onClick={onBack} disabled={creating}>
           ← Indietro
         </Button>
-        <Button onClick={handleCreate} disabled={!gameName.trim() || creating} className="min-w-32">
-          {creating ? (
-            <>
-              <Spinner size="sm" className="mr-2" />
-              Creazione...
-            </>
-          ) : (
-            'Crea Gioco →'
+        <div className="flex gap-2">
+          {allowSkipPdf && onSkipPdf && (
+            <Button
+              variant="outline"
+              onClick={onSkipPdf}
+              disabled={creating}
+            >
+              Salta PDF →
+            </Button>
           )}
-        </Button>
+          <Button onClick={handleCreate} disabled={!gameName.trim() || creating} className="min-w-32">
+            {creating ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Creazione...
+              </>
+            ) : (
+              allowSkipPdf ? 'Crea e Continua →' : 'Crea Gioco →'
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

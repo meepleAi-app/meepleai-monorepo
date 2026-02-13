@@ -109,6 +109,20 @@
             height: calc(100% - 50px);
             background: linear-gradient(to bottom, #e5e7eb, transparent);
         }
+
+        .validation-item {
+            transition: all 0.2s;
+        }
+
+        .validation-item:hover {
+            background: #ffe4e6 !important;
+            border-color: #fb7185 !important;
+        }
+
+        .validation-item input[type="checkbox"] {
+            cursor: pointer;
+            accent-color: #f43f5e;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 via-white to-zinc-50 min-h-screen p-8">
@@ -130,7 +144,7 @@
             </div>
 
             <!-- Stats Overview -->
-            <div class="grid grid-cols-4 gap-4">
+            <div class="grid grid-cols-5 gap-4">
                 <div class="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-emerald-200/50">
                     <div class="text-sm text-zinc-500">Terminal 1: Real-Time</div>
                     <div class="text-3xl font-quicksand font-bold text-emerald-600">2</div>
@@ -146,10 +160,15 @@
                     <div class="text-3xl font-quicksand font-bold text-purple-600">16</div>
                     <div class="text-xs text-emerald-600 font-semibold mt-1">✅ issues closed</div>
                 </div>
+                <div class="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-rose-200/50">
+                    <div class="text-sm text-zinc-500">Need Validation</div>
+                    <div class="text-3xl font-quicksand font-bold text-rose-600">10</div>
+                    <div class="text-xs text-rose-600 font-semibold mt-1">⚠️ verify checkboxes</div>
+                </div>
                 <div class="p-5 rounded-xl bg-white/70 backdrop-blur-md border border-amber-200/50">
                     <div class="text-sm text-zinc-500">Overall Progress</div>
                     <div class="text-3xl font-quicksand font-bold text-amber-600">76%</div>
-                    <div class="text-xs text-zinc-500 mt-1">16/21 total done</div>
+                    <div class="text-xs text-zinc-500 mt-1">16/21 active done</div>
                 </div>
             </div>
         </div>
@@ -528,6 +547,159 @@
                     <li>✓ KB Documents (#4229)</li>
                     <li>✓ Integration (#4230)</li>
                 </ul>
+            </div>
+        </div>
+
+        <!-- Issue Incomplete: Recently Closed but Needs Validation -->
+        <div class="mt-8 p-8 rounded-2xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 border-2 border-rose-300">
+            <h2 class="font-quicksand font-bold text-2xl mb-4 text-rose-900">⚠️ Issue Incomplete - Validation Required</h2>
+            <p class="text-sm text-rose-700 mb-6">
+                Issue chiuse negli ultimi 3 mesi con possibili acceptance criteria non completamente validati.
+                Click per aprire e verificare checkbox.
+            </p>
+
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Epic #4136: PDF Wizard (Recently Closed) -->
+                <div class="p-6 rounded-xl bg-white">
+                    <h3 class="font-semibold text-lg mb-3 text-zinc-800 flex items-center gap-2">
+                        <span class="text-2xl">📋</span>
+                        Epic #4136: PDF Wizard (14 closed)
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4162', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4162 Frontend - Upload PDF</span>
+                                <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded">Closed Feb 12</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: Drag&drop, chunked upload >50MB, preview</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4163', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4163 Metadata Extraction</span>
+                                <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded">Closed Feb 12</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: AI extraction accuracy ≥80%, fallback manual</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4168', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4168 E2E Tests</span>
+                                <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded">Closed Feb 12</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: All wizard steps tested, coverage ≥85%</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4154', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4154 Backend - Upload Command</span>
+                                <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded">Closed Feb 12</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: CQRS pattern, FluentValidation, error handling</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4157', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4157 Wizard Endpoints</span>
+                                <span class="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded">Closed Feb 12</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: API routes, Scalar docs, error responses</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Epic #4071 + Agent System + Other -->
+                <div class="p-6 rounded-xl bg-white">
+                    <h3 class="font-semibold text-lg mb-3 text-zinc-800 flex items-center gap-2">
+                        <span class="text-2xl">🔧</span>
+                        Other Recent Closures
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4215', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4215 7-State Pipeline</span>
+                                <span class="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">Epic #4071</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: All 7 states working, DB schema validated</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4216', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4216 Error Handling & Retry</span>
+                                <span class="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">Epic #4071</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: Manual retry working, error states correct</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4230', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4230 Agent Builder Integration</span>
+                                <span class="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded">Agent System</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: Agent creation from SharedGame, linking works</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4232', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4232 Integration Tests</span>
+                                <span class="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded">Testing</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: Coverage ≥90%, all workflows tested</p>
+                        </div>
+
+                        <div class="validation-item p-3 rounded-lg bg-rose-50 border border-rose-200 cursor-pointer" onclick="window.open('https://github.com/DegrassiAaron/meepleai-monorepo/issues/4231', '_blank')">
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="checkbox" class="w-4 h-4">
+                                <span class="text-sm font-semibold text-zinc-800">#4231 E2E Manual Creation</span>
+                                <span class="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded">Testing</span>
+                            </div>
+                            <p class="text-xs text-zinc-600 ml-6">Verify: Manual flow E2E test passing, screenshots</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <h4 class="text-sm font-semibold text-amber-900 mb-2">📝 Validation Checklist</h4>
+                        <ul class="text-xs text-amber-800 space-y-1">
+                            <li>→ Open each issue and verify all checkboxes are marked</li>
+                            <li>→ Run tests mentioned in acceptance criteria</li>
+                            <li>→ Check PR was merged (not just closed)</li>
+                            <li>→ Verify feature works in dev environment</li>
+                            <li>→ If incomplete, reopen issue with remaining tasks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-6 p-4 rounded-lg bg-white">
+                <h4 class="font-semibold text-sm text-zinc-700 mb-3">🔍 Quick Validation Commands</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-xs font-mono text-zinc-600 mb-2">Frontend Validation:</div>
+                        <div class="space-y-1 text-xs font-mono">
+                            <div><code class="bg-zinc-100 px-2 py-1 rounded">cd apps/web && pnpm test</code></div>
+                            <div><code class="bg-zinc-100 px-2 py-1 rounded">pnpm test:e2e</code></div>
+                            <div><code class="bg-zinc-100 px-2 py-1 rounded">pnpm typecheck</code></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-mono text-zinc-600 mb-2">Backend Validation:</div>
+                        <div class="space-y-1 text-xs font-mono">
+                            <div><code class="bg-zinc-100 px-2 py-1 rounded">cd apps/api/src/Api && dotnet test</code></div>
+                            <div><code class="bg-zinc-100 px-2 py-1 rounded">dotnet test /p:CollectCoverage=true</code></div>
+                            <div><code class="bg-zinc-100 px-2 py-1 rounded">curl http://localhost:8080/health</code></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

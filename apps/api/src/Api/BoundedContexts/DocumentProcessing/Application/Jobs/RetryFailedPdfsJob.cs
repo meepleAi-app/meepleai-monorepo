@@ -52,8 +52,9 @@ internal sealed class RetryFailedPdfsJob : IJob
         try
         {
             // Find failed PDFs with retriable errors that haven't exceeded max retries
+            // Note: Using == instead of string.Equals in LINQ to Entities (EF Core limitation)
             var failedPdfs = await _dbContext.PdfDocuments
-                .Where(p => string.Equals(p.ProcessingState, PdfProcessingState.Failed.ToString(), StringComparison.Ordinal)
+                .Where(p => p.ProcessingState == PdfProcessingState.Failed.ToString()
                          && p.RetryCount < 3
                          && p.ErrorCategory != null
                          && RetriableCategories.Contains(p.ErrorCategory))

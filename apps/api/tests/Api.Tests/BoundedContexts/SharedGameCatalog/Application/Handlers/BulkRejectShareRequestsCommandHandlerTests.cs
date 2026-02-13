@@ -36,7 +36,8 @@ public class BulkRejectShareRequestsCommandHandlerTests
             _mockShareRequestRepository.Object,
             _mockAuditLogRepository.Object,
             _mockUnitOfWork.Object,
-            Mock.Of<ILogger<BulkRejectShareRequestsCommandHandler>>());
+            Mock.Of<ILogger<BulkRejectShareRequestsCommandHandler>>(),
+            TimeProvider.System);
     }
 
     [Fact]

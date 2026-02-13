@@ -4,8 +4,8 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { api } from '@/lib/api';
-import type { SSEEvent } from '@/lib/api/schemas';
 
 export interface UseAgentChatOptions {
   onToken?: (token: string) => void;

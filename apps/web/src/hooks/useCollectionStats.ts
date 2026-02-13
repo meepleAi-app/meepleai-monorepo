@@ -6,6 +6,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+
 import { usePermissions } from '@/contexts/PermissionContext';
 
 export function useCollectionStats() {

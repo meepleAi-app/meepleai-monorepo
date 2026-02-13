@@ -8,6 +8,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+
 import { usePermissions } from '@/contexts/PermissionContext';
 import type { UserRole } from '@/types/permissions';
 

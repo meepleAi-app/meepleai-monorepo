@@ -58,17 +58,17 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import Image from 'next/image';
 
+import { TierBadge } from '@/components/ui/feedback/tier-badge';
+import { UpgradePrompt } from '@/components/ui/feedback/upgrade-prompt';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
-import { cn } from '@/lib/utils';
-import { usePermissions } from '@/contexts/PermissionContext';
-import { TierBadge } from '@/components/ui/feedback/tier-badge';
-import { UpgradePrompt } from '@/components/ui/feedback/upgrade-prompt';
 import { TagStrip } from '@/components/ui/tags/TagStrip';
+import { usePermissions } from '@/contexts/PermissionContext';
+import { cn } from '@/lib/utils';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
@@ -1031,7 +1031,7 @@ export const MeepleCard = React.memo(function MeepleCard({
               featureName={needsUpgradeForBulkSelect ? 'Bulk Selection' : 'Drag & Drop'}
               variant="inline"
               onUpgrade={() => {
-                console.log('Upgrade to:', needsUpgradeForBulkSelect ? 'Pro' : 'Normal');
+                // TODO: Navigate to upgrade page or show upgrade modal
               }}
             />
           </div>

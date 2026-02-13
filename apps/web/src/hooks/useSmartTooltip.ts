@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+
 import { calculateOptimalPosition, debounce, type TooltipPosition } from '@/lib/tooltip/positioning';
 
 export interface UseSmartTooltipOptions {

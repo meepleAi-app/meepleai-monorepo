@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { cn } from '@/lib/utils';
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import { cn } from '@/lib/utils';
 import type { Tag } from '@/types/tags';
 
 export function TagOverflow({ hiddenTags, count, variant }: { hiddenTags: Tag[]; count: number; variant: string }) {

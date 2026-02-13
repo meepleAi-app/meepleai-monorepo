@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { Sparkles, Tag as TagIcon, Check, Heart } from 'lucide-react';
+
 import { TagStrip } from './TagStrip';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'UI/Tags/TagStrip',

@@ -8,9 +8,11 @@
 'use client';
 
 import React, { type ReactNode } from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
-import { useSmartTooltip } from '@/hooks/useSmartTooltip';
+
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useSmartTooltip } from '@/hooks/useSmartTooltip';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
 export interface SmartTooltipProps {
   /** Trigger element */
@@ -81,11 +83,11 @@ export function SmartTooltip({
   return (
     <TooltipProvider delayDuration={delayDuration}>
       <Tooltip open={isVisible} onOpenChange={setIsVisible}>
-        <TooltipTrigger ref={triggerRef as any} asChild>
+        <TooltipTrigger ref={triggerRef as React.Ref<HTMLButtonElement>} asChild>
           {children}
         </TooltipTrigger>
         <TooltipContent
-          ref={tooltipRef as any}
+          ref={tooltipRef as React.Ref<HTMLDivElement>}
           style={position ? {
             position: 'fixed',
             top: position.top,

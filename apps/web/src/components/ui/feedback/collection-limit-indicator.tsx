@@ -8,10 +8,13 @@
 'use client';
 
 import React from 'react';
+
 import { Crown, ArrowRight } from 'lucide-react';
-import { CollectionProgressBar } from './collection-progress-bar';
+
 import { cn } from '@/lib/utils';
 import type { UserTier } from '@/types/permissions';
+
+import { CollectionProgressBar } from './collection-progress-bar';
 
 interface CollectionLimitIndicatorProps {
   /** User's current tier */

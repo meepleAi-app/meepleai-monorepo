@@ -62,7 +62,7 @@ export function calculateOptimalPosition(
 
   // Step 3: Choose optimal placement (prefer vertical)
   let placement: TooltipPosition['placement'];
-  let position: Partial<TooltipPosition> = {};
+  const position: Partial<TooltipPosition> = {};
 
   // Prefer below if space available and more space than above
   if (fitsBelow && spaceBelow >= spaceAbove) {
@@ -116,7 +116,7 @@ export function calculateOptimalPosition(
 /**
  * Debounce utility for scroll/resize handlers
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {

@@ -1,4 +1,5 @@
 import { Sparkles, Tag as TagIcon, Check, Heart, Brain, Eye, Code2, FileText, Clock, AlertCircle } from 'lucide-react';
+
 import type { Tag } from '@/types/tags';
 
 export const GAME_TAG_PRESETS: Record<string, Omit<Tag, 'id'>> = {

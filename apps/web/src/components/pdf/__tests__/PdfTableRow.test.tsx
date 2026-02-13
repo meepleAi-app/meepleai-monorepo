@@ -94,7 +94,8 @@ describe('PdfTableRow', () => {
         </table>
       );
 
-      expect(screen.getByText('completed')).toBeInTheDocument();
+      // Updated for Issue #4217: 'completed' maps to PdfState 'ready' → "Ready"
+      expect(screen.getByText('Ready')).toBeInTheDocument();
     });
   });
 
@@ -235,7 +236,8 @@ describe('PdfTableRow', () => {
         </table>
       );
 
-      expect(screen.getByText('completed')).toBeInTheDocument();
+      // Updated for Issue #4217: 'completed' maps to PdfState 'ready' → "Ready"
+      expect(screen.getByText('Ready')).toBeInTheDocument();
     });
 
     it('should display failed status with destructive variant', () => {
@@ -248,7 +250,8 @@ describe('PdfTableRow', () => {
         </table>
       );
 
-      expect(screen.getByText('failed')).toBeInTheDocument();
+      // Updated for Issue #4217: PdfStatusBadge shows "Failed" (PascalCase)
+      expect(screen.getByText('Failed')).toBeInTheDocument();
     });
 
     it('should display pending status when status is null', () => {
@@ -274,6 +277,7 @@ describe('PdfTableRow', () => {
         </table>
       );
 
+      // Updated for Issue #4217: 'processing' doesn't map to PdfState → fallback to original Badge
       expect(screen.getByText('processing')).toBeInTheDocument();
     });
   });

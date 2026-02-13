@@ -9,8 +9,9 @@
  * 3. Starts memory monitoring for resource consumption visibility
  */
 
-import dotenv from 'dotenv';
 import path from 'path';
+
+import dotenv from 'dotenv';
 
 import { MemoryMonitor } from './helpers/memory-monitor';
 import { waitForServerHealth } from './helpers/server-health';

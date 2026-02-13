@@ -174,6 +174,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .Include(e => e.Sessions.OrderByDescending(s => s.PlayedAt))
             .Include(e => e.Checklist.OrderBy(c => c.DisplayOrder))
+            .Include(e => e.Labels) // Issue #4259: Include labels for accurate counts
             .Include(e => e.PdfDocument)
             .FirstOrDefaultAsync(e => e.UserId == userId && (e.SharedGameId == gameId || e.PrivateGameId == gameId), cancellationToken)
             .ConfigureAwait(false);

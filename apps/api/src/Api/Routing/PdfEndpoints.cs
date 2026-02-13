@@ -152,6 +152,7 @@ internal static class PdfEndpoints
     {
         MapProcessingProgressEndpoint(group);
         MapProcessingCancelEndpoint(group);
+        MapProcessingStatusStreamEndpoint(group); // Issue #4218: SSE streaming
     }
 
     private static void MapProcessingProgressEndpoint(RouteGroupBuilder group)
@@ -170,6 +171,16 @@ internal static class PdfEndpoints
         .RequireSession()
         .RequireAuthorization()
         .WithName("CancelPdfProcessing");
+    }
+
+    private static void MapProcessingStatusStreamEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4218: Real-time PDF status updates via Server-Sent Events
+        group.MapGet("/pdfs/{pdfId:guid}/status/stream", HandleStreamPdfStatus)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("StreamPdfStatus")
+        .WithDescription("Stream real-time PDF processing status updates via SSE");
     }
 
     private static void MapProcessingActionsEndpoints(RouteGroupBuilder group)
@@ -718,6 +729,29 @@ internal static class PdfEndpoints
         }
 
         return Results.Ok(progress);
+    }
+
+    private static async Task HandleStreamPdfStatus(Guid pdfId, HttpContext httpContext, IMediator mediator, CancellationToken ct)
+    {
+        // Issue #4218: Real-time PDF status updates via Server-Sent Events
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        bool isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        // Set SSE headers
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+        var query = new StreamPdfStatusQuery(pdfId, userId, isAdmin);
+
+        await foreach (var statusEvent in mediator.CreateStream(query, ct).ConfigureAwait(false))
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(statusEvent);
+            await httpContext.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+            await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+        }
     }
 
     private static async Task<IResult> HandleCancelPdfProcessing(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)

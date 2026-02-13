@@ -38,8 +38,6 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-
-import { AgentSection } from './_components/AgentSection';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +48,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { api, type SharedGameDocument } from '@/lib/api';
+
+import { AgentSection } from './_components/AgentSection';
 
 interface GameDetailClientProps {
   params: Promise<{ id: string }>;

@@ -1,0 +1,1264 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI Development Roadmap - 85 Issues Across 8 Parallel Streams</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px 40px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .metric {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .streams {
+            padding: 40px;
+        }
+        .stream {
+            margin-bottom: 40px;
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .stream-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stream-title {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .stream-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+        }
+        .stream-stat {
+            padding: 5px 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+        }
+        .sequences {
+            padding: 20px;
+        }
+        .sequence {
+            margin-bottom: 20px;
+            border-left: 3px solid #667eea;
+            padding-left: 15px;
+        }
+        .sequence-header {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #495057;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .issues-grid {
+            display: grid;
+            gap: 10px;
+        }
+        .issue {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        .issue:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .issue-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .issue-priority {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .priority-high {
+            background: #ff6b6b;
+            color: white;
+        }
+        .priority-medium {
+            background: #ffd93d;
+            color: #333;
+        }
+        .priority-low {
+            background: #95e1d3;
+            color: #333;
+        }
+        .issue-title {
+            color: #495057;
+            line-height: 1.4;
+        }
+        .issue-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        .label {
+            padding: 3px 8px;
+            background: #e9ecef;
+            border-radius: 3px;
+            font-size: 0.75em;
+            color: #6c757d;
+        }
+        .epics {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        .epics-header {
+            font-size: 2em;
+            color: #495057;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .epic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .epic {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border-left: 5px solid #764ba2;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            color: #6c757d;
+            border-top: 2px solid #e9ecef;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 MeepleAI Development Roadmap</h1>
+            <p>Parallel Execution Plan - 5.9x Faster</p>
+        </div>
+
+        <div class="metrics">
+            <div class="metric">
+                <span class="metric-value">85</span>
+                <div class="metric-label">Total Issues</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">8</span>
+                <div class="metric-label">Work Streams</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">10</span>
+                <div class="metric-label">Epics</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">15</span>
+                <div class="metric-label">Days (Parallel)</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">89</span>
+                <div class="metric-label">Days (Sequential)</div>
+            </div>
+            <div class="metric">
+                <span class="metric-value">5.9x</span>
+                <div class="metric-label">Speedup</div>
+            </div>
+        </div>
+
+        <div class="streams">
+            
+    <div class="stream">
+        <div class="stream-header" style="background: #FF6B6B;">
+            <div class="stream-title">📄 PDF Processing & Status Tracking</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P1</div>
+                <div class="stream-stat">12 issues</div>
+                <div class="stream-stat">12 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">backend (4 issues - 3 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4208</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Backend - PDF Processing State Machine & Error Handling</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4209</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Backend - SSE Progress Stream for Public PDFs</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3715</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] PDF Analytics</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/pdf</span><span class="label">frontend</span><span class="label">backend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4140</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Backend: Test Suite - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">testing</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">frontend (3 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4141</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Frontend: Wizard Components - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4142</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Frontend: E2E Tests - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">testing</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4252</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Migrate from @react-pdf-viewer to react-pdf for pdfjs-dist v4 support</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">security</span><span class="label">dependencies</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">testing (5 issues - 3 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4218</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">PDF Pipeline - Real-Time Updates (SSE + Polling)</div>
+        <div class="issue-labels"><span class="label">p1-high</span><span class="label">size:M</span><span class="label">epic-4071</span><span class="label">fullstack</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4219</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">PDF Pipeline - Duration Metrics & ETA Calculation</div>
+        <div class="issue-labels"><span class="label">p2-medium</span><span class="label">size:M</span><span class="label">epic-4071</span><span class="label">fullstack</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4220</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">PDF Pipeline - Multi-Channel Notification System</div>
+        <div class="issue-labels"><span class="label">p2-medium</span><span class="label">size:M</span><span class="label">epic-4071</span><span class="label">fullstack</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4143</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Performance Testing - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">performance</span><span class="label">testing</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4144</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Documentation - PDF Wizard</div>
+        <div class="issue-labels"><span class="label">documentation</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #95E1D3;">
+            <div class="stream-title">✅ Testing & Quality Assurance</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P1</div>
+                <div class="stream-stat">10 issues</div>
+                <div class="stream-stat">10 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">performance (7 issues - 5 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4185</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Integration Testing & Documentation</div>
+        <div class="issue-labels"><span class="label">documentation</span><span class="label">testing</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3082</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">[Testing] Implement Missing E2E Test Flows (50 flows)</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">priority: high</span><span class="label">testing</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3718</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Testing - AI Platform</div>
+        <div class="issue-labels"><span class="label">area/ai</span><span class="label">kind/test</span><span class="label">tests</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3763</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Arbitro Agent] Testing & User Feedback Iteration</div>
+        <div class="issue-labels"><span class="label">area/ai</span><span class="label">kind/test</span><span class="label">priority: medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3779</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">[Integration] E2E Testing Suite - All Agent Workflows</div>
+        <div class="issue-labels"><span class="label">area/ai</span><span class="label">kind/test</span><span class="label">tests</span><span class="label">priority: high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3894</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">EntityListView - Test Coverage & Polish (Post-Epic Cleanup)</div>
+        <div class="issue-labels"></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4160</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Wizard Integration Tests</div>
+        <div class="issue-labels"><span class="label">area/admin</span><span class="label">kind/test</span><span class="label">area/api</span><span class="label">tests</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">unit (3 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3717</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] A/B Testing Framework</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4176</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import E2E Tests</div>
+        <div class="issue-labels"><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">kind/test</span><span class="label">tests</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4253</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Fix remaining frontend test setup issues (15 test files)</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">testing</span><span class="label">tech-debt</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #4ECDC4;">
+            <div class="stream-title">🎨 Frontend UI & Components</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">23 issues</div>
+                <div class="stream-stat">15 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">features (19 issues - 12 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4178</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Permission Hooks & Utilities</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4179</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">MeepleCard Permission Integration</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4180</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Tooltip Accessibility WCAG 2.1 AA</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4210</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Frontend - Real-time Progress UI Components</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4211</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Frontend - SSE Connection Management & Polling Fallback</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">p1-high</span><span class="label">size:M</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4213</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Frontend - Configurable Notifications System</div>
+        <div class="issue-labels"><span class="label">frontend</span><span class="label">p1-high</span><span class="label">size:L</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4182</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">Tag System Integration in MeepleCard</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p2-medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4186</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">Tooltip Positioning System</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">frontend</span><span class="label">p2-medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3355</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Editor] Game/Document Version History and Comparison UI</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">frontend</span><span class="label">priority: medium</span><span class="label">sp:3</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3710</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Agent Playground</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3711</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Strategy Editor</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3712</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Visual Pipeline Builder</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">complexity: large</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4172</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Upload UI</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4173</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Preview & Validation</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4174</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Progress (SSE)</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4175</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Frontend - Bulk Import Results Summary</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ui</span><span class="label">area/admin</span><span class="label">frontend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4193</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] Collection Overview Block - Stats Display</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4194</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] Approval Queue Block - Shared Games Management</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4197</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] API Client Integration - Production Ready</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">components (4 issues - 2 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3713</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Agent Catalog & Usage Stats</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">backend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3714</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Epic 3] Chat Analytics</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">backend</span><span class="label">complexity: medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3716</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic 3] Model Performance Tracking</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">backend</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3906</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">Epic: Gamification & Advanced Features</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">area/ui</span><span class="label">frontend</span><span class="label">backend</span><span class="label">priority: medium</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #AA96DA;">
+            <div class="stream-title">🔧 Backend API & Services</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">9 issues</div>
+                <div class="stream-stat">10 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">testing (3 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4169</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Bulk Import JSON Command</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">area/api</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4170</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Bulk Import SSE Progress Endpoint</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">area/api</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4171</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Epic #4136] Backend - Bulk Import Endpoint</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">area/api</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">domain (6 issues - 4 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4177</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Permission Data Model & Schema</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">backend</span><span class="label">p1-high</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4212</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Backend - Processing Duration Metrics & ETA Calculation</div>
+        <div class="issue-labels"><span class="label">backend</span><span class="label">p1-high</span><span class="label">size:M</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4199</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify Approval Queue Endpoint - Add User Info</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4200</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify User Management Endpoints - Add Active Status</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4201</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify User Library Stats Endpoint</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4202</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify User Badges Endpoint</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #FCBAD3;">
+            <div class="stream-title">🤖 AI/RAG & Knowledge Base</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">5 issues</div>
+                <div class="stream-stat">14 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">backend (2 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3358</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[RAG] Implement Iterative RAG Strategy</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/ai</span><span class="label">backend</span><span class="label">priority: low</span><span class="label">sp:5</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3902</span>
+            <span class="issue-priority priority-high">P1</span>
+        </div>
+        <div class="issue-title">Epic: AI Insights & Recommendations</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">area/ai</span><span class="label">frontend</span><span class="label">priority: high</span><span class="label">backend</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">testing (1 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4124</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">Backend: AI Insights Runtime Validation (Performance + Accuracy)</div>
+        <div class="issue-labels"></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">frontend (2 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4195</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] User Management Block - User Cards & Detail Panel</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4196</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Frontend] Detail Pages - Collection, Approvals, Users</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #A8D8EA;">
+            <div class="stream-title">🎲 Game Management & Catalog</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P2</div>
+                <div class="stream-stat">1 issues</div>
+                <div class="stream-stat">8 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">testing (1 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3120</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">feat(UserLibrary): Private Games & Catalog Proposal System</div>
+        <div class="issue-labels"><span class="label">enhancement</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #F38181;">
+            <div class="stream-title">⚙️ Infrastructure & DevOps</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P3</div>
+                <div class="stream-stat">10 issues</div>
+                <div class="stream-stat">8 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">optimization (10 issues - 5 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2968</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 1.1] Oracle Cloud Setup & VM Provisioning</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">kind/infra</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2969</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 1.2] GitHub Actions Runner Installation & Configuration</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">kind/ci</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2970</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 1.3] Workflow Migration to Self-Hosted Runner</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">kind/ci</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2972</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 2.1] Performance Monitoring & Reliability Check</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/ci</span><span class="label">area/ops</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2973</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Week 2.2] Cost Validation on GitHub Billing</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/ci</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2974</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Optional] Setup Monitoring (Prometheus + Grafana)</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">area/ops</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2975</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Optional] Document Troubleshooting Procedures</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">area/docs</span><span class="label">kind/docs</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#2976</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Optional] Create Maintenance Schedule Automation</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/task</span><span class="label">area/ops</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3367</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Infra] Log Aggregation System (Beyond Structured Logs)</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/feature</span><span class="label">area/ops</span><span class="label">priority: medium</span><span class="label">sp:5</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3368</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">[Infra] k6 Load Testing Infrastructure</div>
+        <div class="issue-labels"><span class="label">area/infra</span><span class="label">kind/test</span><span class="label">priority: medium</span><span class="label">sp:3</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+    <div class="stream">
+        <div class="stream-header" style="background: #FFFFD2;">
+            <div class="stream-title">👥 Admin & Enterprise Features</div>
+            <div class="stream-stats">
+                <div class="stream-stat">P3</div>
+                <div class="stream-stat">5 issues</div>
+                <div class="stream-stat">12 days</div>
+            </div>
+        </div>
+        <div class="sequences">
+            
+        <div class="sequence">
+            <div class="sequence-header">testing (4 issues - 2 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#3688</span>
+            <span class="issue-priority priority-medium">P2</span>
+        </div>
+        <div class="issue-title">EPIC: Business & Simulations [Admin Enterprise]</div>
+        <div class="issue-labels"><span class="label">kind/feature</span><span class="label">area/admin</span><span class="label">complexity: large</span><span class="label">priority: medium</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4203</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Testing] Frontend Component Tests - Dashboard</div>
+        <div class="issue-labels"><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4204</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Testing] E2E Workflow Tests - Admin Actions</div>
+        <div class="issue-labels"><span class="label">kind/task</span></div>
+    </div>
+    
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4205</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Testing] API Integration Tests - Admin Endpoints</div>
+        <div class="issue-labels"><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        <div class="sequence">
+            <div class="sequence-header">backend (1 issues - 1 days)</div>
+            <div class="issues-grid">
+                
+    <div class="issue">
+        <div class="issue-header">
+            <span class="issue-number">#4198</span>
+            <span class="issue-priority priority-low">P3</span>
+        </div>
+        <div class="issue-title">[Backend] Verify Admin Stats Endpoint - Schema Adaptation</div>
+        <div class="issue-labels"><span class="label">enhancement</span><span class="label">kind/task</span></div>
+    </div>
+    
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    
+        </div>
+
+        
+    <div class="epics">
+        <div class="epics-header">📋 Major Epics (10)</div>
+        <div class="epic-grid">
+            
+        <div class="epic">
+            <div class="issue-number">#2967</div>
+            <div class="issue-title">Epic: Implement Zero-Cost CI/CD Infrastructure</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3320</div>
+            <div class="issue-title">[EPIC] Gamification & Advanced Dashboard Features</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3341</div>
+            <div class="issue-title">[EPIC] Game Session Toolkit Phase 2 - Advanced Tools</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3348</div>
+            <div class="issue-title">[EPIC] Advanced Features - AI, Admin & Collaboration</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3356</div>
+            <div class="issue-title">[EPIC] Advanced RAG Strategies - 9 Variants Implementation</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3366</div>
+            <div class="issue-title">[EPIC] Infrastructure Enhancements - Observability & Testing</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#3490</div>
+            <div class="issue-title">[EPIC] Multi-Agent Game AI System - Tutor, Arbitro, Decisore</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#4068</div>
+            <div class="issue-title">Epic #1: MeepleCard Enhancements</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#4071</div>
+            <div class="issue-title">Epic #4: PDF Status Tracking</div>
+        </div>
+        
+        <div class="epic">
+            <div class="issue-number">#4136</div>
+            <div class="issue-title">Epic: PDF Wizard per SharedGameCatalog con BGG Integration</div>
+        </div>
+        
+        </div>
+    </div>
+    
+
+        <div class="footer">
+            <p>Generated on 2026-02-13 11:25:00</p>
+            <p>MeepleAI Monorepo - Comprehensive Development Plan</p>
+        </div>
+    </div>
+
+    <script>
+        // Make all issues clickable to open GitHub
+        function openIssue(number) {
+            window.open(`https://github.com/DegrassiAaron/meepleai-monorepo/issues/${number}`, '_blank');
+        }
+
+        // Add click handlers to all issue cards
+        document.addEventListener('DOMContentLoaded', () => {
+            // Issue cards
+            document.querySelectorAll('.issue').forEach(issue => {
+                const numberEl = issue.querySelector('.issue-number');
+                if (numberEl) {
+                    const number = numberEl.textContent.replace('#', '');
+                    issue.style.cursor = 'pointer';
+                    issue.addEventListener('click', () => openIssue(number));
+                }
+            });
+
+            // Epic cards
+            document.querySelectorAll('.epic').forEach(epic => {
+                const numberEl = epic.querySelector('.issue-number');
+                if (numberEl) {
+                    const number = numberEl.textContent.replace('#', '');
+                    epic.style.cursor = 'pointer';
+                    epic.addEventListener('click', () => openIssue(number));
+                }
+            });
+
+            // Add hover effect
+            const style = document.createElement('style');
+            style.textContent = `
+                .issue:hover, .epic:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    background-color: #f8f9fa;
+                }
+                .issue, .epic {
+                    transition: all 0.2s ease;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

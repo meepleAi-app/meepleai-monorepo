@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { PdfStatusBadge } from '@/components/pdf';
 import type { NotificationDto, NotificationSeverity, NotificationType } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notification/store';
@@ -55,6 +56,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   // Format relative timestamp
   const timeAgo = getRelativeTime(new Date(notification.createdAt));
 
+  // Check if PDF-related notification (Issue #4217)
+  const isPdfNotification =
+    notification.type === 'pdf_upload_completed' || notification.type === 'processing_failed';
+
   return (
     <button
       onClick={handleClick}
@@ -73,10 +78,18 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Title with type icon */}
-          <div className="flex items-center gap-2 mb-1">
+          {/* Title with type icon and PDF status badge */}
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <TypeIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span className="text-sm truncate">{notification.title}</span>
+            {/* New: PdfStatusBadge for PDF notifications (Issue #4217) */}
+            {isPdfNotification && (
+              <PdfStatusBadge
+                state={notification.type === 'pdf_upload_completed' ? 'ready' : 'failed'}
+                variant="compact"
+                showIcon={false}
+              />
+            )}
           </div>
 
           {/* Message */}

@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
+#pragma warning disable CA1707 // Identifiers should not contain underscores - Migration name follows EF convention
     public partial class Issue4220_NotificationPreferences : Migration
+#pragma warning restore CA1707
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

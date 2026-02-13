@@ -167,4 +167,29 @@ internal class NoOpEmailService : IEmailService
         Guid gameId,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    // ISSUE-4220: PDF notification emails
+    public Task SendPdfReadyEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        Guid pdfDocumentId,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendPdfFailedEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        string errorMessage,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendPdfRetryEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        int retryCount,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

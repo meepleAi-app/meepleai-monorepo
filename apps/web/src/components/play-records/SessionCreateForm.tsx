@@ -11,6 +11,8 @@
 
 'use client';
 
+import { useState } from 'react';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Calendar, Users, Trophy, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -40,6 +42,8 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { SessionCreateFormSchema, type SessionCreateForm as SessionCreateFormData } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 
+import { GameCombobox } from './GameCombobox';
+
 export interface SessionCreateFormProps {
   onSubmit: (data: SessionCreateFormData) => void;
   onCancel?: () => void;
@@ -63,6 +67,8 @@ export function SessionCreateForm({
     prevStep,
     resetSessionCreation,
   } = usePlayRecordsStore();
+
+  const [_showBggDialog, setShowBggDialog] = useState(false);
 
   const form = useForm<SessionCreateFormData>({
     resolver: zodResolver(SessionCreateFormSchema),
@@ -188,19 +194,20 @@ export function SessionCreateForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Select Game</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Search your library..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {/* TODO: Load user's game library */}
-                          <SelectItem value="placeholder">Loading games...</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <GameCombobox
+                          value={field.value}
+                          onSelect={(gameId, gameName) => {
+                            field.onChange(gameId);
+                            form.setValue('gameName', gameName);
+                          }}
+                          onNotFound={() => setShowBggDialog(true)}
+                          disabled={isSubmitting}
+                          placeholder="Search your library..."
+                        />
+                      </FormControl>
                       <FormDescription>
-                        Select a game from your library or the shared catalog
+                        Search your library, private games, or the shared catalog
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

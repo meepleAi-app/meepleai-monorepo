@@ -9,8 +9,9 @@
 
 'use client';
 
-import { AlertCircle, Loader2, AlertTriangle, Info } from 'lucide-react';
+import { AlertCircle, Loader2, AlertTriangle, Info, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -38,6 +39,7 @@ const STATUS_LABELS: Record<ShareRequestStatus, string> = {
 };
 
 export default function MyProposalsClient() {
+  const router = useRouter();
   const { data, isLoading, error } = useShareRequests();
   const { data: rateLimitData } = useRateLimitStatus();
 
@@ -79,11 +81,17 @@ export default function MyProposalsClient() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Le Mie Proposte</h1>
-        <p className="text-muted-foreground mt-2">
-          Traccia le tue proposte di giochi inviate al catalogo condiviso
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Le Mie Proposte</h1>
+          <p className="text-muted-foreground mt-2">
+            Traccia le tue proposte di giochi inviate al catalogo condiviso
+          </p>
+        </div>
+        <Button onClick={() => router.push('/library/propose')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nuova Proposta
+        </Button>
       </div>
 
       {/* Rate Limit Status Banner */}

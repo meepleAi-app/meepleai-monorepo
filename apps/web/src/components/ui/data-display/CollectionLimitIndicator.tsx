@@ -12,9 +12,8 @@ import React from 'react';
 
 import { AlertTriangle, TrendingUp } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/primitives/button';
 import {
   COLLECTION_LIMITS,
   formatGameCount,
@@ -22,6 +21,7 @@ import {
   getLimitColor,
   type UserTier,
 } from '@/lib/constants/collection-limits';
+import { cn } from '@/lib/utils';
 
 import { Progress } from '../feedback/progress';
 

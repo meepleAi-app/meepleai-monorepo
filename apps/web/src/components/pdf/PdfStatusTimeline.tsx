@@ -6,9 +6,10 @@
 'use client';
 
 import { Check, Loader2 } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
 import type { PdfState } from '@/types/pdf';
 import { getPdfStateLabel, getPdfStateOrder } from '@/types/pdf';
-import { cn } from '@/lib/utils';
 
 export interface PdfStatusTimelineProps {
   currentState: PdfState;

@@ -2,8 +2,9 @@
  * PdfErrorCard Stories (Issue #4217)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { PdfErrorCard } from './PdfErrorCard';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof PdfErrorCard> = {
   title: 'Components/PDF/PdfErrorCard',

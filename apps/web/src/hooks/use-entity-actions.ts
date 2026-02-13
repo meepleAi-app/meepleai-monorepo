@@ -35,13 +35,14 @@ import { useRouter } from 'next/navigation';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
-import { useCollectionActions, type AssociatedData } from './use-collection-actions';
+import type { EntityType } from '@/lib/api/schemas/collections.schemas';
+
 import {
   useAddToCollection,
   useCollectionStatus,
   useRemoveFromCollection,
 } from './queries/useCollections';
-import type { EntityType } from '@/lib/api/schemas/collections.schemas';
+import { useCollectionActions, type AssociatedData } from './use-collection-actions';
 
 // ============================================================================
 // Types

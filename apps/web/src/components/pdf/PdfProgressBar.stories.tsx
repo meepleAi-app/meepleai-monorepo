@@ -3,9 +3,10 @@
  * Showcases progress bar with all states and progress values
  */
 
+import { PdfProgressBar } from './PdfProgressBar';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { PdfProgressBar } from './PdfProgressBar';
 
 const meta: Meta<typeof PdfProgressBar> = {
   title: 'Components/PDF/PdfProgressBar',

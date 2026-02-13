@@ -13,9 +13,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { PdfState } from '@/types/pdf';
-import { mapProcessingStepToPdfState } from '@/types/pdf';
+
 import { api } from '@/lib/api';
+import { mapProcessingStepToPdfState } from '@/types/pdf';
+import type { PdfState } from '@/types/pdf';
 import type { ProcessingStep } from '@/types/pdf';
 
 // ============================================================================

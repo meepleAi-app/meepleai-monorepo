@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import type { PdfState } from '@/types/pdf';
 import { cn } from '@/lib/utils';
+import type { PdfState } from '@/types/pdf';
 
 // ============================================================================
 // Types

@@ -117,7 +117,7 @@ export function getPdfStateLabel(state: PdfState): string {
     ready: 'Ready',
     failed: 'Failed',
   };
-  // eslint-disable-next-line security/detect-object-injection -- state is from typed PdfState union
+   
   return labels[state];
 }
 
@@ -142,6 +142,6 @@ export function getPdfStateOrder(state: PdfState): number {
     ready: 6,
     failed: 6,
   };
-  // eslint-disable-next-line security/detect-object-injection -- state is from typed PdfState union
+   
   return order[state];
 }

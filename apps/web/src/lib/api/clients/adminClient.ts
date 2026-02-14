@@ -105,6 +105,8 @@ import {
   type CreateBatchJobRequest,
   AppUsageStatsSchema,
   type AppUsageStats,
+  BulkImportFromJsonResultSchema,
+  type BulkImportFromJsonResult,
 } from '../schemas';
 import {
   AgentCostEstimationResultSchema,
@@ -1728,6 +1730,22 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return httpClient.get(
         `/api/v1/admin/usage-stats${query ? `?${query}` : ''}`,
         AppUsageStatsSchema
+      );
+    },
+
+    // ========== Game Bulk Import (Issue #4355) ==========
+
+    /**
+     * Bulk import games from JSON
+     * POST /api/v1/admin/games/bulk-import
+     *
+     * Issue #4355: Frontend - Bulk Import Upload UI
+     */
+    async bulkImportGames(jsonContent: string): Promise<BulkImportFromJsonResult> {
+      return httpClient.post(
+        '/api/v1/admin/games/bulk-import',
+        { jsonContent },
+        BulkImportFromJsonResultSchema
       );
     },
   };

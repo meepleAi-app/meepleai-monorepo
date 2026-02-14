@@ -765,4 +765,23 @@ export const AppUsageStatsSchema = z.object({
 });
 export type AppUsageStats = z.infer<typeof AppUsageStatsSchema>;
 
+// ========== Game Bulk Import (Issue #4355) ==========
+
+export const BulkImportErrorSchema = z.object({
+  bggId: z.number().nullable().optional(),
+  gameName: z.string().nullable().optional(),
+  reason: z.string(),
+  errorType: z.string(),
+});
+export type BulkImportError = z.infer<typeof BulkImportErrorSchema>;
+
+export const BulkImportFromJsonResultSchema = z.object({
+  total: z.number().int().nonnegative(),
+  enqueued: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  errors: z.array(BulkImportErrorSchema),
+});
+export type BulkImportFromJsonResult = z.infer<typeof BulkImportFromJsonResultSchema>;
+
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

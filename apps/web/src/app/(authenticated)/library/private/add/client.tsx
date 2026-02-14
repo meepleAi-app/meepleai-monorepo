@@ -71,7 +71,7 @@ export function UserWizardClient() {
   }, []);
 
   // Step 2: Skip PDF from upload step
-  const handleSkipPdfStep = useCallback(() => {
+  const _handleSkipPdfStep = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto senza PDF!`);
     router.push('/library/private');
   }, [router, state.gameName]);

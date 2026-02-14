@@ -32,4 +32,17 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
     Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds threads for a user with filters and pagination (Issue #4362).
+    /// </summary>
+    Task<(IReadOnlyList<ChatThread> Items, int TotalCount)> FindByUserIdFilteredAsync(
+        Guid userId,
+        Guid? gameId = null,
+        string? agentType = null,
+        string? status = null,
+        string? search = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { AlertCircle, BookOpen, Flame, Target } from "lucide-react";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/data-display/card";
+import { Skeleton } from "@/components/ui/feedback/skeleton";
 
 interface AIInsight {
   id: string;

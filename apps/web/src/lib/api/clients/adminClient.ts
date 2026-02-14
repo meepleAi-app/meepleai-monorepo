@@ -105,6 +105,8 @@ import {
   type CreateBatchJobRequest,
   AppUsageStatsSchema,
   type AppUsageStats,
+  BulkImportFromJsonResultSchema,
+  type BulkImportFromJsonResult,
 } from '../schemas';
 import {
   AgentCostEstimationResultSchema,
@@ -1522,25 +1524,6 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       await httpClient.delete(`/api/v1/admin/batch-jobs/${id}`);
     },
 
-    // ========== App Usage Stats (Issue #3719) ==========
-
-    /**
-     * Get app usage statistics (DAU/MAU, retention, feature adoption, geo)
-     * GET /api/v1/admin/usage-stats
-     */
-    async getUsageStats(params?: {
-      period?: '7d' | '30d' | '90d';
-    }): Promise<AppUsageStats | null> {
-      const queryParams = new URLSearchParams();
-      if (params?.period) queryParams.set('period', params.period);
-
-      const query = queryParams.toString();
-      return httpClient.get(
-        `/api/v1/admin/usage-stats${query ? `?${query}` : ''}`,
-        AppUsageStatsSchema
-      );
-    },
-
     // ========== Financial Ledger (Issue #3722) ==========
 
     /**
@@ -1729,6 +1712,41 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteResourceForecast(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/resource-forecast/scenarios/${id}`);
+    },
+
+    // ========== App Usage Stats (Issue #3719) ==========
+
+    /**
+     * Get app usage statistics (DAU/MAU, retention, feature adoption, geo)
+     * GET /api/v1/admin/usage-stats
+     */
+    async getUsageStats(params?: {
+      period?: '7d' | '30d' | '90d';
+    }): Promise<AppUsageStats | null> {
+      const queryParams = new URLSearchParams();
+      if (params?.period) queryParams.set('period', params.period);
+
+      const query = queryParams.toString();
+      return httpClient.get(
+        `/api/v1/admin/usage-stats${query ? `?${query}` : ''}`,
+        AppUsageStatsSchema
+      );
+    },
+
+    // ========== Game Bulk Import (Issue #4355) ==========
+
+    /**
+     * Bulk import games from JSON
+     * POST /api/v1/admin/games/bulk-import
+     *
+     * Issue #4355: Frontend - Bulk Import Upload UI
+     */
+    async bulkImportGames(jsonContent: string): Promise<BulkImportFromJsonResult> {
+      return httpClient.post(
+        '/api/v1/admin/games/bulk-import',
+        { jsonContent },
+        BulkImportFromJsonResultSchema
+      );
     },
   };
 }

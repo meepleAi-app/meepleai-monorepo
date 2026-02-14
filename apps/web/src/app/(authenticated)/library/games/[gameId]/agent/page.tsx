@@ -13,49 +13,21 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useParams } from 'next/navigation';
 
-import { AgentChatSheet } from '@/components/agent/chat';
 import { AgentConfigSheet } from '@/components/agent/config/AgentConfigSheet';
 import { Button } from '@/components/ui/primitives/button';
-import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
 import { useAgentStore } from '@/stores/agentStore';
 import type { Game } from '@/types/domain';
-
-// Placeholder typology until real session management is implemented
-const PLACEHOLDER_TYPOLOGY: Typology = {
-  id: 'placeholder-typology',
-  name: 'Rules Helper',
-  description: 'Get answers to rule questions',
-  basePrompt: 'You are a helpful rules assistant...',
-  defaultStrategyName: 'HybridSearch',
-  defaultStrategyParameters: null,
-  status: 'Approved',
-  createdBy: 'system',
-  approvedBy: 'system',
-  createdAt: new Date().toISOString(),
-  approvedAt: new Date().toISOString(),
-  isDeleted: false,
-};
 
 export default function AgentPage() {
   const params = useParams();
   const gameId = (params?.gameId as string) || '';
   const [game, setGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Issue #3249: Track current typology (will be managed by session in full implementation)
-  const [currentTypology, setCurrentTypology] = useState<Typology>(PLACEHOLDER_TYPOLOGY);
-  // Placeholder session ID until real session management is implemented
-  const [sessionId] = useState<string>('placeholder-session-id');
-
   const { isConfigOpen, openConfig, closeConfig } = useAgentStore();
-
-  // Handle typology switch callback
-  const handleTypologySwitch = useCallback((newTypology: Typology) => {
-    setCurrentTypology(newTypology);
-  }, []);
 
   useEffect(() => {
     const fetchGame = async () => {
@@ -130,17 +102,6 @@ export default function AgentPage() {
         />
       )}
 
-      {/* Chat Sheet (Issue #3249: with dynamic typology switching) */}
-      <AgentChatSheet
-        gameTitle={game?.title || 'Game'}
-        gameId={gameId}
-        currentTypology={currentTypology}
-        modelName="GPT-4o-mini"
-        tokensUsed={445}
-        tokensLimit={500}
-        sessionId={sessionId}
-        onTypologySwitch={handleTypologySwitch}
-      />
     </div>
   );
 }

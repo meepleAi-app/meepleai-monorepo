@@ -5,10 +5,6 @@
 // AI-14: Search mode toggle for hybrid search feature
 export { default as SearchModeToggle, SearchMode } from './search/SearchModeToggle';
 
-// Issue #2051: Document source selector
-export { DocumentSourceSelector } from './chat/DocumentSourceSelector';
-export type { DocumentSource } from './chat/DocumentSourceSelector';
-
 // Issue #859: BGAI-074 - Citation components
 export { CitationCard } from './citations/CitationCard';
 export { CitationList } from './citations/CitationList';

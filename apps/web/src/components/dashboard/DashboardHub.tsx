@@ -129,13 +129,13 @@ function DashboardSkeleton() {
       <div className="h-96 animate-pulse rounded-2xl bg-muted md:col-span-1 lg:col-span-2" />
 
       {/* Wishlist Highlights Skeleton */}
-      <div className="h-80 animate-pulse rounded-2xl bg-gray-200" />
+      <div className="h-80 animate-pulse rounded-2xl bg-muted" />
 
       {/* Catalog Trending Skeleton */}
-      <div className="h-80 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
+      <div className="h-80 animate-pulse rounded-2xl bg-muted md:col-span-1 lg:col-span-2" />
 
       {/* Chat History Skeleton */}
-      <div className="h-64 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
+      <div className="h-64 animate-pulse rounded-2xl bg-muted md:col-span-1 lg:col-span-2" />
 
       {/* Quick Actions Skeleton */}
       <div className="h-48 animate-pulse rounded-2xl bg-muted md:col-span-2 lg:col-span-1" />

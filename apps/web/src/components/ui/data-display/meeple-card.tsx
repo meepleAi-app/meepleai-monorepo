@@ -78,6 +78,10 @@ import { WishlistButton } from './meeple-card-features/WishlistButton';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
+// Issue #4361: Agent-specific display components
+import { AgentModelInfo, type ModelParameters } from './meeple-card-features/AgentModelInfo';
+import { AgentStatsDisplay, type AgentStats } from './meeple-card-features/AgentStatsDisplay';
+import { AgentStatusBadge, type AgentStatus } from './meeple-card-features/AgentStatusBadge';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -245,6 +249,17 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   maxVisibleTags?: number;
   /** Show tag strip (default: auto-detect from tags prop) */
   showTagStrip?: boolean;
+
+  // ========== AGENT ENTITY FEATURES (Issue #4361) ==========
+
+  /** Agent operational status (active/idle/training/error) */
+  agentStatus?: AgentStatus;
+  /** Agent AI model info (name + optional parameters) */
+  agentModel?: { modelName: string; parameters?: ModelParameters };
+  /** Agent invocation statistics */
+  agentStats?: AgentStats;
+  /** Agent capabilities list (e.g., ['rag', 'vision', 'code']) */
+  capabilities?: string[];
 }
 
 // ============================================================================
@@ -750,6 +765,11 @@ export const MeepleCard = React.memo(function MeepleCard({
   tags,
   maxVisibleTags = 3,
   showTagStrip,
+  // Issue #4361: Agent entity features
+  agentStatus,
+  agentModel,
+  agentStats,
+  capabilities,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -962,6 +982,40 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
+        {/* Agent-specific info (Issue #4361) */}
+        {entity === 'agent' && variant !== 'compact' && (agentStatus || agentModel || (capabilities && capabilities.length > 0) || agentStats) && (
+          <div className="flex flex-col gap-1.5 mb-2" data-testid="agent-info-section">
+            {/* Status + Model row */}
+            {(agentStatus || agentModel) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {agentStatus && <AgentStatusBadge status={agentStatus} size="sm" />}
+                {agentModel && (
+                  <AgentModelInfo
+                    modelName={agentModel.modelName}
+                    parameters={agentModel.parameters}
+                    size="sm"
+                  />
+                )}
+              </div>
+            )}
+            {/* Capabilities chips */}
+            {capabilities && capabilities.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {capabilities.map((cap) => (
+                  <span
+                    key={cap}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                  >
+                    {cap}
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Stats row */}
+            {agentStats && <AgentStatsDisplay stats={agentStats} layout="horizontal" className="text-muted-foreground" />}
+          </div>
+        )}
+
         {/* Metadata (non-grid variants render inline; grid uses footer below) */}
         {metadata.length > 0 && variant !== 'compact' && variant !== 'grid' && (
           <MetadataChips
@@ -1054,3 +1108,6 @@ export const MeepleCard = React.memo(function MeepleCard({
 export { MeepleCardSkeleton, entityColors };
 export type { MeepleCardMetadata as MeepleMetadata, MeepleCardAction as MeepleAction };
 export type { MeepleCardFlipData } from './meeple-card-features/FlipCard';
+export type { AgentStatus } from './meeple-card-features/AgentStatusBadge';
+export type { AgentStats } from './meeple-card-features/AgentStatsDisplay';
+export type { ModelParameters } from './meeple-card-features/AgentModelInfo';

@@ -81,7 +81,7 @@ const NAV_ITEMS: NavItem[] = [
     testId: 'menu-catalog',
   },
   {
-    href: '/chat',
+    href: '/chat/new',
     icon: MessageSquare,
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',

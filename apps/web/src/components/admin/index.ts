@@ -89,12 +89,6 @@ export {
 export { AgentModeSelector, LlmProviderSelector } from './agents';
 export type { AgentModeSelectorProps, LlmProviderSelectorProps } from './agents';
 
-// Issue #3700: Impersonation chat history viewer
-export {
-  ImpersonationChatHistory,
-  type ImpersonationChatHistoryProps,
-} from './impersonation-chat-history';
-
 // Issue #2372: Shared Game Catalog components
 export {
   GameStatusBadge,

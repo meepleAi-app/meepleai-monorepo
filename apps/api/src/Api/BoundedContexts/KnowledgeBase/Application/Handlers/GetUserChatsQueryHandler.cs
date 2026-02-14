@@ -44,7 +44,11 @@ internal class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IRead
             IsDeleted: m.IsDeleted,
             DeletedAt: m.DeletedAt,
             DeletedByUserId: m.DeletedByUserId,
-            IsInvalidated: m.IsInvalidated
+            IsInvalidated: m.IsInvalidated,
+            AgentType: m.AgentType,
+            Confidence: m.Confidence,
+            CitationsJson: m.CitationsJson,
+            TokenCount: m.TokenCount
         )).ToList();
 
         return new ChatThreadDto(
@@ -57,7 +61,8 @@ internal class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IRead
             CreatedAt: thread.CreatedAt,
             LastMessageAt: thread.LastMessageAt,
             MessageCount: thread.MessageCount,
-            Messages: messageDtos
+            Messages: messageDtos,
+            AgentType: thread.AgentType // Issue #4362
         );
     }
 }

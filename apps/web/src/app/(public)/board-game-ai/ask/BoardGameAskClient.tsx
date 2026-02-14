@@ -198,7 +198,7 @@ export default function BoardGameAskClient() {
             <span className="text-xl font-bold gradient-text">Board Game AI</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
+            <Link href="/chat/new" className="text-slate-300 hover:text-white transition-colors">
               Chat
             </Link>
             <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">

@@ -184,7 +184,7 @@ export default function GameDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] py-8 px-4">
+      <div className="min-h-screen bg-background py-8 px-4">
         <div className="container mx-auto max-w-7xl">
           <Skeleton className="h-8 w-48 mb-6" />
           <Skeleton className="h-[600px] w-full max-w-2xl mx-auto" />
@@ -195,7 +195,7 @@ export default function GameDetailPage() {
 
   if (error || !gameDetail) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] py-8 px-4">
+      <div className="min-h-screen bg-background py-8 px-4">
         <div className="container mx-auto max-w-7xl">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -216,7 +216,7 @@ export default function GameDetailPage() {
   // ============================================================================
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-7xl">
         {/* Back Button */}
         <Button asChild variant="ghost" className="mb-6 font-nunito">
@@ -273,18 +273,12 @@ export default function GameDetailPage() {
                   <Card
                     className={cn(
                       'border-l-4 border-l-[hsl(25,95%,38%)] overflow-hidden h-full',
-                      'bg-white/95 backdrop-blur-sm shadow-2xl',
+                      'bg-card/95 backdrop-blur-sm shadow-2xl',
                       'hover:shadow-3xl transition-shadow duration-300'
                     )}
-                    style={{
-                      backgroundImage: `
-                        linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(250,248,245,0.98) 100%),
-                        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f97316' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-                      `,
-                    }}
                   >
                     {/* Cover Image */}
-                    <div className="relative h-80 bg-gradient-to-br from-orange-50 to-purple-50 overflow-hidden">
+                    <div className="relative h-80 bg-gradient-to-br from-[hsl(25_95%_38%/0.05)] to-[hsl(262_83%_62%/0.05)] overflow-hidden">
                       <Image
                         src={gameDetail.imageUrl || '/placeholder-game.svg'}
                         alt={gameDetail.title}
@@ -299,7 +293,7 @@ export default function GameDetailPage() {
                       {gameDetail.bggId && (
                         <Badge
                           variant="secondary"
-                          className="absolute top-4 right-4 shadow-lg backdrop-blur-sm bg-white/90"
+                          className="absolute top-4 right-4 shadow-lg backdrop-blur-sm bg-background/90"
                         >
                           BGG #{gameDetail.bggId}
                         </Badge>
@@ -310,10 +304,10 @@ export default function GameDetailPage() {
                     <CardContent className="p-8 space-y-6">
                       {/* Title & Publisher */}
                       <div className="space-y-2">
-                        <h1 className="font-quicksand text-4xl font-bold text-gray-900 leading-tight">
+                        <h1 className="font-quicksand text-4xl font-bold text-foreground leading-tight">
                           {gameDetail.title}
                         </h1>
-                        <div className="flex items-center gap-3 text-sm text-gray-600 font-nunito">
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground font-nunito">
                           {gameDetail.publishers && gameDetail.publishers.length > 0 && (
                             <span>{gameDetail.publishers[0].name}</span>
                           )}
@@ -328,13 +322,13 @@ export default function GameDetailPage() {
 
                       {/* BGG Rating */}
                       {formattedStats && gameDetail.averageRating && (
-                        <div className="flex items-center gap-3 py-3 px-4 bg-orange-50/50 rounded-xl border border-orange-100">
+                        <div className="flex items-center gap-3 py-3 px-4 bg-[hsl(25_95%_38%/0.05)] rounded-xl border border-[hsl(25_95%_38%/0.1)]">
                           <Star className="h-6 w-6 text-[hsl(25,95%,38%)] fill-[hsl(25,95%,38%)]" />
                           <div className="flex-1">
-                            <div className="font-quicksand text-2xl font-bold text-gray-900">
+                            <div className="font-quicksand text-2xl font-bold text-foreground">
                               {formattedStats.rating}
                             </div>
-                            <div className="text-xs text-gray-600 font-nunito">BGG Rating</div>
+                            <div className="text-xs text-muted-foreground font-nunito">BGG Rating</div>
                           </div>
                         </div>
                       )}
@@ -343,31 +337,31 @@ export default function GameDetailPage() {
                       {formattedStats && (
                         <div className="grid grid-cols-3 gap-4">
                           {/* Players */}
-                          <div className="flex flex-col items-center gap-2 p-4 bg-purple-50/30 rounded-xl">
+                          <div className="flex flex-col items-center gap-2 p-4 bg-[hsl(262_83%_62%/0.05)] rounded-xl">
                             <Users className="h-5 w-5 text-[hsl(262,83%,62%)]" />
-                            <div className="font-quicksand font-bold text-lg text-gray-900">
+                            <div className="font-quicksand font-bold text-lg text-foreground">
                               {formattedStats.playerCount}
                             </div>
-                            <div className="text-xs text-gray-600 font-nunito">Giocatori</div>
+                            <div className="text-xs text-muted-foreground font-nunito">Giocatori</div>
                           </div>
 
                           {/* Duration */}
-                          <div className="flex flex-col items-center gap-2 p-4 bg-orange-50/30 rounded-xl">
+                          <div className="flex flex-col items-center gap-2 p-4 bg-[hsl(25_95%_38%/0.05)] rounded-xl">
                             <Clock className="h-5 w-5 text-[hsl(25,95%,38%)]" />
-                            <div className="font-quicksand font-bold text-lg text-gray-900">
+                            <div className="font-quicksand font-bold text-lg text-foreground">
                               {formattedStats.playtime}
                             </div>
-                            <div className="text-xs text-gray-600 font-nunito">Durata</div>
+                            <div className="text-xs text-muted-foreground font-nunito">Durata</div>
                           </div>
 
                           {/* Complexity */}
                           {gameDetail.complexityRating && (
-                            <div className="flex flex-col items-center gap-2 p-4 bg-purple-50/30 rounded-xl">
+                            <div className="flex flex-col items-center gap-2 p-4 bg-[hsl(262_83%_62%/0.05)] rounded-xl">
                               <Gauge className="h-5 w-5 text-[hsl(262,83%,62%)]" />
-                              <div className="font-quicksand font-bold text-lg text-gray-900">
+                              <div className="font-quicksand font-bold text-lg text-foreground">
                                 {formattedStats.complexity}
                               </div>
-                              <div className="text-xs text-gray-600 font-nunito">Complessità</div>
+                              <div className="text-xs text-muted-foreground font-nunito">Complessità</div>
                             </div>
                           )}
                         </div>
@@ -388,22 +382,16 @@ export default function GameDetailPage() {
                   <Card
                     className={cn(
                       'border-l-4 border-l-[hsl(262,83%,62%)] overflow-hidden h-full',
-                      'bg-white/95 backdrop-blur-sm shadow-2xl'
+                      'bg-card/95 backdrop-blur-sm shadow-2xl'
                     )}
-                    style={{
-                      backgroundImage: `
-                        linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(250,248,245,0.98) 100%),
-                        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239333ea' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-                      `,
-                    }}
                   >
                     <CardContent className="p-8 space-y-6 overflow-y-auto max-h-[600px]">
                       {/* Description */}
                       <div className="space-y-3">
-                        <h2 className="font-quicksand text-2xl font-bold text-gray-900">
+                        <h2 className="font-quicksand text-2xl font-bold text-foreground">
                           Descrizione
                         </h2>
-                        <p className="font-nunito text-gray-700 leading-relaxed">
+                        <p className="font-nunito text-muted-foreground leading-relaxed">
                           {gameDetail.description}
                         </p>
                       </div>
@@ -413,7 +401,7 @@ export default function GameDetailPage() {
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Tag className="h-5 w-5 text-[hsl(25,95%,38%)]" />
-                            <h3 className="font-quicksand text-lg font-semibold text-gray-900">
+                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
                               Categorie
                             </h3>
                           </div>
@@ -422,7 +410,7 @@ export default function GameDetailPage() {
                               <Badge
                                 key={cat.id}
                                 variant="secondary"
-                                className="bg-orange-100 text-orange-900 hover:bg-orange-200 font-nunito"
+                                className="bg-[hsl(25_95%_38%/0.1)] text-[hsl(25,95%,38%)] hover:bg-[hsl(25_95%_38%/0.2)] font-nunito"
                               >
                                 {cat.name}
                               </Badge>
@@ -436,7 +424,7 @@ export default function GameDetailPage() {
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Cog className="h-5 w-5 text-[hsl(262,83%,62%)]" />
-                            <h3 className="font-quicksand text-lg font-semibold text-gray-900">
+                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
                               Meccaniche
                             </h3>
                           </div>
@@ -445,7 +433,7 @@ export default function GameDetailPage() {
                               <Badge
                                 key={mech.id}
                                 variant="outline"
-                                className="border-purple-300 text-purple-900 font-nunito"
+                                className="border-[hsl(262_83%_62%/0.3)] text-[hsl(262,83%,62%)] font-nunito"
                               >
                                 {mech.name}
                               </Badge>
@@ -458,8 +446,8 @@ export default function GameDetailPage() {
                       {gameDetail.designers && gameDetail.designers.length > 0 && (
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
-                            <UserIcon className="h-5 w-5 text-gray-600" />
-                            <h3 className="font-quicksand text-lg font-semibold text-gray-900">
+                            <UserIcon className="h-5 w-5 text-muted-foreground" />
+                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
                               Designer
                             </h3>
                           </div>
@@ -477,8 +465,8 @@ export default function GameDetailPage() {
                       {gameDetail.publishers && gameDetail.publishers.length > 0 && (
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
-                            <Paintbrush className="h-5 w-5 text-gray-600" />
-                            <h3 className="font-quicksand text-lg font-semibold text-gray-900">
+                            <Paintbrush className="h-5 w-5 text-muted-foreground" />
+                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
                               Editori
                             </h3>
                           </div>
@@ -568,7 +556,7 @@ export default function GameDetailPage() {
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription className="font-nunito">
-                      Accedi per visualizzare le tue statistiche di gioco
+                      Le statistiche verranno visualizzate qui una volta registrate le prime partite.
                     </AlertDescription>
                   </Alert>
                 </CardContent>

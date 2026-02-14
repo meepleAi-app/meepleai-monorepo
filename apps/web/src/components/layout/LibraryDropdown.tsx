@@ -1,16 +1,15 @@
 /**
- * LibraryDropdown Component (Issue #4064)
+ * LibraryDropdown Component
  *
- * Dropdown navigation for Library section with sub-items:
- * - Collezione → /library (games collection)
- * - Giochi Privati → /library/private (private games)
+ * Dropdown navigation for Library section in the desktop header.
+ * Reads children from the unified nav config (library item children).
  *
  * Features:
  * - Desktop navigation dropdown
  * - Active state highlighting for sub-routes
  * - Keyboard navigation (Tab, Enter, Escape)
  * - ARIA attributes for accessibility
- * - Purple active state, orange hover
+ * - Purple active state
  */
 
 'use client';
@@ -28,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
+import { UNIFIED_NAV_ITEMS } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 
 export interface LibraryDropdownProps {
@@ -35,25 +35,16 @@ export interface LibraryDropdownProps {
   className?: string;
 }
 
-const LIBRARY_ITEMS = [
-  {
-    href: '/library',
-    label: 'Collezione',
-    ariaLabel: 'Navigate to your game collection',
-  },
-  {
-    href: '/library/private',
-    label: 'Giochi Privati',
-    ariaLabel: 'Navigate to your private games',
-  },
-];
-
 export function LibraryDropdown({ className }: LibraryDropdownProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
+  // Get library children from unified config
+  const libraryItem = UNIFIED_NAV_ITEMS.find(item => item.id === 'library');
+  const libraryChildren = libraryItem?.children ?? [];
+
   // Check if any library route is active
-  const isLibraryActive = pathname === '/library' || pathname?.startsWith('/library/');
+  const isLibraryActive = pathname?.startsWith('/library') ?? false;
 
   // Check if specific sub-route is active
   const isActive = (href: string) => {
@@ -94,17 +85,17 @@ export function LibraryDropdown({ className }: LibraryDropdownProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
-        {LIBRARY_ITEMS.map(({ href, label, ariaLabel }) => {
-          const active = isActive(href);
+        {libraryChildren.map(child => {
+          const active = isActive(child.href);
           return (
             <DropdownMenuItem
-              key={href}
+              key={child.id}
               asChild
-              data-testid={`library-item-${href.split('/').pop()}`}
+              data-testid={`library-item-${child.id}`}
             >
               <Link
-                href={href}
-                aria-label={ariaLabel}
+                href={child.href}
+                aria-label={child.ariaLabel}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-2 cursor-pointer w-full',
@@ -112,7 +103,7 @@ export function LibraryDropdown({ className }: LibraryDropdownProps) {
                 )}
                 onClick={() => setIsOpen(false)}
               >
-                <span>{label}</span>
+                <span>{child.label}</span>
               </Link>
             </DropdownMenuItem>
           );

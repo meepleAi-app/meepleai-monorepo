@@ -1,23 +1,22 @@
 /**
  * Collection Dashboard Components Unit Tests - Issue #3476
  *
- * Tests for CollectionStats, MeepleCard, CollectionGrid components
+ * Tests for CollectionStats, MeepleCard components.
  *
- * NOTE: MeepleCard tests are skipped - component refactored in Epic #3820
- * with new API. Tests need to be rewritten for new MeepleCard interface.
- * See: docs/frontend/components/meeple-card.md
+ * NOTE: CollectionGrid was removed in Issue #3894 - its functionality
+ * is superseded by EntityListView and CollectionDashboard's inline rendering.
+ * See: components/ui/data-display/entity-list-view/
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CollectionStats } from '@/components/collection/CollectionStats';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { CollectionGrid } from '@/components/collection/CollectionGrid';
 
-import type { CollectionStats as CollectionStatsType, CollectionGame } from '@/types/collection';
-import type { ActivityEvent } from '@/components/dashboard/ActivityFeed';
+import type { CollectionStats as CollectionStatsType } from '@/types/collection';
+
 
 // ============================================================================
 // Mock Data
@@ -31,38 +30,6 @@ const mockStats: CollectionStatsType = {
   recentActivity: [],
 };
 
-const mockGame: CollectionGame = {
-  id: 'test-game-1',
-  bggId: 12345,
-  title: 'Test Game',
-  imageUrl: '/test-image.jpg',
-  thumbnailUrl: '/test-thumb.jpg',
-  yearPublished: 2020,
-  minPlayers: 2,
-  maxPlayers: 4,
-  playingTime: 60,
-  complexity: 2.5,
-  rating: 8.0,
-  addedAt: new Date().toISOString(),
-  lastPlayedAt: new Date().toISOString(),
-  playCount: 5,
-  hasPdf: true,
-  hasActiveChat: true,
-  chatCount: 2,
-  category: 'Strategy',
-  tags: ['test'],
-};
-
-const mockGames: CollectionGame[] = [
-  mockGame,
-  {
-    ...mockGame,
-    id: 'test-game-2',
-    title: 'Test Game 2',
-    hasPdf: false,
-    hasActiveChat: false,
-  },
-];
 
 // ============================================================================
 // CollectionStats Tests
@@ -179,174 +146,3 @@ describe('MeepleCard', () => {
   });
 });
 
-// ============================================================================
-// CollectionGrid Tests
-// ============================================================================
-
-describe('CollectionGrid', () => {
-  const mockOnSortChange = vi.fn();
-  const mockOnFilterChange = vi.fn();
-  const mockOnGameClick = vi.fn();
-
-  it('should render games grid', () => {
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{}}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    expect(screen.getByTestId('collection-grid-section')).toBeInTheDocument();
-    expect(screen.getByTestId('games-grid')).toBeInTheDocument();
-  });
-
-  it('should render all game cards', () => {
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{}}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    // Verify both game cards are rendered by their titles
-    expect(screen.getByText('Test Game')).toBeInTheDocument();
-    expect(screen.getByText('Test Game 2')).toBeInTheDocument();
-
-    // Verify correct number of cards (using data-entity attribute)
-    const cards = document.querySelectorAll('[data-entity="game"]');
-    expect(cards.length).toBe(2);
-  });
-
-  it('should show empty state when no games', () => {
-    render(
-      <CollectionGrid
-        games={[]}
-        sortBy="date-added-desc"
-        filters={{}}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    expect(screen.getByTestId('collection-grid-empty')).toBeInTheDocument();
-    expect(screen.getByText('Nessun gioco trovato')).toBeInTheDocument();
-  });
-
-  it('should show loading skeleton when loading', () => {
-    render(
-      <CollectionGrid
-        games={[]}
-        sortBy="date-added-desc"
-        filters={{}}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-        isLoading={true}
-      />
-    );
-
-    expect(screen.getByTestId('collection-grid-skeleton')).toBeInTheDocument();
-  });
-
-  it('should render sort select', () => {
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{}}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    expect(screen.getByTestId('sort-select')).toBeInTheDocument();
-  });
-
-  it('should render filter toggle button', () => {
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{}}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
-  });
-
-  it('should show filter panel when toggle clicked', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{}}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    const filterToggle = screen.getByTestId('filter-toggle');
-    await user.click(filterToggle);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('filter-panel')).toBeInTheDocument();
-    });
-  });
-
-  it('should display active filters count', () => {
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{ hasPdf: true, hasActiveChat: true }}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    expect(screen.getByText('2')).toBeInTheDocument(); // Filter count badge
-  });
-
-  it('should show active filter tags', () => {
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{ hasPdf: true }}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    expect(screen.getByTestId('active-filters')).toBeInTheDocument();
-    expect(screen.getByTestId('filter-tag-has-pdf-true')).toBeInTheDocument();
-  });
-
-  it('should call onFilterChange when filter removed', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <CollectionGrid
-        games={mockGames}
-        sortBy="date-added-desc"
-        filters={{ hasPdf: true }}
-        onSortChange={mockOnSortChange}
-        onFilterChange={mockOnFilterChange}
-      />
-    );
-
-    const removeButton = screen.getByRole('button', { name: /Rimuovi filtro Ha PDF/i });
-    await user.click(removeButton);
-
-    expect(mockOnFilterChange).toHaveBeenCalledWith({ hasPdf: undefined });
-  });
-});

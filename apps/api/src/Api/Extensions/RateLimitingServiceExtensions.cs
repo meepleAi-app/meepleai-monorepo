@@ -20,6 +20,7 @@ namespace Api.Extensions;
 /// - UserDashboard: 100 req/min (user dashboard operations) - Issue #3098
 /// - BggSearch: 20 req/hour (BoardGameGeek search operations) - Issue #3120
 /// - ProposePrivateGame: 2 req/min (private game catalog proposals) - Issue #3665
+/// - BulkImportAdmin: 1 req/5min (bulk import operations, Admin only) - Issue #4354
 /// - Default: 60 req/min (general API protection)
 /// </summary>
 internal static class RateLimitingServiceExtensions
@@ -75,6 +76,10 @@ internal static class RateLimitingServiceExtensions
 
                 // Issue #3665: Private game proposal rate limiting policy
                 options.AddPolicy("ProposePrivateGame", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #4354: Bulk import rate limiting policy
+                options.AddPolicy("BulkImportAdmin", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -265,6 +270,23 @@ internal static class RateLimitingServiceExtensions
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 2, // Low limit to prevent proposal spam
                         SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 11: BulkImportAdmin - 1 req/5min for bulk import operations (Issue #4354)
+            options.AddPolicy("BulkImportAdmin", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"bulk-import-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(5),
+                        PermitLimit = 1, // Max 1 bulk import every 5 minutes
+                        SegmentsPerWindow = 5, // 1-minute segments
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });

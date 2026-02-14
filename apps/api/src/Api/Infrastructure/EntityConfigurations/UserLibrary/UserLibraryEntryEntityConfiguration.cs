@@ -41,6 +41,10 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
         builder.HasIndex(e => e.AddedAt)
             .HasDatabaseName("IX_UserLibraryEntries_AddedAt");
 
+        // Issue #4315: Composite index for activity timeline queries (UserId + AddedAt)
+        builder.HasIndex(e => new { e.UserId, e.AddedAt })
+            .HasDatabaseName("IX_UserLibraryEntries_UserId_AddedAt");
+
         // Index for private PDF association
         builder.HasIndex(e => e.PrivatePdfId)
             .HasDatabaseName("IX_UserLibraryEntries_PrivatePdfId");

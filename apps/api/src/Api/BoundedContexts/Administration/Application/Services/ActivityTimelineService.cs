@@ -52,6 +52,8 @@ internal sealed class ActivityTimelineService : IActivityTimelineService
         Guid userId,
         string[]? types = null,
         string? searchTerm = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
         int skip = 0,
         int take = 20,
         SortDirection order = SortDirection.Descending,
@@ -73,6 +75,16 @@ internal sealed class ActivityTimelineService : IActivityTimelineService
         {
             var typeSet = new HashSet<string>(types, StringComparer.OrdinalIgnoreCase);
             filtered = filtered.Where(e => typeSet.Contains(e.Type));
+        }
+
+        // Apply date range filter
+        if (dateFrom.HasValue)
+        {
+            filtered = filtered.Where(e => e.Timestamp >= dateFrom.Value);
+        }
+        if (dateTo.HasValue)
+        {
+            filtered = filtered.Where(e => e.Timestamp <= dateTo.Value);
         }
 
         // Apply text search on GameName/Topic

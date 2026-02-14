@@ -29,9 +29,9 @@ internal class GetTrendingGamesQueryHandler : IQueryHandler<GetTrendingGamesQuer
 
         try
         {
-            var cached = await _cache.GetOrCreateAsync(
+            var cached = await _cache.GetOrCreateAsync<TrendingGamesResponseDto>(
                 cacheKey,
-                async ct =>
+                ct =>
                 {
                     // FUTURE: Query GameTrendingScores table
                     // For now return mock data
@@ -42,7 +42,7 @@ internal class GetTrendingGamesQueryHandler : IQueryHandler<GetTrendingGamesQuer
                         new(Guid.NewGuid(), "Azul", 82.1m, -2.1m)
                     };
 
-                    return new TrendingGamesResponseDto(games, DateTime.UtcNow, query.Period);
+                    return ValueTask.FromResult(new TrendingGamesResponseDto(games, DateTime.UtcNow, query.Period));
                 },
                 new HybridCacheEntryOptions
                 {

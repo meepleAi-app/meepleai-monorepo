@@ -8,6 +8,8 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 /// Handler for achievements queries with caching.
 /// Issue #4314: Achievement System.
 /// </summary>
+#pragma warning disable S4487 // Unused private fields - Will be used in future implementation
+
 internal class GetAchievementsQueryHandler : IQueryHandler<GetAchievementsQuery, List<AchievementDto>>
 {
     private readonly HybridCache _cache;
@@ -19,7 +21,7 @@ internal class GetAchievementsQueryHandler : IQueryHandler<GetAchievementsQuery,
         _logger = logger;
     }
 
-    public async Task<List<AchievementDto>> Handle(GetAchievementsQuery query, CancellationToken cancellationToken)
+    public Task<List<AchievementDto>> Handle(GetAchievementsQuery query, CancellationToken cancellationToken)
     {
         // FUTURE: Query achievements with user unlock status
         // For now return mock achievements
@@ -30,7 +32,7 @@ internal class GetAchievementsQueryHandler : IQueryHandler<GetAchievementsQuery,
             new(Guid.NewGuid(), "Esperto AI", "50+ chat", "🤖", "Chat", "epic", false)
         };
 
-        return achievements;
+        return Task.FromResult(achievements);
     }
 }
 

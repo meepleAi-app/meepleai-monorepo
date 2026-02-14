@@ -80,6 +80,13 @@ internal static class AdministrationServiceExtensions
         // Issue #3916: AI insights service for personalized dashboard recommendations
         services.AddScoped<IAiInsightsService, AiInsightsService>();
 
+        // Issue #4308: Domain analyzers for AI insights (RAG upgrade)
+        services.AddScoped<IUserInsightsService, UserInsightsService>();
+        services.AddScoped<IBacklogAnalyzer, BacklogAnalyzer>();
+        services.AddScoped<IRulesAnalyzer, RulesAnalyzer>();
+        services.AddScoped<IRAGRecommender, RAGRecommender>();
+        services.AddScoped<IStreakAnalyzer, StreakAnalyzer>();
+
         // Issue #3324: SSE real-time dashboard streaming service
         // Singleton because it holds Channel-based subscriber state across requests
         services.AddSingleton<IDashboardStreamService, DashboardStreamService>();

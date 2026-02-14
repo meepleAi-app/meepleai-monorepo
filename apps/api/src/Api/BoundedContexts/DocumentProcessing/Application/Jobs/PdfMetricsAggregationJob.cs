@@ -17,24 +17,25 @@ public class PdfMetricsAggregationJob : IJob
         _logger = logger;
     }
 
-    public async Task Execute(IJobExecutionContext context)
+    public Task Execute(IJobExecutionContext context)
     {
         _logger.LogInformation("PDF Metrics Aggregation Job started");
 
         try
         {
-            // NOTE: Placeholder implementation - full metrics aggregation will be implemented
-            // when PdfProcessingMetrics table schema is finalized (Issue #3715.5)
-            // Future: Query pdf_documents, calculate aggregates, insert into metrics table
+            // FUTURE: Aggregate yesterday's metrics (Issue #3715.5)
+            // - Query pdf_documents WHERE DATE(uploadedAt) = yesterday
+            // - Calculate: total, success, failed, avg time, storage
+            // - INSERT INTO pdf_processing_metrics
 
-            await Task.CompletedTask.ConfigureAwait(false);
-
-            _logger.LogInformation("PDF Metrics Aggregation Job completed successfully");
+            _logger.LogInformation("PDF Metrics Aggregation Job completed successfully (stub)");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "PDF Metrics Aggregation Job failed");
             throw;
         }
+
+        return Task.CompletedTask;
     }
 }

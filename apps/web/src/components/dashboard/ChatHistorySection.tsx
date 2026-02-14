@@ -157,7 +157,7 @@ function EmptyState() {
       <p className="text-sm text-muted-foreground mb-3">
         Nessuna conversazione
       </p>
-      <Link href="/chat">
+      <Link href="/chat/new">
         <Button
           size="sm"
           variant="outline"
@@ -347,7 +347,7 @@ export function ChatHistorySection({
         </div>
 
         {/* New Chat Button */}
-        <Link href="/chat">
+        <Link href="/chat/new">
           <Button
             size="sm"
             variant="outline"

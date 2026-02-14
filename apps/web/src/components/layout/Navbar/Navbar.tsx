@@ -62,7 +62,7 @@ const DESKTOP_NAV_ITEMS: NavItem[] = [
     ariaLabel: 'Navigate to games catalog',
   },
   {
-    href: '/chat',
+    href: '/chat/new',
     icon: MessageSquare,
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',

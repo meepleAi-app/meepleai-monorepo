@@ -79,6 +79,10 @@ export function MobileNavDrawer({
     if (href === '/library') {
       return pathname === '/library';
     }
+    // Chat routes: /chat/new, /chat/{threadId}, etc.
+    if (href === '/chat/new') {
+      return pathname?.startsWith('/chat') ?? false;
+    }
     return pathname?.startsWith(href) ?? false;
   };
 

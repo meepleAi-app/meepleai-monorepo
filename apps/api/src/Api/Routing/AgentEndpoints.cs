@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities;
 using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using KbAgentDto = Api.BoundedContexts.KnowledgeBase.Application.DTOs.AgentDto;
 using Api.Models;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -29,6 +30,8 @@ internal static class AgentEndpoints
         MapGetAgentDocumentsEndpoint(group);
         MapAskAgentQuestionEndpoint(group); // POC: Agent search strategy testing
         MapTutorQueryEndpoint(group); // ISSUE-3499
+        MapChatWithAgentEndpoint(group); // Issue #4126: SSE chat streaming
+        MapGetRecentAgentsEndpoint(group); // Issue #4126: Dashboard widget
 
         return group;
     }
@@ -372,6 +375,79 @@ internal static class AgentEndpoints
         .Produces(401)
         .Produces(500);
     }
+
+    /// <summary>
+    /// Get recent agents endpoint for dashboard widget.
+    /// Issue #4126: API Integration.
+    /// </summary>
+    private static void MapGetRecentAgentsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/recent", async (
+            [FromQuery] int? limit,
+            [FromServices] IMediator mediator,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+        {
+            // Session validated by RequireSessionFilter
+            _ = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+
+            var query = new GetRecentAgentsQuery(limit ?? 10);
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("GetRecentAgents")
+        .WithTags("Agents")
+        .WithDescription("Get recently used agents")
+        .Produces<IReadOnlyList<KbAgentDto>>(200)
+        .Produces(500);
+    }
+
+    /// <summary>
+    /// Chat with agent endpoint with SSE streaming.
+    /// Issue #4126: API Integration for Agent Chat.
+    /// </summary>
+    private static void MapChatWithAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/{id:guid}/chat", async (
+            [FromRoute] Guid id,
+            [FromBody] ChatWithAgentRequest request,
+            [FromServices] IMediator mediator,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+        {
+            // Session validated by RequireSessionFilter
+            _ = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+
+            var command = new SendAgentMessageCommand(
+                AgentId: id,
+                UserQuestion: request.Message
+            );
+
+            // Set SSE headers
+            httpContext.Response.ContentType = "text/event-stream";
+            httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+            httpContext.Response.Headers.Append("Connection", "keep-alive");
+
+            await foreach (var @event in mediator.CreateStream(command, cancellationToken).ConfigureAwait(false))
+            {
+                await httpContext.Response.WriteAsync(
+                    $"data: {System.Text.Json.JsonSerializer.Serialize(@event)}\n\n",
+                    cancellationToken).ConfigureAwait(false);
+
+                await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+        })
+        .RequireSession()
+        .WithName("ChatWithAgent")
+        .WithTags("Agents", "Chat")
+        .WithDescription("Chat with agent (SSE streaming)")
+        .Produces(200)
+        .Produces(400)
+        .Produces(404)
+        .Produces(500);
+    }
 }
 
 /// <summary>
@@ -381,6 +457,14 @@ internal record TutorQueryRequest(
     Guid GameId,
     Guid SessionId,
     string Query
+);
+
+/// <summary>
+/// Request for chat with agent (SSE streaming).
+/// Issue #4126
+/// </summary>
+internal record ChatWithAgentRequest(
+    string Message
 );
 
 // Request DTOs

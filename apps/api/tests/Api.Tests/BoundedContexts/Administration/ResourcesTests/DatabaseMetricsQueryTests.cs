@@ -74,7 +74,7 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
         var query = new GetDatabaseMetricsQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
@@ -97,7 +97,7 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
         var query = new GetDatabaseMetricsQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.SizeFormatted.Should().MatchRegex(@"^\d+\.?\d* (B|KB|MB|GB|TB)$",
@@ -116,8 +116,7 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
         var act = () => handler.Handle(null!, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ArgumentNullException>()
-            .ConfigureAwait(false);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

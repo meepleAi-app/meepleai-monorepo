@@ -1,50 +1,42 @@
 /**
- * Game Detail Page - Flippable Card Design (Issue #3522)
+ * Game Detail Page (Issue #3522)
  *
  * Public game detail page with:
- * - TOP: Flippable 3D card (front: cover/stats, back: description/metadata)
+ * - TOP: MeepleCard (hero, flippable) + MeepleInfoCard (readOnly for public, KB+Social)
  * - BOTTOM: User-specific sections (visible only when authenticated)
  *
  * Data Sources:
  * - Public: SharedGameDetail from shared-games API
- * - Authenticated: Library status, stats, notes from library API
- *
- * Design: Warm, tactile board game aesthetic with smooth flip animation
+ * - Authenticated: Favorite toggle, notes (localStorage)
  */
 
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 
-import { motion } from 'framer-motion';
 import {
   AlertCircle,
   ArrowLeft,
-  RotateCcw,
-  Star,
-  Users,
+  BookOpen,
   Clock,
   Gauge,
-  Tag,
-  Cog,
-  User as UserIcon,
-  Paintbrush,
   Heart,
-  BookOpen,
+  MessageCircle,
   Trash2,
+  Users,
 } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-import { Badge } from '@/components/ui/data-display/badge';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { api, SharedGameDetail } from '@/lib/api';
+import { api, type SharedGameDetail } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
@@ -73,9 +65,6 @@ export default function GameDetailPage() {
   const [gameDetail, setGameDetail] = useState<SharedGameDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Card flip state
-  const [isFlipped, setIsFlipped] = useState(false);
 
   // User-specific state (authenticated users only)
   const [notes, setNotes] = useState('');
@@ -130,10 +119,6 @@ export default function GameDetailPage() {
   }, [gameId]);
 
   // Handlers
-  const handleFlip = useCallback(() => {
-    setIsFlipped((prev) => !prev);
-  }, []);
-
   const handleSaveNotes = useCallback(() => {
     if (!gameId) return;
 
@@ -143,39 +128,40 @@ export default function GameDetailPage() {
       // eslint-disable-next-line security/detect-object-injection
       allNotes[gameId] = notes;
       localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(allNotes));
-      alert('Note salvate con successo!');
     } catch (err) {
       logger.error(
         'Failed to save notes',
         err instanceof Error ? err : new Error(String(err)),
         createErrorContext('GameDetailPage', 'saveNotes', { gameId })
       );
-      alert('Errore nel salvare le note');
     }
   }, [gameId, notes]);
 
   const toggleFavorite = useCallback(() => {
     setIsFavorite((prev) => !prev);
-    // TODO: Persist to backend when authenticated
   }, []);
 
-  // Memoized stats
-  const formattedStats = useMemo(() => {
-    if (!gameDetail) return null;
+  // Build metadata for MeepleCard
+  const metadata = useMemo(() => {
+    if (!gameDetail) return [];
+    const items = [];
 
-    return {
-      playerCount:
-        gameDetail.minPlayers && gameDetail.maxPlayers
-          ? gameDetail.minPlayers === gameDetail.maxPlayers
-            ? `${gameDetail.minPlayers}`
-            : `${gameDetail.minPlayers}-${gameDetail.maxPlayers}`
-          : 'N/A',
-      playtime: gameDetail.playingTimeMinutes ? `${gameDetail.playingTimeMinutes} min` : 'N/A',
-      complexity: gameDetail.complexityRating
-        ? `${gameDetail.complexityRating.toFixed(1)}/5`
-        : 'N/A',
-      rating: gameDetail.averageRating ? gameDetail.averageRating.toFixed(1) : 'N/A',
-    };
+    if (gameDetail.minPlayers && gameDetail.maxPlayers) {
+      const players = gameDetail.minPlayers === gameDetail.maxPlayers
+        ? `${gameDetail.minPlayers}`
+        : `${gameDetail.minPlayers}-${gameDetail.maxPlayers}`;
+      items.push({ icon: Users, value: players });
+    }
+
+    if (gameDetail.playingTimeMinutes) {
+      items.push({ icon: Clock, value: `${gameDetail.playingTimeMinutes} min` });
+    }
+
+    if (gameDetail.complexityRating) {
+      items.push({ icon: Gauge, value: `${gameDetail.complexityRating.toFixed(1)}/5` });
+    }
+
+    return items;
   }, [gameDetail]);
 
   // ============================================================================
@@ -225,267 +211,43 @@ export default function GameDetailPage() {
           </Link>
         </Button>
 
-        {/* ========== TOP SECTION: Flippable Game Card ========== */}
-        <div className="flex justify-center mb-12">
-          <div className="w-full max-w-2xl">
-            {/* Flip Button */}
-            <div className="flex justify-end mb-4">
-              <Button
-                onClick={handleFlip}
-                variant="outline"
-                className="font-nunito shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                {isFlipped ? 'Mostra Fronte' : 'Mostra Retro'}
-              </Button>
-            </div>
+        {/* Cards Section - MeepleCard (hero, flippable) + MeepleInfoCard */}
+        <section className="mb-12 flex flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
+          {/* Flippable Game Card */}
+          <MeepleCard
+            entity="game"
+            variant="hero"
+            title={gameDetail.title}
+            subtitle={
+              (gameDetail.publishers && gameDetail.publishers.length > 0
+                ? gameDetail.publishers[0].name
+                : '') +
+              (gameDetail.yearPublished ? ` (${gameDetail.yearPublished})` : '')
+            }
+            imageUrl={gameDetail.imageUrl || undefined}
+            rating={gameDetail.averageRating ?? undefined}
+            ratingMax={10}
+            metadata={metadata}
+            flippable
+            flipData={{
+              description: gameDetail.description || undefined,
+              categories: gameDetail.categories,
+              mechanics: gameDetail.mechanics,
+              designers: gameDetail.designers,
+              publishers: gameDetail.publishers,
+              complexityRating: gameDetail.complexityRating,
+              minAge: gameDetail.minAge,
+            }}
+          />
 
-            {/* 3D Flippable Card */}
-            <div
-              className="relative w-full"
-              style={{
-                perspective: '1500px',
-                minHeight: '600px',
-              }}
-            >
-              <motion.div
-                className="relative w-full h-full"
-                animate={{ rotateY: isFlipped ? 180 : 0 }}
-                transition={{
-                  duration: 0.8,
-                  type: 'spring',
-                  stiffness: 80,
-                  damping: 15,
-                }}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  minHeight: '600px',
-                }}
-              >
-                {/* ========== FRONT CARD ========== */}
-                <motion.div
-                  className="absolute inset-0 w-full"
-                  style={{
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
-                  }}
-                >
-                  <Card
-                    className={cn(
-                      'border-l-4 border-l-[hsl(25,95%,38%)] overflow-hidden h-full',
-                      'bg-card/95 backdrop-blur-sm shadow-2xl',
-                      'hover:shadow-3xl transition-shadow duration-300'
-                    )}
-                  >
-                    {/* Cover Image */}
-                    <div className="relative h-80 bg-gradient-to-br from-[hsl(25_95%_38%/0.05)] to-[hsl(262_83%_62%/0.05)] overflow-hidden">
-                      <Image
-                        src={gameDetail.imageUrl || '/placeholder-game.svg'}
-                        alt={gameDetail.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 800px"
-                        priority
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-
-                      {/* BGG Badge Overlay */}
-                      {gameDetail.bggId && (
-                        <Badge
-                          variant="secondary"
-                          className="absolute top-4 right-4 shadow-lg backdrop-blur-sm bg-background/90"
-                        >
-                          BGG #{gameDetail.bggId}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Card Content */}
-                    <CardContent className="p-8 space-y-6">
-                      {/* Title & Publisher */}
-                      <div className="space-y-2">
-                        <h1 className="font-quicksand text-4xl font-bold text-foreground leading-tight">
-                          {gameDetail.title}
-                        </h1>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground font-nunito">
-                          {gameDetail.publishers && gameDetail.publishers.length > 0 && (
-                            <span>{gameDetail.publishers[0].name}</span>
-                          )}
-                          {gameDetail.yearPublished && (
-                            <>
-                              <span>•</span>
-                              <span>{gameDetail.yearPublished}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* BGG Rating */}
-                      {formattedStats && gameDetail.averageRating && (
-                        <div className="flex items-center gap-3 py-3 px-4 bg-[hsl(25_95%_38%/0.05)] rounded-xl border border-[hsl(25_95%_38%/0.1)]">
-                          <Star className="h-6 w-6 text-[hsl(25,95%,38%)] fill-[hsl(25,95%,38%)]" />
-                          <div className="flex-1">
-                            <div className="font-quicksand text-2xl font-bold text-foreground">
-                              {formattedStats.rating}
-                            </div>
-                            <div className="text-xs text-muted-foreground font-nunito">BGG Rating</div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Quick Stats Grid */}
-                      {formattedStats && (
-                        <div className="grid grid-cols-3 gap-4">
-                          {/* Players */}
-                          <div className="flex flex-col items-center gap-2 p-4 bg-[hsl(262_83%_62%/0.05)] rounded-xl">
-                            <Users className="h-5 w-5 text-[hsl(262,83%,62%)]" />
-                            <div className="font-quicksand font-bold text-lg text-foreground">
-                              {formattedStats.playerCount}
-                            </div>
-                            <div className="text-xs text-muted-foreground font-nunito">Giocatori</div>
-                          </div>
-
-                          {/* Duration */}
-                          <div className="flex flex-col items-center gap-2 p-4 bg-[hsl(25_95%_38%/0.05)] rounded-xl">
-                            <Clock className="h-5 w-5 text-[hsl(25,95%,38%)]" />
-                            <div className="font-quicksand font-bold text-lg text-foreground">
-                              {formattedStats.playtime}
-                            </div>
-                            <div className="text-xs text-muted-foreground font-nunito">Durata</div>
-                          </div>
-
-                          {/* Complexity */}
-                          {gameDetail.complexityRating && (
-                            <div className="flex flex-col items-center gap-2 p-4 bg-[hsl(262_83%_62%/0.05)] rounded-xl">
-                              <Gauge className="h-5 w-5 text-[hsl(262,83%,62%)]" />
-                              <div className="font-quicksand font-bold text-lg text-foreground">
-                                {formattedStats.complexity}
-                              </div>
-                              <div className="text-xs text-muted-foreground font-nunito">Complessità</div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                {/* ========== BACK CARD ========== */}
-                <motion.div
-                  className="absolute inset-0 w-full"
-                  style={{
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
-                    transform: 'rotateY(180deg)',
-                  }}
-                >
-                  <Card
-                    className={cn(
-                      'border-l-4 border-l-[hsl(262,83%,62%)] overflow-hidden h-full',
-                      'bg-card/95 backdrop-blur-sm shadow-2xl'
-                    )}
-                  >
-                    <CardContent className="p-8 space-y-6 overflow-y-auto max-h-[600px]">
-                      {/* Description */}
-                      <div className="space-y-3">
-                        <h2 className="font-quicksand text-2xl font-bold text-foreground">
-                          Descrizione
-                        </h2>
-                        <p className="font-nunito text-muted-foreground leading-relaxed">
-                          {gameDetail.description}
-                        </p>
-                      </div>
-
-                      {/* Categories */}
-                      {gameDetail.categories && gameDetail.categories.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Tag className="h-5 w-5 text-[hsl(25,95%,38%)]" />
-                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
-                              Categorie
-                            </h3>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {gameDetail.categories.map((cat) => (
-                              <Badge
-                                key={cat.id}
-                                variant="secondary"
-                                className="bg-[hsl(25_95%_38%/0.1)] text-[hsl(25,95%,38%)] hover:bg-[hsl(25_95%_38%/0.2)] font-nunito"
-                              >
-                                {cat.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Mechanics */}
-                      {gameDetail.mechanics && gameDetail.mechanics.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Cog className="h-5 w-5 text-[hsl(262,83%,62%)]" />
-                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
-                              Meccaniche
-                            </h3>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {gameDetail.mechanics.map((mech) => (
-                              <Badge
-                                key={mech.id}
-                                variant="outline"
-                                className="border-[hsl(262_83%_62%/0.3)] text-[hsl(262,83%,62%)] font-nunito"
-                              >
-                                {mech.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Designers */}
-                      {gameDetail.designers && gameDetail.designers.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <UserIcon className="h-5 w-5 text-muted-foreground" />
-                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
-                              Designer
-                            </h3>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {gameDetail.designers.map((designer) => (
-                              <Badge key={designer.id} variant="secondary" className="font-nunito">
-                                {designer.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Publishers */}
-                      {gameDetail.publishers && gameDetail.publishers.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Paintbrush className="h-5 w-5 text-muted-foreground" />
-                            <h3 className="font-quicksand text-lg font-semibold text-foreground">
-                              Editori
-                            </h3>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {gameDetail.publishers.map((pub) => (
-                              <Badge key={pub.id} variant="secondary" className="font-nunito">
-                                {pub.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
+          {/* Info Card - KB & Social (readOnly for public page) */}
+          <MeepleInfoCard
+            gameId={gameDetail.id}
+            gameTitle={gameDetail.title}
+            bggId={gameDetail.bggId}
+            readOnly={!isAuthenticated}
+          />
+        </section>
 
         {/* ========== BOTTOM SECTION: User Info & Actions (authenticated only) ========== */}
         {isAuthenticated && (
@@ -497,7 +259,13 @@ export default function GameDetailPage() {
                   <CardTitle className="font-quicksand text-xl">Azioni Rapide</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Favorite Toggle */}
+                  <Button asChild className="w-full font-nunito bg-[hsl(25,95%,38%)] hover:bg-[hsl(25,95%,32%)]">
+                    <Link href={`/games/${gameId}/chat`}>
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      💬 Chat con AI
+                    </Link>
+                  </Button>
+
                   <Button
                     onClick={toggleFavorite}
                     variant={isFavorite ? 'default' : 'outline'}
@@ -512,13 +280,11 @@ export default function GameDetailPage() {
                     {isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti'}
                   </Button>
 
-                  {/* Add to Collection */}
                   <Button variant="outline" className="w-full font-nunito">
                     <BookOpen className="mr-2 h-4 w-4" />
                     Aggiungi alla Collezione
                   </Button>
 
-                  {/* Remove from Collection */}
                   <Button variant="destructive" className="w-full font-nunito">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Rimuovi dalla Collezione

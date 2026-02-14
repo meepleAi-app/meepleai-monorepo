@@ -10,6 +10,8 @@ using Api.Models;
 using Api.Observability;
 using Api.Routing;
 using Api.Routing.GameManagement;
+using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
+using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection; // Issue #4220
 using Api.Services;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -239,6 +241,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// Epic #4068: Permission system registry
+builder.Services.AddSingleton<Api.BoundedContexts.Administration.Application.Services.PermissionRegistry>();
+
 // Register IHttpContextAccessor for audit logging and request context
 builder.Services.AddHttpContextAccessor();
 
@@ -267,6 +272,8 @@ builder.Services.AddApplicationServices(builder.Configuration);
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
 builder.Services.AddAuthenticationServices(builder.Configuration);
 
+// User Notifications bounded context (Issue #4220)
+builder.Services.AddUserNotificationsContext();
 
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
@@ -458,13 +465,16 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
 var v1Api = app.MapGroup("/api/v1");
 
 v1Api.MapAuthEndpoints();
+v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
+v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
@@ -486,6 +496,7 @@ v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
+v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
 v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
@@ -494,7 +505,10 @@ v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
+v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
 v1Api.MapUserLibraryEndpoints();       // User game library
+v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
+v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
@@ -510,6 +524,9 @@ v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
+v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
+v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
+v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)
 v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
 v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
 v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
@@ -523,12 +540,14 @@ v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 v1Api.MapKnowledgeBaseEndpoints();
 v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 v1Api.MapRagDashboardEndpoints();   // Issue #3304: RAG Dashboard configuration and metrics
+v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strategies endpoint
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
 
 // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
 v1Api.MapArbitroAgentEndpoints();
+v1Api.MapDecisoreAgentEndpoints();  // Issue #3773
 
 // Issue #3377: AI model configuration endpoints
 v1Api.MapModelEndpoints();

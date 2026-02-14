@@ -21,7 +21,7 @@ import {
   LibraryFilters,
   EditNotesModal,
   RemoveGameDialog,
-  UserGameCard,
+  MeepleLibraryGameCard,
   AgentConfigModal,
   PdfUploadModal,
   BulkActionBar,
@@ -412,10 +412,11 @@ export default function LibraryPageClient() {
               layout
             >
               <AnimatePresence mode="popLayout">
-                {filteredGames.map((game, index) => (
-                  <UserGameCard
+                {filteredGames.map((game) => (
+                  <MeepleLibraryGameCard
                     key={game.id}
                     game={game}
+                    variant={viewMode === 'grid' ? 'grid' : 'list'}
                     onConfigureAgent={handleConfigureAgent}
                     onUploadPdf={handleUploadPdf}
                     onEditNotes={handleEditNotes}
@@ -424,8 +425,6 @@ export default function LibraryPageClient() {
                     selectionMode={selectionMode}
                     isSelected={isSelected(game.gameId)}
                     onSelect={handleGameSelect}
-                    index={index}
-                    viewMode={viewMode}
                   />
                 ))}
               </AnimatePresence>

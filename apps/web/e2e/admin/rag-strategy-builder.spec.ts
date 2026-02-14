@@ -1,6 +1,7 @@
 /**
  * E2E Tests: RAG Visual Strategy Builder
  * Issue #3468
+ * @slow - 119 test cases, complex visual interactions and validations
  *
  * Tests the visual drag-and-drop builder for RAG strategies:
  * 1. Drag block from palette to canvas

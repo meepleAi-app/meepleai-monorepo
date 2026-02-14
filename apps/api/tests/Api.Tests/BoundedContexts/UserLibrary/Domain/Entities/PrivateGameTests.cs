@@ -674,6 +674,90 @@ public sealed class PrivateGameTests
 
     #endregion
 
+    #region Agent Linking Tests (Issue #4228)
+
+    [Fact]
+    public void LinkAgent_WithValidAgentId_LinksAgent()
+    {
+        // Arrange
+        var game = CreateValidManualGame();
+        var agentId = Guid.NewGuid();
+
+        // Act
+        game.LinkAgent(agentId);
+
+        // Assert
+        game.AgentDefinitionId.Should().Be(agentId);
+        game.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        game.DomainEvents.Should().ContainSingle(e => e is Api.BoundedContexts.UserLibrary.Domain.Events.AgentLinkedToPrivateGameEvent);
+    }
+
+    [Fact]
+    public void LinkAgent_WhenAgentAlreadyLinked_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var game = CreateValidManualGame();
+        var firstAgentId = Guid.NewGuid();
+        var secondAgentId = Guid.NewGuid();
+        game.LinkAgent(firstAgentId);
+
+        // Act
+        var action = () => game.LinkAgent(secondAgentId);
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("An agent is already linked to this game");
+        game.AgentDefinitionId.Should().Be(firstAgentId); // Should not change
+    }
+
+    [Fact]
+    public void LinkAgent_WithEmptyGuid_ThrowsArgumentException()
+    {
+        // Arrange
+        var game = CreateValidManualGame();
+
+        // Act
+        var action = () => game.LinkAgent(Guid.Empty);
+
+        // Assert
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*AgentId cannot be empty*");
+    }
+
+    [Fact]
+    public void UnlinkAgent_WhenAgentLinked_UnlinksAgent()
+    {
+        // Arrange
+        var game = CreateValidManualGame();
+        var agentId = Guid.NewGuid();
+        game.LinkAgent(agentId);
+        game.ClearDomainEvents(); // Clear link event
+
+        // Act
+        game.UnlinkAgent();
+
+        // Assert
+        game.AgentDefinitionId.Should().BeNull();
+        game.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        game.DomainEvents.Should().ContainSingle(e => e is Api.BoundedContexts.UserLibrary.Domain.Events.AgentUnlinkedFromPrivateGameEvent);
+    }
+
+    [Fact]
+    public void UnlinkAgent_WhenNoAgentLinked_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var game = CreateValidManualGame();
+
+        // Act
+        var action = () => game.UnlinkAgent();
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("No agent is currently linked to this game");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static PrivateGame CreateValidManualGame()

@@ -58,14 +58,26 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import Image from 'next/image';
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
+import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 import { StatusBadge } from './meeple-card-features/StatusBadge';
+import { type TagConfig, type TagPresetKey } from './meeple-card-features/tag-presets';
+import { TagStrip } from './meeple-card-features/TagStrip';
 import { WishlistButton } from './meeple-card-features/WishlistButton';
+// Issue #4030: New action components
+import { MeepleCardInfoButton } from './meeple-card-info-button';
+import { MeepleCardQuickActions } from './meeple-card-quick-actions';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -77,8 +89,9 @@ import type { LucideIcon } from 'lucide-react';
 
 /**
  * Supported entity types with semantic colors
+ * Issue #4030: Extended from 5 to 7 types (removed collection, added session/agent/document/chatSession)
  */
-export type MeepleEntityType = 'game' | 'player' | 'collection' | 'event' | 'custom';
+export type MeepleEntityType = 'game' | 'player' | 'session' | 'agent' | 'document' | 'chatSession' | 'event' | 'custom';
 
 /**
  * Layout variant options
@@ -199,6 +212,39 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (id: string, selected: boolean) => void;
+
+  /** Feature: Flip Card (3D flip to show back content) */
+  flippable?: boolean;
+  flipData?: MeepleCardFlipData;
+  isFlipped?: boolean;
+  onFlip?: (flipped: boolean) => void;
+  /** Flip trigger mode: 'card' = click anywhere, 'button' = dedicated button */
+  flipTrigger?: 'card' | 'button';
+
+  // ========== NEW FEATURES (Issue #4030) ==========
+
+  /** Feature: Entity Quick Actions (hover-reveal buttons) */
+  entityQuickActions?: Array<{
+    icon: LucideIcon;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    hidden?: boolean;
+  }>;
+
+  /** Feature: Info Button (always-visible navigation to detail page) */
+  showInfoButton?: boolean;
+  infoHref?: string;
+  infoTooltip?: string;
+
+  // ========== FEATURE: VERTICAL TAG STRIP (Issue #4181) ==========
+
+  /** Feature: Vertical Tag Strip (left-edge tag display) */
+  tags?: (TagPresetKey | TagConfig)[];
+  /** Max visible tags before overflow (default: 3) */
+  maxVisibleTags?: number;
+  /** Show tag strip (default: auto-detect from tags prop) */
+  showTagStrip?: boolean;
 }
 
 // ============================================================================
@@ -208,7 +254,10 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 const entityColors: Record<MeepleEntityType, { hsl: string; name: string }> = {
   game: { hsl: '25 95% 45%', name: 'Game' },         // Orange
   player: { hsl: '262 83% 58%', name: 'Player' },    // Purple
-  collection: { hsl: '168 76% 42%', name: 'Collection' }, // Teal
+  session: { hsl: '240 60% 55%', name: 'Session' },  // Indigo
+  agent: { hsl: '38 92% 50%', name: 'Agent' },       // Amber
+  document: { hsl: '210 40% 55%', name: 'Document' }, // Slate
+  chatSession: { hsl: '220 80% 55%', name: 'Chat' }, // Blue
   event: { hsl: '350 89% 60%', name: 'Event' },      // Rose
   custom: { hsl: '220 70% 50%', name: 'Custom' },    // Blue (default)
 };
@@ -253,7 +302,7 @@ const meepleCardVariants = cva(
           'hover:-translate-y-2',
         ],
         hero: [
-          'relative rounded-3xl overflow-hidden',
+          'relative flex flex-col rounded-3xl overflow-hidden',
           'min-h-[320px]',
           'shadow-xl hover:shadow-2xl',
           'hover:scale-[1.01]',
@@ -269,7 +318,7 @@ const meepleCardVariants = cva(
 const coverVariants = cva('relative overflow-hidden', {
   variants: {
     variant: {
-      grid: 'aspect-[4/3] rounded-t-2xl',
+      grid: 'aspect-[7/10] rounded-t-2xl', // Issue #4030: Board game card proportions
       list: 'w-16 h-16 rounded-lg flex-shrink-0',
       compact: 'w-10 h-10 rounded-md flex-shrink-0',
       featured: 'aspect-[16/9]',
@@ -286,7 +335,7 @@ const contentVariants = cva('', {
       list: 'flex-1 min-w-0 py-1',
       compact: 'flex-1 min-w-0',
       featured: 'flex-1 flex flex-col p-5',
-      hero: 'relative z-10 flex flex-col justify-end p-6 min-h-[320px]',
+      hero: 'relative z-10 mt-auto flex flex-col justify-end p-5 bg-black/80 backdrop-blur-sm',
     },
   },
   defaultVariants: { variant: 'grid' },
@@ -333,27 +382,16 @@ function EntityIndicator({
   }
 
   if (variant === 'featured' || variant === 'grid') {
+    // Left border accent only; entity badge is rendered by VerticalTagStack
     return (
-      <>
-        {/* Left border accent */}
-        <span
-          className="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
-          style={{ backgroundColor: `hsl(${color})` }}
-          aria-hidden="true"
-        />
-        {/* Top badge */}
-        <span
-          className={cn(
-            'absolute top-3 left-4 z-10',
-            'px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-            'text-white rounded-md shadow-sm',
-            className
-          )}
-          style={{ backgroundColor: `hsl(${color})` }}
-        >
-          {name}
-        </span>
-      </>
+      <span
+        className={cn(
+          'absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200',
+          className
+        )}
+        style={{ backgroundColor: `hsl(${color})` }}
+        aria-hidden="true"
+      />
     );
   }
 
@@ -364,6 +402,79 @@ function EntityIndicator({
       style={{ backgroundColor: `hsl(${color})` }}
       aria-hidden="true"
     />
+  );
+}
+
+/**
+ * Vertical tag stack (top-left of card)
+ * Issue #4062: Stacks entity badge, status, and custom badge vertically
+ * with compact sizing (80px max), truncation, and hover tooltips.
+ */
+function VerticalTagStack({
+  entity,
+  customColor,
+  status,
+  showStatusIcon,
+  badge,
+}: {
+  entity: MeepleEntityType;
+  customColor?: string;
+  status?: MeepleCardProps['status'];
+  showStatusIcon?: boolean;
+  badge?: string;
+}) {
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
+  const color = customColor || entityColors[entity].hsl;
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
+  const name = entityColors[entity].name;
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <div
+        className="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+        data-testid="meeple-card-tag-stack"
+      >
+        {/* Entity type badge (highest priority) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+              style={{ backgroundColor: `hsl(${color})` }}
+            >
+              {name}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {name}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Status badge */}
+        {status && (
+          <StatusBadge
+            status={status}
+            showIcon={showStatusIcon}
+            className="max-w-[80px]"
+          />
+        )}
+
+        {/* Custom badge */}
+        {badge && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="max-w-[80px] truncate bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-muted-foreground border border-border/50 cursor-default"
+              >
+                {badge}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              {badge}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -395,7 +506,7 @@ function CoverImage({
   const showOverlay = variant === 'hero' || variant === 'featured' || variant === 'grid';
 
   return (
-    <div className={coverVariants({ variant })}>
+    <div className={cn(coverVariants({ variant }))}>
       <Image
         src={imageSrc}
         alt={alt}
@@ -624,6 +735,21 @@ export const MeepleCard = React.memo(function MeepleCard({
   selectable,
   selected,
   onSelect,
+  // Flip feature props
+  flippable,
+  flipData,
+  isFlipped,
+  onFlip,
+  flipTrigger,
+  // Issue #4030: New action props
+  entityQuickActions,
+  showInfoButton,
+  infoHref,
+  infoTooltip,
+  // Issue #4181: Vertical Tag Strip
+  tags,
+  maxVisibleTags = 3,
+  showTagStrip,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -686,15 +812,41 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       )}
 
-      {/* Entity indicator */}
+      {/* Entity indicator (left border for grid/featured, ribbon for hero, dot for list/compact) */}
       <EntityIndicator
         entity={entity}
         variant={variant}
         customColor={customColor}
       />
 
-      {/* Feature: Status Badge (below entity badge) */}
-      {status && (
+      {/* Feature: Vertical Tag Strip (Issue #4181) - left-edge tag display */}
+      {(showTagStrip || (tags && tags.length > 0)) && (
+        <TagStrip
+          tags={tags || []}
+          maxVisible={maxVisibleTags}
+          variant={
+            variant === 'grid' || variant === 'featured'
+              ? 'desktop'
+              : variant === 'list'
+                ? 'tablet'
+                : 'mobile'
+          }
+        />
+      )}
+
+      {/* Vertical tag stack: entity badge + status + custom badge (grid/featured only) */}
+      {(variant === 'grid' || variant === 'featured') && (
+        <VerticalTagStack
+          entity={entity}
+          customColor={customColor}
+          status={status}
+          showStatusIcon={showStatusIcon}
+          badge={badge}
+        />
+      )}
+
+      {/* Status Badge for non-grid/non-featured variants */}
+      {status && variant !== 'grid' && variant !== 'featured' && (
         <StatusBadge
           status={status}
           showIcon={showStatusIcon}
@@ -726,17 +878,41 @@ export const MeepleCard = React.memo(function MeepleCard({
 
       {/* Content area */}
       <div className={contentVariants({ variant })}>
-        {/* Feature: Top-right corner (Wishlist or QuickActions) */}
-        {(showWishlistBtn || hasQuickActions) && (
-          <div className="absolute top-3 right-3 flex gap-2 z-15">
-            {hasQuickActions && (
+        {/* Feature: Top-right actions row (Issue #4030: QuickActions + InfoButton) */}
+        {(entityQuickActions || showInfoButton || showWishlistBtn || hasQuickActions) && (
+          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-15">
+            {/* New entity quick actions (Issue #4030) */}
+            {entityQuickActions && entityQuickActions.length > 0 && (
+              <MeepleCardQuickActions
+                actions={entityQuickActions}
+                entityType={entity}
+                customColor={customColor}
+                size="sm"
+              />
+            )}
+
+            {/* Legacy quick actions menu (Issue #3825) */}
+            {hasQuickActions && !entityQuickActions && (
               <QuickActionsMenu actions={quickActions} userRole={userRole} size="sm" />
             )}
-            {showWishlistBtn && onWishlistToggle && (
+
+            {/* Wishlist button (if no entity quick actions) */}
+            {showWishlistBtn && !entityQuickActions && onWishlistToggle && (
               <WishlistButton
                 gameId={testId || 'card'}
                 isWishlisted={!!isWishlisted}
                 onToggle={onWishlistToggle}
+                size="sm"
+              />
+            )}
+
+            {/* Info button (Issue #4030 - always visible, rightmost) */}
+            {showInfoButton && infoHref && (
+              <MeepleCardInfoButton
+                href={infoHref}
+                entityType={entity}
+                customColor={customColor}
+                tooltip={infoTooltip}
                 size="sm"
               />
             )}
@@ -786,8 +962,8 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
-        {/* Metadata */}
-        {metadata.length > 0 && variant !== 'compact' && (
+        {/* Metadata (non-grid variants render inline; grid uses footer below) */}
+        {metadata.length > 0 && variant !== 'compact' && variant !== 'grid' && (
           <MetadataChips
             metadata={metadata}
             variant={variant}
@@ -804,15 +980,54 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
-        {/* Badge overlay */}
-        {badge && !isHeroOrFeatured && (
+        {/* Badge overlay (only for non-grid/non-featured variants without VerticalTagStack) */}
+        {badge && variant !== 'grid' && variant !== 'featured' && !isHeroOrFeatured && (
           <span className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
             {badge}
           </span>
         )}
       </div>
+
+      {/* Grid footer: metadata info bar (~1/5 of card) */}
+      {variant === 'grid' && metadata.length > 0 && (
+        <div
+          className={cn(
+            'flex items-center justify-evenly gap-2',
+            'px-4 py-3',
+            'border-t border-border/50',
+            'bg-muted/60 dark:bg-muted/40',
+            'rounded-b-2xl',
+          )}
+          data-testid="meeple-card-footer"
+        >
+          {metadata.map((item, index) => (
+            <span
+              key={index}
+              className="flex items-center gap-1.5 text-xs text-foreground/70 dark:text-foreground/60"
+            >
+              {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+              <span className="font-nunito font-semibold">{item.label || item.value}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </Component>
   );
+
+  // Feature: Wrap with FlipCard if enabled (takes priority over HoverPreview)
+  if (flippable && flipData) {
+    return (
+      <FlipCard
+        flipData={flipData}
+        variant={variant}
+        isFlipped={isFlipped}
+        onFlip={onFlip}
+        flipTrigger={flipTrigger}
+      >
+        {cardContent}
+      </FlipCard>
+    );
+  }
 
   // Feature: Wrap with HoverPreview if enabled
   if (showPreview && onFetchPreview && id) {
@@ -838,3 +1053,4 @@ export const MeepleCard = React.memo(function MeepleCard({
 
 export { MeepleCardSkeleton, entityColors };
 export type { MeepleCardMetadata as MeepleMetadata, MeepleCardAction as MeepleAction };
+export type { MeepleCardFlipData } from './meeple-card-features/FlipCard';

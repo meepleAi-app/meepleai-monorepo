@@ -2,15 +2,18 @@ using System.Security.Claims;
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands.Labels;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Application.Queries.Labels;
+using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
 using Api.Models;
+using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +41,7 @@ internal static class UserLibraryEndpoints
         MapConfigureGameAgentEndpoint(group);
         MapResetGameAgentEndpoint(group);
         MapSaveAgentConfigEndpoint(group); // Issue #3212
+        MapCreateGameAgentEndpoint(group); // Issue #5
 
         // Custom PDF endpoints
         MapUploadCustomGamePdfEndpoint(group);
@@ -67,6 +71,16 @@ internal static class UserLibraryEndpoints
         MapRemoveLabelFromGameEndpoint(group);
         MapCreateCustomLabelEndpoint(group);
         MapDeleteCustomLabelEndpoint(group);
+
+        // Generic collection endpoints (Issue #4263)
+        MapGetCollectionStatusEndpoint(group);
+        MapAddToCollectionEndpoint(group);
+        MapRemoveFromCollectionEndpoint(group);
+
+        // Bulk collection endpoints (Issue #4268)
+        MapBulkAddToCollectionEndpoint(group);
+        MapBulkRemoveFromCollectionEndpoint(group);
+        MapBulkGetCollectionAssociatedDataEndpoint(group);
 
         return group;
     }
@@ -198,7 +212,7 @@ internal static class UserLibraryEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Created($"/api/v1/library/games/{gameId}", result);
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("already in library"))
+            catch (DomainException ex) when (ex.Message.Contains("already in"))
             {
                 return Results.Conflict(new { error = "Game is already in library" });
             }
@@ -320,8 +334,8 @@ internal static class UserLibraryEndpoints
         .Produces<GameInLibraryStatusDto>(200)
         .Produces(401)
         .WithTags("Library")
-        .WithSummary("Check if game is in library")
-        .WithDescription("Returns whether a game is in user's library and if it's marked as favorite.")
+        .WithSummary("Check if game is in library with associated data")
+        .WithDescription("Returns whether a game is in user's library, favorite status, and detailed counts of associated data (agent config, PDFs, chat sessions, game sessions, checklists, labels). Used by collection quick actions to display Add/Remove buttons and pre-removal warnings.")
         .WithOpenApi();
     }
 
@@ -1369,6 +1383,334 @@ internal static class UserLibraryEndpoints
         .WithDescription("Save simplified agent configuration for a game (Issue #3212)")
         .WithOpenApi();
     }
+
+    /// <summary>
+    /// Maps POST endpoint for creating game agent with custom typology and strategy (Issue #5).
+    /// </summary>
+    private static void MapCreateGameAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/agent", async (
+            Guid gameId,
+            [FromBody] CreateGameAgentRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new CreateGameAgentCommand(
+                GameId: gameId,
+                TypologyId: request.TypologyId,
+                StrategyName: request.StrategyName,
+                StrategyParameters: request.StrategyParameters,
+                UserId: userId
+            );
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<CreateGameAgentResult>(200)
+        .Produces<ProblemDetails>(400)
+        .Produces<ProblemDetails>(401)
+        .Produces<ProblemDetails>(404)
+        .Produces<ProblemDetails>(409)
+        .WithName("CreateGameAgent")
+        .WithDescription("Create agent for game with custom typology and strategy (Issue #5)")
+        .WithOpenApi();
+    }
+
+    private static void MapGetCollectionStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/collections/{entityType}/{entityId:guid}/status", async (
+            string entityType,
+            Guid entityId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var query = new GetCollectionStatusQuery(userId, parsedEntityType, entityId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<CollectionStatusDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections")
+        .WithSummary("Check collection status")
+        .WithDescription("Returns whether an entity is in user's collection with associated data counts. Issue #4263.")
+        .WithOpenApi();
+    }
+
+    private static void MapAddToCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/collections/{entityType}/{entityId:guid}", async (
+            string entityType,
+            Guid entityId,
+            [FromBody] AddToCollectionRequest? request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new AddToCollectionCommand(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityId: entityId,
+                IsFavorite: request?.IsFavorite ?? false,
+                Notes: request?.Notes
+            );
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Created($"/api/v1/collections/{entityType}/{entityId}/status",
+                    new { message = "Entity added to collection" });
+            }
+            catch (DomainException ex) when (ex.Message.Contains("already in"))
+            {
+                return Results.Conflict(new { error = "Entity is already in collection" });
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Collections")
+        .WithSummary("Add entity to collection")
+        .WithDescription("Adds an entity to user's collection with optional favorite status and notes. Returns 409 if already in collection. Issue #4263.")
+        .WithOpenApi();
+    }
+
+    private static void MapRemoveFromCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/collections/{entityType}/{entityId:guid}", async (
+            string entityType,
+            Guid entityId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new RemoveFromCollectionCommand(userId, parsedEntityType, entityId);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (DomainException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Collections")
+        .WithSummary("Remove entity from collection")
+        .WithDescription("Removes an entity from user's collection. Returns 404 if not in collection. Issue #4263.")
+        .WithOpenApi();
+    }
+
+    private static void MapBulkAddToCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/collections/{entityType}/bulk-add", async (
+            string entityType,
+            [FromBody] BulkAddToCollectionRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new BulkAddToCollectionCommand(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityIds: request.EntityIds,
+                IsFavorite: request.IsFavorite,
+                Notes: request.Notes
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<BulkOperationResult>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections", "Bulk")
+        .WithSummary("Bulk add entities to collection")
+        .WithDescription("Adds multiple entities to user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.")
+        .WithOpenApi();
+    }
+
+    private static void MapBulkRemoveFromCollectionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/collections/{entityType}/bulk-remove", async (
+            string entityType,
+            [FromBody] BulkRemoveFromCollectionRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var command = new BulkRemoveFromCollectionCommand(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityIds: request.EntityIds
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<BulkOperationResult>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections", "Bulk")
+        .WithSummary("Bulk remove entities from collection")
+        .WithDescription("Removes multiple entities from user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.")
+        .WithOpenApi();
+    }
+
+    private static void MapBulkGetCollectionAssociatedDataEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/collections/{entityType}/bulk-associated-data", async (
+            string entityType,
+            [FromBody] BulkGetAssociatedDataRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse entityType string to enum
+            if (!Enum.TryParse<EntityType>(entityType, ignoreCase: true, out var parsedEntityType))
+            {
+                return Results.BadRequest(new { error = $"Invalid entity type: {entityType}" });
+            }
+
+            var query = new GetBulkCollectionAssociatedDataQuery(
+                UserId: userId,
+                EntityType: parsedEntityType,
+                EntityIds: request.EntityIds
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<BulkAssociatedDataDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Collections", "Bulk")
+        .WithSummary("Get bulk associated data")
+        .WithDescription("Returns aggregated counts of associated data for multiple collection entries. Used for bulk removal warnings. Issue #4268.")
+        .WithOpenApi();
+    }
 }
 
 /// <summary>
@@ -1451,9 +1793,53 @@ public record SaveAgentConfigRequest(
 );
 
 /// <summary>
+/// Request body for creating game agent with custom typology and strategy (Issue #5).
+/// </summary>
+public record CreateGameAgentRequest(
+    Guid TypologyId,
+    string StrategyName,
+    string? StrategyParameters = null
+);
+
+/// <summary>
 /// Request body for creating a custom label (Epic #3511).
 /// </summary>
 public record CreateCustomLabelRequest(
     string Name,
     string Color
+);
+
+/// <summary>
+/// Request body for adding an entity to collection.
+/// Issue #4263: Phase 2 - Generic UserCollection System
+/// </summary>
+public record AddToCollectionRequest(
+    string? Notes = null,
+    bool IsFavorite = false
+);
+
+/// <summary>
+/// Request body for bulk adding entities to collection.
+/// Issue #4268: Phase 3 - Bulk Collection Actions
+/// </summary>
+public record BulkAddToCollectionRequest(
+    IReadOnlyList<Guid> EntityIds,
+    string? Notes = null,
+    bool IsFavorite = false
+);
+
+/// <summary>
+/// Request body for bulk removing entities from collection.
+/// Issue #4268: Phase 3 - Bulk Collection Actions
+/// </summary>
+public record BulkRemoveFromCollectionRequest(
+    IReadOnlyList<Guid> EntityIds
+);
+
+/// <summary>
+/// Request body for getting bulk associated data.
+/// Issue #4268: Phase 3 - Bulk Collection Actions
+/// </summary>
+public record BulkGetAssociatedDataRequest(
+    IReadOnlyList<Guid> EntityIds
 );

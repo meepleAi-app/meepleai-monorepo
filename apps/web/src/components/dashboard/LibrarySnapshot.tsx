@@ -69,18 +69,20 @@ export interface LibrarySnapshotProps {
   isLoading?: boolean;
   /** Additional CSS classes */
   className?: string;
+  /** Callback for navigation click-through tracking */
+  onNavigate?: (destination: string, source: string) => void;
 }
 
 // ============================================================================
 // Mock Data (for development)
 // ============================================================================
 
-const MOCK_QUOTA: LibraryQuota = {
+const _MOCK_QUOTA: LibraryQuota = {
   used: 127,
   total: 200,
 };
 
-const MOCK_TOP_GAMES: TopGame[] = [
+const _MOCK_TOP_GAMES: TopGame[] = [
   {
     id: 'game-1',
     title: 'Catan',
@@ -280,6 +282,7 @@ export function LibrarySnapshot({
   topGames = [],
   isLoading = false,
   className,
+  onNavigate,
 }: LibrarySnapshotProps) {
   const percentage = useMemo(
     () => (quota.total > 0 ? Math.round((quota.used / quota.total) * 100) : 0),
@@ -317,6 +320,7 @@ export function LibrarySnapshot({
           href="/library"
           className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
           data-testid="view-library-link"
+          onClick={() => onNavigate?.('/library', 'library_snapshot')}
         >
           Vedi Tutto
           <ChevronRight className="h-3 w-3" />

@@ -12,10 +12,10 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MediatR;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -43,7 +43,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<HybridLlmService> _serviceLogger;
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _strategyLogger;
-    private readonly IConfiguration _configuration;
     private readonly Mock<ILlmCostLogRepository> _mockCostLogRepository;
 
     // Constants for test configuration
@@ -57,26 +56,6 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
         _serviceLogger = _loggerFactory.CreateLogger<HybridLlmService>();
         _strategyLogger = _loggerFactory.CreateLogger<HybridAdaptiveRoutingStrategy>();
-
-        // Default configuration
-        var configData = new Dictionary<string, string>
-        {
-            ["LlmRouting:AnonymousModel"] = "llama3:8b",
-            ["LlmRouting:AnonymousOpenRouterPercent"] = "20",
-            ["LlmRouting:UserModel"] = "llama3:8b",
-            ["LlmRouting:UserOpenRouterPercent"] = "20",
-            ["LlmRouting:EditorModel"] = "llama3:8b",
-            ["LlmRouting:EditorOpenRouterPercent"] = "50",
-            ["LlmRouting:AdminModel"] = "llama3:8b",
-            ["LlmRouting:AdminOpenRouterPercent"] = "80",
-            ["LlmRouting:PremiumModel"] = "openai/gpt-4o-mini",
-            ["OllamaUrl"] = "http://meepleai-ollama:11434",
-            ["OPENROUTER_API_KEY"] = "test-key-not-used"
-        };
-
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
 
         _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
     }
@@ -555,6 +534,8 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
 
         var mockModelConfigRepository = new Mock<IAiModelConfigurationRepository>();
 
+        var mockPublisher = new Mock<IPublisher>();
+
         return new HybridLlmService(
             clients,
             routingStrategy,
@@ -562,6 +543,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             _serviceLogger,
             aiSettings,
             mockModelConfigRepository.Object,
+            mockPublisher.Object,
             healthCheckService: null);
     }
 

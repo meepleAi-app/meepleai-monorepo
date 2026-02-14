@@ -1,5 +1,6 @@
 /**
  * E2E Tests for PublicLayout Components - Issue #2230
+ * @slow - 84 test cases, comprehensive layout testing across viewports
  *
  * Real browser tests without mocks for:
  * - PublicHeader: navigation, user menu, theme switcher, mobile Sheet

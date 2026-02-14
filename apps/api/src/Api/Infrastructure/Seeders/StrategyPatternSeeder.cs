@@ -1,7 +1,9 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Pgvector;
 
 namespace Api.Infrastructure.Seeders;
 
@@ -9,21 +11,28 @@ namespace Api.Infrastructure.Seeders;
 /// Seeds common game strategy patterns for AI agent decision-making.
 /// Issue #3493: PostgreSQL Schema Extensions - Deferred strategy pattern seeding.
 /// Issue #3956: Technical Debt - Complete deferred Phase 1+2 work.
+/// Issue #3984: Add embedding generation and configuration toggle.
 /// </summary>
 internal static class StrategyPatternSeeder
 {
+    private const int EmbeddingBatchSize = 5;
+
     /// <summary>
     /// Seeds common game openings and strategies for known games.
     /// Only seeds if no strategy patterns exist for the game.
+    /// Optionally generates embeddings for pattern descriptions when embedding service is available.
     /// </summary>
     public static async Task SeedAsync(
         MeepleAiDbContext db,
         ILogger logger,
+        IEmbeddingService? embeddingService = null,
         CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Starting strategy pattern seeding for common game openings");
 
         var seededCount = 0;
+        var embeddingCount = 0;
+        var allNewEntities = new List<StrategyPatternEntity>();
 
         foreach (var (gameName, patterns) in GameStrategyPatterns)
         {
@@ -64,6 +73,7 @@ internal static class StrategyPatternSeeder
             }).ToList();
 
             db.StrategyPatterns.AddRange(entities);
+            allNewEntities.AddRange(entities);
             seededCount += entities.Count;
 
             logger.LogInformation(
@@ -73,10 +83,71 @@ internal static class StrategyPatternSeeder
 
         if (seededCount > 0)
         {
+            if (embeddingService != null)
+            {
+                embeddingCount = await GenerateEmbeddingsAsync(
+                    allNewEntities, embeddingService, logger, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Embedding service not available. {Count} patterns seeded without embeddings",
+                    seededCount);
+            }
+
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        logger.LogInformation("Strategy pattern seeding complete: {Count} patterns seeded", seededCount);
+        logger.LogInformation(
+            "Strategy pattern seeding complete: {SeededCount} patterns seeded, {EmbeddingCount} embeddings generated",
+            seededCount, embeddingCount);
+    }
+
+    private static async Task<int> GenerateEmbeddingsAsync(
+        List<StrategyPatternEntity> entities,
+        IEmbeddingService embeddingService,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var embeddingCount = 0;
+
+        for (var i = 0; i < entities.Count; i += EmbeddingBatchSize)
+        {
+            var batch = entities.Skip(i).Take(EmbeddingBatchSize).ToList();
+            var texts = batch.Select(e => $"{e.PatternName}: {e.Description}").ToList();
+
+            try
+            {
+                var result = await embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (!result.Success)
+                {
+                    logger.LogWarning(
+                        "Embedding generation failed for batch {BatchIndex}: {Error}. Continuing without embeddings",
+                        i / EmbeddingBatchSize, result.ErrorMessage);
+                    continue;
+                }
+
+                for (var j = 0; j < batch.Count && j < result.Embeddings.Count; j++)
+                {
+                    batch[j].Embedding = new Vector(result.Embeddings[j]);
+                    embeddingCount++;
+                }
+
+                logger.LogDebug(
+                    "Generated embeddings for batch {BatchIndex} ({Count} patterns)",
+                    i / EmbeddingBatchSize, batch.Count);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Embedding generation failed for batch {BatchIndex}. Continuing without embeddings",
+                    i / EmbeddingBatchSize);
+            }
+        }
+
+        return embeddingCount;
     }
 
     private static readonly Dictionary<string, StrategyPatternSeedData[]> GameStrategyPatterns = new(StringComparer.Ordinal)

@@ -45,6 +45,7 @@ import {
   createTestResultsClient,
   createTierStrategyClient,
   createDashboardClient,
+  createKnowledgeBaseClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -70,6 +71,7 @@ import {
   type TestResultsClient,
   type TierStrategyClient,
   type DashboardClient,
+  type KnowledgeBaseClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -127,8 +129,8 @@ export {
 export { logger, logApiError } from './core/logger';
 
 // Re-export PDF-specific types
-export type { ProcessingProgress, ProcessingStepDto } from './schemas/pdf.schemas';
-export { ProcessingStepSchema, ProcessingProgressSchema } from './schemas/pdf.schemas';
+export type { ProcessingProgress, ProcessingStepDto, PdfMetrics } from './schemas/pdf.schemas';
+export { ProcessingStepSchema, ProcessingProgressSchema, PdfMetricsSchema } from './schemas/pdf.schemas';
 
 // Re-export all types and schemas
 export * from './schemas';
@@ -228,6 +230,9 @@ export interface ApiClient {
   /** Dashboard Insights (Issue #3316, #3319) */
   dashboard: DashboardClient;
 
+  /** Knowledge Base Status (Issue #4065) */
+  knowledgeBase: KnowledgeBaseClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -303,6 +308,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     testResults: createTestResultsClient({ httpClient }), // ISSUE-3379
     tierStrategy: createTierStrategyClient({ httpClient }), // ISSUE-3440
     dashboard: createDashboardClient({ httpClient }), // ISSUE-3316, ISSUE-3319
+    knowledgeBase: createKnowledgeBaseClient({ httpClient }), // ISSUE-4065
     delete: (path: string) => httpClient.delete(path),
   };
 

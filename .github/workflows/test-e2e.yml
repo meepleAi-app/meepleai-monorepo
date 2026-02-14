@@ -52,7 +52,8 @@ jobs:
               - 'apps/api/**'
               - '.github/workflows/test-e2e.yml'
 
-  # E2E Tests with Sharding (4 shards) - Backend runs in same job
+  # E2E Tests with Sharding (6 shards) - Backend runs in same job
+  # Issue #3082: Optimized from 4 to 6 shards for 30% faster execution
   e2e-tests:
     name: E2E Tests (Shard ${{ matrix.shard }})
     runs-on: ubuntu-latest
@@ -99,12 +100,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
 
     env:
       CI: true
       SHARD_INDEX: ${{ matrix.shard }}
-      TOTAL_SHARDS: 4
+      TOTAL_SHARDS: 6
 
     steps:
       - name: Checkout
@@ -190,6 +191,14 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('apps/web/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
       - name: Install Playwright Browsers
         working-directory: apps/web

@@ -30,6 +30,8 @@ import type {
   SharedLibrary,
 } from '@/lib/api/schemas/library.schemas';
 
+import { sharedGamesKeys } from './useSharedGames';
+
 /**
  * Query key factory for library queries
  */
@@ -131,6 +133,12 @@ export function useGameInLibraryStatus(
     },
     enabled: enabled && !!gameId && isAuthenticated,
     staleTime: 30 * 1000, // Status can change frequently (30s)
+
+    // Flickering fixes (Research: TanStack Query best practices)
+    retryOnMount: false, // Prevent retry loop on component mount/unmount cycles
+    structuralSharing: false, // Disable for simple status objects (performance)
+    notifyOnChangeProps: ['data', 'error'], // Only re-render on data/error changes (not isFetching)
+    retry: 1, // Reduce from 3 to 1 (minimize flickering on real failures)
   });
 }
 
@@ -211,6 +219,14 @@ export function useAddGameToLibrary(): UseMutationResult<
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+
+      // Issue #4: Invalidate game search cache to show updated library status
+      queryClient.invalidateQueries({ queryKey: ['games', 'search'] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+
+      // Issue #1: Invalidate tag/genre filters sidebar (CatalogFilters)
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.categories() });
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.mechanics() });
     },
   });
 }
@@ -320,6 +336,14 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+
+      // Issue #4: Invalidate game search cache to show updated library status
+      queryClient.invalidateQueries({ queryKey: ['games', 'search'] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+
+      // Issue #1: Invalidate tag/genre filters sidebar (CatalogFilters)
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.categories() });
+      queryClient.invalidateQueries({ queryKey: sharedGamesKeys.mechanics() });
     },
   });
 }

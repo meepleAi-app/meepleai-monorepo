@@ -14,6 +14,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
     // Identity
     private Guid _id;
     private int? _bggId;
+    private Guid? _agentDefinitionId;
 
     // Core Info
     private string _title = string.Empty;
@@ -64,6 +65,12 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the BoardGameGeek ID if imported from BGG.
     /// </summary>
     public int? BggId => _bggId;
+
+    /// <summary>
+    /// Gets the ID of the linked AgentDefinition, if any.
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    public Guid? AgentDefinitionId => _agentDefinitionId;
 
     /// <summary>
     /// Gets the game title.
@@ -266,7 +273,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
         DateTime createdAt,
         DateTime? modifiedAt,
         bool isDeleted,
-        int? bggId = null) : base(id)
+        int? bggId = null,
+        Guid? agentDefinitionId = null) : base(id)
     {
         _id = id;
         _title = title;
@@ -288,6 +296,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _createdAt = createdAt;
         _modifiedAt = modifiedAt;
         _bggId = bggId;
+        _agentDefinitionId = agentDefinitionId;
     }
 
     /// <summary>
@@ -829,6 +838,46 @@ public sealed class SharedGame : AggregateRoot<Guid>
     public bool IsContributor(Guid userId)
     {
         return _contributors.Any(c => c.UserId == userId);
+    }
+
+    // Agent Linking Methods (Issue #4228)
+
+    /// <summary>
+    /// Links an AI agent to this shared game.
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    /// <param name="agentId">The ID of the agent to link</param>
+    /// <exception cref="ArgumentException">Thrown when agentId is empty</exception>
+    /// <exception cref="InvalidOperationException">Thrown when an agent is already linked</exception>
+    public void LinkAgent(Guid agentId)
+    {
+        if (agentId == Guid.Empty)
+            throw new ArgumentException("AgentId cannot be empty", nameof(agentId));
+
+        if (_agentDefinitionId.HasValue)
+            throw new InvalidOperationException("An agent is already linked to this game");
+
+        _agentDefinitionId = agentId;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentLinkedToSharedGameEvent(_id, agentId));
+    }
+
+    /// <summary>
+    /// Unlinks the AI agent from this shared game.
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when no agent is linked</exception>
+    public void UnlinkAgent()
+    {
+        if (!_agentDefinitionId.HasValue)
+            throw new InvalidOperationException("No agent is currently linked to this game");
+
+        var oldAgentId = _agentDefinitionId.Value;
+        _agentDefinitionId = null;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentUnlinkedFromSharedGameEvent(_id, oldAgentId));
     }
 
     // Validation Methods

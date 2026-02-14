@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Pgvector;
+using Pgvector.EntityFrameworkCore;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
@@ -223,6 +224,150 @@ public sealed class AgentGameStateSnapshotRepositoryIntegrationTests : IAsyncLif
         result.Should().NotBeNull();
         result!.TurnNumber.Should().Be(5);
         result.BoardStateJson.Should().Contain("\"turn\": 5");
+    }
+
+    #endregion
+
+    #region Vector Similarity Search Tests
+
+    [Fact]
+    public async Task VectorSimilaritySearch_ReturnsSnapshotsOrderedByDistance()
+    {
+        // Arrange - Create snapshots with distinct embeddings
+        var embeddings = new[]
+        {
+            CreateNormalizedEmbedding(0.5f),
+            CreateNormalizedEmbedding(-0.5f),
+            CreateNormalizedEmbedding(0.3f),
+        };
+
+        for (int i = 0; i < 3; i++)
+        {
+            var snapshot = new AgentGameStateSnapshot(
+                Guid.NewGuid(), _gameId, _agentSessionId,
+                $"{{\"turn\": {i + 10}}}", i + 10);
+            await _repository!.AddAsync(snapshot, TestCancellationToken);
+            await _dbContext!.SaveChangesAsync(TestCancellationToken);
+
+            var entity = await _dbContext.AgentGameStateSnapshots
+                .FirstAsync(s => s.Id == snapshot.Id, TestCancellationToken);
+            entity.Embedding = new Vector(embeddings[i]);
+            await _dbContext.SaveChangesAsync(TestCancellationToken);
+        }
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
+
+        // Act - LINQ CosineDistance
+        var results = await _dbContext!.AgentGameStateSnapshots
+            .Where(s => s.Embedding != null)
+            .OrderBy(s => s.Embedding!.CosineDistance(queryEmbedding))
+            .Take(3)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().HaveCount(3);
+        results[0].TurnNumber.Should().Be(10, "Closest embedding should be first");
+    }
+
+    [Fact]
+    public async Task VectorSimilaritySearch_FilteredByGame_ReturnsOnlyGameSnapshots()
+    {
+        // Arrange - Create a second game
+        var otherGame = new Api.Infrastructure.Entities.GameEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Other Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext!.Games.Add(otherGame);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var embedding = CreateNormalizedEmbedding(0.5f);
+
+        // Add snapshot for each game
+        var snap1 = new AgentGameStateSnapshot(
+            Guid.NewGuid(), _gameId, _agentSessionId, """{"turn": 1}""", 1);
+        var snap2 = new AgentGameStateSnapshot(
+            Guid.NewGuid(), otherGame.Id, _agentSessionId, """{"turn": 2}""", 2);
+
+        await _repository!.AddAsync(snap1, TestCancellationToken);
+        await _repository.AddAsync(snap2, TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        foreach (var id in new[] { snap1.Id, snap2.Id })
+        {
+            var entity = await _dbContext.AgentGameStateSnapshots
+                .FirstAsync(s => s.Id == id, TestCancellationToken);
+            entity.Embedding = new Vector(embedding);
+        }
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
+
+        // Act - Game-filtered vector search
+        var results = await _dbContext.AgentGameStateSnapshots
+            .Where(s => s.GameId == _gameId && s.Embedding != null)
+            .OrderBy(s => s.Embedding!.CosineDistance(queryEmbedding))
+            .Take(5)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().AllSatisfy(s => s.GameId.Should().Be(_gameId));
+        results.Should().NotContain(s => s.GameId == otherGame.Id);
+    }
+
+    [Fact]
+    public async Task VectorSimilaritySearch_RawSql_ReturnsCorrectResults()
+    {
+        // Arrange
+        var embedding = CreateNormalizedEmbedding(0.7f);
+        var snapshot = new AgentGameStateSnapshot(
+            Guid.NewGuid(), _gameId, _agentSessionId,
+            """{"turn": 99, "state": "embedded"}""", 99);
+
+        await _repository!.AddAsync(snapshot, TestCancellationToken);
+        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+
+        var entity = await _dbContext.AgentGameStateSnapshots
+            .FirstAsync(s => s.Id == snapshot.Id, TestCancellationToken);
+        entity.Embedding = new Vector(embedding);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.7f));
+
+        // Act - Raw SQL vector similarity
+        var results = await _dbContext.AgentGameStateSnapshots
+            .FromSqlRaw(@"
+                SELECT id, game_id, agent_session_id, board_state_json, turn_number, created_at, embedding
+                FROM agent_game_state_snapshots
+                ORDER BY embedding <=> {0}::vector
+                LIMIT 5",
+                queryEmbedding)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Should().Contain(s => s.TurnNumber == 99);
+    }
+
+    private static float[] CreateNormalizedEmbedding(float baseValue)
+    {
+        var embedding = new float[1536];
+        for (int i = 0; i < embedding.Length; i++)
+        {
+            embedding[i] = baseValue + (i % 10) * 0.01f;
+        }
+
+        var magnitude = (float)Math.Sqrt(embedding.Sum(x => (double)x * x));
+        for (int i = 0; i < embedding.Length; i++)
+        {
+            embedding[i] /= magnitude;
+        }
+
+        return embedding;
     }
 
     #endregion

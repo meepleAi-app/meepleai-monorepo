@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Pgvector;
+using Pgvector.EntityFrameworkCore;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
@@ -269,6 +270,159 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
         indexes.Should().Contain("ix_strategy_patterns_game_id_applicable_phase");
         indexes.Should().Contain("ix_strategy_patterns_evaluation_score");
         indexes.Should().Contain("pk_strategy_patterns");
+    }
+
+    #endregion
+
+    #region Vector Similarity Search Tests
+
+    [Fact]
+    public async Task VectorSimilaritySearch_ReturnsPatternsOrderedByDistance()
+    {
+        // Arrange - Create patterns with distinct embeddings
+        var embeddings = new[]
+        {
+            CreateNormalizedEmbedding(0.5f),
+            CreateNormalizedEmbedding(-0.5f),
+            CreateNormalizedEmbedding(0.3f),
+        };
+
+        var patternNames = new[] { "Close Pattern", "Far Pattern", "Medium Pattern" };
+
+        for (int i = 0; i < 3; i++)
+        {
+            var pattern = new StrategyPattern(
+                Guid.NewGuid(), _gameId, patternNames[i], "opening",
+                $"Description {i}", 0.8 - i * 0.1, "{}", "{}", "test");
+            await _repository!.AddAsync(pattern, TestCancellationToken);
+            await _dbContext!.SaveChangesAsync(TestCancellationToken);
+
+            var entity = await _dbContext.StrategyPatterns
+                .FirstAsync(p => p.Id == pattern.Id, TestCancellationToken);
+            entity.Embedding = new Vector(embeddings[i]);
+            await _dbContext.SaveChangesAsync(TestCancellationToken);
+        }
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
+
+        // Act - LINQ CosineDistance
+        var results = await _dbContext!.StrategyPatterns
+            .Where(p => p.Embedding != null)
+            .OrderBy(p => p.Embedding!.CosineDistance(queryEmbedding))
+            .Take(3)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().HaveCount(3);
+        results[0].PatternName.Should().Be("Close Pattern", "Closest embedding should be first");
+    }
+
+    [Fact]
+    public async Task VectorSimilaritySearch_FilteredByGameAndPhase_ReturnsCorrectSubset()
+    {
+        // Arrange - Create another game
+        var otherGame = new Api.Infrastructure.Entities.GameEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Go",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext!.Games.Add(otherGame);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var embedding = CreateNormalizedEmbedding(0.5f);
+
+        // Patterns across games and phases
+        var patterns = new[]
+        {
+            new StrategyPattern(Guid.NewGuid(), _gameId, "Chess Opening", "opening", "Test", 0.8, "{}", "{}", "test"),
+            new StrategyPattern(Guid.NewGuid(), _gameId, "Chess Midgame", "midgame", "Test", 0.7, "{}", "{}", "test"),
+            new StrategyPattern(Guid.NewGuid(), otherGame.Id, "Go Opening", "opening", "Test", 0.9, "{}", "{}", "test"),
+        };
+
+        foreach (var p in patterns)
+        {
+            await _repository!.AddAsync(p, TestCancellationToken);
+        }
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        foreach (var p in patterns)
+        {
+            var entity = await _dbContext.StrategyPatterns
+                .FirstAsync(e => e.Id == p.Id, TestCancellationToken);
+            entity.Embedding = new Vector(embedding);
+        }
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
+
+        // Act - Filtered by game + phase
+        var results = await _dbContext.StrategyPatterns
+            .Where(p => p.GameId == _gameId && p.ApplicablePhase == "opening" && p.Embedding != null)
+            .OrderBy(p => p.Embedding!.CosineDistance(queryEmbedding))
+            .Take(10)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].PatternName.Should().Be("Chess Opening");
+        results[0].GameId.Should().Be(_gameId);
+        results[0].ApplicablePhase.Should().Be("opening");
+    }
+
+    [Fact]
+    public async Task VectorSimilaritySearch_RawSql_ReturnsCorrectResults()
+    {
+        // Arrange
+        var embedding = CreateNormalizedEmbedding(0.7f);
+        var pattern = new StrategyPattern(
+            Guid.NewGuid(), _gameId, "Embedded Pattern", "endgame",
+            "Pattern with embedding", 0.95, "{}", "{}", "test");
+
+        await _repository!.AddAsync(pattern, TestCancellationToken);
+        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+
+        var entity = await _dbContext.StrategyPatterns
+            .FirstAsync(p => p.Id == pattern.Id, TestCancellationToken);
+        entity.Embedding = new Vector(embedding);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.7f));
+
+        // Act - Raw SQL vector similarity
+        var results = await _dbContext.StrategyPatterns
+            .FromSqlRaw(@"
+                SELECT id, game_id, pattern_name, description, applicable_phase,
+                       board_conditions_json, move_sequence_json, evaluation_score, embedding, source
+                FROM strategy_patterns
+                ORDER BY embedding <=> {0}::vector
+                LIMIT 10",
+                queryEmbedding)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Should().Contain(p => p.PatternName == "Embedded Pattern");
+    }
+
+    private static float[] CreateNormalizedEmbedding(float baseValue)
+    {
+        var embedding = new float[1536];
+        for (int i = 0; i < embedding.Length; i++)
+        {
+            embedding[i] = baseValue + (i % 10) * 0.01f;
+        }
+
+        var magnitude = (float)Math.Sqrt(embedding.Sum(x => (double)x * x));
+        for (int i = 0; i < embedding.Length; i++)
+        {
+            embedding[i] /= magnitude;
+        }
+
+        return embedding;
     }
 
     #endregion

@@ -1,49 +1,46 @@
+using System.Net;
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
-using System.Net;
-using System.Text.Json;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// ISSUE-3499: Unit tests for TutorQueryCommandHandler.
-/// Tests CQRS handler calls orchestration service correctly.
+/// Unit tests for TutorQueryCommandHandler.
+/// Issue #3490: Multi-Agent System - Test coverage for Tutor Agent.
 /// </summary>
 [Trait("Category", "Unit")]
-[Trait("BoundedContext", "KnowledgeBase")]
-[Trait("Issue", "3499")]
 public class TutorQueryCommandHandlerTests
 {
-    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
-    private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
-    private readonly Mock<ILogger<TutorQueryCommandHandler>> _mockLogger;
+    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
+    private readonly Mock<ILogger<TutorQueryCommandHandler>> _loggerMock;
     private readonly TutorQueryCommandHandler _handler;
+    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
 
     public TutorQueryCommandHandlerTests()
     {
-        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
-        _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-        _mockLogger = new Mock<ILogger<TutorQueryCommandHandler>>();
+        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _loggerMock = new Mock<ILogger<TutorQueryCommandHandler>>();
+        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
-        var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
+        var httpClient = new HttpClient(_httpMessageHandlerMock.Object)
         {
-            BaseAddress = new Uri("http://orchestration-service:8004")
+            BaseAddress = new Uri("http://localhost:8090")
         };
 
-        _mockHttpClientFactory
-            .Setup(x => x.CreateClient("OrchestrationService"))
+        _httpClientFactoryMock
+            .Setup(f => f.CreateClient("OrchestrationService"))
             .Returns(httpClient);
 
-        _handler = new TutorQueryCommandHandler(_mockHttpClientFactory.Object, _mockLogger.Object);
+        _handler = new TutorQueryCommandHandler(_httpClientFactoryMock.Object, _loggerMock.Object);
     }
 
     [Fact]
-    public async Task Handle_ValidCommand_CallsOrchestrationService()
+    public async Task Handle_WithValidRequest_ReturnsSuccessfulResponse()
     {
         // Arrange
         var command = new TutorQueryCommand(
@@ -55,39 +52,44 @@ public class TutorQueryCommandHandlerTests
         var orchestrationResponse = new
         {
             agent_type = "tutor",
-            response = "Setup instructions...",
-            confidence = 0.92,
-            citations = new List<string>(),
-            execution_time_ms = 245.0,
+            response = "To set up the game, follow these steps...",
+            confidence = 0.95,
+            citations = new List<string> { "setup_guide.pdf:p1" },
+            execution_time_ms = 250.0,
             error = (string?)null
         };
 
         var responseJson = JsonSerializer.Serialize(orchestrationResponse);
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")
+        };
 
-        _mockHttpMessageHandler.Protected()
+        _httpMessageHandlerMock
+            .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Post &&
+                    req.RequestUri!.ToString().Contains("/execute")),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(responseJson)
-            });
+            .ReturnsAsync(httpResponse);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Response.Should().Be("Setup instructions...");
-        result.AgentType.Should().Be("tutor");
-        result.Confidence.Should().Be(0.92);
-        result.ExecutionTimeMs.Should().Be(245.0);
+        Assert.NotNull(result);
+        Assert.Equal("tutor", result.AgentType);
+        Assert.Equal("To set up the game, follow these steps...", result.Response);
+        Assert.Equal(0.95, result.Confidence);
+        Assert.Single(result.Citations);
+        Assert.Equal("setup_guide.pdf:p1", result.Citations[0]);
+        Assert.Equal(250.0, result.ExecutionTimeMs);
     }
 
     [Fact]
-    public async Task Handle_OrchestrationServiceUnavailable_ThrowsInvalidOperationException()
+    public async Task Handle_WithOrchestrationServiceUnavailable_ThrowsInvalidOperationException()
     {
         // Arrange
         var command = new TutorQueryCommand(
@@ -96,7 +98,8 @@ public class TutorQueryCommandHandlerTests
             Query: "Test query"
         );
 
-        _mockHttpMessageHandler.Protected()
+        _httpMessageHandlerMock
+            .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -104,7 +107,267 @@ public class TutorQueryCommandHandlerTests
             .ThrowsAsync(new HttpRequestException("Service unavailable"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        Assert.Equal("Tutor agent service unavailable", exception.Message);
+        Assert.IsType<HttpRequestException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task Handle_WithInvalidJsonResponse_ThrowsException()
+    {
+        // Arrange
+        var command = new TutorQueryCommand(
+            GameId: Guid.NewGuid(),
+            SessionId: Guid.NewGuid(),
+            Query: "Test query"
+        );
+
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("invalid json", System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Act & Assert - JsonSerializer.Deserialize throws JsonException
+        // which is caught and re-thrown by handler's catch block
+        await Assert.ThrowsAnyAsync<Exception>(
+            () => _handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_WithHttpErrorStatus_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var command = new TutorQueryCommand(
+            GameId: Guid.NewGuid(),
+            SessionId: Guid.NewGuid(),
+            Query: "Test query"
+        );
+
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent("Internal server error")
+        };
+
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Act & Assert - EnsureSuccessStatusCode throws HttpRequestException
+        // which is caught and wrapped in InvalidOperationException by handler
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        Assert.Equal("Tutor agent service unavailable", exception.Message);
+        Assert.IsType<HttpRequestException>(exception.InnerException);
+    }
+
+    [Theory]
+    [InlineData(0.95, "High confidence response")]
+    [InlineData(0.75, "Medium confidence response")]
+    [InlineData(0.55, "Low confidence response")]
+    public async Task Handle_WithDifferentConfidenceLevels_ReturnsCorrectConfidence(
+        double confidence,
+        string response)
+    {
+        // Arrange
+        var command = new TutorQueryCommand(
+            GameId: Guid.NewGuid(),
+            SessionId: Guid.NewGuid(),
+            Query: "Test query"
+        );
+
+        var orchestrationResponse = new
+        {
+            agent_type = "tutor",
+            response,
+            confidence,
+            citations = new List<string>(),
+            execution_time_ms = 200.0,
+            error = (string?)null
+        };
+
+        var responseJson = JsonSerializer.Serialize(orchestrationResponse);
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(confidence, result.Confidence);
+        Assert.Equal(response, result.Response);
+    }
+
+    [Fact]
+    public async Task Handle_WithEmptyCitations_ReturnsEmptyList()
+    {
+        // Arrange
+        var command = new TutorQueryCommand(
+            GameId: Guid.NewGuid(),
+            SessionId: Guid.NewGuid(),
+            Query: "General question"
+        );
+
+        var orchestrationResponse = new
+        {
+            agent_type = "tutor",
+            response = "General answer without specific sources",
+            confidence = 0.80,
+            citations = new List<string>(),
+            execution_time_ms = 180.0,
+            error = (string?)null
+        };
+
+        var responseJson = JsonSerializer.Serialize(orchestrationResponse);
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.Empty(result.Citations);
+    }
+
+    [Fact]
+    public async Task Handle_WithMultipleCitations_ReturnsAllCitations()
+    {
+        // Arrange
+        var command = new TutorQueryCommand(
+            GameId: Guid.NewGuid(),
+            SessionId: Guid.NewGuid(),
+            Query: "Detailed rules question"
+        );
+
+        var citations = new List<string>
+        {
+            "rulebook.pdf:p12",
+            "faq.pdf:p3",
+            "errata.pdf:p1"
+        };
+
+        var orchestrationResponse = new
+        {
+            agent_type = "tutor",
+            response = "According to the rules...",
+            confidence = 0.92,
+            citations,
+            execution_time_ms = 320.0,
+            error = (string?)null
+        };
+
+        var responseJson = JsonSerializer.Serialize(orchestrationResponse);
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(3, result.Citations.Count);
+        Assert.Contains("rulebook.pdf:p12", result.Citations);
+        Assert.Contains("faq.pdf:p3", result.Citations);
+        Assert.Contains("errata.pdf:p1", result.Citations);
+    }
+
+    [Fact]
+    public async Task Handle_LogsInformationMessages()
+    {
+        // Arrange
+        var command = new TutorQueryCommand(
+            GameId: Guid.NewGuid(),
+            SessionId: Guid.NewGuid(),
+            Query: "Test logging"
+        );
+
+        var orchestrationResponse = new
+        {
+            agent_type = "tutor",
+            response = "Test response",
+            confidence = 0.85,
+            citations = new List<string>(),
+            execution_time_ms = 200.0,
+            error = (string?)null
+        };
+
+        var responseJson = JsonSerializer.Serialize(orchestrationResponse);
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(responseJson, System.Text.Encoding.UTF8, "application/json")
+        };
+
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert - Verify logging occurred (check mock was invoked)
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Executing tutor query")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Tutor query completed")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 }

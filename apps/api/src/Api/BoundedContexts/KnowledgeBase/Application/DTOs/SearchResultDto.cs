@@ -44,7 +44,8 @@ internal record QaResponseDto(
     double OverallConfidence,
     bool IsLowQuality,
     IReadOnlyList<CitationDto> Citations,
-    RagValidationResultDto? ValidationResult = null
+    RagValidationResultDto? ValidationResult = null,
+    string? ErrorCode = null
 );
 
 /// <summary>

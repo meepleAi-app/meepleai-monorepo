@@ -1,5 +1,6 @@
 /**
  * Chat Loading States and Animations E2E Tests (CHAT-04) - MIGRATED TO POM
+ * @slow - 34 test cases, animation timing and loading state verification
  *
  * @see apps/web/e2e/pages/
  */

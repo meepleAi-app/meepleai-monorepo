@@ -310,7 +310,40 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
             if (existingGame == null)
             {
-                return (false, "Game not found. Please select a valid game before uploading.", null);
+                // Fallback: check shared_games catalog and auto-create games entry
+                var sharedGame = await _db.SharedGames
+                    .Where(sg => sg.Id == parsedGameId && !sg.IsDeleted)
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+                if (sharedGame == null)
+                {
+                    return (false, "Game not found. Please select a valid game before uploading.", null);
+                }
+
+                // Auto-create a games entry linked to the shared game
+                existingGame = new GameEntity
+                {
+                    Id = Guid.NewGuid(),
+                    Name = sharedGame.Title,
+                    SharedGameId = sharedGame.Id,
+                    BggId = sharedGame.BggId,
+                    ImageUrl = sharedGame.ImageUrl,
+                    IconUrl = sharedGame.ThumbnailUrl,
+                    MinPlayers = sharedGame.MinPlayers,
+                    MaxPlayers = sharedGame.MaxPlayers,
+                    MinPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
+                    MaxPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
+                    YearPublished = sharedGame.YearPublished,
+                    Language = sharedGame.RulesLanguage,
+                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+                };
+
+                _db.Games.Add(existingGame);
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    "Auto-created game {GameId} from shared game {SharedGameId} ({Title}) for PDF upload",
+                    existingGame.Id, sharedGame.Id, sharedGame.Title);
             }
 
             _logger.LogInformation("Using existing game {GameId} for PDF upload (matched by {InputId})",

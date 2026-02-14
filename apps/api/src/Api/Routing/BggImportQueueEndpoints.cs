@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
@@ -50,6 +51,16 @@ internal static class BggImportQueueEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
+        // POST /api/v1/admin/bgg-queue/batch-json - Bulk import from JSON file
+        group.MapPost("/batch-json", EnqueueBatchFromJson)
+            .WithName("EnqueueBggBatchFromJson")
+            .WithSummary("Bulk import games from JSON content")
+            .WithDescription("Parse JSON array of {bggId, name} objects, check duplicates, and enqueue new games with best-effort strategy (Issue #4352)")
+            .Produces<BulkImportResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
         // DELETE /api/v1/admin/bgg-queue/{id} - Cancel queued import
         group.MapDelete("/{id:guid}", CancelQueuedImport)
             .WithName("CancelBggImport")
@@ -87,6 +98,15 @@ internal static class BggImportQueueEndpoints
             .WithName("StreamBggQueueProgress")
             .WithSummary("Server-Sent Events stream for queue progress")
             .WithDescription("Real-time updates on queue status changes (new items, completed, failed)")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        // GET /api/v1/admin/bgg-queue/bulk-import-progress - SSE stream for bulk import progress
+        group.MapGet("/bulk-import-progress", StreamBulkImportProgress)
+            .WithName("StreamBulkImportProgress")
+            .WithSummary("SSE stream for bulk import progress tracking")
+            .WithDescription("Real-time progress updates for bulk import operations. Updates every 1 second. Auto-closes when no active items remain. (Issue #4353)")
             .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
@@ -152,6 +172,25 @@ internal static class BggImportQueueEndpoints
         var entities = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
 
         return Results.Created("/api/v1/admin/bgg-queue/status", entities);
+    }
+
+    private static async Task<IResult> EnqueueBatchFromJson(
+        [FromBody] EnqueueBggBatchFromJsonRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var command = new EnqueueBggBatchFromJsonCommand
+        {
+            JsonContent = request.JsonContent,
+            UserId = userId != null ? Guid.Parse(userId) : Guid.Empty
+        };
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> CancelQueuedImport(
@@ -268,6 +307,68 @@ internal static class BggImportQueueEndpoints
             // Client disconnected - expected
         }
     }
+
+    /// <summary>
+    /// SSE endpoint for bulk import progress tracking.
+    /// Issue #4353: Updates every 1 second, auto-closes when no active items remain.
+    /// </summary>
+    private static async Task StreamBulkImportProgress(
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
+
+        // Track consecutive idle polls to auto-close after inactivity
+        var consecutiveIdlePolls = 0;
+        const int maxIdlePolls = 5; // Close after 5 seconds of no active items
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var query = new GetBulkImportProgressQuery();
+                var progress = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+                // Send progress event
+                await httpContext.Response.WriteAsync(
+                    $"event: progress\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                    cancellationToken).ConfigureAwait(false);
+
+                await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+                // Auto-close: if no active items, count idle polls
+                if (!progress.IsActive)
+                {
+                    consecutiveIdlePolls++;
+                    if (consecutiveIdlePolls >= maxIdlePolls)
+                    {
+                        // Send completion event and close stream
+                        await httpContext.Response.WriteAsync(
+                            $"event: complete\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                            cancellationToken).ConfigureAwait(false);
+
+                        await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+                }
+                else
+                {
+                    consecutiveIdlePolls = 0;
+                }
+
+                // Update every 1 second for responsive bulk import tracking
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Client disconnected - expected behavior
+        }
+    }
 }
 
 /// <summary>
@@ -289,3 +390,8 @@ public sealed record EnqueueBggRequest(int BggId, string? GameName = null);
 /// Request to enqueue multiple BGG games
 /// </summary>
 public sealed record EnqueueBggBatchRequest(List<int> BggIds);
+
+/// <summary>
+/// Request to bulk import games from JSON content (Issue #4352)
+/// </summary>
+public sealed record EnqueueBggBatchFromJsonRequest(string JsonContent);

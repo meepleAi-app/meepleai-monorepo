@@ -24,6 +24,15 @@ vi.mock('@/lib/api/dashboard', () => ({
   fetchDashboardData: vi.fn(),
 }));
 
+// Mock useCatalogTrending hook (CatalogTrending widget fetches independently)
+vi.mock('@/hooks/useCatalogTrending', () => ({
+  useCatalogTrending: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 // Mock react-intersection-observer (useInView for lazy loading)
 const mockUseInView = vi.fn();
 vi.mock('react-intersection-observer', () => ({
@@ -43,7 +52,7 @@ const mockFetchDashboardData = vi.mocked(fetchDashboardData);
 
 const mockDashboardData: DashboardData = {
   user: {
-    id: 'user-123',
+    id: '550e8400-e29b-41d4-a716-446655440000', // Valid UUID
     username: 'TestUser',
     email: 'test@example.com',
   },
@@ -168,14 +177,14 @@ describe('DashboardHub', () => {
       });
     });
 
-    it('renders all 6 main sections', async () => {
+    it('renders all 8 main sections', async () => {
       const { container } = render(<DashboardHub />, { wrapper: createQueryWrapper() });
 
       await waitFor(() => {
         // Count only direct child sections of the grid (child components also render <section>)
         const grid = container.querySelector('.grid');
         const directSections = grid?.querySelectorAll(':scope > section');
-        expect(directSections?.length).toBe(6); // Hero, Sessions, Library, Activity, Chat, QuickActions
+        expect(directSections?.length).toBe(8); // Hero, Sessions, Library, Activity, Wishlist, CatalogTrending, Chat, QuickActions
       });
     });
 
@@ -288,8 +297,8 @@ describe('DashboardHub', () => {
         // LazySection renders animate-pulse divs when inView=false
         const grid = container.querySelector('.grid');
         const skeletons = grid?.querySelectorAll('.animate-pulse');
-        // 4 below-fold sections: Library, Activity, Chat, QuickActions
-        expect(skeletons?.length).toBe(4);
+        // 6 below-fold sections: Library, Activity, Wishlist, CatalogTrending, Chat, QuickActions
+        expect(skeletons?.length).toBe(6);
       });
     });
 

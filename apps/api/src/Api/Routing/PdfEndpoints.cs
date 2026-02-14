@@ -88,7 +88,7 @@ internal static class PdfEndpoints
     {
         // Get chunked upload session status
         group.MapGet("/ingest/pdf/chunked/{sessionId:guid}/status", HandleGetChunkedUploadStatus)
-        .RequireSession();
+        .RequireSession(); // Issue #1446: Automatic session validation
     }
 
     private static void MapChunkedUploadTransferEndpoints(RouteGroupBuilder group)
@@ -152,6 +152,9 @@ internal static class PdfEndpoints
     {
         MapProcessingProgressEndpoint(group);
         MapProcessingCancelEndpoint(group);
+        MapProcessingStatusStreamEndpoint(group); // Issue #4218: SSE streaming
+        MapProgressStreamEndpoint(group); // Issue #4209: Progress stream for public PDFs
+        MapMetricsEndpoint(group); // Issue #4219: Duration metrics and ETA
     }
 
     private static void MapProcessingProgressEndpoint(RouteGroupBuilder group)
@@ -172,6 +175,59 @@ internal static class PdfEndpoints
         .WithName("CancelPdfProcessing");
     }
 
+    private static void MapProcessingStatusStreamEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4218: Real-time PDF status updates via Server-Sent Events
+        group.MapGet("/pdfs/{pdfId:guid}/status/stream", HandleStreamPdfStatus)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("StreamPdfStatus")
+        .WithDescription("Stream real-time PDF processing status updates via SSE");
+    }
+
+    /// <summary>
+    /// Issue #4209: SSE endpoint for streaming PDF processing progress.
+    /// Supports both public and private PDFs with owner/admin authorization.
+    /// </summary>
+    private static void MapProgressStreamEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/pdfs/{pdfId:guid}/progress/stream", HandleStreamPdfProgress)
+        .RequireSession()
+        .RequireAuthorization()
+        .Produces<ProcessingProgressJson>(200, contentType: "text/event-stream")
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithName("StreamPdfProgress")
+        .WithTags("PDF", "SSE")
+        .WithSummary("Stream PDF processing progress (SSE)")
+        .WithDescription("Server-Sent Events endpoint for real-time progress updates during PDF processing. Supports public and private PDFs. Owner or admin access required. Heartbeat every 30s. Issue #4209.");
+    }
+
+    private static void MapMetricsEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4219: Get PDF processing metrics (timing, ETA, progress)
+        group.MapGet("/documents/{id:guid}/metrics", HandleGetPdfMetrics)
+        .RequireSession()
+        .WithName("GetPdfMetrics")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Get PDF processing metrics and ETA";
+            operation.Description = "Retrieves detailed processing metrics including per-state timing, progress percentage, and estimated time remaining.";
+            return operation;
+        });
+    }
+
+    private static async Task<IResult> HandleGetPdfMetrics(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetPdfMetricsQuery(id);
+        var metrics = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(metrics);
+    }
+
     private static void MapProcessingActionsEndpoints(RouteGroupBuilder group)
     {
         MapPdfRuleSpecEndpoints(group);
@@ -187,6 +243,7 @@ internal static class PdfEndpoints
     {
         MapPdfIndexEndpoint(group);
         MapPdfExtractEndpoint(group);
+        MapPdfRetryEndpoint(group); // Issue #4216: Manual retry
     }
 
     private static void MapPdfIndexEndpoint(RouteGroupBuilder group)
@@ -199,6 +256,73 @@ internal static class PdfEndpoints
     {
         // BGAI-081: Extract text from existing PDF (reprocess stuck PDFs)
         group.MapPost("/ingest/pdf/{pdfId:guid}/extract", HandleExtractPdfText);
+    }
+
+    private static void MapPdfRetryEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4216: Retry failed PDF processing
+        group.MapPost("/documents/{pdfId:guid}/retry", HandleRetryPdfProcessing)
+            .RequireSession()
+            .WithName("RetryPdfProcessing")
+            .WithOpenApi(operation =>
+            {
+                operation.Summary = "Retry processing of a failed PDF document";
+                operation.Description = "Attempts to retry processing of a PDF that failed. Maximum 3 retries allowed. Only the document owner can initiate retry.";
+                return operation;
+            });
+    }
+
+    private static async Task<IResult> HandleRetryPdfProcessing(
+        Guid pdfId,
+        IMediator mediator,
+        HttpContext context,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Validate session
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var command = new RetryPdfProcessingCommand(
+            PdfId: pdfId,
+            UserId: session!.User!.Id
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            // Determine appropriate status code
+            var statusCode = result.Message?.Contains("not found") == true ? 404
+                : result.Message?.Contains("not authorized") == true ? 403
+                : result.Message?.Contains("Maximum retry") == true ? 429 // Too Many Requests
+                : 400; // Bad Request
+
+            return Results.Json(
+                new
+                {
+                    success = false,
+                    message = result.Message,
+                    currentState = result.CurrentState,
+                    retryCount = result.RetryCount
+                },
+                statusCode: statusCode
+            );
+        }
+
+        logger.LogInformation(
+            "User {UserId} initiated retry for PDF {PdfId}: {Message}",
+            session!.User!.Id,
+            pdfId,
+            result.Message);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = result.Message,
+            currentState = result.CurrentState,
+            retryCount = result.RetryCount
+        });
     }
 
     private static async Task<IResult> HandleStandardUpload(
@@ -652,6 +776,85 @@ internal static class PdfEndpoints
         return Results.Ok(progress);
     }
 
+    private static async Task HandleStreamPdfStatus(Guid pdfId, HttpContext httpContext, IMediator mediator, CancellationToken ct)
+    {
+        // Issue #4218: Real-time PDF status updates via Server-Sent Events
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        bool isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        // Set SSE headers
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+        var query = new StreamPdfStatusQuery(pdfId, userId, isAdmin);
+
+        await foreach (var statusEvent in mediator.CreateStream(query, ct).ConfigureAwait(false))
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(statusEvent);
+            await httpContext.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+            await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Issue #4209: Stream PDF processing progress via SSE.
+    /// Supports both public and private PDFs with owner/admin authorization.
+    /// Uses CQRS pattern via StreamPdfProgressQuery.
+    /// </summary>
+    private static async Task HandleStreamPdfProgress(
+        Guid pdfId,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        // Get authenticated user
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        bool isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        // Set SSE headers
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+        // Create streaming query (authorization handled in QueryHandler)
+        var query = new StreamPdfProgressQuery(pdfId, userId, isAdmin);
+
+        try
+        {
+            // Stream progress events via MediatR
+            await foreach (var progress in mediator.CreateStream(query, ct).ConfigureAwait(false))
+            {
+                // Serialize progress event
+                var json = System.Text.Json.JsonSerializer.Serialize(progress);
+
+                // Send SSE event
+                if (progress.Percent == -1 && string.Equals(progress.Message, "heartbeat", StringComparison.Ordinal))
+                {
+                    // Heartbeat event
+                    await httpContext.Response.WriteAsync("event: heartbeat\n", ct).ConfigureAwait(false);
+                    await httpContext.Response.WriteAsync($"data: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n", ct).ConfigureAwait(false);
+                }
+                else
+                {
+                    // Progress event
+                    await httpContext.Response.WriteAsync("event: progress\n", ct).ConfigureAwait(false);
+                    await httpContext.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                }
+
+                await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Client disconnected - this is expected
+        }
+    }
+
     private static async Task<IResult> HandleCancelPdfProcessing(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
@@ -904,4 +1107,3 @@ internal record InitChunkedUploadRequest(Guid GameId, string FileName, long Tota
 internal record CompleteChunkedUploadRequest(Guid SessionId);
 internal record SetPdfVisibilityRequest(bool IsPublic);
 internal record ExtractBggGamesRequest(string PdfFilePath); // ISSUE-2513
-

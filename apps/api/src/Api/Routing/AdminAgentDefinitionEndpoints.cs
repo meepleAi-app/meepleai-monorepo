@@ -35,9 +35,12 @@ internal static class AdminAgentDefinitionEndpoints
             var command = new CreateAgentDefinitionCommand(
                 Name: request.Name,
                 Description: request.Description,
+                Type: request.Type,
                 Model: request.Model,
                 MaxTokens: request.MaxTokens,
                 Temperature: request.Temperature,
+                StrategyName: request.StrategyName,
+                StrategyParameters: request.StrategyParameters,
                 Prompts: request.Prompts,
                 Tools: request.Tools);
 
@@ -117,9 +120,12 @@ internal static class AdminAgentDefinitionEndpoints
                 Id: id,
                 Name: request.Name,
                 Description: request.Description,
+                Type: request.Type,
                 Model: request.Model,
                 MaxTokens: request.MaxTokens,
                 Temperature: request.Temperature,
+                StrategyName: request.StrategyName,
+                StrategyParameters: request.StrategyParameters,
                 Prompts: request.Prompts,
                 Tools: request.Tools);
 
@@ -161,6 +167,27 @@ internal static class AdminAgentDefinitionEndpoints
         .WithTags("AgentDefinition", "Admin")
         .WithSummary("Delete agent definition (Admin - AI Lab)")
         .WithDescription("Delete an agent definition");
+
+        // GET /api/v1/admin/agent-definitions/stats
+        // Get aggregated statistics for all agent definitions
+        group.MapGet("/stats", async (
+            [AsParameters] AgentDefinitionStatsRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetAgentDefinitionStatsQuery
+            {
+                ActiveOnly = request.ActiveOnly
+            };
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("AdminGetAgentDefinitionStats")
+        .WithTags("AgentDefinition", "Admin", "Stats")
+        .WithSummary("Get agent definitions statistics (Admin - AI Lab)")
+        .WithDescription("Get aggregated statistics for all agent definitions including type distribution and recent templates");
     }
 }
 
@@ -169,21 +196,30 @@ internal static class AdminAgentDefinitionEndpoints
 internal sealed record CreateAgentDefinitionRequest(
     string Name,
     string Description,
+    string Type,
     string Model,
     int MaxTokens,
     float Temperature,
+    string? StrategyName,
+    Dictionary<string, object>? StrategyParameters,
     List<PromptTemplateDto>? Prompts,
     List<ToolConfigDto>? Tools);
 
 internal sealed record UpdateAgentDefinitionRequest(
     string Name,
     string Description,
+    string Type,
     string Model,
     int MaxTokens,
     float Temperature,
+    string? StrategyName,
+    Dictionary<string, object>? StrategyParameters,
     List<PromptTemplateDto>? Prompts,
     List<ToolConfigDto>? Tools);
 
 internal sealed record AgentDefinitionListRequest(
     bool ActiveOnly = false,
     string? Search = null);
+
+internal sealed record AgentDefinitionStatsRequest(
+    bool ActiveOnly = false);

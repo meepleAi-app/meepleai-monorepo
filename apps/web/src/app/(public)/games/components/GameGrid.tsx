@@ -51,6 +51,7 @@ function mapToCarouselGame(game: SharedGame): CarouselGame {
     imageUrl: game.imageUrl || undefined,
     rating: game.averageRating ?? undefined,
     ratingMax: 10,
+    description: game.description || undefined,
     metadata: [
       ...(game.minPlayers && game.maxPlayers
         ? [{ label: 'Players', value: `${game.minPlayers}-${game.maxPlayers}` }]
@@ -112,6 +113,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
         onGameSelect={(game) => handleGameClick(game.id)}
         showDots
         autoPlay={false}
+        flippable
       />
     );
   }
@@ -125,6 +127,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
             key={game.id}
             game={game}
             variant="grid"
+            flippable
             onClick={() => handleGameClick(game.id)}
           />
         ))}

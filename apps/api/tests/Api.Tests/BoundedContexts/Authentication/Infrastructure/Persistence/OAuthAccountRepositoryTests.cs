@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", TestCategories.Unit)]
+[Trait("Category", TestCategories.Integration)]
 public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

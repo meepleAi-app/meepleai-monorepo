@@ -1,5 +1,6 @@
 /**
  * E2E Tests for Library Filters and Views (Issue #2870, #2866, #2867)
+ * @slow - 66 test cases, comprehensive filter and view combinations
  *
  * Tests complete user workflows for:
  * - Filter by state (Nuovo, InPrestito, Wishlist)

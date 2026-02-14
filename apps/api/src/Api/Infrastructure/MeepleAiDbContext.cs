@@ -1,6 +1,7 @@
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -54,6 +55,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatThreadEntity> ChatThreads => Set<ChatThreadEntity>(); // DDD-PHASE3: KnowledgeBase ChatThread aggregate
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
+    public DbSet<ProcessingMetricEntity> ProcessingMetrics => Set<ProcessingMetricEntity>(); // ISSUE-4212: Historical metrics storage
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
@@ -104,6 +106,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
+    public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
+    public DbSet<UserCollectionEntryEntity> UserCollectionEntries => Set<UserCollectionEntryEntity>(); // ISSUE-4263: Generic user collections
     public DbSet<LibraryShareLinkEntity> LibraryShareLinks => Set<LibraryShareLinkEntity>(); // ISSUE-2614: Library sharing
     public DbSet<GameLabelEntity> GameLabels => Set<GameLabelEntity>(); // ISSUE-3512: Game labels for library
     public DbSet<UserGameLabelEntity> UserGameLabels => Set<UserGameLabelEntity>(); // ISSUE-3512: User game label assignments
@@ -128,6 +132,12 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.Administration.Domain.Entities.UserTokenUsage> UserTokenUsages => Set<BoundedContexts.Administration.Domain.Entities.UserTokenUsage>(); // ISSUE-3692: Token Management
     public DbSet<BoundedContexts.Administration.Domain.Entities.BatchJob> BatchJobs => Set<BoundedContexts.Administration.Domain.Entities.BatchJob>(); // ISSUE-3693: Batch Job System
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition> AgentDefinitions => Set<BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition>(); // ISSUE-3808: Agent Definition for AI Lab
+    public DbSet<GameAnalyticsEventEntity> GameAnalyticsEvents => Set<GameAnalyticsEventEntity>(); // ISSUE-3918: Catalog Trending Analytics
+    public DbSet<Entities.Gamification.AchievementEntity> Achievements => Set<Entities.Gamification.AchievementEntity>(); // ISSUE-3922: Achievement System
+    public DbSet<Entities.Gamification.UserAchievementEntity> UserAchievements => Set<Entities.Gamification.UserAchievementEntity>(); // ISSUE-3922: Achievement System
+    public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry> LedgerEntries => Set<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry>(); // ISSUE-3720: Financial Ledger
+    public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario> CostScenarios => Set<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario>(); // ISSUE-3725: Agent Cost Calculator
+    public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast> ResourceForecasts => Set<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast>(); // ISSUE-3726: Resource Forecasting Simulator
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -139,6 +149,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity> SessionDecks => Set<Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.CardEntity> Cards => Set<Api.Infrastructure.Entities.SessionTracking.CardEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity> SessionNotes => Set<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity>();
+
+    // Issue #4220: Notification preferences
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity> NotificationPreferences => Set<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

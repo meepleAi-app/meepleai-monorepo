@@ -1,6 +1,7 @@
 # Epic: AI Insights & Recommendations
 
 **Epic ID**: EPIC-DH-002
+**GitHub Epic**: #3902
 **Priority**: P1 - High
 **Status**: Planning
 **Target Sprint**: N+3 to N+4
@@ -52,8 +53,9 @@ Aggiungere intelligenza AI alla dashboard hub tramite insights personalizzati, r
 
 ### Backend (3 issues - 7 SP)
 
-#### Issue #9: AI Insights Service (RAG Integration)
+#### Issue #4308: AI Insights Service (RAG Integration)
 **Story Points**: 3
+**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4308
 **Assignee**: Backend Team + AI Team
 **Dependencies**: RAG service operational
 
@@ -101,8 +103,9 @@ return new AIInsight {
 
 ---
 
-#### Issue #10: Wishlist Management API
+#### Issue #4309: Wishlist Management API
 **Story Points**: 2
+**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4309
 **Assignee**: Backend Team
 **Dependencies**: None
 
@@ -133,8 +136,9 @@ CREATE TABLE WishlistItems (
 
 ---
 
-#### Issue #11: Catalog Trending Analytics
+#### Issue #4310: Catalog Trending Analytics
 **Story Points**: 2
+**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4310
 **Assignee**: Backend Team
 **Dependencies**: None
 
@@ -165,10 +169,11 @@ PercentageChange = ((ThisWeekScore - LastWeekScore) / LastWeekScore) * 100;
 
 ### Frontend (3 issues - 6 SP)
 
-#### Issue #12: AI Insights Widget Component
+#### Issue #4311: AI Insights Widget Component
 **Story Points**: 2
+**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4311
 **Assignee**: Frontend Team
-**Dependencies**: #9 (Backend AI service)
+**Dependencies**: #4308 (Backend AI service)
 
 **Description**:
 Widget dashboard che visualizza insights AI con icone distintive e azioni cliccabili.
@@ -205,10 +210,11 @@ interface AIInsightsWidgetProps {
 
 ---
 
-#### Issue #13: Wishlist Highlights Component
+#### Issue #4312: Wishlist Highlights Component
 **Story Points**: 2
+**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4312
 **Assignee**: Frontend Team
-**Dependencies**: #10 (Backend wishlist API)
+**Dependencies**: #4309 (Backend wishlist API)
 
 **Description**:
 Componente compatto che mostra top 5 wishlist con link a pagina gestione completa.
@@ -240,10 +246,11 @@ interface WishlistHighlightsProps {
 
 ---
 
-#### Issue #14: Catalog Trending Widget
+#### Issue #4313: Catalog Trending Widget
 **Story Points**: 2
+**GitHub Issue**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/4313
 **Assignee**: Frontend Team
-**Dependencies**: #11 (Backend trending analytics)
+**Dependencies**: #4310 (Backend trending analytics)
 
 **Description**:
 Widget che mostra giochi trending nel catalogo community con variazione percentuale.
@@ -285,17 +292,17 @@ interface CatalogTrendingWidgetProps {
 
 ### Internal Dependencies (Within Epic)
 ```
-Issue #9 (AI Insights Service)
+Issue #4308 (AI Insights Service)
   ↓
-Issue #12 (AI Insights Widget)
+Issue #4311 (AI Insights Widget)
 
-Issue #10 (Wishlist API)
+Issue #4309 (Wishlist API)
   ↓
-Issue #13 (Wishlist Highlights)
+Issue #4312 (Wishlist Highlights)
 
-Issue #11 (Trending Analytics)
+Issue #4310 (Trending Analytics)
   ↓
-Issue #14 (Trending Widget)
+Issue #4313 (Trending Widget)
 ```
 
 ---
@@ -303,12 +310,12 @@ Issue #14 (Trending Widget)
 ## 🚀 Rollout Plan
 
 ### Sprint N+3 (Week 7-8)
-- Backend: #9 AI Insights + #10 Wishlist API
+- Backend: #4308 AI Insights + #4309 Wishlist API
 - Frontend: Start component development
 
 ### Sprint N+4 (Week 9-10)
-- Backend: #11 Trending Analytics + cron job setup
-- Frontend: Complete #12, #13, #14
+- Backend: #4310 Trending Analytics + cron job setup
+- Frontend: Complete #4311, #4312, #4313
 - QA: Integration testing
 
 ### Sprint N+5 (Week 11) - Optional Polish
@@ -369,5 +376,6 @@ Epic is considered complete when:
 ---
 
 **Epic Owner**: Backend Team Lead + AI Team
-**Last Updated**: 2026-01-21
+**Created**: 2026-01-21
+**Last Updated**: 2026-02-14 (Issues created: #4308-4313)
 **Next Review**: Sprint Planning N+3

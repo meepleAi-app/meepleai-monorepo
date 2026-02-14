@@ -9,8 +9,9 @@
 **New to MeepleAI?** Start here:
 
 1. **[CLAUDE.md](../CLAUDE.md)** - Complete development guide (setup, standards, workflows)
-2. **[Architecture Overview](./01-architecture/README.md)** - System design and ADRs
-3. **[Development Guide](./02-development/README.md)** - Local setup and development workflow
+2. **[Development Roadmap](./DEVELOPMENT-ROADMAP.html)** - Visual timeline with dual-terminal execution strategy
+3. **[Architecture Overview](./01-architecture/README.md)** - System design and ADRs
+4. **[Development Guide](./02-development/README.md)** - Local setup and development workflow
 
 ---
 
@@ -43,6 +44,8 @@ docs/
 ### By Role
 
 **Developer**
+- [Development Roadmap](./DEVELOPMENT-ROADMAP.html) - Current sprint tasks & parallel execution
+- [Roadmap Guide](./ROADMAP-GUIDE.md) - How to use dual-terminal strategy
 - [Development Guide](./02-development/README.md) - Local setup, coding standards
 - [Bounded Contexts](./09-bounded-contexts/README.md) - DDD context guides
 - [Testing Guide](./05-testing/README.md) - Testing strategy
@@ -99,7 +102,7 @@ docs/
 **Testing**
 - [Testing Philosophy](./05-testing/README.md#testing-philosophy)
 - [Testcontainers Best Practices](./05-testing/backend/testcontainers-best-practices.md)
-- [E2E Guide](./05-testing/e2e/E2E_TEST_GUIDE.md)
+- [E2E Guide](./05-testing/e2e/e2-e-test-guide.md)
 
 ---
 

@@ -49,6 +49,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/naviga
 import { Button } from '@/components/ui/primitives/button';
 import { api, type SharedGameDocument } from '@/lib/api';
 
+import { AgentSection } from './_components/AgentSection';
+
 interface GameDetailClientProps {
   params: Promise<{ id: string }>;
 }
@@ -510,6 +512,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
             Documents {documents?.length ? `(${documents.length})` : ''}
           </TabsTrigger>
           <TabsTrigger value="history">Review History</TabsTrigger>
+          <TabsTrigger value="agent">AI Agent</TabsTrigger>
         </TabsList>
 
         {/* Details Tab */}
@@ -696,6 +699,15 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* AI Agent Tab */}
+        <TabsContent value="agent" className="space-y-6">
+          <AgentSection
+            gameId={gameId}
+            gameTitle={game.title}
+            gameDescription={game.description}
+          />
         </TabsContent>
       </Tabs>
     </div>

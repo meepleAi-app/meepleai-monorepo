@@ -15,7 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 /// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", TestCategories.Unit)]
+[Trait("Category", TestCategories.Integration)]
 public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 {
     public UserRepositoryTests(SharedTestcontainersFixture fixture) : base(fixture)

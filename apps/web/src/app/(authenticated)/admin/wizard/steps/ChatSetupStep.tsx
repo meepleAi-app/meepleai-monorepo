@@ -17,14 +17,45 @@ import { api } from '@/lib/api';
 interface ChatSetupStepProps {
   gameId: string;
   gameName: string;
-  pdfId: string;
-  onComplete: (chatThreadId: string) => void;
+  pdfId?: string | null;  // Optional for user wizard (Issue #4)
+  onComplete: (chatThreadId: string | null) => void;
   onBack: () => void;
 }
 
 type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: ChatSetupStepProps) {
+  // Issue #4: If no PDF, skip agent setup
+  if (!pdfId) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+            Setup Agente RAG
+          </h2>
+          <p className="text-slate-600 dark:text-slate-400">
+            Nessun PDF caricato. L'agente RAG richiede un PDF per funzionare.
+          </p>
+        </div>
+
+        <Card className="p-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+          <p className="text-amber-800 dark:text-amber-200">
+            💡 Per creare un agente RAG, è necessario caricare un PDF con le regole del gioco.
+          </p>
+        </Card>
+
+        <div className="flex justify-between gap-3">
+          <Button variant="outline" onClick={onBack}>
+            ← Indietro
+          </Button>
+          <Button onClick={() => onComplete(null)}>
+            Salta Agente →
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('pending');
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingMessage, setProcessingMessage] = useState('Inizializzazione...');

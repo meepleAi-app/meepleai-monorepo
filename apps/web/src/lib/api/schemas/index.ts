@@ -86,3 +86,6 @@ export * from './tier-strategy.schemas';
 
 // AI Usage Tracking schemas (Issue #3338)
 export * from './ai-usage.schemas';
+
+// Knowledge Base Status schemas (Issue #4065)
+export * from './knowledge-base.schemas';

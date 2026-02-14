@@ -6,10 +6,12 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.BusinessSimulations.Domain.Events;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
+using MediatR;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
@@ -54,6 +56,7 @@ internal class HybridLlmService : ILlmService
     private readonly IProviderHealthCheckService? _healthCheckService;
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly IAiModelConfigurationRepository _modelConfigRepository;
+    private readonly IPublisher _publisher;
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -79,6 +82,7 @@ internal class HybridLlmService : ILlmService
         ILogger<HybridLlmService> logger,
         IOptions<AiProviderSettings> aiSettings,
         IAiModelConfigurationRepository modelConfigRepository,
+        IPublisher publisher,
         IProviderHealthCheckService? healthCheckService = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
@@ -87,6 +91,7 @@ internal class HybridLlmService : ILlmService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _modelConfigRepository = modelConfigRepository ?? throw new ArgumentNullException(nameof(modelConfigRepository));
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
 
         if (_clients.Count == 0)
@@ -534,6 +539,21 @@ internal class HybridLlmService : ILlmService
 
             // Issue #2520: Update model usage statistics
             await UpdateModelUsageStatsAsync(result, cancellationToken).ConfigureAwait(false);
+
+            // Issue #3721: Publish event for automatic financial ledger tracking
+            var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
+            if (totalCost > 0 && user?.Id != null)
+            {
+                await _publisher.Publish(
+                    new TokenUsageLedgerEvent(
+                        UserId: user.Id,
+                        ModelId: result.Cost.ModelId,
+                        TokensConsumed: result.Usage.PromptTokens + result.Usage.CompletionTokens,
+                        CostUsd: totalCost,
+                        Endpoint: "completion",
+                        Timestamp: DateTime.UtcNow),
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception logEx)
         {

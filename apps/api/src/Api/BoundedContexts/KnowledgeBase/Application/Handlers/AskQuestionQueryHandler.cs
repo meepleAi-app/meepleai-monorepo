@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -25,6 +26,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
+    private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly IRagValidationPipelineService _validationPipeline;
@@ -35,6 +37,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
+        IPdfDocumentRepository pdfDocumentRepository,
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
         IRagValidationPipelineService validationPipeline,
@@ -44,6 +47,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
+        _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
@@ -58,6 +62,26 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation(
             "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
+
+        // Step 0: Check if documents are still being processed
+        var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
+            query.GameId, null, cancellationToken).ConfigureAwait(false);
+
+        if (!allReady)
+        {
+            _logger.LogInformation(
+                "Documents not ready for game {GameId}: {Processing}/{Total} still processing",
+                query.GameId, processingCount, totalCount);
+            return new QaResponseDto(
+                Answer: $"{processingCount} of {totalCount} documents are still being processed. Please wait for processing to complete before asking questions.",
+                Sources: [],
+                SearchConfidence: 0,
+                LlmConfidence: 0,
+                OverallConfidence: 0,
+                IsLowQuality: false,
+                Citations: [],
+                ErrorCode: "DOCUMENT_PROCESSING");
+        }
 
         // Step 1: Perform vector search and calculate confidence
         _logger.LogDebug("[AskQuestionHandler] Step 1: Starting vector search...");
@@ -311,5 +335,20 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             Citations: citations,
             ValidationResult: validationResult
         );
+    }
+
+    private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
+        Guid gameId, List<Guid>? documentIds, CancellationToken ct)
+    {
+        var documents = documentIds?.Count > 0
+            ? await _pdfDocumentRepository.GetByIdsAsync(documentIds, ct).ConfigureAwait(false)
+            : await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
+
+        // Defensive: Handle null or empty collection
+        if (documents is null or { Count: 0 }) return (true, 0, 0);
+
+        var notCompleted = documents.Count(d =>
+            !string.Equals(d.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase));
+        return (notCompleted == 0, notCompleted, documents.Count);
     }
 }

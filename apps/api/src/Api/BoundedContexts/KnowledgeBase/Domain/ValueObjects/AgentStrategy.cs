@@ -1,6 +1,8 @@
 namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// Value object representing the execution strategy for an AI agent.
@@ -8,11 +10,12 @@ using System.Globalization;
 /// <remarks>
 /// AgentStrategy defines HOW the agent performs its task, including algorithm parameters.
 /// Uses the Strategy pattern for flexible agent behavior configuration.
+/// Issue #3708: Made public for use in AgentDefinition (AI Lab templates).
 /// </remarks>
-internal sealed record AgentStrategy
+public sealed record AgentStrategy
 {
-    public string Name { get; init; }
-    public IReadOnlyDictionary<string, object> Parameters { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public IReadOnlyDictionary<string, object> Parameters { get; init; } = new Dictionary<string, object>(StringComparer.Ordinal);
 
     private static readonly string[] DefaultModels = { "gpt-4", "claude-3-opus" };
     private static readonly string[] ValidationLayers =
@@ -24,6 +27,10 @@ internal sealed record AgentStrategy
         "ConsensusCheck"
     };
 
+    // Public parameterless constructor for JSON deserialization
+    public AgentStrategy() { }
+
+    // Private constructor for factory methods (maintains encapsulation)
     private AgentStrategy(string name, Dictionary<string, object> parameters)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -135,6 +142,19 @@ internal sealed record AgentStrategy
         // Direct type match - no conversion needed (handles arrays, complex objects)
         if (value is T typedValue)
             return typedValue;
+
+        // Handle JsonElement from JSON deserialization (Dictionary<string, object> deserializes values as JsonElement)
+        if (value is JsonElement jsonElement)
+        {
+            try
+            {
+                return jsonElement.Deserialize<T>() ?? defaultValue;
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
 
         // Try conversion for primitive types implementing IConvertible
         if (value is IConvertible && (typeof(T).IsPrimitive || typeof(T) == typeof(string)))

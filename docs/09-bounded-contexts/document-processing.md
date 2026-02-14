@@ -1,205 +1,185 @@
 # DocumentProcessing Bounded Context
 
-**PDF Upload, Extraction, Chunking, e Validation**
+**PDF Upload, 3-Stage Extraction, Chunking, Vector Indexing**
 
 ---
 
-## 📋 Responsabilità
+## Responsibilities
 
-- PDF upload e storage
-- 3-stage extraction pipeline (Unstructured → SmolDocling → Docnet)
-- Quality validation (text coverage, structure, tables)
-- Chunking con overlap (800 tokens, 100 overlap)
-- Status tracking e error handling
-
----
-
-## 🏗️ Domain Model
-
-### Aggregates
-
-**Document**:
-```csharp
-public class Document
-{
-    public Guid Id { get; private set; }
-    public Guid GameId { get; private set; }
-    public string Filename { get; private set; }
-    public long FileSize { get; private set; }
-    public ProcessingStatus Status { get; private set; }
-    public int Progress { get; private set; }        // 0-100
-    public double QualityScore { get; private set; } // 0.0-1.0
-    public List<ExtractionAttempt> Attempts { get; private set; }
-    public List<string> Errors { get; private set; }
-
-    public void StartProcessing() { }
-    public void RecordAttempt(ExtractionStage stage, double quality) { }
-    public void MarkCompleted(double finalQuality) { }
-    public void MarkFailed(string error) { }
-}
-```
-
-**ExtractionAttempt**:
-```csharp
-public class ExtractionAttempt
-{
-    public ExtractionStage Stage { get; private set; } // Unstructured | SmolDocling | Docnet
-    public double QualityScore { get; private set; }
-    public DateTime AttemptedAt { get; private set; }
-    public bool Succeeded { get; private set; }
-}
-```
+- PDF upload & storage (S3/local)
+- 3-stage extraction (Unstructured → SmolDocling → Docnet) per ADR-003b
+- Chunked uploads (resumable, 5MB chunks)
+- Private PDF support
+- Document collections (multi-PDF organization)
+- Processing progress (SSE streaming)
+- Quality validation (text coverage, structure)
+- Vector indexing (Qdrant integration)
+- Background jobs
+- Quota enforcement (tier-based)
 
 ---
 
-## 📡 Application Layer
+## Domain Model
 
-### Commands
+| Aggregate | Key Fields | Purpose |
+|-----------|-----------|---------|
+| **PdfDocument** | Id, GameId, UploadedByUserId, FileName, Status, ExtractedText, QualityScore, IsDeleted | Aggregate root |
+| **ExtractionAttempt** | PdfDocumentId, Stage, QualityScore, Succeeded, DurationMs | Pipeline tracking |
+| **DocumentCollection** | GameId, UserId, Name, Documents[] | Multi-PDF grouping |
+| **ChunkedUploadSession** | SessionId, TotalChunks, ReceivedChunks, IsComplete | Resumable uploads |
 
-| Command | Description | Endpoint |
-|---------|-------------|----------|
-| `UploadDocumentCommand` | Upload PDF | `POST /api/v1/documents/upload` |
-| `ProcessDocumentCommand` | Start extraction | Internal (background job) |
-| `DeleteDocumentCommand` | Delete PDF + chunks | `DELETE /api/v1/documents/{id}` |
+**Value Objects**: ExtractionStage (Unstructured/SmolDocling/Docnet), ProcessingStatus (Pending/Extracting/Completed/Failed), ProcessingProgress
 
-### Queries
-
-| Query | Description | Endpoint |
-|-------|-------------|----------|
-| `GetDocumentByIdQuery` | Document metadata | `GET /api/v1/documents/{id}` |
-| `GetProcessingStatusQuery` | Processing status | `GET /api/v1/documents/{id}/status` |
-| `ListDocumentsQuery` | User's documents | `GET /api/v1/documents` |
+**Domain Methods**: `StartProcessing()`, `RecordAttempt()`, `MarkCompleted()`, `MarkFailed()`, `SoftDelete()`, `AddDocument()`
 
 ---
 
-## 🔄 3-Stage Extraction Pipeline (ADR-003b)
+## API Operations (26 total)
 
-### Stage 1: Unstructured (80% success)
+**14 Commands**: UploadPdf, UploadPrivatePdf, InitChunkedUpload, UploadChunk, CompleteChunkedUpload, ExtractPdfText, IndexPdf, DeletePdf, SetPdfVisibility, CancelPdfProcessing, CreateDocumentCollection, AddDocumentToCollection, RemoveDocumentFromCollection, GenerateRuleSpecFromPdf
 
-**Target**: ≥0.80 quality score
-**Latency**: <2s average
-**Success Rate**: 80% of PDFs
+**10 Queries**: GetPdfText, DownloadPdf, GetPdfDocumentsByGame, GetPdfDocumentById, GetPdfOwnership, GetPdfProgress, GetCollectionByGame, GetCollectionById, GetCollectionsByUser, ExtractBggGamesFromPdf
 
-```python
-# Unstructured service
-result = partition_pdf(
-    filename="rules.pdf",
-    strategy="hi_res",           # High-resolution layout analysis
-    extract_images=False,
-    languages=["ita", "eng"]
-)
-```
-
-**Quality Metrics**:
-- Text coverage: 40%
-- Structure preservation: 20%
-- Table extraction: 20%
-- Page coverage: 20%
-
-### Stage 2: SmolDocling VLM (15% fallback)
-
-**Target**: ≥0.70 quality score
-**Latency**: 5-8s average
-**Success Rate**: 15% fallback cases
-
-```python
-# SmolDocling service (VLM)
-result = process_document(
-    file_path="rules.pdf",
-    model="smoldocling-vlm",     # Vision-Language Model
-    extract_tables=True
-)
-```
-
-**Strengths**: Complex layouts, diagrams, multi-column text
-
-### Stage 3: Docnet OCR (5% last resort)
-
-**Target**: Best effort (no threshold)
-**Latency**: 3-5s average
-**Success Rate**: 5% extreme fallback
-
-```python
-# Docnet OCR
-result = extract_text(
-    file_path="rules.pdf",
-    engine="docnet",
-    ocr_enabled=True
-)
-```
-
-**Use Case**: Scanned PDFs, image-heavy documents
+**2 Background Jobs**: PDF extraction pipeline, Qdrant indexing
 
 ---
 
-## 📊 Chunking Strategy
+## Key Endpoints
 
-**Configuration**:
-- Chunk size: 800 tokens
-- Overlap: 100 tokens
-- Separator: Double newline (`\n\n`)
-- Metadata: Page number, section title
-
-**Example**:
-```
-Chunk 1 (tokens 0-800):    "Introduzione... setup... ──overlap──"
-Chunk 2 (tokens 700-1500): "──overlap── first turn... actions..."
-Chunk 3 (tokens 1400-2200): "──overlap── end game... scoring..."
-```
-
-**Rationale**: Overlap ensures context continuity across chunk boundaries
-
----
-
-## 🔄 Integration Points
-
-### Outbound Events
-
-**DocumentProcessedEvent**:
-```csharp
-public class DocumentProcessedEvent : INotification
-{
-    public Guid DocumentId { get; init; }
-    public List<ChunkDto> Chunks { get; init; }
-    public double QualityScore { get; init; }
-}
-```
-
-**Handled By**:
-- **KnowledgeBase**: Generate embeddings and store in Qdrant
+| Method | Endpoint | Auth | Purpose |
+|--------|----------|------|---------|
+| POST | `/api/v1/ingest/pdf` | Session | Upload PDF |
+| POST | `/api/v1/users/{userId}/library/entries/{entryId}/pdf` | Session | Upload private PDF |
+| POST | `/api/v1/ingest/pdf/chunked/init` | Session | Init chunked upload |
+| POST | `/api/v1/ingest/pdf/chunked/chunk` | Session | Upload chunk |
+| POST | `/api/v1/ingest/pdf/chunked/complete` | Session | Complete chunked |
+| POST | `/api/v1/ingest/pdf/{pdfId}/extract` | Admin | Extract text |
+| POST | `/api/v1/ingest/pdf/{pdfId}/index` | Admin | Vector index |
+| GET | `/api/v1/pdfs/{pdfId}/text` | Session | Get extracted text |
+| GET | `/api/v1/pdfs/{pdfId}/download` | Session | Download PDF |
+| GET | `/api/v1/pdfs/{pdfId}/progress` | Session | Progress (SSE) |
+| DELETE | `/api/v1/pdf/{pdfId}` | Session+Owner | Soft-delete |
 
 ---
 
-## 🧪 Testing
+## 3-Stage Extraction Pipeline (ADR-003b)
 
-**Location**: `tests/Api.Tests/BoundedContexts/DocumentProcessing/`
+| Stage | Service | Target Quality | Success Rate | Latency |
+|-------|---------|----------------|--------------|---------|
+| **Stage 1** | Unstructured.py | ≥ 0.80 | 80% | <2s P95 |
+| **Stage 2** | SmolDocling VLM | ≥ 0.70 | 15% | <10s P95 |
+| **Stage 3** | Docnet OCR | Accept any | 5% | <5s P95 |
 
-**Coverage**: 90%
+**Quality Calculation**: `TextQuality = 0.5 + (chars_per_page - 500) / 500 * 0.5`
 
-**Key Tests**:
-```csharp
-UploadDocument_ValidPdf_ShouldStartProcessing()
-ProcessDocument_Stage1Success_ShouldNotFallback()
-ProcessDocument_Stage1Fail_ShouldTryStage2()
-QualityValidation_BelowThreshold_ShouldFallback()
+**Decision Logic**: Stage N quality ≥ threshold → RETURN ✅ | Else → fallback to Stage N+1
+
+**Guaranteed Success**: Stage 3 always returns result (best-effort)
+
+---
+
+## Domain Events
+
+| Event | When | Subscribers |
+|-------|------|-------------|
+| `PdfUploadedEvent` | Upload complete | Administration (audit) |
+| `PdfExtractedEvent` | Extraction done | KnowledgeBase (index trigger) |
+| `ExtractionStageCompletedEvent` | Stage done | Administration (metrics) |
+| `PdfIndexedEvent` | Indexing done | KnowledgeBase, Administration |
+| `PdfDeletedEvent` | PDF deleted | KnowledgeBase (cleanup vectors) |
+| `ProcessingFailedEvent` | Error | UserNotifications |
+| `ChunkedUploadCompletedEvent` | Chunks assembled | Administration |
+
+---
+
+## Integration Points
+
+**Inbound**:
+- UserLibrary → UploadPrivatePdf
+- SharedGameCatalog → ExtractBggGamesFromPdf
+
+**Outbound**:
+- Blob Storage (S3/R2/Local) via `IBlobStorageService`
+- Python Services: Unstructured (8000), SmolDocling (8001), Embedding (8002)
+- Qdrant (vector DB) via collection: `pdfs`, namespace: `game_{gameId}`
+- KnowledgeBase → PdfIndexedEvent enables RAG queries
+
+---
+
+## Security & Quotas
+
+**Access Control**:
+- Upload: Authenticated users (quota enforced)
+- Download: Owner OR Admin (row-level security)
+- Processing: Admin/Editor only
+- Private PDFs: Owner only (no admin override)
+
+**Quota Limits**:
+
+| Tier | Storage | File Size | Daily Uploads |
+|------|---------|-----------|---------------|
+| Free | 100 MB | 10 MB | 5 |
+| Basic | 1 GB | 50 MB | 20 |
+| Premium | 10 GB | 100 MB | 100 |
+| Enterprise | Unlimited | 500 MB | Unlimited |
+
+---
+
+## Performance
+
+**Latency Targets**:
+- Total pipeline: <15s P95 (all stages)
+- Stage 1: <2s, Stage 2: <10s, Stage 3: <5s
+
+**Caching**:
+- GetPdfText: Redis 1h (invalidate: PdfExtractedEvent)
+- GetPdfProgress: HybridCache 10s (event-driven)
+- GetPdfDocumentsByGame: Redis 30m (invalidate: PdfUploadedEvent, PdfDeletedEvent)
+
+**Database Indexes**:
+```sql
+idx_pdfs_game ON PdfDocuments(GameId) WHERE NOT IsDeleted
+idx_pdfs_user ON PdfDocuments(UploadedByUserId) WHERE NOT IsDeleted
+idx_pdfs_status ON PdfDocuments(ProcessingStatus, UploadedAt DESC)
+idx_collections_game ON DocumentCollections(GameId, UserId)
 ```
 
 ---
 
-## 📂 Code Location
+## Testing
+
+**Unit Tests** (`tests/Api.Tests/DocumentProcessing/`):
+- EnhancedPdfProcessingOrchestrator_Tests.cs (3-stage pipeline logic)
+- QualityCalculator_Tests.cs (quality score formulas)
+- ChunkedUploadSession_Tests.cs (out-of-order chunks)
+- PdfDocument_Tests.cs (state transitions)
+
+**Integration Tests** (Testcontainers: PostgreSQL, MinIO, Qdrant):
+1. End-to-End Upload → Extract → Index
+2. 3-Stage Fallback (force Stage 1 failure → verify Stage 2 called)
+3. Chunked Upload (10 chunks, missing chunk → complete → reassemble)
+4. Private PDF Namespace (isolation verification)
+
+---
+
+## Code Location
 
 `apps/api/src/Api/BoundedContexts/DocumentProcessing/`
 
 ---
 
-## 📖 Related Documentation
+## Related Documentation
 
-- [ADR-003b: Unstructured PDF](../01-architecture/adr/adr-003b-unstructured-pdf.md)
-- [ADR-016: Advanced PDF Embedding Pipeline](../01-architecture/adr/adr-016-advanced-pdf-embedding-pipeline.md)
-- [PDF Pipeline Diagram](../01-architecture/diagrams/pdf-pipeline-detailed.md)
+**ADRs**:
+- [ADR-003b: Unstructured PDF Processing](../../01-architecture/adr/adr-003b-unstructured-pdf.md)
+- [ADR-026: Document Collections](../../01-architecture/adr/adr-026-document-collections.md)
+
+**Contexts**:
+- [KnowledgeBase](./knowledge-base.md) - RAG indexing
+- [UserLibrary](./user-library.md) - Private PDFs
+- [SharedGameCatalog](./shared-game-catalog.md) - BGG extraction
 
 ---
 
-**Last Updated**: 2026-01-18
 **Status**: ✅ Production
-**Pipeline**: 3-stage fallback (95%+ success rate)
+**Commands**: 14 | **Queries**: 10 | **Extraction Success**: 100% (3-stage fallback) | **Avg Processing**: <15s P95

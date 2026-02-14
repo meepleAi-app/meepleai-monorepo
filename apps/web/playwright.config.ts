@@ -99,6 +99,8 @@ export default defineConfig({
       }),
     ],
     ...prometheusReporter, // Type-safe spread of Prometheus reporter
+    // Issue #3082 Phase B: Duration tracking for shard balancing
+    ['./e2e/reporters/duration-reporter.ts'],
   ],
   use: {
     baseURL: 'http://localhost:3000',

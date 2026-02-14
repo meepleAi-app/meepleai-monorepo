@@ -13,10 +13,12 @@ public sealed class UserTier : ValueObject
     public static readonly UserTier Free = new("free");
     public static readonly UserTier Normal = new("normal");
     public static readonly UserTier Premium = new("premium");
+    public static readonly UserTier Pro = new("pro"); // Alias for Premium
+    public static readonly UserTier Enterprise = new("enterprise"); // Epic #4068
 
     private static readonly HashSet<string> ValidTiers = new(StringComparer.OrdinalIgnoreCase)
     {
-        "free", "normal", "premium"
+        "free", "normal", "premium", "pro", "enterprise"
     };
 
     public string Value { get; }
@@ -40,10 +42,13 @@ public sealed class UserTier : ValueObject
 
     public bool IsFree() => string.Equals(Value, "free", StringComparison.Ordinal);
     public bool IsNormal() => string.Equals(Value, "normal", StringComparison.Ordinal);
-    public bool IsPremium() => string.Equals(Value, "premium", StringComparison.Ordinal);
+    public bool IsPremium() => string.Equals(Value, "premium", StringComparison.Ordinal) || string.Equals(Value, "pro", StringComparison.Ordinal);
+    public bool IsPro() => IsPremium(); // Alias (Epic #4068)
+    public bool IsEnterprise() => string.Equals(Value, "enterprise", StringComparison.Ordinal); // Epic #4068
 
     /// <summary>
-    /// Gets the tier level for comparison (0 = free, 1 = normal, 2 = premium).
+    /// Gets the tier level for comparison (0 = free, 1 = normal, 2 = premium/pro, 3 = enterprise).
+    /// Epic #4068: Added Enterprise tier
     /// </summary>
     public int GetLevel()
     {
@@ -52,7 +57,24 @@ public sealed class UserTier : ValueObject
             "free" => 0,
             "normal" => 1,
             "premium" => 2,
+            "pro" => 2, // Alias for premium
+            "enterprise" => 3,
             _ => 0
+        };
+    }
+
+    /// <summary>
+    /// Gets collection limits for this tier (Epic #4068)
+    /// </summary>
+    public CollectionLimits GetLimits()
+    {
+        return Value switch
+        {
+            "free" => new CollectionLimits(MaxGames: 50, StorageQuotaMB: 100),
+            "normal" => new CollectionLimits(MaxGames: 100, StorageQuotaMB: 500),
+            "premium" or "pro" => new CollectionLimits(MaxGames: 500, StorageQuotaMB: 5000),
+            "enterprise" => new CollectionLimits(MaxGames: int.MaxValue, StorageQuotaMB: int.MaxValue),
+            _ => new CollectionLimits(MaxGames: 50, StorageQuotaMB: 100) // Default to free
         };
     }
 
@@ -78,3 +100,8 @@ public sealed class UserTier : ValueObject
         return tier.Value;
     }
 }
+
+/// <summary>
+/// Collection limits per tier (Epic #4068 - Issue #4177)
+/// </summary>
+public record CollectionLimits(int MaxGames, int StorageQuotaMB);

@@ -1,7 +1,13 @@
 /**
- * AchievementsWidget Tests (Issue #3321)
+ * AchievementsWidget Tests (Issue #3924)
  *
- * Test coverage for achievements widget with badges.
+ * Test coverage for achievements widget with:
+ * - Recent achievements display with points
+ * - Progress bar for next achievement
+ * - Celebration animation on new unlock
+ * - Hook integration (data fetching)
+ * - Rarity badges and category icons
+ * - Empty state and loading state
  */
 
 import { render, screen } from '@testing-library/react';
@@ -11,8 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   AchievementsWidget,
   type Achievement,
-  type AchievementRarity,
-  type AchievementCategory,
+  type NextAchievementProgress,
 } from '../AchievementsWidget';
 
 // Mock Next.js Link - preserve all props including data-testid
@@ -28,12 +33,28 @@ vi.mock('framer-motion', () => ({
     div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
       <div {...props}>{children}</div>
     ),
+    span: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
+      <span {...props}>{children}</span>
+    ),
+    section: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
+      <section {...props}>{children}</section>
+    ),
   },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock date-fns
 vi.mock('date-fns', () => ({
   formatDistanceToNow: vi.fn(() => '2 ore fa'),
+}));
+
+// Mock useRecentAchievements hook
+vi.mock('@/hooks/useRecentAchievements', () => ({
+  useRecentAchievements: vi.fn(() => ({
+    data: null,
+    isLoading: false,
+    error: null,
+  })),
 }));
 
 // ============================================================================
@@ -47,6 +68,7 @@ const mockAchievements: Achievement[] = [
     description: '7 giorni di streak',
     category: 'streak',
     rarity: 'rare',
+    points: 50,
     unlockedAt: '2026-02-04T08:00:00Z',
   },
   {
@@ -55,6 +77,7 @@ const mockAchievements: Achievement[] = [
     description: '100+ giochi in collezione',
     category: 'collection',
     rarity: 'epic',
+    points: 100,
     unlockedAt: '2026-02-03T10:00:00Z',
   },
   {
@@ -63,9 +86,16 @@ const mockAchievements: Achievement[] = [
     description: '50+ chat completate',
     category: 'chat',
     rarity: 'common',
+    points: 25,
     unlockedAt: '2026-02-01T10:00:00Z',
   },
 ];
+
+const mockNextProgress: NextAchievementProgress = {
+  achievementName: 'Maestro Sessioni',
+  current: 7,
+  target: 10,
+};
 
 // ============================================================================
 // Test Helpers
@@ -109,6 +139,15 @@ describe('AchievementsWidget', () => {
       const skeleton = screen.getByTestId('achievements-widget-skeleton');
       expect(skeleton).toHaveClass('rounded-2xl');
     });
+
+    it('shows progress skeleton in loading state', () => {
+      renderComponent({ isLoading: true });
+
+      const skeleton = screen.getByTestId('achievements-widget-skeleton');
+      // Progress skeleton section has a rounded-full skeleton
+      const progressSkeleton = skeleton.querySelector('.rounded-full');
+      expect(progressSkeleton).toBeTruthy();
+    });
   });
 
   describe('Success State', () => {
@@ -130,8 +169,8 @@ describe('AchievementsWidget', () => {
     it('limits to 3 achievements maximum', () => {
       const manyAchievements: Achievement[] = [
         ...mockAchievements,
-        { id: 'ach-4', name: 'Extra', description: 'Extra desc', category: 'gameplay', rarity: 'common', unlockedAt: '2026-01-01T10:00:00Z' },
-        { id: 'ach-5', name: 'Another', description: 'Another desc', category: 'milestone', rarity: 'legendary', unlockedAt: '2026-01-02T10:00:00Z' },
+        { id: 'ach-4', name: 'Extra', description: 'Extra desc', category: 'gameplay', rarity: 'common', points: 10, unlockedAt: '2026-01-01T10:00:00Z' },
+        { id: 'ach-5', name: 'Another', description: 'Another desc', category: 'milestone', rarity: 'legendary', points: 200, unlockedAt: '2026-01-02T10:00:00Z' },
       ];
 
       renderComponent({ achievements: manyAchievements });
@@ -143,9 +182,9 @@ describe('AchievementsWidget', () => {
 
     it('sorts achievements by unlockedAt (most recent first)', () => {
       const unsortedAchievements: Achievement[] = [
-        { id: 'ach-old', name: 'Old', description: 'Old desc', category: 'gameplay', rarity: 'common', unlockedAt: '2026-01-01T10:00:00Z' },
-        { id: 'ach-new', name: 'New', description: 'New desc', category: 'streak', rarity: 'rare', unlockedAt: '2026-02-04T10:00:00Z' },
-        { id: 'ach-mid', name: 'Mid', description: 'Mid desc', category: 'chat', rarity: 'epic', unlockedAt: '2026-01-15T10:00:00Z' },
+        { id: 'ach-old', name: 'Old', description: 'Old desc', category: 'gameplay', rarity: 'common', points: 10, unlockedAt: '2026-01-01T10:00:00Z' },
+        { id: 'ach-new', name: 'New', description: 'New desc', category: 'streak', rarity: 'rare', points: 50, unlockedAt: '2026-02-04T10:00:00Z' },
+        { id: 'ach-mid', name: 'Mid', description: 'Mid desc', category: 'chat', rarity: 'epic', points: 75, unlockedAt: '2026-01-15T10:00:00Z' },
       ];
 
       renderComponent({ achievements: unsortedAchievements });
@@ -188,11 +227,95 @@ describe('AchievementsWidget', () => {
     });
   });
 
+  describe('Points Display', () => {
+    it('shows points for each achievement', () => {
+      renderComponent({ achievements: mockAchievements });
+
+      expect(screen.getByTestId('achievement-points-ach-1')).toHaveTextContent('50 pts');
+      expect(screen.getByTestId('achievement-points-ach-2')).toHaveTextContent('100 pts');
+      expect(screen.getByTestId('achievement-points-ach-3')).toHaveTextContent('25 pts');
+    });
+  });
+
+  describe('Next Achievement Progress', () => {
+    it('shows progress bar when nextProgress is provided', () => {
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: mockNextProgress,
+      });
+
+      expect(screen.getByTestId('next-achievement-progress')).toBeInTheDocument();
+    });
+
+    it('displays next achievement name', () => {
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: mockNextProgress,
+      });
+
+      expect(screen.getByTestId('next-achievement-name')).toHaveTextContent('Maestro Sessioni');
+    });
+
+    it('displays current/target count', () => {
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: mockNextProgress,
+      });
+
+      expect(screen.getByTestId('next-achievement-count')).toHaveTextContent('7/10');
+    });
+
+    it('displays percentage', () => {
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: mockNextProgress,
+      });
+
+      expect(screen.getByTestId('next-achievement-percentage')).toHaveTextContent('70% completato');
+    });
+
+    it('has accessible progress bar with aria-label', () => {
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: mockNextProgress,
+      });
+
+      const progressBar = screen.getByRole('progressbar');
+      expect(progressBar).toHaveAttribute(
+        'aria-label',
+        'Progresso verso Maestro Sessioni: 70%'
+      );
+    });
+
+    it('caps percentage at 100%', () => {
+      const overProgress: NextAchievementProgress = {
+        achievementName: 'Over',
+        current: 15,
+        target: 10,
+      };
+
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: overProgress,
+      });
+
+      expect(screen.getByTestId('next-achievement-percentage')).toHaveTextContent('100% completato');
+    });
+
+    it('does not show progress section when nextProgress is null', () => {
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: null,
+      });
+
+      expect(screen.queryByTestId('next-achievement-progress')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Rarity Badges', () => {
     it('shows rarity badge for each achievement', () => {
       renderComponent({ achievements: mockAchievements });
 
-      // Check for at least one of each rarity in the mock data
       expect(screen.getByTestId('rarity-badge-rare')).toBeInTheDocument();
       expect(screen.getByTestId('rarity-badge-epic')).toBeInTheDocument();
       expect(screen.getByTestId('rarity-badge-common')).toBeInTheDocument();
@@ -200,9 +323,9 @@ describe('AchievementsWidget', () => {
 
     it('displays correct rarity labels', () => {
       const allRarities: Achievement[] = [
-        { id: 'common', name: 'Common Achievement', description: 'desc', category: 'gameplay', rarity: 'common', unlockedAt: '2026-02-04T10:00:00Z' },
-        { id: 'rare', name: 'Rare Achievement', description: 'desc', category: 'gameplay', rarity: 'rare', unlockedAt: '2026-02-03T10:00:00Z' },
-        { id: 'epic', name: 'Epic Achievement', description: 'desc', category: 'gameplay', rarity: 'epic', unlockedAt: '2026-02-02T10:00:00Z' },
+        { id: 'common', name: 'Common Achievement', description: 'desc', category: 'gameplay', rarity: 'common', points: 10, unlockedAt: '2026-02-04T10:00:00Z' },
+        { id: 'rare', name: 'Rare Achievement', description: 'desc', category: 'gameplay', rarity: 'rare', points: 50, unlockedAt: '2026-02-03T10:00:00Z' },
+        { id: 'epic', name: 'Epic Achievement', description: 'desc', category: 'gameplay', rarity: 'epic', points: 100, unlockedAt: '2026-02-02T10:00:00Z' },
       ];
 
       renderComponent({ achievements: allRarities });
@@ -214,7 +337,7 @@ describe('AchievementsWidget', () => {
 
     it('shows legendary rarity badge', () => {
       const legendaryAchievement: Achievement[] = [
-        { id: 'legendary', name: 'Legendary Achievement', description: 'desc', category: 'milestone', rarity: 'legendary', unlockedAt: '2026-02-04T10:00:00Z' },
+        { id: 'legendary', name: 'Legendary Achievement', description: 'desc', category: 'milestone', rarity: 'legendary', points: 200, unlockedAt: '2026-02-04T10:00:00Z' },
       ];
 
       renderComponent({ achievements: legendaryAchievement });
@@ -226,9 +349,9 @@ describe('AchievementsWidget', () => {
   describe('Category Icons', () => {
     it('shows category icons for achievements', () => {
       const allCategories: Achievement[] = [
-        { id: 'coll', name: 'Collection', description: 'desc', category: 'collection', rarity: 'common', unlockedAt: '2026-02-04T10:00:00Z' },
-        { id: 'game', name: 'Gameplay', description: 'desc', category: 'gameplay', rarity: 'common', unlockedAt: '2026-02-03T10:00:00Z' },
-        { id: 'chat', name: 'Chat', description: 'desc', category: 'chat', rarity: 'common', unlockedAt: '2026-02-02T10:00:00Z' },
+        { id: 'coll', name: 'Collection', description: 'desc', category: 'collection', rarity: 'common', points: 10, unlockedAt: '2026-02-04T10:00:00Z' },
+        { id: 'game', name: 'Gameplay', description: 'desc', category: 'gameplay', rarity: 'common', points: 10, unlockedAt: '2026-02-03T10:00:00Z' },
+        { id: 'chat', name: 'Chat', description: 'desc', category: 'chat', rarity: 'common', points: 10, unlockedAt: '2026-02-02T10:00:00Z' },
       ];
 
       renderComponent({ achievements: allCategories });
@@ -240,7 +363,7 @@ describe('AchievementsWidget', () => {
 
     it('shows streak category icon', () => {
       const streakAchievement: Achievement[] = [
-        { id: 'streak', name: 'Streak', description: 'desc', category: 'streak', rarity: 'rare', unlockedAt: '2026-02-04T10:00:00Z' },
+        { id: 'streak', name: 'Streak', description: 'desc', category: 'streak', rarity: 'rare', points: 50, unlockedAt: '2026-02-04T10:00:00Z' },
       ];
 
       renderComponent({ achievements: streakAchievement });
@@ -250,7 +373,7 @@ describe('AchievementsWidget', () => {
 
     it('shows milestone category icon', () => {
       const milestoneAchievement: Achievement[] = [
-        { id: 'milestone', name: 'Milestone', description: 'desc', category: 'milestone', rarity: 'legendary', unlockedAt: '2026-02-04T10:00:00Z' },
+        { id: 'milestone', name: 'Milestone', description: 'desc', category: 'milestone', rarity: 'legendary', points: 200, unlockedAt: '2026-02-04T10:00:00Z' },
       ];
 
       renderComponent({ achievements: milestoneAchievement });
@@ -273,6 +396,16 @@ describe('AchievementsWidget', () => {
     });
   });
 
+  describe('Celebration Animation', () => {
+    it('renders celebration badge for first item when hasNewUnlock is true', () => {
+      renderComponent({ achievements: mockAchievements, hasNewUnlock: true });
+
+      // First achievement icon should still be present (celebration uses same testid)
+      const firstAchievementId = 'ach-1'; // Most recent by date
+      expect(screen.getByTestId(`achievement-icon-${firstAchievementId}`)).toBeInTheDocument();
+    });
+  });
+
   describe('Empty State', () => {
     it('renders empty state when no achievements', () => {
       renderComponent({ achievements: [] });
@@ -287,6 +420,12 @@ describe('AchievementsWidget', () => {
       const cta = screen.getByTestId('view-achievements-empty-cta');
       expect(cta).toBeInTheDocument();
       expect(cta.closest('a')).toHaveAttribute('href', '/achievements');
+    });
+
+    it('does not show progress section in empty state', () => {
+      renderComponent({ achievements: [], nextProgress: mockNextProgress });
+
+      expect(screen.queryByTestId('next-achievement-progress')).not.toBeInTheDocument();
     });
   });
 
@@ -326,6 +465,16 @@ describe('AchievementsWidget', () => {
       links.forEach((link) => {
         expect(link).toHaveAttribute('href');
       });
+    });
+
+    it('progress bar has aria-label', () => {
+      renderComponent({
+        achievements: mockAchievements,
+        nextProgress: mockNextProgress,
+      });
+
+      const progressBar = screen.getByRole('progressbar');
+      expect(progressBar).toHaveAccessibleName();
     });
   });
 });

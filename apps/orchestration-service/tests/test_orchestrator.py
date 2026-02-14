@@ -97,3 +97,83 @@ class TestGameOrchestrator:
 
         # Should complete with response
         assert result.agent_response is not None
+
+    @pytest.mark.asyncio
+    async def test_classify_move_validation(self, orchestrator, base_state):
+        """Test routing to Arbitro for move validation queries."""
+        base_state.user_query = "Is this move legal?"
+
+        result = await orchestrator.execute(base_state)
+
+        assert result.intent == IntentType.MOVE_VALIDATION
+        assert result.current_agent == AgentType.ARBITRO
+
+    @pytest.mark.asyncio
+    async def test_classify_general_query(self, orchestrator, base_state):
+        """Test routing to Tutor for general queries."""
+        base_state.user_query = "Tell me about this game"
+
+        result = await orchestrator.execute(base_state)
+
+        assert result.intent == IntentType.GENERAL
+        assert result.current_agent == AgentType.TUTOR
+
+    @pytest.mark.asyncio
+    async def test_agent_switching_mid_conversation(self, orchestrator, base_state):
+        """Test agent switching detection and routing."""
+        # Start with Tutor context
+        base_state.user_query = "Actually, switch to Decisore for strategy"
+        base_state.current_agent = AgentType.TUTOR
+
+        # Mock decisore API
+        from unittest.mock import AsyncMock
+        orchestrator.api_client.decisore_analyze = AsyncMock(return_value={
+            "suggestions": [{"move": {"notation": "e2-e4"}, "reasoning": "Control"}],
+            "overallConfidence": 0.85,
+        })
+
+        result = await orchestrator.execute(base_state)
+
+        # Should have switched to Decisore
+        assert result.current_agent == AgentType.DECISORE
+        assert result.next_agent == AgentType.DECISORE
+
+    def test_route_entry_direct_to_tutor_with_intent(self, orchestrator):
+        """Test direct routing when intent already classified."""
+        state = GameAgentState(
+            game_id=uuid4(),
+            session_id=uuid4(),
+            intent=IntentType.SETUP_QUESTION,
+        )
+
+        route = orchestrator._route_entry(state)
+
+        assert route == "tutor"
+
+    def test_route_entry_direct_to_arbitro_with_pending_move(self, orchestrator):
+        """Test priority routing to Arbitro for pending moves."""
+        from src.domain import Move
+
+        state = GameAgentState(
+            game_id=uuid4(),
+            session_id=uuid4(),
+            pending_move=Move(move_notation="e2-e4", player="white"),
+            intent=IntentType.SETUP_QUESTION,  # Even with different intent
+        )
+
+        route = orchestrator._route_entry(state)
+
+        # Pending move takes priority
+        assert route == "arbitro"
+
+    def test_route_entry_defaults_to_classify(self, orchestrator):
+        """Test default routing to classification when no clear signal."""
+        state = GameAgentState(
+            game_id=uuid4(),
+            session_id=uuid4(),
+            user_query="ambiguous query",
+        )
+
+        route = orchestrator._route_entry(state)
+
+        assert route == "classify"

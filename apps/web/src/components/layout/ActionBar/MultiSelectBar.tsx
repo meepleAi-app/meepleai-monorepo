@@ -10,7 +10,7 @@
 
 import { forwardRef, type ComponentPropsWithoutRef } from 'react';
 
-import { X, Tag, FolderPlus, Trash2, MoreHorizontal } from 'lucide-react';
+import { X, Tag, FolderPlus, Trash2, MoreHorizontal, Plus, Minus } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -30,6 +30,10 @@ export interface MultiSelectBarProps
   onMove?: () => void;
   /** Handler for delete action */
   onDelete?: () => void;
+  /** Handler for bulk add to collection (Issue #4268) */
+  onAddToCollection?: () => void;
+  /** Handler for bulk remove from collection (Issue #4268) */
+  onRemoveFromCollection?: () => void;
   /** Additional menu actions */
   additionalActions?: Array<{
     id: string;
@@ -48,7 +52,16 @@ export interface MultiSelectBarProps
  */
 export const MultiSelectBar = forwardRef<HTMLDivElement, MultiSelectBarProps>(
   function MultiSelectBar(
-    { onTag, onMove, onDelete, additionalActions = [], className, ...props },
+    {
+      onTag,
+      onMove,
+      onDelete,
+      onAddToCollection,
+      onRemoveFromCollection,
+      additionalActions = [],
+      className,
+      ...props
+    },
     ref
   ) {
     const { isActive, selectedCount, exitMultiSelect } = useMultiSelect();
@@ -104,6 +117,32 @@ export const MultiSelectBar = forwardRef<HTMLDivElement, MultiSelectBarProps>(
 
           {/* Right side: Actions */}
           <div className="flex items-center gap-2">
+            {/* Add to collection (Issue #4268) */}
+            {onAddToCollection && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onAddToCollection}
+                className="h-11 w-11 text-primary-foreground hover:bg-primary-foreground/10"
+                aria-label="Aggiungi alla collezione"
+              >
+                <Plus className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            )}
+
+            {/* Remove from collection (Issue #4268) */}
+            {onRemoveFromCollection && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onRemoveFromCollection}
+                className="h-11 w-11 text-primary-foreground hover:bg-primary-foreground/10"
+                aria-label="Rimuovi dalla collezione"
+              >
+                <Minus className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            )}
+
             {/* Tag action */}
             {onTag && (
               <Button

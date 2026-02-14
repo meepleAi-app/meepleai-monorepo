@@ -5,12 +5,15 @@ Multi-agent workflow coordination for Tutor, Arbitro, Decisore.
 
 import logging
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from langgraph.graph import StateGraph, END
 
-from ..domain import GameAgentState, AgentType, IntentType, ArbitroState
+from ..domain import GameAgentState, AgentType, IntentType, ArbitroState, Message
 from .arbitro_agent import ArbitroAgent
+from .switch_detector import SwitchAgentDetector
+from .fallback_strategy import FallbackStrategy
+from ..infrastructure.api_client import MeepleAIApiClient
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +27,22 @@ class GameOrchestrator:
     2. Route to appropriate agent (Tutor/Arbitro/Decisore)
     3. Execute agent logic
     4. Return response
+    
+    ISSUE-3776: Enhanced with agent switching, context preservation, and fallback strategies.
     """
 
-    def __init__(self):
-        """Initialize the LangGraph workflow."""
-        # Initialize agents
+    def __init__(self, api_client: Optional[MeepleAIApiClient] = None):
+        """
+        Initialize the LangGraph workflow.
+        
+        Args:
+            api_client: Optional API client for .NET backend (auto-created if None)
+        """
+        # Initialize agents and utilities
         self.arbitro = ArbitroAgent()
+        self.api_client = api_client or MeepleAIApiClient()
+        self.switch_detector = SwitchAgentDetector()
+        self.fallback = FallbackStrategy()
         self.graph = self._build_graph()
 
     def _build_graph(self) -> StateGraph:
@@ -87,11 +100,25 @@ class GameOrchestrator:
     def _route_entry(self, state: GameAgentState) -> Literal["classify", "tutor", "arbitro", "decisore"]:
         """
         Determine entry point based on existing state.
+        
+        ISSUE-3776: Enhanced with agent switching detection.
 
+        - If user requests agent switch → route to requested agent
         - If intent already classified → route directly to agent
         - If pending move → arbitro
         - Otherwise → classify intent first
         """
+        # Check for agent switching request
+        if state.user_query:
+            switch_target = self.switch_detector.detect_switch(
+                state.user_query,
+                state.current_agent
+            )
+            if switch_target:
+                logger.info(f"Agent switch requested: {state.current_agent} → {switch_target}")
+                state.next_agent = switch_target
+                return switch_target.value  # type: ignore
+
         if state.pending_move:
             return "arbitro"
 
@@ -150,29 +177,42 @@ class GameOrchestrator:
             "current_agent": AgentType.TUTOR if intent in [IntentType.SETUP_QUESTION, IntentType.RULES_QUESTION] else None,
         }
 
-    def _tutor_node(self, state: GameAgentState) -> dict[str, Any]:
+    async def _tutor_node(self, state: GameAgentState) -> dict[str, Any]:
         """
         Tutor agent: Handles setup and rules questions.
-
-        In production, this will:
-        1. Retrieve relevant context from PostgreSQL (conversation memory)
-        2. Search knowledge base (Qdrant hybrid search)
-        3. Generate response with LLM
-        4. Store interaction in memory
-
-        For now: Returns placeholder response.
+        
+        ISSUE-3776: Integration with C# Tutor API endpoint.
+        Calls POST /api/v1/kb/agents/tutor/query with conversation context.
         """
         logger.info(f"Tutor agent processing query: {state.user_query}")
-
-        # Placeholder response
-        response = f"[TUTOR AGENT] I can help you with that question. (Query: {state.user_query})"
-
-        return {
-            "agent_response": response,
-            "current_agent": AgentType.TUTOR,
-            "confidence_score": 0.85,
-            "citations": [],
-        }
+        
+        try:
+            # Call C# Tutor API with retry fallback
+            result = await self.fallback.execute_with_retry(
+                self.api_client.tutor_query,
+                game_id=state.game_id,
+                session_id=state.session_id,
+                query=state.user_query or "",
+                conversation_history=state.conversation_history,
+            )
+            
+            # Update conversation history with agent response
+            updated_history = state.conversation_history + [
+                Message(role="user", content=state.user_query or ""),
+                Message(role="assistant", content=result.get("response", ""), metadata={"agent": "tutor"}),
+            ]
+            
+            return {
+                "agent_response": result.get("response", ""),
+                "current_agent": AgentType.TUTOR,
+                "confidence_score": result.get("confidence", 0.85),
+                "citations": result.get("citations", []),
+                "conversation_history": updated_history,
+            }
+            
+        except Exception as e:
+            logger.error(f"Tutor node failed after retries: {e}", exc_info=True)
+            return self.fallback.get_timeout_fallback(AgentType.TUTOR)
 
     async def _arbitro_node(self, state: GameAgentState) -> dict[str, Any]:
         """
@@ -180,6 +220,7 @@ class GameOrchestrator:
 
         ISSUE-3759: Real-time move validation with rule arbitration.
         Target: <100ms P95 latency with Redis tier-1 cache.
+        ISSUE-3776: Enhanced with context preservation.
         """
         logger.info(f"Arbitro agent processing: {state.pending_move or state.user_query}")
 
@@ -198,48 +239,86 @@ class GameOrchestrator:
                 game_state=None,  # TODO: Extract from board_state
             )
 
-            # Execute Arbitro workflow
-            result = await self.arbitro.execute(arbitro_state)
+            # Execute Arbitro workflow with retry fallback
+            result = await self.fallback.execute_with_retry(
+                self.arbitro.execute,
+                arbitro_state
+            )
+            
+            # Update conversation history
+            move_text = state.pending_move.move_notation if state.pending_move else state.user_query
+            updated_history = state.conversation_history + [
+                Message(role="user", content=f"Validate move: {move_text}"),
+                Message(role="assistant", content=result.agent_response, metadata={"agent": "arbitro"}),
+            ]
 
             return {
                 "agent_response": result.agent_response,
                 "current_agent": AgentType.ARBITRO,
                 "confidence_score": result.confidence_score or 0.90,
                 "citations": result.citations,
+                "conversation_history": updated_history,
             }
 
         except Exception as e:
             logger.error(f"Arbitro node failed: {e}", exc_info=True)
-            return {
-                "agent_response": "I encountered an error validating the move.",
-                "current_agent": AgentType.ARBITRO,
-                "confidence_score": 0.0,
-                "citations": [],
-                "error": str(e),
-            }
+            return self.fallback.get_timeout_fallback(AgentType.ARBITRO)
 
-    def _decisore_node(self, state: GameAgentState) -> dict[str, Any]:
+    async def _decisore_node(self, state: GameAgentState) -> dict[str, Any]:
         """
         Decisore agent: Provides strategic move suggestions.
-
-        In production, this will:
-        1. Analyze board state
-        2. Generate candidate moves
-        3. Evaluate moves with strategic reasoning
-        4. Rank and return top suggestions
-
-        For now: Returns placeholder response.
+        
+        ISSUE-3776: Integration with C# Decisore API endpoint.
+        Calls POST /api/v1/agents/decisore/analyze for strategic analysis.
         """
         logger.info(f"Decisore agent processing board state for game {state.game_id}")
+        
+        try:
+            # Extract player from board_state or default to "White"
+            player_name = state.board_state.current_player if state.board_state else "White"
+            
+            # Call C# Decisore API with retry fallback
+            result = await self.fallback.execute_with_retry(
+                self.api_client.decisore_analyze,
+                session_id=state.session_id,
+                player_name=player_name,
+                analysis_depth="standard",
+                max_suggestions=3,
+            )
+            
+            # Format suggestions into response text
+            suggestions = result.get("suggestions", [])
+            response_text = self._format_decisore_response(suggestions, result)
+            
+            # Update conversation history
+            updated_history = state.conversation_history + [
+                Message(role="assistant", content=response_text, metadata={"agent": "decisore"}),
+            ]
+            
+            return {
+                "agent_response": response_text,
+                "current_agent": AgentType.DECISORE,
+                "confidence_score": result.get("overallConfidence", 0.75),
+                "citations": [],  # Decisore uses strategic reasoning, not citations
+                "conversation_history": updated_history,
+            }
+            
+        except Exception as e:
+            logger.error(f"Decisore node failed after retries: {e}", exc_info=True)
+            return self.fallback.get_timeout_fallback(AgentType.DECISORE)
 
-        response = "[DECISORE AGENT] Strategic analysis placeholder. Real implementation in Phase 4."
-
-        return {
-            "agent_response": response,
-            "current_agent": AgentType.DECISORE,
-            "confidence_score": 0.75,
-            "citations": [],
-        }
+    def _format_decisore_response(self, suggestions: list, result: dict) -> str:
+        """Format Decisore suggestions into readable response."""
+        if not suggestions:
+            return "No strategic suggestions available for this position."
+        
+        lines = ["**Strategic Analysis:**\n"]
+        for i, sug in enumerate(suggestions[:3], 1):
+            move = sug.get("move", {})
+            reasoning = sug.get("reasoning", "")
+            lines.append(f"{i}. **{move.get('notation', 'N/A')}** - {reasoning}")
+        
+        return "\n".join(lines)
 
     def _format_response_node(self, state: GameAgentState) -> dict[str, Any]:
         """Format final response with metadata."""

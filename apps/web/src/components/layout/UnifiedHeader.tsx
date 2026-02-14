@@ -19,21 +19,23 @@ import { useState, useEffect, useTransition } from 'react';
 
 import {
   Gamepad2,
-  BookOpen,
   LayoutDashboard,
-  MessageSquare,
   Settings,
   Shield,
   LogOut,
   UserIcon,
   User,
-  Dice6,
   FileEdit,
+  Users,
+  History,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { logoutAction } from '@/actions/auth';
+import { LibraryDropdown } from '@/components/layout/LibraryDropdown';
+import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer';
 import { NotificationBell } from '@/components/notifications';
 import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import {
@@ -66,6 +68,7 @@ interface NavItem {
 
 /**
  * Navigation items for the header
+ * Issue #4064 - Navigation Overhaul
  *
  * Visibility rules:
  * - anonOnly: only visible when NOT logged in
@@ -74,18 +77,18 @@ interface NavItem {
  * - adminOnly: only visible for admin users
  * - no flags: visible to everyone
  *
- * Anonymous users see: Home, Catalogo
- * Authenticated users see: Dashboard, Library, Chat, Toolkit, Catalogo, Profilo
- * Editor users see: + Editor
- * Admin users see: + Editor, Admin
+ * Anonymous users see: Welcome, Catalogo
+ * Authenticated users see: Dashboard, Catalogo, Libreria (dropdown), Agenti, Chat History, Sessioni
+ * Editor users see: + Editor (in user dropdown)
+ * Admin users see: + Editor, Admin (in user dropdown)
  */
 const NAV_ITEMS: NavItem[] = [
   // Anonymous-only items
   {
     href: '/',
     icon: LayoutDashboard,
-    label: 'Home',
-    ariaLabel: 'Navigate to home page',
+    label: 'Welcome',
+    ariaLabel: 'Navigate to welcome page',
     anonOnly: true,
   },
   // Authenticated-only items
@@ -94,27 +97,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
     label: 'Dashboard',
     ariaLabel: 'Navigate to dashboard',
-    authOnly: true,
-  },
-  {
-    href: '/library',
-    icon: BookOpen,
-    label: 'I Miei Giochi',
-    ariaLabel: 'Navigate to your game library',
-    authOnly: true,
-  },
-  {
-    href: '/chat',
-    icon: MessageSquare,
-    label: 'Chat',
-    ariaLabel: 'Navigate to chat interface',
-    authOnly: true,
-  },
-  {
-    href: '/toolkit',
-    icon: Dice6,
-    label: 'Toolkit',
-    ariaLabel: 'Navigate to game session toolkit',
     authOnly: true,
   },
   // Visible to everyone
@@ -126,25 +108,25 @@ const NAV_ITEMS: NavItem[] = [
   },
   // Authenticated-only items
   {
-    href: '/profile',
-    icon: User,
-    label: 'Profilo',
-    ariaLabel: 'Navigate to your profile',
+    href: '/agents',
+    icon: Users,
+    label: 'Agenti',
+    ariaLabel: 'Navigate to agents list',
     authOnly: true,
   },
   {
-    href: '/editor',
-    icon: FileEdit,
-    label: 'Editor',
-    ariaLabel: 'Navigate to editor dashboard',
-    editorOnly: true,
+    href: '/chat',
+    icon: History,
+    label: 'Chat History',
+    ariaLabel: 'Navigate to chat history',
+    authOnly: true,
   },
   {
-    href: '/admin',
-    icon: Shield,
-    label: 'Admin',
-    ariaLabel: 'Navigate to admin dashboard',
-    adminOnly: true,
+    href: '/sessions',
+    icon: Calendar,
+    label: 'Sessioni',
+    ariaLabel: 'Navigate to play sessions',
+    authOnly: true,
   },
 ];
 
@@ -156,7 +138,7 @@ export interface UnifiedHeaderProps {
 export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: user } = useCurrentUser();
+  const { data: user, isLoading: isAuthLoading } = useCurrentUser();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggingOut, startTransition] = useTransition();
 
@@ -183,8 +165,9 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
     if (href === '/dashboard') {
       return pathname === '/dashboard';
     }
-    if (href === '/profile') {
-      return pathname === '/profile' || pathname?.startsWith('/profile/');
+    // Library routes include /library, /library/private, etc.
+    if (href === '/library') {
+      return pathname === '/library' || pathname?.startsWith('/library/');
     }
     return pathname?.startsWith(href) ?? false;
   };
@@ -203,8 +186,30 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const userInitial =
     user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
 
+  // Check if any library route is active
+  const isLibraryActive = pathname === '/library' || pathname?.startsWith('/library/') || false;
+
+  // Library sub-items for mobile drawer
+  const LIBRARY_ITEMS = [
+    {
+      href: '/library',
+      label: 'Collezione',
+      ariaLabel: 'Navigate to your game collection',
+    },
+    {
+      href: '/library/private',
+      label: 'Giochi Privati',
+      ariaLabel: 'Navigate to your private games',
+    },
+  ];
+
   // Filter nav items based on authentication and role
+  // While auth is loading, show only items visible to everyone (no authOnly, no anonOnly)
   const visibleNavItems = NAV_ITEMS.filter(item => {
+    if (isAuthLoading) {
+      // While loading, only show items with no auth restrictions
+      return !item.authOnly && !item.anonOnly && !item.adminOnly && !item.editorOnly;
+    }
     // Admin-only items: only for admins
     if (item.adminOnly && !isAdmin) return false;
     // Editor-only items: only for editors (includes admins)
@@ -217,35 +222,80 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   });
 
   // Desktop Navigation
-  const DesktopNav = () => (
-    <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
-      {visibleNavItems.map(({ href, icon: Icon, label, ariaLabel }) => {
-        const active = isActive(href);
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-label={ariaLabel}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
-              'transition-colors duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
-              active
-                ? 'bg-[hsl(262_83%_62%/0.1)] dark:bg-[hsl(262_83%_62%/0.2)] text-[hsl(262_83%_62%)] font-semibold'
-                : 'text-muted-foreground hover:text-primary hover:bg-muted dark:hover:bg-muted/70'
-            )}
-          >
-            <Icon className="h-4 w-4" aria-hidden="true" />
-            <span>{label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
+  const DesktopNav = () => {
+    // Find where to insert LibraryDropdown (after Catalogo in authenticated view)
+    const catalogIndex = visibleNavItems.findIndex(item => item.href === '/games');
+    const beforeLibrary = visibleNavItems.slice(0, catalogIndex + 1);
+    const afterLibrary = visibleNavItems.slice(catalogIndex + 1);
+
+    return (
+      <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
+        {beforeLibrary.map(({ href, icon: Icon, label, ariaLabel }) => {
+          const active = isActive(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-label={ariaLabel}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
+                'transition-colors duration-200',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                active
+                  ? 'bg-[hsl(262_83%_62%/0.1)] dark:bg-[hsl(262_83%_62%/0.2)] text-[hsl(262_83%_62%)] font-semibold'
+                  : 'text-muted-foreground hover:text-primary hover:bg-muted dark:hover:bg-muted/70'
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+
+        {/* Library Dropdown (only for authenticated users) */}
+        {isAuthenticated && !isAuthLoading && (
+          <LibraryDropdown />
+        )}
+
+        {afterLibrary.map(({ href, icon: Icon, label, ariaLabel }) => {
+          const active = isActive(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-label={ariaLabel}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
+                'transition-colors duration-200',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                active
+                  ? 'bg-[hsl(262_83%_62%/0.1)] dark:bg-[hsl(262_83%_62%/0.2)] text-[hsl(262_83%_62%)] font-semibold'
+                  : 'text-muted-foreground hover:text-primary hover:bg-muted dark:hover:bg-muted/70'
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  };
 
   // User Menu
   const UserMenu = () => {
+    // Show skeleton while auth state is loading to prevent flash of "Accedi" button
+    if (isAuthLoading) {
+      return (
+        <div className="flex items-center gap-2" data-testid="user-menu-loading">
+          <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+          <div className="hidden lg:block w-20 h-4 rounded bg-muted animate-pulse" />
+        </div>
+      );
+    }
+
     if (!user) {
       return (
         <Link href="/login">
@@ -286,6 +336,16 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
               <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {/* Profilo link */}
+          <DropdownMenuItem asChild data-testid="profile-menu-item">
+            <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+              <User className="h-4 w-4" />
+              <span>Profilo</span>
+            </Link>
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
 
           {/* Editor link in dropdown (for editors and admins) */}
@@ -362,20 +422,36 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
       data-testid="unified-header"
     >
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left: Logo */}
-        <Link href="/" className="flex items-center gap-2" aria-label="MeepleAI Home">
-          <MeepleLogo variant="icon" size="sm" />
-          <span className="font-quicksand font-bold text-xl text-foreground hidden sm:inline">
-            MeepleAI
-          </span>
-        </Link>
+        {/* Left: Mobile Nav + Logo */}
+        <div className="flex items-center gap-2">
+          {/* Mobile Navigation Drawer */}
+          {isAuthenticated && !isAuthLoading && (
+            <MobileNavDrawer
+              navItems={visibleNavItems.map(item => ({
+                href: item.href,
+                icon: item.icon,
+                label: item.label,
+                ariaLabel: item.ariaLabel,
+              }))}
+              libraryItems={LIBRARY_ITEMS}
+              isLibraryActive={isLibraryActive}
+            />
+          )}
+
+          <Link href="/" className="flex items-center gap-2" aria-label="MeepleAI Home">
+            <MeepleLogo variant="icon" size="sm" />
+            <span className="font-quicksand font-bold text-xl text-foreground hidden sm:inline">
+              MeepleAI
+            </span>
+          </Link>
+        </div>
 
         {/* Center: Desktop Navigation */}
         <DesktopNav />
 
         {/* Right: Settings + Notifications + User Menu (Settings/Notifications only for authenticated) */}
         <div className="flex items-center gap-2">
-          {isAuthenticated && (
+          {isAuthenticated && !isAuthLoading && (
             <>
               <Link
                 href="/settings"

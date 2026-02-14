@@ -122,15 +122,15 @@ export function AdminWizardClient() {
     [goToNextStep]
   );
 
-  // Step 3: Chat setup complete
+  // Step 3: Chat setup complete (Issue #4: handle null for skip agent)
   const handleChatReady = useCallback(
-    (chatThreadId: string) => {
+    (chatThreadId: string | null) => {
       setState(prev => ({
         ...prev,
-        chatThreadId,
+        chatThreadId,  // Keep as string | null
         processingComplete: true,
       }));
-      goToNextStep();
+      goToNextStep();  // Always go to next step
     },
     [goToNextStep]
   );

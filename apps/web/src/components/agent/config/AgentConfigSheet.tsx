@@ -119,8 +119,8 @@ export function AgentConfigSheet({
               {/* Game Selection - Issue #3239 */}
               <GameSelector />
 
-              {/* Strategy Selection - Issue #3376 */}
-              <StrategySelector />
+              {/* Strategy Selection - Issue #3 */}
+              <StrategySelector onChange={() => {}} />
 
               {/* Template Carousel - Issue #3239 */}
               <TemplateCarousel />

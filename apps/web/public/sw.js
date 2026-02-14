@@ -35,6 +35,7 @@ const NO_CACHE_PATTERNS = [
   /\/api\/v1\/users\/me/,
   /\/_next\/webpack-hmr/,
   /\/__nextjs/,
+  /pdf\.worker/,
 ];
 
 // ============================================================================
@@ -87,6 +88,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // Skip blob: URLs (e.g., PDF preview from File objects)
+  if (request.url.startsWith('blob:')) {
     return;
   }
 

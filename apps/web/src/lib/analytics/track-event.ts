@@ -1,9 +1,10 @@
 /**
  * Analytics Event Tracking Utility
  * Issue #3913 - Quick Actions Grid Enhancement
+ * Issue #3982 - Dashboard Business Metrics Tracking
  *
  * Provides centralized event tracking for user interactions.
- * Ready for integration with analytics platforms (PostHog, Google Analytics 4, etc.)
+ * Events are forwarded to HyperDX in production via addAction().
  *
  * @example
  * ```tsx
@@ -20,8 +21,13 @@
  * ```
  */
 
+import { trackEvent as hyperdxTrackEvent } from '@/lib/hyperdx';
+
 /**
  * Track a user interaction event
+ *
+ * Events are forwarded to HyperDX for production telemetry
+ * and logged to console in development mode.
  *
  * @param eventName - Event identifier (e.g., 'dashboard_quick_action_library')
  * @param properties - Optional event metadata
@@ -33,16 +39,14 @@ export function trackEvent(eventName: string, properties?: Record<string, unknow
     console.info('[Analytics]', eventName, properties);
   }
 
-  // TODO: Production integration with analytics platform
-  // Example PostHog integration:
-  // if (typeof window !== 'undefined' && window.posthog) {
-  //   window.posthog.capture(eventName, properties);
-  // }
+  // Forward to HyperDX for production telemetry
+  const sanitizedProperties = properties
+    ? Object.fromEntries(
+        Object.entries(properties).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : v])
+      ) as Record<string, string | number | boolean>
+    : undefined;
 
-  // Example Google Analytics 4:
-  // if (typeof window !== 'undefined' && window.gtag) {
-  //   window.gtag('event', eventName, properties);
-  // }
+  hyperdxTrackEvent(eventName, sanitizedProperties);
 }
 
 /**
@@ -68,5 +72,21 @@ export function trackNavigation(destination: string, source: string): void {
   trackEvent('navigation', {
     destination,
     source,
+  });
+}
+
+/**
+ * Track timing event (e.g., time on page)
+ *
+ * @param category - Timing category (e.g., 'Dashboard')
+ * @param variable - Timing variable (e.g., 'time_on_page')
+ * @param valueMs - Duration in milliseconds
+ */
+export function trackTiming(category: string, variable: string, valueMs: number): void {
+  trackEvent('timing', {
+    category,
+    variable,
+    value_ms: valueMs,
+    value_seconds: Math.round(valueMs / 1000),
   });
 }

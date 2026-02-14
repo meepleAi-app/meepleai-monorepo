@@ -8,15 +8,21 @@
 
 import {
   AlertCircle,
+  BookOpen,
   Brain,
   CheckCheck,
   CheckCircle,
   Code,
   Eye,
   FileText,
+  Gavel,
   Heart,
+  Lightbulb,
   Loader2,
+  Scale,
+  Shield,
   Sparkles,
+  Swords,
   Tag as TagIcon,
   type LucideIcon,
 } from 'lucide-react';
@@ -27,10 +33,19 @@ export type TagPresetKey =
   | 'sale'
   | 'owned'
   | 'wishlist'
-  // Agent tags
+  // Agent capability tags
   | 'rag'
   | 'vision'
   | 'code'
+  // Agent type tags
+  | 'tutor'
+  | 'arbitro'
+  | 'decisore'
+  // Agent skill tags
+  | 'rules-qa'
+  | 'move-validation'
+  | 'strategy'
+  | 'game-setup'
   // Document tags
   | 'pdf'
   | 'processing'
@@ -127,6 +142,76 @@ export const agentTagPresets: Record<string, TagConfig> = {
     textClass: 'text-white',
     icon: Code,
     description: 'Code generation & execution',
+  },
+  tutor: {
+    key: 'tutor',
+    label: 'Tutor',
+    abbr: 'Tut',
+    color: 'emerald',
+    bgClass: 'bg-emerald-500 dark:bg-emerald-600',
+    textClass: 'text-white',
+    icon: BookOpen,
+    description: 'Assistente regole e setup gioco',
+  },
+  arbitro: {
+    key: 'arbitro',
+    label: 'Arbitro',
+    abbr: 'Arb',
+    color: 'blue',
+    bgClass: 'bg-blue-500 dark:bg-blue-600',
+    textClass: 'text-white',
+    icon: Scale,
+    description: 'Validazione mosse e regolamento',
+  },
+  decisore: {
+    key: 'decisore',
+    label: 'Decisore',
+    abbr: 'Dec',
+    color: 'violet',
+    bgClass: 'bg-violet-500 dark:bg-violet-600',
+    textClass: 'text-white',
+    icon: Lightbulb,
+    description: 'Analisi strategica e consigli',
+  },
+  'rules-qa': {
+    key: 'rules-qa',
+    label: 'Rules Q&A',
+    abbr: 'Q&A',
+    color: 'teal',
+    bgClass: 'bg-teal-500 dark:bg-teal-600',
+    textClass: 'text-white',
+    icon: BookOpen,
+    description: 'Domande e risposte sulle regole',
+  },
+  'move-validation': {
+    key: 'move-validation',
+    label: 'Moves',
+    abbr: 'Mov',
+    color: 'indigo',
+    bgClass: 'bg-indigo-500 dark:bg-indigo-600',
+    textClass: 'text-white',
+    icon: Shield,
+    description: 'Validazione mosse di gioco',
+  },
+  strategy: {
+    key: 'strategy',
+    label: 'Strategy',
+    abbr: 'Str',
+    color: 'orange',
+    bgClass: 'bg-orange-500 dark:bg-orange-600',
+    textClass: 'text-white',
+    icon: Swords,
+    description: 'Analisi e suggerimenti strategici',
+  },
+  'game-setup': {
+    key: 'game-setup',
+    label: 'Setup',
+    abbr: 'Set',
+    color: 'cyan',
+    bgClass: 'bg-cyan-500 dark:bg-cyan-600',
+    textClass: 'text-white',
+    icon: Gavel,
+    description: 'Guida al setup del gioco',
   },
 };
 

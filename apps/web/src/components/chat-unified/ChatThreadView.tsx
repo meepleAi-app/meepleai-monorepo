@@ -1,0 +1,394 @@
+/**
+ * ChatThreadView - Split view layout for active chat (Issue #4364)
+ *
+ * Composes the split layout:
+ * - Header with title, agent, actions
+ * - Left: Chat messages + input (60-65%)
+ * - Right: ChatInfoPanel (35-40%)
+ *
+ * Responsive:
+ * - Desktop (lg+): Full split view
+ * - Tablet/Mobile: Chat full width, info as drawer
+ */
+
+'use client';
+
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+
+import { useRouter } from 'next/navigation';
+
+import { api } from '@/lib/api';
+import type { Citation } from '@/types';
+import { cn } from '@/lib/utils';
+
+import { ChatInfoPanel } from '@/components/chat/ChatInfoPanel';
+
+import { ChatThreadHeader } from './ChatThreadHeader';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp?: string;
+  citations?: Citation[];
+  followUpQuestions?: string[];
+}
+
+interface ThreadData {
+  id: string;
+  title: string;
+  gameId?: string | null;
+  status: string;
+  messages: ChatMessage[];
+}
+
+export interface ChatThreadViewProps {
+  /** Thread ID from URL params */
+  threadId: string;
+}
+
+// ============================================================================
+// Component
+// ============================================================================
+
+export function ChatThreadView({ threadId }: ChatThreadViewProps) {
+  const router = useRouter();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // State
+  const [thread, setThread] = useState<ThreadData | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Derived state for info panel
+  const [game, setGame] = useState<{ id: string; title: string } | null>(null);
+
+  // Extract citations from all assistant messages
+  const allCitations = useMemo(
+    () => messages.flatMap(m => m.citations ?? []),
+    [messages]
+  );
+
+  // Extract last suggested questions
+  const suggestedQuestions = useMemo(() => {
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+    return lastAssistant?.followUpQuestions ?? [];
+  }, [messages]);
+
+  // Auto-scroll to bottom
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  // Load thread data
+  useEffect(() => {
+    async function loadThread() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const threadData = await api.chat.getThreadById(threadId);
+        if (!threadData) {
+          setError('Thread non trovato');
+          return;
+        }
+
+        const mappedMessages = (threadData.messages ?? []).map((m: any) => ({
+          id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: m.timestamp,
+          citations: m.citations,
+          followUpQuestions: m.followUpQuestions,
+        }));
+
+        setThread({
+          id: threadData.id,
+          title: threadData.title ?? 'Chat',
+          gameId: threadData.gameId,
+          status: 'Active',
+          messages: mappedMessages,
+        });
+
+        setMessages(mappedMessages);
+
+        // Load game info if available
+        if (threadData.gameId) {
+          try {
+            const games = await api.games.getAll();
+            const found = (games.games ?? []).find(
+              (g: any) => g.id === threadData.gameId
+            );
+            if (found) {
+              setGame({
+                id: found.id,
+                title: found.title,
+              });
+            }
+          } catch {
+            // Non-critical: game info not found
+          }
+        }
+      } catch {
+        setError('Errore nel caricamento della conversazione');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    void loadThread();
+  }, [threadId]);
+
+  // Send message
+  const handleSendMessage = useCallback(
+    async (content?: string) => {
+      const messageContent = content || inputValue.trim();
+      if (!messageContent || isSending) return;
+
+      setIsSending(true);
+      setInputValue('');
+
+      // Optimistic UI: add user message
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: messageContent,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+
+      try {
+        const response = await api.chat.addMessage(threadId, {
+          content: messageContent,
+          role: 'user',
+        });
+
+        if (response?.messages) {
+          setMessages(
+            response.messages.map((m: any) => ({
+              id: m.id ?? `msg-${Date.now()}-${Math.random()}`,
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+              citations: m.citations,
+              followUpQuestions: m.followUpQuestions,
+            }))
+          );
+        }
+      } catch {
+        setError('Errore nell\'invio del messaggio');
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [inputValue, isSending, threadId]
+  );
+
+  // Title change
+  const handleTitleChange = useCallback(
+    async (newTitle: string) => {
+      try {
+        await api.chat.updateThreadTitle(threadId, newTitle);
+        setThread(prev => prev ? { ...prev, title: newTitle } : prev);
+      } catch {
+        // Silent fail
+      }
+    },
+    [threadId]
+  );
+
+  // Delete thread
+  const handleDelete = useCallback(async () => {
+    try {
+      await api.chat.deleteThread(threadId);
+      router.push('/chat/new');
+    } catch {
+      setError('Errore nell\'eliminazione della conversazione');
+    }
+  }, [threadId, router]);
+
+  // Handle question click
+  const handleQuestionClick = useCallback(
+    (question: string) => {
+      void handleSendMessage(question);
+    },
+    [handleSendMessage]
+  );
+
+  // Handle key press in input
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        void handleSendMessage();
+      }
+    },
+    [handleSendMessage]
+  );
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-dvh items-center justify-center" data-testid="chat-loading">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500 mx-auto mb-3" />
+          <p className="text-muted-foreground font-nunito text-sm">Caricamento chat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !thread) {
+    return (
+      <div className="flex h-dvh items-center justify-center" data-testid="chat-error">
+        <div className="text-center max-w-md">
+          <p className="text-red-600 dark:text-red-400 mb-3">{error}</p>
+          <a
+            href="/chat/new"
+            className="text-amber-600 hover:text-amber-700 underline text-sm"
+          >
+            Torna alla selezione
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-dvh bg-background" data-testid="chat-thread-view">
+      {/* Header */}
+      <ChatThreadHeader
+        title={thread?.title ?? 'Chat'}
+        gameName={game?.title}
+        agentName={undefined}
+        onTitleChange={handleTitleChange}
+        onDelete={handleDelete}
+      />
+
+      {/* Error banner */}
+      {error && (
+        <div
+          role="alert"
+          className="mx-4 mt-2 p-2 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-xs border border-red-200 dark:border-red-500/20"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Split view */}
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Chat Area (left) */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Messages */}
+          <div
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+            data-testid="messages-area"
+          >
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-muted-foreground">
+                  <p className="text-lg font-quicksand mb-2">Inizia la conversazione</p>
+                  <p className="text-sm font-nunito">Scrivi un messaggio per cominciare.</p>
+                </div>
+              </div>
+            ) : (
+              messages.map(msg => (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    'max-w-[85%] rounded-2xl px-4 py-3',
+                    msg.role === 'user'
+                      ? 'ml-auto bg-amber-500 text-white'
+                      : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
+                  )}
+                  data-testid={`message-${msg.role}`}
+                >
+                  <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+                  {msg.citations && msg.citations.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {msg.citations.map((c, i) => (
+                        <span
+                          key={`${c.documentId}-${c.pageNumber}-${i}`}
+                          className="text-[10px] px-1.5 py-0.5 bg-orange-500/20 text-orange-700 dark:text-orange-300 rounded"
+                        >
+                          p.{c.pageNumber}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <div
+            className="border-t border-border/50 dark:border-border/30 p-4 bg-background/95 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none"
+            data-testid="chat-input-area"
+          >
+            <div className="flex items-end gap-2 max-w-3xl mx-auto">
+              <textarea
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Scrivi un messaggio..."
+                rows={1}
+                className={cn(
+                  'flex-1 resize-none rounded-xl border border-border/50 px-4 py-3',
+                  'bg-white/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
+                  'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
+                  'max-h-32'
+                )}
+                disabled={isSending}
+                data-testid="message-input"
+              />
+              <button
+                onClick={() => void handleSendMessage()}
+                disabled={!inputValue.trim() || isSending}
+                className={cn(
+                  'p-3 rounded-xl transition-all duration-200 flex-shrink-0',
+                  inputValue.trim() && !isSending
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                )}
+                aria-label="Invia messaggio"
+                data-testid="send-btn"
+              >
+                {isSending ? (
+                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Panel (right) */}
+        <ChatInfoPanel
+          game={game}
+          citations={allCitations}
+          suggestedQuestions={suggestedQuestions}
+          onQuestionClick={handleQuestionClick}
+          isStreaming={isSending}
+        />
+      </div>
+    </div>
+  );
+}

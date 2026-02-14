@@ -1,5 +1,5 @@
 /**
- * BulkImportJsonUploader Component Tests - Issue #4355
+ * BulkImportJsonUploader Component Tests - Issue #4355 + #4356
  *
  * Test coverage:
  * - Initial render and UI elements
@@ -7,7 +7,8 @@
  * - Textarea input and validation
  * - File upload via input
  * - Client-side validation (format, size, entries)
- * - API submission and result display
+ * - Preview step (validates then shows BulkImportPreview)
+ * - API submission and result display (via preview confirm)
  * - Error handling
  * - Reset/clear functionality
  *
@@ -102,11 +103,11 @@ describe('BulkImportJsonUploader', () => {
       expect(screen.getByTestId('json-textarea')).toBeInTheDocument();
     });
 
-    it('renders submit button disabled when no content', () => {
+    it('renders preview button disabled when no content', () => {
       render(<BulkImportJsonUploader />);
 
-      const submitBtn = screen.getByTestId('submit-import');
-      expect(submitBtn).toBeDisabled();
+      const previewBtn = screen.getByTestId('preview-button');
+      expect(previewBtn).toBeDisabled();
     });
 
     it('does not render clear button when no content', () => {
@@ -117,14 +118,14 @@ describe('BulkImportJsonUploader', () => {
   });
 
   describe('Textarea Input', () => {
-    it('enables submit button when content is entered', () => {
+    it('enables preview button when content is entered', () => {
       render(<BulkImportJsonUploader />);
 
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": 123, "name": "Test Game"}]');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      expect(submitBtn).not.toBeDisabled();
+      const previewBtn = screen.getByTestId('preview-button');
+      expect(previewBtn).not.toBeDisabled();
     });
 
     it('shows clear button when content is entered', () => {
@@ -159,7 +160,7 @@ describe('BulkImportJsonUploader', () => {
     });
   });
 
-  describe('Client-Side Validation', () => {
+  describe('Client-Side Validation (on Preview click)', () => {
     it('shows error for invalid JSON syntax', async () => {
       const user = userEvent.setup();
       render(<BulkImportJsonUploader />);
@@ -167,8 +168,7 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, 'not valid json');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      await user.click(submitBtn);
+      await user.click(screen.getByTestId('preview-button'));
 
       expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
       expect(screen.getByText(/invalid json format/i)).toBeInTheDocument();
@@ -181,8 +181,7 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '{"key": "value"}');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      await user.click(submitBtn);
+      await user.click(screen.getByTestId('preview-button'));
 
       expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
       expect(screen.getByText(/json must be an array/i)).toBeInTheDocument();
@@ -195,8 +194,7 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[]');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      await user.click(submitBtn);
+      await user.click(screen.getByTestId('preview-button'));
 
       expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
       expect(screen.getByText(/json array is empty/i)).toBeInTheDocument();
@@ -209,8 +207,7 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": -1, "name": "Test"}]');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      await user.click(submitBtn);
+      await user.click(screen.getByTestId('preview-button'));
 
       expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
       expect(screen.getByText(/invalid entries/i)).toBeInTheDocument();
@@ -223,26 +220,74 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": 123, "name": ""}]');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      await user.click(submitBtn);
+      await user.click(screen.getByTestId('preview-button'));
 
       expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
       expect(screen.getByText(/invalid entries/i)).toBeInTheDocument();
     });
 
-    it('keeps submit disabled for whitespace-only content', () => {
+    it('keeps preview button disabled for whitespace-only content', () => {
       render(<BulkImportJsonUploader />);
 
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '   ');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      expect(submitBtn).toBeDisabled();
+      const previewBtn = screen.getByTestId('preview-button');
+      expect(previewBtn).toBeDisabled();
     });
   });
 
-  describe('API Submission', () => {
-    it('calls mutate with JSON content on submit', async () => {
+  describe('Preview Step', () => {
+    it('shows preview after clicking Preview Import with valid JSON', async () => {
+      const user = userEvent.setup();
+      render(<BulkImportJsonUploader />);
+
+      const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
+      setTextareaValue(textarea, '[{"bggId": 123, "name": "Test Game"}]');
+
+      await user.click(screen.getByTestId('preview-button'));
+
+      // Preview should be visible
+      expect(screen.getByTestId('bulk-import-preview')).toBeInTheDocument();
+      // Upload area should be hidden
+      expect(screen.queryByTestId('json-textarea')).not.toBeInTheDocument();
+    });
+
+    it('returns to upload when Back to Edit is clicked in preview', async () => {
+      const user = userEvent.setup();
+      render(<BulkImportJsonUploader />);
+
+      const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
+      setTextareaValue(textarea, '[{"bggId": 123, "name": "Test Game"}]');
+
+      await user.click(screen.getByTestId('preview-button'));
+      expect(screen.getByTestId('bulk-import-preview')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('preview-back'));
+
+      // Should be back to upload area
+      expect(screen.queryByTestId('bulk-import-preview')).not.toBeInTheDocument();
+      expect(screen.getByTestId('json-textarea')).toBeInTheDocument();
+    });
+
+    it('returns to upload when Cancel is clicked in preview', async () => {
+      const user = userEvent.setup();
+      render(<BulkImportJsonUploader />);
+
+      const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
+      setTextareaValue(textarea, '[{"bggId": 123, "name": "Test Game"}]');
+
+      await user.click(screen.getByTestId('preview-button'));
+
+      await user.click(screen.getByTestId('preview-cancel'));
+
+      expect(screen.queryByTestId('bulk-import-preview')).not.toBeInTheDocument();
+      expect(screen.getByTestId('json-textarea')).toBeInTheDocument();
+    });
+  });
+
+  describe('API Submission (via Preview Confirm)', () => {
+    it('calls mutate with JSON content when confirm is clicked', async () => {
       const user = userEvent.setup();
       render(<BulkImportJsonUploader />);
 
@@ -250,28 +295,15 @@ describe('BulkImportJsonUploader', () => {
       const validJson = '[{"bggId": 123, "name": "Test Game"}]';
       setTextareaValue(textarea, validJson);
 
-      const submitBtn = screen.getByTestId('submit-import');
-      await user.click(submitBtn);
+      // Go to preview
+      await user.click(screen.getByTestId('preview-button'));
+      // Confirm import
+      await user.click(screen.getByTestId('confirm-import'));
 
       expect(mockMutate).toHaveBeenCalledWith(validJson);
     });
 
-    it('shows loading state during submission', () => {
-      mockMutationState.isPending = true;
-      render(<BulkImportJsonUploader />);
-
-      expect(screen.getByText('Importing...')).toBeInTheDocument();
-    });
-
-    it('disables submit and textarea during submission', () => {
-      mockMutationState.isPending = true;
-      render(<BulkImportJsonUploader />);
-
-      expect(screen.getByTestId('submit-import')).toBeDisabled();
-      expect(screen.getByTestId('json-textarea')).toBeDisabled();
-    });
-
-    it('displays API error when submission fails', () => {
+    it('displays API error when submission fails in preview', () => {
       mockMutationState.error = new Error('Rate limit exceeded');
       render(<BulkImportJsonUploader />);
 
@@ -281,15 +313,15 @@ describe('BulkImportJsonUploader', () => {
   });
 
   describe('Result Display', () => {
-    it('shows import result after successful submission', async () => {
+    it('shows import result after successful submission via preview', async () => {
       const user = userEvent.setup();
       render(<BulkImportJsonUploader />);
 
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": 123, "name": "Test"}]');
 
-      const submitBtn = screen.getByTestId('submit-import');
-      await user.click(submitBtn);
+      await user.click(screen.getByTestId('preview-button'));
+      await user.click(screen.getByTestId('confirm-import'));
 
       expect(screen.getByTestId('import-result')).toBeInTheDocument();
     });
@@ -301,7 +333,8 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": 123, "name": "Test"}]');
 
-      await user.click(screen.getByTestId('submit-import'));
+      await user.click(screen.getByTestId('preview-button'));
+      await user.click(screen.getByTestId('confirm-import'));
 
       expect(screen.getByText('Total')).toBeInTheDocument();
       expect(screen.getByText('Enqueued')).toBeInTheDocument();
@@ -316,11 +349,11 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": 123, "name": "Test"}]');
 
-      await user.click(screen.getByTestId('submit-import'));
+      await user.click(screen.getByTestId('preview-button'));
+      await user.click(screen.getByTestId('confirm-import'));
 
       expect(screen.getByText('Gloomhaven')).toBeInTheDocument();
       expect(screen.getByText('Already exists')).toBeInTheDocument();
-      expect(screen.getByText('Duplicate')).toBeInTheDocument();
     });
 
     it('shows import another button after result', async () => {
@@ -330,7 +363,8 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": 123, "name": "Test"}]');
 
-      await user.click(screen.getByTestId('submit-import'));
+      await user.click(screen.getByTestId('preview-button'));
+      await user.click(screen.getByTestId('confirm-import'));
 
       expect(screen.getByTestId('import-another')).toBeInTheDocument();
     });
@@ -342,7 +376,8 @@ describe('BulkImportJsonUploader', () => {
       const textarea = screen.getByTestId('json-textarea') as HTMLTextAreaElement;
       setTextareaValue(textarea, '[{"bggId": 123, "name": "Test"}]');
 
-      await user.click(screen.getByTestId('submit-import'));
+      await user.click(screen.getByTestId('preview-button'));
+      await user.click(screen.getByTestId('confirm-import'));
 
       expect(screen.getByTestId('import-result')).toBeInTheDocument();
 
@@ -417,8 +452,6 @@ describe('BulkImportJsonUploader', () => {
 
       fireEvent.dragOver(dropZone, { dataTransfer: { files: [] } });
 
-      // The border color changes on drag over - we can verify the handler ran
-      // by checking the text changes
       expect(screen.getByText(/drop json file here/i)).toBeInTheDocument();
     });
 

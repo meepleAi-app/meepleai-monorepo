@@ -26,6 +26,7 @@ import {
   Info,
   Trash2,
   ClipboardPaste,
+  Search,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,8 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import type { BulkImportFromJsonResult } from '@/lib/api/schemas/admin.schemas';
 import { cn } from '@/lib/utils';
+
+import { BulkImportPreview, parseAndValidateEntries, type PreviewData } from './BulkImportPreview';
 
 // Validation constants
 const MAX_JSON_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -131,6 +134,8 @@ export function BulkImportJsonUploader(): JSX.Element {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [result, setResult] = useState<BulkImportFromJsonResult | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { mutate: submitImport, isPending, error: apiError, reset: resetMutation } = useMutation({
@@ -200,16 +205,33 @@ export function BulkImportJsonUploader(): JSX.Element {
     }
   }, [processFile]);
 
-  // Submit handler
-  const handleSubmit = useCallback(() => {
+  // Preview handler - validates and shows preview
+  const handlePreview = useCallback(() => {
     const validation = validateJsonContent(jsonContent);
     if (!validation.isValid) {
       setValidationErrors(validation.errors);
       return;
     }
     setValidationErrors([]);
+    const data = parseAndValidateEntries(jsonContent);
+    if (!data) {
+      setValidationErrors([{ field: 'parse', message: 'Failed to parse JSON content' }]);
+      return;
+    }
+    setPreviewData(data);
+    setShowPreview(true);
+  }, [jsonContent]);
+
+  // Confirm import from preview
+  const handleConfirmImport = useCallback(() => {
     submitImport(jsonContent);
   }, [jsonContent, submitImport]);
+
+  // Back from preview
+  const handleBackFromPreview = useCallback(() => {
+    setShowPreview(false);
+    setPreviewData(null);
+  }, []);
 
   // Reset handler
   const handleReset = useCallback(() => {
@@ -217,6 +239,8 @@ export function BulkImportJsonUploader(): JSX.Element {
     setFileName(null);
     setValidationErrors([]);
     setResult(null);
+    setShowPreview(false);
+    setPreviewData(null);
     resetMutation();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -271,8 +295,29 @@ export function BulkImportJsonUploader(): JSX.Element {
           </CardContent>
         </Card>
 
+        {/* Preview Step */}
+        {showPreview && previewData && !result && (
+          <>
+            <BulkImportPreview
+              previewData={previewData}
+              onConfirm={handleConfirmImport}
+              onBack={handleBackFromPreview}
+              isSubmitting={isPending}
+            />
+            {apiError && (
+              <Alert variant="destructive" data-testid="api-error">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Import Failed</AlertTitle>
+                <AlertDescription className="text-sm">
+                  {apiError instanceof Error ? apiError.message : 'An unexpected error occurred'}
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
+        )}
+
         {/* Upload Area */}
-        {!result && (
+        {!result && !showPreview && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Upload JSON</CardTitle>
@@ -408,18 +453,12 @@ export function BulkImportJsonUploader(): JSX.Element {
               {/* Action Buttons */}
               <div className="flex items-center gap-3">
                 <Button
-                  onClick={handleSubmit}
+                  onClick={handlePreview}
                   disabled={!hasContent || isPending}
-                  data-testid="submit-import"
+                  data-testid="preview-button"
                 >
-                  {isPending ? (
-                    <>Importing...</>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import Games
-                    </>
-                  )}
+                  <Search className="mr-2 h-4 w-4" />
+                  Preview Import
                 </Button>
                 {hasContent && (
                   <Button variant="outline" onClick={handleReset} disabled={isPending} data-testid="reset-button">

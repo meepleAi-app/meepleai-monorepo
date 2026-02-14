@@ -37,7 +37,9 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
             id: Guid.NewGuid(),
             userId: command.UserId,
             gameId: command.GameId,
-            title: command.Title
+            title: command.Title,
+            agentId: command.AgentId,
+            agentType: command.AgentType // Issue #4362
         );
 
         // Add initial message if provided
@@ -71,7 +73,11 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
             IsDeleted: m.IsDeleted,
             DeletedAt: m.DeletedAt,
             DeletedByUserId: m.DeletedByUserId,
-            IsInvalidated: m.IsInvalidated
+            IsInvalidated: m.IsInvalidated,
+            AgentType: m.AgentType,
+            Confidence: m.Confidence,
+            CitationsJson: m.CitationsJson,
+            TokenCount: m.TokenCount
         )).ToList();
 
         return new ChatThreadDto(
@@ -84,7 +90,8 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
             CreatedAt: thread.CreatedAt,
             LastMessageAt: thread.LastMessageAt,
             MessageCount: thread.MessageCount,
-            Messages: messageDtos
+            Messages: messageDtos,
+            AgentType: thread.AgentType // Issue #4362
         );
     }
 }

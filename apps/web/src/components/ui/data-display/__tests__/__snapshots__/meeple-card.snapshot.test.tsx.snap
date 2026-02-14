@@ -15,12 +15,24 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+    <span
+      class="max-w-[80px] truncate bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-muted-foreground border border-border/50 cursor-default"
+      data-state="closed"
+    >
+      Popular
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -87,11 +99,6 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
         8.7
       </span>
     </div>
-    <span
-      class="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50"
-    >
-      Popular
-    </span>
   </div>
   <div
     class="flex items-center justify-evenly gap-2 px-4 py-3 border-t border-border/50 bg-muted/60 dark:bg-muted/40 rounded-b-2xl"
@@ -352,12 +359,18 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(38, 98, 217);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(38, 98, 217);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Custom
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(38, 98, 217);"
+    >
+      Custom
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -429,12 +442,18 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(22, 162, 73);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(22, 162, 73);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Custom
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(22, 162, 73);"
+    >
+      Custom
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -497,12 +516,18 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(244, 62, 92);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(244, 62, 92);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Event
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(244, 62, 92);"
+    >
+      Event
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -624,12 +649,18 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -755,12 +786,18 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(124, 59, 237);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(124, 59, 237);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Player
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(124, 59, 237);"
+    >
+      Player
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -894,12 +931,18 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[16/9]"
   >
@@ -1065,12 +1108,18 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -1725,12 +1774,24 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+    <span
+      class="max-w-[80px] truncate bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-muted-foreground border border-border/50 cursor-default"
+      data-state="closed"
+    >
+      New
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -1762,11 +1823,6 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
     >
       Publisher
     </p>
-    <span
-      class="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50"
-    >
-      New
-    </span>
   </div>
 </article>
 `;
@@ -1784,12 +1840,18 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[16/9]"
   >
@@ -1853,12 +1915,18 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -1904,12 +1972,18 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >
@@ -1958,12 +2032,18 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot without
     class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
     style="background-color: rgb(224, 97, 6);"
   />
-  <span
-    class="absolute top-3 left-4 z-10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm"
-    style="background-color: rgb(224, 97, 6);"
+  <div
+    class="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+    data-testid="meeple-card-tag-stack"
   >
-    Game
-  </span>
+    <span
+      class="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+      data-state="closed"
+      style="background-color: rgb(224, 97, 6);"
+    >
+      Game
+    </span>
+  </div>
   <div
     class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
   >

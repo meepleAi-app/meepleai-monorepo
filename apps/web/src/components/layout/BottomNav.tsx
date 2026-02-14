@@ -80,7 +80,7 @@ const navItems: NavItem[] = [
     testId: 'bottomnav-games',
   },
   {
-    href: '/chat',
+    href: '/chat/new',
     icon: MessageSquare,
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',
@@ -116,6 +116,10 @@ export function BottomNav() {
     }
     if (href === '/profile') {
       return pathname === '/profile' || pathname?.startsWith('/profile/');
+    }
+    // Chat routes: /chat/new, /chat/{threadId}, etc.
+    if (href === '/chat/new') {
+      return pathname?.startsWith('/chat') ?? false;
     }
     return pathname?.startsWith(href) ?? false;
   };

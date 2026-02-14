@@ -19,6 +19,12 @@ internal sealed class ChatMessage
     public bool IsInvalidated { get; private set; }
     public int SequenceNumber { get; private set; }
 
+    // Issue #4362: Agent-specific metadata
+    public string? AgentType { get; private set; }
+    public float? Confidence { get; private set; }
+    public string? CitationsJson { get; private set; }
+    public int? TokenCount { get; private set; }
+
     // Known roles
     public static readonly string UserRole = "user";
     public static readonly string AssistantRole = "assistant";
@@ -98,6 +104,21 @@ internal sealed class ChatMessage
             throw new InvalidOperationException("Only assistant messages can be invalidated");
 
         IsInvalidated = true;
+    }
+
+    /// <summary>
+    /// Sets agent-specific metadata on an assistant message (Issue #4362).
+    /// Called after SSE stream completes to persist agent response metadata.
+    /// </summary>
+    public void SetAgentMetadata(string? agentType = null, float? confidence = null, string? citationsJson = null, int? tokenCount = null)
+    {
+        if (!IsAssistantMessage)
+            throw new InvalidOperationException("Agent metadata can only be set on assistant messages");
+
+        AgentType = agentType;
+        Confidence = confidence;
+        CitationsJson = citationsJson;
+        TokenCount = tokenCount;
     }
 
     public override string ToString() => $"[{Role}] {Content.Substring(0, Math.Min(50, Content.Length))}...";

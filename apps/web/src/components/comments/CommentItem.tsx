@@ -2,12 +2,11 @@ import { useState, useCallback } from 'react';
 
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import type { RuleSpecComment } from '@/lib/api';
+import type { RuleSpecComment } from './types';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
-import { MentionInput } from '../chat/MentionInput';
 
 interface CommentItemProps {
   comment: RuleSpecComment;
@@ -369,11 +368,12 @@ export function CommentItem({
       {/* Reply form */}
       {isReplying && (
         <div className="mt-3 pt-3 border-t border-gray-300">
-          <MentionInput
+          <textarea
             value={replyText}
-            onChange={setReplyText}
+            onChange={e => setReplyText(e.target.value)}
             placeholder="Scrivi una risposta..."
             disabled={isDisabled}
+            className="w-full min-h-[60px] p-2 border border-gray-400 rounded text-sm font-[inherit] resize-y"
           />
           <div className="flex gap-2 mt-2">
             <button

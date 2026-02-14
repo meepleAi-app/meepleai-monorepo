@@ -139,7 +139,7 @@ describe('BoardGameAskClient', () => {
     it('should render navigation links in header', () => {
       render(<BoardGameAskClient />);
 
-      expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('href', '/chat');
+      expect(screen.getByRole('link', { name: /chat/i })).toHaveAttribute('href', '/chat/new');
       expect(screen.getByRole('link', { name: /upload/i })).toHaveAttribute('href', '/upload');
       expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/');
     });

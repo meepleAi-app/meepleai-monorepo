@@ -12,20 +12,6 @@ export { useCurrentUser, userKeys } from './useCurrentUser';
 // Games queries
 export { useGames, useGame, useGameSessions, useGameDocuments, gamesKeys } from './useGames';
 
-// Chat queries and mutations
-export {
-  useChats,
-  useChatThread,
-  useMessages,
-  useCreateChat,
-  useAddMessage,
-  useEditMessage,
-  useDeleteMessage,
-  useCloseChat,
-  useReopenChat,
-  chatKeys,
-} from './useChats';
-
 // Admin dashboard queries (Issue #886)
 export {
   useDashboardData,
@@ -153,18 +139,6 @@ export {
   useInvalidateSessionQuota,
   sessionQuotaKeys,
 } from './useSessionQuota';
-
-// Chat Sessions queries and mutations (Issue #3484)
-export {
-  useRecentChatSessions,
-  useGameChatSessions,
-  useInfiniteGameChatSessions,
-  useChatSession,
-  useCreateChatSession,
-  useAddChatSessionMessage,
-  useDeleteChatSession,
-  chatSessionKeys,
-} from './useChatSessions';
 
 // Tier Strategy Configuration queries and mutations (Issue #3440)
 export {

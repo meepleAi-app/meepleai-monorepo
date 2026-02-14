@@ -30,6 +30,7 @@ import {
   KeyIcon,
   FlaskConicalIcon,
   ActivityIcon,
+  UploadIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -87,6 +88,7 @@ const defaultNavigation: NavItem[] = [
   { href: '/admin/prompts', label: 'Prompts', icon: FileTextIcon },
   { href: '/admin/n8n-templates', label: 'N8N Templates', icon: PackageIcon },
   { href: '/admin/bulk-export', label: 'Bulk Export', icon: PackageIcon },
+  { href: '/admin/games/import/bulk', label: 'Bulk Import', icon: UploadIcon },
 ];
 
 function NavLink({

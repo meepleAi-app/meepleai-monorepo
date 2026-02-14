@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-import { AgentChat } from './AgentChat';
 
 // Tab types
 type TabType = 'chat' | 'history' | 'kb';
@@ -72,7 +71,7 @@ export function AgentInfoCard({
   className,
 }: AgentInfoCardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('chat');
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<Array<{ id: string; name: string; url?: string }>>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError] = useState<string | null>(null);
 
@@ -152,10 +151,26 @@ export function AgentInfoCard({
 
       {/* Tab Content */}
       <div className="flex h-[calc(100%-57px)] flex-col">
-        {/* Chat Tab */}
+        {/* Chat Tab - Redirects to unified chat system */}
         {activeTab === 'chat' && (
-          <div className="h-full">
-            <AgentChat agentId={agentId} agentName={agentName} layout="full-page" />
+          <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsla(25,95%,38%,0.1)]">
+              <MessageSquare className="h-8 w-8 text-[hsl(25,95%,38%)]" />
+            </div>
+            <h4 className="mb-2 font-quicksand text-lg font-semibold text-[#2D2A26]">
+              Chat AI
+            </h4>
+            <p className="max-w-xs font-nunito text-sm text-[#6B665C] mb-4">
+              Usa il sistema di chat unificato per parlare con {agentName}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = '/chat/new'}
+              className="rounded-full"
+            >
+              Vai alla Chat
+            </Button>
           </div>
         )}
 

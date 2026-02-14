@@ -37,7 +37,6 @@ import {
   UserActivityTimeline,
   type UserActivityEvent,
 } from '@/components/admin';
-import { ImpersonationChatHistory } from '@/components/admin/impersonation-chat-history';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -728,7 +727,16 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ImpersonationChatHistory userId={userId} limit={20} />
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Chat history viewer migrated to unified chat system. View conversations in{' '}
+                          <Link href="/chat/new" className="underline">
+                            Chat
+                          </Link>
+                          .
+                        </AlertDescription>
+                      </Alert>
                     </CardContent>
                   </Card>
                 </TabsContent>

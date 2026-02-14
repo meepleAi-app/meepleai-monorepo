@@ -1,3 +1,3 @@
 // Page components barrel export
-export { default as ChatPage } from './ChatPage';
-export { SharedChatView } from './SharedChatView';
+// ChatPage and SharedChatView removed - Issue #4368: Legacy Chat Removal
+// Unified chat is at /chat/new and /chat/[threadId]

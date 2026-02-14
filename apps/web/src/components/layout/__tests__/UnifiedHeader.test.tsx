@@ -136,7 +136,7 @@ describe('UnifiedHeader', () => {
       expect(screen.getByLabelText('Navigate to dashboard')).toHaveAttribute('href', '/dashboard');
       expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
       expect(screen.getByLabelText('Navigate to agents list')).toHaveAttribute('href', '/agents');
-      expect(screen.getByLabelText('Navigate to chat history')).toHaveAttribute('href', '/chat');
+      expect(screen.getByLabelText('Navigate to chat history')).toHaveAttribute('href', '/chat/new');
       expect(screen.getByLabelText('Navigate to play sessions')).toHaveAttribute('href', '/sessions');
     });
 

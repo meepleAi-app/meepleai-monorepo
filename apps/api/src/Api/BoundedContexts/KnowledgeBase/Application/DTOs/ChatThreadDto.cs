@@ -16,7 +16,8 @@ internal record ChatThreadDto(
     DateTime CreatedAt,
     DateTime LastMessageAt,
     int MessageCount,
-    IReadOnlyList<ChatMessageDto> Messages
+    IReadOnlyList<ChatMessageDto> Messages,
+    string? AgentType = null // Issue #4362
 );
 
 /// <summary>
@@ -33,7 +34,12 @@ internal record ChatMessageDto(
     bool IsDeleted = false,
     DateTime? DeletedAt = null,
     Guid? DeletedByUserId = null,
-    bool IsInvalidated = false
+    bool IsInvalidated = false,
+    // Issue #4362: Agent metadata
+    string? AgentType = null,
+    float? Confidence = null,
+    string? CitationsJson = null,
+    int? TokenCount = null
 );
 
 /// <summary>
@@ -42,7 +48,9 @@ internal record ChatMessageDto(
 internal record CreateChatThreadRequest(
     Guid? GameId = null,
     string? Title = null,
-    string? InitialMessage = null
+    string? InitialMessage = null,
+    Guid? AgentId = null,
+    string? AgentType = null // Issue #4362
 );
 
 /// <summary>
@@ -51,4 +59,30 @@ internal record CreateChatThreadRequest(
 internal record AddMessageRequest(
     string Content,
     string Role
+);
+
+/// <summary>
+/// DTO for a paginated list of chat threads (Issue #4362).
+/// </summary>
+internal record ChatThreadListDto(
+    IReadOnlyList<ChatThreadDto> Threads,
+    int TotalCount,
+    int Page,
+    int PageSize
+);
+
+/// <summary>
+/// DTO for summary-level thread info (no messages) used in listings (Issue #4362).
+/// </summary>
+internal record ChatThreadSummaryDto(
+    Guid Id,
+    Guid UserId,
+    Guid? GameId,
+    Guid? AgentId,
+    string? Title,
+    string Status,
+    DateTime CreatedAt,
+    DateTime LastMessageAt,
+    int MessageCount,
+    string? AgentType = null
 );

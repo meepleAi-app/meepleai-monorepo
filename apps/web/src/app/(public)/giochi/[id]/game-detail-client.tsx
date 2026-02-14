@@ -25,7 +25,6 @@ import { GameOverviewTab } from '@/components/games/detail/GameOverviewTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 
-import { GameChatTab } from './components/GameChatTab';
 import { GameFAQTab } from './components/GameFAQTab';
 import { HeroSection } from './components/HeroSection';
 import { InfoGrid } from './components/InfoGrid';
@@ -131,9 +130,20 @@ export function GameDetailClient({ game }: GameDetailClientProps) {
           <GameFAQTab gameId={game.id} gameTitle={game.title} />
         </TabsContent>
 
-        {/* Chat Tab (AI chat + Quick questions) */}
+        {/* Chat Tab - Redirects to unified chat */}
         <TabsContent value="chat" className="mt-6">
-          <GameChatTab gameId={game.id} gameTitle={game.title} />
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <MessageSquare className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Chat AI</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Parla con l&apos;assistente AI su {game.title}
+            </p>
+            <Button asChild>
+              <Link href={`/chat/new?gameId=${game.id}`}>
+                Avvia Chat AI
+              </Link>
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

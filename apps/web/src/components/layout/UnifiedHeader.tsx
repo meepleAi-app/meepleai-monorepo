@@ -115,7 +115,7 @@ const NAV_ITEMS: NavItem[] = [
     authOnly: true,
   },
   {
-    href: '/chat',
+    href: '/chat/new',
     icon: History,
     label: 'Chat History',
     ariaLabel: 'Navigate to chat history',
@@ -168,6 +168,10 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
     // Library routes include /library, /library/private, etc.
     if (href === '/library') {
       return pathname === '/library' || pathname?.startsWith('/library/');
+    }
+    // Chat routes: /chat/new, /chat/{threadId}, etc.
+    if (href === '/chat/new') {
+      return pathname?.startsWith('/chat') ?? false;
     }
     return pathname?.startsWith(href) ?? false;
   };

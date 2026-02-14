@@ -27,7 +27,7 @@ interface ConfigAgentStepProps {
 export function ConfigAgentStep({
   gameId,
   gameName,
-  pdfId,
+  pdfId: _pdfId,
   onComplete,
   onSkip,
   onBack,
@@ -95,7 +95,7 @@ export function ConfigAgentStep({
       <StrategySelector
         value={strategyName}
         onChange={setStrategyName}
-        userTier={userTier as any}
+        userTier={userTier}
       />
 
       {/* Info Card */}

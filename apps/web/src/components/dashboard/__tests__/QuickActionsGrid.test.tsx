@@ -123,7 +123,7 @@ describe('QuickActionsGrid', () => {
       render(<QuickActionsGrid />);
 
       const action = screen.getByTestId('quick-action-chat');
-      expect(action).toHaveAttribute('href', '/chat');
+      expect(action).toHaveAttribute('href', '/chat/new');
     });
 
     it('catalog action links to /games/catalog', () => {
@@ -296,7 +296,7 @@ describe('QuickActionsGrid', () => {
         'dashboard_quick_action_chat',
         expect.objectContaining({
           action_name: 'Chat AI',
-          destination: '/chat',
+          destination: '/chat/new',
           source: 'dashboard',
         })
       );

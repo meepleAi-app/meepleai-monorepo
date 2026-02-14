@@ -5,11 +5,19 @@
  * Grid, List, and Carousel view modes.
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntityListView } from '../entity-list-view';
 import type { MeepleEntityType } from '../../meeple-card';
 import { vi } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
+
+// Mock Next.js router (required by GameCarousel → useEntityActions → useRouter)
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() })),
+  usePathname: vi.fn(() => '/'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 // Mock data
 interface MockGame {
@@ -46,13 +54,13 @@ describe('EntityListView - Mode Persistence Integration', () => {
 
   describe('Grid Mode Persistence', () => {
     it('should persist grid mode across reload', () => {
-      const { unmount } = render(<EntityListView {...defaultProps} />);
+      const { unmount } = renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
       expect(localStorage.getItem('view-mode:integration-test')).toBe('"grid"');
 
       unmount();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
     });
@@ -61,7 +69,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
   describe('List Mode Persistence', () => {
     it('should persist list mode across reload', async () => {
       const user = userEvent.setup();
-      const { unmount } = render(<EntityListView {...defaultProps} />);
+      const { unmount } = renderWithQuery(<EntityListView {...defaultProps} />);
 
       // Switch to list mode
       await user.click(screen.getByRole('radio', { name: /list view/i }));
@@ -70,7 +78,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
       expect(localStorage.getItem('view-mode:integration-test')).toBe('"list"');
 
       unmount();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       // Should restore list mode
       expect(screen.getByTestId('list-layout')).toBeInTheDocument();
@@ -80,7 +88,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
   describe('Carousel Mode Persistence', () => {
     it('should persist carousel mode across reload', async () => {
       const user = userEvent.setup();
-      const { unmount } = render(<EntityListView {...defaultProps} />);
+      const { unmount } = renderWithQuery(<EntityListView {...defaultProps} />);
 
       // Switch to carousel mode
       await user.click(screen.getByRole('radio', { name: /carousel view/i }));
@@ -90,7 +98,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
       expect(localStorage.getItem('view-mode:integration-test')).toBe('"carousel"');
 
       unmount();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       // Should restore carousel mode
       expect(screen.getByTestId('carousel-layout')).toBeInTheDocument();
@@ -103,7 +111,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
       const user = userEvent.setup();
 
       // Render with persistenceKey "page-a"
-      const { unmount: unmountA } = render(
+      const { unmount: unmountA } = renderWithQuery(
         <EntityListView {...defaultProps} persistenceKey="page-a" />
       );
 
@@ -114,7 +122,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
       unmountA();
 
       // Render with persistenceKey "page-b" (should default to grid)
-      render(<EntityListView {...defaultProps} persistenceKey="page-b" />);
+      renderWithQuery(<EntityListView {...defaultProps} persistenceKey="page-b" />);
 
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
       expect(localStorage.getItem('view-mode:page-b')).toBe('"grid"');
@@ -125,7 +133,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
   describe('Mode Switching Flow', () => {
     it('should switch between all 3 modes seamlessly', async () => {
       const user = userEvent.setup();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       // Start: Grid
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
@@ -149,7 +157,7 @@ describe('EntityListView - Mode Persistence Integration', () => {
 
     it('should maintain items across mode switches', async () => {
       const user = userEvent.setup();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       // Verify items in grid
       expect(screen.getByText('Twilight Imperium')).toBeInTheDocument();

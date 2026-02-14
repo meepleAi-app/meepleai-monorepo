@@ -2,11 +2,19 @@
  * Tests for EntityListView component (Phase 1: Grid mode only)
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntityListView } from '../entity-list-view';
 import type { MeepleEntityType } from '../../meeple-card';
 import { vi } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
+
+// Mock Next.js router (required by GameCarousel → useEntityActions → useRouter)
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() })),
+  usePathname: vi.fn(() => '/'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
 
 // Mock data
 interface MockGame {
@@ -42,14 +50,14 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Basic Rendering', () => {
     it('should render grid layout by default', () => {
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
       expect(screen.getAllByTestId('meeple-card')).toHaveLength(3);
     });
 
     it('should render all items as MeepleCard components', () => {
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByText('Twilight Imperium')).toBeInTheDocument();
       expect(screen.getByText('Gloomhaven')).toBeInTheDocument();
@@ -57,7 +65,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     });
 
     it('should use grid variant for MeepleCard', () => {
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       const cards = screen.getAllByTestId('meeple-card');
       cards.forEach((card) => {
@@ -66,7 +74,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     });
 
     it('should apply correct entity type to cards', () => {
-      render(<EntityListView {...defaultProps} entity="game" />);
+      renderWithQuery(<EntityListView {...defaultProps} entity="game" />);
 
       const cards = screen.getAllByTestId('meeple-card');
       cards.forEach((card) => {
@@ -77,13 +85,13 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Title & Subtitle', () => {
     it('should render title when provided', () => {
-      render(<EntityListView {...defaultProps} title="Featured Games" />);
+      renderWithQuery(<EntityListView {...defaultProps} title="Featured Games" />);
 
       expect(screen.getByRole('heading', { name: /featured games/i })).toBeInTheDocument();
     });
 
     it('should render subtitle when provided', () => {
-      render(
+      renderWithQuery(
         <EntityListView {...defaultProps} title="Games" subtitle="Explore the collection" />
       );
 
@@ -91,7 +99,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     });
 
     it('should not render header when no title, subtitle, or switcher', () => {
-      const { container } = render(<EntityListView {...defaultProps} showViewSwitcher={false} />);
+      const { container } = renderWithQuery(<EntityListView {...defaultProps} showViewSwitcher={false} />);
 
       // Check that the header element is not rendered (use container query to avoid global headings)
       const header = container.querySelector('header');
@@ -101,19 +109,19 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('ViewModeSwitcher', () => {
     it('should render ViewModeSwitcher by default', () => {
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByRole('radiogroup', { name: /view mode/i })).toBeInTheDocument();
     });
 
     it('should hide ViewModeSwitcher when showViewSwitcher is false', () => {
-      render(<EntityListView {...defaultProps} showViewSwitcher={false} />);
+      renderWithQuery(<EntityListView {...defaultProps} showViewSwitcher={false} />);
 
       expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
     });
 
     it('should show all 3 modes by default (Phase 2)', () => {
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByRole('radio', { name: /grid view/i })).toBeInTheDocument();
       expect(screen.getByRole('radio', { name: /list view/i })).toBeInTheDocument();
@@ -121,7 +129,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     });
 
     it('should respect availableModes prop', () => {
-      render(<EntityListView {...defaultProps} availableModes={['grid', 'list']} />);
+      renderWithQuery(<EntityListView {...defaultProps} availableModes={['grid', 'list']} />);
 
       expect(screen.getByRole('radio', { name: /grid view/i })).toBeInTheDocument();
       expect(screen.getByRole('radio', { name: /list view/i })).toBeInTheDocument();
@@ -131,14 +139,14 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Empty State', () => {
     it('should render empty state when items array is empty', () => {
-      render(<EntityListView {...defaultProps} items={[]} />);
+      renderWithQuery(<EntityListView {...defaultProps} items={[]} />);
 
       expect(screen.getByTestId('empty-state')).toBeInTheDocument();
       expect(screen.getByText(/no items to display/i)).toBeInTheDocument();
     });
 
     it('should render custom empty message', () => {
-      render(
+      renderWithQuery(
         <EntityListView {...defaultProps} items={[]} emptyMessage="No games found. Try adjusting your filters." />
       );
 
@@ -146,7 +154,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     });
 
     it('should not render grid layout when empty', () => {
-      render(<EntityListView {...defaultProps} items={[]} />);
+      renderWithQuery(<EntityListView {...defaultProps} items={[]} />);
 
       expect(screen.queryByTestId('grid-layout')).not.toBeInTheDocument();
     });
@@ -154,20 +162,20 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Loading State', () => {
     it('should render loading skeleton when loading is true', () => {
-      render(<EntityListView {...defaultProps} loading />);
+      renderWithQuery(<EntityListView {...defaultProps} loading />);
 
       expect(screen.getByTestId('loading-skeleton-grid')).toBeInTheDocument();
     });
 
     it('should not render items when loading', () => {
-      render(<EntityListView {...defaultProps} loading />);
+      renderWithQuery(<EntityListView {...defaultProps} loading />);
 
       expect(screen.queryByTestId('grid-layout')).not.toBeInTheDocument();
       expect(screen.queryByText('Twilight Imperium')).not.toBeInTheDocument();
     });
 
     it('should not render empty state when loading', () => {
-      render(<EntityListView {...defaultProps} items={[]} loading />);
+      renderWithQuery(<EntityListView {...defaultProps} items={[]} loading />);
 
       expect(screen.queryByTestId('empty-state')).not.toBeInTheDocument();
     });
@@ -178,7 +186,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
       const mockOnClick = vi.fn();
       const user = userEvent.setup();
 
-      render(<EntityListView {...defaultProps} onItemClick={mockOnClick} />);
+      renderWithQuery(<EntityListView {...defaultProps} onItemClick={mockOnClick} />);
 
       const firstCard = screen.getAllByTestId('meeple-card')[0];
       await user.click(firstCard);
@@ -190,7 +198,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     it('should not throw when onItemClick is not provided', async () => {
       const user = userEvent.setup();
 
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       const firstCard = screen.getAllByTestId('meeple-card')[0];
 
@@ -202,7 +210,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Grid Configuration', () => {
     it('should apply default grid columns', () => {
-      const { container } = render(<EntityListView {...defaultProps} />);
+      const { container } = renderWithQuery(<EntityListView {...defaultProps} />);
 
       const gridLayout = container.querySelector('[data-testid="grid-layout"]');
       expect(gridLayout).toHaveClass('grid-cols-1');
@@ -212,7 +220,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     });
 
     it('should apply custom grid columns', () => {
-      const { container } = render(
+      const { container } = renderWithQuery(
         <EntityListView
           {...defaultProps}
           gridColumns={{ default: 2, sm: 3, lg: 4, xl: 5 }}
@@ -227,7 +235,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     });
 
     it('should apply custom grid gap', () => {
-      const { container } = render(<EntityListView {...defaultProps} gridGap={6} />);
+      const { container } = renderWithQuery(<EntityListView {...defaultProps} gridGap={6} />);
 
       const gridLayout = container.querySelector('[data-testid="grid-layout"]');
       expect(gridLayout).toHaveClass('gap-6');
@@ -236,7 +244,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('View Mode Persistence', () => {
     it('should persist grid mode to localStorage', () => {
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
       expect(localStorage.getItem('view-mode:test-list')).toBe('"grid"');
@@ -245,18 +253,18 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     it('should restore grid mode from localStorage', () => {
       localStorage.setItem('view-mode:test-list', '"grid"');
 
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
     });
 
     it('should use different localStorage keys for different persistenceKey values', () => {
-      const { unmount } = render(<EntityListView {...defaultProps} persistenceKey="page-a" />);
+      const { unmount } = renderWithQuery(<EntityListView {...defaultProps} persistenceKey="page-a" />);
 
       expect(localStorage.getItem('view-mode:page-a')).toBe('"grid"');
 
       unmount();
-      render(<EntityListView {...defaultProps} persistenceKey="page-b" />);
+      renderWithQuery(<EntityListView {...defaultProps} persistenceKey="page-b" />);
 
       expect(localStorage.getItem('view-mode:page-b')).toBe('"grid"');
       expect(localStorage.getItem('view-mode:page-a')).toBe('"grid"');
@@ -265,7 +273,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Controlled Mode', () => {
     it('should use controlled viewMode when provided', () => {
-      render(<EntityListView {...defaultProps} viewMode="grid" />);
+      renderWithQuery(<EntityListView {...defaultProps} viewMode="grid" />);
 
       expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
     });
@@ -273,7 +281,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
     it('should call onViewModeChange when mode changes', async () => {
       const mockOnChange = vi.fn();
 
-      render(<EntityListView {...defaultProps} onViewModeChange={mockOnChange} />);
+      renderWithQuery(<EntityListView {...defaultProps} onViewModeChange={mockOnChange} />);
 
       // Should be called on mount with initial mode
       expect(mockOnChange).toHaveBeenCalledWith('grid');
@@ -282,13 +290,13 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Custom Styling', () => {
     it('should apply custom className to section', () => {
-      render(<EntityListView {...defaultProps} className="custom-section-class" />);
+      renderWithQuery(<EntityListView {...defaultProps} className="custom-section-class" />);
 
       expect(screen.getByTestId('entity-list-view')).toHaveClass('custom-section-class');
     });
 
     it('should apply cardClassName to individual cards', () => {
-      render(<EntityListView {...defaultProps} cardClassName="custom-card-class" />);
+      renderWithQuery(<EntityListView {...defaultProps} cardClassName="custom-card-class" />);
 
       const cards = screen.getAllByTestId('meeple-card');
       cards.forEach((card) => {
@@ -299,19 +307,19 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
   describe('Accessibility', () => {
     it('should have aria-label on section', () => {
-      render(<EntityListView {...defaultProps} title="My Games" />);
+      renderWithQuery(<EntityListView {...defaultProps} title="My Games" />);
 
       expect(screen.getByRole('region', { name: /my games/i })).toBeInTheDocument();
     });
 
     it('should announce item count to screen readers', () => {
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       expect(screen.getByText(/showing 3 items in grid view/i)).toBeInTheDocument();
     });
 
     it('should announce loading state to screen readers', () => {
-      render(<EntityListView {...defaultProps} loading />);
+      renderWithQuery(<EntityListView {...defaultProps} loading />);
 
       expect(screen.getByLabelText(/loading/i)).toBeInTheDocument();
     });
@@ -320,7 +328,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
   describe('List Mode (Phase 2)', () => {
     it('should render list layout when mode is list', async () => {
       const user = userEvent.setup();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       await user.click(screen.getByRole('radio', { name: /list view/i }));
 
@@ -330,7 +338,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
     it('should use MeepleCard variant="list" in list mode', async () => {
       const user = userEvent.setup();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       await user.click(screen.getByRole('radio', { name: /list view/i }));
 
@@ -342,7 +350,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
     it('should display all items in list mode', async () => {
       const user = userEvent.setup();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       await user.click(screen.getByRole('radio', { name: /list view/i }));
 
@@ -355,7 +363,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
   describe('Carousel Mode (Phase 2)', () => {
     it('should render carousel layout when mode is carousel', async () => {
       const user = userEvent.setup();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       await user.click(screen.getByRole('radio', { name: /carousel view/i }));
 
@@ -365,7 +373,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
     it('should transform items to CarouselGame format', async () => {
       const user = userEvent.setup();
-      render(<EntityListView {...defaultProps} />);
+      renderWithQuery(<EntityListView {...defaultProps} />);
 
       await user.click(screen.getByRole('radio', { name: /carousel view/i }));
 
@@ -375,7 +383,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
 
     it('should pass carousel options correctly', async () => {
       const user = userEvent.setup();
-      render(
+      renderWithQuery(
         <EntityListView
           {...defaultProps}
           carouselOptions={{ autoPlay: true, showDots: false }}
@@ -392,7 +400,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
       const user = userEvent.setup();
       const mockOnClick = vi.fn();
 
-      render(<EntityListView {...defaultProps} onItemClick={mockOnClick} />);
+      renderWithQuery(<EntityListView {...defaultProps} onItemClick={mockOnClick} />);
 
       await user.click(screen.getByRole('radio', { name: /carousel view/i }));
 
@@ -416,7 +424,7 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
         { customId: 2, customTitle: 'Item 2' },
       ];
 
-      render(
+      renderWithQuery(
         <EntityListView<CustomItem>
           items={customItems}
           entity="custom"

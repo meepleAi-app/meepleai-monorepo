@@ -6,30 +6,38 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Handler for GetUserChatsQuery.
-/// Retrieves all chat threads for a user with pagination.
+/// Handler for GetUserChatThreadsQuery.
+/// Retrieves user chat threads with filtering and pagination (Issue #4362).
 /// </summary>
-internal class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IReadOnlyList<ChatThreadDto>>
+internal class GetUserChatThreadsQueryHandler : IQueryHandler<GetUserChatThreadsQuery, ChatThreadListDto>
 {
     private readonly IChatThreadRepository _threadRepository;
 
-    public GetUserChatsQueryHandler(IChatThreadRepository threadRepository)
+    public GetUserChatThreadsQueryHandler(IChatThreadRepository threadRepository)
     {
         _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
     }
 
-    public async Task<IReadOnlyList<ChatThreadDto>> Handle(GetUserChatsQuery request, CancellationToken cancellationToken)
+    public async Task<ChatThreadListDto> Handle(GetUserChatThreadsQuery request, CancellationToken cancellationToken)
     {
-        // Get user's threads (repository returns ordered by LastMessageAt descending)
-        var threads = await _threadRepository.FindByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
+        var (threads, totalCount) = await _threadRepository.FindByUserIdFilteredAsync(
+            userId: request.UserId,
+            gameId: request.GameId,
+            agentType: request.AgentType,
+            status: request.Status,
+            search: request.Search,
+            page: request.Page,
+            pageSize: request.PageSize,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        // Apply pagination
-        var paginatedThreads = threads
-            .Skip(request.Skip)
-            .Take(request.Take)
-            .ToList();
+        var threadDtos = threads.Select(MapToDto).ToList();
 
-        return paginatedThreads.Select(MapToDto).ToList();
+        return new ChatThreadListDto(
+            Threads: threadDtos,
+            TotalCount: totalCount,
+            Page: request.Page,
+            PageSize: request.PageSize
+        );
     }
 
     private static ChatThreadDto MapToDto(Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread thread)
@@ -55,14 +63,14 @@ internal class GetUserChatsQueryHandler : IQueryHandler<GetUserChatsQuery, IRead
             Id: thread.Id,
             UserId: thread.UserId,
             GameId: thread.GameId,
-            AgentId: thread.AgentId, // Issue #2030
+            AgentId: thread.AgentId,
             Title: thread.Title,
             Status: thread.Status.Value,
             CreatedAt: thread.CreatedAt,
             LastMessageAt: thread.LastMessageAt,
             MessageCount: thread.MessageCount,
             Messages: messageDtos,
-            AgentType: thread.AgentType // Issue #4362
+            AgentType: thread.AgentType
         );
     }
 }

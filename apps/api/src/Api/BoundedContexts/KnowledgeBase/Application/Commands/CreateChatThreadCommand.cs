@@ -10,5 +10,7 @@ internal record CreateChatThreadCommand(
     Guid UserId,
     Guid? GameId = null,
     string? Title = null,
-    string? InitialMessage = null
+    string? InitialMessage = null,
+    Guid? AgentId = null,
+    string? AgentType = null // Issue #4362
 ) : ICommand<ChatThreadDto>;

@@ -79,6 +79,13 @@ internal static class KnowledgeBaseEndpoints
         .RequireSession()
         .WithTags("ChatThreads")
         .WithDescription("Retrieve user's chat history for dashboard display (optimized, lightweight)");
+
+        // Issue #4362: Get user's chat threads with filtering and pagination
+        group.MapGet("/chat-threads/my", HandleGetMyFilteredThreads)
+        .WithName("GetMyFilteredThreads")
+        .RequireSession()
+        .WithTags("ChatThreads")
+        .WithDescription("Retrieve user's chat threads with filtering by agentType, gameId, status, and search");
     }
 
     private static void MapChatLifecycleEndpoints(RouteGroupBuilder group)
@@ -315,6 +322,45 @@ internal static class KnowledgeBaseEndpoints
         }
     }
 
+    /// <summary>
+    /// Issue #4362: Get user's chat threads with filtering and pagination.
+    /// Supports agentType, gameId, status, and search filters.
+    /// </summary>
+    private static async Task<IResult> HandleGetMyFilteredThreads(
+        [FromQuery] Guid? gameId,
+        [FromQuery] string? agentType,
+        [FromQuery] string? status,
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        HttpContext context = null!,
+        IMediator mediator = null!,
+        CancellationToken ct = default)
+    {
+        var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
+        if (session?.User?.Id is not Guid userId)
+        {
+            return Results.Unauthorized();
+        }
+
+        var safePage = Math.Max(1, page);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = new GetUserChatThreadsQuery(
+            UserId: userId,
+            GameId: gameId,
+            AgentType: agentType,
+            Status: status,
+            Search: search,
+            Page: safePage,
+            PageSize: safePageSize
+        );
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleGetChatThreadById(
         Guid threadId,
         HttpContext context,
@@ -379,7 +425,9 @@ internal static class KnowledgeBaseEndpoints
             UserId: userId,
             GameId: req.GameId,
             Title: req.Title,
-            InitialMessage: req.InitialMessage
+            InitialMessage: req.InitialMessage,
+            AgentId: req.AgentId,
+            AgentType: req.AgentType // Issue #4362
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

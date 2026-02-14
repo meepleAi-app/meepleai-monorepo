@@ -100,6 +100,47 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         return threadEntities.Select(MapToDomain).ToList();
     }
 
+    public async Task<(IReadOnlyList<ChatThread> Items, int TotalCount)> FindByUserIdFilteredAsync(
+        Guid userId,
+        Guid? gameId = null,
+        string? agentType = null,
+        string? status = null,
+        string? search = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.ChatThreads
+            .AsNoTracking()
+            .Where(t => t.UserId == userId);
+
+        // Apply filters
+        if (gameId.HasValue)
+            query = query.Where(t => t.GameId == gameId.Value);
+
+        if (!string.IsNullOrWhiteSpace(agentType))
+            query = query.Where(t => t.AgentType == agentType);
+
+        if (!string.IsNullOrWhiteSpace(status))
+            query = query.Where(t => t.Status == status);
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(t => t.Title != null && t.Title.Contains(search));
+
+        // Get total count before pagination
+        var totalCount = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        // Apply ordering and pagination
+        var threadEntities = await query
+            .OrderByDescending(t => t.LastMessageAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var items = threadEntities.Select(MapToDomain).ToList();
+        return (items, totalCount);
+    }
+
     public async Task AddAsync(ChatThread thread, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(thread);
@@ -174,6 +215,15 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
                 typeof(ChatMessage).GetProperty(nameof(ChatMessage.IsInvalidated))?.SetValue(message, dto.IsInvalidated);
             }
 
+            // Issue #4362: Hydrate agent-specific metadata
+            if (dto.AgentType != null || dto.Confidence.HasValue || dto.CitationsJson != null || dto.TokenCount.HasValue)
+            {
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.AgentType))?.SetValue(message, dto.AgentType);
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.Confidence))?.SetValue(message, dto.Confidence);
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.CitationsJson))?.SetValue(message, dto.CitationsJson);
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.TokenCount))?.SetValue(message, dto.TokenCount);
+            }
+
             return message;
         }).ToList();
 
@@ -182,7 +232,8 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             id: entity.Id,
             userId: entity.UserId,
             gameId: entity.GameId,
-            title: entity.Title
+            title: entity.Title,
+            agentType: entity.AgentType // Issue #4362
         );
 
         // Add messages via domain method (but disable Status validation during hydration)
@@ -223,7 +274,11 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             IsDeleted: m.IsDeleted,
             DeletedAt: m.DeletedAt,
             DeletedByUserId: m.DeletedByUserId,
-            IsInvalidated: m.IsInvalidated
+            IsInvalidated: m.IsInvalidated,
+            AgentType: m.AgentType,
+            Confidence: m.Confidence,
+            CitationsJson: m.CitationsJson,
+            TokenCount: m.TokenCount
         )).ToList();
 
         var messagesJson = JsonSerializer.Serialize(messageDtos);
@@ -233,6 +288,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             Id = domainEntity.Id,
             UserId = domainEntity.UserId,
             GameId = domainEntity.GameId,
+            AgentType = domainEntity.AgentType, // Issue #4362
             Title = domainEntity.Title,
             Status = domainEntity.Status.Value,
             CreatedAt = domainEntity.CreatedAt,
@@ -273,7 +329,12 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         bool IsDeleted = false,
         DateTime? DeletedAt = null,
         Guid? DeletedByUserId = null,
-        bool IsInvalidated = false
+        bool IsInvalidated = false,
+        // Issue #4362: Agent-specific metadata
+        string? AgentType = null,
+        float? Confidence = null,
+        string? CitationsJson = null,
+        int? TokenCount = null
     );
 
     /// <summary>
@@ -317,6 +378,23 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
 
             var isInvalidated = root.TryGetProperty("IsInvalidated", out var isInvalidatedProp) && isInvalidatedProp.GetBoolean();
 
+            // Issue #4362: Agent-specific metadata (optional)
+            var agentType = root.TryGetProperty("AgentType", out var agentTypeProp) && agentTypeProp.ValueKind != JsonValueKind.Null
+                ? agentTypeProp.GetString()
+                : null;
+
+            var confidence = root.TryGetProperty("Confidence", out var confidenceProp) && confidenceProp.ValueKind != JsonValueKind.Null
+                ? confidenceProp.GetSingle()
+                : (float?)null;
+
+            var citationsJson = root.TryGetProperty("CitationsJson", out var citationsProp) && citationsProp.ValueKind != JsonValueKind.Null
+                ? citationsProp.GetString()
+                : null;
+
+            var tokenCount = root.TryGetProperty("TokenCount", out var tokenCountProp) && tokenCountProp.ValueKind != JsonValueKind.Null
+                ? tokenCountProp.GetInt32()
+                : (int?)null;
+
             return new PersistenceChatMessageDto(
                 Id: id,
                 Content: content,
@@ -327,7 +405,11 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
                 IsDeleted: isDeleted,
                 DeletedAt: deletedAt,
                 DeletedByUserId: deletedByUserId,
-                IsInvalidated: isInvalidated
+                IsInvalidated: isInvalidated,
+                AgentType: agentType,
+                Confidence: confidence,
+                CitationsJson: citationsJson,
+                TokenCount: tokenCount
             );
         }
 

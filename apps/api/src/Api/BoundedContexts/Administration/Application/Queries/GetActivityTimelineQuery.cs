@@ -12,6 +12,8 @@ internal record GetActivityTimelineQuery(
     Guid UserId,
     string[]? Types = null,
     string? SearchTerm = null,
+    DateTime? DateFrom = null,
+    DateTime? DateTo = null,
     int Skip = 0,
     int Take = 20,
     SortDirection Order = SortDirection.Descending

@@ -1,19 +1,18 @@
 /**
  * CatalogTrending - Dashboard Widget for Trending Games
- * Issue #3318 - Implement CatalogTrending widget
+ * Issue #3921 - Frontend: Catalog Trending Widget
  *
  * Features:
- * - Shows top 3-5 trending games in community
- * - Trend percentages with visual indicators
- * - Color coding (green positive, red negative)
- * - Click navigation to game detail
- * - CTA to view full catalog
- * - Loading skeleton state
+ * - Fetches top 5 trending games from GET /api/v1/catalog/trending
+ * - Trend indicators: 🔥 > 20%, 📈 10-20%, → < 10%
+ * - Rank badges with gold/silver/bronze colors
+ * - Click navigation to game detail /games/{id}
+ * - CTA: "Vedi Catalogo Completo" → /games/catalog
+ * - Auto-refresh every 12h (matches backend cache TTL)
+ * - Loading skeleton + empty state
  *
- * @example
- * ```tsx
- * <CatalogTrending />
- * ```
+ * @see Issue #3918 - Backend Trending Analytics Service
+ * @see Epic #3902 - AI Insights & Recommendations
  */
 
 'use client';
@@ -26,6 +25,7 @@ import { motion } from 'framer-motion';
 import {
   Flame,
   TrendingUp,
+  ArrowRight,
   TrendingDown,
   Minus,
   ChevronRight,
@@ -35,6 +35,7 @@ import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { useCatalogTrending } from '@/hooks/useCatalogTrending';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -44,16 +45,16 @@ import { cn } from '@/lib/utils';
 export interface TrendingGame {
   id: string;
   name: string;
-  trend: number; // percentage (+15, -5, etc)
+  trend: number; // percentage (+25, +12, etc)
   rank: number;
   previousRank: number;
   imageUrl?: string | null;
 }
 
 export interface CatalogTrendingProps {
-  /** Trending games data */
+  /** Override trending games data (skips hook) */
   games?: TrendingGame[];
-  /** Loading state */
+  /** Override loading state */
   isLoading?: boolean;
   /** Last updated timestamp */
   lastUpdated?: string;
@@ -66,48 +67,6 @@ export interface CatalogTrendingProps {
 // ============================================================================
 
 const MAX_GAMES = 5;
-
-// ============================================================================
-// Mock Data (for development)
-// ============================================================================
-
-const MOCK_GAMES: TrendingGame[] = [
-  {
-    id: 'game-1',
-    name: 'Ark Nova',
-    trend: 15,
-    rank: 1,
-    previousRank: 2,
-  },
-  {
-    id: 'game-2',
-    name: 'Wingspan',
-    trend: 12,
-    rank: 2,
-    previousRank: 3,
-  },
-  {
-    id: 'game-3',
-    name: 'Dune: Imperium',
-    trend: 10,
-    rank: 3,
-    previousRank: 1,
-  },
-  {
-    id: 'game-4',
-    name: 'Earth',
-    trend: 8,
-    rank: 4,
-    previousRank: 6,
-  },
-  {
-    id: 'game-5',
-    name: 'Cascadia',
-    trend: 5,
-    rank: 5,
-    previousRank: 4,
-  },
-];
 
 // ============================================================================
 // Skeleton Component
@@ -163,16 +122,19 @@ function CatalogTrendingSkeleton({ className }: { className?: string }) {
 // ============================================================================
 
 function TrendIcon({ trend }: { trend: number }) {
-  if (trend >= 10) {
+  if (trend > 20) {
     return <Flame className="h-4 w-4 text-orange-500" data-testid="trend-icon-hot" />;
   }
-  if (trend > 0) {
+  if (trend >= 10) {
     return <TrendingUp className="h-4 w-4 text-emerald-500" data-testid="trend-icon-up" />;
+  }
+  if (trend > 0) {
+    return <ArrowRight className="h-4 w-4 text-blue-500" data-testid="trend-icon-stable" />;
   }
   if (trend < 0) {
     return <TrendingDown className="h-4 w-4 text-red-500" data-testid="trend-icon-down" />;
   }
-  return <Minus className="h-4 w-4 text-muted-foreground" data-testid="trend-icon-stable" />;
+  return <Minus className="h-4 w-4 text-muted-foreground" data-testid="trend-icon-neutral" />;
 }
 
 // ============================================================================
@@ -180,24 +142,26 @@ function TrendIcon({ trend }: { trend: number }) {
 // ============================================================================
 
 function TrendBadge({ trend }: { trend: number }) {
-  const isPositive = trend > 0;
+  const isHot = trend > 20;
+  const isUp = trend >= 10 && trend <= 20;
+  const isLow = trend > 0 && trend < 10;
   const isNegative = trend < 0;
-  const isHot = trend >= 10;
 
   return (
     <div
       className={cn(
         'flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
         isHot && 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-        isPositive && !isHot && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+        isUp && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+        isLow && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
         isNegative && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-        !isPositive && !isNegative && 'bg-muted text-muted-foreground'
+        !isHot && !isUp && !isLow && !isNegative && 'bg-muted text-muted-foreground'
       )}
       data-testid="trend-badge"
     >
       <TrendIcon trend={trend} />
       <span>
-        {isPositive && '+'}
+        {trend > 0 && '+'}
         {trend}%
       </span>
     </div>
@@ -297,17 +261,23 @@ function EmptyState() {
 // ============================================================================
 
 export function CatalogTrending({
-  games = MOCK_GAMES,
-  isLoading = false,
+  games: gamesProp,
+  isLoading: isLoadingProp,
   lastUpdated,
   className,
 }: CatalogTrendingProps) {
+  // Use hook when no data prop is provided
+  const { data: hookData, isLoading: hookLoading } = useCatalogTrending(MAX_GAMES);
+
+  const isLoading = isLoadingProp ?? (gamesProp === undefined && hookLoading);
+
   // Sort by rank and limit to MAX_GAMES
   const sortedGames = useMemo(() => {
+    const games = gamesProp ?? hookData ?? [];
     return [...games]
       .sort((a, b) => a.rank - b.rank)
       .slice(0, MAX_GAMES);
-  }, [games]);
+  }, [gamesProp, hookData]);
 
   if (isLoading) {
     return <CatalogTrendingSkeleton className={className} />;

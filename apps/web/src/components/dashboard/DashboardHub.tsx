@@ -7,7 +7,10 @@
  * - Hero Stats Overview
  * - Active Sessions Widget
  * - Library Snapshot
- * - Activity Feed Timeline
+ * - Activity Feed Timeline with Advanced Filters (Issue #3925)
+ * - Wishlist Highlights (Issue #3920)
+ * - Catalog Trending (Issue #3921)
+ * - Achievements Widget (Issue #3924)
  * - Chat History
  * - Quick Actions Grid
  * - Responsive Layout: Mobile (1-col), Tablet (2-col), Desktop (3-col asymmetric)
@@ -18,6 +21,8 @@
  * - Error handling for partial failures
  *
  * @see Epic #3901 - Dashboard Hub Core (MVP)
+ * @see Issue #3921 - Catalog Trending Widget
+ * @see Issue #3924 - Achievements Widget Component
  * @see docs/07-frontend/dashboard-overview-hub.md
  */
 
@@ -28,6 +33,8 @@ import { Component, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import {
   adaptStatsForHeroStats,
@@ -36,12 +43,15 @@ import {
 } from '@/lib/adapters/dashboardAdapter';
 import { useReducedMotion } from '@/lib/animations';
 
+import { AchievementsWidget } from './AchievementsWidget';
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
-import { ActivityFeed } from './ActivityFeed';
+import { ActivityFeedWithFilters } from './ActivityFeedWithFilters';
+import { CatalogTrending } from './CatalogTrending';
 import { ChatHistorySection } from './ChatHistorySection';
 import { HeroStats } from './HeroStats';
 import { LibrarySnapshot } from './LibrarySnapshot';
 import { QuickActionsGrid } from './QuickActionsGrid';
+import { WishlistHighlights } from './WishlistHighlights';
 
 // ============================================================================
 // Animation Variants
@@ -118,8 +128,14 @@ function DashboardSkeleton() {
       {/* Activity Feed Skeleton */}
       <div className="h-96 animate-pulse rounded-2xl bg-muted md:col-span-1 lg:col-span-2" />
 
+      {/* Wishlist Highlights Skeleton */}
+      <div className="h-80 animate-pulse rounded-2xl bg-gray-200" />
+
+      {/* Catalog Trending Skeleton */}
+      <div className="h-80 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
+
       {/* Chat History Skeleton */}
-      <div className="h-64 animate-pulse rounded-2xl bg-muted md:col-span-2" />
+      <div className="h-64 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
 
       {/* Quick Actions Skeleton */}
       <div className="h-48 animate-pulse rounded-2xl bg-muted md:col-span-2 lg:col-span-1" />
@@ -219,7 +235,9 @@ function SectionErrorFallback({ label, onRetry }: { label: string; onRetry: () =
 
 export function DashboardHub() {
   const { data, isLoading, error } = useDashboardData();
+  const { user: authUser } = useAuthUser();
   const shouldReduceMotion = useReducedMotion();
+  const { trackClickThrough } = useDashboardAnalytics();
 
   // Loading State
   if (isLoading) {
@@ -249,32 +267,12 @@ export function DashboardHub() {
 
   // Adapt data to component formats
   const heroStats = adaptStatsForHeroStats(data);
+  // Override mock userName with real authenticated user's name
+  if (authUser?.displayName) {
+    heroStats.userName = authUser.displayName;
+  }
   const activeSessions = adaptActiveSessions(data.activeSessions);
   const chatThreads = adaptChatThreads(data.chatHistory);
-
-  // Convert activity events to ActivityFeed format
-  const activityEvents = data.recentActivity.map((event) => ({
-    id: event.id,
-    type: event.type,
-    title:
-      event.type === 'game_added'
-        ? `Added "${event.gameName}"`
-        : event.type === 'session_completed'
-          ? `Played "${event.gameName}"`
-          : event.type === 'chat_saved'
-            ? `Chat: "${event.topic}"`
-            : `Wishlisted "${event.gameName}"`,
-    entityId: event.gameId || event.sessionId || event.chatId,
-    entityType:
-      event.type === 'game_added'
-        ? ('game' as const)
-        : event.type === 'session_completed'
-          ? ('session' as const)
-          : event.type === 'chat_saved'
-            ? ('chat' as const)
-            : ('wishlist' as const),
-    timestamp: event.timestamp.toISOString(),
-  }));
 
   const variants = shouldReduceMotion ? noMotionVariants : sectionVariants;
   const container = shouldReduceMotion ? undefined : containerVariants;
@@ -317,12 +315,12 @@ export function DashboardHub() {
               <SectionErrorFallback label="Library Snapshot" onRetry={resetErrorBoundary} />
             )}
           >
-            <LibrarySnapshot quota={data.librarySnapshot.quota} topGames={data.librarySnapshot.topGames} />
+            <LibrarySnapshot quota={data.librarySnapshot.quota} topGames={data.librarySnapshot.topGames} onNavigate={trackClickThrough} />
           </SimpleErrorBoundary>
         </LazySection>
       </motion.section>
 
-      {/* Activity Feed - Main Content (2 cols on desktop, lazy loaded) */}
+      {/* Activity Feed with Filters - Main Content (2 cols on desktop, lazy loaded) - Issue #3925 */}
       <motion.section className="md:col-span-1 lg:col-span-2" variants={variants}>
         <LazySection fallbackHeight="h-96">
           <SimpleErrorBoundary
@@ -330,13 +328,52 @@ export function DashboardHub() {
               <SectionErrorFallback label="Activity Feed" onRetry={resetErrorBoundary} />
             )}
           >
-            <ActivityFeed events={activityEvents} />
+            <ActivityFeedWithFilters />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
+
+      {/* Wishlist Highlights - Sidebar (1 col, lazy loaded) - Issue #3920 */}
+      <motion.section className="md:col-span-1 lg:col-span-1" variants={variants}>
+        <LazySection fallbackHeight="h-80">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Wishlist Highlights" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <WishlistHighlights />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
+
+      {/* Achievements Widget - Sidebar (1 col, lazy loaded) - Issue #3924 */}
+      <motion.section className="md:col-span-1 lg:col-span-1" variants={variants}>
+        <LazySection fallbackHeight="h-80">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Achievements" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <AchievementsWidget />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
+
+      {/* Catalog Trending - 2 cols (lazy loaded) - Issue #3921 */}
+      <motion.section className="md:col-span-1 lg:col-span-2" variants={variants}>
+        <LazySection fallbackHeight="h-80">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Catalog Trending" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <CatalogTrending />
           </SimpleErrorBoundary>
         </LazySection>
       </motion.section>
 
       {/* Chat History - 2 cols (lazy loaded) */}
-      <motion.section className="md:col-span-2" variants={variants}>
+      <motion.section className="md:col-span-1 lg:col-span-2" variants={variants}>
         <LazySection fallbackHeight="h-64">
           <SimpleErrorBoundary
             fallback={({ resetErrorBoundary }) => (

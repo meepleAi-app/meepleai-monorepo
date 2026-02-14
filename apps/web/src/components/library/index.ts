@@ -11,9 +11,16 @@ export { QuotaStickyHeader, type QuotaStickyHeaderProps } from './QuotaStickyHea
 export { LibraryFilters, type LibraryFiltersProps } from './LibraryFilters';
 export { EditNotesModal, type EditNotesModalProps } from './EditNotesModal';
 export { RemoveGameDialog, type RemoveGameDialogProps } from './RemoveGameDialog';
-export { UserGameCard } from './UserGameCard';
+export { MeepleLibraryGameCard, MeepleLibraryGameCardSkeleton } from './MeepleLibraryGameCard';
 export { AgentConfigModal } from './AgentConfigModal';
-export { PdfUploadModal } from './PdfUploadModal';
+
+// Dynamic import to prevent DOMMatrix SSR error with react-pdf (Issue #4133)
+import dynamic from 'next/dynamic';
+export const PdfUploadModal = dynamic(
+  () => import('./PdfUploadModal').then(mod => ({ default: mod.PdfUploadModal })),
+  { ssr: false }
+);
+
 export { GameActionsModal, type GameActionsModalProps } from './GameActionsModal';
 export { RecentLibraryCard, type RecentLibraryCardProps } from './RecentLibraryCard';
 
@@ -27,6 +34,13 @@ export { SharedLibraryGameCard } from './SharedLibraryGameCard';
 
 // View Mode Toggle (Issue #2866)
 export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewModeToggle';
+
+// Library Navigation Tabs (Issue #4055)
+export { LibraryNavTabs } from './LibraryNavTabs';
+
+// BGG Search Integration (Issue #4053)
+export { BggGameSearch, type BggGameSearchProps } from './BggGameSearch';
+export { AddPrivateGameWithBgg, type AddPrivateGameWithBggProps } from './AddPrivateGameWithBgg';
 
 // Game Detail Components (Issue #3513)
 export {

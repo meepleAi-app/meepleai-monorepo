@@ -16,12 +16,10 @@
 import { useState, ChangeEvent, FormEvent, useCallback, useEffect } from 'react';
 
 import { Loader2, Upload, FileText, X, Check, Eye, ChevronLeft } from 'lucide-react';
-import { pdfjs } from 'react-pdf';
 
 import { toast } from '@/components/layout/Toast';
-import { PdfPreview } from '@/components/pdf/PdfPreview';
+import { PdfPreview, PdfProgressBar, PdfErrorCard } from '@/components/pdf';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { Progress } from '@/components/ui/feedback/progress';
 import {
   Dialog,
   DialogContent,
@@ -33,16 +31,11 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { api } from '@/lib/api';
 
-// Configure PDF.js worker for page count validation
-if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-}
-
-// Validation constants (Issue #2616)
+// Validation constants (Issue #2616, #4133)
 const MAX_FILE_SIZE_MB = 50;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const MAX_PAGE_COUNT = 500;
 
 type UploadStep = 'select' | 'preview' | 'uploading';
 
@@ -51,15 +44,16 @@ interface PdfUploadModalProps {
   onClose: () => void;
   gameId: string;
   gameTitle: string;
+  onUploadSuccess?: () => void;
 }
 
-export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: PdfUploadModalProps) {
+export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuccess }: PdfUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<UploadStep>('select');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [pageCount, setPageCount] = useState<number | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -69,8 +63,8 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
       setStep('select');
       setUploadProgress(0);
       setValidationErrors([]);
-      setPageCount(null);
       setIsValidating(false);
+      setUploadError(null);
     }
   }, [isOpen]);
 
@@ -96,32 +90,14 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
     return errors;
   }, []);
 
-  // Async page count validation (Issue #2616)
-  const validatePageCount = useCallback(async (selectedFile: File): Promise<string | null> => {
-    try {
-      const arrayBuffer = await selectedFile.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-      const pages = pdf.numPages;
-      setPageCount(pages);
-
-      if (pages > MAX_PAGE_COUNT) {
-        return `Il PDF ha troppe pagine: ${pages} (max ${MAX_PAGE_COUNT} pagine)`;
-      }
-      return null;
-    } catch (_error) {
-      return 'Impossibile leggere il PDF. Il file potrebbe essere corrotto.';
-    }
-  }, []);
-
   const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
     // Reset state
     setValidationErrors([]);
-    setPageCount(null);
 
-    // Sync validation first
+    // Sync validation only
     const syncErrors = validateFileSync(selectedFile);
     if (syncErrors.length > 0) {
       setValidationErrors(syncErrors);
@@ -129,21 +105,10 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
       return;
     }
 
-    // Async page count validation
-    setIsValidating(true);
-    const pageError = await validatePageCount(selectedFile);
-    setIsValidating(false);
-
-    if (pageError) {
-      setValidationErrors([pageError]);
-      setFile(null);
-      return;
-    }
-
     // All validations passed
     setFile(selectedFile);
     setUploadProgress(0);
-  }, [validateFileSync, validatePageCount]);
+  }, [validateFileSync]);
 
   // Show preview step
   const handleShowPreview = useCallback(() => {
@@ -163,10 +128,16 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
     setStep('select');
     setUploadProgress(0);
     setValidationErrors([]);
-    setPageCount(null);
     setIsValidating(false);
+    setUploadError(null);
     onClose();
   }, [onClose]);
+
+  // Retry upload after error
+  const handleRetryUpload = useCallback(() => {
+    setUploadError(null);
+    setStep('preview');
+  }, []);
 
   // Confirm upload from preview
   const handleConfirmUpload = useCallback(async () => {
@@ -174,39 +145,28 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
 
     setStep('uploading');
     setUploadProgress(0);
+    setUploadError(null);
 
     try {
-      // Simulate upload progress (replace with actual upload logic)
-      // TODO: Implement actual PDF upload with backend endpoint
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      await api.pdf.uploadPdf(gameId, file, (percent) => {
+        setUploadProgress(percent);
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      clearInterval(interval);
       setUploadProgress(100);
-
       toast.success(`PDF "${file.name}" caricato con successo per "${gameTitle}"!`);
+      onUploadSuccess?.();
 
       // Close modal after short delay
       setTimeout(() => {
         handleClose();
       }, 500);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Errore durante il caricamento del PDF'
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Errore durante il caricamento del PDF';
+      setUploadError(errorMessage);
+      toast.error(errorMessage);
       setUploadProgress(0);
-      setStep('preview'); // Go back to preview on error
     }
-  }, [file, gameTitle, handleClose]);
+  }, [file, gameId, gameTitle, handleClose, onUploadSuccess]);
 
   const handleUpload = async (e: FormEvent) => {
     e.preventDefault();
@@ -265,7 +225,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
                   data-testid="pdf-file-input"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Formato: PDF • Dimensione massima: {MAX_FILE_SIZE_MB}MB • Max {MAX_PAGE_COUNT} pagine
+                  Formato: PDF • Dimensione massima: {MAX_FILE_SIZE_MB}MB
                 </p>
 
                 {/* Validating State */}
@@ -309,7 +269,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
                         {file.name}
                       </p>
                       <p className="text-xs text-green-700 dark:text-green-300">
-                        {formatFileSize(file.size)} • {pageCount} {pageCount === 1 ? 'pagina' : 'pagine'}
+                        {formatFileSize(file.size)}
                       </p>
                     </div>
                     <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -363,29 +323,42 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
         {step === 'uploading' && (
           <>
             <div className="space-y-4 py-8" data-testid="uploading-state">
-              <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                <div className="text-center">
-                  <p className="font-medium" data-testid="uploading-filename">{file?.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Caricamento in corso...
-                  </p>
-                </div>
-              </div>
+              {!uploadError ? (
+                <>
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                    <div className="text-center">
+                      <p className="font-medium" data-testid="uploading-filename">{file?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Caricamento in corso...
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-medium" data-testid="upload-progress">{uploadProgress}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-2" data-testid="upload-progress-bar" />
-              </div>
+                  {/* New: PdfProgressBar with state (Issue #4217) */}
+                  <PdfProgressBar
+                    state="uploading"
+                    progress={uploadProgress}
+                    showLabel
+                    className="mt-4"
+                  />
+                </>
+              ) : (
+                /* New: PdfErrorCard on upload failure (Issue #4217) */
+                <PdfErrorCard
+                  error={uploadError}
+                  category="network"
+                  canRetry
+                  onRetry={handleRetryUpload}
+                  className="mt-4"
+                />
+              )}
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose} disabled data-testid="cancel-button-uploading">
+              <Button variant="outline" onClick={handleClose} disabled={!uploadError} data-testid="cancel-button-uploading">
                 <X className="mr-2 h-4 w-4" />
-                Annulla
+                {uploadError ? 'Chiudi' : 'Annulla'}
               </Button>
             </DialogFooter>
           </>

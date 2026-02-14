@@ -16,7 +16,4 @@ export { StatusBadge, type StatusBadgeProps, type GameStatus } from './StatusBad
 export { HoverPreview, type HoverPreviewProps, type HoverPreviewData } from './HoverPreview';
 export { DragHandle, type DragHandleProps, type DragData } from './DragHandle';
 export { BulkSelectCheckbox, type BulkSelectCheckboxProps } from './BulkSelectCheckbox';
-// export { StatusBadge, type StatusBadgeProps } from './StatusBadge';
-// export { HoverPreview, type HoverPreviewProps } from './HoverPreview';
-// export { DragHandle, type DragHandleProps } from './DragHandle';
-// export { BulkSelectCheckbox, type BulkSelectCheckboxProps } from './BulkSelectCheckbox';
+export { FlipCard, type FlipCardProps, type MeepleCardFlipData } from './FlipCard';

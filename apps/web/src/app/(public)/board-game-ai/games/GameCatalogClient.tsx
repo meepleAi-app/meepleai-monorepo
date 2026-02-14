@@ -18,10 +18,10 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
-import { AlignJustify, Grid3x3, MessageSquare, Search, X } from 'lucide-react';
+import { AlignJustify, Grid3x3, Search, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { GameCard } from '@/components/games/GameCard';
+import { MeepleGameCard } from '@/components/games/MeepleGameCard';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -308,23 +308,12 @@ export function GameCatalogClient({
           }
         >
           {games.map(game => (
-            <div key={game.id} className="relative group">
-              <GameCard game={game} variant={view} onClick={() => handleGameClick(game.id)} />
-              {/* Quick action overlay on hover */}
-              <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-lg pointer-events-none group-hover:pointer-events-auto">
-                <Button
-                  size="sm"
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleGameClick(game.id);
-                  }}
-                  className="gap-2"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Chiedi all&apos;AI
-                </Button>
-              </div>
-            </div>
+            <MeepleGameCard
+              key={game.id}
+              game={game}
+              variant={view}
+              onClick={handleGameClick}
+            />
           ))}
         </div>
       )}

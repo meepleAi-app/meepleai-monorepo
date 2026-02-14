@@ -12,13 +12,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// <remarks>
 /// Issue #3808 (Epic #3687): AgentDefinition stores the "definition/template" of an agent
 /// that administrators can create, edit, and deploy in the AI Lab.
+/// Issue #3708: Extended with Type and Strategy fields for full agent template specification.
 /// This is separate from the existing Agent entity which represents runtime instances.
 /// </remarks>
 public sealed class AgentDefinition : AggregateRoot<Guid>
 {
     private string _name = string.Empty;
     private string _description = string.Empty;
+    private string _typeValue = string.Empty;
+    private string _typeDescription = string.Empty;
     private AgentDefinitionConfig _config;
+    private string _strategyJson = "{}";
     private string _promptsJson = "[]";
     private string _toolsJson = "[]";
     private bool _isActive;
@@ -36,9 +40,37 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     public string Description => _description;
 
     /// <summary>
+    /// Gets the agent type (RAG, Citation, Confidence, etc.).
+    /// </summary>
+    /// <remarks>
+    /// Issue #3708: AgentType determines the agent's primary capability and use case.
+    /// Reconstructed from stored type_value and type_description.
+    /// </remarks>
+    public AgentType Type => AgentType.Custom(_typeValue, _typeDescription);
+
+    /// <summary>
     /// Gets the agent configuration (model, tokens, temperature).
     /// </summary>
     public AgentDefinitionConfig Config => _config;
+
+    /// <summary>
+    /// Gets the agent execution strategy (retrieval, validation, reasoning).
+    /// </summary>
+    /// <remarks>
+    /// Issue #3708: AgentStrategy defines HOW the agent performs its task.
+    /// Deserialized from JSONB column strategy.
+    /// </remarks>
+    public AgentStrategy Strategy
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_strategyJson))
+                return AgentStrategy.HybridSearch(); // Default strategy
+
+            return JsonSerializer.Deserialize<AgentStrategy>(_strategyJson)
+                ?? AgentStrategy.HybridSearch();
+        }
+    }
 
     /// <summary>
     /// Gets the list of prompt templates (deserialized from JSON).
@@ -101,7 +133,10 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         Guid id,
         string name,
         string description,
+        string typeValue,
+        string typeDescription,
         AgentDefinitionConfig config,
+        string strategyJson,
         string promptsJson,
         string toolsJson,
         bool isActive,
@@ -110,7 +145,10 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     {
         _name = name;
         _description = description;
+        _typeValue = typeValue;
+        _typeDescription = typeDescription;
         _config = config;
+        _strategyJson = strategyJson;
         _promptsJson = promptsJson;
         _toolsJson = toolsJson;
         _isActive = isActive;
@@ -121,10 +159,15 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     /// <summary>
     /// Creates a new agent definition with validation.
     /// </summary>
+    /// <remarks>
+    /// Issue #3708: Now includes AgentType and AgentStrategy parameters for full template specification.
+    /// </remarks>
     public static AgentDefinition Create(
         string name,
         string description,
+        AgentType type,
         AgentDefinitionConfig config,
+        AgentStrategy? strategy = null,
         List<AgentPromptTemplate>? prompts = null,
         List<AgentToolConfig>? tools = null)
     {
@@ -137,17 +180,22 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         if (description?.Length > 1000)
             throw new ArgumentException("Agent description cannot exceed 1000 characters", nameof(description));
 
+        ArgumentNullException.ThrowIfNull(type);
         ArgumentNullException.ThrowIfNull(config);
 
         var promptsList = prompts ?? new List<AgentPromptTemplate>();
         var toolsList = tools ?? new List<AgentToolConfig>();
+        var agentStrategy = strategy ?? AgentStrategy.HybridSearch(); // Default strategy
 
         var agent = new AgentDefinition
         {
             Id = Guid.NewGuid(),
             _name = name.Trim(),
             _description = description?.Trim() ?? string.Empty,
+            _typeValue = type.Value,
+            _typeDescription = type.Description,
             _config = config,
+            _strategyJson = JsonSerializer.Serialize(agentStrategy),
             _promptsJson = JsonSerializer.Serialize(promptsList),
             _toolsJson = JsonSerializer.Serialize(toolsList),
             _isActive = true,
@@ -191,6 +239,39 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"Name updated to '{name}'"));
+    }
+
+    /// <summary>
+    /// Updates the agent type.
+    /// </summary>
+    /// <remarks>
+    /// Issue #3708: Allow administrators to change agent categorization.
+    /// </remarks>
+    public void UpdateType(AgentType type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+
+        _typeValue = type.Value;
+        _typeDescription = type.Description;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"Type updated to '{type.Value}'"));
+    }
+
+    /// <summary>
+    /// Updates the agent execution strategy.
+    /// </summary>
+    /// <remarks>
+    /// Issue #3708: Allow administrators to configure agent behavior (retrieval, validation, reasoning).
+    /// </remarks>
+    public void UpdateStrategy(AgentStrategy strategy)
+    {
+        ArgumentNullException.ThrowIfNull(strategy);
+
+        _strategyJson = JsonSerializer.Serialize(strategy);
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"Strategy updated to '{strategy.Name}'"));
     }
 
     /// <summary>

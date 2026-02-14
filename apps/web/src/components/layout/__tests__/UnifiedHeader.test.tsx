@@ -40,6 +40,16 @@ vi.mock('@/components/notifications', () => ({
   NotificationBell: () => <div data-testid="notification-bell">Bell</div>,
 }));
 
+// Mock LibraryDropdown
+vi.mock('@/components/layout/LibraryDropdown', () => ({
+  LibraryDropdown: () => <div data-testid="library-dropdown">Library Dropdown</div>,
+}));
+
+// Mock MobileNavDrawer
+vi.mock('@/components/layout/MobileNavDrawer', () => ({
+  MobileNavDrawer: () => <div data-testid="mobile-nav-drawer-mock">Mobile Nav</div>,
+}));
+
 // Mock logoutAction
 vi.mock('@/actions/auth', () => ({
   logoutAction: vi.fn(() => Promise.resolve({ success: true })),
@@ -86,12 +96,26 @@ describe('UnifiedHeader', () => {
     it('should render navigation links on desktop', () => {
       render(<UnifiedHeader />);
 
-      // Issue #2860: Nav order is Dashboard, Library, Catalog, Chat, Profile
+      // Issue #4064: New nav structure - Dashboard, Catalogo, Agenti, Chat History, Sessioni
       expect(screen.getByLabelText('Navigate to dashboard')).toBeInTheDocument();
-      expect(screen.getByLabelText('Navigate to your game library')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
-      expect(screen.getByLabelText('Navigate to chat interface')).toBeInTheDocument();
-      expect(screen.getByLabelText('Navigate to your profile')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to agents list')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to chat history')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to play sessions')).toBeInTheDocument();
+    });
+
+    it('should render LibraryDropdown for authenticated users', () => {
+      render(<UnifiedHeader />);
+      expect(screen.getByTestId('library-dropdown')).toBeInTheDocument();
+    });
+
+    it('should NOT render LibraryDropdown for anonymous users', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      render(<UnifiedHeader />);
+      expect(screen.queryByTestId('library-dropdown')).not.toBeInTheDocument();
     });
 
     it('should render login button when not authenticated', () => {
@@ -108,23 +132,41 @@ describe('UnifiedHeader', () => {
     it('should render correct href attributes', () => {
       render(<UnifiedHeader />);
 
-      // Issue #2860: Updated nav order - Dashboard, Library, Catalog, Chat, Profile
+      // Issue #4064: New nav structure
       expect(screen.getByLabelText('Navigate to dashboard')).toHaveAttribute('href', '/dashboard');
-      expect(screen.getByLabelText('Navigate to your game library')).toHaveAttribute('href', '/library');
       expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
-      expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat');
-      expect(screen.getByLabelText('Navigate to your profile')).toHaveAttribute('href', '/profile');
+      expect(screen.getByLabelText('Navigate to agents list')).toHaveAttribute('href', '/agents');
+      expect(screen.getByLabelText('Navigate to chat history')).toHaveAttribute('href', '/chat');
+      expect(screen.getByLabelText('Navigate to play sessions')).toHaveAttribute('href', '/sessions');
     });
 
     it('should render correct labels', () => {
       render(<UnifiedHeader />);
 
-      // Issue #2860: Updated labels - Settings moved to dropdown
+      // Issue #4064: Italian labels
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('I Miei Giochi')).toBeInTheDocument();
       expect(screen.getByText('Catalogo')).toBeInTheDocument();
-      expect(screen.getByText('Chat')).toBeInTheDocument();
-      expect(screen.getByText('Profilo')).toBeInTheDocument();
+      expect(screen.getByText('Agenti')).toBeInTheDocument();
+      expect(screen.getByText('Chat History')).toBeInTheDocument();
+      expect(screen.getByText('Sessioni')).toBeInTheDocument();
+    });
+
+    it('should show Welcome link for anonymous users', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.getByLabelText('Navigate to welcome page')).toBeInTheDocument();
+      expect(screen.getByText('Welcome')).toBeInTheDocument();
+    });
+
+    it('should NOT show Welcome link for authenticated users', () => {
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByLabelText('Navigate to welcome page')).not.toBeInTheDocument();
+      expect(screen.queryByText('Welcome')).not.toBeInTheDocument();
     });
   });
 
@@ -147,30 +189,41 @@ describe('UnifiedHeader', () => {
       expect(gamesLink).toHaveAttribute('aria-current', 'page');
     });
 
-    it('should mark library as active for /library routes', () => {
-      mockUsePathname.mockReturnValue('/library');
+    it('should mark agents as active for /agents routes', () => {
+      mockUsePathname.mockReturnValue('/agents');
       render(<UnifiedHeader />);
 
-      const libraryLink = screen.getByLabelText('Navigate to your game library');
-      expect(libraryLink).toHaveAttribute('aria-current', 'page');
+      const agentsLink = screen.getByLabelText('Navigate to agents list');
+      expect(agentsLink).toHaveAttribute('aria-current', 'page');
     });
 
-    it('should mark chat as active for /chat routes', () => {
+    it('should mark sessions as active for /sessions routes', () => {
+      mockUsePathname.mockReturnValue('/sessions/abc-123');
+      render(<UnifiedHeader />);
+
+      const sessionsLink = screen.getByLabelText('Navigate to play sessions');
+      expect(sessionsLink).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('should mark chat history as active for /chat routes', () => {
       mockUsePathname.mockReturnValue('/chat/thread-123');
       render(<UnifiedHeader />);
 
-      const chatLink = screen.getByLabelText('Navigate to chat interface');
+      const chatLink = screen.getByLabelText('Navigate to chat history');
       expect(chatLink).toHaveAttribute('aria-current', 'page');
     });
 
-    it('should mark profile as active for /profile routes', () => {
-      mockUsePathname.mockReturnValue('/profile');
+    it('should mark Welcome as active for / route (anonymous)', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      mockUsePathname.mockReturnValue('/');
       render(<UnifiedHeader />);
 
-      const profileLink = screen.getByLabelText('Navigate to your profile');
-      expect(profileLink).toHaveAttribute('aria-current', 'page');
-      // Purple active state (Issue #2860)
-      expect(profileLink).toHaveClass('text-[hsl(262_83%_62%)]');
+      const welcomeLink = screen.getByLabelText('Navigate to welcome page');
+      expect(welcomeLink).toHaveAttribute('aria-current', 'page');
+      expect(welcomeLink).toHaveClass('text-[hsl(262_83%_62%)]');
     });
 
     it('should not mark multiple items as active', () => {
@@ -188,31 +241,24 @@ describe('UnifiedHeader', () => {
       mockUsePathname.mockReturnValue('/dashboard');
       render(<UnifiedHeader />);
 
-      const chatLink = screen.getByLabelText('Navigate to chat interface');
+      const chatLink = screen.getByLabelText('Navigate to chat history');
       // Orange hover state (Issue #2860)
       expect(chatLink).toHaveClass('hover:text-primary');
     });
   });
 
   describe('Admin Visibility', () => {
-    it('should NOT show admin link for regular users', () => {
-      mockUseCurrentUser.mockReturnValue({
-        data: { id: '1', email: 'user@test.com', role: 'User' },
-        isLoading: false,
-      });
-      render(<UnifiedHeader />);
-
-      expect(screen.queryByLabelText('Navigate to admin dashboard')).not.toBeInTheDocument();
-    });
-
-    it('should show admin link for admin users in navigation', () => {
+    it('should NOT show admin link in desktop nav (moved to dropdown)', () => {
       mockUseCurrentUser.mockReturnValue({
         data: { id: '1', email: 'admin@test.com', role: 'Admin' },
         isLoading: false,
       });
-      render(<UnifiedHeader />);
+      const { container } = render(<UnifiedHeader />);
 
-      expect(screen.getByLabelText('Navigate to admin dashboard')).toBeInTheDocument();
+      // Admin link should NOT be in desktop nav
+      const desktopNav = container.querySelector('nav[aria-label="Main navigation"]');
+      const adminLinkInNav = desktopNav?.querySelector('a[aria-label="Navigate to admin dashboard"]');
+      expect(adminLinkInNav).not.toBeInTheDocument();
     });
 
     it('should show admin link in dropdown for admin users', async () => {
@@ -253,14 +299,20 @@ describe('UnifiedHeader', () => {
       });
     });
 
-    it('should handle case-insensitive admin role check', () => {
+    it('should handle case-insensitive admin role check in dropdown', async () => {
       mockUseCurrentUser.mockReturnValue({
-        data: { id: '1', email: 'admin@test.com', role: 'admin' },
+        data: { id: '1', email: 'admin@test.com', displayName: 'Admin', role: 'admin' },
         isLoading: false,
       });
+
+      const user = userEvent.setup();
       render(<UnifiedHeader />);
 
-      expect(screen.getByLabelText('Navigate to admin dashboard')).toBeInTheDocument();
+      await user.click(screen.getByTestId('user-menu-trigger'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-panel-menu-item')).toBeInTheDocument();
+      });
     });
   });
 
@@ -289,6 +341,22 @@ describe('UnifiedHeader', () => {
       render(<UnifiedHeader />);
 
       expect(screen.getByText('T')).toBeInTheDocument(); // First letter of "Test User"
+    });
+
+    it('should have profile link in dropdown', async () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: { id: '1', email: 'test@example.com', role: 'User' },
+        isLoading: false,
+      });
+
+      const user = userEvent.setup();
+      render(<UnifiedHeader />);
+
+      await user.click(screen.getByTestId('user-menu-trigger'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('profile-menu-item')).toBeInTheDocument();
+      });
     });
 
     it('should have settings link in dropdown', async () => {
@@ -340,6 +408,29 @@ describe('UnifiedHeader', () => {
       const desktopNav = container.querySelector('nav[aria-label="Main navigation"]');
       expect(desktopNav).toHaveClass('hidden', 'md:flex');
     });
+
+    it('should render MobileNavDrawer for authenticated users', () => {
+      render(<UnifiedHeader />);
+      expect(screen.getByTestId('mobile-nav-drawer-mock')).toBeInTheDocument();
+    });
+
+    it('should NOT render MobileNavDrawer for anonymous users', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      render(<UnifiedHeader />);
+      expect(screen.queryByTestId('mobile-nav-drawer-mock')).not.toBeInTheDocument();
+    });
+
+    it('should NOT render MobileNavDrawer while loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+      expect(screen.queryByTestId('mobile-nav-drawer-mock')).not.toBeInTheDocument();
+    });
   });
 
   describe('Accessibility', () => {
@@ -371,6 +462,83 @@ describe('UnifiedHeader', () => {
       icons.forEach(icon => {
         expect(icon).toHaveAttribute('aria-hidden', 'true');
       });
+    });
+  });
+
+  describe('Auth Loading State (Issue #4056)', () => {
+    it('should show loading skeleton while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.getByTestId('user-menu-loading')).toBeInTheDocument();
+      expect(screen.queryByText('Accedi')).not.toBeInTheDocument();
+    });
+
+    it('should not show Accedi button while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByText('Accedi')).not.toBeInTheDocument();
+    });
+
+    it('should only show public nav items while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      // Catalogo is visible to everyone (no auth flags)
+      expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
+
+      // Auth-only items should be hidden while loading
+      expect(screen.queryByLabelText('Navigate to dashboard')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Navigate to agents list')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Navigate to chat history')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Navigate to play sessions')).not.toBeInTheDocument();
+
+      // Anonymous-only items should also be hidden while loading
+      expect(screen.queryByLabelText('Navigate to welcome page')).not.toBeInTheDocument();
+    });
+
+    it('should hide settings and notifications while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByLabelText('Navigate to settings')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('notification-bell')).not.toBeInTheDocument();
+    });
+
+    it('should show Accedi button after loading completes with no user', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByTestId('user-menu-loading')).not.toBeInTheDocument();
+      expect(screen.getByText('Accedi')).toBeInTheDocument();
+    });
+
+    it('should show user menu after loading completes with user', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: { id: '1', email: 'test@example.com', displayName: 'Test', role: 'User' },
+        isLoading: false,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByTestId('user-menu-loading')).not.toBeInTheDocument();
+      expect(screen.queryByText('Accedi')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-menu-trigger')).toBeInTheDocument();
     });
   });
 

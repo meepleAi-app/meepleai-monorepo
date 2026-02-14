@@ -1,7 +1,7 @@
-using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -23,17 +23,20 @@ internal sealed class BulkRejectShareRequestsCommandHandler : ICommandHandler<Bu
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BulkRejectShareRequestsCommandHandler> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public BulkRejectShareRequestsCommandHandler(
         IShareRequestRepository shareRequestRepository,
         IAuditLogRepository auditLogRepository,
         IUnitOfWork unitOfWork,
-        ILogger<BulkRejectShareRequestsCommandHandler> logger)
+        ILogger<BulkRejectShareRequestsCommandHandler> logger,
+        TimeProvider timeProvider)
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _auditLogRepository = auditLogRepository ?? throw new ArgumentNullException(nameof(auditLogRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<BulkOperationResult> Handle(
@@ -113,7 +116,7 @@ internal sealed class BulkRejectShareRequestsCommandHandler : ICommandHandler<Bu
                     {
                         shareRequestId,
                         reason = command.Reason,
-                        rejectedAt = DateTime.UtcNow
+                        rejectedAt = _timeProvider.GetUtcNow().UtcDateTime
                     }),
                     ipAddress: "editor-action"
                 );

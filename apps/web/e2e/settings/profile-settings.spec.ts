@@ -1,6 +1,7 @@
 /**
  * Profile/Settings E2E Tests
  * Issue #2883 - Profile Update, Password, 2FA, Preferences
+ * @slow - 44 test cases, comprehensive settings workflows
  *
  * Tests the /settings page workflows:
  * - Profile tab: Update display name, change password

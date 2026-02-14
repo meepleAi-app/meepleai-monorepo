@@ -19,8 +19,34 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.UploadedByUserId).IsRequired().HasMaxLength(64);
         builder.Property(e => e.UploadedAt).IsRequired();
         builder.Property(e => e.Metadata).HasMaxLength(2048);
+        // Issue #4215: New granular state tracking (enum stored as string)
+        builder.Property(e => e.ProcessingState)
+            .IsRequired()
+            .HasMaxLength(32)
+            .HasColumnName("processing_state")
+            .HasDefaultValue("Pending")
+            .HasConversion<string>(); // EF Core converts enum to string automatically
+
+        // Deprecated: Keep for backward compatibility
         builder.Property(e => e.ProcessingStatus).IsRequired().HasMaxLength(32);
+
         builder.Property(e => e.ProcessingError).HasMaxLength(1024);
+
+        // Issue #4216: Retry tracking configuration
+        builder.Property(e => e.RetryCount)
+            .IsRequired()
+            .HasColumnName("retry_count")
+            .HasDefaultValue(0);
+
+        builder.Property(e => e.ErrorCategory)
+            .HasMaxLength(32)
+            .HasColumnName("error_category")
+            .IsRequired(false);
+
+        builder.Property(e => e.FailedAtState)
+            .HasMaxLength(32)
+            .HasColumnName("failed_at_state")
+            .IsRequired(false);
         builder.Property(e => e.ExtractedTables).HasMaxLength(8192);
         builder.Property(e => e.ExtractedDiagrams).HasMaxLength(8192);
         builder.Property(e => e.AtomicRules).HasMaxLength(8192);
@@ -54,5 +80,26 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         // Issue #3664: Private game PDF support
         builder.Property(e => e.PrivateGameId).HasMaxLength(64).IsRequired(false);
         builder.HasIndex(e => e.PrivateGameId);
+
+        // Issue #4219: Per-state timing fields for metrics and ETA
+        builder.Property(e => e.UploadingStartedAt)
+            .HasColumnName("uploading_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.ExtractingStartedAt)
+            .HasColumnName("extracting_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.ChunkingStartedAt)
+            .HasColumnName("chunking_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.EmbeddingStartedAt)
+            .HasColumnName("embedding_started_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.IndexingStartedAt)
+            .HasColumnName("indexing_started_at")
+            .IsRequired(false);
     }
 }

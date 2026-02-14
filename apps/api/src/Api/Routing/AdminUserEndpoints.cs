@@ -10,6 +10,7 @@ using Api.Extensions;
 using Api.Infrastructure.Security;
 using Api.Middleware.Exceptions;
 using Api.Models;
+using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 

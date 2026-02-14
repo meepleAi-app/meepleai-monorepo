@@ -106,6 +106,45 @@ import {
   AppUsageStatsSchema,
   type AppUsageStats,
 } from '../schemas';
+import {
+  AgentCostEstimationResultSchema,
+  CostScenariosResponseSchema,
+  SaveScenarioResponseSchema,
+  type AgentCostEstimationResult,
+  type CostScenariosResponse,
+  type SaveScenarioResponse,
+  type EstimateAgentCostRequest,
+  type SaveCostScenarioRequest,
+  type GetCostScenariosParams,
+} from '../schemas/cost-calculator.schemas';
+import {
+  LedgerEntriesResponseSchema,
+  LedgerSummarySchema,
+  LedgerEntryDtoSchema,
+  LedgerDashboardDataSchema,
+  CreateLedgerEntryResponseSchema,
+  type LedgerEntriesResponse,
+  type LedgerSummary,
+  type LedgerEntryDto,
+  type LedgerDashboardData,
+  type CreateLedgerEntryResponse,
+  type CreateLedgerEntryRequest,
+  type UpdateLedgerEntryRequest,
+  type GetLedgerEntriesParams,
+  type GetLedgerSummaryParams,
+  type ExportLedgerParams,
+} from '../schemas/financial-ledger.schemas';
+import {
+  ResourceForecastEstimationResultSchema,
+  ResourceForecastsResponseSchema,
+  SaveForecastResponseSchema,
+  type ResourceForecastEstimationResult,
+  type ResourceForecastsResponse,
+  type SaveForecastResponse,
+  type EstimateResourceForecastRequest,
+  type SaveResourceForecastRequest,
+  type GetResourceForecastsParams,
+} from '../schemas/resource-forecast.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -1254,6 +1293,30 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
     },
 
+    // ========== Game Import Wizard (Issue #4163) ==========
+
+    /**
+     * Extract game metadata from uploaded PDF using AI
+     * POST /api/v1/admin/games/wizard/extract-metadata
+     *
+     * Issue #4163: Step 2 - Metadata Extraction
+     */
+    async extractGameMetadata(filePath: string) {
+      return httpClient.post<{
+        title?: string;
+        year?: number;
+        minPlayers?: number;
+        maxPlayers?: number;
+        playingTime?: number;
+        minAge?: number;
+        description?: string;
+        confidenceScore: number; // 0.0-1.0
+      }>(
+        '/api/v1/admin/games/wizard/extract-metadata',
+        { filePath }
+      );
+    },
+
     // ========== Audit Log (Issue #3691) ==========
 
     /**
@@ -1476,6 +1539,196 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         `/api/v1/admin/usage-stats${query ? `?${query}` : ''}`,
         AppUsageStatsSchema
       );
+    },
+
+    // ========== Financial Ledger (Issue #3722) ==========
+
+    /**
+     * Get paginated and filtered ledger entries
+     * GET /api/v1/admin/financial-ledger
+     */
+    async getLedgerEntries(params?: GetLedgerEntriesParams): Promise<LedgerEntriesResponse> {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      if (params?.type !== undefined && params?.type !== null) searchParams.set('type', params.type.toString());
+      if (params?.category !== undefined && params?.category !== null) searchParams.set('category', params.category.toString());
+      if (params?.source !== undefined && params?.source !== null) searchParams.set('source', params.source.toString());
+      if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/financial-ledger${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get(url, LedgerEntriesResponseSchema);
+      return result || { entries: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get a single ledger entry by ID
+     * GET /api/v1/admin/financial-ledger/{id}
+     */
+    async getLedgerEntryById(id: string): Promise<LedgerEntryDto> {
+      const result = await httpClient.get(`/api/v1/admin/financial-ledger/${id}`, LedgerEntryDtoSchema);
+      if (!result) throw new Error('Ledger entry not found');
+      return result;
+    },
+
+    /**
+     * Get income/expense summary for a date range
+     * GET /api/v1/admin/financial-ledger/summary
+     */
+    async getLedgerSummary(params: GetLedgerSummaryParams): Promise<LedgerSummary> {
+      const qs = new URLSearchParams({
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+      }).toString();
+      const result = await httpClient.get(`/api/v1/admin/financial-ledger/summary?${qs}`, LedgerSummarySchema);
+      return result || { totalIncome: 0, totalExpense: 0, netBalance: 0, from: params.dateFrom, to: params.dateTo };
+    },
+
+    /**
+     * Create a new manual ledger entry
+     * POST /api/v1/admin/financial-ledger
+     */
+    async createLedgerEntry(request: CreateLedgerEntryRequest): Promise<CreateLedgerEntryResponse> {
+      return httpClient.post('/api/v1/admin/financial-ledger', request, CreateLedgerEntryResponseSchema);
+    },
+
+    /**
+     * Update an existing ledger entry
+     * PUT /api/v1/admin/financial-ledger/{id}
+     */
+    async updateLedgerEntry(id: string, request: UpdateLedgerEntryRequest): Promise<void> {
+      await httpClient.put(`/api/v1/admin/financial-ledger/${id}`, request);
+    },
+
+    /**
+     * Delete a manual ledger entry
+     * DELETE /api/v1/admin/financial-ledger/{id}
+     */
+    async deleteLedgerEntry(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/financial-ledger/${id}`);
+    },
+
+    /**
+     * Get dashboard visualization data (12-month revenue vs costs, category breakdown, KPIs)
+     * GET /api/v1/admin/financial-ledger/dashboard
+     */
+    async getLedgerDashboard(): Promise<LedgerDashboardData> {
+      const result = await httpClient.get('/api/v1/admin/financial-ledger/dashboard', LedgerDashboardDataSchema);
+      if (!result) throw new Error('Failed to load ledger dashboard data');
+      return result;
+    },
+
+    /**
+     * Export ledger entries as CSV, Excel, or PDF
+     * GET /api/v1/admin/financial-ledger/export
+     * Issue #3724: Export Ledger (PDF/CSV/Excel)
+     */
+    async exportLedgerEntries(params: ExportLedgerParams): Promise<Blob> {
+      const searchParams = new URLSearchParams();
+      searchParams.set('format', String(params.format));
+      if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+      if (params.dateTo) searchParams.set('dateTo', params.dateTo);
+      if (params.type !== undefined) searchParams.set('type', String(params.type));
+      if (params.category !== undefined) searchParams.set('category', String(params.category));
+      const qs = searchParams.toString();
+      const url = `${getApiBase()}/api/v1/admin/financial-ledger/export${qs ? `?${qs}` : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`Export failed: ${response.statusText}`);
+      return response.blob();
+    },
+
+    // ========== Cost Calculator (Issue #3725) ==========
+
+    /**
+     * Estimate agent costs based on strategy, model, and usage parameters
+     * POST /api/v1/admin/cost-calculator/estimate
+     */
+    async estimateAgentCost(request: EstimateAgentCostRequest): Promise<AgentCostEstimationResult> {
+      return httpClient.post('/api/v1/admin/cost-calculator/estimate', request, AgentCostEstimationResultSchema);
+    },
+
+    /**
+     * Save a cost estimation scenario
+     * POST /api/v1/admin/cost-calculator/scenarios
+     */
+    async saveCostScenario(request: SaveCostScenarioRequest): Promise<SaveScenarioResponse> {
+      return httpClient.post('/api/v1/admin/cost-calculator/scenarios', request, SaveScenarioResponseSchema);
+    },
+
+    /**
+     * Get saved cost scenarios for the current user
+     * GET /api/v1/admin/cost-calculator/scenarios
+     */
+    async getCostScenarios(params?: GetCostScenariosParams): Promise<CostScenariosResponse> {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/cost-calculator/scenarios${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get(url, CostScenariosResponseSchema);
+      return result || { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Delete a saved cost scenario
+     * DELETE /api/v1/admin/cost-calculator/scenarios/{id}
+     */
+    async deleteCostScenario(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/cost-calculator/scenarios/${id}`);
+    },
+
+    // ========== Resource Forecast Methods (Issue #3726) ==========
+
+    /**
+     * Estimate resource forecast based on current metrics and growth parameters
+     * POST /api/v1/admin/resource-forecast/estimate
+     */
+    async estimateResourceForecast(
+      request: EstimateResourceForecastRequest,
+    ): Promise<ResourceForecastEstimationResult> {
+      return httpClient.post(
+        '/api/v1/admin/resource-forecast/estimate',
+        request,
+        ResourceForecastEstimationResultSchema,
+      );
+    },
+
+    /**
+     * Save a resource forecast scenario
+     * POST /api/v1/admin/resource-forecast/scenarios
+     */
+    async saveResourceForecast(request: SaveResourceForecastRequest): Promise<SaveForecastResponse> {
+      return httpClient.post(
+        '/api/v1/admin/resource-forecast/scenarios',
+        request,
+        SaveForecastResponseSchema,
+      );
+    },
+
+    /**
+     * Get saved resource forecast scenarios for the current user
+     * GET /api/v1/admin/resource-forecast/scenarios
+     */
+    async getResourceForecasts(
+      params?: GetResourceForecastsParams,
+    ): Promise<ResourceForecastsResponse> {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/resource-forecast/scenarios${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get(url, ResourceForecastsResponseSchema);
+      return result || { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Delete a saved resource forecast scenario
+     * DELETE /api/v1/admin/resource-forecast/scenarios/{id}
+     */
+    async deleteResourceForecast(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/resource-forecast/scenarios/${id}`);
     },
   };
 }

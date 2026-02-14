@@ -46,9 +46,19 @@ export interface AddPrivateGameFormProps {
   onCancel: () => void;
   /** Whether form is submitting */
   isSubmitting?: boolean;
+  /** Optional initial values to pre-populate the form (e.g., from BGG data) */
+  initialValues?: Partial<AddPrivateGameFormData>;
+  /** Submit button label override */
+  submitLabel?: string;
 }
 
-export function AddPrivateGameForm({ onSubmit, onCancel, isSubmitting = false }: AddPrivateGameFormProps) {
+export function AddPrivateGameForm({
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+  initialValues,
+  submitLabel,
+}: AddPrivateGameFormProps) {
   const {
     register,
     handleSubmit,
@@ -56,9 +66,15 @@ export function AddPrivateGameForm({ onSubmit, onCancel, isSubmitting = false }:
   } = useForm<AddPrivateGameFormData>({
     resolver: zodResolver(AddPrivateGameFormSchema),
     defaultValues: {
-      minPlayers: 1,
-      maxPlayers: 4,
-      yearPublished: new Date().getFullYear(),
+      minPlayers: initialValues?.minPlayers ?? 1,
+      maxPlayers: initialValues?.maxPlayers ?? 4,
+      yearPublished: initialValues?.yearPublished ?? new Date().getFullYear(),
+      title: initialValues?.title ?? '',
+      playingTimeMinutes: initialValues?.playingTimeMinutes ?? undefined,
+      minAge: initialValues?.minAge ?? undefined,
+      complexityRating: initialValues?.complexityRating ?? undefined,
+      description: initialValues?.description ?? undefined,
+      imageUrl: initialValues?.imageUrl ?? undefined,
     },
   });
 
@@ -231,7 +247,7 @@ export function AddPrivateGameForm({ onSubmit, onCancel, isSubmitting = false }:
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Adding...' : 'Add Private Game'}
+          {isSubmitting ? 'Adding...' : (submitLabel ?? 'Add Private Game')}
         </Button>
       </div>
     </form>

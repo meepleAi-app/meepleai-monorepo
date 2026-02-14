@@ -28,7 +28,9 @@ import { Users, Clock, BarChart2 } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
+import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================
@@ -42,6 +44,8 @@ export interface MeepleGameCatalogCardProps {
   variant?: MeepleCardVariant;
   /** Click handler for card navigation */
   onClick?: (gameId: string) => void;
+  /** Enable flip card with back content */
+  flippable?: boolean;
   /** Additional CSS classes */
   className?: string;
 }
@@ -86,10 +90,15 @@ function formatPlaytime(minutes: number | null | undefined): string {
 // Component
 // ============================================================================
 
+function isDetailGame(game: SharedGame | SharedGameDetail): game is SharedGameDetail {
+  return 'categories' in game;
+}
+
 export function MeepleGameCatalogCard({
   game,
   variant = 'grid',
   onClick,
+  flippable,
   className,
 }: MeepleGameCatalogCardProps) {
   const [isAdding, setIsAdding] = useState(false);
@@ -100,6 +109,12 @@ export function MeepleGameCatalogCard({
 
   // Mutation for adding game to library
   const addMutation = useAddGameToLibrary();
+
+  // Issue #4040: Entity-specific quick actions
+  const entityActions = useEntityActions({
+    entity: 'game',
+    id: game.id,
+  });
 
   const handleAddToLibrary = async () => {
     setIsAdding(true);
@@ -155,6 +170,21 @@ export function MeepleGameCatalogCard({
   // Build badge
   const badge = inLibrary && !statusLoading ? 'In Libreria' : undefined;
 
+  // Build flip data from game fields
+  const flipData: MeepleCardFlipData | undefined = flippable
+    ? {
+        description: game.description || undefined,
+        complexityRating: game.complexityRating,
+        minAge: game.minAge || undefined,
+        ...(isDetailGame(game) ? {
+          categories: game.categories,
+          mechanics: game.mechanics,
+          designers: game.designers,
+          publishers: game.publishers,
+        } : {}),
+      }
+    : undefined;
+
   return (
     <MeepleCard
       entity="game"
@@ -169,8 +199,16 @@ export function MeepleGameCatalogCard({
       actions={actions}
       loading={statusLoading}
       onClick={onClick ? () => onClick(game.id) : undefined}
+      flippable={flippable && !!game.description}
+      flipData={flipData}
+      flipTrigger="button"
       className={className}
       data-testid={`catalog-game-card-${game.id}`}
+      // Issue #4040: New action system
+      entityQuickActions={entityActions.quickActions}
+      showInfoButton
+      infoHref={`/games/${game.id}`}
+      infoTooltip="Vai al dettaglio"
     />
   );
 }

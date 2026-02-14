@@ -485,7 +485,7 @@ Lighthouse accessibility score impacts overall performance score. Ensure:
 - **Component Performance Testing**: `apps/web/docs/testing/performance-testing-guide.md` (Vitest-based)
 - **E2E Testing Guide**: `docs/05-testing/README.md`
 - **Admin Dashboard Guide**: `docs/02-development/admin-dashboard-guide.md`
-- **CI/CD Pipeline**: `docs/05-testing/CI_CD_PIPELINE.md`
+- **CI/CD Pipeline**: `docs/05-testing/ci-cd-pipeline.md`
 
 ---
 

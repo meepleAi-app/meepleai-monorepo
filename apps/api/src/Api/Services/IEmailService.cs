@@ -93,6 +93,15 @@ internal interface IEmailService
         string leaderboardUrl,
         CancellationToken ct = default);
 
+    // ISSUE-4159: Shared game approval workflow - Admin notification
+    Task SendSharedGameSubmittedForApprovalEmailAsync(
+        string toEmail,
+        string toName,
+        string gameTitle,
+        string submitterName,
+        Guid gameId,
+        CancellationToken ct = default);
+
     // ISSUE-2742: Rate limit cooldown email
     Task SendCooldownEndedEmailAsync(
         string toEmail,
@@ -136,5 +145,27 @@ internal interface IEmailService
         string userName,
         string gameTitle,
         Guid sharedGameId,
+        CancellationToken ct = default);
+
+    // ISSUE-4220: PDF notification emails
+    Task SendPdfReadyEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        Guid pdfDocumentId,
+        CancellationToken ct = default);
+
+    Task SendPdfFailedEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        string errorMessage,
+        CancellationToken ct = default);
+
+    Task SendPdfRetryEmailAsync(
+        string toEmail,
+        string userName,
+        string fileName,
+        int retryCount,
         CancellationToken ct = default);
 }

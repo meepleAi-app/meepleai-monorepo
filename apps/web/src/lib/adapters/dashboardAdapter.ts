@@ -6,15 +6,14 @@
  * @see Epic #3901 - Dashboard Hub Core (MVP)
  */
 
+import type { ActiveSession as ComponentActiveSession } from '@/components/dashboard/ActiveSessionsWidget';
+import type { ChatThread as ComponentChatThread } from '@/components/dashboard/ChatHistorySection';
+import type { DashboardStats as ComponentDashboardStats } from '@/components/dashboard/HeroStats';
 import type {
   DashboardData,
-  ActivityEvent as ApiActivityEvent,
   ChatThread as ApiChatThread,
   ActiveSession as ApiActiveSession,
 } from '@/types/dashboard';
-import type { DashboardStats as ComponentDashboardStats } from '@/components/dashboard/HeroStats';
-import type { ActiveSession as ComponentActiveSession } from '@/components/dashboard/ActiveSessionsWidget';
-import type { ChatThread as ComponentChatThread } from '@/components/dashboard/ChatHistorySection';
 
 // ============================================================================
 // Helpers

@@ -4,16 +4,18 @@
  * Epic #2718: Game Sharing from User Library to Shared Catalog
  *
  * Public page showing full details of a shared game from the community catalog.
- * Includes game information, contributors, and community content.
+ * Uses MeepleCard (hero, flippable) + MeepleInfoCard (readOnly) + ContributorsSection.
  */
 
 'use client';
 
-import { use } from 'react';
+import { use, useMemo } from 'react';
 
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Clock, Gauge, Users } from 'lucide-react';
 
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useSharedGame } from '@/hooks/queries';
@@ -28,21 +30,36 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
   const { id } = use(params);
   const { data: game, isLoading, error } = useSharedGame(id);
 
+  // Build metadata for MeepleCard
+  const metadata = useMemo(() => {
+    if (!game) return [];
+    const items = [];
+
+    if (game.minPlayers && game.maxPlayers) {
+      const players = game.minPlayers === game.maxPlayers
+        ? `${game.minPlayers}`
+        : `${game.minPlayers}-${game.maxPlayers}`;
+      items.push({ icon: Users, value: players });
+    }
+
+    if (game.playingTimeMinutes) {
+      items.push({ icon: Clock, value: `${game.playingTimeMinutes} min` });
+    }
+
+    if (game.complexityRating) {
+      items.push({ icon: Gauge, value: `${game.complexityRating.toFixed(1)}/5` });
+    }
+
+    return items;
+  }, [game]);
+
   // Loading state
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main content */}
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-96 w-full" />
-          </div>
-
-          {/* Sidebar */}
-          <aside className="space-y-6">
-            <Skeleton className="h-48 w-full" />
-          </aside>
+        <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:justify-center">
+          <Skeleton className="h-[560px] w-full max-w-[420px]" />
+          <Skeleton className="h-[560px] w-full max-w-[420px]" />
         </div>
       </div>
     );
@@ -64,66 +81,49 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Game Header */}
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{game.title}</h1>
-            {game.description && (
-              <p className="text-muted-foreground">{game.description}</p>
-            )}
-          </div>
+      {/* Cards Section - MeepleCard (hero, flippable) + MeepleInfoCard */}
+      <section className="mb-8 flex flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
+        {/* Flippable Game Card */}
+        <MeepleCard
+          entity="game"
+          variant="hero"
+          title={game.title}
+          subtitle={
+            (game.publishers && game.publishers.length > 0
+              ? game.publishers[0].name
+              : '') +
+            (game.yearPublished ? ` (${game.yearPublished})` : '')
+          }
+          imageUrl={game.imageUrl || undefined}
+          rating={game.averageRating ?? undefined}
+          ratingMax={10}
+          metadata={metadata}
+          flippable
+          flipData={{
+            description: game.description || undefined,
+            categories: game.categories,
+            mechanics: game.mechanics,
+            designers: game.designers,
+            publishers: game.publishers,
+            complexityRating: game.complexityRating,
+            minAge: game.minAge,
+          }}
+        />
 
-          {/* Game Details - Placeholder for future expansion */}
-          <div className="rounded-lg border p-6">
-            <h2 className="text-xl font-semibold mb-4">Game Details</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {game.minPlayers && game.maxPlayers && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Players</p>
-                  <p className="font-medium">
-                    {game.minPlayers === game.maxPlayers
-                      ? game.minPlayers
-                      : `${game.minPlayers}-${game.maxPlayers}`}
-                  </p>
-                </div>
-              )}
-              {game.playingTimeMinutes && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Playing Time</p>
-                  <p className="font-medium">{game.playingTimeMinutes} min</p>
-                </div>
-              )}
-              {game.complexityRating && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Complexity</p>
-                  <p className="font-medium">{game.complexityRating.toFixed(1)}/5.0</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Additional sections can be added here:
-              - FAQs
-              - Errata
-              - Community Documents
-              - Reviews
-          */}
+        {/* Info Card - KB & Social (readOnly for public page) */}
+        <div className="w-full max-w-[420px] flex-shrink-0 space-y-6">
+          <MeepleInfoCard
+            gameId={id}
+            gameTitle={game.title}
+            bggId={game.bggId}
+            readOnly
+          />
         </div>
+      </section>
 
-        {/* Sidebar */}
-        <aside className="space-y-6">
-          {/* Contributors Section - NEW */}
-          <ContributorsSection gameId={id} />
-
-          {/* Future sidebar sections:
-              - Quick Actions (Add to Library, Share, Report)
-              - Categories & Mechanics
-              - Publisher Info
-              - BGG Link
-          */}
-        </aside>
+      {/* Contributors Section */}
+      <div className="mx-auto max-w-4xl">
+        <ContributorsSection gameId={id} />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -36,11 +37,31 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
     public async Task<IReadOnlyList<PdfDocument>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
+        // Direct match on pdf_documents.GameId
         var entities = await DbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.GameId == gameId)
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        // If no direct match, resolve via games.SharedGameId → games.Id → pdf_documents.GameId
+        if (entities.Count == 0)
+        {
+            var resolvedGameIds = await DbContext.Games
+                .AsNoTracking()
+                .Where(g => g.SharedGameId == gameId)
+                .Select(g => g.Id)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            if (resolvedGameIds.Count > 0)
+            {
+                entities = await DbContext.PdfDocuments
+                    .AsNoTracking()
+                    .Where(p => resolvedGameIds.Contains(p.GameId))
+                    .OrderByDescending(p => p.UploadedAt)
+                    .ToListAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
 
         return entities.Select(MapToDomain).ToList();
     }
@@ -145,6 +166,17 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         // Issue #2140: Use Reconstitute factory method instead of reflection
         // Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
         // Issue #3664: Added PrivateGameId
+        // Issue #4216: Added retry tracking fields
+
+        // Parse retry-specific enums
+        var errorCategory = string.IsNullOrWhiteSpace(entity.ErrorCategory)
+            ? (ErrorCategory?)null
+            : Enum.Parse<ErrorCategory>(entity.ErrorCategory);
+
+        var failedAtState = string.IsNullOrWhiteSpace(entity.FailedAtState)
+            ? (PdfProcessingState?)null
+            : Enum.Parse<PdfProcessingState>(entity.FailedAtState);
+
         return PdfDocument.Reconstitute(
             id: entity.Id,
             gameId: entity.GameId,
@@ -165,7 +197,15 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             sharedGameId: entity.SharedGameId,
             contributorId: entity.ContributorId,
             sourceDocumentId: entity.SourceDocumentId,
-            privateGameId: entity.PrivateGameId
+            privateGameId: entity.PrivateGameId,
+            retryCount: entity.RetryCount,
+            errorCategory: errorCategory,
+            failedAtState: failedAtState,
+            uploadingStartedAt: entity.UploadingStartedAt, // Issue #4219
+            extractingStartedAt: entity.ExtractingStartedAt, // Issue #4219
+            chunkingStartedAt: entity.ChunkingStartedAt, // Issue #4219
+            embeddingStartedAt: entity.EmbeddingStartedAt, // Issue #4219
+            indexingStartedAt: entity.IndexingStartedAt // Issue #4219
         );
     }
 
@@ -182,6 +222,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             UploadedByUserId = domain.UploadedByUserId,
             UploadedAt = domain.UploadedAt,
             ProcessingStatus = domain.ProcessingStatus,
+            ProcessingState = domain.ProcessingState.ToString(), // Issue #4215
             ProcessedAt = domain.ProcessedAt,
             PageCount = domain.PageCount,
             ProcessingError = domain.ProcessingError,
@@ -193,7 +234,15 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             SharedGameId = domain.SharedGameId, // Issue #2732
             ContributorId = domain.ContributorId, // Issue #2732
             SourceDocumentId = domain.SourceDocumentId, // Issue #2732
-            PrivateGameId = domain.PrivateGameId // Issue #3664
+            PrivateGameId = domain.PrivateGameId, // Issue #3664
+            RetryCount = domain.RetryCount, // Issue #4216
+            ErrorCategory = domain.ErrorCategory?.ToString(), // Issue #4216
+            FailedAtState = domain.FailedAtState?.ToString(), // Issue #4216
+            UploadingStartedAt = domain.UploadingStartedAt, // Issue #4219
+            ExtractingStartedAt = domain.ExtractingStartedAt, // Issue #4219
+            ChunkingStartedAt = domain.ChunkingStartedAt, // Issue #4219
+            EmbeddingStartedAt = domain.EmbeddingStartedAt, // Issue #4219
+            IndexingStartedAt = domain.IndexingStartedAt // Issue #4219
         };
     }
 }

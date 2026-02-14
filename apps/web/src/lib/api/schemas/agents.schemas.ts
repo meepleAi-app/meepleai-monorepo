@@ -245,6 +245,34 @@ export const UpdateAgentDocumentsResponseSchema = z.object({
 
 export type UpdateAgentDocumentsResponse = z.infer<typeof UpdateAgentDocumentsResponseSchema>;
 
+// ========== Issue #4126: Chat API Schemas ==========
+
+/**
+ * Chat with Agent Request Schema
+ */
+export const ChatWithAgentRequestSchema = z.object({
+  message: z.string().min(1, 'Message is required').max(2000, 'Message too long'),
+});
+
+export type ChatWithAgentRequest = z.infer<typeof ChatWithAgentRequestSchema>;
+
+/**
+ * SSE Streaming Event Schema
+ */
+export const SSEEventSchema = z.object({
+  type: z.enum(['StateUpdate', 'Token', 'Complete', 'Error', 'Citations']),
+  data: z.unknown(),
+  timestamp: z.string().datetime(),
+});
+
+export type SSEEvent = z.infer<typeof SSEEventSchema>;
+
+/**
+ * Recent Agents Response (array of AgentDto)
+ */
+export const RecentAgentsResponseSchema = z.array(AgentDtoSchema);
+export type RecentAgentsResponse = z.infer<typeof RecentAgentsResponseSchema>;
+
 // ========== Player Mode AI Suggestion (Issue #2421) ==========
 
 /**

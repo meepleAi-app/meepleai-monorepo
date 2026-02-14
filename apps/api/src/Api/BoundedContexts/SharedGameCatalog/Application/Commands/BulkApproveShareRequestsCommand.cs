@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Administration.Application.Commands;
+using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;

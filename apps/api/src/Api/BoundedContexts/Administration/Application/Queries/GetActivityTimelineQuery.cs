@@ -4,9 +4,24 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
 /// <summary>
-/// Query to retrieve user's activity timeline (Issue #3973).
+/// Query to retrieve user's activity timeline with advanced filtering,
+/// search, pagination, and sorting (Issue #3923).
+/// Extends basic timeline from Issue #3973.
 /// </summary>
 internal record GetActivityTimelineQuery(
     Guid UserId,
-    int Limit = 10
+    string[]? Types = null,
+    string? SearchTerm = null,
+    int Skip = 0,
+    int Take = 20,
+    SortDirection Order = SortDirection.Descending
 ) : IQuery<ActivityTimelineResponseDto>;
+
+/// <summary>
+/// Sort direction for timeline queries.
+/// </summary>
+public enum SortDirection
+{
+    Ascending,
+    Descending
+}

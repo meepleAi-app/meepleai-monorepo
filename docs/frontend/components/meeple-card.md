@@ -2,21 +2,34 @@
 
 > The canonical card component for all MeepleAI entity displays
 
+**Epic #4029** | **Updated**: 2026-02-11
+
 ## Introduction
 
-MeepleCard is MeepleAI's universal card component, designed to display games, players, collections, events, and custom entities with a consistent, accessible interface.
+MeepleCard is MeepleAI's universal card component, designed to display games, players, sessions, agents, documents, chat conversations, events, and custom entities with a consistent, accessible interface.
+
+**Latest Updates (Epic #4029)**:
+- ✅ Extended to **7 entity types** (added session, agent, document, chatSession)
+- ✅ Entity-specific **quick actions** with hover reveal
+- ✅ **Info button** for detail page navigation
+- ✅ **Board game card proportions** (7:10 aspect ratio)
 
 ### Why MeepleCard?
 
 - **Consistency**: One component for all entity types ensures uniform UX
 - **Accessibility**: Built-in WCAG AA compliance with keyboard navigation
 - **Performance**: React.memo optimized with lazy-loaded images
-- **Flexibility**: 5 entity types × 5 layout variants = 25+ combinations
+- **Flexibility**: 7 entity types × 5 layout variants × modular features
 - **Maintainability**: Single source of truth reduces bug surface
+- **Quick Actions**: Entity-specific actions via `useEntityActions` hook
 
-## Entity Types
+### Replacing Legacy Components
 
-Each entity type has a semantic color that appears in the left border, badge, and gradient overlays.
+**GameCard/PlayerCard are deprecated**. For migration guide, see `/apps/web/MIGRATION_GAMECARD_TO_MEEPLECARD.md`.
+
+## Entity Types (7 Total)
+
+Each entity type has a semantic color that appears in the left border, badge, and gradient overlays. Issue #4030 extended support from 5 to 7 entity types.
 
 ### Game (Orange)
 
@@ -55,18 +68,83 @@ Each entity type has a semantic color that appears in the left border, badge, an
 
 **Color**: `hsl(262 83% 58%)` - Vibrant purple for users
 
-### Collection (Teal)
+### Session (Indigo)
 
 ```tsx
 <MeepleCard
-  entity="collection"
-  title="Strategy Favorites"
-  subtitle="23 games"
-  imageUrl="/collections/strategy.jpg"
+  entity="session"
+  title="Serata Azul"
+  subtitle="Azul · Casa di Marco"
+  metadata={[
+    { icon: Users, value: "4 giocatori" },
+    { icon: Clock, value: "45 min" },
+  ]}
+  entityQuickActions={actions.quickActions}
+  showInfoButton
+  infoHref={`/sessions/${session.id}`}
 />
 ```
 
-**Color**: `hsl(168 76% 42%)` - Fresh teal for collections
+**Color**: `hsl(240 60% 55%)` - Indigo for game sessions
+**Actions**: Riprendi, Usa Toolkit, Condividi codice
+
+### Agent (Amber)
+
+```tsx
+<MeepleCard
+  entity="agent"
+  title="Azul Rules Expert"
+  subtitle="RAG Strategy · GPT-4o-mini"
+  metadata={[
+    { icon: MessageSquare, value: "342 invocazioni" },
+  ]}
+  entityQuickActions={actions.quickActions}
+  showInfoButton
+  infoHref={`/agents/${agent.id}`}
+/>
+```
+
+**Color**: `hsl(38 92% 50%)` - Amber for AI agents
+**Actions**: Chat, Statistiche
+
+### Document (Slate)
+
+```tsx
+<MeepleCard
+  entity="document"
+  title="azul_rulebook.pdf"
+  subtitle="Azul · Regolamento base"
+  metadata={[
+    { icon: FileText, value: "12 pagine" },
+    { icon: Download, value: "2.4 MB" },
+  ]}
+  entityQuickActions={actions.quickActions}
+  showInfoButton
+  infoHref={`/documents/${doc.id}`}
+/>
+```
+
+**Color**: `hsl(210 40% 55%)` - Slate for documents
+**Actions**: Download, Chat sui contenuti
+
+### ChatSession (Blue)
+
+```tsx
+<MeepleCard
+  entity="chatSession"
+  title="Come si gioca ad Azul?"
+  subtitle="Azul · Azul Rules Expert"
+  metadata={[
+    { icon: MessageSquare, value: "12 messaggi" },
+  ]}
+  entityQuickActions={actions.quickActions}
+  showInfoButton
+  infoHref={`/chat/${chat.id}`}
+/>
+```
+
+**Color**: `hsl(220 80% 55%)` - Blue for chat conversations
+**Actions**: Continua Chat, Esporta
 
 ### Event (Rose)
 

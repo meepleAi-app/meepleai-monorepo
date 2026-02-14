@@ -4,7 +4,7 @@
  * Tests WCAG 2.1 AA compliance using jest-axe
  *
  * Coverage:
- * - All entity types (game, player, collection, event, custom)
+ * - All entity types (game, player, session, agent, document, chatSession, event, custom)
  * - All layout variants (grid, list, compact, featured, hero)
  * - Interactive states (clickable vs static)
  * - Keyboard navigation
@@ -37,7 +37,7 @@ const defaultProps = {
 
 describe('MeepleCard - Accessibility', () => {
   describe('Entity Types - No Violations', () => {
-    const entityTypes: MeepleEntityType[] = ['game', 'player', 'collection', 'event', 'custom'];
+    const entityTypes: MeepleEntityType[] = ['game', 'player', 'session', 'agent', 'document', 'chatSession', 'event', 'custom'];
 
     it.each(entityTypes)('should have no accessibility violations for %s entity', async entity => {
       const { container } = render(
@@ -135,10 +135,10 @@ describe('MeepleCard - Accessibility', () => {
       expect(card).toBeInTheDocument();
     });
 
-    it('should have entity-specific aria-label for collection', () => {
-      render(<MeepleCard {...defaultProps} entity="collection" title="My Collection" onClick={() => {}} />);
+    it('should have entity-specific aria-label for custom', () => {
+      render(<MeepleCard {...defaultProps} entity="custom" title="My Custom Entity" onClick={() => {}} />);
 
-      const card = screen.getByRole('button', { name: /collection: my collection/i });
+      const card = screen.getByRole('button', { name: /custom: my custom entity/i });
       expect(card).toBeInTheDocument();
     });
 

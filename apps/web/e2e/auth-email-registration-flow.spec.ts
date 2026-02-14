@@ -1,5 +1,6 @@
 /**
  * E2E Test: Email Registration → Dashboard → Logout Flow
+ * @slow - 49 test cases, complete user journey with real backend integration
  *
  * Complete user journey test with REAL BACKEND:
  * 1. Navigate to home page

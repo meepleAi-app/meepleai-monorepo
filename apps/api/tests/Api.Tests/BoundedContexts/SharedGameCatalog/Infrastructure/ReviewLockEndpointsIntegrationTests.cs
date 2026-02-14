@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -41,6 +43,12 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
 
     internal static readonly Guid TestAdminId = Guid.NewGuid();
     internal static readonly Guid TestContributorId = Guid.NewGuid();
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public ReviewLockEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -239,7 +247,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<StartReviewResponse>();
+        var result = await response.Content.ReadFromJsonAsync<StartReviewResponse>(JsonOptions);
         Assert.NotNull(result);
         Assert.Equal(shareRequestId, result.ShareRequestId);
         Assert.True(result.LockExpiresAt > DateTime.UtcNow);
@@ -398,7 +406,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>();
+        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
         Assert.NotNull(result);
         Assert.Empty(result);
     }
@@ -419,7 +427,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>();
+        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
         Assert.NotNull(result);
         Assert.Single(result);
 
@@ -446,7 +454,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>();
+        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
         Assert.NotNull(result);
         Assert.Equal(3, result.Count);
     }
@@ -469,7 +477,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>();
+        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
         Assert.NotNull(result);
         Assert.Single(result);
         Assert.All(result, r => Assert.Equal(ShareRequestStatus.InReview, r.Status));
@@ -491,7 +499,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>();
+        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
         Assert.NotNull(result);
         Assert.Single(result);
 
@@ -522,7 +530,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>();
+        var result = await response.Content.ReadFromJsonAsync<IReadOnlyCollection<ActiveReviewDto>>(JsonOptions);
         Assert.NotNull(result);
         Assert.Single(result);
 

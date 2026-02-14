@@ -174,6 +174,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .Include(e => e.Sessions.OrderByDescending(s => s.PlayedAt))
             .Include(e => e.Checklist.OrderBy(c => c.DisplayOrder))
+            .Include(e => e.Labels) // Issue #4259: Include labels for accurate counts
             .Include(e => e.PdfDocument)
             .FirstOrDefaultAsync(e => e.UserId == userId && (e.SharedGameId == gameId || e.PrivateGameId == gameId), cancellationToken)
             .ConfigureAwait(false);
@@ -211,6 +212,48 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .CountAsync(e => e.UserId == userId && e.PrivatePdfId != null, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<UserLibraryEntry>> GetRecentlyPlayedAsync(
+        Guid userId,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        // Get entries with sessions, ordered by most recent session first
+        var entities = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Include(e => e.SharedGame)
+            .Include(e => e.Sessions)
+            .Where(e => e.UserId == userId && e.Sessions.Any())
+            .OrderByDescending(e => e.Sessions.Max(s => s.PlayedAt))
+            .Take(limit)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<UserLibraryEntry>> GetUnplayedGamesAsync(
+        Guid userId,
+        int daysSince,
+        CancellationToken cancellationToken = default)
+    {
+        var cutoffDate = DateTime.UtcNow.AddDays(-daysSince);
+
+        // Get entries with no sessions OR last session older than cutoffDate
+        var entities = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Include(e => e.SharedGame)
+            .Include(e => e.Sessions)
+            .Where(e => e.UserId == userId &&
+                        (!e.Sessions.Any() || e.Sessions.Max(s => s.PlayedAt) < cutoffDate))
+            .OrderByDescending(e => e.AddedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
     }
 
     public async Task AddAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)

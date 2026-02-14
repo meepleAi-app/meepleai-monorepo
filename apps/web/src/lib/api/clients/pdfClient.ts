@@ -6,7 +6,12 @@
  */
 
 import { getApiBase, type HttpClient } from '../core/httpClient';
-import { ProcessingProgressSchema, type ProcessingProgress } from '../schemas';
+import {
+  ProcessingProgressSchema,
+  type ProcessingProgress,
+  PdfMetricsSchema,
+  type PdfMetrics,
+} from '../schemas';
 
 export interface CreatePdfClientParams {
   httpClient: HttpClient;
@@ -31,6 +36,19 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     },
 
     /**
+     * Get detailed processing metrics with per-state timing and ETA
+     * Issue #4219: Duration metrics and ETA calculation
+     * @param documentId Document ID (GUID format)
+     * @returns Metrics with timing, progress, and ETA
+     */
+    async getMetrics(documentId: string): Promise<PdfMetrics | null> {
+      return httpClient.get(
+        `/api/v1/documents/${encodeURIComponent(documentId)}/metrics`,
+        PdfMetricsSchema
+      );
+    },
+
+    /**
      * Cancel ongoing PDF processing
      * @param pdfId PDF document ID (GUID format)
      */
@@ -46,6 +64,64 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     getPdfDownloadUrl(pdfId: string): string {
       const baseUrl = getApiBase();
       return `${baseUrl}/api/v1/pdfs/${encodeURIComponent(pdfId)}/download`;
+    },
+
+    /**
+     * Upload a PDF file for a game
+     * POST /api/v1/ingest/pdf (multipart/form-data)
+     * @param gameId Game ID to associate the PDF with
+     * @param file PDF file to upload
+     * @param onProgress Optional progress callback (0-100) via XMLHttpRequest
+     * @returns Upload result with documentId and fileName
+     */
+    async uploadPdf(
+      gameId: string,
+      file: File,
+      onProgress?: (percent: number) => void
+    ): Promise<{ documentId: string; fileName: string }> {
+      const baseUrl = getApiBase();
+      const url = `${baseUrl}/api/v1/ingest/pdf`;
+
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.withCredentials = true;
+
+        if (onProgress) {
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = Math.round((event.loaded / event.total) * 100);
+              onProgress(percent);
+            }
+          };
+        }
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              resolve({ documentId: data.documentId, fileName: data.fileName });
+            } catch {
+              resolve({ documentId: '', fileName: file.name });
+            }
+          } else {
+            let message = `Upload failed (${xhr.status})`;
+            try {
+              const err = JSON.parse(xhr.responseText);
+              message = err.detail || err.title || err.message || message;
+            } catch { /* use default message */ }
+            reject(new Error(message));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Errore di rete durante il caricamento'));
+        xhr.ontimeout = () => reject(new Error('Timeout durante il caricamento'));
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('gameId', gameId);
+        xhr.send(formData);
+      });
     },
 
     /**

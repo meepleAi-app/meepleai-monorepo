@@ -14,10 +14,12 @@ import React, { useState } from 'react';
 
 import { Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
 
 import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils/timeUtils';
+import { useAgentStore } from '@/stores/agentStore';
 import { AgentMessage as AgentMessageType } from '@/types/agent';
 
 import { CitationBadge } from './CitationBadge';
@@ -33,6 +35,7 @@ export const ChatMessage = React.memo(function ChatMessage({
   message,
   isGrouped = false,
 }: ChatMessageProps) {
+  const { openPdfViewer } = useAgentStore();
   const [copied, setCopied] = useState(false);
 
   const isUser = message.type === 'user';
@@ -50,9 +53,17 @@ export const ChatMessage = React.memo(function ChatMessage({
     }
   };
 
-  // Citation click handler (MVP: logs, future: PDF viewer)
-  const handleCitationClick = (_citation: Citation) => {
-    // TODO: Future integration with PDF viewer scroll
+  // Citation click handler - Opens PDF viewer at cited page (Issue #4130)
+  const handleCitationClick = (citation: Citation) => {
+    const pageNumber = citation.pageNumber ?? citation.page ?? 1;
+    const documentId = citation.documentId;
+
+    if (documentId) {
+      openPdfViewer(documentId, pageNumber);
+      toast.success(`Opening PDF at page ${pageNumber}`);
+    } else {
+      toast.info('PDF document not available for this citation');
+    }
   };
 
   // System message (center-aligned)

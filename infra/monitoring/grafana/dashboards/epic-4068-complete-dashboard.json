@@ -1,0 +1,751 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "epic-4068-complete",
+    "title": "Epic #4068: MeepleCard Enhancements - Complete Dashboard",
+    "tags": ["epic-4068", "permissions", "performance"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Permission Checks (Rate)",
+        "targets": [
+          {
+            "expr": "rate(permission_check_total[5m])",
+            "legendFormat": "Checks/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "decimals": 2,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 50, "color": "yellow" },
+                { "value": 100, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 2,
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Permission Denied Rate",
+        "targets": [
+          {
+            "expr": "rate(permission_denied_total[5m]) / rate(permission_check_total[5m])",
+            "legendFormat": "Denied %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "decimals": 2,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 0.05, "color": "yellow" },
+                { "value": 0.1, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 3,
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Cache Hit Rate",
+        "targets": [
+          {
+            "expr": "rate(permission_cache_hit_total[5m]) / (rate(permission_cache_hit_total[5m]) + rate(permission_cache_miss_total[5m]))",
+            "legendFormat": "Hit Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "decimals": 2,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 0.8, "color": "yellow" },
+                { "value": 0.9, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 4,
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "API Latency (p95)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{endpoint='/api/v1/permissions/me'}[5m])) * 1000",
+            "legendFormat": "p95 ms"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "decimals": 1,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 50, "color": "yellow" },
+                { "value": 100, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 5,
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "type": "graph",
+        "title": "Permission Checks Over Time",
+        "targets": [
+          {
+            "expr": "rate(permission_check_total{result='granted'}[5m])",
+            "legendFormat": "Granted"
+          },
+          {
+            "expr": "rate(permission_check_total{result='denied'}[5m])",
+            "legendFormat": "Denied"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Checks/sec" },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "pointradius": 2,
+        "legend": {
+          "show": true,
+          "values": true,
+          "min": true,
+          "max": true,
+          "current": true,
+          "total": false,
+          "avg": true
+        }
+      },
+
+      {
+        "id": 6,
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "type": "graph",
+        "title": "Permission Check Duration (Histogram)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(permission_check_duration_ms_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(permission_check_duration_ms_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(permission_check_duration_ms_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "yaxes": [
+          { "format": "ms", "label": "Duration", "logBase": 1, "min": 0 },
+          { "format": "short" }
+        ],
+        "alert": {
+          "name": "Permission Check Slow (p95 > 100ms)",
+          "conditions": [
+            {
+              "evaluator": { "params": [100], "type": "gt" },
+              "operator": { "type": "and" },
+              "query": { "params": ["B", "5m", "now"] },
+              "reducer": { "params": [], "type": "avg" },
+              "type": "query"
+            }
+          ]
+        }
+      },
+
+      {
+        "id": 7,
+        "gridPos": { "x": 0, "y": 12, "w": 8, "h": 6 },
+        "type": "table",
+        "title": "Top Denied Features (Last Hour)",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (feature) (increase(permission_denied_total[1h])))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "Time": true },
+              "renameByName": {
+                "feature": "Feature",
+                "Value": "Denials (1h)"
+              }
+            }
+          }
+        ]
+      },
+
+      {
+        "id": 8,
+        "gridPos": { "x": 8, "y": 12, "w": 8, "h": 6 },
+        "type": "piechart",
+        "title": "User Tier Distribution",
+        "targets": [
+          {
+            "expr": "count by (tier) (user_tier_gauge)"
+          }
+        ],
+        "options": {
+          "legend": {
+            "display": true,
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        }
+      },
+
+      {
+        "id": 9,
+        "gridPos": { "x": 16, "y": 12, "w": 8, "h": 6 },
+        "type": "piechart",
+        "title": "User Role Distribution",
+        "targets": [
+          {
+            "expr": "count by (role) (user_role_gauge)"
+          }
+        ]
+      },
+
+      {
+        "id": 10,
+        "gridPos": { "x": 0, "y": 18, "w": 12, "h": 8 },
+        "type": "graph",
+        "title": "Frontend: Tooltip Positioning Performance",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(tooltip_position_duration_ms_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(tooltip_position_duration_ms_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "yaxes": [
+          { "format": "ms", "label": "Duration" },
+          { "format": "short" }
+        ],
+        "seriesOverrides": [
+          {
+            "alias": "p95",
+            "color": "#73BF69",
+            "fill": 0,
+            "linewidth": 2
+          },
+          {
+            "alias": "p99",
+            "color": "#F2495C",
+            "fill": 0,
+            "linewidth": 2,
+            "dashes": true
+          }
+        ],
+        "alert": {
+          "name": "Tooltip Positioning Slow (p95 > 16ms)",
+          "message": "Tooltip positioning not meeting 60fps target (Epic #4068 Issue #4186)",
+          "conditions": [
+            {
+              "evaluator": { "params": [16], "type": "gt" },
+              "query": { "params": ["A", "5m", "now"] },
+              "reducer": { "type": "avg" }
+            }
+          ],
+          "frequency": "5m"
+        }
+      },
+
+      {
+        "id": 11,
+        "gridPos": { "x": 12, "y": 18, "w": 12, "h": 8 },
+        "type": "graph",
+        "title": "MeepleCard Render Performance",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(meeplecard_render_duration_ms_bucket{features='all'}[5m]))",
+            "legendFormat": "p95 (all features)"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(meeplecard_render_duration_ms_bucket{features='minimal'}[5m]))",
+            "legendFormat": "p95 (minimal)"
+          }
+        ],
+        "yaxes": [
+          { "format": "ms", "label": "Render Time", "max": 150 }
+        ]
+      },
+
+      {
+        "id": 12,
+        "gridPos": { "x": 0, "y": 26, "w": 8, "h": 6 },
+        "type": "table",
+        "title": "Permission Cache Performance",
+        "targets": [
+          {
+            "expr": "rate(permission_cache_access_duration_ms_sum[5m]) / rate(permission_cache_access_duration_ms_count[5m])",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "Avg Duration (ms)"
+          },
+          {
+            "expr": "rate(permission_cache_hit_total[5m]) / (rate(permission_cache_hit_total[5m]) + rate(permission_cache_miss_total[5m]))",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "Hit Rate"
+          }
+        ]
+      },
+
+      {
+        "id": 13,
+        "gridPos": { "x": 8, "y": 26, "w": 8, "h": 6 },
+        "type": "graph",
+        "title": "Tag Rendering Performance",
+        "targets": [
+          {
+            "expr": "rate(tag_strip_render_duration_ms_sum[5m]) / rate(tag_strip_render_duration_ms_count[5m])",
+            "legendFormat": "Avg Render Time"
+          }
+        ],
+        "yaxes": [
+          { "format": "ms", "label": "Time", "max": 20 }
+        ]
+      },
+
+      {
+        "id": 14,
+        "gridPos": { "x": 16, "y": 26, "w": 8, "h": 6 },
+        "type": "graph",
+        "title": "Agent Metadata Load Performance",
+        "targets": [
+          {
+            "expr": "rate(agent_metadata_load_duration_ms_sum[5m]) / rate(agent_metadata_load_duration_ms_count[5m])",
+            "legendFormat": "Avg Load Time"
+          }
+        ]
+      },
+
+      {
+        "id": 15,
+        "gridPos": { "x": 0, "y": 32, "w": 24, "h": 8 },
+        "type": "table",
+        "title": "Recent Permission Failures (Last 100)",
+        "targets": [
+          {
+            "expr": "topk(100, permission_denied_total)",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "__name__": true, "job": true, "instance": true },
+              "indexByName": {},
+              "renameByName": {
+                "feature": "Feature",
+                "user_tier": "User Tier",
+                "user_role": "User Role",
+                "reason": "Denial Reason",
+                "Value": "Count"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": {
+              "fields": {},
+              "sort": [{ "field": "Count", "desc": true }]
+            }
+          }
+        ]
+      },
+
+      {
+        "id": 16,
+        "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+        "type": "heatmap",
+        "title": "Permission Check Duration Heatmap",
+        "targets": [
+          {
+            "expr": "rate(permission_check_duration_ms_bucket[5m])",
+            "format": "heatmap",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "yAxis": {
+          "format": "ms",
+          "decimals": 0
+        },
+        "dataFormat": "tsbuckets",
+        "color": {
+          "mode": "spectrum",
+          "scheme": "Spectral"
+        }
+      },
+
+      {
+        "id": 17,
+        "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+        "type": "graph",
+        "title": "Tier Upgrade Events",
+        "targets": [
+          {
+            "expr": "rate(user_tier_changed_total{new_tier='pro'}[1h])",
+            "legendFormat": "Upgraded to Pro"
+          },
+          {
+            "expr": "rate(user_tier_changed_total{new_tier='enterprise'}[1h])",
+            "legendFormat": "Upgraded to Enterprise"
+          },
+          {
+            "expr": "rate(user_tier_changed_total{old_tier='pro',new_tier='free'}[1h])",
+            "legendFormat": "Downgraded from Pro"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Upgrades/hour" }
+        ]
+      },
+
+      {
+        "id": 18,
+        "gridPos": { "x": 0, "y": 48, "w": 24, "h": 1 },
+        "type": "row",
+        "title": "Database Performance",
+        "collapsed": false
+      },
+
+      {
+        "id": 19,
+        "gridPos": { "x": 0, "y": 49, "w": 12, "h": 6 },
+        "type": "graph",
+        "title": "Permission Query Duration (Database)",
+        "targets": [
+          {
+            "expr": "rate(sql_query_duration_ms_sum{query='GetUserPermissions'}[5m]) / rate(sql_query_duration_ms_count{query='GetUserPermissions'}[5m])",
+            "legendFormat": "Avg Query Time"
+          }
+        ],
+        "yaxes": [
+          { "format": "ms", "label": "Duration", "max": 50 }
+        ],
+        "alert": {
+          "name": "Database Query Slow (>50ms avg)",
+          "message": "Permission database queries slowing down - check indexes",
+          "conditions": [
+            {
+              "evaluator": { "params": [50], "type": "gt" },
+              "query": { "params": ["A", "10m", "now"] }
+            }
+          ]
+        }
+      },
+
+      {
+        "id": 20,
+        "gridPos": { "x": 12, "y": 49, "w": 12, "h": 6 },
+        "type": "stat",
+        "title": "Database Connection Pool",
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends{datname='meepleai'}",
+            "legendFormat": "Active Connections"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 80, "color": "yellow" },
+                { "value": 150, "color": "red" }
+              ]
+            },
+            "max": 200
+          }
+        }
+      },
+
+      {
+        "id": 21,
+        "gridPos": { "x": 0, "y": 55, "w": 24, "h": 1 },
+        "type": "row",
+        "title": "Frontend Performance",
+        "collapsed": false
+      },
+
+      {
+        "id": 22,
+        "gridPos": { "x": 0, "y": 56, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Web Vitals - LCP (p75)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.75, rate(web_vitals_lcp_bucket[5m])) / 1000",
+            "legendFormat": "LCP"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 2,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 2.5, "color": "yellow" },
+                { "value": 4.0, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 23,
+        "gridPos": { "x": 8, "y": 56, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Web Vitals - FID (p75)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.75, rate(web_vitals_fid_bucket[5m]))",
+            "legendFormat": "FID"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "decimals": 1,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 100, "color": "yellow" },
+                { "value": 300, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 24,
+        "gridPos": { "x": 16, "y": 56, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Web Vitals - CLS (p75)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.75, rate(web_vitals_cls_bucket[5m]))",
+            "legendFormat": "CLS"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 3,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 0.1, "color": "yellow" },
+                { "value": 0.25, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 25,
+        "gridPos": { "x": 0, "y": 62, "w": 24, "h": 1 },
+        "type": "row",
+        "title": "Business Metrics",
+        "collapsed": false
+      },
+
+      {
+        "id": 26,
+        "gridPos": { "x": 0, "y": 63, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Tier Upgrade Conversions (Today)",
+        "targets": [
+          {
+            "expr": "increase(user_tier_changed_total{new_tier=~'pro|enterprise'}[24h])",
+            "legendFormat": "Upgrades"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0,
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "yellow" },
+                { "value": 5, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        "id": 27,
+        "gridPos": { "x": 6, "y": 63, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Permission Upgrade Prompts Shown",
+        "targets": [
+          {
+            "expr": "rate(permission_upgrade_prompt_shown_total[1h])",
+            "legendFormat": "Prompts/hour"
+          }
+        ]
+      },
+
+      {
+        "id": 28,
+        "gridPos": { "x": 12, "y": 63, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Upgrade Prompt Click-Through Rate",
+        "targets": [
+          {
+            "expr": "rate(permission_upgrade_prompt_clicked_total[1h]) / rate(permission_upgrade_prompt_shown_total[1h])",
+            "legendFormat": "CTR"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "decimals": 2
+          }
+        }
+      },
+
+      {
+        "id": 29,
+        "gridPos": { "x": 18, "y": 63, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Feature Adoption Rate (Tags)",
+        "targets": [
+          {
+            "expr": "count(meeplecard_rendered_total{has_tags='true'}) / count(meeplecard_rendered_total)",
+            "legendFormat": "% Cards with Tags"
+          }
+        ]
+      },
+
+      {
+        "id": 30,
+        "gridPos": { "x": 0, "y": 67, "w": 24, "h": 8 },
+        "type": "logs",
+        "title": "Permission System Logs (Errors & Warnings)",
+        "targets": [
+          {
+            "expr": "{namespace='meepleai',app='api'} |= `permission` |~ `error|warning|denied` | json"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none",
+          "prettifyLogMessage": true
+        }
+      }
+    ],
+
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "query",
+          "query": "label_values(up, environment)",
+          "current": { "text": "production", "value": "production" }
+        },
+        {
+          "name": "tier",
+          "type": "custom",
+          "options": [
+            { "text": "All", "value": ".*" },
+            { "text": "Free", "value": "free" },
+            { "text": "Normal", "value": "normal" },
+            { "text": "Pro", "value": "pro" },
+            { "text": "Enterprise", "value": "enterprise" }
+          ],
+          "current": { "text": "All", "value": ".*" }
+        },
+        {
+          "name": "feature",
+          "type": "query",
+          "query": "label_values(permission_check_total, feature)",
+          "multi": true,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" }
+        }
+      ]
+    },
+
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "changes(build_info[5m])",
+          "tagKeys": "version,epic",
+          "titleFormat": "Deployment: {{version}}",
+          "textFormat": "Epic: {{epic}}"
+        },
+        {
+          "name": "Tier Changes",
+          "datasource": "Prometheus",
+          "expr": "user_tier_changed_total",
+          "tagKeys": "user_id,old_tier,new_tier",
+          "titleFormat": "Tier Change",
+          "textFormat": "User {{user_id}}: {{old_tier}} → {{new_tier}}"
+        }
+      ]
+    },
+
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m"],
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d"]
+    }
+  }
+}

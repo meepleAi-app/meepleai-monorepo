@@ -20,6 +20,8 @@ permissions:
   contents: read
   packages: write
   id-token: write  # For OIDC auth to cloud providers
+  checks: write     # Required by ci.yml reusable workflow
+  pull-requests: write  # Required by ci.yml reusable workflow
 
 env:
   REGISTRY: ghcr.io
@@ -31,7 +33,7 @@ jobs:
   # Run tests before deploy (unless skipped for emergency)
   test:
     name: Pre-deploy Tests
-    if: inputs.skip_tests != 'true'
+    if: github.event_name == 'push' || inputs.skip_tests != 'true'
     uses: ./.github/workflows/ci.yml
     secrets: inherit
 
@@ -40,7 +42,7 @@ jobs:
     name: Build Images
     runs-on: ubuntu-latest
     needs: [test]
-    if: always() && (needs.test.result == 'success' || inputs.skip_tests == 'true')
+    if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == 'true'))
     outputs:
       api_image: ${{ steps.meta-api.outputs.tags }}
       web_image: ${{ steps.meta-web.outputs.tags }}

@@ -147,5 +147,5 @@ dotnet test --collect:"XPlat Code Coverage"
 ## Related Documentation
 
 - [Codecov Docs](https://docs.codecov.com/)
-- [CI/CD Pipeline](./CI_CD_PIPELINE.md)
+- [CI/CD Pipeline](./ci-cd-pipeline.md)
 - [Testing Guide](./README.md)

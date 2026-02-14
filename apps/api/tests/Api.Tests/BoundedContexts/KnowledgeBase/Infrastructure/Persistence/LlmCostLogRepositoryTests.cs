@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", TestCategories.Unit)]
+[Trait("Category", TestCategories.Integration)]
 public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;

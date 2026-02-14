@@ -23,9 +23,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
-import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
+// Dynamic import to prevent DOMMatrix SSR error (Issue #4133)
+const PdfViewerModal = dynamic(
+  () => import('@/components/pdf/PdfViewerModal').then(mod => ({ default: mod.PdfViewerModal })),
+  { ssr: false }
+);
 import { api } from '@/lib/api';
 import { useChatStore } from '@/store/chat/store';
 import { Game, ChatThread } from '@/types';

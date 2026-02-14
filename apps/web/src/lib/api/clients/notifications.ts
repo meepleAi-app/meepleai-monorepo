@@ -13,10 +13,12 @@ import {
   GetUnreadCountResponseSchema,
   MarkAllNotificationsReadResponseSchema,
   MarkNotificationReadResponseSchema,
+  NotificationPreferencesSchema,
   type GetUnreadCountResponse,
   type MarkAllNotificationsReadResponse,
   type MarkNotificationReadResponse,
   type NotificationDto,
+  type NotificationPreferences,
 } from '../schemas/notifications.schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -30,6 +32,8 @@ export interface NotificationsClient {
   getUnreadCount(): Promise<number>;
   markNotificationRead(notificationId: string): Promise<boolean>;
   markAllNotificationsRead(): Promise<number>;
+  getPreferences(): Promise<NotificationPreferences>;
+  updatePreferences(prefs: Omit<NotificationPreferences, 'userId'>): Promise<void>;
 }
 
 export interface GetNotificationsParams {
@@ -106,6 +110,24 @@ export function createNotificationsClient({
         MarkAllNotificationsReadResponseSchema
       );
       return data?.updatedCount ?? 0;
+    },
+
+    /**
+     * Get notification preferences for authenticated user
+     * Issue #4220: Multi-channel notification configuration
+     */
+    async getPreferences(): Promise<NotificationPreferences> {
+      const data = await httpClient.get('/api/v1/notifications/preferences', NotificationPreferencesSchema);
+      if (!data) throw new Error('Failed to fetch preferences');
+      return data;
+    },
+
+    /**
+     * Update notification preferences
+     * Issue #4220: Multi-channel notification configuration
+     */
+    async updatePreferences(prefs: Omit<NotificationPreferences, 'userId'>): Promise<void> {
+      await httpClient.put('/api/v1/notifications/preferences', prefs);
     },
   };
 }

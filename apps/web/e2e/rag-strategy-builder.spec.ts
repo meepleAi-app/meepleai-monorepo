@@ -1,6 +1,7 @@
 /**
  * E2E Test: RAG Visual Strategy Builder
  * Issue #3468
+ * @slow - 135 test cases, complex drag-and-drop interactions
  *
  * Tests for the RAG Pipeline Builder visual interface:
  * 1. Block Palette - drag blocks to canvas

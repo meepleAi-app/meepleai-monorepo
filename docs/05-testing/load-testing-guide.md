@@ -486,6 +486,6 @@ See [Performance Baselines](./performance-baselines.md) for established baseline
 ## See Also
 
 - [Performance Benchmarks](./performance-benchmarks.md) - Test suite performance
-- [CI/CD Pipeline](./CI_CD_PIPELINE.md) - CI integration details
+- [CI/CD Pipeline](./ci-cd-pipeline.md) - CI integration details
 - [Grafana Dashboards](../../infra/monitoring/grafana/dashboards/) - Monitoring setup
 - [k6 Documentation](https://k6.io/docs/) - Official k6 documentation

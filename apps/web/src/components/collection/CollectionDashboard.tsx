@@ -619,20 +619,27 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
   // Map library entries to MeepleCard format (CollectionGame type)
   const games = useMemo(() => {
     if (!libraryData?.items) return [];
-    return libraryData.items.map(entry => ({
-      id: entry.gameId,
-      title: entry.gameTitle,
-      thumbnailUrl: entry.gameIconUrl ?? undefined,
-      imageUrl: entry.gameImageUrl ?? undefined,
-      yearPublished: entry.gameYearPublished ?? undefined,
-      addedAt: entry.addedAt,
-      // These fields are not in UserLibraryEntry, need API enhancement
-      // For now, provide sensible defaults
-      playCount: 0,
-      hasPdf: entry.hasPdfDocuments,
-      hasActiveChat: false,
-      chatCount: 0,
-    }));
+    return libraryData.items.map(entry => {
+      const stateToStatus: Record<string, 'owned' | 'wishlisted' | 'borrowed'> = {
+        Owned: 'owned',
+        Nuovo: 'owned',
+        Wishlist: 'wishlisted',
+        InPrestito: 'borrowed',
+      };
+      return {
+        id: entry.gameId,
+        title: entry.gameTitle,
+        thumbnailUrl: entry.gameIconUrl ?? undefined,
+        imageUrl: entry.gameImageUrl ?? undefined,
+        yearPublished: entry.gameYearPublished ?? undefined,
+        addedAt: entry.addedAt,
+        playCount: 0,
+        hasPdf: entry.hasPdfDocuments,
+        hasActiveChat: false,
+        chatCount: 0,
+        status: stateToStatus[entry.currentState] ?? 'owned',
+      };
+    });
   }, [libraryData]);
 
   return (
@@ -717,6 +724,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
                     title={game.title}
                     imageUrl={game.imageUrl}
                     variant={viewMode === 'list' ? 'list' : 'grid'}
+                    status={game.status}
                     metadata={[
                       { label: 'Year', value: game.yearPublished?.toString() },
                       { label: 'Plays', value: game.playCount.toString() },

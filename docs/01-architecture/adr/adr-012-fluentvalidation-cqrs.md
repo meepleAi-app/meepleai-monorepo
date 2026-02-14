@@ -84,111 +84,35 @@ Request Flow with Validation:
 
 #### 1. FluentValidation Validators
 
-**Example: LoginCommandValidator**
-```csharp
-public class LoginCommandValidator : AbstractValidator<LoginCommand>
-{
-    public LoginCommandValidator()
-    {
-        RuleFor(x => x.Email)
-            .NotEmpty()
-            .WithMessage("Email is required")
-            .EmailAddress()
-            .WithMessage("Invalid email format")
-            .MaximumLength(256)
-            .WithMessage("Email must not exceed 256 characters");
+**Pattern**: Inherit `AbstractValidator<TCommand>`, define rules with `RuleFor()`
 
-        RuleFor(x => x.Password)
-            .NotEmpty()
-            .WithMessage("Password is required")
-            .MinimumLength(8)
-            .WithMessage("Password must be at least 8 characters")
-            .MaximumLength(128)
-            .WithMessage("Password must not exceed 128 characters");
-    }
-}
-```
+**Example rules**:
+- Email: NotEmpty, EmailAddress, MaxLength(256)
+- Password: NotEmpty, MinLength(8), MaxLength(128)
+- Custom validation: Must(), When(), DependentRules()
+
+**Implementation**: See validator classes in `BoundedContexts/{Context}/Application/Commands/Validators/`
 
 #### 2. ValidationBehavior Pipeline
 
-```csharp
-public class ValidationBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
-{
-    private readonly IEnumerable<IValidator<TRequest>> _validators;
-    private readonly ILogger<ValidationBehavior<TRequest, TResponse>> _logger;
+**Purpose**: MediatR pipeline behavior that intercepts all commands/queries before handler execution
 
-    public ValidationBehavior(
-        IEnumerable<IValidator<TRequest>> validators,
-        ILogger<ValidationBehavior<TRequest, TResponse>> logger)
-    {
-        _validators = validators;
-        _logger = logger;
-    }
+**Logic**:
+1. Find all `IValidator<TRequest>` implementations
+2. Execute validation asynchronously (parallel)
+3. Collect failures
+4. Throw `ValidationException` if any failures
+5. Continue to handler if valid
 
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
-    {
-        if (!_validators.Any())
-        {
-            return await next();
-        }
-
-        var context = new ValidationContext<TRequest>(request);
-
-        var validationResults = await Task.WhenAll(
-            _validators.Select(v => v.ValidateAsync(context, cancellationToken))
-        );
-
-        var failures = validationResults
-            .SelectMany(r => r.Errors)
-            .Where(f => f != null)
-            .ToList();
-
-        if (failures.Any())
-        {
-            _logger.LogWarning(
-                "Validation failed for {RequestType}: {Errors}",
-                typeof(TRequest).Name,
-                string.Join("; ", failures.Select(f => f.ErrorMessage))
-            );
-
-            throw new ValidationException(failures);
-        }
-
-        return await next();
-    }
-}
-```
+**Implementation**: See `ValidationBehavior.cs` in `Infrastructure/Behaviors/`
 
 #### 3. Global Exception Handler
 
-```csharp
-// ApiExceptionHandlerMiddleware.cs
-catch (FluentValidation.ValidationException ex)
-{
-    context.Response.StatusCode = 422; // Unprocessable Entity
+**Middleware**: Catches `ValidationException`, returns RFC 7807 Problem Details (422 status)
 
-    var errors = ex.Errors
-        .GroupBy(e => e.PropertyName)
-        .ToDictionary(
-            g => g.Key,
-            g => g.Select(e => e.ErrorMessage).ToArray()
-        );
+**Response format**: Field-level errors grouped by property name
 
-    await context.Response.WriteAsJsonAsync(new
-    {
-        type = "ValidationError",
-        title = "One or more validation errors occurred",
-        status = 422,
-        errors = errors,
-        traceId = context.TraceIdentifier
-    });
-}
-```
+**Implementation**: See `ApiExceptionHandlerMiddleware.cs` exception handling
 
 ---
 
@@ -272,23 +196,7 @@ catch (FluentValidation.ValidationException ex)
 - Reusable validators (composition)
 - Less boilerplate in handlers
 
-✅ **Testability**:
-```csharp
-[Fact]
-public void LoginCommandValidator_ShouldFailForEmptyEmail()
-{
-    // Arrange
-    var validator = new LoginCommandValidator();
-    var command = new LoginCommand(Email: "", Password: "validpassword");
-
-    // Act
-    var result = validator.Validate(command);
-
-    // Assert
-    Assert.False(result.IsValid);
-    Assert.Contains(result.Errors, e => e.PropertyName == "Email");
-}
-```
+✅ **Testability**: Validators easily unit tested in isolation (no infrastructure dependencies)
 
 ### Negative
 
@@ -395,47 +303,26 @@ public void LoginCommandValidator_ShouldFailForEmptyEmail()
 ## Testing Strategy
 
 ### Unit Tests (Validators)
-```csharp
-public class LoginCommandValidatorTests
-{
-    private readonly LoginCommandValidator _validator = new();
+**Pattern**: Instantiate validator, test invalid inputs return expected error messages
 
-    [Theory]
-    [InlineData("", "Password must be at least 8 characters")]
-    [InlineData("short", "Password must be at least 8 characters")]
-    [InlineData("a".PadRight(129, 'a'), "Password must not exceed 128 characters")]
-    public void Validate_Password_ShouldFailForInvalidPassword(string password, string expectedError)
-    {
-        // Arrange
-        var command = new LoginCommand(Email: "test@example.com", Password: password);
+**Test cases**:
+- Empty/null values
+- Format validation (email, regex)
+- Length constraints (min/max)
+- Custom business rules
 
-        // Act
-        var result = _validator.Validate(command);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.ErrorMessage == expectedError);
-    }
-}
-```
+**Example**: See `LoginCommandValidatorTests.cs` for Theory-based test patterns
 
 ### Integration Tests (Pipeline)
-```csharp
-[Fact]
-public async Task LoginEndpoint_ShouldReturn422ForInvalidEmail()
-{
-    // Arrange
-    var request = new { email = "not-an-email", password = "validpassword123" };
+**Pattern**: HTTP request with invalid data → verify 422 status + field-level errors in response
 
-    // Act
-    var response = await _client.PostAsJsonAsync("/api/v1/auth/login", request);
+**Test cases**:
+- Malformed input (invalid email)
+- Missing required fields
+- Out-of-range values
+- Cross-field validation
 
-    // Assert
-    Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-    var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
-    Assert.Contains("Email", problem.Errors.Keys);
-}
-```
+**Example**: See endpoint integration tests for complete validation flow
 
 ---
 
@@ -470,21 +357,12 @@ public async Task LoginEndpoint_ShouldReturn422ForInvalidEmail()
 ## Dependencies
 
 **NuGet Packages**:
-```xml
-<PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
-<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.3.0" />
-```
+- `FluentValidation.AspNetCore` v11.3.0
+- `FluentValidation.DependencyInjectionExtensions` v11.3.0
 
-**Registration**:
-```csharp
-// Program.cs
-builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
-builder.Services.AddMediatR(cfg =>
-{
-    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
-    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-});
-```
+**Registration** (`Program.cs`):
+- `AddValidatorsFromAssembly()`: Auto-register all validators
+- `AddBehavior<ValidationBehavior>()`: Register pipeline behavior for MediatR
 
 ---
 

@@ -39,6 +39,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import { useEntityActions } from '@/hooks/use-entity-actions';
 import { cn } from '@/lib/utils';
 
 import { MeepleCard, type MeepleCardMetadata } from './meeple-card';
@@ -56,6 +57,7 @@ export interface CarouselGame {
   ratingMax?: number;
   metadata?: MeepleCardMetadata[];
   badge?: string;
+  description?: string;
 }
 
 /**
@@ -105,6 +107,8 @@ export interface GameCarouselProps {
   sort?: CarouselSortValue;
   /** Callback when sort changes */
   onSortChange?: (sort: CarouselSortValue) => void;
+  /** Enable flip on carousel cards */
+  flippable?: boolean;
   /** Additional CSS classes */
   className?: string;
   /** Test ID */
@@ -531,6 +535,7 @@ export const GameCarousel = React.memo(function GameCarousel({
   defaultSort = 'rating',
   sort: controlledSort,
   onSortChange,
+  flippable,
   className,
   'data-testid': testId,
 }: GameCarouselProps) {
@@ -542,6 +547,17 @@ export const GameCarousel = React.memo(function GameCarousel({
   const [internalSort, setInternalSort] = useState<CarouselSortValue>(defaultSort);
   const containerRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Issue #4040: Generate entity actions for current visible card
+  // Only generate for center card to avoid unnecessary hook calls
+  // Guard: Use first game's ID as fallback to prevent empty string (broken links)
+  // eslint-disable-next-line security/detect-object-injection -- currentIndex is controlled by useState, always valid array index
+  const centerGame = games[currentIndex];
+  const fallbackId = games.length > 0 ? (centerGame?.id || games[0]?.id || 'placeholder') : 'placeholder';
+  const centerEntityActions = useEntityActions({
+    entity: 'game',
+    id: fallbackId,
+  });
 
   // Support controlled and uncontrolled sort modes
   const currentSort = controlledSort ?? internalSort;
@@ -780,6 +796,9 @@ export const GameCarousel = React.memo(function GameCarousel({
                     metadata={game.metadata}
                     badge={game.badge}
                     onClick={() => handleCardClick(game, position)}
+                    flippable={flippable && !!game.description}
+                    flipData={flippable && game.description ? { description: game.description } : undefined}
+                    flipTrigger="button"
                     className={cn(
                       // Enhanced shadow for center card
                       isCenter && [
@@ -790,6 +809,11 @@ export const GameCarousel = React.memo(function GameCarousel({
                       ]
                     )}
                     data-testid={`carousel-card-${position.index}`}
+                    // Issue #4040: Quick actions + Info button (only on center card)
+                    entityQuickActions={isCenter ? centerEntityActions.quickActions : undefined}
+                    showInfoButton={isCenter}
+                    infoHref={isCenter ? `/games/${game.id}` : undefined}
+                    infoTooltip="Vai al dettaglio"
                   />
                 </div>
               </div>

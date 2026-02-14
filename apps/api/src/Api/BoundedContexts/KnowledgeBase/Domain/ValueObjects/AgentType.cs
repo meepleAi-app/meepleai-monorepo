@@ -6,8 +6,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// <remarks>
 /// AgentType determines the agent's primary capability and use case.
 /// Design Decision (ADR-004): Knowledge-domain agents reside in KnowledgeBase context.
+/// Issue #3708: Made public for use in AgentDefinition (AI Lab templates).
 /// </remarks>
-internal sealed record AgentType
+public sealed record AgentType
 {
     /// <summary>
     /// RAG agent: Hybrid search + LLM generation for general questions.

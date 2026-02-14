@@ -6,13 +6,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition
 /// <summary>
 /// Command to create a new agent definition.
 /// Issue #3808 (Epic #3687): AgentDefinition management in AI Lab.
+/// Issue #3708: Extended with Type and Strategy fields for full template specification.
 /// </summary>
 public sealed record CreateAgentDefinitionCommand(
     string Name,
     string Description,
+    string Type,
     string Model,
     int MaxTokens,
     float Temperature,
+    string? StrategyName = null,
+    Dictionary<string, object>? StrategyParameters = null,
     List<PromptTemplateDto>? Prompts = null,
     List<ToolConfigDto>? Tools = null
 ) : IRequest<AgentDefinitionDto>;

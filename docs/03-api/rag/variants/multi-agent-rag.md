@@ -1,221 +1,228 @@
 # Multi-Agent RAG
 
-## Quick Stats
+**Stats**: 12,900 tokens/query | $0.043/query (mixed models) | +20% accuracy | 5-10s latency | **Priority: P2**
 
-| Metric | Value |
-|--------|-------|
-| **Tokens/Query** | 12,900 |
-| **Cost/Query** | $0.043–$0.095 |
-| **Accuracy** | +20% above naive |
-| **Latency** | 5–10s |
-| **Priority** | **P2** - PRECISE Tier |
-
----
-
-## Architecture Diagram
+## Architecture
 
 ```
-Query Input
+Shared Retrieval: 5,000 tokens (10 chunks)
     ↓
-[Shared Retrieval] (all agents use same docs)
-    └─ 5,000 tokens (10 chunks)
+┌─────────────────────────────────────────────────────────┐
+│ Agent 1: Retrieval Agent (Haiku)                        │
+│ Input: 1,450 tokens | Output: 200 tokens                │
+│ Role: Analyze query, plan retrieval strategy            │
+└─────────────────────────────────────────────────────────┘
     ↓
-[Agent 1: Analyzer] Claude Haiku
-    ├─ Analyze game state and rules
-    └─ 2,550 input + 400 output
+┌─────────────────────────────────────────────────────────┐
+│ Agent 2: Analysis Agent (Haiku)                         │
+│ Input: 3,250 tokens (state + docs) | Output: 400 tokens │
+│ Role: Extract relevant rules, identify patterns         │
+└─────────────────────────────────────────────────────────┘
     ↓
-[Agent 2: Strategist] Claude Opus
-    ├─ Generate recommendation
-    └─ 2,950 input + 500 output
+┌─────────────────────────────────────────────────────────┐
+│ Agent 3: Synthesis Agent (Sonnet)                       │
+│ Input: 3,650 tokens | Output: 500 tokens                │
+│ Role: Synthesize comprehensive answer                   │
+└─────────────────────────────────────────────────────────┘
     ↓
-[Agent 3: Validator] Claude Haiku
-    ├─ Cross-check against rules
-    └─ 2,950 input + 300 output
-    ↓
-[Agent 4: Synthesizer] (Optional)
-    ├─ Reconcile agent outputs
-    └─ ~3,000 tokens
-    ↓
-Answer (multi-agent consensus)
+┌─────────────────────────────────────────────────────────┐
+│ Agent 4: Validation Agent (Haiku)                       │
+│ Input: 3,150 tokens | Output: 300 tokens                │
+│ Role: Verify answer correctness, check citations        │
+└─────────────────────────────────────────────────────────┘
 ```
-
----
 
 ## How It Works
 
-1. **Shared Retrieval**: All agents work with same documents
-2. **Agent 1 (Analyzer)**: Breaks down problem
-3. **Agent 2 (Strategist)**: Generates recommendation (best model)
-4. **Agent 3 (Validator)**: Cross-checks against rules
-5. **Synthesis**: Judge model reconciles if conflicts
-6. **Output**: Final answer with reasoning from multiple agents
+Multi-Agent RAG decomposes the RAG pipeline into specialized agents, each optimized for a specific subtask. Unlike monolithic approaches where one LLM handles everything, multi-agent systems leverage task-specific expertise, cheaper models for simple tasks, and parallel execution where possible.
 
----
+The four-agent architecture: (1) **Retrieval Agent** analyzes query complexity and determines retrieval strategy (which indexes, how many chunks, filters), (2) **Analysis Agent** extracts relevant information from retrieved chunks and identifies patterns, (3) **Synthesis Agent** (premium model) combines findings into a coherent, comprehensive answer, (4) **Validation Agent** verifies accuracy, checks citations, and assigns confidence score.
+
+Key advantages: (1) cheaper models (Haiku at $0.25/1M input) handle 75% of tokens (agents 1,2,4), premium model (Sonnet) only for synthesis, (2) specialized prompts per agent improve task performance, (3) parallel execution of independent agents (1+2 can run concurrently).
+
+For complex strategic queries in board games (e.g., "Optimal 4-player opening strategy with River expansion"), multi-agent RAG achieves 95-98% accuracy by systematically analyzing rules, strategies, expansions, and player interactions.
 
 ## Token Breakdown
 
-**Shared Retrieval**: 5,000 tokens (10 chunks, used by all)
+**Shared Retrieval**: 5,000 tokens (10 chunks, shared across agents)
 
-**Analyzer Agent**:
-- Input: 500 + 50 + 2,000 = 2,550 tokens
-- Output: 400 tokens (analysis)
+**Agent 1 - Retrieval Agent** (Haiku):
+- Input: 400 (system) + 50 (query) + 1,000 (state) = 1,450 tokens
+- Output: 200 tokens (retrieval plan)
 
-**Strategist Agent**:
-- Input: 500 + 50 + 400 (analyzer output) + 2,000 = 2,950 tokens
-- Output: 500 tokens (recommendation)
+**Agent 2 - Analysis Agent** (Haiku):
+- Input: 500 + 50 + 200 (Agent 1 output) + 2,500 (docs) = 3,250 tokens
+- Output: 400 tokens (analysis report)
 
-**Validator Agent**:
-- Input: 500 + 50 + 900 (agents 1+2) + 1,500 = 2,950 tokens
-- Output: 300 tokens
+**Agent 3 - Synthesis Agent** (Sonnet - premium):
+- Input: 500 + 50 + 600 (Agents 1+2 outputs) + 2,500 (docs) = 3,650 tokens
+- Output: 500 tokens (synthesized answer)
 
-**Total Input**: 2,550 + 2,950 + 2,950 = 8,450 tokens
-**Total Output**: 400 + 500 + 300 = 1,200 tokens
-**Total**: 9,650 tokens
+**Agent 4 - Validation Agent** (Haiku):
+- Input: 500 + 50 + 1,100 (previous outputs) + 1,500 (docs) = 3,150 tokens
+- Output: 300 tokens (validation report)
 
-**Cost**:
-- Analyzer (Haiku): $0.005
-- Strategist (Opus): $0.038
-- Validator (Haiku): $0.005
-- **Total**: ~$0.048 per query
-
----
+**Total Input**: 1,450 + 3,250 + 3,650 + 3,150 = **11,500 tokens**
+**Total Output**: 200 + 400 + 500 + 300 = **1,400 tokens**
+**Grand Total**: **12,900 tokens**
 
 ## When to Use
 
-✅ **Best For**:
-- Complex strategic queries
-- Rule contradictions needing validation
-- PRECISE tier (high value)
-- When accuracy > cost
-
-❌ **Not For**:
-- Simple lookups
-- Budget-constrained
-- Latency-critical (<2s)
-
----
+- **PRECISE tier** for Editor/Admin users on complex strategic queries
+- **Controversial rules** requiring multi-perspective analysis and validation
+- **High-stakes answers** where 95%+ accuracy justifies 6.5x token cost vs naive RAG
 
 ## Code Example
 
 ```python
-class MultiAgentRag:
-    async def execute_multi_agent(
-        self,
-        query: str,
-        docs: list[Document]
-    ) -> MultiAgentResponse:
-        """Multi-agent collaboration"""
+from anthropic import Anthropic
+from typing import Dict, List
 
-        # Parallel agent execution
-        analysis, strategy = await asyncio.gather(
-            self.analyzer_agent.analyze(query, docs),
-            self.strategist_agent.strategize(query, docs, analysis)
-        )
+client = Anthropic(api_key="...")
 
-        # Validator validates strategy
-        validation = await self.validator_agent.validate(
-            strategy,
-            docs,
-            query
-        )
+# Agent configurations
+AGENTS = {
+    "retrieval": {"model": "claude-3-5-haiku-20241022", "max_tokens": 200},
+    "analysis": {"model": "claude-3-5-haiku-20241022", "max_tokens": 400},
+    "synthesis": {"model": "claude-3-5-sonnet-20241022", "max_tokens": 500},
+    "validation": {"model": "claude-3-5-haiku-20241022", "max_tokens": 300}
+}
 
-        # If conflicts, judge reconciles
-        if validation.has_conflicts:
-            final_answer = await self.judge_agent.judge(
-                analysis,
-                strategy,
-                validation.issues
-            )
-        else:
-            final_answer = strategy
+def multi_agent_rag(query: str) -> Dict:
+    """Multi-agent RAG with specialized agents for each phase."""
 
-        return MultiAgentResponse(
-            analysis=analysis,
-            strategy=strategy,
-            validation=validation,
-            final_answer=final_answer,
-            confidence=validation.confidence
-        )
+    # Shared retrieval (executed once)
+    query_embedding = get_embedding(query)
+    chunks = vector_search(query_embedding, top_k=10)
+    context = "\n\n".join([c['text'] for c in chunks])
 
-    async def analyzer_agent(self, query, docs):
-        """Analyze and break down problem"""
-        prompt = f"""
-        Analyze this game rules question:
-        {query}
+    # Agent 1: Retrieval Strategy
+    retrieval_response = client.messages.create(
+        **AGENTS['retrieval'],
+        messages=[{
+            "role": "user",
+            "content": f"""Analyze this query and assess retrieval quality.
 
-        Rules: {self.format_docs(docs)}
+Query: {query}
+Retrieved chunks: {len(chunks)}
 
-        Provide structured analysis:
-        1. What is being asked?
-        2. Which rules apply?
-        3. What are the options?
-        """
-        return await self.llm_haiku.generate(prompt)
+Evaluate:
+1. Are the chunks relevant?
+2. Is additional retrieval needed?
+3. What metadata filters would improve results?
 
-    async def strategist_agent(self, query, docs, analysis):
-        """Generate strategic recommendation"""
-        prompt = f"""
-        Based on this analysis:
-        {analysis}
+Output JSON: {{"relevant": true/false, "suggestions": "..."}}
+"""
+        }]
+    )
 
-        Question: {query}
-        Rules: {self.format_docs(docs)}
+    # Agent 2: Rule Analysis
+    analysis_response = client.messages.create(
+        **AGENTS['analysis'],
+        messages=[{
+            "role": "user",
+            "content": f"""Extract and analyze relevant rules.
 
-        Provide strategic recommendation with reasoning.
-        """
-        return await self.llm_opus.generate(prompt)
+Query: {query}
+Context: {context[:2000]}...
 
-    async def validator_agent(self, strategy, docs, query):
-        """Validate strategy against rules"""
-        prompt = f"""
-        Validate this strategy:
-        {strategy}
+Extract:
+1. Primary rules relevant to query
+2. Edge cases or exceptions
+3. Related mechanics
 
-        Against these rules:
-        {self.format_docs(docs)}
+Format as structured analysis.
+"""
+        }]
+    )
 
-        Question: {query}
+    # Agent 3: Answer Synthesis
+    synthesis_response = client.messages.create(
+        **AGENTS['synthesis'],
+        messages=[{
+            "role": "user",
+            "content": f"""Synthesize comprehensive answer.
 
-        Identify any rule violations or ambiguities.
-        """
-        return await self.llm_haiku.generate(prompt)
+Query: {query}
+Retrieval Assessment: {retrieval_response.content[0].text}
+Rule Analysis: {analysis_response.content[0].text}
+Full Context: {context}
+
+Provide a comprehensive, well-structured answer with citations.
+"""
+        }]
+    )
+
+    # Agent 4: Validation
+    validation_response = client.messages.create(
+        **AGENTS['validation'],
+        messages=[{
+            "role": "user",
+            "content": f"""Validate answer correctness.
+
+Query: {query}
+Answer: {synthesis_response.content[0].text}
+Context: {context[:1500]}...
+
+Check:
+1. Are all claims supported by context?
+2. Are citations accurate?
+3. Are there contradictions?
+
+Output: {{"confidence": 0-100, "issues": [...], "verified": true/false}}
+"""
+        }]
+    )
+
+    import json
+    validation = json.loads(validation_response.content[0].text)
+
+    return {
+        "answer": synthesis_response.content[0].text,
+        "confidence": validation['confidence'],
+        "validated": validation['verified'],
+        "agent_outputs": {
+            "retrieval": retrieval_response.content[0].text,
+            "analysis": analysis_response.content[0].text,
+            "validation": validation_response.content[0].text
+        }
+    }
 ```
-
----
-
-## Pros/Cons
-
-| Aspect | Pros | Cons |
-|--------|------|------|
-| **Accuracy** | +20% (best in class) | 12,900 tokens (6-7x) |
-| **Reasoning** | Transparent (agent trace) | $0.043-0.095 per query |
-| **Latency** | 5-10s (slower) | Complex orchestration |
-| **Reliability** | Validation built-in | Requires 3+ models |
-
----
 
 ## Integration
 
-**Tier Level**: PRECISE tier only
+Multi-Agent RAG integrates as an **advanced flow pattern** in TOMAC-RAG's Modular framework, replacing Layers 3-6 with a specialized agent pipeline.
 
-**Agent Selection**:
-- Analyzer: Claude Haiku (cheap, fast)
-- Strategist: Claude Opus (best reasoning)
-- Validator: Claude Haiku (validation)
-- Judge: Claude Sonnet (if needed)
+**Standard Flow** (Single LLM):
+```
+Layer 3: Retrieve → Layer 4: CRAG → Layer 5: Generate → Layer 6: Validate
+```
 
-**Parallel Execution**:
-- Analyzer + Strategist can run parallel
-- Validator sequential (needs both outputs)
-- Saves ~1-2s latency vs sequential
+**Multi-Agent Flow** (THIS VARIANT):
+```
+┌─ Agent 1: Retrieval Strategy ─┐
+│  (Plan optimal retrieval)      │
+└────────────┬───────────────────┘
+             ↓
+┌─ Agent 2: Analysis ────────────┐  (Can run parallel with Agent 1)
+│  (Extract relevant rules)      │
+└────────────┬───────────────────┘
+             ↓
+┌─ Agent 3: Synthesis ───────────┐
+│  (Premium model for quality)   │
+└────────────┬───────────────────┘
+             ↓
+┌─ Agent 4: Validation ──────────┐
+│  (Verify correctness)          │
+└────────────────────────────────┘
+```
 
----
+**Activation Criteria** (PRECISE tier only):
+- Query complexity score ≥8 (multi-concept, strategic planning)
+- User role: Editor or Admin
+- Query template: `resource_planning`, `strategic_analysis`
 
-## Research Sources
+## Sources
 
-- [Agents of Change: Self-Evolving LLM Agents](https://nbelle1.github.io/agents-of-change/)
-- [Advanced RAG Techniques](https://neo4j.com/blog/genai/advanced-rag-techniques/)
-
----
-
-**Status**: Production-Ready | **MeepleAI Tier**: P2 PRECISE
+- [Multi-Agent RAG Framework](https://www.mdpi.com/2073-431X/14/12/525)
+- [Agentic RAG Patterns](https://www.marktechpost.com/2024/11/25/retrieval-augmented-generation-rag-deep-dive-into-25-different-types-of-rag/)

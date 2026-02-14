@@ -1,25 +1,26 @@
 /**
- * PDF Viewer Component (Issue #3155, #4133)
+ * PDF Viewer Component (Issue #3155, #4133, #4252)
  *
  * Reusable PDF viewer with navigation, zoom, and interactive controls.
  * Supports jump-to-page from external triggers (chat references).
  *
- * Migration: react-pdf → @react-pdf-viewer/core (Issue #4133)
- * - SSR-compatible with proper dynamic imports
- * - No DOMMatrix dependency issues
- * - Modern plugin-based architecture
+ * Uses react-pdf with pdfjs-dist v5 for security (GHSA-wgrm-67xf-hhpq).
  */
 
 'use client';
 
-import { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import { useState, forwardRef, useImperativeHandle, useCallback, useEffect } from 'react';
 
-import { Viewer, Worker } from '@react-pdf-viewer/core';
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
-import { pageNavigationPlugin } from '@react-pdf-viewer/page-navigation';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+import { PdfControls } from './PdfControls';
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 export interface PdfViewerProps {
   /** URL or file path of the PDF to display */
@@ -43,6 +44,12 @@ export interface PdfViewerRef {
   getCurrentPage: () => number;
 }
 
+const DEFAULT_ZOOM = 1.0;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.0;
+const ZOOM_STEP = 0.1;
+const BASE_WIDTH = 800;
+
 export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(function PdfViewer(
   {
     pdfUrl,
@@ -55,61 +62,82 @@ export const PdfViewer = forwardRef<PdfViewerRef, PdfViewerProps>(function PdfVi
   ref
 ) {
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(DEFAULT_ZOOM);
 
-  // Page navigation plugin for programmatic control
-  const pageNavigationPluginInstance = pageNavigationPlugin();
-  const { jumpToPage } = pageNavigationPluginInstance;
+  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  }, []);
 
-  // Default layout plugin for full controls
-  const defaultLayoutPluginInstance = defaultLayoutPlugin({
-    sidebarTabs: () => [],
-  });
-
-  // Use appropriate plugin based on showControls
-  const plugins = showControls
-    ? [defaultLayoutPluginInstance]
-    : [pageNavigationPluginInstance];
+  const goToPage = useCallback((page: number) => {
+    const clamped = Math.max(1, Math.min(page, numPages));
+    setCurrentPage(clamped);
+    onPageChange?.(clamped);
+  }, [numPages, onPageChange]);
 
   // Expose imperative handle for external control
   useImperativeHandle(ref, () => ({
-    jumpToPage: (page: number) => {
-      jumpToPage(page - 1); // @react-pdf-viewer uses 0-indexed
-    },
+    jumpToPage: (page: number) => goToPage(page),
     getCurrentPage: () => currentPage,
-  }));
-
-  // Handle page change events
-  const handlePageChange = (e: { currentPage: number }) => {
-    const pageNum = e.currentPage + 1; // Convert to 1-indexed
-    setCurrentPage(pageNum);
-    onPageChange?.(pageNum);
-  };
+  }), [goToPage, currentPage]);
 
   // Jump to highlighted page from external trigger
   useEffect(() => {
     if (highlightedPage && highlightedPage !== currentPage) {
-      jumpToPage(highlightedPage - 1); // 0-indexed
+      goToPage(highlightedPage);
     }
-  }, [highlightedPage, currentPage, jumpToPage]);
+  }, [highlightedPage, currentPage, goToPage]);
 
   // Jump to initial page on mount
   useEffect(() => {
     if (initialPage > 1) {
-      const timer = setTimeout(() => {
-        jumpToPage(initialPage - 1); // 0-indexed
-      }, 100);
-      return () => clearTimeout(timer);
+      setCurrentPage(initialPage);
     }
-  }, [initialPage, jumpToPage]);
+  }, [initialPage]);
+
+  const handleZoomIn = useCallback(() => {
+    setZoom(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prev => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setZoom(DEFAULT_ZOOM);
+  }, []);
+
+  const handleZoomFitWidth = useCallback(() => {
+    setZoom(DEFAULT_ZOOM);
+  }, []);
 
   return (
     <div className={`pdf-viewer-container flex flex-col h-full ${className}`}>
-      <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.0.279/build/pdf.worker.min.js">
-        <Viewer fileUrl={pdfUrl} plugins={plugins} onPageChange={handlePageChange} />
-      </Worker>
+      {showControls && numPages > 0 && (
+        <PdfControls
+          currentPage={currentPage}
+          totalPages={numPages}
+          zoom={zoom}
+          onPageChange={goToPage}
+          onNextPage={() => goToPage(currentPage + 1)}
+          onPreviousPage={() => goToPage(currentPage - 1)}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomFitWidth={handleZoomFitWidth}
+          onZoomReset={handleZoomReset}
+          pdfUrl={pdfUrl}
+        />
+      )}
+      <div className="flex-1 overflow-auto flex justify-center">
+        <Document file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
+          <Page
+            pageNumber={currentPage}
+            width={BASE_WIDTH * zoom}
+          />
+        </Document>
+      </div>
     </div>
   );
 });
 
 export default PdfViewer;
-

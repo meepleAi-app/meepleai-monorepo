@@ -238,12 +238,12 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
             : SortDirection.Descending;
 
         var query = new GetActivityTimelineQuery(
-            session.User!.Id,
-            types,
-            search,
-            Math.Max(0, skip),
-            Math.Clamp(take, 1, 100),
-            sortDirection);
+            UserId: session.User!.Id,
+            Types: types,
+            SearchTerm: search,
+            Skip: Math.Max(0, skip),
+            Take: Math.Clamp(take, 1, 100),
+            Order: sortDirection);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 

@@ -15,6 +15,7 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     public Guid UserId { get; private set; }
     public Guid? GameId { get; private set; }
     public Guid? AgentId { get; private set; } // Issue #2030 - Track which agent was used
+    public string? AgentType { get; private set; } // Issue #4362 - tutor/arbitro/decisore/auto
     public string? Title { get; private set; }
     public ThreadStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -48,7 +49,8 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         Guid userId,
         Guid? gameId = null,
         string? title = null,
-        Guid? agentId = null) : base(id) // Issue #2030 - Positioned after title for backward compatibility
+        Guid? agentId = null,
+        string? agentType = null) : base(id) // Issue #4362 - Added agentType parameter
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty", nameof(userId));
@@ -56,6 +58,7 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         UserId = userId;
         GameId = gameId;
         AgentId = agentId; // Issue #2030
+        AgentType = agentType?.Trim(); // Issue #4362
         Title = title?.Trim();
         Status = ThreadStatus.Active;
         CreatedAt = DateTime.UtcNow;
@@ -97,6 +100,23 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     {
         var sequenceNumber = _messages.Count;
         var message = new ChatMessage(content, ChatMessage.AssistantRole, sequenceNumber);
+        AddMessage(message);
+    }
+
+    /// <summary>
+    /// Adds an assistant message with agent metadata (Issue #4362).
+    /// Used after SSE stream completion to persist the full response with metadata.
+    /// </summary>
+    public void AddAssistantMessageWithMetadata(
+        string content,
+        string? agentType = null,
+        float? confidence = null,
+        string? citationsJson = null,
+        int? tokenCount = null)
+    {
+        var sequenceNumber = _messages.Count;
+        var message = new ChatMessage(content, ChatMessage.AssistantRole, sequenceNumber);
+        message.SetAgentMetadata(agentType, confidence, citationsJson, tokenCount);
         AddMessage(message);
     }
 

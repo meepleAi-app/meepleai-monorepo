@@ -2,6 +2,9 @@
  * Navbar - Responsive navigation header
  * Issue #3288 - Phase 2: Navbar Components
  *
+ * @deprecated Use UnifiedHeader instead. This component is kept for
+ * backward compatibility and will be removed in a future release.
+ *
  * Features:
  * - Responsive layout (mobile/tablet/desktop)
  * - Hamburger menu on mobile

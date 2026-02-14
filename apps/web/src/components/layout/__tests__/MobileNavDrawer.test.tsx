@@ -2,14 +2,19 @@
  * MobileNavDrawer Component Tests (Issue #4064)
  *
  * Tests for mobile navigation drawer with hamburger menu.
+ * Updated for unified navigation system (Issue #4369):
+ * - MobileNavDrawer now uses useNavigationItems hook internally
+ * - No more props-based nav items; mock useCurrentUser for auth state
  */
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { usePathname } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { axe } from 'jest-axe';
-import { LayoutDashboard, Gamepad2, Users, History, Calendar } from 'lucide-react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 
 import { MobileNavDrawer } from '../MobileNavDrawer';
 
@@ -18,93 +23,57 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
+// Mock useCurrentUser hook
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(),
+}));
+
 const mockUsePathname = usePathname as Mock;
+const mockUseCurrentUser = useCurrentUser as Mock;
 
-const MOCK_NAV_ITEMS = [
-  {
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    label: 'Dashboard',
-    ariaLabel: 'Navigate to dashboard',
-  },
-  {
-    href: '/games',
-    icon: Gamepad2,
-    label: 'Catalogo',
-    ariaLabel: 'Navigate to games catalog',
-  },
-  {
-    href: '/agents',
-    icon: Users,
-    label: 'Agenti',
-    ariaLabel: 'Navigate to agents list',
-  },
-  {
-    href: '/chat/new',
-    icon: History,
-    label: 'Chat History',
-    ariaLabel: 'Navigate to chat history',
-  },
-  {
-    href: '/sessions',
-    icon: Calendar,
-    label: 'Sessioni',
-    ariaLabel: 'Navigate to play sessions',
-  },
-];
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  };
+}
 
-const MOCK_LIBRARY_ITEMS = [
-  {
-    href: '/library',
-    label: 'Collezione',
-    ariaLabel: 'Navigate to your game collection',
-  },
-  {
-    href: '/library/private',
-    label: 'Giochi Privati',
-    ariaLabel: 'Navigate to your private games',
-  },
-];
+function renderDrawer() {
+  return render(<MobileNavDrawer />, { wrapper: createWrapper() });
+}
 
 describe('MobileNavDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/dashboard');
+    // Default to authenticated user
+    mockUseCurrentUser.mockReturnValue({
+      data: { id: '1', email: 'test@test.com', role: 'User', displayName: 'Test' },
+      isLoading: false,
+    });
   });
 
   describe('Rendering', () => {
     it('renders hamburger button', () => {
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
       expect(screen.getByTestId('mobile-nav-trigger')).toBeInTheDocument();
     });
 
     it('hamburger button has Menu icon', () => {
-      const { container } = render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
       const button = screen.getByTestId('mobile-nav-trigger');
       const svg = button.querySelector('svg');
       expect(svg).toBeInTheDocument();
     });
 
     it('drawer is closed initially', () => {
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
       expect(screen.queryByTestId('mobile-nav-drawer')).not.toBeInTheDocument();
     });
   });
@@ -112,13 +81,7 @@ describe('MobileNavDrawer', () => {
   describe('Drawer Interaction', () => {
     it('opens drawer on hamburger click', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -126,53 +89,33 @@ describe('MobileNavDrawer', () => {
       expect(screen.getByText('Navigazione')).toBeInTheDocument();
     });
 
-    it('shows all navigation items when open', async () => {
+    it('shows navigation items when open', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
-      expect(screen.getByTestId('mobile-nav-item-dashboard')).toBeInTheDocument();
-      expect(screen.getByTestId('mobile-nav-item-games')).toBeInTheDocument();
-      expect(screen.getByTestId('mobile-nav-item-agents')).toBeInTheDocument();
-      expect(screen.getByTestId('mobile-nav-item-chat-new')).toBeInTheDocument();
-      expect(screen.getByTestId('mobile-nav-item-sessions')).toBeInTheDocument();
+      // Should show at least Dashboard, Catalogo, Chat for authenticated user
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('Catalogo')).toBeInTheDocument();
+      expect(screen.getByText('Chat')).toBeInTheDocument();
     });
 
     it('closes drawer on Escape key', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
       expect(screen.getByTestId('mobile-nav-drawer')).toBeInTheDocument();
 
       await user.keyboard('{Escape}');
 
-      // Drawer should close
       expect(screen.queryByTestId('mobile-nav-drawer')).not.toBeInTheDocument();
     });
 
     it('closes drawer on Chiudi button click', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
       await user.click(screen.getByTestId('mobile-nav-close'));
@@ -184,13 +127,7 @@ describe('MobileNavDrawer', () => {
   describe('Library Expandable Section', () => {
     it('shows Library toggle button', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -199,64 +136,40 @@ describe('MobileNavDrawer', () => {
 
     it('expands library section on toggle click', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
       await user.click(screen.getByTestId('mobile-library-toggle'));
 
-      expect(screen.getByTestId('mobile-library-item-library')).toBeInTheDocument();
-      expect(screen.getByTestId('mobile-library-item-private')).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-library-item-collection')).toBeInTheDocument();
     });
 
     it('collapses library section on second toggle click', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
       await user.click(screen.getByTestId('mobile-library-toggle'));
-      expect(screen.getByTestId('mobile-library-item-library')).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-library-item-collection')).toBeInTheDocument();
 
       await user.click(screen.getByTestId('mobile-library-toggle'));
-      expect(screen.queryByTestId('mobile-library-item-library')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mobile-library-item-collection')).not.toBeInTheDocument();
     });
 
     it('library section expanded by default when library route active', async () => {
+      mockUsePathname.mockReturnValue('/library');
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={true}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
       // Should be expanded without clicking toggle
-      expect(screen.getByTestId('mobile-library-item-library')).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-library-item-collection')).toBeInTheDocument();
     });
 
     it('rotates chevron icon when expanded', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
       await user.click(screen.getByTestId('mobile-library-toggle'));
@@ -271,13 +184,7 @@ describe('MobileNavDrawer', () => {
     it('highlights active navigation item', async () => {
       mockUsePathname.mockReturnValue('/agents');
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -289,13 +196,7 @@ describe('MobileNavDrawer', () => {
     it('highlights Library toggle when library route active', async () => {
       mockUsePathname.mockReturnValue('/library');
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={true}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -306,15 +207,10 @@ describe('MobileNavDrawer', () => {
     it('highlights active library sub-item', async () => {
       mockUsePathname.mockReturnValue('/library/private');
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={true}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
+      // Library should auto-expand since /library/* is active
 
       const privateLink = screen.getByTestId('mobile-library-item-private');
       expect(privateLink).toHaveClass('text-[hsl(262_83%_62%)]');
@@ -325,13 +221,7 @@ describe('MobileNavDrawer', () => {
   describe('Accessibility', () => {
     it('has no axe violations when drawer open', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      const { container } = render(<MobileNavDrawer />, { wrapper: createWrapper() });
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -341,13 +231,7 @@ describe('MobileNavDrawer', () => {
 
     it('has navigation landmark', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -356,13 +240,7 @@ describe('MobileNavDrawer', () => {
 
     it('library submenu has group role', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
       await user.click(screen.getByTestId('mobile-library-toggle'));
@@ -372,13 +250,7 @@ describe('MobileNavDrawer', () => {
 
     it('library toggle has aria-expanded', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -391,13 +263,7 @@ describe('MobileNavDrawer', () => {
 
     it('library toggle has aria-controls', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 
@@ -410,26 +276,14 @@ describe('MobileNavDrawer', () => {
 
   describe('Responsive Behavior', () => {
     it('has md:hidden class on trigger', () => {
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
       const trigger = screen.getByTestId('mobile-nav-trigger');
       expect(trigger).toHaveClass('md:hidden');
     });
 
     it('drawer has correct width classes', async () => {
       const user = userEvent.setup();
-      render(
-        <MobileNavDrawer
-          navItems={MOCK_NAV_ITEMS}
-          libraryItems={MOCK_LIBRARY_ITEMS}
-          isLibraryActive={false}
-        />
-      );
+      renderDrawer();
 
       await user.click(screen.getByTestId('mobile-nav-trigger'));
 

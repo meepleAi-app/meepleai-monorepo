@@ -15,6 +15,8 @@ export interface QuickMenuItem {
   icon: string;
   label: string;
   action: string;
+  /** Visibility rules based on user role (optional) */
+  visibility?: { minRole?: 'Editor' | 'Admin' };
 }
 
 /**
@@ -25,6 +27,8 @@ export interface FABActionConfig {
   label: string;
   action: string;
   quickMenuItems: QuickMenuItem[];
+  /** Visibility rules based on user role (optional) */
+  visibility?: { minRole?: 'Editor' | 'Admin' };
 }
 
 /**

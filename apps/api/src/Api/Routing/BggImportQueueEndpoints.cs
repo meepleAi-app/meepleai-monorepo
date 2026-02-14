@@ -102,6 +102,15 @@ internal static class BggImportQueueEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
+        // GET /api/v1/admin/bgg-queue/bulk-import-progress - SSE stream for bulk import progress
+        group.MapGet("/bulk-import-progress", StreamBulkImportProgress)
+            .WithName("StreamBulkImportProgress")
+            .WithSummary("SSE stream for bulk import progress tracking")
+            .WithDescription("Real-time progress updates for bulk import operations. Updates every 1 second. Auto-closes when no active items remain. (Issue #4353)")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
         return endpoints;
     }
 
@@ -296,6 +305,68 @@ internal static class BggImportQueueEndpoints
         catch (OperationCanceledException)
         {
             // Client disconnected - expected
+        }
+    }
+
+    /// <summary>
+    /// SSE endpoint for bulk import progress tracking.
+    /// Issue #4353: Updates every 1 second, auto-closes when no active items remain.
+    /// </summary>
+    private static async Task StreamBulkImportProgress(
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
+
+        // Track consecutive idle polls to auto-close after inactivity
+        var consecutiveIdlePolls = 0;
+        const int maxIdlePolls = 5; // Close after 5 seconds of no active items
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var query = new GetBulkImportProgressQuery();
+                var progress = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+                // Send progress event
+                await httpContext.Response.WriteAsync(
+                    $"event: progress\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                    cancellationToken).ConfigureAwait(false);
+
+                await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+                // Auto-close: if no active items, count idle polls
+                if (!progress.IsActive)
+                {
+                    consecutiveIdlePolls++;
+                    if (consecutiveIdlePolls >= maxIdlePolls)
+                    {
+                        // Send completion event and close stream
+                        await httpContext.Response.WriteAsync(
+                            $"event: complete\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                            cancellationToken).ConfigureAwait(false);
+
+                        await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+                }
+                else
+                {
+                    consecutiveIdlePolls = 0;
+                }
+
+                // Update every 1 second for responsive bulk import tracking
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Client disconnected - expected behavior
         }
     }
 }

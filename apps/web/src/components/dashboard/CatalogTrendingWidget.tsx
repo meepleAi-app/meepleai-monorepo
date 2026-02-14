@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/primitives/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/layout/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';
 
 export interface TrendingGame {

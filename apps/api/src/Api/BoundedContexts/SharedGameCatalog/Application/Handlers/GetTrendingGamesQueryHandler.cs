@@ -7,12 +7,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Handlers;
 /// Handler for GetTrendingGamesQuery.
 /// Issue #4310: Returns mock trending data (full implementation with GameTrendingScores table in follow-up)
 /// </summary>
-internal class GetTrendingGamesQueryHandler : IRequestHandler<GetTrendingGamesQuery, List<TrendingGameDto>>
+internal class GetTrendingGamesQueryHandler : IRequestHandler<GetTrendingGamesQuery, List<TrendingGameSummaryDto>>
 {
-    public async Task<List<TrendingGameDto>> Handle(GetTrendingGamesQuery request, CancellationToken cancellationToken)
+    public async Task<List<TrendingGameSummaryDto>> Handle(GetTrendingGamesQuery request, CancellationToken cancellationToken)
     {
         // Mock data - placeholder until GameTrendingScores table and background job are implemented
-        var mockTrending = new List<TrendingGameDto>
+        var mockTrending = new List<TrendingGameSummaryDto>
         {
             new(Guid.NewGuid(), "Wingspan", 95.5m, 15.0m, null),
             new(Guid.NewGuid(), "Terraforming Mars", 88.3m, 8.5m, null),

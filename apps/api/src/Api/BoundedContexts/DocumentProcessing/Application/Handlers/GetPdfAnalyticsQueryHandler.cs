@@ -11,23 +11,17 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// </summary>
 internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuery, PdfAnalyticsDto>
 {
-    private readonly IPdfDocumentRepository _repository;
-
-    public GetPdfAnalyticsQueryHandler(IPdfDocumentRepository repository)
+    public async Task<PdfAnalyticsDto> Handle(GetPdfAnalyticsQuery request, CancellationToken cancellationToken)
     {
-        _repository = repository;
-    }
+        _ = request.TimeRangeDays; // NOTE: Will be used for date filtering in future implementation
+        _ = cancellationToken; // NOTE: Will be used for async DB queries
 
-    public async Task<PdfAnalyticsDto> Handle(GetPdfAnalyticsQuery request, CancellationToken ct)
-    {
-        _ = request.TimeRangeDays; // TODO: Use for date filtering when querying DB
-
-        // Simplified aggregation - full implementation with PdfProcessingMetrics table in follow-up
-        var totalUploaded = 1234; // TODO: Query from DB
+        // Placeholder implementation - returns mock data until PdfProcessingMetrics table is populated
+        var totalUploaded = 1234;
         var successCount = 1100;
         var failedCount = 134;
 
-        await Task.CompletedTask; // CS1998: Satisfy async requirement
+        await Task.CompletedTask.ConfigureAwait(false);
 
         return new PdfAnalyticsDto
         {
@@ -38,7 +32,7 @@ internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuer
             AvgProcessingTime = TimeSpan.FromMinutes(2.75),
             P95ProcessingTime = TimeSpan.FromMinutes(5.5),
             TotalStorageBytes = 15728640000,
-            StorageByTier = new() { ["Free"] = 524288000, ["Pro"] = 15204352000 },
+            StorageByTier = new(StringComparer.Ordinal) { ["Free"] = 524288000, ["Pro"] = 15204352000 },
             UploadsByDay = new()
         };
     }

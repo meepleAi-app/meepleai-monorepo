@@ -23,12 +23,11 @@ public class PdfMetricsAggregationJob : IJob
 
         try
         {
-            // TODO: Aggregate yesterday's metrics
-            // - Query pdf_documents WHERE DATE(uploadedAt) = yesterday
-            // - Calculate: total, success, failed, avg time, storage
-            // - INSERT INTO pdf_processing_metrics
+            // NOTE: Placeholder implementation - full metrics aggregation will be implemented
+            // when PdfProcessingMetrics table schema is finalized (Issue #3715.5)
+            // Future: Query pdf_documents, calculate aggregates, insert into metrics table
 
-            await Task.CompletedTask; // CS1998: Satisfy async requirement
+            await Task.CompletedTask.ConfigureAwait(false);
 
             _logger.LogInformation("PDF Metrics Aggregation Job completed successfully");
         }

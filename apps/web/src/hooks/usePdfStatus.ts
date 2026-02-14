@@ -247,7 +247,7 @@ export function usePdfStatus(
         }
       } catch (_err) {
         if (!isMountedRef.current) return;
-        const error = err instanceof Error ? err : new Error('Polling failed');
+        const error = _err instanceof Error ? _err : new Error('Polling failed');
         setError(error);
         onErrorRef.current?.(error.message);
       } finally {
@@ -340,7 +340,7 @@ export function usePdfStatus(
             eventSource.close();
           }
         } catch (_err) {
-          console.error('Failed to parse SSE message:', err);
+          console.error('Failed to parse SSE message:', _err);
         }
       };
 

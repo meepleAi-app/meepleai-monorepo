@@ -43,7 +43,7 @@ export const mockReactPdf = () => {
       Document: MockDocument,
       Page: MockPage,
       pdfjs: {
-        version: '3.11.174',
+        version: '5.4.624',
         GlobalWorkerOptions: {
           workerSrc: ''
         }

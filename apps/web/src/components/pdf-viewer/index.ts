@@ -2,7 +2,7 @@
  * PDF Viewer Components Export (Issue #3155)
  */
 
-// Dynamic import to prevent DOMMatrix SSR error with react-pdf (Issue #4133)
+// Dynamic import to prevent SSR errors with react-pdf (Issue #4133, #4252)
 import dynamic from 'next/dynamic';
 
 export const PdfViewer = dynamic(

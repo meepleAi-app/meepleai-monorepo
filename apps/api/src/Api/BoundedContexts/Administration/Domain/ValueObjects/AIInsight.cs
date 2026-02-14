@@ -69,10 +69,10 @@ public sealed record AIInsight
         string actionUrl,
         int priority)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title, nameof(title));
-        ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
-        ArgumentException.ThrowIfNullOrWhiteSpace(actionLabel, nameof(actionLabel));
-        ArgumentException.ThrowIfNullOrWhiteSpace(actionUrl, nameof(actionUrl));
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actionLabel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actionUrl);
 
         if (title.Length > 100)
             throw new ValidationException(nameof(title), "Title must not exceed 100 characters");

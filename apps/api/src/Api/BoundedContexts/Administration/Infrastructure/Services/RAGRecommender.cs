@@ -9,6 +9,9 @@ using Api.Services;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 
+#pragma warning disable S1144 // Unused private fields/methods - Will be used when RAG is implemented
+#pragma warning disable S4487 // Unread private fields - Will be used in future RAG implementation
+
 /// <summary>
 /// Generates game recommendations using RAG with Qdrant vector similarity search.
 /// </summary>
@@ -70,7 +73,7 @@ internal sealed class RAGRecommender : IRAGRecommender
                 userId);
             return new List<AIInsight>();
 
-            /* TODO: Complete RAG implementation after game embeddings collection is ready
+            /* FUTURE: Complete RAG implementation after game embeddings collection is ready
             // Generate embeddings for user's top games
             var gameTexts = topGames.Select(g => $"GameId: {g.GameId}").ToList();
             var embeddings = await _embeddingService.GenerateEmbeddingsAsync(
@@ -88,7 +91,7 @@ internal sealed class RAGRecommender : IRAGRecommender
             var avgEmbedding = AverageEmbeddings(embeddings);
             */
 
-            /* TODO: Complete after game embeddings collection ready
+            /* FUTURE: Complete after game embeddings collection ready
             // Query Qdrant for similar games (excluding user's existing library)
             var userGameIds = await _dbContext.Set<UserLibraryEntry>()
                 .AsNoTracking()

@@ -27,7 +27,7 @@ public sealed class WishlistItemTests
     {
         var item = WishlistItem.Create(Guid.NewGuid(), Guid.NewGuid(), WishlistPriority.Low);
 
-        item.Update(WishlistPriority.High, 59.99m, "Updated notes", WishlistVisibility.Public);
+        item.Update(WishlistPriority.High, 59.99m, clearTargetPrice: false, "Updated notes", clearNotes: false, WishlistVisibility.Public);
 
         Assert.Equal(WishlistPriority.High, item.Priority);
         Assert.Equal(59.99m, item.TargetPrice);

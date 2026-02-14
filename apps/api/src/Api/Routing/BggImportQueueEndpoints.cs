@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
@@ -46,6 +47,16 @@ internal static class BggImportQueueEndpoints
             .WithSummary("Enqueue multiple BGG games for import")
             .WithDescription("Add multiple BGG game IDs to the import queue in a single request")
             .Produces<List<BggImportQueueEntity>>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        // POST /api/v1/admin/bgg-queue/batch-json - Bulk import from JSON file
+        group.MapPost("/batch-json", EnqueueBatchFromJson)
+            .WithName("EnqueueBggBatchFromJson")
+            .WithSummary("Bulk import games from JSON content")
+            .WithDescription("Parse JSON array of {bggId, name} objects, check duplicates, and enqueue new games with best-effort strategy (Issue #4352)")
+            .Produces<BulkImportResult>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
@@ -152,6 +163,25 @@ internal static class BggImportQueueEndpoints
         var entities = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
 
         return Results.Created("/api/v1/admin/bgg-queue/status", entities);
+    }
+
+    private static async Task<IResult> EnqueueBatchFromJson(
+        [FromBody] EnqueueBggBatchFromJsonRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var command = new EnqueueBggBatchFromJsonCommand
+        {
+            JsonContent = request.JsonContent,
+            UserId = userId != null ? Guid.Parse(userId) : Guid.Empty
+        };
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> CancelQueuedImport(
@@ -289,3 +319,8 @@ public sealed record EnqueueBggRequest(int BggId, string? GameName = null);
 /// Request to enqueue multiple BGG games
 /// </summary>
 public sealed record EnqueueBggBatchRequest(List<int> BggIds);
+
+/// <summary>
+/// Request to bulk import games from JSON content (Issue #4352)
+/// </summary>
+public sealed record EnqueueBggBatchFromJsonRequest(string JsonContent);

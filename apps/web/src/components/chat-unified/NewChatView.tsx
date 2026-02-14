@@ -326,7 +326,7 @@ export function NewChatView() {
   }, []);
 
   // Resolve actual agent ID from backend agents list
-  const resolveAgentId = useCallback(
+  const _resolveAgentId = useCallback(
     (agentType: string | null): string | undefined => {
       if (!agentType || agentType === 'auto') return undefined;
       const match = agents.find(a => a.type === agentType);

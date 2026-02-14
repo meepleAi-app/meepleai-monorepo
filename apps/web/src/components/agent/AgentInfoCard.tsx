@@ -71,7 +71,7 @@ export function AgentInfoCard({
   className,
 }: AgentInfoCardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('chat');
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<Array<{ id: string; name: string; url?: string }>>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError] = useState<string | null>(null);
 

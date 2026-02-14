@@ -19,5 +19,6 @@ export interface DashboardInsightsResponse {
 
 export async function getAIInsights(): Promise<DashboardInsightsResponse> {
   const response = await apiClient.get<DashboardInsightsResponse>("/dashboard/insights");
-  return response.data;
+  if (!response) throw new Error('Failed to fetch AI insights');
+  return response;
 }

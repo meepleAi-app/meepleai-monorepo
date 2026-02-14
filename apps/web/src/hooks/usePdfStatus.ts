@@ -245,7 +245,7 @@ export function usePdfStatus(
             pollingIntervalRef.current = null;
           }
         }
-      } catch (err) {
+      } catch (_err) {
         if (!isMountedRef.current) return;
         const error = err instanceof Error ? err : new Error('Polling failed');
         setError(error);
@@ -339,7 +339,7 @@ export function usePdfStatus(
             onCompleteRef.current?.();
             eventSource.close();
           }
-        } catch (err) {
+        } catch (_err) {
           console.error('Failed to parse SSE message:', err);
         }
       };
@@ -367,7 +367,7 @@ export function usePdfStatus(
           startPolling();
         }
       };
-    } catch (err) {
+    } catch (_err) {
       // SSE not supported, fallback to polling
       setConnectionState('failed');
       startPolling();

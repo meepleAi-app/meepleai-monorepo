@@ -89,12 +89,12 @@ export function ChatHistoryDrawer({
 
         // Load threads for each game in parallel
         const results = await Promise.allSettled(
-          games.map(async (game: any) => {
+          games.map(async (game: { id: string; title: string }) => {
             const threads = await api.chat.getThreadsByGame(game.id);
             return {
               gameId: game.id,
               gameName: game.title,
-              threads: (threads ?? []).map((t: any) => ({
+              threads: (threads ?? []).map((t: { id: string; title: string; gameId: string; messageCount?: number; lastMessageAt: string }) => ({
                 id: t.id,
                 title: t.title,
                 gameId: t.gameId,

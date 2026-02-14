@@ -12,8 +12,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { Step4EnrichAndConfirm } from '@/app/(authenticated)/admin/games/import/wizard/steps/Step4EnrichAndConfirm';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
@@ -30,13 +32,27 @@ vi.mock('@/components/layout', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
   },
+}));
+vi.mock('@/hooks/wizard/useCheckDuplicate', () => ({
+  useCheckDuplicate: () => ({ data: null }),
+}));
+vi.mock('@/components/admin/games/import/DuplicateWarningDialog', () => ({
+  DuplicateWarningDialog: () => null,
+}));
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: (props: Record<string, unknown>) => (
+    <div data-testid={props['data-testid'] as string || 'final-preview-card'}>
+      {props.title as string}
+    </div>
+  ),
 }));
 
 describe('Step4EnrichAndConfirm', () => {
   // Mock store state
   const mockExtractedMetadata: ExtractedMetadata = {
-    title: 'Catan PDF',
+    title: 'Catan',       // Same as BGG name to avoid unintended title conflict
     yearPublished: 1995,
     minPlayers: 3,
     maxPlayers: 4,
@@ -55,7 +71,7 @@ describe('Step4EnrichAndConfirm', () => {
     maxPlayers: 4,
     playingTime: 90, // Different from PDF!
     minAge: 10,
-    description: 'BGG description of Catan with more details',
+    description: 'PDF description of Catan', // Same as PDF to avoid unintended description conflict
     imageUrl: 'https://example.com/catan.jpg',
     thumbnailUrl: 'https://example.com/catan-thumb.jpg',
   };
@@ -93,7 +109,7 @@ describe('Step4EnrichAndConfirm', () => {
 
   describe('Rendering', () => {
     it('renders header and description', () => {
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Review & Confirm')).toBeInTheDocument();
       expect(
@@ -104,7 +120,7 @@ describe('Step4EnrichAndConfirm', () => {
     it('shows "No Conflicts" alert when data matches', () => {
       // Mock data with no conflicts (same title and playTime)
       vi.mocked(useGameImportWizardStore).mockReturnValue({
-        extractedMetadata: { ...mockExtractedMetadata, playTime: 90 }, // Match BGG
+        extractedMetadata: { ...mockExtractedMetadata, playTime: 90 }, // Match BGG playTime
         bggGameData: mockBggGameData,
         selectedBggId: 13,
         enrichedData: null,
@@ -125,7 +141,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('No Conflicts')).toBeInTheDocument();
       expect(
@@ -134,7 +150,7 @@ describe('Step4EnrichAndConfirm', () => {
     });
 
     it('shows conflict resolution UI when conflicts exist', () => {
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Should detect playTime conflict (60 vs 90)
       expect(screen.getByText('Resolve Conflicts')).toBeInTheDocument();
@@ -142,7 +158,7 @@ describe('Step4EnrichAndConfirm', () => {
     });
 
     it('displays final preview card', () => {
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Final Preview')).toBeInTheDocument();
       expect(screen.getByTestId('final-preview-card')).toBeInTheDocument();
@@ -171,7 +187,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Missing Data')).toBeInTheDocument();
       expect(
@@ -204,13 +220,13 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Game Title')).toBeInTheDocument();
     });
 
     it('detects playTime conflict', () => {
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // playTime conflict: PDF 60 vs BGG 90
       expect(screen.getByText('Play Time (minutes)')).toBeInTheDocument();
@@ -248,7 +264,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText(/4 conflicts detected/i)).toBeInTheDocument();
     });
@@ -257,7 +273,7 @@ describe('Step4EnrichAndConfirm', () => {
   describe('Conflict Resolution UI', () => {
     it('allows selecting BGG option', async () => {
       const user = userEvent.setup();
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Find playTime conflict BGG radio button
       const bggRadio = screen.getByRole('radio', { name: /Use BGG:.*90/ });
@@ -270,7 +286,7 @@ describe('Step4EnrichAndConfirm', () => {
 
     it('allows selecting PDF option', async () => {
       const user = userEvent.setup();
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       const pdfRadio = screen.getByRole('radio', { name: /Use PDF:.*60/ });
       expect(pdfRadio).not.toBeChecked();
@@ -284,7 +300,7 @@ describe('Step4EnrichAndConfirm', () => {
 
     it('allows selecting custom option and entering custom value', async () => {
       const user = userEvent.setup();
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Find the custom radio for playTime field (first "Custom:" in the document for playTime conflict)
       const customRadios = screen.getAllByRole('radio', { name: /Custom:/ });
@@ -302,11 +318,11 @@ describe('Step4EnrichAndConfirm', () => {
       });
 
       await user.type(customInput, '75');
-      expect(customInput).toHaveValue('75');
+      expect(customInput).toHaveValue(75); // Number type input returns number
     });
 
     it('disables custom input when custom option not selected', () => {
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       const customInput = screen.getByTestId('playTime-custom-input');
       expect(customInput).toBeDisabled(); // BGG selected by default
@@ -318,7 +334,7 @@ describe('Step4EnrichAndConfirm', () => {
       const user = userEvent.setup();
       mockSubmitWizard.mockResolvedValue(undefined);
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       const confirmButton = screen.getByTestId('confirm-import-btn');
       await user.click(confirmButton);
@@ -357,7 +373,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Importing...')).toBeInTheDocument();
       expect(screen.getByTestId('confirm-import-btn')).toBeDisabled();
@@ -386,7 +402,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       expect(screen.getByText('Import Failed')).toBeInTheDocument();
       expect(screen.getByText(/Network error: Failed to import game/i)).toBeInTheDocument();
@@ -397,7 +413,7 @@ describe('Step4EnrichAndConfirm', () => {
       const onComplete = vi.fn();
       mockSubmitWizard.mockResolvedValue(undefined);
 
-      render(<Step4EnrichAndConfirm onComplete={onComplete} />);
+      renderWithQuery(<Step4EnrichAndConfirm onComplete={onComplete} />);
 
       const confirmButton = screen.getByTestId('confirm-import-btn');
       await user.click(confirmButton);
@@ -413,7 +429,7 @@ describe('Step4EnrichAndConfirm', () => {
       const user = userEvent.setup();
       mockSubmitWizard.mockResolvedValue(undefined);
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       const confirmButton = screen.getByTestId('confirm-import-btn');
       await user.click(confirmButton);
@@ -461,7 +477,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       const confirmButton = screen.getByTestId('confirm-import-btn');
       await user.click(confirmButton);
@@ -480,7 +496,7 @@ describe('Step4EnrichAndConfirm', () => {
       const user = userEvent.setup();
       mockSubmitWizard.mockResolvedValue(undefined);
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Select custom option for playTime
       const customRadios = screen.getAllByRole('radio', { name: /Custom:/ });
@@ -503,7 +519,7 @@ describe('Step4EnrichAndConfirm', () => {
       await waitFor(() => {
         expect(mockResolveConflicts).toHaveBeenCalledWith(
           expect.objectContaining({
-            playTime: '75', // Custom value
+            playTime: 75, // Custom value (coerced to number for numeric fields)
           })
         );
       });
@@ -537,7 +553,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Should show no conflicts (nothing to conflict with)
       expect(screen.getByText('No Conflicts')).toBeInTheDocument();
@@ -549,7 +565,7 @@ describe('Step4EnrichAndConfirm', () => {
       await waitFor(() => {
         expect(mockResolveConflicts).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: 'Catan PDF',
+            title: 'Catan',
             playTime: 60,
             minPlayers: 3,
             maxPlayers: 4,
@@ -584,7 +600,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Should show no conflicts
       expect(screen.getByText('No Conflicts')).toBeInTheDocument();
@@ -629,7 +645,7 @@ describe('Step4EnrichAndConfirm', () => {
         reset: vi.fn(),
       });
 
-      render(<Step4EnrichAndConfirm />);
+      renderWithQuery(<Step4EnrichAndConfirm />);
 
       // Missing data alert shown, no submit button
       expect(screen.getByText('Missing Data')).toBeInTheDocument();

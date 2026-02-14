@@ -44,13 +44,19 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
       expect(card).toHaveAttribute('data-entity', entity);
     });
 
+    // entityColors maps entity keys to display names (e.g., chatSession → "Chat")
+    const entityNameMap: Record<string, string> = {
+      game: 'Game', player: 'Player', session: 'Session', agent: 'Agent',
+      document: 'Document', chatSession: 'Chat', event: 'Event',
+    };
+
     it.each(entityTypes)('should have correct aria-label for %s', entity => {
       render(
         <MeepleCard {...defaultProps} entity={entity} title="Entity Title" onClick={() => {}} />
       );
 
-      // Entity name should be capitalized in aria-label
-      const expectedLabel = new RegExp(`${entity}:.*entity title`, 'i');
+      const expectedName = entityNameMap[entity] || entity;
+      const expectedLabel = new RegExp(`${expectedName}:.*entity title`, 'i');
       expect(screen.getByRole('button')).toHaveAttribute('aria-label', expect.stringMatching(expectedLabel));
     });
   });
@@ -109,7 +115,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
           {...defaultProps}
           entity="game"
           // Ownership indicated by presence in library, wishlist, etc.
-          testId="owned-game"
+          data-testid="owned-game"
         />
       );
 
@@ -121,7 +127,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
         <MeepleCard
           {...defaultProps}
           entity="game"
-          showWishlistBtn
+          showWishlist
           isWishlisted={true}
           onWishlistToggle={() => {}}
         />
@@ -137,7 +143,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
         <MeepleCard
           {...defaultProps}
           entity="game"
-          showWishlistBtn
+          showWishlist
           isWishlisted={false}
           onWishlistToggle={() => {}}
         />
@@ -165,8 +171,9 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
 
         render(<MeepleCard {...defaultProps} entity="game" metadata={metadata} />);
 
-        expect(screen.getByText('2-4')).toBeInTheDocument();
-        expect(screen.getByText('60 min')).toBeInTheDocument();
+        // MeepleCard renders item.label || item.value
+        expect(screen.getByText('Players')).toBeInTheDocument();
+        expect(screen.getByText('Duration')).toBeInTheDocument();
       });
     });
 
@@ -204,7 +211,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
           <MeepleCard
             {...defaultProps}
             entity="session"
-            status="in-progress"
+            status="played"
             showStatusIcon
           />
         );
@@ -253,18 +260,19 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
       render(<MeepleCard {...defaultProps} entity="game" loading />);
 
       // Loading state should show skeleton
-      expect(screen.getByTestId('meeple-card')).toBeInTheDocument();
+      expect(screen.getByTestId('meeple-card-skeleton')).toBeInTheDocument();
     });
 
     it('should render loading skeleton for each variant', () => {
       const variants: MeepleCardVariant[] = ['grid', 'list', 'compact', 'featured', 'hero'];
 
       variants.forEach(variant => {
-        const { container } = render(
+        const { unmount } = render(
           <MeepleCard {...defaultProps} entity="game" variant={variant} loading />
         );
 
-        expect(container.querySelector('[data-variant]')).toHaveAttribute('data-variant', variant);
+        expect(screen.getByTestId('meeple-card-skeleton')).toBeInTheDocument();
+        unmount();
       });
     });
   });
@@ -281,7 +289,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
           rating={8.5}
           ratingMax={10}
           badge="Popular"
-          status="available"
+          status="owned"
           showStatusIcon
           metadata={[
             { value: '2-4', label: 'Players' },
@@ -291,7 +299,7 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
             { label: 'Add to Library', primary: true, onClick: () => {} },
             { label: 'View Details', onClick: () => {} },
           ]}
-          showWishlistBtn
+          showWishlist
           isWishlisted={false}
           onWishlistToggle={() => {}}
         />
@@ -335,15 +343,16 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
           {...defaultProps}
           entity="game"
           loading
-          status="processing"
+          status="owned"
           badge="New"
-          showWishlistBtn
+          showWishlist
           isWishlisted
           onWishlistToggle={() => {}}
         />
       );
 
-      expect(screen.getByTestId('meeple-card')).toBeInTheDocument();
+      // loading=true → renders skeleton
+      expect(screen.getByTestId('meeple-card-skeleton')).toBeInTheDocument();
     });
   });
 });

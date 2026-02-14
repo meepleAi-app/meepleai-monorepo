@@ -21,6 +21,19 @@ import { vi, Mock } from 'vitest';
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { api } from '@/lib/api';
+
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: mockPush,
+    back: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  })),
+  usePathname: vi.fn(() => '/test'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
 import type { PrivateGameDto, PaginatedPrivateGamesResponse } from '@/lib/api/schemas/private-games.schemas';
 
 import PrivateGamesClient from '../PrivateGamesClient';
@@ -37,40 +50,7 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-// Mock AddPrivateGameWithBgg to simplify testing (Issue #4053)
-vi.mock('@/components/library/AddPrivateGameWithBgg', () => ({
-  AddPrivateGameWithBgg: ({
-    onSubmit,
-    onCancel,
-    isSubmitting,
-  }: {
-    onSubmit: (data: Record<string, unknown>, source: string, bggId?: number, thumbnailUrl?: string) => void;
-    onCancel: () => void;
-    isSubmitting: boolean;
-  }) => (
-    <div data-testid="add-private-game-with-bgg">
-      <button
-        data-testid="mock-submit-add"
-        onClick={() =>
-          onSubmit(
-            {
-              title: 'New Game',
-              minPlayers: 2,
-              maxPlayers: 4,
-            },
-            'Manual'
-          )
-        }
-        disabled={isSubmitting}
-      >
-        Submit
-      </button>
-      <button data-testid="mock-cancel-add" onClick={onCancel}>
-        Cancel
-      </button>
-    </div>
-  ),
-}));
+// AddPrivateGameWithBgg mock removed — Add flow now navigates to /library/private/add
 
 // Keep AddPrivateGameForm mock for edit dialog
 vi.mock('@/components/library/AddPrivateGameForm', () => ({
@@ -515,8 +495,8 @@ describe('PrivateGamesClient', () => {
     });
   });
 
-  describe('Add Game Dialog', () => {
-    it('should open add dialog when clicking Add Game button', async () => {
+  describe('Add Game Navigation', () => {
+    it('should navigate to add page when clicking Add Game button', async () => {
       mockGetPrivateGames.mockResolvedValueOnce(
         createPaginatedResponse(mockGames)
       );
@@ -530,41 +510,10 @@ describe('PrivateGamesClient', () => {
 
       await user.click(screen.getByTestId('add-private-game-btn'));
 
-      await waitFor(() => {
-        expect(screen.getByText('Add Private Game')).toBeInTheDocument();
-        expect(
-          screen.getByText('Search BoardGameGeek to auto-fill or enter details manually.')
-        ).toBeInTheDocument();
-      });
+      expect(mockPush).toHaveBeenCalledWith('/library/private/add');
     });
 
-    it('should call API and reload when submitting add form', async () => {
-      mockGetPrivateGames.mockResolvedValue(
-        createPaginatedResponse(mockGames)
-      );
-      mockAddPrivateGame.mockResolvedValueOnce({});
-
-      const user = userEvent.setup();
-      renderWithQuery(<PrivateGamesClient />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByTestId('add-private-game-btn'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-submit-add')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByTestId('mock-submit-add'));
-
-      await waitFor(() => {
-        expect(mockAddPrivateGame).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('should open add dialog from empty state', async () => {
+    it('should navigate to add page from empty state', async () => {
       mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse([]));
 
       const user = userEvent.setup();
@@ -576,9 +525,7 @@ describe('PrivateGamesClient', () => {
 
       await user.click(screen.getByText('Add Your First Game'));
 
-      await waitFor(() => {
-        expect(screen.getByText('Add Private Game')).toBeInTheDocument();
-      });
+      expect(mockPush).toHaveBeenCalledWith('/library/private/add');
     });
   });
 
@@ -691,11 +638,10 @@ describe('PrivateGamesClient', () => {
       });
     });
 
-    it('should call addPrivateGame with source Manual', async () => {
+    it('should navigate to add page on Add Game click', async () => {
       mockGetPrivateGames.mockResolvedValue(
         createPaginatedResponse(mockGames)
       );
-      mockAddPrivateGame.mockResolvedValueOnce({});
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -706,17 +652,7 @@ describe('PrivateGamesClient', () => {
 
       await user.click(screen.getByTestId('add-private-game-btn'));
 
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-submit-add')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByTestId('mock-submit-add'));
-
-      await waitFor(() => {
-        expect(mockAddPrivateGame).toHaveBeenCalledWith(
-          expect.objectContaining({ source: 'Manual' })
-        );
-      });
+      expect(mockPush).toHaveBeenCalledWith('/library/private/add');
     });
   });
 

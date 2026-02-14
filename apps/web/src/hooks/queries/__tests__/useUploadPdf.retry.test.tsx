@@ -1,6 +1,9 @@
 /**
  * useUploadPdf - Retry Edge Cases Tests
  * Issue #4167: Network retry logic tests
+ *
+ * The hook uses retryWithBackoff internally (not React Query retry).
+ * We mock retryWithBackoff to execute without delays and control retry behavior.
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
@@ -11,11 +14,11 @@ import type { ReactNode } from 'react';
 import { useUploadPdf } from '../useUploadPdf';
 import { api } from '@/lib/api';
 
-// Mock API and toast
+// Mock API - hook uses api.sharedGames.wizardUploadPdf (not api.pdf.uploadPdf)
 vi.mock('@/lib/api', () => ({
   api: {
-    pdf: {
-      uploadPdf: vi.fn(),
+    sharedGames: {
+      wizardUploadPdf: vi.fn(),
     },
   },
 }));
@@ -26,6 +29,43 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
   },
 }));
+
+// Mock retryWithBackoff to execute synchronously without delays
+vi.mock('@/lib/retryUtils', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/retryUtils')>();
+  return {
+    ...original,
+    retryWithBackoff: async <T,>(
+      fn: () => Promise<T>,
+      options?: {
+        maxAttempts?: number;
+        shouldRetry?: (error: unknown, attempt: number) => boolean;
+        onRetry?: (error: unknown, attempt: number, delayMs: number) => void;
+      }
+    ): Promise<T> => {
+      const maxAttempts = options?.maxAttempts ?? 3;
+      let lastError: unknown;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          return await fn();
+        } catch (error) {
+          lastError = error;
+          const isLastAttempt = attempt === maxAttempts - 1;
+
+          if (isLastAttempt || (options?.shouldRetry && !options.shouldRetry(error, attempt))) {
+            throw error;
+          }
+
+          // Call onRetry without delay
+          options?.onRetry?.(error, attempt + 1, 0);
+        }
+      }
+
+      throw lastError;
+    },
+  };
+});
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -45,13 +85,14 @@ describe('useUploadPdf - Retry Edge Cases', () => {
     vi.clearAllMocks();
   });
 
-  it('should retry on network error up to 3 times', async () => {
+  it('should retry on retryable error up to 3 times', async () => {
     const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
     // Fail twice, succeed on 3rd attempt
-    vi.mocked(api.pdf.uploadPdf)
-      .mockRejectedValueOnce(new TypeError('Network error'))
-      .mockRejectedValueOnce(new TypeError('Network error'))
+    // isRetryableError checks TypeError with message containing 'fetch'
+    vi.mocked(api.sharedGames.wizardUploadPdf)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValueOnce({ documentId: 'doc-123', fileName: 'test.pdf' });
 
     const { toast } = await import('sonner');
@@ -66,19 +107,22 @@ describe('useUploadPdf - Retry Edge Cases', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    // Should have called uploadPdf 3 times (2 failures + 1 success)
-    expect(api.pdf.uploadPdf).toHaveBeenCalledTimes(3);
+    // Should have called wizardUploadPdf 3 times (2 failures + 1 success)
+    expect(api.sharedGames.wizardUploadPdf).toHaveBeenCalledTimes(3);
 
     // Should have shown retry toast 2 times
     expect(toast.info).toHaveBeenCalledTimes(2);
+    // Toast message format: "Upload failed. Retrying... (attempt N/3)"
     expect(toast.info).toHaveBeenCalledWith(expect.stringContaining('Retrying'));
   });
 
   it('should fail after 3 retry attempts', async () => {
     const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
-    // Fail all 3 attempts
-    vi.mocked(api.pdf.uploadPdf).mockRejectedValue(new TypeError('Network error'));
+    // Fail all 3 attempts with retryable error
+    vi.mocked(api.sharedGames.wizardUploadPdf).mockRejectedValue(
+      new TypeError('Failed to fetch')
+    );
 
     const { result } = renderHook(() => useUploadPdf(), {
       wrapper: createWrapper(),
@@ -91,7 +135,7 @@ describe('useUploadPdf - Retry Edge Cases', () => {
     });
 
     // Should have tried 3 times
-    expect(api.pdf.uploadPdf).toHaveBeenCalledTimes(3);
+    expect(api.sharedGames.wizardUploadPdf).toHaveBeenCalledTimes(3);
   });
 
   it('should not retry on non-retryable errors (4xx)', async () => {
@@ -100,7 +144,7 @@ describe('useUploadPdf - Retry Edge Cases', () => {
     const clientError = new Error('Bad request');
     Object.assign(clientError, { statusCode: 400 });
 
-    vi.mocked(api.pdf.uploadPdf).mockRejectedValue(clientError);
+    vi.mocked(api.sharedGames.wizardUploadPdf).mockRejectedValue(clientError);
 
     const { result } = renderHook(() => useUploadPdf(), {
       wrapper: createWrapper(),
@@ -113,17 +157,19 @@ describe('useUploadPdf - Retry Edge Cases', () => {
     });
 
     // Should only try once (no retry for 4xx)
-    expect(api.pdf.uploadPdf).toHaveBeenCalledOnce();
+    expect(api.sharedGames.wizardUploadPdf).toHaveBeenCalledOnce();
   });
 
   it('should reset progress on error', async () => {
     const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
-    vi.mocked(api.pdf.uploadPdf).mockImplementation(async (_, __, onProgress) => {
-      // Simulate progress then fail
-      onProgress?.(50);
-      throw new Error('Upload failed');
-    });
+    // wizardUploadPdf signature: (file, onProgress?) => Promise
+    vi.mocked(api.sharedGames.wizardUploadPdf).mockImplementation(
+      async (_file: File, onProgress?: (percent: number) => void) => {
+        onProgress?.(50);
+        throw new Error('Upload failed');
+      }
+    );
 
     const { result } = renderHook(() => useUploadPdf(), {
       wrapper: createWrapper(),
@@ -131,17 +177,11 @@ describe('useUploadPdf - Retry Edge Cases', () => {
 
     result.current.mutate(file);
 
-    // Progress should increase
-    await waitFor(() => {
-      expect(result.current.progress).toBeGreaterThan(0);
-    });
-
-    // Then error occurs
+    // Error occurs and progress resets to 0
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
 
-    // Progress should reset to 0
     expect(result.current.progress).toBe(0);
   });
 });

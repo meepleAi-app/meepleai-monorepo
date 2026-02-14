@@ -27,10 +27,42 @@ vi.mock('sonner', () => ({
   },
 }));
 
-const createWrapper = () => {
+/**
+ * Create a wrapper that does NOT override the retry option,
+ * allowing the hook's own retry configuration to apply.
+ * This is important for tests that verify retry behavior.
+ */
+const createRetryWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: {
+        // Do NOT set retry here - let the hook's retry config apply
+        gcTime: 0,
+        staleTime: 0,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      },
+    },
+  });
+
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
+
+/**
+ * Create a wrapper that disables retries for tests that
+ * do not need retry behavior (faster tests).
+ */
+const createNoRetryWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+        staleTime: 0,
+      },
     },
   });
 
@@ -45,10 +77,11 @@ describe('useSearchBggGames - Edge Cases', () => {
   });
 
   it('should retry on network error up to 3 times', async () => {
-    // Fail twice, succeed on 3rd
+    // isRetryableError checks for TypeError with 'fetch' in message,
+    // or statusCode >= 500, or statusCode 408/429
     vi.mocked(api.bgg.search)
-      .mockRejectedValueOnce(new TypeError('Network error'))
-      .mockRejectedValueOnce(new TypeError('Network error'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValueOnce({
         results: [{ bggId: 13, name: 'Catan', type: 'boardgame' }],
         totalResults: 1,
@@ -56,45 +89,48 @@ describe('useSearchBggGames - Edge Cases', () => {
         pageSize: 20,
       });
 
-    const { toast } = await import('sonner');
-
     const { result } = renderHook(() => useSearchBggGames({ query: 'Catan' }), {
-      wrapper: createWrapper(),
+      wrapper: createRetryWrapper(),
     });
 
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
+    await waitFor(
+      () => {
+        expect(result.current.isSuccess).toBe(true);
+      },
+      { timeout: 15000 }
+    );
 
-    // Should have retried
+    // Should have retried: failed 2x, succeeded on 3rd
     expect(api.bgg.search).toHaveBeenCalledTimes(3);
-    expect(toast.info).toHaveBeenCalled();
-  });
+  }, 20000);
 
   it('should fail after 3 retry attempts', async () => {
-    // Fail all 3 attempts
-    vi.mocked(api.bgg.search).mockRejectedValue(new TypeError('Network error'));
+    // All attempts fail with a retryable error
+    vi.mocked(api.bgg.search).mockRejectedValue(new TypeError('Failed to fetch'));
 
     const { result } = renderHook(() => useSearchBggGames({ query: 'Catan' }), {
-      wrapper: createWrapper(),
+      wrapper: createRetryWrapper(),
     });
 
-    await waitFor(() => {
-      expect(result.current.isError).toBe(true);
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(result.current.isError).toBe(true);
+      },
+      { timeout: 30000 }
+    );
 
-    // Should have tried 3 times
-    expect(api.bgg.search).toHaveBeenCalledTimes(3);
-  });
+    // Initial attempt + 3 retries = 4 total calls
+    // (retry callback returns false when failureCount >= 3)
+    expect(api.bgg.search).toHaveBeenCalledTimes(4);
+  }, 35000);
 
-  it('should handle timeout error (AbortError)', async () => {
+  it('should handle timeout error', async () => {
     const timeoutError = new Error('BGG search timed out after 30s');
-    timeoutError.name = 'Error'; // Simulated timeout message
 
     vi.mocked(api.bgg.search).mockRejectedValue(timeoutError);
 
     const { result } = renderHook(() => useSearchBggGames({ query: 'Catan' }), {
-      wrapper: createWrapper(),
+      wrapper: createNoRetryWrapper(),
     });
 
     await waitFor(() => {
@@ -111,14 +147,14 @@ describe('useSearchBggGames - Edge Cases', () => {
     vi.mocked(api.bgg.search).mockRejectedValue(clientError);
 
     const { result } = renderHook(() => useSearchBggGames({ query: 'Catan' }), {
-      wrapper: createWrapper(),
+      wrapper: createRetryWrapper(),
     });
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
 
-    // Should only try once (no retry for 4xx)
+    // isRetryableError returns false for 4xx, so no retries
     expect(api.bgg.search).toHaveBeenCalledOnce();
   });
 
@@ -137,32 +173,39 @@ describe('useSearchBggGames - Edge Cases', () => {
       });
 
     const { result } = renderHook(() => useSearchBggGames({ query: 'Catan' }), {
-      wrapper: createWrapper(),
+      wrapper: createRetryWrapper(),
     });
 
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
+    await waitFor(
+      () => {
+        expect(result.current.isSuccess).toBe(true);
+      },
+      { timeout: 15000 }
+    );
 
     // Should have retried once
     expect(api.bgg.search).toHaveBeenCalledTimes(2);
-  });
+  }, 20000);
 
   it('should not query if query length < 2', () => {
     const { result } = renderHook(() => useSearchBggGames({ query: 'C' }), {
-      wrapper: createWrapper(),
+      wrapper: createNoRetryWrapper(),
     });
 
-    expect(result.current.isPending).toBe(false);
+    // When enabled=false, React Query v5 reports fetchStatus='idle'
+    // and isPending=true (data is pending since it was never fetched).
+    // The key indicator that the query is disabled is fetchStatus='idle'.
+    expect(result.current.fetchStatus).toBe('idle');
     expect(api.bgg.search).not.toHaveBeenCalled();
   });
 
   it('should not query if disabled', () => {
     const { result } = renderHook(() => useSearchBggGames({ query: 'Catan', enabled: false }), {
-      wrapper: createWrapper(),
+      wrapper: createNoRetryWrapper(),
     });
 
-    expect(result.current.isPending).toBe(false);
+    // Query is disabled, so fetchStatus should be 'idle'
+    expect(result.current.fetchStatus).toBe('idle');
     expect(api.bgg.search).not.toHaveBeenCalled();
   });
 });

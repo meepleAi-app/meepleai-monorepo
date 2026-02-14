@@ -7,6 +7,7 @@
 
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { EntityListView } from '../entity-list-view';
 import type { MeepleEntityType } from '../../meeple-card';
 import { vi } from 'vitest';
@@ -16,6 +17,18 @@ import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() })),
   usePathname: vi.fn(() => '/'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+    back: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  })),
+  usePathname: vi.fn(() => '/test'),
   useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 

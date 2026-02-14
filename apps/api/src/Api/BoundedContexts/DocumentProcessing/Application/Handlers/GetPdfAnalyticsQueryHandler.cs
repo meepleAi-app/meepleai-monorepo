@@ -28,7 +28,7 @@ internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuer
             TotalUploaded = totalUploaded,
             SuccessCount = successCount,
             FailedCount = failedCount,
-            SuccessRate = (decimal)successCount / totalUploaded * 100,
+            SuccessRate = totalUploaded > 0 ? (decimal)successCount / totalUploaded * 100 : 0,
             AvgProcessingTime = TimeSpan.FromMinutes(2.75),
             P95ProcessingTime = TimeSpan.FromMinutes(5.5),
             TotalStorageBytes = 15728640000,

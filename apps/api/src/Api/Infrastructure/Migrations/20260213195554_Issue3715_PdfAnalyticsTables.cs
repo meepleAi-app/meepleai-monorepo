@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "EF Core migration naming convention")]
     public partial class Issue3715_PdfAnalyticsTables : Migration
     {
         /// <inheritdoc />

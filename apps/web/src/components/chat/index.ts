@@ -2,6 +2,7 @@
 export { AgentSelector } from './AgentSelector';
 export { ChatContent } from './ChatContent';
 export { ChatHistory } from './ChatHistory';
+export { ChatInfoPanel } from './ChatInfoPanel';
 export { ChatSidebar } from './ChatSidebar';
 export { FollowUpQuestions } from './FollowUpQuestions';
 export { GameSelector } from './GameSelector';

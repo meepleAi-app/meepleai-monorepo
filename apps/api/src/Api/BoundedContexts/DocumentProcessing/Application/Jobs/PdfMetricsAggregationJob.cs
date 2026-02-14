@@ -28,6 +28,8 @@ public class PdfMetricsAggregationJob : IJob
             // - Calculate: total, success, failed, avg time, storage
             // - INSERT INTO pdf_processing_metrics
 
+            await Task.CompletedTask; // CS1998: Satisfy async requirement
+
             _logger.LogInformation("PDF Metrics Aggregation Job completed successfully");
         }
         catch (Exception ex)

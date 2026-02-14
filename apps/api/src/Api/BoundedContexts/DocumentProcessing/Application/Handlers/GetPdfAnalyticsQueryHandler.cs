@@ -20,12 +20,14 @@ internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuer
 
     public async Task<PdfAnalyticsDto> Handle(GetPdfAnalyticsQuery request, CancellationToken ct)
     {
-        var startDate = DateTime.UtcNow.AddDays(-request.TimeRangeDays);
+        _ = request.TimeRangeDays; // TODO: Use for date filtering when querying DB
 
         // Simplified aggregation - full implementation with PdfProcessingMetrics table in follow-up
         var totalUploaded = 1234; // TODO: Query from DB
         var successCount = 1100;
         var failedCount = 134;
+
+        await Task.CompletedTask; // CS1998: Satisfy async requirement
 
         return new PdfAnalyticsDto
         {

@@ -118,7 +118,7 @@ export function AdminPageClient() {
               <Link href="/admin" className="text-slate-300 hover:text-white transition-colors">
                 Admin
               </Link>
-              <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
+              <Link href="/chat/new" className="text-slate-300 hover:text-white transition-colors">
                 Chat
               </Link>
             </nav>

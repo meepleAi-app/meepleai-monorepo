@@ -211,7 +211,7 @@ describe('BottomNav', () => {
         '/library'
       );
       expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
-      expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat');
+      expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat/new');
       expect(screen.getByLabelText('Navigate to your profile')).toHaveAttribute('href', '/profile');
     });
 

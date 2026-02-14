@@ -40,7 +40,7 @@ const MOCK_NAV_ITEMS = [
     ariaLabel: 'Navigate to agents list',
   },
   {
-    href: '/chat',
+    href: '/chat/new',
     icon: History,
     label: 'Chat History',
     ariaLabel: 'Navigate to chat history',
@@ -141,7 +141,7 @@ describe('MobileNavDrawer', () => {
       expect(screen.getByTestId('mobile-nav-item-dashboard')).toBeInTheDocument();
       expect(screen.getByTestId('mobile-nav-item-games')).toBeInTheDocument();
       expect(screen.getByTestId('mobile-nav-item-agents')).toBeInTheDocument();
-      expect(screen.getByTestId('mobile-nav-item-chat')).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-nav-item-chat-new')).toBeInTheDocument();
       expect(screen.getByTestId('mobile-nav-item-sessions')).toBeInTheDocument();
     });
 

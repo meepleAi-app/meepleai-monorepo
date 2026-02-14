@@ -84,7 +84,7 @@ export default function BoardGameAI() {
             </Link>
             {authUser ? (
               <>
-                <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
+                <Link href="/chat/new" className="text-slate-300 hover:text-white transition-colors">
                   Chat
                 </Link>
                 <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">
@@ -437,7 +437,7 @@ export default function BoardGameAI() {
           <div className="space-y-3">
             <h4 className="font-semibold">Support</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
+              <Link href="/chat/new" className="text-slate-300 hover:text-white transition-colors">
                 General Chat
               </Link>
               <Link href="/settings" className="text-slate-300 hover:text-white transition-colors">

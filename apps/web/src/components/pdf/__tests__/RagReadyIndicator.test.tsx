@@ -173,7 +173,7 @@ describe('RagReadyIndicator', () => {
       expect(chatButton).toBeInTheDocument();
 
       const link = chatButton.closest('a');
-      expect(link).toHaveAttribute('href', '/chat?gameId=game-123');
+      expect(link).toHaveAttribute('href', '/chat/new?game=game-123');
     });
 
     it('does not show stage indicators when ready', () => {

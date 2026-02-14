@@ -83,7 +83,7 @@ const DEFAULT_ACTIONS: QuickAction[] = [
     id: 'chat',
     icon: MessageSquare,
     label: 'Chat AI',
-    href: '/chat',
+    href: '/chat/new',
     iconColor: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-500/20 hover:bg-blue-500/30',
   },

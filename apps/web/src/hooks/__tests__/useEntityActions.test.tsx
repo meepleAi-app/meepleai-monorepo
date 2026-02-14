@@ -41,7 +41,7 @@ describe('useEntityActions', () => {
       );
 
       result.current.quickActions[0].onClick();
-      expect(mockPush).toHaveBeenCalledWith('/chat?gameId=game-123');
+      expect(mockPush).toHaveBeenCalledWith('/chat/new?game=game-123');
     });
 
     it('navigates to new session when Avvia Sessione is clicked', () => {

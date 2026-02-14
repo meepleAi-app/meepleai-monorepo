@@ -32,7 +32,7 @@ const navigationItems: NavItem[] = [
     icon: '🎲',
     color: 'var(--color-primary-500)',
   },
-  { label: 'Ask AI', href: '/chat', icon: '💬', color: 'var(--color-blue)' },
+  { label: 'Ask AI', href: '/chat/new', icon: '💬', color: 'var(--color-blue)' },
   { label: 'My Games', href: '/games', icon: '🎮', color: 'var(--color-green)' },
   { label: 'Library', href: '/library', icon: '📚', color: 'var(--color-secondary-500)' },
   { label: 'Settings', href: '/settings', icon: '⚙️', color: 'var(--color-neutral-600)' },

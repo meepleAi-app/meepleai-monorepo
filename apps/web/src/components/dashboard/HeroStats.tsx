@@ -204,7 +204,7 @@ export function HeroStats({
       iconColor: 'blue' as KpiColorVariant,
       value: stats.chats.total,
       label: 'Chat AI 7gg',
-      href: '/chat',
+      href: '/chat/new',
     },
     {
       key: 'wishlist',

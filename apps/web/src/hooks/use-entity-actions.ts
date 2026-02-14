@@ -157,7 +157,7 @@ export function useEntityActions({
             {
               icon: MessageSquare,
               label: 'Chat con Agent',
-              onClick: () => router.push(`/chat?gameId=${id}`),
+              onClick: () => router.push(`/chat/new?game=${id}`),
             },
             {
               icon: Play,

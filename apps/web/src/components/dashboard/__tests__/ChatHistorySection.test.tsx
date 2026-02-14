@@ -170,7 +170,7 @@ describe('ChatHistorySection', () => {
 
       const newChatBtn = screen.getByTestId('new-chat-button');
       expect(newChatBtn).toBeInTheDocument();
-      expect(newChatBtn.closest('a')).toHaveAttribute('href', '/chat');
+      expect(newChatBtn.closest('a')).toHaveAttribute('href', '/chat/new');
     });
 
     it('applies custom className', () => {
@@ -341,7 +341,7 @@ describe('ChatHistorySection', () => {
       renderWithQueryClient(<ChatHistorySection threads={mockThreads} />);
 
       const newChatBtn = screen.getByTestId('new-chat-button');
-      expect(newChatBtn.closest('a')).toHaveAttribute('href', '/chat');
+      expect(newChatBtn.closest('a')).toHaveAttribute('href', '/chat/new');
     });
 
     it('view all link appears when more than 4 threads', () => {
@@ -381,7 +381,7 @@ describe('ChatHistorySection', () => {
 
       const cta = screen.getByTestId('start-chat-cta');
       expect(cta).toBeInTheDocument();
-      expect(cta.closest('a')).toHaveAttribute('href', '/chat');
+      expect(cta.closest('a')).toHaveAttribute('href', '/chat/new');
     });
 
     it('does not show thread items in empty state', () => {

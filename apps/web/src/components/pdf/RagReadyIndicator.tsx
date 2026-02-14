@@ -286,7 +286,7 @@ export function RagReadyIndicator({
               </p>
             </div>
             <Button asChild size="sm" className="bg-green-600 hover:bg-green-700" data-testid="chat-now-button">
-              <Link href={`/chat?gameId=${encodeURIComponent(gameId)}`}>
+              <Link href={`/chat/new?game=${encodeURIComponent(gameId)}`}>
                 <MessageSquare className="mr-1.5 h-4 w-4" />
                 Chat Now
               </Link>

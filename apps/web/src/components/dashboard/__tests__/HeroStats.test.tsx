@@ -336,7 +336,7 @@ describe('HeroStats', () => {
 
       const chatsCard = screen.getByTestId('kpi-chats');
       const link = chatsCard.closest('a');
-      expect(link).toHaveAttribute('href', '/chat');
+      expect(link).toHaveAttribute('href', '/chat/new');
     });
 
     it('wishlist card links to /wishlist', () => {

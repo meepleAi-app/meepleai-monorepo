@@ -203,7 +203,7 @@ const ACTIVITY_TYPE_CONFIG: Record<ActivityEventType, ActivityTypeConfig> = {
     icon: MessageSquare,
     iconColor: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-500/20',
-    href: (entityId) => entityId ? `/chat/${entityId}` : '/chat',
+    href: (entityId) => entityId ? `/chat/${entityId}` : '/chat/new',
   },
   wishlist_added: {
     icon: Star,

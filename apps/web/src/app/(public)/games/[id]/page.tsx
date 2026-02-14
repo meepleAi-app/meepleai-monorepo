@@ -260,7 +260,7 @@ export default function GameDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Button asChild className="w-full font-nunito bg-[hsl(25,95%,38%)] hover:bg-[hsl(25,95%,32%)]">
-                    <Link href={`/games/${gameId}/chat`}>
+                    <Link href={`/chat/new?game=${gameId}`}>
                       <MessageCircle className="mr-2 h-4 w-4" />
                       💬 Chat con AI
                     </Link>

@@ -63,6 +63,7 @@ public class GetPdfMetricsQueryHandlerTests
         Action act = () =>
             new GetPdfMetricsQueryHandler(
                 null!,
+                _metricsServiceMock.Object,
                 _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>()
@@ -76,6 +77,7 @@ public class GetPdfMetricsQueryHandlerTests
         Action act = () =>
             new GetPdfMetricsQueryHandler(
                 _repositoryMock.Object,
+                _metricsServiceMock.Object,
                 null!);
 
         act.Should().Throw<ArgumentNullException>()

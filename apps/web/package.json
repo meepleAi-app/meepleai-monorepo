@@ -257,14 +257,17 @@
     "overrides": {
       "@babel/runtime": ">=7.26.10",
       "@isaacs/brace-expansion": ">=5.0.1",
+      "axios": ">=1.13.5",
       "dompurify": ">=3.2.4",
       "glob": ">=10.5.0",
       "js-yaml": ">=4.1.1",
       "lodash": ">=4.17.23",
       "lodash-es": ">=4.17.23",
       "markdown-it": ">=14.1.1",
+      "qs": ">=6.14.2",
       "storybook": ">=10.1.10",
-      "tar": ">=7.5.7"
+      "tar": ">=7.5.7",
+      "webpack": ">=5.104.1"
     }
   }
 }

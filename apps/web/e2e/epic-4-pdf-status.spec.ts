@@ -109,28 +109,32 @@ test.describe('Epic #4: PDF Status Tracking', () => {
   });
 
   /**
-   * Issue #4109: Real-time Updates (SSE + Polling)
+   * Issue #4109 / #4218: Real-time Updates (SSE + Polling)
+   * Verifies SSE connection to /api/v1/pdfs/{id}/status/stream
+   * and real-time progress updates from Uploading → Ready
    */
   test('PDF - Real-time progress updates via SSE', async ({ page }) => {
     await page.goto('/upload');
 
-    // Start monitoring network for SSE connection
-    const ssePromise = page.waitForResponse(resp =>
-      resp.url().includes('/api/v1/sse/') && resp.status() === 200
+    // Monitor network for SSE connection to the correct endpoint
+    const sseRequestPromise = page.waitForRequest(req =>
+      req.url().includes('/api/v1/pdfs/') &&
+      req.url().includes('/status/stream')
     );
 
     // Upload PDF
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles('./test-fixtures/sample-rulebook.pdf');
 
-    // Verify SSE connection established
-    await ssePromise;
+    // Verify SSE connection established to correct endpoint
+    const sseRequest = await sseRequestPromise;
+    expect(sseRequest.url()).toMatch(/\/api\/v1\/pdfs\/[\w-]+\/status\/stream/);
 
     // Verify progress bar updates in real-time
     const progressBar = page.locator('[data-testid="pdf-progress-bar"]');
     await expect(progressBar).toBeVisible();
 
-    // Monitor progress updates
+    // Monitor progress updates - should increase over time
     let previousProgress = 0;
     for (let i = 0; i < 5; i++) {
       await page.waitForTimeout(2000);
@@ -140,8 +144,9 @@ test.describe('Epic #4: PDF Status Tracking', () => {
       previousProgress = currentProgress;
     }
 
-    // TODO: Test SSE reconnection after disconnect
-    // TODO: Verify polling fallback if SSE unavailable
+    // Verify terminal state: status badge shows Complete/Ready
+    const statusBadge = page.locator('[data-testid="pdf-status-badge"]');
+    await expect(statusBadge).toContainText(/Complete|Ready/, { timeout: 60000 });
   });
 
   /**

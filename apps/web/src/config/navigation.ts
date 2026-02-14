@@ -1,126 +1,229 @@
 /**
- * Navigation Configuration
- * Issue #3479 - Layout System v2: Unified ActionBar
+ * Unified Navigation Configuration
+ * Single source of truth for ALL navigation items across the app.
  *
- * Defines navigation items for the unified bottom navigation.
- * These items are always visible in the ActionBar alongside context actions.
+ * Replaces 5 divergent NAV_ITEMS definitions:
+ * - config/navigation.ts (ActionBar) — this file
+ * - components/layout/UnifiedHeader.tsx (desktop header)
+ * - components/layout/Navbar/Navbar.tsx (old desktop nav)
+ * - components/layout/Navbar/HamburgerMenu.tsx (old mobile menu)
+ * - components/layout/BottomNav.tsx (deprecated mobile nav)
+ *
+ * Consumers should use the `useNavigationItems` hook, NOT import directly.
  */
 
+import {
+  BookOpen,
+  Calendar,
+  Gamepad2,
+  History,
+  LayoutDashboard,
+  User,
+  Users,
+} from 'lucide-react';
+
+import { LIBRARY_TABS } from '@/config/library-navigation';
+
+import type { UnifiedNavItem, UnifiedNavSubItem, NavItemVisibility } from './navigation.types';
+
+// Re-export types for backward compatibility
+export type { UnifiedNavItem, UnifiedNavSubItem, NavItemVisibility };
+
 /**
- * Navigation item configuration for unified bottom navigation.
+ * Legacy NavItem type for backward compatibility with ActionBar.
+ * New code should use UnifiedNavItem via useNavigationItems hook.
  */
 export interface NavItem {
-  /** Unique identifier */
   id: string;
-  /** Route path */
   href: string;
-  /** Icon name (lucide icon) */
   icon: string;
-  /** Display label */
   label: string;
-  /** Accessible description */
   ariaLabel: string;
-  /** Priority for ordering (lower = more visible on mobile) */
   priority: number;
-  /** Test ID for e2e testing */
   testId: string;
-  /** Pattern for active state matching */
   activePattern?: RegExp;
 }
 
 /**
- * Primary navigation items for authenticated users.
- * Order by priority: Dashboard → Library → Chat → Toolkit → Catalogo → Profilo
- *
- * Mobile shows first 4, tablet shows 5, desktop shows all (but nav is in header).
- * ActionBar is mobile-only; desktop uses UnifiedHeader for navigation.
+ * Build library children from LIBRARY_TABS (library-navigation.ts).
  */
-export const NAV_ITEMS: NavItem[] = [
+const LIBRARY_CHILDREN: UnifiedNavSubItem[] = LIBRARY_TABS.map(tab => ({
+  id: tab.id,
+  href: tab.href,
+  label: tab.label,
+  ariaLabel: `Navigate to ${tab.label}`,
+  icon: tab.icon,
+}));
+
+/**
+ * Unified navigation items — single source of truth.
+ *
+ * | id        | label     | priority | visibility   | note                     |
+ * |-----------|-----------|----------|-------------|--------------------------|
+ * | welcome   | Welcome   | 0        | anonOnly    | landing page only        |
+ * | dashboard | Dashboard | 1        | authOnly    |                          |
+ * | library   | Libreria  | 2        | authOnly    | children: tabs           |
+ * | chat      | Chat      | 3        | authOnly    |                          |
+ * | toolkit   | Toolkit   | 4        | authOnly    | (removed from header, kept for ActionBar) |
+ * | catalog   | Catalogo  | 5        | (none)      | visible to all           |
+ * | profile   | Profilo   | 6        | authOnly    |                          |
+ * | agents    | Agenti    | 7        | authOnly    |                          |
+ * | sessions  | Sessioni  | 8        | authOnly    |                          |
+ */
+export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
   {
-    id: 'home',
+    id: 'welcome',
+    href: '/',
+    icon: LayoutDashboard,
+    iconName: 'layout-dashboard',
+    label: 'Welcome',
+    ariaLabel: 'Navigate to welcome page',
+    priority: 0,
+    testId: 'nav-welcome',
+    activePattern: /^\/$/,
+    visibility: { anonOnly: true },
+  },
+  {
+    id: 'dashboard',
     href: '/dashboard',
-    icon: 'home',
-    label: 'Home',
-    ariaLabel: 'Vai alla dashboard',
+    icon: LayoutDashboard,
+    iconName: 'home',
+    label: 'Dashboard',
+    ariaLabel: 'Navigate to dashboard',
     priority: 1,
-    testId: 'nav-home',
+    testId: 'nav-dashboard',
     activePattern: /^\/dashboard$/,
+    visibility: { authOnly: true },
   },
   {
     id: 'library',
     href: '/library',
-    icon: 'book-open',
+    icon: BookOpen,
+    iconName: 'book-open',
     label: 'Libreria',
-    ariaLabel: 'Vai alla tua libreria giochi',
+    ariaLabel: 'Navigate to your game library',
     priority: 2,
     testId: 'nav-library',
     activePattern: /^\/library/,
+    visibility: { authOnly: true },
+    children: LIBRARY_CHILDREN,
   },
   {
     id: 'chat',
     href: '/chat',
-    icon: 'message-square',
+    icon: History,
+    iconName: 'message-square',
     label: 'Chat',
-    ariaLabel: 'Apri la chat AI',
+    ariaLabel: 'Navigate to chat history',
     priority: 3,
     testId: 'nav-chat',
     activePattern: /^\/chat/,
-  },
-  {
-    id: 'toolkit',
-    href: '/toolkit',
-    icon: 'dice-6',
-    label: 'Toolkit',
-    ariaLabel: 'Vai al toolkit di gioco',
-    priority: 4,
-    testId: 'nav-toolkit',
-    activePattern: /^\/toolkit/,
+    visibility: { authOnly: true },
   },
   {
     id: 'catalog',
     href: '/games',
-    icon: 'gamepad-2',
+    icon: Gamepad2,
+    iconName: 'gamepad-2',
     label: 'Catalogo',
-    ariaLabel: 'Sfoglia il catalogo giochi',
+    ariaLabel: 'Navigate to games catalog',
     priority: 5,
     testId: 'nav-catalog',
     activePattern: /^\/games/,
+    // No visibility — visible to everyone
   },
   {
     id: 'profile',
     href: '/profile',
-    icon: 'user',
+    icon: User,
+    iconName: 'user',
     label: 'Profilo',
-    ariaLabel: 'Vai al tuo profilo',
+    ariaLabel: 'Navigate to your profile',
     priority: 6,
     testId: 'nav-profile',
     activePattern: /^\/profile/,
+    visibility: { authOnly: true },
+  },
+  {
+    id: 'agents',
+    href: '/agents',
+    icon: Users,
+    iconName: 'users',
+    label: 'Agenti',
+    ariaLabel: 'Navigate to agents list',
+    priority: 7,
+    testId: 'nav-agents',
+    activePattern: /^\/agents/,
+    visibility: { authOnly: true },
+  },
+  {
+    id: 'sessions',
+    href: '/sessions',
+    icon: Calendar,
+    iconName: 'calendar',
+    label: 'Sessioni',
+    ariaLabel: 'Navigate to play sessions',
+    priority: 8,
+    testId: 'nav-sessions',
+    activePattern: /^\/sessions/,
+    visibility: { authOnly: true },
   },
 ];
 
-/**
- * Maximum visible navigation items per breakpoint.
- * ActionBar is mobile-only; desktop navigation is handled by UnifiedHeader.
- */
-export const MAX_NAV_ITEMS = {
-  mobile: 4,   // Home, Library, Chat, Toolkit
-  tablet: 5,   // + Catalogo
-  desktop: 6,  // All items (but desktop uses header, not actionbar)
-} as const;
+// ---------------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------------
 
 /**
- * Total slots available per breakpoint.
- * Includes nav items + FAB (primary action) + context actions + overflow button.
- * Note: ActionBar is mobile/tablet only. Desktop uses UnifiedHeader.
+ * Filter navigation items by authentication state and user role.
  */
-export const TOTAL_SLOTS = {
-  mobile: 6,    // 4 nav + 1 FAB + 1 overflow
-  tablet: 7,    // 5 nav + 1 FAB + 1 overflow
-  desktop: 8,   // 6 nav + 1 FAB + 1 overflow (but not rendered on desktop)
-} as const;
+export function filterNavItemsByRole(
+  items: UnifiedNavItem[],
+  options: {
+    isAuthenticated: boolean;
+    isAuthLoading?: boolean;
+    userRole?: string | null;
+  }
+): UnifiedNavItem[] {
+  const { isAuthenticated, isAuthLoading = false, userRole } = options;
+
+  // While auth is loading, only show items with no auth restrictions
+  if (isAuthLoading) {
+    return items.filter(item => !item.visibility?.authOnly && !item.visibility?.anonOnly);
+  }
+
+  const roleLower = userRole?.toLowerCase() ?? '';
+
+  return items.filter(item => {
+    const vis = item.visibility;
+    if (!vis) return true;
+
+    // Auth-only: only for authenticated users
+    if (vis.authOnly && !isAuthenticated) return false;
+    // Anon-only: only for non-authenticated users
+    if (vis.anonOnly && isAuthenticated) return false;
+
+    // Role check
+    if (vis.minRole) {
+      const minRole = vis.minRole.toLowerCase();
+      if (minRole === 'admin') {
+        if (roleLower !== 'admin' && roleLower !== 'superadmin') return false;
+      } else if (minRole === 'editor') {
+        if (
+          roleLower !== 'editor' &&
+          roleLower !== 'admin' &&
+          roleLower !== 'superadmin'
+        )
+          return false;
+      }
+    }
+
+    return true;
+  });
+}
 
 /**
- * Get navigation items for a specific breakpoint.
+ * Get navigation items for a specific breakpoint (for ActionBar).
  * Returns items sorted by priority, limited to max for breakpoint.
  */
 export function getNavItemsForBreakpoint(
@@ -135,7 +238,6 @@ export function getNavItemsForBreakpoint(
 
 /**
  * Get overflow navigation items for a specific breakpoint.
- * Returns items that don't fit in visible slots.
  */
 export function getOverflowNavItems(
   breakpoint: 'mobile' | 'tablet' | 'desktop'
@@ -148,13 +250,25 @@ export function getOverflowNavItems(
 }
 
 /**
- * Check if a route matches a navigation item.
+ * Check if a route matches a unified navigation item.
+ */
+export function isUnifiedNavItemActive(item: UnifiedNavItem, pathname: string): boolean {
+  if (item.activePattern) {
+    return item.activePattern.test(pathname);
+  }
+  if (item.href === '/' || item.href === '/dashboard') {
+    return pathname === item.href;
+  }
+  return pathname.startsWith(item.href);
+}
+
+/**
+ * Check if a route matches a legacy navigation item.
  */
 export function isNavItemActive(item: NavItem, pathname: string): boolean {
   if (item.activePattern) {
     return item.activePattern.test(pathname);
   }
-  // Fallback: exact match for home, startsWith for others
   if (item.href === '/' || item.href === '/dashboard') {
     return pathname === item.href;
   }
@@ -163,7 +277,6 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
 
 /**
  * Get context action slots available for a breakpoint.
- * Total slots - nav items - 1 (for overflow).
  */
 export function getContextActionSlots(
   breakpoint: 'mobile' | 'tablet' | 'desktop'
@@ -171,3 +284,44 @@ export function getContextActionSlots(
   // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   return TOTAL_SLOTS[breakpoint] - MAX_NAV_ITEMS[breakpoint] - 1;
 }
+
+// ---------------------------------------------------------------------------
+// Legacy constants for ActionBar backward compatibility
+// ---------------------------------------------------------------------------
+
+/**
+ * Legacy NAV_ITEMS for ActionBar (string-based icons).
+ * ActionBar uses icon name strings, not LucideIcon components.
+ */
+export const NAV_ITEMS: NavItem[] = UNIFIED_NAV_ITEMS
+  .filter(item => item.visibility?.authOnly || !item.visibility) // ActionBar only for auth users
+  .filter(item => !item.visibility?.anonOnly)
+  .filter(item => ['dashboard', 'library', 'chat', 'catalog', 'profile'].includes(item.id)) // ActionBar subset
+  .map(item => ({
+    id: item.id === 'dashboard' ? 'home' : item.id,
+    href: item.href,
+    icon: item.iconName,
+    label: item.id === 'dashboard' ? 'Home' : item.label,
+    ariaLabel: item.ariaLabel,
+    priority: item.priority,
+    testId: item.testId,
+    activePattern: item.activePattern,
+  }));
+
+/**
+ * Maximum visible navigation items per breakpoint (ActionBar).
+ */
+export const MAX_NAV_ITEMS = {
+  mobile: 4,
+  tablet: 5,
+  desktop: 6,
+} as const;
+
+/**
+ * Total slots available per breakpoint (ActionBar).
+ */
+export const TOTAL_SLOTS = {
+  mobile: 6,
+  tablet: 7,
+  desktop: 8,
+} as const;

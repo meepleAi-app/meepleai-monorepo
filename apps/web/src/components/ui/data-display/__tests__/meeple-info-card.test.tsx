@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { MeepleInfoCard } from '../meeple-info-card';
@@ -16,6 +16,23 @@ import { MeepleInfoCard } from '../meeple-info-card';
 vi.mock('@/components/library/PdfUploadModal', () => ({
   PdfUploadModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="pdf-upload-modal">PDF Modal</div> : null,
+}));
+
+// Mock PdfViewerModal (depends on @react-pdf-viewer packages)
+vi.mock('@/components/pdf/PdfViewerModal', () => ({
+  PdfViewerModal: () => null,
+}));
+
+// Mock API to prevent real HTTP calls on mount
+vi.mock('@/lib/api', () => ({
+  api: {
+    documents: {
+      getDocumentsByGame: vi.fn().mockResolvedValue([]),
+    },
+    pdf: {
+      getPdfDownloadUrl: vi.fn((id: string) => `/api/pdf/${id}/download`),
+    },
+  },
 }));
 
 // Mock Next.js Link
@@ -57,35 +74,49 @@ describe('MeepleInfoCard', () => {
   });
 
   describe('Knowledge Base Tab', () => {
-    it('should show empty state for KB tab', () => {
+    it('should show empty state for KB tab', async () => {
       renderWithQuery(<MeepleInfoCard {...defaultProps} />);
-      expect(screen.getByText('Nessun documento')).toBeInTheDocument();
+      // Wait for async document fetch to complete
+      await waitFor(() => {
+        expect(screen.getByText('Nessun documento')).toBeInTheDocument();
+      });
     });
 
-    it('should show upload button when not readOnly', () => {
+    it('should show upload button when not readOnly', async () => {
       renderWithQuery(<MeepleInfoCard {...defaultProps} />);
-      expect(screen.getByText('Carica')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Carica')).toBeInTheDocument();
+      });
     });
 
-    it('should hide upload button when readOnly', () => {
+    it('should hide upload button when readOnly', async () => {
       renderWithQuery(<MeepleInfoCard {...defaultProps} readOnly />);
-      expect(screen.queryByText('Carica')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText('Carica')).not.toBeInTheDocument();
+      });
     });
 
-    it('should show readOnly empty message', () => {
+    it('should show readOnly empty message', async () => {
       renderWithQuery(<MeepleInfoCard {...defaultProps} readOnly />);
-      expect(screen.getByText(/Nessun documento disponibile/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Nessun documento disponibile/)).toBeInTheDocument();
+      });
     });
 
-    it('should show editable empty message when not readOnly', () => {
+    it('should show editable empty message when not readOnly', async () => {
       renderWithQuery(<MeepleInfoCard {...defaultProps} />);
-      expect(screen.getByText(/Carica regolamenti/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Carica regolamenti/)).toBeInTheDocument();
+      });
     });
 
-    it('should open PDF modal on upload click', () => {
+    it('should open PDF modal on upload click', async () => {
       renderWithQuery(<MeepleInfoCard {...defaultProps} />);
 
-      // Click the "Carica PDF" button in empty state
+      // Wait for loading to complete, then click "Carica PDF" button in empty state
+      await waitFor(() => {
+        expect(screen.getByText('Carica PDF')).toBeInTheDocument();
+      });
       fireEvent.click(screen.getByText('Carica PDF'));
       expect(screen.getByTestId('pdf-upload-modal')).toBeInTheDocument();
     });
@@ -145,7 +176,7 @@ describe('MeepleInfoCard', () => {
     ];
 
     it('should show stats tab when showStats is true with data', () => {
-      render(
+      renderWithQuery(
         <MeepleInfoCard
           {...defaultProps}
           showStats
@@ -156,7 +187,7 @@ describe('MeepleInfoCard', () => {
     });
 
     it('should display stats data', () => {
-      render(
+      renderWithQuery(
         <MeepleInfoCard
           {...defaultProps}
           showStats
@@ -171,7 +202,7 @@ describe('MeepleInfoCard', () => {
     });
 
     it('should display recent sessions', () => {
-      render(
+      renderWithQuery(
         <MeepleInfoCard
           {...defaultProps}
           showStats
@@ -187,7 +218,7 @@ describe('MeepleInfoCard', () => {
     });
 
     it('should show N/A for missing stats', () => {
-      render(
+      renderWithQuery(
         <MeepleInfoCard
           {...defaultProps}
           showStats
@@ -209,7 +240,7 @@ describe('MeepleInfoCard', () => {
 
   describe('Tab Visibility', () => {
     it('should hide KB tab when showKnowledgeBase is false', () => {
-      render(
+      renderWithQuery(
         <MeepleInfoCard
           {...defaultProps}
           showKnowledgeBase={false}
@@ -219,7 +250,7 @@ describe('MeepleInfoCard', () => {
     });
 
     it('should hide Social tab when showSocialLinks is false', () => {
-      render(
+      renderWithQuery(
         <MeepleInfoCard
           {...defaultProps}
           showSocialLinks={false}

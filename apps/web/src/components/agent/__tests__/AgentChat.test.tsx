@@ -4,12 +4,48 @@
  * Tests for base chat UI with 3 layout variants.
  */
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe } from 'jest-axe';
 
 import { AgentChat } from '../AgentChat';
+
+// Mock sonner toast (used by AgentChat for error notifications)
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), info: vi.fn() },
+}));
+
+// Mock useAgentChat hook to simulate streaming behavior.
+// Uses a ref to always access the latest options (avoids stale closure issues
+// in the component's onComplete callback that reads streamingContent).
+vi.mock('@/hooks/queries/useAgentChat', () => {
+  const React = require('react');
+  return {
+    useAgentChat: (_agentId: string, options: any = {}) => {
+      const [isStreaming, setIsStreaming] = React.useState(false);
+      const optionsRef = React.useRef(options);
+      optionsRef.current = options;
+
+      const sendMessage = React.useCallback((content: string) => {
+        setIsStreaming(true);
+        const echoText = `Echo: ${content}`;
+        // Simulate token streaming
+        setTimeout(() => {
+          optionsRef.current.onToken?.(echoText);
+          // Wait for React to re-render with updated streamingContent,
+          // then call onComplete with the latest options
+          setTimeout(() => {
+            optionsRef.current.onComplete?.();
+            setIsStreaming(false);
+          }, 100);
+        }, 50);
+      }, []);
+
+      return { isStreaming, sendMessage };
+    },
+  };
+});
 
 // Mock chat sub-components
 vi.mock('@/components/agent/chat', () => ({

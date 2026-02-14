@@ -47,7 +47,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   const value: PermissionContextValue = {
     tier: data?.tier ?? 'free',
     role: data?.role ?? 'user',
-    canAccess: (feature) => data?.accessibleFeatures.includes(feature) ?? false,
+    canAccess: (feature) => data?.accessibleFeatures?.includes(feature) ?? false,
     hasTier: (tier) => hasMinimumTier(data?.tier ?? 'free', tier),
     isAdmin: () => isAdmin(data?.role ?? 'user'),
     loading: isLoading

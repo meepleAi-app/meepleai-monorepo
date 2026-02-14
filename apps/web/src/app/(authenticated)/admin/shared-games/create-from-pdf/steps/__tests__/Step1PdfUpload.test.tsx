@@ -2,10 +2,29 @@
  * Step1PdfUpload Tests - Issue #4141
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
+
 import { Step1PdfUpload } from '../Step1PdfUpload';
+
+// Mock react-dropzone (not installed as dependency)
+vi.mock('react-dropzone', () => ({
+  useDropzone: vi.fn(({ onDrop, disabled }: { onDrop?: (files: File[]) => void; disabled?: boolean }) => ({
+    getRootProps: () => ({
+      role: 'button',
+      'aria-label': 'Upload PDF file',
+      onClick: () => {},
+    }),
+    getInputProps: () => ({
+      type: 'file',
+      accept: 'application/pdf',
+      disabled,
+    }),
+    isDragActive: false,
+  })),
+}));
 
 // Mock dependencies
 vi.mock('@/lib/utils/upload', () => ({
@@ -47,14 +66,14 @@ describe('Step1PdfUpload', () => {
   });
 
   it('should render upload zone', () => {
-    render(<Step1PdfUpload onNext={mockOnNext} />);
+    renderWithQuery(<Step1PdfUpload onNext={mockOnNext} />);
 
     expect(screen.getByLabelText('Upload PDF file')).toBeInTheDocument();
     expect(screen.getByText(/Drag & drop a PDF file here/i)).toBeInTheDocument();
   });
 
   it('should display file size and format restrictions', () => {
-    render(<Step1PdfUpload onNext={mockOnNext} />);
+    renderWithQuery(<Step1PdfUpload onNext={mockOnNext} />);
 
     expect(screen.getByText(/Max size: 100MB/i)).toBeInTheDocument();
     expect(screen.getByText(/PDF format only/i)).toBeInTheDocument();

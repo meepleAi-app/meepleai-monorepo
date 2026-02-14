@@ -352,7 +352,9 @@ describe('useLibrary hooks', () => {
 
       const { result } = renderHook(() => useGameInLibraryStatus(gameId), { wrapper });
 
-      await waitFor(() => expect(result.current.isError).toBe(true));
+      // Hook sets retry: 1 (overrides test client's retry: false),
+      // so we need a longer timeout for the retry cycle to complete
+      await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
 
       expect(result.current.error).toEqual(error);
     });

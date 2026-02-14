@@ -2,8 +2,10 @@
  * Step3BggMatch Tests - Issue #4141
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { Step3BggMatch } from '../Step3BggMatch';
 
@@ -63,14 +65,14 @@ describe('Step3BggMatch', () => {
   });
 
   it('should render tabs for search and manual ID', () => {
-    render(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
+    renderWithQuery(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
 
     expect(screen.getByText('Search by Title')).toBeInTheDocument();
     expect(screen.getByText('Enter BGG ID')).toBeInTheDocument();
   });
 
   it('should display search results', async () => {
-    render(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
+    renderWithQuery(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
 
     await waitFor(() => {
       expect(screen.getByText('Catan')).toBeInTheDocument();
@@ -81,13 +83,13 @@ describe('Step3BggMatch', () => {
   // TODO: Add test for tab switching with proper Tabs mock
 
   it('should have skip BGG button', () => {
-    render(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
+    renderWithQuery(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
 
     expect(screen.getByRole('button', { name: /Skip BGG/i })).toBeInTheDocument();
   });
 
   it('should call onBack when back button clicked', () => {
-    render(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
+    renderWithQuery(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
 
     const backButton = screen.getByRole('button', { name: /back/i });
     fireEvent.click(backButton);
@@ -96,7 +98,7 @@ describe('Step3BggMatch', () => {
   });
 
   it('should disable Use BGG Data button when no game selected', () => {
-    render(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
+    renderWithQuery(<Step3BggMatch onNext={mockOnNext} onBack={mockOnBack} />);
 
     const useButton = screen.getByRole('button', { name: /Use BGG Data/i });
     expect(useButton).toBeDisabled();

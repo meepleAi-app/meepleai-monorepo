@@ -3,9 +3,11 @@
  * Issue #4167: Error boundary for wizard
  */
 
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect } from 'vitest';
+
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { AdminGameImportWizardClient } from '../client';
 
@@ -44,13 +46,13 @@ vi.mock('@/hooks/wizard/useWizardAutoSave', () => ({
   clearDraft: vi.fn(),
 }));
 
-vi.mock('./steps/Step1UploadPdf', () => ({
+vi.mock('../steps/Step1UploadPdf', () => ({
   Step1UploadPdf: () => {
     throw new Error('Step1 component crashed!');
   },
 }));
 
-vi.mock('./steps/Step3BggMatch', () => ({
+vi.mock('../steps/Step3BggMatch', () => ({
   Step3BggMatch: () => <div>Step 3</div>,
 }));
 
@@ -60,7 +62,7 @@ describe('AdminGameImportWizard - Error Boundary', () => {
     const originalError = console.error;
     console.error = vi.fn();
 
-    render(<AdminGameImportWizardClient />);
+    renderWithQuery(<AdminGameImportWizardClient />);
 
     // Should show error fallback
     await screen.findByText('Wizard Error');
@@ -77,7 +79,7 @@ describe('AdminGameImportWizard - Error Boundary', () => {
     const originalError = console.error;
     console.error = vi.fn();
 
-    render(<AdminGameImportWizardClient />);
+    renderWithQuery(<AdminGameImportWizardClient />);
 
     await screen.findByText('Wizard Error');
 
@@ -86,8 +88,10 @@ describe('AdminGameImportWizard - Error Boundary', () => {
 
     await user.click(startOverBtn);
 
-    // Error boundary should reset (component would re-render if not mocked to crash)
-    expect(startOverBtn).toBeInTheDocument();
+    // Error boundary resets, Step1 throws again, so error fallback re-appears
+    // Re-query for the button since DOM was re-rendered
+    const newStartOverBtn = await screen.findByRole('button', { name: /start over/i });
+    expect(newStartOverBtn).toBeInTheDocument();
 
     console.error = originalError;
   });

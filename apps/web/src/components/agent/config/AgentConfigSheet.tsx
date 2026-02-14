@@ -26,7 +26,6 @@ import {
   SheetFooter,
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
-import { useAgentSessionLaunch } from '@/hooks/useAgentSessionLaunch';
 
 import { CostPreview } from './CostPreview';
 import { GameSelector } from './GameSelector';
@@ -35,13 +34,11 @@ import { SlotCards } from './SlotCards';
 import { StrategySelector } from './StrategySelector';
 import { TemplateCarousel } from './TemplateCarousel';
 import { TokenQuotaDisplay } from './TokenQuotaDisplay';
-import { ActionBar } from '../shared/ActionBar';
 
 interface AgentConfigSheetProps {
   isOpen: boolean;
   onClose: () => void;
   gameId: string;
-  gameSessionId?: string;
   gameTitle: string;
 }
 
@@ -51,17 +48,11 @@ export function AgentConfigSheet({
   isOpen,
   onClose,
   gameId,
-  gameSessionId,
   gameTitle,
 }: AgentConfigSheetProps) {
   const [view, setView] = useState<ViewState>('config');
 
-  // Issue #3375: Agent Session Launch
-  const { launch, isLaunching } = useAgentSessionLaunch({
-    onSuccess: () => {
-      onClose();
-    },
-  });
+  const isLaunching = false;
 
   const handleBack = () => {
     if (view === 'template-info' || view === 'model-pricing') {
@@ -158,20 +149,21 @@ export function AgentConfigSheet({
           )}
         </div>
 
-        {/* Footer - Action Bar */}
+        {/* Footer */}
         <SheetFooter className="border-t border-slate-800 pt-4">
-          <div className="w-full">
-            <ActionBar
-              state="config"
-              onLaunch={() => {
-                // Issue #3375: Launch agent session
-                if (gameSessionId) {
-                  launch(gameSessionId, { gameId });
-                }
+          <div className="w-full flex gap-3 justify-end">
+            <Button variant="outline" onClick={onClose} disabled={isLaunching}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                // Navigate to unified chat with game context
+                window.location.href = `/chat/new?gameId=${gameId}`;
               }}
-              onCancel={onClose}
               disabled={isLaunching}
-            />
+            >
+              Start Chat
+            </Button>
           </div>
         </SheetFooter>
       </SheetContent>

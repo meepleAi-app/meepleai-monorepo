@@ -17,7 +17,6 @@ import { Bot, Settings, Radio, MessageCircle, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-import { AdminAgentChat } from '@/components/admin/agents/AdminAgentChat';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -212,7 +211,7 @@ export default function AdminAgentViewPage() {
 
         {/* Right Column */}
         <div className="space-y-6">
-          {/* 3. Chat Section (Issue #239) */}
+          {/* 3. Chat Section - Redirects to unified chat */}
           <Card className="border-amber-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-quicksand">
@@ -221,11 +220,17 @@ export default function AdminAgentViewPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <AdminAgentChat
-                agentId={agentId}
-                agentName={agent.name}
-                channelEnabled={channelEnabled}
-              />
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <MessageCircle className="h-10 w-10 text-amber-500/50 mb-3" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  Agent chat has been migrated to the unified chat system.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/chat/new">
+                    Open Unified Chat
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

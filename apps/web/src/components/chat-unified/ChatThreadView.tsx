@@ -21,8 +21,6 @@ import { api } from '@/lib/api';
 import type { Citation } from '@/types';
 import { cn } from '@/lib/utils';
 
-import { ChatInfoPanel } from '@/components/chat/ChatInfoPanel';
-
 import { ChatThreadHeader } from './ChatThreadHeader';
 
 // ============================================================================
@@ -380,14 +378,43 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           </div>
         </div>
 
-        {/* Info Panel (right) */}
-        <ChatInfoPanel
-          game={game}
-          citations={allCitations}
-          suggestedQuestions={suggestedQuestions}
-          onQuestionClick={handleQuestionClick}
-          isStreaming={isSending}
-        />
+        {/* Info Panel (right) - Hidden on mobile */}
+        <div className="hidden lg:flex w-[340px] flex-shrink-0 flex-col border-l border-border/50 bg-card/50 p-4 overflow-y-auto">
+          {game && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold font-quicksand mb-1">{game.title}</h4>
+              <p className="text-xs text-muted-foreground">Gioco collegato</p>
+            </div>
+          )}
+          {allCitations.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold font-quicksand mb-2">Citazioni ({allCitations.length})</h4>
+              <div className="space-y-1">
+                {allCitations.slice(0, 10).map((c, i) => (
+                  <div key={`${c.documentId}-${c.pageNumber}-${i}`} className="text-xs px-2 py-1 bg-amber-50 dark:bg-amber-500/10 rounded">
+                    p.{c.pageNumber} - {c.documentId?.slice(0, 8)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {suggestedQuestions.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold font-quicksand mb-2">Domande suggerite</h4>
+              <div className="space-y-1">
+                {suggestedQuestions.map((q, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleQuestionClick(q)}
+                    className="block w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,21 +1,18 @@
 /**
  * ChatHistorySection - Dashboard Widget for Recent AI Chats
  * Issue #3312 - Implement ChatHistorySection
- * Issue #3484 - Backend Integration
+ * Issue #4368 - Refactored: prop-driven only (legacy hooks removed)
  *
  * Features:
- * - Shows up to 4 most recent chat sessions from backend
+ * - Shows up to 4 most recent chat threads (passed via props)
  * - Displays title, relative timestamp, message count
  * - Click navigates to chat session
  * - "New Chat" button to start new conversation
- * - "View All" link to chat history
  * - Empty state with "Start Conversation" CTA
- * - Loading skeleton state
- * - Delete session with confirmation
  *
  * @example
  * ```tsx
- * <ChatHistorySection userId={currentUser.id} />
+ * <ChatHistorySection threads={chatThreads} />
  * ```
  */
 
@@ -29,16 +26,11 @@ import {
   ChevronRight,
   MessageSquare,
   Plus,
-  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
-import {
-  useDeleteChatSession,
-  useRecentChatSessions,
-} from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -55,13 +47,11 @@ export interface ChatThread {
 }
 
 export interface ChatHistorySectionProps {
-  /** User ID for fetching sessions (required for backend integration) */
-  userId?: string;
-  /** Chat threads data (optional - for testing or manual override) */
+  /** Chat threads data */
   threads?: ChatThread[];
   /** Total count of threads (for "View All" logic) */
   totalCount?: number;
-  /** Loading state (optional - auto-detected from query) */
+  /** Loading state */
   isLoading?: boolean;
   /** Additional CSS classes */
   className?: string;
@@ -75,13 +65,11 @@ function formatRelativeTime(isoDate: string): string {
   const date = new Date(isoDate);
   const now = new Date();
 
-  // Check if same day
   const isToday =
     date.getDate() === now.getDate() &&
     date.getMonth() === now.getMonth() &&
     date.getFullYear() === now.getFullYear();
 
-  // Check if yesterday
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday =
@@ -95,7 +83,6 @@ function formatRelativeTime(isoDate: string): string {
   if (isYesterday) {
     return `Ieri ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
   }
-  // More than yesterday, show date
   return date.toLocaleDateString('it-IT', {
     day: '2-digit',
     month: '2-digit',
@@ -117,7 +104,6 @@ function ChatHistorySectionSkeleton({ className }: { className?: string }) {
       )}
       data-testid="chat-history-skeleton"
     >
-      {/* Header Skeleton */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded-lg" />
@@ -125,8 +111,6 @@ function ChatHistorySectionSkeleton({ className }: { className?: string }) {
         </div>
         <Skeleton className="h-8 w-24 rounded-full" />
       </div>
-
-      {/* Threads Skeleton */}
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex items-center justify-between p-2">
@@ -179,23 +163,14 @@ function EmptyState() {
 interface ThreadItemProps {
   thread: ChatThread;
   index: number;
-  onDelete?: (threadId: string, gameId?: string) => void;
-  isDeleting?: boolean;
 }
 
-function ThreadItem({ thread, index, onDelete, isDeleting }: ThreadItemProps) {
-  const handleDelete = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDelete?.(thread.id, thread.gameId);
-  };
-
+function ThreadItem({ thread, index }: ThreadItemProps) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={cn(isDeleting && 'opacity-50')}
     >
       <Link
         href={`/chat/${thread.id}`}
@@ -218,27 +193,12 @@ function ThreadItem({ thread, index, onDelete, isDeleting }: ThreadItemProps) {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 ml-2">
-          <span
-            className="text-xs text-muted-foreground"
-            data-testid={`chat-time-${thread.id}`}
-          >
-            {formatRelativeTime(thread.lastMessageAt)}
-          </span>
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              data-testid={`delete-thread-${thread.id}`}
-            >
-              <Trash2 className="h-3 w-3" />
-              <span className="sr-only">Elimina</span>
-            </Button>
-          )}
-        </div>
+        <span
+          className="text-xs text-muted-foreground shrink-0 ml-2"
+          data-testid={`chat-time-${thread.id}`}
+        >
+          {formatRelativeTime(thread.lastMessageAt)}
+        </span>
       </Link>
     </motion.div>
   );
@@ -249,82 +209,19 @@ function ThreadItem({ thread, index, onDelete, isDeleting }: ThreadItemProps) {
 // ============================================================================
 
 export function ChatHistorySection({
-  userId,
   threads: propThreads,
   totalCount: propTotalCount,
-  isLoading: propIsLoading,
+  isLoading,
   className,
 }: ChatHistorySectionProps) {
-  // Fetch from backend if userId provided and no threads prop
-  const {
-    data: backendData,
-    isLoading: queryLoading,
-    error,
-  } = useRecentChatSessions(userId, {
-    limit: 10,
-    enabled: !!userId && !propThreads,
-  });
-
-  // Delete mutation
-  const deleteMutation = useDeleteChatSession();
-
-  // Map backend data to ChatThread format
-  const threads = useMemo(() => {
-    if (propThreads) return propThreads;
-    if (!backendData?.sessions) return [];
-
-    return backendData.sessions.map((session) => ({
-      id: session.id,
-      title: session.title || `Chat del ${new Date(session.createdAt).toLocaleDateString('it-IT')}`,
-      lastMessageAt: session.lastMessageAt || session.createdAt,
-      messageCount: session.messageCount,
-      gameId: session.gameId,
-      gameTitle: session.gameTitle || undefined,
-    }));
-  }, [propThreads, backendData]);
-
+  const threads = propThreads ?? [];
   const displayThreads = useMemo(() => threads.slice(0, 4), [threads]);
-  const total = propTotalCount ?? backendData?.totalCount ?? threads.length;
+  const total = propTotalCount ?? threads.length;
   const hasMore = total > 4;
   const isEmpty = threads.length === 0;
-  const isLoading = propIsLoading ?? queryLoading;
-
-  const handleDelete = (threadId: string, gameId?: string) => {
-    if (!userId) return;
-    deleteMutation.mutate({
-      sessionId: threadId,
-      userId,
-      gameId: gameId ?? '',
-    });
-  };
 
   if (isLoading) {
     return <ChatHistorySectionSkeleton className={className} />;
-  }
-
-  // Show error state
-  if (error && !propThreads) {
-    return (
-      <section
-        className={cn(
-          'rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xl p-4',
-          className
-        )}
-        data-testid="chat-history-error"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-destructive/20 flex items-center justify-center">
-              <MessageSquare className="h-4 w-4 text-destructive" />
-            </div>
-            <h3 className="font-semibold text-sm">Conversazioni AI Recenti</h3>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground text-center py-4">
-          Impossibile caricare le conversazioni
-        </p>
-      </section>
-    );
   }
 
   return (
@@ -346,7 +243,6 @@ export function ChatHistorySection({
           </h3>
         </div>
 
-        {/* New Chat Button */}
         <Link href="/chat/new">
           <Button
             size="sm"
@@ -365,20 +261,16 @@ export function ChatHistorySection({
         <EmptyState />
       ) : (
         <>
-          {/* Threads List */}
           <div className="space-y-1" data-testid="threads-list">
             {displayThreads.map((thread, index) => (
               <ThreadItem
                 key={thread.id}
                 thread={thread}
                 index={index}
-                onDelete={userId ? handleDelete : undefined}
-                isDeleting={deleteMutation.isPending && deleteMutation.variables?.sessionId === thread.id}
               />
             ))}
           </div>
 
-          {/* View All Link */}
           {hasMore && (
             <div className="mt-4 pt-3 border-t border-border/40">
               <Link

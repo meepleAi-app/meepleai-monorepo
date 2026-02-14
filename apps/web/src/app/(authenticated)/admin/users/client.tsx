@@ -7,6 +7,10 @@ import Link from 'next/link';
 
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import {
+  AdminConfirmationDialog,
+  AdminConfirmationLevel,
+} from '@/components/ui/admin/admin-confirmation-dialog';
 import type { SortingState, RowSelectionState } from '@/components/ui/data-display/data-table';
 import { type UserRole } from '@/components/ui/data-display/user-role-badge';
 import { api } from '@/lib/api';
@@ -91,6 +95,11 @@ export function AdminPageClient() {
   const [tierModal, setTierModal] = useState<{ isOpen: boolean; user?: User }>({
     isOpen: false,
   }); // Issue #3699
+  const [impersonateDialog, setImpersonateDialog] = useState<{
+    isOpen: boolean;
+    user?: User;
+  }>({ isOpen: false }); // Issue #3700: Level 2 confirmation
+  const [impersonateLoading, setImpersonateLoading] = useState(false);
 
   // Row selection conversion helpers
   const rowSelection = useMemo<RowSelectionState>(() =>
@@ -256,27 +265,32 @@ export function AdminPageClient() {
     [addToast, fetchUsers]
   );
 
-  // Impersonate user (Issue #3349)
+  // Impersonate user (Issue #3700: Level 2 confirmation)
   const handleImpersonate = useCallback(
-    async (targetUser: User) => {
-      setConfirmation({
-        isOpen: true,
-        title: 'Impersonate User',
-        message: `You are about to impersonate "${targetUser.displayName}" (${targetUser.email}). All actions will be logged with your admin ID. Continue?`,
-        onConfirm: async () => {
-          setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-          const success = await startImpersonation(targetUser.id, {
-            displayName: targetUser.displayName,
-            email: targetUser.email,
-          });
-          if (!success) {
-            addToast('error', 'Failed to start impersonation');
-          }
-        },
-      });
+    (targetUser: User) => {
+      setImpersonateDialog({ isOpen: true, user: targetUser });
     },
-    [addToast, startImpersonation]
+    []
   );
+
+  const handleImpersonateConfirm = useCallback(async () => {
+    const targetUser = impersonateDialog.user;
+    if (!targetUser) return;
+
+    setImpersonateLoading(true);
+    try {
+      const success = await startImpersonation(targetUser.id, {
+        displayName: targetUser.displayName,
+        email: targetUser.email,
+      });
+      if (!success) {
+        addToast('error', 'Failed to start impersonation');
+      }
+    } finally {
+      setImpersonateLoading(false);
+      setImpersonateDialog({ isOpen: false });
+    }
+  }, [impersonateDialog.user, startImpersonation, addToast]);
 
   // Change tier - Issue #3699
   const handleChangeTier = useCallback(
@@ -672,6 +686,23 @@ export function AdminPageClient() {
             onConfirm={handleChangeTier}
           />
         )}
+
+        {/* Impersonate Confirmation Dialog - Issue #3700 (Level 2) */}
+        <AdminConfirmationDialog
+          isOpen={impersonateDialog.isOpen}
+          onClose={() => setImpersonateDialog({ isOpen: false })}
+          onConfirm={handleImpersonateConfirm}
+          level={AdminConfirmationLevel.Level2}
+          title="Impersonate User"
+          message={
+            impersonateDialog.user
+              ? `You are about to impersonate "${impersonateDialog.user.displayName}" (${impersonateDialog.user.email}). You will see the application as this user. All actions will be tracked and logged with your admin ID.`
+              : ''
+          }
+          warningMessage="This is a critical security action. Only use impersonation for debugging and support purposes."
+          confirmText="Start Impersonation"
+          isLoading={impersonateLoading}
+        />
 
         {/* Confirmation Dialog */}
         {confirmation.isOpen && (

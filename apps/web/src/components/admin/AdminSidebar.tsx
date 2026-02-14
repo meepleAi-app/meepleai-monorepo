@@ -29,6 +29,7 @@ import {
   BellIcon,
   KeyIcon,
   FlaskConicalIcon,
+  ActivityIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -79,6 +80,7 @@ const defaultNavigation: NavItem[] = [
   { href: '/admin/api-keys', label: 'API Keys', icon: KeyIcon },
   { href: '/admin/alerts', label: 'Alerts', icon: BellIcon },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChartIcon },
+  { href: '/admin/usage-stats', label: 'Usage Stats', icon: ActivityIcon },
   { href: '/admin/testing', label: 'Testing', icon: FlaskConicalIcon },
   { href: '/admin/configuration', label: 'Configuration', icon: SettingsIcon },
   { href: '/admin/cache', label: 'Cache', icon: DatabaseIcon },

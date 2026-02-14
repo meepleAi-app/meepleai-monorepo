@@ -170,7 +170,7 @@ export default function GameDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] py-8 px-4">
+      <div className="min-h-screen bg-background py-8 px-4">
         <div className="container mx-auto max-w-7xl">
           <Skeleton className="h-8 w-48 mb-6" />
           <Skeleton className="h-[600px] w-full max-w-2xl mx-auto" />
@@ -181,7 +181,7 @@ export default function GameDetailPage() {
 
   if (error || !gameDetail) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] py-8 px-4">
+      <div className="min-h-screen bg-background py-8 px-4">
         <div className="container mx-auto max-w-7xl">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -202,7 +202,7 @@ export default function GameDetailPage() {
   // ============================================================================
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-7xl">
         {/* Back Button */}
         <Button asChild variant="ghost" className="mb-6 font-nunito">
@@ -322,7 +322,7 @@ export default function GameDetailPage() {
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription className="font-nunito">
-                      Accedi per visualizzare le tue statistiche di gioco
+                      Le statistiche verranno visualizzate qui una volta registrate le prime partite.
                     </AlertDescription>
                   </Alert>
                 </CardContent>

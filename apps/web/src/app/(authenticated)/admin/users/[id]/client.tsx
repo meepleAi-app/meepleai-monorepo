@@ -37,6 +37,7 @@ import {
   UserActivityTimeline,
   type UserActivityEvent,
 } from '@/components/admin';
+import { ImpersonationChatHistory } from '@/components/admin/impersonation-chat-history';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -595,6 +596,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       </Badge>
                     )}
                   </TabsTrigger>
+                  <TabsTrigger value="chat-history">Chat History</TabsTrigger>
                   <TabsTrigger value="sessions">Sessions</TabsTrigger>
                   <TabsTrigger value="api-keys">API Keys</TabsTrigger>
                 </TabsList>
@@ -714,6 +716,21 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   )}
                 </CardContent>
               </Card>
+                </TabsContent>
+
+                {/* Chat History Tab - Issue #3700 */}
+                <TabsContent value="chat-history" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>AI Chat History</CardTitle>
+                      <CardDescription>
+                        View this user&apos;s AI chat conversations (read-only)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ImpersonationChatHistory userId={userId} limit={20} />
+                    </CardContent>
+                  </Card>
                 </TabsContent>
 
                 {/* Sessions Tab - Issue #3946 */}

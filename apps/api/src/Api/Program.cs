@@ -495,6 +495,7 @@ v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload l
 v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
+v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics

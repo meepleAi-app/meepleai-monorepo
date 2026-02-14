@@ -218,6 +218,8 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
         IMediator mediator,
         string? type = null,
         string? search = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
         int skip = 0,
         int take = 20,
         string? order = null,
@@ -241,6 +243,8 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
             UserId: session.User!.Id,
             Types: types,
             SearchTerm: search,
+            DateFrom: dateFrom,
+            DateTo: dateTo,
             Skip: Math.Max(0, skip),
             Take: Math.Clamp(take, 1, 100),
             Order: sortDirection);

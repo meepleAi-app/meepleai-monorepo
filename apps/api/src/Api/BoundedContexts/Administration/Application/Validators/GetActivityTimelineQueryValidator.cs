@@ -39,5 +39,15 @@ internal sealed class GetActivityTimelineQueryValidator : AbstractValidator<GetA
             .Must(t => ValidTypes.Contains(t))
             .When(x => x.Types is { Length: > 0 })
             .WithMessage("Invalid activity type. Valid types: game_added, session_completed, chat_saved, wishlist_added");
+
+        RuleFor(x => x.DateTo)
+            .GreaterThanOrEqualTo(x => x.DateFrom!.Value)
+            .When(x => x.DateFrom.HasValue && x.DateTo.HasValue)
+            .WithMessage("DateTo must be >= DateFrom");
+
+        RuleFor(x => x)
+            .Must(x => !x.DateFrom.HasValue || !x.DateTo.HasValue ||
+                       (x.DateTo.Value - x.DateFrom.Value).TotalDays <= 365)
+            .WithMessage("Date range must not exceed 1 year (365 days)");
     }
 }

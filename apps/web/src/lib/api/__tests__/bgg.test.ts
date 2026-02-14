@@ -19,6 +19,10 @@ describe('BGG API Client', () => {
     vi.useFakeTimers();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('searchBggGames', () => {
     it('should return matching games for valid query', async () => {
       const promise = searchBggGames('Catan');
@@ -156,10 +160,11 @@ describe('BGG API Client', () => {
 
     it('should throw error for invalid ID', async () => {
       const promise = fetchBggGameById(99999);
+      const assertion = expect(promise).rejects.toThrow('BGG game not found: ID 99999');
 
       await vi.advanceTimersByTimeAsync(300);
 
-      await expect(promise).rejects.toThrow('BGG game not found: ID 99999');
+      await assertion;
     });
 
     it('should return different games for different IDs', async () => {

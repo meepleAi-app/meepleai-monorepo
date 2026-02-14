@@ -19,25 +19,8 @@ vi.mock('@/components/auth/AuthProvider', () => ({
   }),
 }));
 
-// Mock MentionInput component
-interface MockMentionInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-}
-
-vi.mock('../chat/MentionInput', () => ({
-  MentionInput: ({ value, onChange, placeholder, disabled }: MockMentionInputProps) => (
-    <textarea
-      data-testid="mention-input"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      disabled={disabled}
-    />
-  ),
-}));
+// Reply textarea selector helper (component uses plain <textarea> for replies)
+const REPLY_PLACEHOLDER = 'Scrivi una risposta...';
 
 // Mock dialog hooks
 const mockConfirm = vi.fn();
@@ -1141,7 +1124,7 @@ describe('CommentItem', () => {
 
       fireEvent.click(screen.getByLabelText('Reply to comment'));
 
-      expect(screen.getByTestId('mention-input')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(REPLY_PLACEHOLDER)).toBeInTheDocument();
     });
 
     it('toggles reply form when button clicked again', () => {
@@ -1160,10 +1143,10 @@ describe('CommentItem', () => {
 
       const replyButton = screen.getByLabelText('Reply to comment');
       fireEvent.click(replyButton);
-      expect(screen.getByTestId('mention-input')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(REPLY_PLACEHOLDER)).toBeInTheDocument();
 
       fireEvent.click(replyButton);
-      expect(screen.queryByTestId('mention-input')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(REPLY_PLACEHOLDER)).not.toBeInTheDocument();
     });
 
     it('allows typing reply text', () => {
@@ -1182,7 +1165,7 @@ describe('CommentItem', () => {
 
       fireEvent.click(screen.getByLabelText('Reply to comment'));
 
-      const textarea = screen.getByTestId('mention-input');
+      const textarea = screen.getByPlaceholderText(REPLY_PLACEHOLDER);
       fireEvent.change(textarea, { target: { value: 'This is a reply' } });
 
       expect(textarea).toHaveValue('This is a reply');
@@ -1205,7 +1188,7 @@ describe('CommentItem', () => {
 
       fireEvent.click(screen.getByLabelText('Reply to comment'));
 
-      const textarea = screen.getByTestId('mention-input');
+      const textarea = screen.getByPlaceholderText(REPLY_PLACEHOLDER);
       fireEvent.change(textarea, { target: { value: 'This is a reply' } });
 
       fireEvent.click(screen.getByText('Invia risposta'));
@@ -1232,13 +1215,13 @@ describe('CommentItem', () => {
 
       fireEvent.click(screen.getByLabelText('Reply to comment'));
 
-      const textarea = screen.getByTestId('mention-input');
+      const textarea = screen.getByPlaceholderText(REPLY_PLACEHOLDER);
       fireEvent.change(textarea, { target: { value: 'This is a reply' } });
 
       fireEvent.click(screen.getByText('Invia risposta'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('mention-input')).not.toBeInTheDocument();
+        expect(screen.queryByPlaceholderText(REPLY_PLACEHOLDER)).not.toBeInTheDocument();
       });
     });
 
@@ -1258,7 +1241,7 @@ describe('CommentItem', () => {
 
       fireEvent.click(screen.getByLabelText('Reply to comment'));
 
-      const textarea = screen.getByTestId('mention-input');
+      const textarea = screen.getByPlaceholderText(REPLY_PLACEHOLDER);
       fireEvent.change(textarea, { target: { value: '   ' } });
 
       fireEvent.click(screen.getByText('Invia risposta'));
@@ -1284,13 +1267,13 @@ describe('CommentItem', () => {
 
       fireEvent.click(screen.getByLabelText('Reply to comment'));
 
-      const textarea = screen.getByTestId('mention-input');
+      const textarea = screen.getByPlaceholderText(REPLY_PLACEHOLDER);
       fireEvent.change(textarea, { target: { value: 'This is a reply' } });
 
       const cancelButtons = screen.getAllByText('Annulla');
       fireEvent.click(cancelButtons[0]);
 
-      expect(screen.queryByTestId('mention-input')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(REPLY_PLACEHOLDER)).not.toBeInTheDocument();
     });
 
     it('shows alert on reply error', async () => {
@@ -1310,7 +1293,7 @@ describe('CommentItem', () => {
 
       fireEvent.click(screen.getByLabelText('Reply to comment'));
 
-      const textarea = screen.getByTestId('mention-input');
+      const textarea = screen.getByPlaceholderText(REPLY_PLACEHOLDER);
       fireEvent.change(textarea, { target: { value: 'This is a reply' } });
 
       fireEvent.click(screen.getByText('Invia risposta'));

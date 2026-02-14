@@ -8,13 +8,26 @@ import { toast } from 'sonner';
 
 import { ChatInterface } from '@/components/playground/ChatInterface';
 import { DebugPanel } from '@/components/playground/DebugPanel';
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { RagContextViewer } from '@/components/playground/RagContextViewer';
+import { ScenarioManager } from '@/components/playground/ScenarioManager';
+import {
+  Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Tabs, TabsContent, TabsList, TabsTrigger, Textarea,
+} from '@/components/ui';
+import { parsePlaygroundSSEChunk } from '@/lib/agent/playground-sse-parser';
+import type { PlaygroundSSEHandlers } from '@/lib/agent/playground-sse-parser';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
+import type { PlaygroundTestScenarioDto } from '@/lib/api/schemas/playground-scenarios.schemas';
 import { usePlaygroundStore } from '@/stores/playground-store';
 
 export default function AgentPlaygroundPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
-  const { clearMessages, setCurrentAgent, addMessage, appendToLastMessage, updateMessageMetadata, setStreaming } = usePlaygroundStore();
+  const {
+    clearMessages, setCurrentAgent, addMessage, appendToLastMessage,
+    updateMessageMetadata, setStreaming, addCitations, addStateUpdate,
+    setFollowUpQuestions, setCompletionMetadata, setLatencyMs, clearResponseState,
+    systemMessage, setSystemMessage,
+  } = usePlaygroundStore();
 
   const { data: agents = [] } = useQuery({
     queryKey: ['admin', 'agent-definitions', { activeOnly: true }],
@@ -27,14 +40,20 @@ export default function AgentPlaygroundPage() {
       return;
     }
 
+    // Reset per-response state before new request
+    clearResponseState();
     setStreaming(true);
 
+    const requestStartTime = Date.now();
+
     try {
-      // Create EventSource for SSE
       const response = await fetch(`/api/v1/admin/agent-definitions/${selectedAgentId}/playground/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          message,
+          ...(systemMessage ? { systemMessage } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -43,41 +62,57 @@ export default function AgentPlaygroundPage() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      // Add placeholder assistant message
+
+      // Add placeholder assistant message for streaming tokens
       addMessage({ role: 'assistant', content: '' });
+
+      const handlers: PlaygroundSSEHandlers = {
+        onToken: (token) => appendToLastMessage(token),
+        onStateUpdate: (msg) => addStateUpdate(msg),
+        onCitations: (citations) => addCitations(citations),
+        onFollowUpQuestions: (questions) => setFollowUpQuestions(questions),
+        onComplete: (metadata) => {
+          setCompletionMetadata(metadata);
+          setLatencyMs(Date.now() - requestStartTime);
+          const lastMsg = usePlaygroundStore.getState().messages.slice(-1)[0];
+          if (lastMsg) {
+            updateMessageMetadata(lastMsg.id, {
+              tokens: metadata.totalTokens,
+              latency: Date.now() - requestStartTime,
+            });
+          }
+        },
+        onError: (error) => {
+          toast.error(error.errorMessage || 'Stream error');
+        },
+        onHeartbeat: () => {
+          // Keep-alive, no action needed
+        },
+      };
 
       while (reader) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(6));
-
-            if (line.startsWith('event: chunk')) {
-              appendToLastMessage(data.content);
-            } else if (line.startsWith('event: metadata')) {
-              // Update last message metadata
-              const lastMsg = usePlaygroundStore.getState().messages.slice(-1)[0];
-              if (lastMsg) {
-                updateMessageMetadata(lastMsg.id, {
-                  tokens: data.tokens,
-                  latency: data.latency,
-                  model: data.model,
-                });
-              }
-            }
-          }
-        }
+        const chunk = decoder.decode(value, { stream: true });
+        parsePlaygroundSSEChunk(chunk, handlers);
       }
     } catch (error) {
       toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setStreaming(false);
     }
+  };
+
+  const handleRunScenario = async (scenario: PlaygroundTestScenarioDto) => {
+    // Apply scenario system message override if provided
+    if (scenario.systemMessage) {
+      setSystemMessage(scenario.systemMessage);
+    }
+
+    // Add user message and send
+    addMessage({ role: 'user', content: scenario.userMessage });
+    await handleSendMessage(scenario.userMessage);
   };
 
   const handleClearChat = () => {
@@ -159,13 +194,43 @@ export default function AgentPlaygroundPage() {
         </div>
       </div>
 
+      {/* System Message */}
+      <div>
+        <label className="text-sm font-medium mb-2 block">System Message (optional)</label>
+        <Textarea
+          placeholder="Override the agent's system prompt for this session..."
+          value={systemMessage}
+          onChange={(e) => setSystemMessage(e.target.value)}
+          rows={2}
+          className="resize-none text-sm"
+        />
+      </div>
+
       {/* Main Layout */}
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2">
           <ChatInterface agentId={selectedAgentId} onSendMessage={handleSendMessage} />
         </div>
         <div>
-          <DebugPanel />
+          <Tabs defaultValue="debug" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="debug">Debug</TabsTrigger>
+              <TabsTrigger value="context">RAG</TabsTrigger>
+              <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
+            </TabsList>
+            <TabsContent value="debug" className="mt-4">
+              <DebugPanel />
+            </TabsContent>
+            <TabsContent value="context" className="mt-4">
+              <RagContextViewer />
+            </TabsContent>
+            <TabsContent value="scenarios" className="mt-4">
+              <ScenarioManager
+                agentDefinitionId={selectedAgentId}
+                onRunScenario={handleRunScenario}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

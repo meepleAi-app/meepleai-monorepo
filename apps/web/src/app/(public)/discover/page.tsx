@@ -93,7 +93,7 @@ export default function DiscoverAgentsPage() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
   // Fetch agent availability status (optional, for real-time status)
-  const { data: agentStatuses } = useQuery({
+  const { data: _agentStatuses } = useQuery({
     queryKey: ['agents', 'status'],
     queryFn: async () => {
       // In POC, all agents are available

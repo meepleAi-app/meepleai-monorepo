@@ -91,7 +91,7 @@ export interface EntityActions {
 export function useEntityActions({
   entity,
   id,
-  entityName,
+  _entityName,
   userId,
   userRole = 'user',
   data,

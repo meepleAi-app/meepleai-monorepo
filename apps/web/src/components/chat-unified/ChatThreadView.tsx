@@ -101,7 +101,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           return;
         }
 
-        const mappedMessages = (threadData.messages ?? []).map((m: any) => ({
+        const mappedMessages = (threadData.messages ?? []).map((m: { id: string; content: string; role: string; createdAt: string; citations?: unknown[]; agentId?: string }) => ({
           id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
           role: m.role as 'user' | 'assistant',
           content: m.content,
@@ -125,7 +125,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           try {
             const games = await api.games.getAll();
             const found = (games.games ?? []).find(
-              (g: any) => g.id === threadData.gameId
+              (g: { id: string }) => g.id === threadData.gameId
             );
             if (found) {
               setGame({
@@ -173,7 +173,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
         if (response?.messages) {
           setMessages(
-            response.messages.map((m: any) => ({
+            response.messages.map((m: { id: string; content: string; role: string; createdAt: string; citations?: unknown[]; agentId?: string }) => ({
               id: m.id ?? `msg-${Date.now()}-${Math.random()}`,
               role: m.role,
               content: m.content,

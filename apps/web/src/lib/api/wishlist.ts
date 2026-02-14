@@ -12,5 +12,8 @@ export interface WishlistItem {
 
 export async function getWishlistHighlights(): Promise<WishlistItem[]> {
   const response = await apiClient.get<WishlistItem[]>("/wishlist/highlights");
-  return response.data;
+  if (!response) return [];
+  return response;
 }
+
+export const fetchWishlistHighlights = getWishlistHighlights;

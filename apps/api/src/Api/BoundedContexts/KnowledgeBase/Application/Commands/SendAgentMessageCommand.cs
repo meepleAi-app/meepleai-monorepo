@@ -7,8 +7,11 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Streaming command for sending a message to a standalone agent (non-session).
 /// Returns SSE events: Token(s) → Complete
 /// Issue #4126: API Integration for Agent Chat
+/// Issue #4386: SSE Stream → ChatThread Persistence Hook
 /// </summary>
 internal record SendAgentMessageCommand(
     Guid AgentId,
-    string UserQuestion
+    string UserQuestion,
+    Guid UserId,
+    Guid? ChatThreadId = null
 ) : IStreamingQuery<RagStreamingEvent>;

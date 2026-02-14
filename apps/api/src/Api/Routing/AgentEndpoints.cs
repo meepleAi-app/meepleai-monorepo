@@ -418,11 +418,13 @@ internal static class AgentEndpoints
             CancellationToken cancellationToken) =>
         {
             // Session validated by RequireSessionFilter
-            _ = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
 
             var command = new SendAgentMessageCommand(
                 AgentId: id,
-                UserQuestion: request.Message
+                UserQuestion: request.Message,
+                UserId: session.User!.Id,
+                ChatThreadId: request.ChatThreadId
             );
 
             // Set SSE headers
@@ -461,10 +463,11 @@ internal record TutorQueryRequest(
 
 /// <summary>
 /// Request for chat with agent (SSE streaming).
-/// Issue #4126
+/// Issue #4126, Issue #4386: SSE Stream → ChatThread Persistence Hook
 /// </summary>
 internal record ChatWithAgentRequest(
-    string Message
+    string Message,
+    Guid? ChatThreadId = null
 );
 
 // Request DTOs

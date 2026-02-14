@@ -109,9 +109,13 @@ internal static class AgentSessionEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        var userId = httpContext.User.GetUserId();
+
         var command = new ChatWithSessionAgentCommand(
             AgentSessionId: request.AgentSessionId,
-            UserQuestion: request.UserQuestion
+            UserQuestion: request.UserQuestion,
+            UserId: userId,
+            ChatThreadId: request.ChatThreadId
         );
 
         // Set SSE headers
@@ -208,7 +212,8 @@ internal record LaunchSessionAgentResponse(Guid AgentSessionId);
 
 internal record ChatWithSessionAgentRequest(
     Guid AgentSessionId,
-    string UserQuestion);
+    string UserQuestion,
+    Guid? ChatThreadId = null);
 
 internal record UpdateAgentSessionStateRequest(
     Guid AgentSessionId,

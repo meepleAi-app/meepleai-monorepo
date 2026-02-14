@@ -11,12 +11,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 public record GetTrendingGamesQuery(
     string Period = "week",
     int Limit = 10
-) : IRequest<List<TrendingGameDto>>;
+) : IRequest<List<TrendingGameSummaryDto>>;
 
 /// <summary>
-/// DTO for trending game response.
+/// DTO for trending game response (Issue #4310 simplified view).
 /// </summary>
-public record TrendingGameDto(
+public record TrendingGameSummaryDto(
     Guid GameId,
     string Title,
     decimal TrendScore,

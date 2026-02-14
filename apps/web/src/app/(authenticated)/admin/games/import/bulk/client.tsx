@@ -22,7 +22,6 @@ import {
   Upload,
   FileJson,
   AlertCircle,
-  CheckCircle,
   Info,
   Trash2,
   ClipboardPaste,
@@ -40,6 +39,7 @@ import type { BulkImportFromJsonResult } from '@/lib/api/schemas/admin.schemas';
 import { cn } from '@/lib/utils';
 
 import { BulkImportPreview, parseAndValidateEntries, type PreviewData } from './BulkImportPreview';
+import { BulkImportResults } from './BulkImportResults';
 
 // Validation constants
 const MAX_JSON_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -473,73 +473,10 @@ export function BulkImportJsonUploader(): JSX.Element {
 
         {/* Result Display */}
         {result && (
-          <Card data-testid="import-result">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <CardTitle className="text-base">Import Complete</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Summary Stats */}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-2xl font-bold">{result.total}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center border-green-500/30 bg-green-500/5">
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{result.enqueued}</p>
-                  <p className="text-xs text-muted-foreground">Enqueued</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center border-yellow-500/30 bg-yellow-500/5">
-                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{result.skipped}</p>
-                  <p className="text-xs text-muted-foreground">Skipped</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center border-red-500/30 bg-red-500/5">
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{result.failed}</p>
-                  <p className="text-xs text-muted-foreground">Failed</p>
-                </div>
-              </div>
-
-              {/* Error Details */}
-              {result.errors.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Errors & Skipped Items</h4>
-                  <div className="max-h-60 overflow-y-auto rounded-md border">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted/50 sticky top-0">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-medium">BGG ID</th>
-                          <th className="px-3 py-2 text-left font-medium">Game</th>
-                          <th className="px-3 py-2 text-left font-medium">Type</th>
-                          <th className="px-3 py-2 text-left font-medium">Reason</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.errors.map((err, idx) => (
-                          <tr key={idx} className="border-t">
-                            <td className="px-3 py-2 text-muted-foreground">{err.bggId ?? '-'}</td>
-                            <td className="px-3 py-2">{err.gameName ?? '-'}</td>
-                            <td className="px-3 py-2">
-                              <Badge variant={err.errorType === 'Duplicate' ? 'secondary' : 'destructive'} className="text-xs">
-                                {err.errorType}
-                              </Badge>
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground">{err.reason}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Import Another */}
-              <Button variant="outline" onClick={handleReset} data-testid="import-another">
-                Import Another Batch
-              </Button>
-            </CardContent>
-          </Card>
+          <BulkImportResults
+            result={result}
+            onNewImport={handleReset}
+          />
         )}
       </div>
     </TooltipProvider>

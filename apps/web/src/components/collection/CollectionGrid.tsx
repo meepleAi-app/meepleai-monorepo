@@ -360,6 +360,7 @@ export function CollectionGrid({
               title={game.title}
               imageUrl={game.imageUrl}
               rating={game.rating}
+              status={game.status}
               metadata={[
                 game.yearPublished && { label: 'Year', value: game.yearPublished.toString() },
                 game.playCount && { label: 'Plays', value: game.playCount.toString() },

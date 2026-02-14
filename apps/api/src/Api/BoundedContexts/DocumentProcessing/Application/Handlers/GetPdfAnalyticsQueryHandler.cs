@@ -11,29 +11,28 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// </summary>
 internal class GetPdfAnalyticsQueryHandler : IRequestHandler<GetPdfAnalyticsQuery, PdfAnalyticsDto>
 {
-    public async Task<PdfAnalyticsDto> Handle(GetPdfAnalyticsQuery request, CancellationToken cancellationToken)
-    {
-        _ = request.TimeRangeDays; // NOTE: Will be used for date filtering in future implementation
-        _ = cancellationToken; // NOTE: Will be used for async DB queries
+    // Stub handler - repository will be used in Issue #3715.5 full implementation
 
-        // Placeholder implementation - returns mock data until PdfProcessingMetrics table is populated
+    public Task<PdfAnalyticsDto> Handle(GetPdfAnalyticsQuery request, CancellationToken cancellationToken)
+    {
+        // Stub implementation - full metrics from PdfProcessingMetrics table in Issue #3715.5
         var totalUploaded = 1234;
         var successCount = 1100;
         var failedCount = 134;
 
-        await Task.CompletedTask.ConfigureAwait(false);
-
-        return new PdfAnalyticsDto
+        var result = new PdfAnalyticsDto
         {
             TotalUploaded = totalUploaded,
             SuccessCount = successCount,
             FailedCount = failedCount,
-            SuccessRate = totalUploaded > 0 ? (decimal)successCount / totalUploaded * 100 : 0,
+            SuccessRate = (decimal)successCount / totalUploaded * 100,
             AvgProcessingTime = TimeSpan.FromMinutes(2.75),
             P95ProcessingTime = TimeSpan.FromMinutes(5.5),
             TotalStorageBytes = 15728640000,
-            StorageByTier = new(StringComparer.Ordinal) { ["Free"] = 524288000, ["Pro"] = 15204352000 },
-            UploadsByDay = new()
+            StorageByTier = new Dictionary<string, long>(StringComparer.Ordinal) { ["Free"] = 524288000, ["Pro"] = 15204352000 },
+            UploadsByDay = new List<DailyUploadStats>()
         };
+
+        return Task.FromResult(result);
     }
 }

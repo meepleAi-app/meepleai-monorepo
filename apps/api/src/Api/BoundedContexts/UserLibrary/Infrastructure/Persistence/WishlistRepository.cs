@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.SharedKernel.Application.Services;
@@ -139,8 +140,7 @@ internal class WishlistRepository : RepositoryBase, IWishlistRepository
             gameId: entity.GameId,
             priority: (WishlistPriority)entity.Priority,
             targetPrice: entity.TargetPrice,
-            notes: entity.Notes,
-            visibility: (WishlistVisibility)entity.Visibility);
+            notes: entity.Notes);
 
         // Override Id, AddedAt, and UpdatedAt from DB using reflection
         var idProp = typeof(WishlistItem).BaseType?.BaseType?.GetProperty("Id");

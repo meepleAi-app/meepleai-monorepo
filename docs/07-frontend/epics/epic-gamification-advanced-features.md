@@ -1,6 +1,7 @@
 # Epic: Gamification & Advanced Features
 
 **Epic ID**: EPIC-DH-003
+**GitHub Epic**: #3906
 **Priority**: P2 - Medium
 **Status**: Planning
 **Target Sprint**: N+5 to N+6
@@ -52,7 +53,7 @@ Sistema di gamification con achievements, badges, progressione utente e funziona
 
 ### Backend (2 issues - 4 SP)
 
-#### Issue #15: Achievement System & Badge Engine
+#### Issue #4314: Achievement System & Badge Engine
 **Story Points**: 3
 **Assignee**: Backend Team
 **Dependencies**: None
@@ -140,7 +141,7 @@ public async Task EvaluateAchievements(CancellationToken ct) {
 
 ---
 
-#### Issue #16: Advanced Activity Timeline Query Service
+#### Issue #4315: Advanced Activity Timeline Query Service
 **Story Points**: 1
 **Assignee**: Backend Team
 **Dependencies**: Epic 1 Issue #2 (Basic activity service)
@@ -167,7 +168,7 @@ GET /api/v1/activity/timeline?type=game_added&dateFrom=2026-01-01&page=1&pageSiz
 
 ### Frontend (2 issues - 4 SP)
 
-#### Issue #17: Achievements Widget Component
+#### Issue #4317: Achievements Widget Component
 **Story Points**: 2
 **Assignee**: Frontend Team
 **Dependencies**: #15 (Backend achievement system)
@@ -205,7 +206,7 @@ interface AchievementsWidgetProps {
 
 ---
 
-#### Issue #18: Advanced Activity Timeline with Filters
+#### Issue #4318: Advanced Activity Timeline with Filters
 **Story Points**: 2
 **Assignee**: Frontend Team
 **Dependencies**: #16 (Backend advanced query)
@@ -252,13 +253,13 @@ interface AdvancedActivityTimelineProps {
 
 ### Internal Dependencies (Within Epic)
 ```
-Issue #15 (Achievement Engine)
+Issue #4314 (Achievement Engine)
   ↓
-Issue #17 (Achievements Widget)
+Issue #4317 (Achievements Widget)
 
-Issue #16 (Advanced Timeline Service)
+Issue #4315 (Advanced Timeline Service)
   ↓
-Issue #18 (Advanced Timeline Component)
+Issue #4318 (Advanced Timeline Component)
 ```
 
 ---
@@ -333,5 +334,6 @@ Epic is considered complete when:
 ---
 
 **Epic Owner**: Product Team + Frontend Lead
-**Last Updated**: 2026-01-21
+**Created**: 2026-01-21
+**Last Updated**: 2026-02-14 (Issues created: #4314-4315, #4317-4318)
 **Next Review**: Sprint Planning N+5

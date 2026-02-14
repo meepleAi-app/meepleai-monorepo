@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1707 // Identifiers should not contain underscores - EF migration name is auto-generated
-
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    [SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "EF Core migration naming convention")]
+#pragma warning disable CA1707 // Identifiers should not contain underscores - EF Core migration naming standard
     public partial class Issue3715_PdfAnalyticsTables : Migration
+#pragma warning restore CA1707
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

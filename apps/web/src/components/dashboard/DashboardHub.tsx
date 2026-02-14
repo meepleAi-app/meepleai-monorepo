@@ -103,7 +103,7 @@ function LazySection({ children, className, fallbackHeight = 'h-64' }: LazySecti
       {inView ? (
         children
       ) : (
-        <div className={`${fallbackHeight} animate-pulse rounded-2xl bg-gray-200`} />
+        <div className={`${fallbackHeight} animate-pulse rounded-2xl bg-muted`} />
       )}
     </div>
   );
@@ -117,28 +117,28 @@ function DashboardSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 p-4 md:grid-cols-2 md:gap-6 md:p-6 lg:grid-cols-3 lg:gap-8 lg:p-8">
       {/* Hero Stats Skeleton */}
-      <div className="col-span-full h-32 animate-pulse rounded-2xl bg-gray-200" />
+      <div className="col-span-full h-32 animate-pulse rounded-2xl bg-muted" />
 
       {/* Active Sessions Skeleton */}
-      <div className="col-span-full h-64 animate-pulse rounded-2xl bg-gray-200" />
+      <div className="col-span-full h-64 animate-pulse rounded-2xl bg-muted" />
 
       {/* Library Snapshot Skeleton */}
-      <div className="h-96 animate-pulse rounded-2xl bg-gray-200" />
+      <div className="h-96 animate-pulse rounded-2xl bg-muted" />
 
       {/* Activity Feed Skeleton */}
-      <div className="h-96 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
+      <div className="h-96 animate-pulse rounded-2xl bg-muted md:col-span-1 lg:col-span-2" />
 
       {/* Wishlist Highlights Skeleton */}
-      <div className="h-80 animate-pulse rounded-2xl bg-gray-200" />
+      <div className="h-80 animate-pulse rounded-2xl bg-muted" />
 
       {/* Catalog Trending Skeleton */}
-      <div className="h-80 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
+      <div className="h-80 animate-pulse rounded-2xl bg-muted md:col-span-1 lg:col-span-2" />
 
       {/* Chat History Skeleton */}
-      <div className="h-64 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
+      <div className="h-64 animate-pulse rounded-2xl bg-muted md:col-span-1 lg:col-span-2" />
 
       {/* Quick Actions Skeleton */}
-      <div className="h-48 animate-pulse rounded-2xl bg-gray-200 md:col-span-2 lg:col-span-1" />
+      <div className="h-48 animate-pulse rounded-2xl bg-muted md:col-span-2 lg:col-span-1" />
     </div>
   );
 }
@@ -154,13 +154,13 @@ interface ErrorFallbackProps {
 
 function DashboardErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-red-200 bg-red-50 p-8">
+    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-destructive/30 bg-destructive/5 p-8">
       <div className="text-6xl">⚠️</div>
-      <h2 className="text-2xl font-semibold text-red-900">Dashboard Error</h2>
-      <p className="max-w-md text-center text-red-700">{error.message}</p>
+      <h2 className="text-2xl font-semibold text-destructive">Dashboard Error</h2>
+      <p className="max-w-md text-center text-destructive/80">{error.message}</p>
       <button
         onClick={resetErrorBoundary}
-        className="min-h-[44px] min-w-[44px] rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+        className="min-h-[44px] min-w-[44px] rounded-lg bg-destructive px-4 py-2 text-destructive-foreground hover:bg-destructive/90"
       >
         Try Again
       </button>
@@ -215,13 +215,13 @@ class SimpleErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
 
 function SectionErrorFallback({ label, onRetry }: { label: string; onRetry: () => void }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
-      <p className="text-sm text-yellow-800">
+    <div className="flex items-center justify-between rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-6">
+      <p className="text-sm text-amber-800 dark:text-amber-200">
         ⚠️ {label} failed to load. Other sections are still working.
       </p>
       <button
         onClick={onRetry}
-        className="ml-4 min-h-[44px] min-w-[44px] shrink-0 rounded-lg bg-yellow-600 px-3 py-1.5 text-xs text-white hover:bg-yellow-700"
+        className="ml-4 min-h-[44px] min-w-[44px] shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
       >
         Retry
       </button>

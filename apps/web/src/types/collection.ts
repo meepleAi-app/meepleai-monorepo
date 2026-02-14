@@ -30,6 +30,7 @@ export interface CollectionGame {
   hasPdf: boolean;
   hasActiveChat: boolean;
   chatCount: number;
+  status?: 'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade';
   category?: string;
   tags?: string[];
   notes?: string;

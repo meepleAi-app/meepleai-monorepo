@@ -1,9 +1,6 @@
 /**
  * Library Section Navigation Configuration
- * Issue #4055 - Add Navigation Links for Private Games Section
- *
- * Defines the 3-tab library section navigation:
- * Collection (main), Private Games, My Proposals.
+ * Defines the library section sub-navigation tabs.
  */
 
 import {
@@ -55,11 +52,8 @@ export const LIBRARY_TABS: LibraryTab[] = [
  * Check if a pathname matches a library tab
  */
 export function getActiveLibraryTab(pathname: string): string {
-  // Exact match for sub-routes first (more specific)
   if (pathname.startsWith('/library/private')) return 'private';
   if (pathname.startsWith('/library/proposals')) return 'proposals';
-  // Default: collection (matches /library exactly or /library with no sub-route)
   if (pathname === '/library') return 'collection';
-  // For game detail pages (/library/games/...), still highlight collection
   return 'collection';
 }

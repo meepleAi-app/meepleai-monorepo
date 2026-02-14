@@ -14,6 +14,7 @@ import type { Action, LayoutContext } from '@/types/layout';
  * Issue #3479 - Extended contexts for Layout System v2
  */
 export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
+  // ─── Core Domain ─────────────────────────────────────────────────────
   default: [],
 
   dashboard: [
@@ -41,6 +42,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  // ─── Library Domain ───────────────────────────────────────────────────
   library: [
     {
       id: 'add',
@@ -136,6 +138,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  // ─── Game Domain ─────────────────────────────────────────────────────
   game_detail: [
     {
       id: 'play',
@@ -214,6 +217,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  // ─── Session Domain ──────────────────────────────────────────────────
   session_setup: [
     {
       id: 'start',
@@ -319,6 +323,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  // ─── Content Domain ──────────────────────────────────────────────────
   document_viewer: [
     {
       id: 'ask-ai',
@@ -358,6 +363,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  // (catalog is part of Game domain but listed separately for context mapping)
   catalog: [
     {
       id: 'filter',
@@ -382,6 +388,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  // ─── User Domain ─────────────────────────────────────────────────────
   wishlist: [
     {
       id: 'sort',
@@ -454,6 +461,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  // ─── Communication Domain ─────────────────────────────────────────────
   chat: [
     {
       id: 'send',

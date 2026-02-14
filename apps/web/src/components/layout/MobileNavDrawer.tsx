@@ -2,11 +2,12 @@
  * MobileNavDrawer Component (Issue #4064)
  *
  * Slide-out navigation drawer for mobile viewports (<768px).
+ * Uses useNavigationItems hook for unified nav config.
  *
  * Features:
  * - Hamburger button triggers drawer from left
- * - Role-filtered navigation items
- * - Libreria expandable section
+ * - Role-filtered navigation items (via unified hook)
+ * - Libreria expandable section with children
  * - Active link purple highlighting
  * - Close on link click or outside tap
  * - 300ms smooth animation
@@ -22,7 +23,6 @@ import {
   Menu,
   X,
   ChevronDown,
-  BookOpen,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -36,55 +36,31 @@ import {
   SheetTrigger,
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
+import { useNavigationItems } from '@/hooks/useNavigationItems';
 import { cn } from '@/lib/utils';
 
 export interface MobileNavDrawerProps {
-  /** Navigation items to display */
-  navItems: Array<{
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-    ariaLabel: string;
-  }>;
-  /** Library sub-items (Collezione, Giochi Privati) */
-  libraryItems: Array<{
-    href: string;
-    label: string;
-    ariaLabel: string;
-  }>;
-  /** Is any library route active */
-  isLibraryActive: boolean;
   /** Additional className */
   className?: string;
 }
 
 export function MobileNavDrawer({
-  navItems,
-  libraryItems,
-  isLibraryActive,
   className,
 }: MobileNavDrawerProps) {
   const pathname = usePathname();
+  const { items: navItems, isItemActive } = useNavigationItems();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Check if any library route is active
+  const isLibraryActive = pathname?.startsWith('/library') ?? false;
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(isLibraryActive);
 
-  // Check if route is active
-  const isActive = (href: string) => {
-    if (href === '/') {
-      return pathname === '/';
-    }
-    if (href === '/dashboard') {
-      return pathname === '/dashboard';
-    }
-    if (href === '/library') {
-      return pathname === '/library';
-    }
-    // Chat routes: /chat/new, /chat/{threadId}, etc.
-    if (href === '/chat/new') {
-      return pathname?.startsWith('/chat') ?? false;
-    }
-    return pathname?.startsWith(href) ?? false;
-  };
+  // Find the library item to get its children
+  const libraryItem = navItems.find(item => item.id === 'library');
+  const libraryChildren = libraryItem?.children ?? [];
+
+  // Items without library (library is rendered separately with expandable section)
+  const itemsWithoutLibrary = navItems.filter(item => item.id !== 'library');
 
   // Close drawer on navigation
   const handleLinkClick = () => {
@@ -114,13 +90,14 @@ export function MobileNavDrawer({
         </SheetHeader>
 
         <nav className="flex flex-col gap-1 mt-6" aria-label="Mobile navigation">
-          {navItems.map(({ href, icon: Icon, label, ariaLabel }) => {
-            const active = isActive(href);
+          {itemsWithoutLibrary.map(item => {
+            const Icon = item.icon;
+            const active = isItemActive(item, pathname ?? '');
             return (
               <Link
-                key={href}
-                href={href}
-                aria-label={ariaLabel}
+                key={item.id}
+                href={item.href}
+                aria-label={item.ariaLabel}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
@@ -131,16 +108,16 @@ export function MobileNavDrawer({
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
                 onClick={handleLinkClick}
-                data-testid={`mobile-nav-item-${href.split('/').filter(Boolean).join('-') || 'home'}`}
+                data-testid={`mobile-nav-item-${item.href.split('/').filter(Boolean).join('-') || 'home'}`}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
-                <span>{label}</span>
+                <span>{item.label}</span>
               </Link>
             );
           })}
 
           {/* Library Expandable Section */}
-          {libraryItems.length > 0 && (
+          {libraryItem && libraryChildren.length > 0 && (
             <div className="flex flex-col">
               <button
                 onClick={() => setIsLibraryExpanded(!isLibraryExpanded)}
@@ -157,8 +134,11 @@ export function MobileNavDrawer({
                 data-testid="mobile-library-toggle"
               >
                 <div className="flex items-center gap-3">
-                  <BookOpen className="h-5 w-5" aria-hidden="true" />
-                  <span>Libreria</span>
+                  {(() => {
+                    const LibIcon = libraryItem.icon;
+                    return <LibIcon className="h-5 w-5" aria-hidden="true" />;
+                  })()}
+                  <span>{libraryItem.label}</span>
                 </div>
                 <ChevronDown
                   className={cn(
@@ -176,13 +156,15 @@ export function MobileNavDrawer({
                   role="group"
                   aria-label="Library submenu"
                 >
-                  {libraryItems.map(({ href, label, ariaLabel }) => {
-                    const active = isActive(href);
+                  {libraryChildren.map(child => {
+                    const active = child.href === '/library'
+                      ? pathname === '/library'
+                      : pathname?.startsWith(child.href) ?? false;
                     return (
                       <Link
-                        key={href}
-                        href={href}
-                        aria-label={ariaLabel}
+                        key={child.id}
+                        href={child.href}
+                        aria-label={child.ariaLabel}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
                           'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm',
@@ -193,9 +175,9 @@ export function MobileNavDrawer({
                             : 'text-muted-foreground hover:text-primary hover:bg-muted/50'
                         )}
                         onClick={handleLinkClick}
-                        data-testid={`mobile-library-item-${href.split('/').pop()}`}
+                        data-testid={`mobile-library-item-${child.id}`}
                       >
-                        <span>{label}</span>
+                        <span>{child.label}</span>
                       </Link>
                     );
                   })}

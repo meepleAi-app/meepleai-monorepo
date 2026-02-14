@@ -61,7 +61,7 @@ describe('LibraryDropdown', () => {
 
       await user.click(screen.getByTestId('library-dropdown-trigger'));
 
-      expect(screen.getByTestId('library-item-library')).toBeInTheDocument();
+      expect(screen.getByTestId('library-item-collection')).toBeInTheDocument();
       expect(screen.getByTestId('library-item-private')).toBeInTheDocument();
     });
 
@@ -112,7 +112,7 @@ describe('LibraryDropdown', () => {
 
       await user.click(screen.getByTestId('library-dropdown-trigger'));
 
-      const collectionLink = screen.getByTestId('library-item-library');
+      const collectionLink = screen.getByTestId('library-item-collection');
       expect(collectionLink).toHaveClass('text-[hsl(262_83%_62%)]');
       expect(collectionLink).toHaveAttribute('aria-current', 'page');
     });
@@ -181,8 +181,8 @@ describe('LibraryDropdown', () => {
 
       await user.click(screen.getByTestId('library-dropdown-trigger'));
 
-      expect(screen.getByLabelText('Navigate to your game collection')).toBeInTheDocument();
-      expect(screen.getByLabelText('Navigate to your private games')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to Collezione')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to Giochi Privati')).toBeInTheDocument();
     });
 
     it('chevron icon is aria-hidden', () => {

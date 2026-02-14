@@ -203,6 +203,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IConversationMemoryRepository, ConversationMemoryRepository>();
         services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
+        services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

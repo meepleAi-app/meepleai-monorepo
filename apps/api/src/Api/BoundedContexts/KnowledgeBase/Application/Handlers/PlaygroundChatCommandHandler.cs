@@ -608,7 +608,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 tierInfo: new PlaygroundTierInfo(
                     requiredTier: GetRequiredTierForStrategy(effectiveStrategy),
                     userTier: "admin",
-                    hasAccess: true)));
+                    hasAccess: true),
+                costEstimate: EstimateCostRange(effectiveStrategy, effectiveModel)));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -713,6 +714,43 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         };
     }
 
+    /// <summary>
+    /// Estimates cost range for a strategy based on model pricing and typical token usage.
+    /// Issue #4472: Pre-execution cost estimate.
+    /// </summary>
+    private PlaygroundCostEstimate EstimateCostRange(string strategy, string modelId)
+    {
+        var pricing = _costCalculator.GetModelPricing(modelId);
+        if (pricing == null || pricing.IsFree)
+        {
+            return new PlaygroundCostEstimate(0, 0, 0, 0, true);
+        }
+
+        if (string.Equals(strategy, "RetrievalOnly", StringComparison.Ordinal))
+        {
+            return new PlaygroundCostEstimate(0, 0, pricing.InputCostPer1M, pricing.OutputCostPer1M, true);
+        }
+
+        // Token estimates per strategy (based on typical RAG interactions)
+        var (minPrompt, maxPrompt, minCompletion, maxCompletion) = strategy switch
+        {
+            "MultiModelConsensus" => (1000, 4000, 400, 1600), // 2x SingleModel
+            _ => (500, 2000, 200, 800) // SingleModel default
+        };
+
+        var minCost = (minPrompt / 1_000_000m * pricing.InputCostPer1M) +
+                      (minCompletion / 1_000_000m * pricing.OutputCostPer1M);
+        var maxCost = (maxPrompt / 1_000_000m * pricing.InputCostPer1M) +
+                      (maxCompletion / 1_000_000m * pricing.OutputCostPer1M);
+
+        return new PlaygroundCostEstimate(
+            Math.Round(minCost, 6),
+            Math.Round(maxCost, 6),
+            pricing.InputCostPer1M,
+            pricing.OutputCostPer1M,
+            false);
+    }
+
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)
     {
         return new RagStreamingEvent(type, data, DateTime.UtcNow);
@@ -750,7 +788,8 @@ internal record PlaygroundStreamingComplete(
     List<PlaygroundTomacLayer>? tomacLayers = null,
     string? systemPrompt = null,
     PlaygroundPromptTemplateInfo? promptTemplateInfo = null,
-    PlaygroundTierInfo? tierInfo = null);
+    PlaygroundTierInfo? tierInfo = null,
+    PlaygroundCostEstimate? costEstimate = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -868,6 +907,17 @@ internal record PlaygroundTierInfo(
     string requiredTier,
     string userTier,
     bool hasAccess);
+
+/// <summary>
+/// Pre-execution cost estimate range for a strategy.
+/// Issue #4472: Shows expected cost before execution.
+/// </summary>
+internal record PlaygroundCostEstimate(
+    decimal minCost,
+    decimal maxCost,
+    decimal inputPricePer1M,
+    decimal outputPricePer1M,
+    bool isFree);
 
 /// <summary>
 /// Internal cache entry for playground query deduplication.

@@ -18,6 +18,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 
 import { api } from '@/lib/api';
+import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import type { Citation } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +41,7 @@ interface ThreadData {
   id: string;
   title: string;
   gameId?: string | null;
+  agentId?: string | null;
   status: string;
   messages: ChatMessage[];
 }
@@ -68,6 +70,25 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
 
+  // SSE Streaming (Issue #4364)
+  const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
+    onComplete: (answer, metadata) => {
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: answer,
+        timestamp: new Date().toISOString(),
+        followUpQuestions: metadata.followUpQuestions,
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsSending(false);
+    },
+    onError: (errorMsg) => {
+      setError(errorMsg);
+      setIsSending(false);
+    },
+  });
+
   // Extract citations from all assistant messages
   const allCitations = useMemo(
     () => messages.flatMap(m => m.citations ?? []),
@@ -87,7 +108,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages, streamState.currentAnswer, scrollToBottom]);
 
   // Load thread data
   useEffect(() => {
@@ -112,6 +133,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           id: threadData.id,
           title: threadData.title ?? 'Chat',
           gameId: threadData.gameId,
+          agentId: threadData.agentId ?? null,
           status: 'Active',
           messages: mappedMessages,
         });
@@ -145,7 +167,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     void loadThread();
   }, [threadId]);
 
-  // Send message
+  // Send message - SSE streaming when agentId available, REST fallback otherwise
   const handleSendMessage = useCallback(
     async (content?: string) => {
       const messageContent = content || inputValue.trim();
@@ -153,6 +175,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
       setIsSending(true);
       setInputValue('');
+      setError(null);
 
       // Optimistic UI: add user message
       const userMessage: ChatMessage = {
@@ -163,6 +186,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       };
       setMessages(prev => [...prev, userMessage]);
 
+      // SSE path: stream via agent endpoint when agentId is available
+      if (thread?.agentId) {
+        sendViaSSE(thread.agentId, messageContent, threadId);
+        return; // onComplete/onError callbacks handle the rest
+      }
+
+      // REST fallback: standard API call
       try {
         const response = await api.chat.addMessage(threadId, {
           content: messageContent,
@@ -187,7 +217,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         setIsSending(false);
       }
     },
-    [inputValue, isSending, threadId]
+    [inputValue, isSending, threadId, thread?.agentId, sendViaSSE]
   );
 
   // Title change
@@ -326,6 +356,28 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 </div>
               ))
             )}
+            {/* Streaming status message */}
+            {streamState.statusMessage && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-nunito" data-testid="stream-status">
+                <div className="h-3 w-3 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                {streamState.statusMessage}
+              </div>
+            )}
+
+            {/* Streaming response bubble */}
+            {streamState.isStreaming && streamState.currentAnswer && (
+              <div
+                className="max-w-[85%] mr-auto rounded-2xl px-4 py-3 bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
+                data-testid="message-streaming"
+              >
+                <p className="text-sm whitespace-pre-wrap font-nunito">{streamState.currentAnswer}</p>
+                <div className="mt-1 flex items-center gap-1">
+                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-[10px] text-muted-foreground">In scrittura...</span>
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -347,15 +399,15 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
                   'max-h-32'
                 )}
-                disabled={isSending}
+                disabled={isSending || streamState.isStreaming}
                 data-testid="message-input"
               />
               <button
                 onClick={() => void handleSendMessage()}
-                disabled={!inputValue.trim() || isSending}
+                disabled={!inputValue.trim() || isSending || streamState.isStreaming}
                 className={cn(
                   'p-3 rounded-xl transition-all duration-200 flex-shrink-0',
-                  inputValue.trim() && !isSending
+                  inputValue.trim() && !isSending && !streamState.isStreaming
                     ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer'
                     : 'bg-muted text-muted-foreground cursor-not-allowed'
                 )}

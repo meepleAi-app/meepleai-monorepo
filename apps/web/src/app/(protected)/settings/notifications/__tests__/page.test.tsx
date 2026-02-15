@@ -257,4 +257,176 @@ describe('NotificationSettingsPage', () => {
     expect(switches[4]).toBeDisabled();
     expect(switches[7]).toBeDisabled();
   });
+
+  it('calls subscribe when Enable button is clicked', async () => {
+    mockPush.isSubscribed = false;
+
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: false,
+      pushOnDocumentFailed: false,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: false,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => mockPrefs,
+    });
+
+    const user = userEvent.setup();
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Enable' })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Enable' }));
+
+    expect(mockPush.subscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls unsubscribe when Disable button is clicked', async () => {
+    mockPush.isSubscribed = true;
+
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: true,
+      pushOnDocumentFailed: true,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: true,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => mockPrefs,
+    });
+
+    const user = userEvent.setup();
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Disable' })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Disable' }));
+
+    expect(mockPush.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows Send Test button when push is subscribed', async () => {
+    mockPush.isSubscribed = true;
+
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: true,
+      pushOnDocumentFailed: true,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: true,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => mockPrefs,
+    });
+
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('test-push-button')).toBeInTheDocument();
+    });
+  });
+
+  it('hides Send Test button when not subscribed', async () => {
+    mockPush.isSubscribed = false;
+
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: false,
+      pushOnDocumentFailed: false,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: false,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => mockPrefs,
+    });
+
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Document Ready')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('test-push-button')).not.toBeInTheDocument();
+  });
+
+  it('sends test push notification on button click', async () => {
+    mockPush.isSubscribed = true;
+
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: true,
+      pushOnDocumentFailed: true,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: true,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockPrefs,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: 'Test notification sent' }),
+      });
+
+    const user = userEvent.setup();
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('test-push-button')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('test-push-button'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/notifications/push/test',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+  });
 });

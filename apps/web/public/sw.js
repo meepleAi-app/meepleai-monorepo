@@ -285,6 +285,30 @@ self.addEventListener('push', (event) => {
   if (!event.data) return;
 
   const data = event.data.json();
+
+  // Silent push: badge updates and background data sync
+  if (data.silent === true || data.type === 'badge-update') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'BADGE_UPDATE',
+            count: data.count || 0,
+          });
+        });
+
+        // Update app badge if Badge API is available
+        if (navigator.setAppBadge && data.count > 0) {
+          return navigator.setAppBadge(data.count);
+        } else if (navigator.clearAppBadge && (data.count === 0 || !data.count)) {
+          return navigator.clearAppBadge();
+        }
+      })
+    );
+    return;
+  }
+
+  // Visible notification
   const options = {
     body: data.body,
     icon: '/icons/icon-192x192.png',

@@ -109,7 +109,7 @@ describe('GameCarousel', () => {
     });
 
     it('should render with title and subtitle', () => {
-      render(
+      renderWithQuery(
         <GameCarousel
           games={MOCK_GAMES}
           title="Featured Games"
@@ -289,7 +289,7 @@ describe('GameCarousel', () => {
 
   describe('Auto-Play', () => {
     it('should auto-advance when autoPlay is enabled', async () => {
-      render(
+      renderWithQuery(
         <GameCarousel games={MOCK_GAMES} autoPlay autoPlayInterval={1000} />
       );
 
@@ -314,7 +314,7 @@ describe('GameCarousel', () => {
     });
 
     it('should pause auto-play on hover', () => {
-      render(
+      renderWithQuery(
         <GameCarousel games={MOCK_GAMES} autoPlay autoPlayInterval={1000} />
       );
 
@@ -330,7 +330,7 @@ describe('GameCarousel', () => {
     });
 
     it('should resume auto-play on mouse leave', () => {
-      render(
+      renderWithQuery(
         <GameCarousel games={MOCK_GAMES} autoPlay autoPlayInterval={1000} />
       );
 
@@ -353,7 +353,7 @@ describe('GameCarousel', () => {
 
     it('should use custom autoPlayInterval', () => {
       const customInterval = 3000;
-      render(
+      renderWithQuery(
         <GameCarousel
           games={MOCK_GAMES}
           autoPlay
@@ -430,7 +430,7 @@ describe('GameCarousel', () => {
 
     it('should render sort button that can be clicked', () => {
       const onSortChange = vi.fn();
-      render(
+      renderWithQuery(
         <GameCarousel
           games={MOCK_GAMES}
           sortable
@@ -463,7 +463,7 @@ describe('GameCarousel', () => {
 
   describe('Accessibility', () => {
     it('should have accessible region role', () => {
-      render(
+      renderWithQuery(
         <GameCarousel games={MOCK_GAMES} title="Featured" />
       );
 

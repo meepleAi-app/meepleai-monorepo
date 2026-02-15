@@ -29,6 +29,8 @@ internal interface IActivityTimelineService
     /// <param name="userId">The user ID.</param>
     /// <param name="types">Optional event type filter (e.g., game_added, session_completed).</param>
     /// <param name="searchTerm">Optional text search on game name/title.</param>
+    /// <param name="dateFrom">Optional start date filter (inclusive).</param>
+    /// <param name="dateTo">Optional end date filter (inclusive).</param>
     /// <param name="skip">Number of events to skip (pagination).</param>
     /// <param name="take">Number of events to take (pagination).</param>
     /// <param name="order">Sort direction (ascending or descending by timestamp).</param>
@@ -38,6 +40,8 @@ internal interface IActivityTimelineService
         Guid userId,
         string[]? types = null,
         string? searchTerm = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
         int skip = 0,
         int take = 20,
         SortDirection order = SortDirection.Descending,

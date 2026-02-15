@@ -6,8 +6,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
 
 // Mock Zustand store
@@ -40,7 +41,7 @@ describe('SessionCreateForm', () => {
   });
 
   it('renders step 1: game selection', () => {
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
@@ -55,7 +56,7 @@ describe('SessionCreateForm', () => {
   });
 
   it('shows progress stepper', () => {
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
@@ -68,7 +69,7 @@ describe('SessionCreateForm', () => {
   });
 
   it('allows selecting free-form game type', () => {
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
@@ -85,7 +86,7 @@ describe('SessionCreateForm', () => {
     // SKIPPED: Select component rendering issue
     // TODO: Investigate why Select with "Search your library..." is not rendered
 
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
@@ -101,7 +102,7 @@ describe('SessionCreateForm', () => {
   });
 
   it('validates required fields', async () => {
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
@@ -117,7 +118,7 @@ describe('SessionCreateForm', () => {
   });
 
   it('calls onCancel when cancel button clicked', () => {
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
@@ -131,7 +132,7 @@ describe('SessionCreateForm', () => {
   });
 
   it('disables buttons when submitting', () => {
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
@@ -152,7 +153,7 @@ describe('SessionCreateForm', () => {
     // Note: require() doesn't work with ESM modules in vitest
     // Need to use vi.doMock or refactor test setup
 
-    render(
+    renderWithQuery(
       <SessionCreateForm
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}

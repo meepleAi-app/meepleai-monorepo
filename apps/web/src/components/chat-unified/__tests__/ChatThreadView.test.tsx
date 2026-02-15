@@ -4,18 +4,21 @@
  * Tests for the split view chat page:
  * 1. Loads and renders thread data
  * 2. Renders messages
- * 3. Sends messages via API
+ * 3. Sends messages via API (REST fallback)
  * 4. Shows empty state for new threads
  * 5. Shows loading state
  * 6. Shows error when thread not found
  * 7. Renders ChatInfoPanel with citations
  * 8. Inline title editing
  * 9. Delete thread
+ * 10. SSE streaming when agentId is present
+ * 11. Streaming indicator during SSE
+ * 12. Input/button disabled during streaming
  *
  * Pattern: Vitest + React Testing Library
  */
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import React from 'react';
@@ -40,6 +43,31 @@ vi.mock('@/lib/api', () => ({
     games: {
       getAll: vi.fn(),
     },
+  },
+}));
+
+// SSE streaming hook mock
+const mockSendViaSSE = vi.fn();
+const mockStreamState = {
+  statusMessage: null as string | null,
+  currentAnswer: '',
+  followUpQuestions: [] as string[],
+  isStreaming: false,
+  error: null as string | null,
+  chatThreadId: null as string | null,
+  totalTokens: 0,
+};
+
+vi.mock('@/hooks/useAgentChatStream', () => ({
+  useAgentChatStream: (callbacks?: any) => {
+    // Store callbacks for test access
+    (globalThis as any).__sseCallbacks = callbacks;
+    return {
+      state: mockStreamState,
+      sendMessage: mockSendViaSSE,
+      stopStreaming: vi.fn(),
+      reset: vi.fn(),
+    };
   },
 }));
 
@@ -96,7 +124,22 @@ const mockGames = {
 // Helpers
 // ============================================================================
 
+const mockThreadNoAgent = {
+  ...mockThread,
+  agentId: null,
+};
+
 let apiMock: any;
+
+function resetStreamState() {
+  mockStreamState.statusMessage = null;
+  mockStreamState.currentAnswer = '';
+  mockStreamState.followUpQuestions = [];
+  mockStreamState.isStreaming = false;
+  mockStreamState.error = null;
+  mockStreamState.chatThreadId = null;
+  mockStreamState.totalTokens = 0;
+}
 
 async function renderView(threadId = 'thread-1') {
   const result = render(<ChatThreadView threadId={threadId} />);
@@ -110,6 +153,7 @@ async function renderView(threadId = 'thread-1') {
 describe('ChatThreadView', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    resetStreamState();
 
     // Ensure matchMedia is available
     Object.defineProperty(window, 'matchMedia', {
@@ -207,7 +251,8 @@ describe('ChatThreadView', () => {
   // Message Sending
   // --------------------------------------------------------------------------
 
-  it('sends message on button click', async () => {
+  it('sends message via REST when no agentId', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue(mockThreadNoAgent);
     const user = userEvent.setup();
     await renderView();
 
@@ -225,6 +270,27 @@ describe('ChatThreadView', () => {
         role: 'user',
       });
     });
+
+    expect(mockSendViaSSE).not.toHaveBeenCalled();
+  });
+
+  it('sends message via SSE when agentId is present', async () => {
+    const user = userEvent.setup();
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-input')).toBeInTheDocument();
+    });
+
+    const input = screen.getByTestId('message-input');
+    await user.type(input, 'SSE message');
+    await user.click(screen.getByTestId('send-btn'));
+
+    await waitFor(() => {
+      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'SSE message', 'thread-1');
+    });
+
+    expect(apiMock.chat.addMessage).not.toHaveBeenCalled();
   });
 
   it('disables send button when input empty', async () => {
@@ -236,25 +302,11 @@ describe('ChatThreadView', () => {
   });
 
   // --------------------------------------------------------------------------
-  // ChatInfoPanel Integration
+  // Info Panel (citations + suggested questions)
   // --------------------------------------------------------------------------
 
-  it('passes citations to ChatInfoPanel', async () => {
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('chat-info-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('citation-count')).toHaveTextContent('1');
-    });
-  });
-
-  it('passes suggested questions to ChatInfoPanel', async () => {
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('question-count')).toHaveTextContent('2');
-    });
-  });
+  // ChatInfoPanel was inlined into ChatThreadView - no separate component to test
+  // Citations and suggested questions are now rendered directly in the view
 
   // --------------------------------------------------------------------------
   // Header Actions
@@ -282,6 +334,54 @@ describe('ChatThreadView', () => {
     await waitFor(() => {
       expect(apiMock.chat.deleteThread).toHaveBeenCalledWith('thread-1');
       expect(mockPush).toHaveBeenCalledWith('/chat/new');
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // SSE Streaming (Issue #4364)
+  // --------------------------------------------------------------------------
+
+  it('shows streaming status message', async () => {
+    mockStreamState.statusMessage = 'Connecting...';
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('stream-status')).toBeInTheDocument();
+      expect(screen.getByText('Connecting...')).toBeInTheDocument();
+    });
+  });
+
+  it('shows streaming response bubble during streaming', async () => {
+    mockStreamState.isStreaming = true;
+    mockStreamState.currentAnswer = 'Partial response text';
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-streaming')).toBeInTheDocument();
+      expect(screen.getByText('Partial response text')).toBeInTheDocument();
+      expect(screen.getByText('In scrittura...')).toBeInTheDocument();
+    });
+  });
+
+  it('does not show streaming bubble when not streaming', async () => {
+    mockStreamState.isStreaming = false;
+    mockStreamState.currentAnswer = '';
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('chat-thread-view')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('message-streaming')).not.toBeInTheDocument();
+  });
+
+  it('disables input and send button during streaming', async () => {
+    mockStreamState.isStreaming = true;
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-input')).toBeDisabled();
+      expect(screen.getByTestId('send-btn')).toBeDisabled();
     });
   });
 });

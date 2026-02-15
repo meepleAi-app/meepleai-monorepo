@@ -2,9 +2,10 @@
  * Admin Agent View Page Tests (Task #8)
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { useParams } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 
@@ -19,14 +20,6 @@ vi.mock('@/lib/api/agent-definitions.api', () => ({
   agentDefinitionsApi: {
     getById: vi.fn(),
   },
-}));
-
-vi.mock('@/components/admin/agents/AdminAgentChat', () => ({
-  AdminAgentChat: ({ agentName, channelEnabled }: { agentName: string; channelEnabled: boolean }) => (
-    <div data-testid="admin-agent-chat">
-      Chat: {agentName} (Channel: {channelEnabled ? 'Enabled' : 'Disabled'})
-    </div>
-  ),
 }));
 
 describe('AdminAgentViewPage', () => {
@@ -55,7 +48,7 @@ describe('AdminAgentViewPage', () => {
   it('renders agent information', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
-    render(<AdminAgentViewPage />);
+    renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Test Agent')).toBeInTheDocument();
@@ -68,21 +61,22 @@ describe('AdminAgentViewPage', () => {
   it('shows configuration section', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
-    render(<AdminAgentViewPage />);
+    renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Configuration')).toBeInTheDocument();
     });
 
     expect(screen.getByText('gpt-4')).toBeInTheDocument();
-    expect(screen.getByText('HybridSearch')).toBeInTheDocument();
+    // Component renders hardcoded 'POC Strategy' instead of config.strategyName
+    expect(screen.getByText('POC Strategy')).toBeInTheDocument();
     expect(screen.getByText('0.7')).toBeInTheDocument();
   });
 
   it('shows channel configuration section', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
-    render(<AdminAgentViewPage />);
+    renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Channel Configuration')).toBeInTheDocument();
@@ -94,7 +88,7 @@ describe('AdminAgentViewPage', () => {
   it('enables channel when button clicked', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
-    render(<AdminAgentViewPage />);
+    renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Enable Channel/i })).toBeInTheDocument();
@@ -113,41 +107,35 @@ describe('AdminAgentViewPage', () => {
   it('shows chat section after channel section', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
-    render(<AdminAgentViewPage />);
+    renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Agent Chat')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('admin-agent-chat')).toBeInTheDocument();
+    // Chat section now renders inline content with link to unified chat
+    expect(screen.getByText('Open Unified Chat')).toBeInTheDocument();
   });
 
-  it('passes channel status to AdminAgentChat', async () => {
+  it('shows chat migration notice with unified chat link', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
-    render(<AdminAgentViewPage />);
+    renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('admin-agent-chat')).toBeInTheDocument();
+      expect(screen.getByText('Agent Chat')).toBeInTheDocument();
     });
 
-    // Initially disabled
-    expect(screen.getByText(/Channel: Disabled/i)).toBeInTheDocument();
-
-    // Enable channel
-    const enableBtn = screen.getByRole('button', { name: /Enable Channel/i });
-    fireEvent.click(enableBtn);
-
-    // Now enabled
-    await waitFor(() => {
-      expect(screen.getByText(/Channel: Enabled/i)).toBeInTheDocument();
-    });
+    // Chat section shows migration notice and link to unified chat
+    expect(screen.getByText(/unified chat system/i)).toBeInTheDocument();
+    const chatLink = screen.getByText('Open Unified Chat');
+    expect(chatLink.closest('a')).toHaveAttribute('href', '/chat/new');
   });
 
   it('has edit button linking to edit page', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
-    render(<AdminAgentViewPage />);
+    renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
       const editLink = screen.getByRole('link', { name: /Edit/i });

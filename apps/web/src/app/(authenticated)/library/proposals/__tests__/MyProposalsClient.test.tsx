@@ -10,6 +10,18 @@ import { axe } from 'jest-axe';
 
 import MyProposalsClient from '../MyProposalsClient';
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+    back: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  })),
+  usePathname: vi.fn(() => '/test'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
+
 import type { PaginatedShareRequestsResponse, RateLimitStatusDto } from '@/lib/api';
 
 // Mock the hooks

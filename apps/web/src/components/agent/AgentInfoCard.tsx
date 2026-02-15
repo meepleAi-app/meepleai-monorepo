@@ -71,7 +71,12 @@ export function AgentInfoCard({
   className,
 }: AgentInfoCardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('chat');
-  const [documents, setDocuments] = useState<Array<{ id: string; name: string; url?: string }>>([]);
+  const [documents, setDocuments] = useState<Array<{
+    id: string;
+    fileName: string;
+    documentType: number;
+    fileSizeBytes: number;
+  }>>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError] = useState<string | null>(null);
 
@@ -88,7 +93,14 @@ export function AgentInfoCard({
     setDocsError(null);
     try {
       const result = await api.agents.getDocuments(agentId);
-      setDocuments(result?.documents || []);
+      setDocuments(
+        (result?.documents || []).map((doc) => ({
+          id: doc.id,
+          fileName: doc.gameName || doc.id,
+          documentType: doc.documentType,
+          fileSizeBytes: 0,
+        }))
+      );
     } catch (err) {
       setDocsError(err instanceof Error ? err.message : 'Failed to load documents');
     } finally {

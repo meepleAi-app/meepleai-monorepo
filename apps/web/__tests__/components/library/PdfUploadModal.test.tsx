@@ -7,9 +7,10 @@
  * - Upload confirmation flow
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
 
 // Mock pdfjs for page count validation
@@ -63,30 +64,30 @@ describe('PdfUploadModal', () => {
 
   describe('Initial Render', () => {
     it('should render modal when open', () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       expect(screen.getByTestId('pdf-upload-modal')).toBeInTheDocument();
       expect(screen.getByTestId('pdf-upload-modal')).toHaveAttribute('data-step', 'select');
     });
 
     it('should display game title in description', () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       expect(screen.getByTestId('pdf-upload-modal')).toBeInTheDocument();
     });
 
     it('should show file input with correct accept type', () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
       expect(input).toHaveAttribute('accept', 'application/pdf');
     });
 
     it('should show validation constraints', () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       expect(screen.getByText(/50MB/)).toBeInTheDocument();
       // Page limit validation happens during upload, not shown in UI
     });
 
     it('should have disabled preview button initially', () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const button = screen.getByTestId('preview-button');
       expect(button).toBeDisabled();
     });
@@ -94,7 +95,7 @@ describe('PdfUploadModal', () => {
 
   describe('Validation Errors (Synchronous)', () => {
     it('should show error for non-PDF file', async () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
 
@@ -107,7 +108,7 @@ describe('PdfUploadModal', () => {
     });
 
     it('should show error for file exceeding 50MB', async () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       // Create file with mocked size
@@ -123,7 +124,7 @@ describe('PdfUploadModal', () => {
     });
 
     it('should show error for empty file', async () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       const file = new File([], 'empty.pdf', { type: 'application/pdf' });
@@ -140,13 +141,12 @@ describe('PdfUploadModal', () => {
 
   describe('File Selection with Page Count Validation', () => {
     it('should show success state when valid PDF selected', async () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
-      // Create valid PDF file with mocked arrayBuffer
+      // Create valid PDF file
       const file = new File(['pdf content'], 'valid.pdf', { type: 'application/pdf' });
       Object.defineProperty(file, 'size', { value: 5 * 1024 * 1024 }); // 5MB
-      file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(100));
 
       fireEvent.change(input, { target: { files: [file] } });
 
@@ -154,11 +154,11 @@ describe('PdfUploadModal', () => {
         expect(screen.getByTestId('file-selected')).toBeInTheDocument();
       });
       expect(screen.getByText('valid.pdf')).toBeInTheDocument();
-      expect(screen.getByText(/10 pagine/)).toBeInTheDocument();
+      expect(screen.getByText('5.00 MB')).toBeInTheDocument();
     });
 
     it('should enable preview button after valid file selection', async () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       const file = new File(['pdf content'], 'valid.pdf', { type: 'application/pdf' });
@@ -173,52 +173,44 @@ describe('PdfUploadModal', () => {
       });
     });
 
-    it('should show error when PDF has too many pages', async () => {
-      // Mock PDF with 600 pages (exceeds 500 limit)
-      mockGetDocument.mockReturnValue({
-        promise: Promise.resolve({ numPages: 600 }),
-      });
-
-      render(<PdfUploadModal {...mockProps} />);
+    it('should accept PDF regardless of page count (page validation removed)', async () => {
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       const file = new File(['pdf content'], 'huge.pdf', { type: 'application/pdf' });
       Object.defineProperty(file, 'size', { value: 10 * 1024 * 1024 });
-      file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(100));
 
       fireEvent.change(input, { target: { files: [file] } });
 
+      // Component now only does sync validation (type, size, empty).
+      // A valid PDF file passes regardless of page count.
       await waitFor(() => {
-        expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
+        expect(screen.getByTestId('file-selected')).toBeInTheDocument();
       });
-      expect(screen.getByText(/troppe pagine/)).toBeInTheDocument();
+      expect(screen.getByText('huge.pdf')).toBeInTheDocument();
     });
 
-    it('should show error when PDF is corrupted', async () => {
-      // Mock PDF loading failure
-      mockGetDocument.mockReturnValue({
-        promise: Promise.reject(new Error('Invalid PDF')),
-      });
-
-      render(<PdfUploadModal {...mockProps} />);
+    it('should accept PDF file without content validation (corruption check removed)', async () => {
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       const file = new File(['invalid'], 'corrupt.pdf', { type: 'application/pdf' });
       Object.defineProperty(file, 'size', { value: 1 * 1024 * 1024 });
-      file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(100));
 
       fireEvent.change(input, { target: { files: [file] } });
 
+      // Component now only does sync validation (type, size, empty).
+      // A file with correct MIME type and non-zero size passes validation.
       await waitFor(() => {
-        expect(screen.getByTestId('validation-errors')).toBeInTheDocument();
+        expect(screen.getByTestId('file-selected')).toBeInTheDocument();
       });
-      expect(screen.getByText(/corrotto/)).toBeInTheDocument();
+      expect(screen.getByText('corrupt.pdf')).toBeInTheDocument();
     });
   });
 
   describe('Preview Step', () => {
     const setupValidFile = async () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       const file = new File(['pdf content'], 'preview.pdf', { type: 'application/pdf' });
@@ -281,20 +273,20 @@ describe('PdfUploadModal', () => {
 
   describe('Modal Close Behavior', () => {
     it('should call onClose when cancel button clicked', () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       fireEvent.click(screen.getByTestId('cancel-button'));
       expect(mockProps.onClose).toHaveBeenCalled();
     });
 
     it('should not render when isOpen is false', () => {
-      render(<PdfUploadModal {...mockProps} isOpen={false} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} isOpen={false} />);
       expect(screen.queryByTestId('pdf-upload-modal')).not.toBeInTheDocument();
     });
   });
 
   describe('Upload Step', () => {
     it('should show progress during upload', async () => {
-      render(<PdfUploadModal {...mockProps} />);
+      renderWithQuery(<PdfUploadModal {...mockProps} />);
       const input = screen.getByTestId('pdf-file-input');
 
       const file = new File(['pdf content'], 'upload.pdf', { type: 'application/pdf' });

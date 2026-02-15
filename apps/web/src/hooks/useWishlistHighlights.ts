@@ -27,6 +27,17 @@ export function useWishlistHighlights(): UseQueryResult<WishlistHighlightItem[],
   return useQuery({
     queryKey: ['wishlist', 'highlights'],
     queryFn: fetchWishlistHighlights,
+    select: (data) =>
+      data.map((item) => ({
+        id: item.id,
+        game: {
+          id: item.gameId,
+          name: item.gameId,
+          coverUrl: '',
+        },
+        priority: item.priority as WishlistHighlightItem['priority'],
+        targetPrice: item.targetPrice,
+      })),
     staleTime: FIVE_MINUTES_MS,
     refetchInterval: FIVE_MINUTES_MS,
     retry: 2,

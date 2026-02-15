@@ -28,6 +28,8 @@ internal sealed class GetActivityTimelineQueryHandler
             query.UserId,
             query.Types,
             query.SearchTerm,
+            query.DateFrom,
+            query.DateTo,
             query.Skip,
             query.Take,
             query.Order,
@@ -37,6 +39,9 @@ internal sealed class GetActivityTimelineQueryHandler
             .Select(ActivityEventDto.FromEvent)
             .ToList();
 
-        return new ActivityTimelineResponseDto(dtos, totalCount);
+        var page = query.Take > 0 ? (query.Skip / query.Take) + 1 : 1;
+        var hasMore = query.Skip + query.Take < totalCount;
+
+        return new ActivityTimelineResponseDto(dtos, totalCount, page, query.Take, hasMore);
     }
 }

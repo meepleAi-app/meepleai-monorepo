@@ -10,6 +10,14 @@
  * - Empty state with friendly message
  * - Loading skeleton (20 cards)
  * - Click navigation to game detail page
+ *
+ * Note (Issue #3894): Not migrated to EntityListView because:
+ * 1. Uses MeepleGameCatalogCard (specialized adapter with library hooks),
+ *    not MeepleCard which EntityListView renders via renderItem.
+ * 2. View mode is URL-driven (server component parent), not localStorage.
+ * 3. Data is fetched server-side with pagination - incompatible with
+ *    EntityListView's client-side search/sort/filter pipeline.
+ * Migration requires adding a `renderCard` prop to EntityListView.
  */
 
 'use client';

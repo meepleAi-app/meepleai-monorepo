@@ -201,9 +201,10 @@ describe('UserManagementBlock', () => {
     // Wait for user card to appear
     await screen.findByText('John Doe');
 
-    // Click "View Profile" button (first action button on the card)
-    const viewProfileButton = screen.getByText('View Profile');
-    fireEvent.click(viewProfileButton);
+    // MeepleCard in grid variant uses onClick on the card itself (no action buttons in grid/list).
+    // Click the card element to trigger detail panel.
+    const userCard = screen.getByTestId('meeple-card');
+    fireEvent.click(userCard);
 
     // Wait for dialog to open
     await waitFor(() => {

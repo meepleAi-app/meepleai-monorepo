@@ -163,11 +163,12 @@ describe('pollExtractionStatus', () => {
     });
 
     const promise = pollExtractionStatus('pdf-failed');
-    await vi.runAllTimersAsync();
-
-    await expect(promise).rejects.toThrow(
+    const assertion = expect(promise).rejects.toThrow(
       'PDF extraction failed: Extraction service error'
     );
+    await vi.runAllTimersAsync();
+
+    await assertion;
   });
 
   it('should throw error on max retries exceeded', async () => {
@@ -177,15 +178,16 @@ describe('pollExtractionStatus', () => {
     });
 
     const promise = pollExtractionStatus('pdf-timeout', 3, 1000);
+    const assertion = expect(promise).rejects.toThrow(
+      'PDF extraction timeout: exceeded 3 attempts'
+    );
 
     // Advance through all retries
     for (let i = 0; i < 3; i++) {
       await vi.advanceTimersByTimeAsync(1000 * (i + 2));
     }
 
-    await expect(promise).rejects.toThrow(
-      'PDF extraction timeout: exceeded 3 attempts'
-    );
+    await assertion;
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
@@ -198,13 +200,14 @@ describe('pollExtractionStatus', () => {
     });
 
     const promise = pollExtractionStatus('pdf-notfound', 3, 1000);
+    const assertion = expect(promise).rejects.toThrow('HTTP 404: PDF not found');
 
     // Advance through all retries
     for (let i = 0; i < 3; i++) {
       await vi.advanceTimersByTimeAsync(1000 * (i + 2));
     }
 
-    await expect(promise).rejects.toThrow('HTTP 404: PDF not found');
+    await assertion;
   });
 
   it('should handle network errors with retry', async () => {
@@ -278,15 +281,16 @@ describe('pollExtractionStatus', () => {
     });
 
     const promise = pollExtractionStatus('pdf-custom', 5, 500);
+    const assertion = expect(promise).rejects.toThrow(
+      'PDF extraction timeout: exceeded 5 attempts'
+    );
 
     // Advance through all custom retries
     for (let i = 0; i < 5; i++) {
       await vi.advanceTimersByTimeAsync(500 * (i + 2));
     }
 
-    await expect(promise).rejects.toThrow(
-      'PDF extraction timeout: exceeded 5 attempts'
-    );
+    await assertion;
     expect(mockFetch).toHaveBeenCalledTimes(5);
   });
 

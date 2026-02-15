@@ -495,11 +495,13 @@ v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload l
 v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
+v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
+v1Api.MapPlaygroundTestScenarioEndpoints(); // Issue #4396: Playground Test Scenario CRUD
 v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management

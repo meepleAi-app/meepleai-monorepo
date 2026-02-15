@@ -1,10 +1,12 @@
-using System.Text;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using MediatR;
 
 namespace Api.Routing;
 
 /// <summary>
-/// Agent Playground endpoints for testing agents (Issue #3810, Epic #3687)
+/// Agent Playground endpoints for testing agents with real AgentDefinition integration.
+/// Issue #4392: Replace placeholder with real SSE streaming via AgentDefinition pipeline.
+/// Epic #3710: Agent Playground.
 /// </summary>
 internal static class AgentPlaygroundEndpoints
 {
@@ -13,7 +15,7 @@ internal static class AgentPlaygroundEndpoints
         var group = app.MapGroup("/api/v1/admin/agent-definitions/{agentId:guid}/playground");
 
         // POST /api/v1/admin/agent-definitions/{agentId}/playground/chat
-        // SSE streaming chat endpoint
+        // SSE streaming chat endpoint with real AgentDefinition integration
         group.MapPost("/chat", async (
             Guid agentId,
             PlaygroundChatRequest request,
@@ -22,64 +24,53 @@ internal static class AgentPlaygroundEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
+            // Set SSE headers
             context.Response.ContentType = "text/event-stream";
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
+            var command = new PlaygroundChatCommand(
+                AgentDefinitionId: agentId,
+                Message: request.Message);
+
             try
             {
-                // Placeholder: Will integrate with AgentDefinition after #3850 merges
-                await SendSseEventAsync(context.Response, "start", new { agentId, message = "Chat started" }, ct).ConfigureAwait(false);
-
-                // Simulate streaming response
-                var response = $"Playground test response for agent {agentId}: {request.Message}";
-                var chunks = response.Split(' ');
-
-                foreach (var chunk in chunks)
+                await foreach (var @event in mediator.CreateStream(command, ct).ConfigureAwait(false))
                 {
-                    await SendSseEventAsync(context.Response, "chunk", new { content = chunk + " " }, ct).ConfigureAwait(false);
-                    await Task.Delay(50, ct).ConfigureAwait(false); // Simulate streaming delay
+                    await context.Response.WriteAsync(
+                        $"data: {System.Text.Json.JsonSerializer.Serialize(@event)}\n\n",
+                        ct).ConfigureAwait(false);
+
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
                 }
-
-                // Send metadata
-                await SendSseEventAsync(context.Response, "metadata", new
-                {
-                    tokens = 150,
-                    latency = 1.2,
-                    model = "gpt-4"
-                }, ct).ConfigureAwait(false);
-
-                await SendSseEventAsync(context.Response, "done", new { success = true }, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException ex)
             {
                 logger.LogInformation(ex, "Playground chat cancelled for agent {AgentId}", agentId);
-                await SendSseEventAsync(context.Response, "error", new { message = "Cancelled" }, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error in playground chat for agent {AgentId}", agentId);
-                await SendSseEventAsync(context.Response, "error", new { message = ex.Message }, ct).ConfigureAwait(false);
-            }
 
-            return Results.Ok();
+                var errorEvent = new Api.Models.RagStreamingEvent(
+                    Api.Models.StreamingEventType.Error,
+                    new Api.Models.StreamingError(ex.Message, "INTERNAL_ERROR"),
+                    DateTime.UtcNow);
+
+                await context.Response.WriteAsync(
+                    $"data: {System.Text.Json.JsonSerializer.Serialize(errorEvent)}\n\n",
+                    ct).ConfigureAwait(false);
+
+                await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+            }
         })
         .WithName("AgentPlaygroundChat")
         .WithTags("Agent Playground", "Admin")
-        .WithSummary("Test agent in playground with SSE streaming")
-        .WithDescription("Send message to agent and receive streaming response");
-    }
-
-    private static async Task SendSseEventAsync(
-        HttpResponse response,
-        string eventType,
-        object data,
-        CancellationToken ct)
-    {
-        var json = System.Text.Json.JsonSerializer.Serialize(data);
-        var message = $"event: {eventType}\ndata: {json}\n\n";
-        await response.WriteAsync(message, Encoding.UTF8, ct).ConfigureAwait(false);
-        await response.Body.FlushAsync(ct).ConfigureAwait(false);
+        .WithSummary("Test agent in playground with SSE streaming (real AgentDefinition)")
+        .WithDescription(
+            "Send message to agent and receive streaming response. " +
+            "Uses real AgentDefinition config (model, temperature, prompts) for LLM generation. " +
+            "Returns RagStreamingEvent format: StateUpdate → Token(s) → FollowUpQuestions → Complete.");
     }
 }
 

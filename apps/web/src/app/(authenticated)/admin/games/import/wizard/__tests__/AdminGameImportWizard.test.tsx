@@ -13,9 +13,11 @@
  * Target: ≥85% coverage
  */
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { AdminGameImportWizardClient } from '../client';
 
@@ -89,7 +91,7 @@ describe('AdminGameImportWizardClient', () => {
         loading: true,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
@@ -100,7 +102,7 @@ describe('AdminGameImportWizardClient', () => {
         loading: false,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText('Authentication Required')).toBeInTheDocument();
       expect(screen.getByText('Please sign in to access the admin wizard.')).toBeInTheDocument();
@@ -111,7 +113,7 @@ describe('AdminGameImportWizardClient', () => {
     });
 
     it('renders wizard when authenticated', () => {
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText('Game Import Wizard')).toBeInTheDocument();
       expect(screen.getByText(/import a game from pdf/i)).toBeInTheDocument();
@@ -120,7 +122,7 @@ describe('AdminGameImportWizardClient', () => {
 
   describe('Initial Render', () => {
     it('displays all wizard steps in step indicator', () => {
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
       expect(screen.getByText('2. Metadata')).toBeInTheDocument();
@@ -129,7 +131,7 @@ describe('AdminGameImportWizardClient', () => {
     });
 
     it('highlights step 1 as active on initial render', () => {
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       // WizardSteps uses aria-current for active step
       const step1Button = screen.getByLabelText(/step 1:/i);
@@ -137,7 +139,7 @@ describe('AdminGameImportWizardClient', () => {
     });
 
     it('displays wizard state summary', () => {
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText('Wizard State')).toBeInTheDocument();
       expect(screen.getByText(/step:/i)).toBeInTheDocument();
@@ -145,7 +147,7 @@ describe('AdminGameImportWizardClient', () => {
     });
 
     it('shows reset button', () => {
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByRole('button', { name: /reset/i })).toBeInTheDocument();
     });
@@ -153,14 +155,14 @@ describe('AdminGameImportWizardClient', () => {
 
   describe('Step Navigation', () => {
     it('Previous button is disabled on step 1', () => {
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const prevButton = screen.getByRole('button', { name: /previous/i });
       expect(prevButton).toBeDisabled();
     });
 
     it('Next button is disabled when step validation fails', () => {
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const nextButton = screen.getByRole('button', { name: /next/i });
       expect(nextButton).toBeDisabled(); // No PDF uploaded
@@ -172,7 +174,7 @@ describe('AdminGameImportWizardClient', () => {
         uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const nextButton = screen.getByRole('button', { name: /next/i });
       expect(nextButton).not.toBeDisabled();
@@ -183,7 +185,7 @@ describe('AdminGameImportWizardClient', () => {
         uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const nextButton = screen.getByRole('button', { name: /next/i });
       await userEvent.click(nextButton);
@@ -200,7 +202,7 @@ describe('AdminGameImportWizardClient', () => {
         extractedMetadata: { title: 'Test Game' },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const prevButton = screen.getByRole('button', { name: /previous/i });
       await userEvent.click(prevButton);
@@ -215,7 +217,7 @@ describe('AdminGameImportWizardClient', () => {
         currentStep: 4,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /submit & import/i })).toBeInTheDocument();
@@ -228,7 +230,7 @@ describe('AdminGameImportWizardClient', () => {
         uploadedPdf: { id: 'pdf-123', fileName: 'rulebook.pdf' },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       // Check wizard state summary shows PDF uploaded
       const summary = screen.getByText('Wizard State').closest('div');
@@ -246,7 +248,7 @@ describe('AdminGameImportWizardClient', () => {
         },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText(/title:/i)).toBeInTheDocument();
       expect(screen.getByText('Test Game')).toBeInTheDocument();
@@ -260,10 +262,11 @@ describe('AdminGameImportWizardClient', () => {
         selectedBggId: 12345,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
-      expect(screen.getByText(/selected bgg id:/i)).toBeInTheDocument();
-      expect(screen.getByText('12345')).toBeInTheDocument();
+      // Wizard state summary shows BGG selection status
+      expect(screen.getByText(/BGG:/i)).toBeInTheDocument();
+      expect(screen.getByText(/✓ ID 12345/i)).toBeInTheDocument();
     });
 
     it('displays enriched data on step 4', () => {
@@ -277,7 +280,7 @@ describe('AdminGameImportWizardClient', () => {
         },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText(/final title:/i)).toBeInTheDocument();
       expect(screen.getByText('Final Game Title')).toBeInTheDocument();
@@ -292,7 +295,7 @@ describe('AdminGameImportWizardClient', () => {
         error: 'Test error message',
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText('Error')).toBeInTheDocument();
       expect(screen.getByText('Test error message')).toBeInTheDocument();
@@ -306,7 +309,7 @@ describe('AdminGameImportWizardClient', () => {
         error: 'Previous error',
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const prevButton = screen.getByRole('button', { name: /previous/i });
       await userEvent.click(prevButton);
@@ -325,7 +328,7 @@ describe('AdminGameImportWizardClient', () => {
         enrichedData: null,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const submitButton = screen.getByRole('button', { name: /submit & import/i });
       expect(submitButton).toBeDisabled();
@@ -338,7 +341,7 @@ describe('AdminGameImportWizardClient', () => {
         enrichedData: { title: 'Test Game' },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const submitButton = screen.getByRole('button', { name: /submit & import/i });
       expect(submitButton).not.toBeDisabled();
@@ -352,7 +355,7 @@ describe('AdminGameImportWizardClient', () => {
         isProcessing: true,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       expect(screen.getByText(/submitting/i)).toBeInTheDocument();
     });
@@ -367,7 +370,7 @@ describe('AdminGameImportWizardClient', () => {
         selectedBggId: 12345,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const resetButton = screen.getByRole('button', { name: /reset/i });
       await userEvent.click(resetButton);
@@ -392,7 +395,7 @@ describe('AdminGameImportWizardClient', () => {
         enrichedData: { title: 'Final' },
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const summary = screen.getByText('Wizard State').closest('div');
       expect(within(summary!).getByText(/✓.*test\.pdf/i)).toBeInTheDocument();
@@ -410,7 +413,7 @@ describe('AdminGameImportWizardClient', () => {
         enrichedData: null,
       });
 
-      render(<AdminGameImportWizardClient />);
+      renderWithQuery(<AdminGameImportWizardClient />);
 
       const summary = screen.getByText('Wizard State').closest('div');
       expect(within(summary!).getByText(/✗.*not uploaded/i)).toBeInTheDocument();
@@ -423,7 +426,7 @@ describe('AdminGameImportWizardClient', () => {
   describe('Wizard Navigation & Progress - Issue #4166', () => {
     describe('Progress Bar', () => {
       it('displays progress bar with correct percentage for step 1', () => {
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
         expect(screen.getByText('0%')).toBeInTheDocument();
@@ -436,7 +439,7 @@ describe('AdminGameImportWizardClient', () => {
       it('displays progress bar with correct percentage for step 2', () => {
         useGameImportWizardStore.setState({ currentStep: 2 });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
         expect(screen.getByText('33%')).toBeInTheDocument();
@@ -448,7 +451,7 @@ describe('AdminGameImportWizardClient', () => {
       it('displays progress bar with correct percentage for step 3', () => {
         useGameImportWizardStore.setState({ currentStep: 3 });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         expect(screen.getByText('Step 3 of 4')).toBeInTheDocument();
         expect(screen.getByText('67%')).toBeInTheDocument();
@@ -460,7 +463,7 @@ describe('AdminGameImportWizardClient', () => {
       it('displays progress bar with correct percentage for step 4', () => {
         useGameImportWizardStore.setState({ currentStep: 4 });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         expect(screen.getByText('Step 4 of 4')).toBeInTheDocument();
         expect(screen.getByText('100%')).toBeInTheDocument();
@@ -473,7 +476,7 @@ describe('AdminGameImportWizardClient', () => {
 
     describe('WizardSteps Integration', () => {
       it('renders WizardSteps component with all steps', () => {
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         // WizardSteps should render all step labels
         expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
@@ -485,7 +488,7 @@ describe('AdminGameImportWizardClient', () => {
       it('highlights current step in WizardSteps', () => {
         useGameImportWizardStore.setState({ currentStep: 2 });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         // Step 2 should have active state (aria-current)
         const step2 = screen.getByLabelText(/step 2:/i);
@@ -495,7 +498,7 @@ describe('AdminGameImportWizardClient', () => {
       it('shows completed checkmark for completed steps', () => {
         useGameImportWizardStore.setState({ currentStep: 3 });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         // Steps 1 and 2 should have completed state (green background)
         const step1 = screen.getByLabelText(/step 1:/i);
@@ -518,7 +521,7 @@ describe('AdminGameImportWizardClient', () => {
           extractedMetadata: { title: 'Test' },
         });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         // Click on step 1 (completed)
         const step1Button = screen.getByLabelText(/step 1:/i);
@@ -532,7 +535,7 @@ describe('AdminGameImportWizardClient', () => {
       it('allows clicking on active step (no effect)', async () => {
         useGameImportWizardStore.setState({ currentStep: 2 });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         // Click on step 2 (active)
         const step2Button = screen.getByLabelText(/step 2:/i);
@@ -546,7 +549,7 @@ describe('AdminGameImportWizardClient', () => {
       it('does not allow clicking on future steps', async () => {
         useGameImportWizardStore.setState({ currentStep: 1 });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         // Step 3 button should be disabled
         const step3Button = screen.getByLabelText(/step 3:/i);
@@ -561,7 +564,7 @@ describe('AdminGameImportWizardClient', () => {
           uploadedPdf: null,
         });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         const nextButton = screen.getByRole('button', { name: /next/i });
         expect(nextButton).toBeDisabled();
@@ -573,7 +576,7 @@ describe('AdminGameImportWizardClient', () => {
           uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
         });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         const nextButton = screen.getByRole('button', { name: /next/i });
         expect(nextButton).not.toBeDisabled();
@@ -586,7 +589,7 @@ describe('AdminGameImportWizardClient', () => {
           extractedMetadata: null,
         });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         const nextButton = screen.getByRole('button', { name: /next/i });
         expect(nextButton).toBeDisabled();
@@ -600,7 +603,7 @@ describe('AdminGameImportWizardClient', () => {
           selectedBggId: null,
         });
 
-        render(<AdminGameImportWizardClient />);
+        renderWithQuery(<AdminGameImportWizardClient />);
 
         const nextButton = screen.getByRole('button', { name: /next/i });
         expect(nextButton).toBeDisabled();

@@ -5,9 +5,10 @@
 
 import React from 'react';
 
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { StrategySelector } from '../StrategySelector';
 import { StrategyCard } from '../StrategyCard';
@@ -32,19 +33,19 @@ describe('StrategySelector', () => {
 
   describe('Rendering', () => {
     it('should render the strategy selector card', () => {
-      render(<StrategySelector {...defaultProps} />);
+      renderWithQuery(<StrategySelector {...defaultProps} />);
 
       expect(screen.getByText('Select Strategy')).toBeInTheDocument();
     });
 
     it('should display user tier badge', () => {
-      render(<StrategySelector {...defaultProps} userTier="Editor" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="Editor" />);
 
       expect(screen.getByText('Editor Tier')).toBeInTheDocument();
     });
 
     it('should render all 6 strategy cards', () => {
-      render(<StrategySelector {...defaultProps} userTier="Admin" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="Admin" />);
 
       expect(screen.getByText('FAST')).toBeInTheDocument();
       expect(screen.getByText('BALANCED')).toBeInTheDocument();
@@ -55,7 +56,7 @@ describe('StrategySelector', () => {
     });
 
     it('should apply custom className', () => {
-      const { container } = render(
+      const { container } = renderWithQuery(
         <StrategySelector {...defaultProps} className="custom-class" />
       );
 
@@ -63,7 +64,7 @@ describe('StrategySelector', () => {
     });
 
     it('should show custom title and description', () => {
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           title="Choose a RAG Strategy"
@@ -82,14 +83,14 @@ describe('StrategySelector', () => {
 
   describe('Tier-Based Access', () => {
     it('should show authentication required for Anonymous tier', () => {
-      render(<StrategySelector {...defaultProps} userTier="Anonymous" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="Anonymous" />);
 
       expect(screen.getByText('Authentication Required')).toBeInTheDocument();
       expect(screen.getByText(/Anonymous users cannot access the RAG system/)).toBeInTheDocument();
     });
 
     it('should show 2 available strategies for User tier', () => {
-      render(<StrategySelector {...defaultProps} userTier="User" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="User" />);
 
       // Text is split across elements, so check individual parts
       expect(screen.getByText('2')).toBeInTheDocument();
@@ -97,21 +98,21 @@ describe('StrategySelector', () => {
     });
 
     it('should show 3 available strategies for Editor tier', () => {
-      render(<StrategySelector {...defaultProps} userTier="Editor" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="Editor" />);
 
       expect(screen.getByText('3')).toBeInTheDocument();
       expect(screen.getByText(/of.*6 strategies available/)).toBeInTheDocument();
     });
 
     it('should show 6 available strategies for Admin tier', () => {
-      render(<StrategySelector {...defaultProps} userTier="Admin" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="Admin" />);
 
       expect(screen.getByText('6', { selector: '.font-medium' })).toBeInTheDocument();
       expect(screen.getByText(/of.*6 strategies available/)).toBeInTheDocument();
     });
 
     it('should show 5 available strategies for Premium tier', () => {
-      render(<StrategySelector {...defaultProps} userTier="Premium" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="Premium" />);
 
       expect(screen.getByText('5')).toBeInTheDocument();
       expect(screen.getByText(/of.*6 strategies available/)).toBeInTheDocument();
@@ -127,7 +128,7 @@ describe('StrategySelector', () => {
       const onSelect = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -145,7 +146,7 @@ describe('StrategySelector', () => {
       const onSelect = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="User"
@@ -161,7 +162,7 @@ describe('StrategySelector', () => {
     });
 
     it('should show selected strategy badge when strategy is selected', () => {
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -179,7 +180,7 @@ describe('StrategySelector', () => {
       const onUpgrade = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="User"
@@ -201,13 +202,13 @@ describe('StrategySelector', () => {
 
   describe('Accessibility', () => {
     it('should have listbox role for strategy grid', () => {
-      render(<StrategySelector {...defaultProps} userTier="Admin" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="Admin" />);
 
       expect(screen.getByRole('listbox', { name: /RAG Strategies/i })).toBeInTheDocument();
     });
 
     it('should have aria-selected on selected card', () => {
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -220,7 +221,7 @@ describe('StrategySelector', () => {
     });
 
     it('should have aria-disabled on unavailable cards', () => {
-      render(<StrategySelector {...defaultProps} userTier="User" />);
+      renderWithQuery(<StrategySelector {...defaultProps} userTier="User" />);
 
       const preciseCard = screen.getByRole('button', { name: /PRECISE strategy \(requires Editor tier\)/i });
       expect(preciseCard).toHaveAttribute('aria-disabled', 'true');
@@ -230,7 +231,7 @@ describe('StrategySelector', () => {
       const onSelect = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -249,7 +250,7 @@ describe('StrategySelector', () => {
       const onSelect = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -271,7 +272,7 @@ describe('StrategySelector', () => {
 
   describe('Dropdown Variant', () => {
     it('should render as dropdown when variant is dropdown', () => {
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -284,7 +285,7 @@ describe('StrategySelector', () => {
     });
 
     it('should show selected strategy in dropdown button', () => {
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -299,7 +300,7 @@ describe('StrategySelector', () => {
     it('should open dropdown on click', async () => {
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -323,7 +324,7 @@ describe('StrategySelector', () => {
       const onSelect = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategySelector
           {...defaultProps}
           userTier="Admin"
@@ -357,19 +358,19 @@ describe('StrategyCard', () => {
 
   describe('Rendering', () => {
     it('should render strategy name and icon', () => {
-      render(<StrategyCard {...defaultCardProps} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} />);
 
       expect(screen.getByText('FAST')).toBeInTheDocument();
     });
 
     it('should render strategy description', () => {
-      render(<StrategyCard {...defaultCardProps} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} />);
 
       expect(screen.getByText(STRATEGIES.FAST.description)).toBeInTheDocument();
     });
 
     it('should render token, latency, and accuracy details when showDetails is true', () => {
-      render(<StrategyCard {...defaultCardProps} showDetails={true} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} showDetails={true} />);
 
       expect(screen.getByText('Tokens')).toBeInTheDocument();
       expect(screen.getByText('Latency')).toBeInTheDocument();
@@ -377,7 +378,7 @@ describe('StrategyCard', () => {
     });
 
     it('should not render details when showDetails is false', () => {
-      render(<StrategyCard {...defaultCardProps} showDetails={false} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} showDetails={false} />);
 
       expect(screen.queryByText('Tokens')).not.toBeInTheDocument();
       expect(screen.queryByText('Latency')).not.toBeInTheDocument();
@@ -386,7 +387,7 @@ describe('StrategyCard', () => {
 
   describe('Available State', () => {
     it('should not show lock icon when available', () => {
-      render(<StrategyCard {...defaultCardProps} isAvailable={true} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} isAvailable={true} />);
 
       // Lock icon should not be present
       expect(screen.queryByText(/Upgrade to/)).not.toBeInTheDocument();
@@ -396,7 +397,7 @@ describe('StrategyCard', () => {
       const onSelect = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={true}
@@ -413,7 +414,7 @@ describe('StrategyCard', () => {
 
   describe('Unavailable State', () => {
     it('should show tier badge when unavailable', () => {
-      render(
+      renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={false}
@@ -425,7 +426,7 @@ describe('StrategyCard', () => {
     });
 
     it('should show upgrade message when unavailable', () => {
-      render(
+      renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={false}
@@ -437,7 +438,7 @@ describe('StrategyCard', () => {
     });
 
     it('should have reduced opacity when unavailable', () => {
-      const { container } = render(
+      const { container } = renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={false}
@@ -453,7 +454,7 @@ describe('StrategyCard', () => {
       const onUpgrade = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={false}
@@ -471,7 +472,7 @@ describe('StrategyCard', () => {
 
   describe('Selected State', () => {
     it('should have aria-selected true when selected', () => {
-      render(
+      renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={true}
@@ -484,7 +485,7 @@ describe('StrategyCard', () => {
     });
 
     it('should have ring styling when selected', () => {
-      const { container } = render(
+      const { container } = renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={true}
@@ -499,19 +500,19 @@ describe('StrategyCard', () => {
 
   describe('Accessibility', () => {
     it('should have button role', () => {
-      render(<StrategyCard {...defaultCardProps} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} />);
 
       expect(screen.getByRole('button', { name: /FAST strategy/i })).toBeInTheDocument();
     });
 
     it('should have accessible name', () => {
-      render(<StrategyCard {...defaultCardProps} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} />);
 
       expect(screen.getByRole('button', { name: /FAST strategy/i })).toBeInTheDocument();
     });
 
     it('should include tier requirement in accessible name when unavailable', () => {
-      render(
+      renderWithQuery(
         <StrategyCard
           {...defaultCardProps}
           isAvailable={false}
@@ -525,7 +526,7 @@ describe('StrategyCard', () => {
     });
 
     it('should be focusable', () => {
-      render(<StrategyCard {...defaultCardProps} />);
+      renderWithQuery(<StrategyCard {...defaultCardProps} />);
 
       const card = screen.getByRole('button', { name: /FAST strategy/i });
       expect(card).toHaveAttribute('tabIndex', '0');

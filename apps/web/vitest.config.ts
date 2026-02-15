@@ -76,6 +76,7 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/e2e/**',
+      '**/*.e2e.test.{ts,tsx}',
       '**/.next/**',
       '**/.__tests__/fixtures/**',
       // Issue #1951: Exclude flaky performance tests in CI
@@ -114,6 +115,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       // Mock next-intl for tests to use test-i18n utility
       'next-intl': path.resolve(__dirname, './src/test-utils/__mocks__/next-intl.ts'),
+      // Mock uninstalled dependencies for test resolution
+      'react-dropzone': path.resolve(__dirname, './src/test-utils/__mocks__/react-dropzone.ts'),
+      'swr': path.resolve(__dirname, './src/test-utils/__mocks__/swr.ts'),
+      '@react-pdf-viewer/core': path.resolve(__dirname, './src/test-utils/__mocks__/react-pdf-viewer-core.ts'),
+      '@react-pdf-viewer/default-layout': path.resolve(__dirname, './src/test-utils/__mocks__/react-pdf-viewer-default-layout.ts'),
+      '@react-pdf-viewer/page-navigation': path.resolve(__dirname, './src/test-utils/__mocks__/react-pdf-viewer-page-navigation.ts'),
+      // CSS imports from uninstalled packages
+      '@react-pdf-viewer/core/lib/styles/index.css': path.resolve(__dirname, './src/test-utils/__mocks__/empty.css'),
+      '@react-pdf-viewer/default-layout/lib/styles/index.css': path.resolve(__dirname, './src/test-utils/__mocks__/empty.css'),
     },
   },
 });

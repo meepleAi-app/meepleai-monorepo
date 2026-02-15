@@ -1,19 +1,22 @@
 /**
- * PdfPreview Component (Issue #4133)
+ * PdfPreview Component (Issue #4133, #4252)
  *
- * Simplified PDF preview for file upload validation
- * Migration: react-pdf → @react-pdf-viewer/core
+ * Simplified PDF preview for file upload validation.
+ * Uses react-pdf with pdfjs-dist v5 for security (GHSA-wgrm-67xf-hhpq).
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-import { Viewer, Worker } from '@react-pdf-viewer/core';
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 export interface PdfPreviewProps {
   file: File;
@@ -22,8 +25,7 @@ export interface PdfPreviewProps {
 
 export function PdfPreview({ file }: PdfPreviewProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-
-  const defaultLayoutPluginInstance = defaultLayoutPlugin();
+  const [numPages, setNumPages] = useState<number>(0);
 
   // Convert File to URL for viewer
   useEffect(() => {
@@ -32,15 +34,26 @@ export function PdfPreview({ file }: PdfPreviewProps) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  }, []);
+
   if (!fileUrl) {
     return <div className="flex items-center justify-center h-full">Loading...</div>;
   }
 
   return (
-    <div className="pdf-preview-container h-full">
-      <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-        <Viewer fileUrl={fileUrl} plugins={[defaultLayoutPluginInstance]} />
-      </Worker>
+    <div className="pdf-preview-container h-full overflow-auto">
+      <Document file={fileUrl} onLoadSuccess={onDocumentLoadSuccess}>
+        {Array.from({ length: numPages }, (_, index) => (
+          <Page
+            key={`page_${index + 1}`}
+            pageNumber={index + 1}
+            width={600}
+            className="mb-2"
+          />
+        ))}
+      </Document>
     </div>
   );
 }

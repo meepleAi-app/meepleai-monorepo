@@ -49,11 +49,14 @@ public record WishlistAddedEvent : ActivityEvent
 }
 
 /// <summary>
-/// Response DTO for activity timeline endpoint (Issue #3973).
+/// Response DTO for activity timeline endpoint (Issue #3973, #4315).
 /// </summary>
 public record ActivityTimelineResponseDto(
     IReadOnlyList<ActivityEventDto> Activities,
-    int TotalCount
+    int TotalCount,
+    int Page = 1,
+    int PageSize = 20,
+    bool HasMore = false
 );
 
 /// <summary>

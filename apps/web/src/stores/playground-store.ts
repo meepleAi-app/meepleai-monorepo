@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, CompletionMetadata, CostBreakdown, LatencyBreakdown, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, CompletionMetadata, CostBreakdown, LatencyBreakdown, PipelineStepTiming, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -51,6 +51,7 @@ interface PlaygroundState {
   sessionTotalCost: number;
   activeStrategy: string | null;
   strategyInfo: StrategyInfo | null;
+  pipelineTimings: PipelineStepTiming[];
 
   // System message
   systemMessage: string;
@@ -122,6 +123,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       sessionTotalCost: 0,
       activeStrategy: null,
       strategyInfo: null,
+      pipelineTimings: [],
 
       // System message
       systemMessage: '',
@@ -184,6 +186,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           sessionTotalCost: 0,
           activeStrategy: null,
           strategyInfo: null,
+          pipelineTimings: [],
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -208,6 +211,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           sessionTotalCost: 0,
           activeStrategy: null,
           strategyInfo: null,
+          pipelineTimings: [],
         }),
 
       endSession: () =>
@@ -259,6 +263,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           sessionTotalCost: state.sessionTotalCost + (metadata.costBreakdown?.totalCost ?? 0),
           activeStrategy: metadata.strategy ?? null,
           strategyInfo: metadata.strategyInfo ?? null,
+          pipelineTimings: metadata.pipelineTimings ?? [],
         })),
 
       setLatencyMs: (latencyMs) => set({ latencyMs }),
@@ -277,6 +282,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           costBreakdown: null,
           activeStrategy: null,
           strategyInfo: null,
+          pipelineTimings: [],
         }),
 
       // ─── System Message ──────────────────────────

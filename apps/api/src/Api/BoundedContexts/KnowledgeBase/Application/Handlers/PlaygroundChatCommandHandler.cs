@@ -65,6 +65,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var totalStopwatch = Stopwatch.StartNew();
+        var pipelineTimings = new List<PlaygroundPipelineStep>();
+        var stepStopwatch = Stopwatch.StartNew();
 
         // Resolve effective strategy: command override > agent definition default
         var effectiveStrategy = ResolveStrategy(command.Strategy);
@@ -113,8 +115,16 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded. Using {effectiveStrategy} strategy.{overrideInfo}"));
 
+        pipelineTimings.Add(new PlaygroundPipelineStep(
+            "Agent Loading", "retrieval", stepStopwatch.ElapsedMilliseconds, null));
+        stepStopwatch.Restart();
+
         // 2. Build system prompt from AgentDefinition prompts
         var systemPrompt = BuildSystemPrompt(agentDefinition);
+
+        pipelineTimings.Add(new PlaygroundPipelineStep(
+            "Prompt Building", "compute", stepStopwatch.ElapsedMilliseconds, null));
+        stepStopwatch.Restart();
 
         // 3. RAG retrieval (for all strategies if GameId is provided)
         var retrievalStopwatch = Stopwatch.StartNew();
@@ -170,6 +180,14 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         }
 
         retrievalStopwatch.Stop();
+
+        if (command.GameId.HasValue)
+        {
+            pipelineTimings.Add(new PlaygroundPipelineStep(
+                "RAG Retrieval", "retrieval", retrievalStopwatch.ElapsedMilliseconds,
+                ragSnippets != null ? $"{ragSnippets.Count} chunks" : "no results"));
+        }
+        stepStopwatch.Restart();
 
         // 4. Strategy-specific execution
         var generationStopwatch = Stopwatch.StartNew();
@@ -313,6 +331,16 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
         generationStopwatch.Stop();
 
+        var generationDetail = effectiveStrategy switch
+        {
+            "RetrievalOnly" => "no LLM call",
+            "MultiModelConsensus" => $"{agentDefinition.Strategy.GetParameter("Models", DefaultConsensusModels).Length} models",
+            _ => effectiveModel
+        };
+        pipelineTimings.Add(new PlaygroundPipelineStep(
+            "LLM Generation", "llm", generationStopwatch.ElapsedMilliseconds, generationDetail));
+        stepStopwatch.Restart();
+
         // 5. Follow-up questions (if response is long enough and not RetrievalOnly)
         var fullResponse = responseBuilder.ToString();
         if (fullResponse.Length > 50 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal))
@@ -349,6 +377,9 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         {
             _logger.LogWarning(ex, "Failed to persist playground cost log");
         }
+
+        pipelineTimings.Add(new PlaygroundPipelineStep(
+            "Post-Processing", "compute", stepStopwatch.ElapsedMilliseconds, "cost + follow-up"));
 
         // 7. Build strategy info from agent definition
         var strategyParams = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -391,7 +422,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     totalMs: totalStopwatch.ElapsedMilliseconds,
                     retrievalMs: retrievalStopwatch.ElapsedMilliseconds,
                     generationMs: generationStopwatch.ElapsedMilliseconds),
-                strategyInfo: strategyInfo));
+                strategyInfo: strategyInfo,
+                pipelineTimings: pipelineTimings));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -467,6 +499,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Issue #4437: Added strategy field.
 /// Issue #4439: Added cost breakdown.
 /// Issue #4441: Added strategy info with parameters.
+/// Issue #4442: Added pipeline timings.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -478,7 +511,8 @@ internal record PlaygroundStreamingComplete(
     PlaygroundCostBreakdown costBreakdown,
     PlaygroundAgentConfigSnapshot agentConfig,
     PlaygroundLatencyBreakdown latencyBreakdown,
-    PlaygroundStrategyInfo? strategyInfo = null);
+    PlaygroundStrategyInfo? strategyInfo = null,
+    List<PlaygroundPipelineStep>? pipelineTimings = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -518,3 +552,13 @@ internal record PlaygroundStrategyInfo(
     string name,
     string type,
     Dictionary<string, object> parameters);
+
+/// <summary>
+/// Individual pipeline step timing for waterfall visualization.
+/// Issue #4442: Per-step timing with type categorization.
+/// </summary>
+internal record PlaygroundPipelineStep(
+    string name,
+    string type,
+    long durationMs,
+    string? detail);

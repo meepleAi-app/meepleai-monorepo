@@ -64,6 +64,13 @@ export interface StrategyInfo {
   parameters: Record<string, unknown>;
 }
 
+export interface PipelineStepTiming {
+  name: string;
+  type: 'retrieval' | 'compute' | 'llm';
+  durationMs: number;
+  detail: string | null;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
@@ -75,6 +82,7 @@ export interface CompletionMetadata {
   agentConfig?: AgentConfigSnapshot;
   latencyBreakdown?: LatencyBreakdown;
   strategyInfo?: StrategyInfo;
+  pipelineTimings?: PipelineStepTiming[];
 }
 
 export interface StreamingError {

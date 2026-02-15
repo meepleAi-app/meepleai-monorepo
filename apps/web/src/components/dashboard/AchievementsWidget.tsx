@@ -216,10 +216,12 @@ function RarityBadge({
   rarity,
   isLocked,
   unlockHint,
+  achievementName,
 }: {
   rarity: AchievementRarity;
   isLocked?: boolean;
   unlockHint?: string;
+  achievementName?: string;
 }) {
   const colors = RARITY_COLORS[rarity];
 
@@ -242,7 +244,10 @@ function RarityBadge({
       <Tooltip>
         <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent side="left" data-testid={`unlock-tooltip-${rarity}`}>
-          <p className="font-medium text-xs">{unlockHint}</p>
+          {achievementName && (
+            <p className="font-semibold text-xs mb-1" data-testid="unlock-tooltip-name">{achievementName}</p>
+          )}
+          <p className="font-medium text-xs" data-testid="unlock-tooltip-hint">{unlockHint}</p>
         </TooltipContent>
       </Tooltip>
     );
@@ -367,6 +372,7 @@ function AchievementCard({ achievement, index, isCelebrating }: AchievementCardP
           rarity={achievement.rarity}
           isLocked={achievement.isLocked}
           unlockHint={achievement.unlockHint}
+          achievementName={achievement.name}
         />
       </Link>
     </motion.div>

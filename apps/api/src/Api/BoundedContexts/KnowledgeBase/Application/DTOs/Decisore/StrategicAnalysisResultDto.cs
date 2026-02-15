@@ -6,6 +6,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs.Decisore;
 /// </summary>
 public sealed record StrategicAnalysisResultDto
 {
+    /// <summary>
+    /// Unique correlation ID for this analysis (for feedback tracking).
+    /// Issue #4335: Decisore beta testing feedback.
+    /// </summary>
+    public required Guid SuggestionId { get; init; }
+
     public required List<MoveSuggestionDto> Suggestions { get; init; }
     public required double PositionStrength { get; init; }  // -1 (losing) to +1 (winning)
     public required string RiskLevel { get; init; }  // "low", "medium", "high"

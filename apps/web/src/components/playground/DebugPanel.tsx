@@ -41,6 +41,7 @@ export function DebugPanel() {
   const [logLevelFilter, setLogLevelFilter] = useState<Set<string>>(new Set(['info', 'warn', 'error', 'debug']));
   const [logSourceFilter, setLogSourceFilter] = useState<string>('all');
   const [logSearch, setLogSearch] = useState('');
+  const [agentConfigExpanded, setAgentConfigExpanded] = useState(false);
   const [systemPromptExpanded, setSystemPromptExpanded] = useState(false);
   const [systemPromptCopied, setSystemPromptCopied] = useState(false);
 
@@ -216,42 +217,76 @@ export function DebugPanel() {
         </Card>
       )}
 
-      {/* Agent Config */}
-      {agentConfig && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Server className="h-4 w-4" />
-              Agent Config
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Provider</span>
-                <span className="font-mono">{agentConfig.provider}</span>
+      {/* Agent Config (Issue #4470: enhanced with non-default highlighting + collapsible) */}
+      {agentConfig && (() => {
+        const isNonDefaultTemp = agentConfig.temperature !== 0.7;
+        const isNonDefaultMaxTokens = agentConfig.maxTokens !== 2048;
+        const hasOverrides = agentConfig.isModelOverride || isNonDefaultTemp || isNonDefaultMaxTokens;
+
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Server className="h-4 w-4" />
+                Model Config
+                {hasOverrides && (
+                  <span className="text-[10px] bg-amber-100 text-amber-800 px-1 py-0.5 rounded leading-none">customized</span>
+                )}
+                <button
+                  type="button"
+                  className="ml-auto"
+                  onClick={() => setAgentConfigExpanded(!agentConfigExpanded)}
+                >
+                  {agentConfigExpanded
+                    ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  }
+                </button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Provider</span>
+                  <span className="font-mono">{agentConfig.provider}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Model</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs truncate max-w-[140px]" title={agentConfig.model}>{agentConfig.model}</span>
+                    {agentConfig.isModelOverride && (
+                      <span className="text-[10px] bg-amber-100 text-amber-800 px-1 py-0.5 rounded leading-none">override</span>
+                    )}
+                  </span>
+                </div>
+                {agentConfigExpanded && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Temperature</span>
+                      <span className={cn('font-mono', isNonDefaultTemp && 'text-amber-600 font-semibold')}>
+                        {agentConfig.temperature}
+                        {isNonDefaultTemp && <span className="text-[10px] ml-1 text-muted-foreground">(default: 0.7)</span>}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Max Tokens</span>
+                      <span className={cn('font-mono', isNonDefaultMaxTokens && 'text-amber-600 font-semibold')}>
+                        {agentConfig.maxTokens.toLocaleString()}
+                        {isNonDefaultMaxTokens && <span className="text-[10px] ml-1 text-muted-foreground">(default: 2048)</span>}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {!agentConfigExpanded && (
+                  <p className="text-[11px] text-muted-foreground">
+                    T:{agentConfig.temperature} · Max:{agentConfig.maxTokens.toLocaleString()}
+                  </p>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Model</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="font-mono text-xs truncate max-w-[140px]" title={agentConfig.model}>{agentConfig.model}</span>
-                  {agentConfig.isModelOverride && (
-                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1 py-0.5 rounded leading-none">override</span>
-                  )}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Temperature</span>
-                <span className="font-mono">{agentConfig.temperature}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Max Tokens</span>
-                <span className="font-mono">{agentConfig.maxTokens.toLocaleString()}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Strategy Info */}
       {(activeStrategy || strategyInfo) && (

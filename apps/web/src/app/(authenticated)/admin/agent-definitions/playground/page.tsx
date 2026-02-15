@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { Download, Trash2 } from 'lucide-react';
+import { ChevronDown, Download, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ChatInterface } from '@/components/playground/ChatInterface';
@@ -11,7 +11,7 @@ import { DebugPanel } from '@/components/playground/DebugPanel';
 import { RagContextViewer } from '@/components/playground/RagContextViewer';
 import { ScenarioManager } from '@/components/playground/ScenarioManager';
 import {
-  Button, Label, RadioGroup, RadioGroupItem, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Button, Input, Label, RadioGroup, RadioGroupItem, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Tabs, TabsContent, TabsList, TabsTrigger, Textarea,
 } from '@/components/ui';
 import { parsePlaygroundSSEChunk } from '@/lib/agent/playground-sse-parser';
@@ -42,6 +42,7 @@ const STRATEGY_OPTIONS: { value: PlaygroundStrategy; label: string; description:
 
 export default function AgentPlaygroundPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const {
     clearMessages, setCurrentAgent, addMessage, appendToLastMessage,
     updateMessageMetadata, setStreaming, addCitations, addStateUpdate,
@@ -49,6 +50,9 @@ export default function AgentPlaygroundPage() {
     systemMessage, setSystemMessage,
     currentGameId, setCurrentGameId,
     strategy, setStrategy,
+    modelOverride, setModelOverride,
+    providerOverride, setProviderOverride,
+    resetOverrides,
   } = usePlaygroundStore();
 
   const apiClient = useApiClient();
@@ -86,6 +90,8 @@ export default function AgentPlaygroundPage() {
           ...(systemMessage ? { systemMessage } : {}),
           ...(currentGameId ? { gameId: currentGameId } : {}),
           strategy,
+          ...(modelOverride ? { modelOverride } : {}),
+          ...(providerOverride ? { providerOverride } : {}),
         }),
       });
 
@@ -265,6 +271,66 @@ export default function AgentPlaygroundPage() {
             </div>
           ))}
         </RadioGroup>
+      </div>
+
+      {/* Advanced Options - Model/Provider Override */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-0' : '-rotate-90'}`} />
+          Advanced Options
+          {(modelOverride || providerOverride) && (
+            <span className="ml-1.5 text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Override active</span>
+          )}
+        </button>
+        {showAdvanced && (
+          <div className="mt-3 space-y-3 pl-6 border-l-2 border-muted">
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <Label htmlFor="model-override" className="text-sm">Model Override</Label>
+                <Input
+                  id="model-override"
+                  placeholder="e.g. gpt-4o, claude-3-opus, mistral-large..."
+                  value={modelOverride ?? ''}
+                  onChange={(e) => setModelOverride(e.target.value || null)}
+                  className="mt-1 text-sm font-mono"
+                />
+              </div>
+              <div className="w-48">
+                <Label htmlFor="provider-override" className="text-sm">Provider</Label>
+                <Select
+                  value={providerOverride ?? '__none__'}
+                  onValueChange={(value) => setProviderOverride(value === '__none__' ? null : value)}
+                >
+                  <SelectTrigger id="provider-override" className="mt-1">
+                    <SelectValue placeholder="Agent default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Agent default</SelectItem>
+                    <SelectItem value="OpenRouter">OpenRouter</SelectItem>
+                    <SelectItem value="Ollama">Ollama</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetOverrides}
+                disabled={!modelOverride && !providerOverride}
+                className="shrink-0"
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                Reset
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Override the agent&apos;s configured model/provider for this request. Leave empty to use agent defaults.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* System Message */}

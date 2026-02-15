@@ -123,7 +123,12 @@ export function DebugPanel() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Model</span>
-                <span className="font-mono text-xs truncate max-w-[160px]" title={agentConfig.model}>{agentConfig.model}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="font-mono text-xs truncate max-w-[140px]" title={agentConfig.model}>{agentConfig.model}</span>
+                  {agentConfig.isModelOverride && (
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1 py-0.5 rounded leading-none">override</span>
+                  )}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Temperature</span>

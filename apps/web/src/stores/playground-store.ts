@@ -33,6 +33,10 @@ interface PlaygroundState {
   // Strategy selection
   strategy: PlaygroundStrategy;
 
+  // Model/Provider overrides
+  modelOverride: string | null;
+  providerOverride: string | null;
+
   // SSE-derived state (per response cycle)
   citations: Snippet[];
   stateUpdates: string[];
@@ -65,6 +69,11 @@ interface PlaygroundState {
   // Actions - Strategy
   setStrategy: (strategy: PlaygroundStrategy) => void;
 
+  // Actions - Model override
+  setModelOverride: (model: string | null) => void;
+  setProviderOverride: (provider: string | null) => void;
+  resetOverrides: () => void;
+
   // Actions - SSE state
   addCitations: (citations: Snippet[]) => void;
   addStateUpdate: (message: string) => void;
@@ -91,6 +100,10 @@ export const usePlaygroundStore = create<PlaygroundState>()(
 
       // Strategy
       strategy: 'SingleModel' as PlaygroundStrategy,
+
+      // Model/Provider overrides
+      modelOverride: null,
+      providerOverride: null,
 
       // SSE-derived state
       citations: [],
@@ -194,6 +207,12 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       // ─── Strategy Actions ──────────────────────────
 
       setStrategy: (strategy) => set({ strategy }),
+
+      // ─── Model Override Actions ────────────────────
+
+      setModelOverride: (model) => set({ modelOverride: model }),
+      setProviderOverride: (provider) => set({ providerOverride: provider }),
+      resetOverrides: () => set({ modelOverride: null, providerOverride: null }),
 
       // ─── SSE State Actions ───────────────────────
 

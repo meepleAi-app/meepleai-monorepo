@@ -41,6 +41,7 @@ export interface AgentConfigSnapshot {
   temperature: number;
   maxTokens: number;
   provider: string;
+  isModelOverride?: boolean;
 }
 
 export interface LatencyBreakdown {

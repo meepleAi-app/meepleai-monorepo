@@ -192,4 +192,12 @@ internal class NoOpEmailService : IEmailService
         int retryCount,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    // ISSUE-4417: Raw email sending for queue processor
+    public Task SendRawEmailAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

@@ -7,9 +7,10 @@ using MediatR;
 namespace Api.Routing;
 
 /// <summary>
-/// Notification preferences endpoints.
+/// Notification preferences and email history endpoints.
 /// Issue #4220: Multi-channel notification configuration.
 /// Issue #4416: Push notification subscribe/unsubscribe.
+/// Issue #4417: Email queue history and resend.
 /// </summary>
 internal static class NotificationPreferencesEndpoints
 {
@@ -83,6 +84,46 @@ internal static class NotificationPreferencesEndpoints
         })
         .WithName("GetVapidPublicKey");
 
+        // Issue #4417: Email queue history
+        group.MapGet("/emails", async (
+            [AsParameters] EmailHistoryRequest request,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            var query = new GetEmailHistoryQuery(
+                session!.User!.Id,
+                request.Skip ?? 0,
+                request.Take ?? 20);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("GetEmailHistory");
+
+        // Issue #4417: Resend failed email
+        group.MapPost("/emails/{emailId}/resend", async (
+            Guid emailId,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            var command = new ResendFailedEmailCommand(emailId, session!.User!.Id);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return result ? Results.Ok() : Results.NotFound();
+        })
+        .RequireSession()
+        .WithName("ResendFailedEmail");
+
         return group;
     }
+
+    // Issue #4417: Parameter binding for email history query
+    internal record EmailHistoryRequest(int? Skip, int? Take);
 }

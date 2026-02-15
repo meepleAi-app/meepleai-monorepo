@@ -154,6 +154,9 @@ public class MeepleAiDbContext : DbContext
     // Issue #4220: Notification preferences
     public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity> NotificationPreferences => Set<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity>();
 
+    // Issue #4417: Email notification queue
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity> EmailQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);

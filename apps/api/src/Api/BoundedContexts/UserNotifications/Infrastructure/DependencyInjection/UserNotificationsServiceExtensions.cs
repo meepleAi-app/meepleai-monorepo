@@ -1,6 +1,8 @@
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
@@ -10,6 +12,7 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjecti
 /// <summary>
 /// Dependency injection extensions for UserNotifications bounded context.
 /// Issue #2053: User notifications system.
+/// Issue #4417: Email notification queue with retry policy.
 /// </summary>
 internal static class UserNotificationsServiceExtensions
 {
@@ -21,6 +24,10 @@ internal static class UserNotificationsServiceExtensions
         // Register repositories
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<INotificationPreferencesRepository, NotificationPreferencesRepository>();
+        services.AddScoped<IEmailQueueRepository, EmailQueueRepository>(); // Issue #4417
+
+        // Register services
+        services.AddSingleton<IEmailTemplateService, EmailTemplateService>(); // Issue #4417
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -68,6 +75,20 @@ internal static class UserNotificationsServiceExtensions
                 .WithIdentity("cooldown-end-reminder-trigger", "notifications")
                 .WithCronSchedule("0 0 * * * ?")  // Every hour at minute 0
                 .WithDescription("Runs hourly to notify users when their cooldown period ends"));
+        });
+
+        // ISSUE-4417: Email processor job - runs every 30 seconds
+        services.AddQuartz(q =>
+        {
+            q.AddJob<EmailProcessorJob>(opts => opts
+                .WithIdentity("email-processor-job", "notifications")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("email-processor-job", "notifications")
+                .WithIdentity("email-processor-trigger", "notifications")
+                .WithCronSchedule("0/30 * * * * ?")  // Every 30 seconds
+                .WithDescription("Processes queued emails with retry and dead letter handling"));
         });
 
         // Note: AddQuartzHostedService is called once in Administration context

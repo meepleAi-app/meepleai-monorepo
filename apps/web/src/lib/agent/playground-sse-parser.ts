@@ -58,6 +58,12 @@ export interface CostBreakdown {
   isFree: boolean;
 }
 
+export interface StrategyInfo {
+  name: string;
+  type: 'retrieval' | 'generation' | 'consensus' | 'validation' | 'custom';
+  parameters: Record<string, unknown>;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
@@ -68,6 +74,7 @@ export interface CompletionMetadata {
   costBreakdown?: CostBreakdown;
   agentConfig?: AgentConfigSnapshot;
   latencyBreakdown?: LatencyBreakdown;
+  strategyInfo?: StrategyInfo;
 }
 
 export interface StreamingError {

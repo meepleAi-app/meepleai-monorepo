@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, CompletionMetadata, CostBreakdown, LatencyBreakdown, Snippet } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, CompletionMetadata, CostBreakdown, LatencyBreakdown, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -50,6 +50,7 @@ interface PlaygroundState {
   costBreakdown: CostBreakdown | null;
   sessionTotalCost: number;
   activeStrategy: string | null;
+  strategyInfo: StrategyInfo | null;
 
   // System message
   systemMessage: string;
@@ -120,6 +121,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       costBreakdown: null,
       sessionTotalCost: 0,
       activeStrategy: null,
+      strategyInfo: null,
 
       // System message
       systemMessage: '',
@@ -181,6 +183,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           costBreakdown: null,
           sessionTotalCost: 0,
           activeStrategy: null,
+          strategyInfo: null,
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -204,6 +207,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           costBreakdown: null,
           sessionTotalCost: 0,
           activeStrategy: null,
+          strategyInfo: null,
         }),
 
       endSession: () =>
@@ -254,6 +258,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           costBreakdown: metadata.costBreakdown ?? null,
           sessionTotalCost: state.sessionTotalCost + (metadata.costBreakdown?.totalCost ?? 0),
           activeStrategy: metadata.strategy ?? null,
+          strategyInfo: metadata.strategyInfo ?? null,
         })),
 
       setLatencyMs: (latencyMs) => set({ latencyMs }),
@@ -271,6 +276,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           latencyBreakdown: null,
           costBreakdown: null,
           activeStrategy: null,
+          strategyInfo: null,
         }),
 
       // ─── System Message ──────────────────────────

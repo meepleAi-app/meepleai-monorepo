@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, ApiTrace, CacheInfo, CompletionMetadata, CostBreakdown, LatencyBreakdown, LogEntry, PipelineStepTiming, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, ApiTrace, CacheInfo, CompletionMetadata, CostBreakdown, LatencyBreakdown, LogEntry, PipelineStepTiming, Snippet, StrategyInfo, TomacLayer } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -63,6 +63,9 @@ interface PlaygroundState {
 
   // Developer console log entries (Issue #4445)
   logEntries: LogEntry[];
+
+  // TOMAC-RAG layer visualization (Issue #4446)
+  tomacLayers: TomacLayer[];
 
   // System message
   systemMessage: string;
@@ -147,6 +150,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       // Developer console
       logEntries: [],
 
+      // TOMAC layers
+      tomacLayers: [],
+
       // System message
       systemMessage: '',
 
@@ -214,6 +220,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           sessionCacheRequests: 0,
           apiTraces: [],
           logEntries: [],
+          tomacLayers: [],
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -244,6 +251,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           sessionCacheRequests: 0,
           apiTraces: [],
           logEntries: [],
+          tomacLayers: [],
         }),
 
       endSession: () =>
@@ -305,6 +313,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
             sessionCacheHits: state.sessionCacheHits + (isHit ? 1 : 0),
             apiTraces: metadata.apiTraces ?? [],
             logEntries: metadata.logEntries ?? [],
+            tomacLayers: metadata.tomacLayers ?? [],
           };
         }),
 
@@ -328,6 +337,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           cacheInfo: null,
           apiTraces: [],
           logEntries: [],
+          tomacLayers: [],
         }),
 
       // ─── System Message ──────────────────────────

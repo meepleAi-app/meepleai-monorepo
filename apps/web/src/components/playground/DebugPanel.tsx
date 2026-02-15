@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Activity, BarChart3, ChevronDown, ChevronRight, Clock, Cpu, Database, DollarSign, Download, Gauge, Globe, Route, Search, Server, Terminal, Workflow } from 'lucide-react';
+import { Activity, ArrowDown, BarChart3, ChevronDown, ChevronRight, Clock, Cpu, Database, DollarSign, Download, Gauge, Globe, Layers, Route, Search, Server, Terminal, Workflow } from 'lucide-react';
 
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, ScrollArea } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers } = usePlaygroundStore();
   const [expandedTrace, setExpandedTrace] = useState<number | null>(null);
   const [logLevelFilter, setLogLevelFilter] = useState<Set<string>>(new Set(['info', 'warn', 'error', 'debug']));
   const [logSourceFilter, setLogSourceFilter] = useState<string>('all');
@@ -296,6 +296,101 @@ export function DebugPanel() {
                   {activeStrategy === 'MultiModelConsensus' && 'RAG + dual-model consensus'}
                 </p>
               )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* TOMAC-RAG Layer Visualization (Issue #4446) */}
+      {tomacLayers.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              TOMAC-RAG Pipeline
+              <span className="text-[10px] text-muted-foreground font-normal ml-auto">
+                {tomacLayers.filter(l => l.status === 'active').length}/{tomacLayers.length} active
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-0">
+              {tomacLayers.map((layer, index) => {
+                const layerColors: Record<string, string> = {
+                  L1: 'bg-blue-500',
+                  L2: 'bg-purple-500',
+                  L3: 'bg-green-500',
+                  L4: 'bg-yellow-500',
+                  L5: 'bg-orange-500',
+                  L6: 'bg-red-500',
+                };
+                const dotColor = layerColors[layer.id] ?? 'bg-gray-400';
+
+                return (
+                  <div key={layer.id}>
+                    {/* Arrow between layers */}
+                    {index > 0 && (
+                      <div className="flex justify-center py-0.5">
+                        <ArrowDown className={cn(
+                          'h-3 w-3',
+                          layer.status === 'active' || tomacLayers[index - 1].status === 'active'
+                            ? 'text-muted-foreground'
+                            : 'text-muted-foreground/30',
+                        )} />
+                      </div>
+                    )}
+                    {/* Layer row */}
+                    <div className={cn(
+                      'flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',
+                      layer.status === 'active' && 'bg-muted/60',
+                      layer.status === 'planned' && 'opacity-50',
+                      layer.status === 'bypassed' && 'opacity-60',
+                    )}>
+                      <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', dotColor)} />
+                      <span className="font-mono text-[10px] text-muted-foreground w-5 shrink-0">{layer.id}</span>
+                      <span className="font-medium flex-1 truncate" title={layer.name}>{layer.name}</span>
+                      <span className={cn(
+                        'text-[9px] px-1.5 py-0.5 rounded-full leading-none font-semibold shrink-0',
+                        layer.status === 'active' && 'bg-green-100 text-green-800',
+                        layer.status === 'planned' && 'bg-gray-100 text-gray-600',
+                        layer.status === 'bypassed' && 'bg-orange-100 text-orange-800',
+                      )}>
+                        {layer.status}
+                      </span>
+                    </div>
+                    {/* Active layer metrics */}
+                    {layer.status === 'active' && (
+                      <div className="ml-9 pl-2 border-l-2 border-muted pb-1 space-y-0.5">
+                        {layer.latencyMs > 0 && (
+                          <div className="flex justify-between text-[11px] text-muted-foreground">
+                            <span>Latency</span>
+                            <span className="font-mono">{layer.latencyMs}ms</span>
+                          </div>
+                        )}
+                        {layer.itemsProcessed > 0 && (
+                          <div className="flex justify-between text-[11px] text-muted-foreground">
+                            <span>Items</span>
+                            <span className="font-mono">{layer.itemsProcessed}</span>
+                          </div>
+                        )}
+                        {layer.score !== null && (
+                          <div className="flex justify-between text-[11px] text-muted-foreground">
+                            <span>Score</span>
+                            <span className="font-mono">{(layer.score * 100).toFixed(0)}%</span>
+                          </div>
+                        )}
+                        {layer.description && (
+                          <p className="text-[10px] text-muted-foreground italic">{layer.description}</p>
+                        )}
+                      </div>
+                    )}
+                    {/* Planned/bypassed description */}
+                    {layer.status !== 'active' && layer.description && (
+                      <p className="ml-9 text-[10px] text-muted-foreground/60 italic pb-0.5">{layer.description}</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

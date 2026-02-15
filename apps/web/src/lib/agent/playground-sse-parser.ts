@@ -99,6 +99,16 @@ export interface LogEntry {
   timestamp: string;
 }
 
+export interface TomacLayer {
+  id: string;
+  name: string;
+  status: 'active' | 'planned' | 'bypassed';
+  latencyMs: number;
+  itemsProcessed: number;
+  score: number | null;
+  description: string;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
@@ -114,6 +124,7 @@ export interface CompletionMetadata {
   cacheInfo?: CacheInfo;
   apiTraces?: ApiTrace[];
   logEntries?: LogEntry[];
+  tomacLayers?: TomacLayer[];
 }
 
 export interface StreamingError {

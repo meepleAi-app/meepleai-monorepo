@@ -119,6 +119,42 @@ internal class EmailQueueRepository : RepositoryBase, IEmailQueueRepository
             .AnyAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<Dictionary<string, int>> GetCountsByStatusAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<EmailQueueEntity>()
+            .AsNoTracking()
+            .GroupBy(e => e.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<int> GetSentCountSinceAsync(DateTime since, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<EmailQueueEntity>()
+            .AsNoTracking()
+            .CountAsync(e => e.Status == "sent" && e.ProcessedAt >= since, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<EmailQueueItem>> GetDeadLetterAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.Set<EmailQueueEntity>()
+            .AsNoTracking()
+            .Where(e => e.Status == "dead_letter")
+            .OrderByDescending(e => e.FailedAt)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<int> GetDeadLetterCountAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<EmailQueueEntity>()
+            .AsNoTracking()
+            .CountAsync(e => e.Status == "dead_letter", cancellationToken).ConfigureAwait(false);
+    }
+
     private static EmailQueueEntity MapToPersistence(EmailQueueItem item)
     {
         return new EmailQueueEntity

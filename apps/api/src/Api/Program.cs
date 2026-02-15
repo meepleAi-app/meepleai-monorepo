@@ -499,6 +499,7 @@ v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with pa
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
+v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
 v1Api.MapPlaygroundTestScenarioEndpoints(); // Issue #4396: Playground Test Scenario CRUD

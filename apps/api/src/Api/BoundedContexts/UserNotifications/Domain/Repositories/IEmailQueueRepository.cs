@@ -38,4 +38,28 @@ internal interface IEmailQueueRepository : IRepository<EmailQueueItem, Guid>
     /// Issue #4429: Email throttling.
     /// </summary>
     Task<bool> ExistsSimilarRecentAsync(Guid userId, string subject, DateTime since, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets count of emails grouped by status for admin monitoring.
+    /// Issue #4430: Email queue dashboard monitoring.
+    /// </summary>
+    Task<Dictionary<string, int>> GetCountsByStatusAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets count of emails sent within a time window for admin monitoring.
+    /// Issue #4430: Email queue dashboard monitoring.
+    /// </summary>
+    Task<int> GetSentCountSinceAsync(DateTime since, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets dead-lettered emails with pagination for admin review.
+    /// Issue #4430: Email queue dashboard monitoring.
+    /// </summary>
+    Task<IReadOnlyList<EmailQueueItem>> GetDeadLetterAsync(int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets total count of dead-lettered emails.
+    /// Issue #4430: Email queue dashboard monitoring.
+    /// </summary>
+    Task<int> GetDeadLetterCountAsync(CancellationToken cancellationToken = default);
 }

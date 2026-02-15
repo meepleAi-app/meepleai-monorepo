@@ -23,6 +23,10 @@ export { PluginPalette } from './PluginPalette';
 export { NodeConfigPanel } from './NodeConfigPanel';
 export { EdgeConfigPanel } from './EdgeConfigPanel';
 
+// Converters
+export { convertPipelineToStrategy, exportPipelineAsJSON, importStrategyAsPipeline } from './converters/pipeline-to-strategy';
+export type { ExportedStrategy, StrategyMetadata, StrategyStep, StrategyConnection } from './converters/pipeline-to-strategy';
+
 // Types
 export type {
   PluginCategory,

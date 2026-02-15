@@ -1748,6 +1748,70 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         BulkImportFromJsonResultSchema
       );
     },
+
+    // ========== RAG Execution History (Issue #4458) ==========
+
+    /**
+     * Get paginated RAG execution history with filters
+     * GET /api/v1/admin/rag-executions
+     */
+    async getRagExecutions(params?: {
+      skip?: number;
+      take?: number;
+      strategy?: string;
+      status?: string;
+      minLatencyMs?: number;
+      maxLatencyMs?: number;
+      minConfidence?: number;
+      dateFrom?: string;
+      dateTo?: string;
+    }): Promise<RagExecutionListResult> {
+      const searchParams = new URLSearchParams();
+      if (params?.skip) searchParams.set('skip', params.skip.toString());
+      if (params?.take) searchParams.set('take', params.take.toString());
+      if (params?.strategy) searchParams.set('strategy', params.strategy);
+      if (params?.status) searchParams.set('status', params.status);
+      if (params?.minLatencyMs) searchParams.set('minLatencyMs', params.minLatencyMs.toString());
+      if (params?.maxLatencyMs) searchParams.set('maxLatencyMs', params.maxLatencyMs.toString());
+      if (params?.minConfidence) searchParams.set('minConfidence', params.minConfidence.toString());
+      if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/rag-executions${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get<RagExecutionListResult>(url);
+      if (!result) {
+        return { items: [], totalCount: 0 };
+      }
+      return result;
+    },
+
+    /**
+     * Get RAG execution detail by ID
+     * GET /api/v1/admin/rag-executions/{id}
+     */
+    async getRagExecutionById(id: string): Promise<RagExecutionDetail | null> {
+      return httpClient.get<RagExecutionDetail>(`/api/v1/admin/rag-executions/${id}`);
+    },
+
+    /**
+     * Get RAG execution aggregated stats
+     * GET /api/v1/admin/rag-executions/stats
+     */
+    async getRagExecutionStats(params?: {
+      dateFrom?: string;
+      dateTo?: string;
+    }): Promise<RagExecutionStatsResult> {
+      const searchParams = new URLSearchParams();
+      if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/rag-executions/stats${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get<RagExecutionStatsResult>(url);
+      if (!result) {
+        return { totalExecutions: 0, avgLatencyMs: 0, errorRate: 0, cacheHitRate: 0, totalCost: 0, avgConfidence: 0 };
+      }
+      return result;
+    },
   };
 }
 
@@ -1811,4 +1875,46 @@ export type ImpersonateUserResponse = {
 export type EndImpersonationResponse = {
   success: boolean;
   message: string;
+};
+
+// ========== RAG Execution History Types (Issue #4458) ==========
+
+export type RagExecutionListItem = {
+  id: string;
+  query: string;
+  agentDefinitionId: string | null;
+  agentName: string | null;
+  strategy: string;
+  model: string | null;
+  provider: string | null;
+  gameId: string | null;
+  isPlayground: boolean;
+  totalLatencyMs: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  totalCost: number;
+  confidence: number | null;
+  cacheHit: boolean;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
+export type RagExecutionListResult = {
+  items: RagExecutionListItem[];
+  totalCount: number;
+};
+
+export type RagExecutionDetail = RagExecutionListItem & {
+  executionTrace: string | null;
+};
+
+export type RagExecutionStatsResult = {
+  totalExecutions: number;
+  avgLatencyMs: number;
+  errorRate: number;
+  cacheHitRate: number;
+  totalCost: number;
+  avgConfidence: number;
 };

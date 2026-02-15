@@ -269,6 +269,11 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         label: 'RAG Tier Config',
         icon: SlidersIcon,
       },
+      {
+        href: '/admin/rag-executions',
+        label: 'RAG Executions',
+        icon: HistoryIcon,
+      },
     ],
   },
   {

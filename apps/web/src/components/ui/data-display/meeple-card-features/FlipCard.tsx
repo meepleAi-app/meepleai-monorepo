@@ -19,9 +19,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { motion } from 'framer-motion';
-import { RotateCcw, Tag, Cog, User, Paintbrush } from 'lucide-react';
+import { ExternalLink, RotateCcw, Tag, Cog, User, Paintbrush } from 'lucide-react';
+import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 import type { MeepleCardVariant } from '../meeple-card';
@@ -53,6 +53,8 @@ export interface FlipCardProps {
   onFlip?: (flipped: boolean) => void;
   /** Flip trigger mode: 'card' = click anywhere flips, 'button' = dedicated flip button */
   flipTrigger?: 'card' | 'button';
+  /** Link to entity detail page (shown on back) */
+  detailHref?: string;
   /** Additional CSS classes */
   className?: string;
 }
@@ -120,11 +122,11 @@ const variantConfigs: Record<MeepleCardVariant, VariantConfig> = {
 function BackContent({
   flipData,
   variant = 'grid',
-  onFlipBack,
+  detailHref,
 }: {
   flipData: MeepleCardFlipData;
   variant: MeepleCardVariant;
-  onFlipBack: () => void;
+  detailHref?: string;
 }) {
   // eslint-disable-next-line security/detect-object-injection
   const config = variantConfigs[variant];
@@ -135,7 +137,7 @@ function BackContent({
       'flex h-full flex-col overflow-y-auto',
       isCompact ? 'p-3 pl-5' : 'p-6 pl-8',
     )}>
-      {/* Header with flip-back button */}
+      {/* Header */}
       <div className={cn('flex items-center justify-between', isCompact ? 'mb-2' : 'mb-4')}>
         <h2 className={cn(
           'font-quicksand font-bold text-[#2D2A26]',
@@ -143,18 +145,6 @@ function BackContent({
         )}>
           Informazioni
         </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-[#6B665C] hover:text-[hsl(262,83%,62%)]"
-          onClick={(e) => {
-            e.stopPropagation();
-            onFlipBack();
-          }}
-        >
-          <RotateCcw className={cn('mr-1', isCompact ? 'h-3 w-3' : 'h-4 w-4')} />
-          Gira
-        </Button>
       </div>
 
       {/* Description */}
@@ -262,6 +252,25 @@ function BackContent({
           </span>
         </div>
       )}
+
+      {/* Detail page link */}
+      {detailHref && (
+        <div className="mt-auto pt-3">
+          <Link
+            href={detailHref}
+            className={cn(
+              'inline-flex items-center gap-1.5 font-nunito font-medium',
+              'text-[hsl(262,83%,62%)] hover:text-[hsl(262,83%,52%)]',
+              'transition-colors duration-200',
+              isCompact ? 'text-xs' : 'text-sm',
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className={cn(isCompact ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
+            Vai alla pagina
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -277,6 +286,7 @@ export function FlipCard({
   isFlipped: controlledFlipped,
   onFlip,
   flipTrigger = 'card',
+  detailHref,
   className,
 }: FlipCardProps) {
   // Internal state for uncontrolled mode
@@ -419,7 +429,7 @@ export function FlipCard({
           <BackContent
             flipData={flipData}
             variant={variant}
-            onFlipBack={handleFlip}
+            detailHref={detailHref}
           />
         </div>
       </motion.div>

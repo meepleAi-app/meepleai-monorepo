@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Seeders;
@@ -86,6 +87,10 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
 
             // Always check and seed games, badges, and rate limits if missing
             await SeedSharedGamesAndRelatedDataAsync(cancellationToken).ConfigureAwait(false);
+
+            // Seed agent definitions for Playground POC (idempotent - skips if any exist)
+            _logger.LogInformation("Seeding agent definitions...");
+            await _mediator.Send(new SeedAgentDefinitionsCommand(), cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Auto-configuration completed successfully.");
         }

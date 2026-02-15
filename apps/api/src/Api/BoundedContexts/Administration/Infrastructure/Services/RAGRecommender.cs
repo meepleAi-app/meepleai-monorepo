@@ -72,37 +72,6 @@ internal sealed class RAGRecommender : IRAGRecommender
                 "RAG recommendations not yet implemented for user {UserId}, returning empty",
                 userId);
             return new List<AIInsight>();
-
-            /* FUTURE: Complete RAG implementation after game embeddings collection is ready
-            // Generate embeddings for user's top games
-            var gameTexts = topGames.Select(g => $"GameId: {g.GameId}").ToList();
-            var embeddings = await _embeddingService.GenerateEmbeddingsAsync(
-                gameTexts,
-                cancellationToken)
-                .ConfigureAwait(false);
-
-            if (embeddings.Count == 0)
-            {
-                _logger.LogWarning("Embedding service returned no results for user {UserId}", userId);
-                return new List<AIInsight>();
-            }
-
-            // Average embeddings to create user preference vector
-            var avgEmbedding = AverageEmbeddings(embeddings);
-            */
-
-            /* FUTURE: Complete after game embeddings collection ready
-            // Query Qdrant for similar games (excluding user's existing library)
-            var userGameIds = await _dbContext.Set<UserLibraryEntry>()
-                .AsNoTracking()
-                .Where(e => e.UserId == userId)
-                .Select(e => e.GameId)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            var similarGames = await _qdrantClient.SearchAsync(...);
-            // ... rest of RAG logic
-            */
         }
         catch (Exception ex)
         {

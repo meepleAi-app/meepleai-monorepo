@@ -101,13 +101,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           return;
         }
 
-        const mappedMessages = (threadData.messages ?? []).map((m: { id: string; content: string; role: string; createdAt: string; citations?: unknown[]; agentId?: string }) => ({
+        const mappedMessages: ChatMessage[] = (threadData.messages ?? []).map((m) => ({
           id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
           role: m.role as 'user' | 'assistant',
           content: m.content,
           timestamp: m.timestamp,
-          citations: m.citations,
-          followUpQuestions: m.followUpQuestions,
         }));
 
         setThread({
@@ -173,13 +171,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
         if (response?.messages) {
           setMessages(
-            response.messages.map((m: { id: string; content: string; role: string; createdAt: string; citations?: unknown[]; agentId?: string }) => ({
-              id: m.id ?? `msg-${Date.now()}-${Math.random()}`,
-              role: m.role,
+            response.messages.map((m): ChatMessage => ({
+              id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
+              role: m.role as 'user' | 'assistant',
               content: m.content,
               timestamp: m.timestamp,
-              citations: m.citations,
-              followUpQuestions: m.followUpQuestions,
             }))
           );
         }

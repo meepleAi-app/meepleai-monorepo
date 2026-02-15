@@ -43,7 +43,7 @@ export default function NotificationSettingsPage() {
         if (!response.ok) throw new Error('Failed to fetch preferences');
         const data = await response.json();
         setPrefs(data);
-      } catch (error) {
+      } catch (_error) {
         toast({
           title: 'Error',
           description: 'Failed to load notification preferences',
@@ -74,7 +74,7 @@ export default function NotificationSettingsPage() {
         title: 'Success',
         description: 'Notification preferences saved successfully',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to save notification preferences',

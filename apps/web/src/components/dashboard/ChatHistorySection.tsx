@@ -214,7 +214,7 @@ export function ChatHistorySection({
   isLoading,
   className,
 }: ChatHistorySectionProps) {
-  const threads = propThreads ?? [];
+  const threads = useMemo(() => propThreads ?? [], [propThreads]);
   const displayThreads = useMemo(() => threads.slice(0, 4), [threads]);
   const total = propTotalCount ?? threads.length;
   const hasMore = total > 4;

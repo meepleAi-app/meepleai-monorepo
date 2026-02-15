@@ -188,45 +188,21 @@ export default preview;
 // Story Parameters
 // ============================================================================
 
-/**
- * Use in individual stories to customize permission context
- *
- * @example
- * ```typescript
- * export const FreeUserStory: Story = {
- *   args: { /* component props */ },
- *   parameters: {
- *     permissions: MOCK_USERS.free // Override to Free tier
- *   }
- * };
- * ```
- */
+// Usage: In individual stories, customize permission context:
+//   export const FreeUserStory: Story = {
+//     args: { ... },
+//     parameters: { permissions: MOCK_USERS.free }
+//   };
 
-/**
- * Use for responsive testing
- *
- * @example
- * ```typescript
- * export const MobileStory: Story = {
- *   args: { /* component props */ },
- *   parameters: {
- *     viewport: { defaultViewport: 'mobile' }
- *   }
- * };
- * ```
- */
+// Usage: For responsive testing:
+//   export const MobileStory: Story = {
+//     args: { ... },
+//     parameters: { viewport: { defaultViewport: 'mobile' } }
+//   };
 
-/**
- * Use for dark mode testing
- *
- * @example
- * ```typescript
- * export const DarkModeStory: Story = {
- *   args: { /* component props */ },
- *   parameters: {
- *     backgrounds: { default: 'dark' }
- *   },
- *   decorators: [(Story) => <div className="dark"><Story /></div>]
- * };
- * ```
- */
+// Usage: For dark mode testing:
+//   export const DarkModeStory: Story = {
+//     args: { ... },
+//     parameters: { backgrounds: { default: 'dark' } },
+//     decorators: [(Story) => <div className="dark"><Story /></div>]
+//   };

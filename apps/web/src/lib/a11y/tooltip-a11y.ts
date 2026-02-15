@@ -37,7 +37,7 @@ export function handleTooltipKeyboard(
 export function meetsWCAGContrast(
   foreground: string,
   background: string,
-  isLargeText = false
+  _isLargeText = false
 ): boolean {
   // Simplified: Assume our design system colors meet WCAG AA
   // Full implementation would use color-contrast library

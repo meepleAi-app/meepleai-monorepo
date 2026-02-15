@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { adminClient } from '@/lib/api/admin-client';
 
-interface ApprovalQueueItem {
+interface _ApprovalQueueItem {
   gameId: string;
   title: string;
   submittedBy: string;

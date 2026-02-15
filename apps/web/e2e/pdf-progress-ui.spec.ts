@@ -469,7 +469,7 @@ test.describe('PDF Progress UI Components (Issue #4210)', () => {
       await iframe.locator('body').evaluate((el) => el.classList.add('dark'));
 
       const card = iframe.locator('.rounded-lg').first();
-      await expect(card).toHaveClass(/dark:bg-white\\/5/);
+      await expect(card).toHaveClass(/dark:bg-white\/5/);
 
       await expect(card).toHaveScreenshot('progress-card-dark.png');
     });

@@ -223,6 +223,17 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         badge: { key: 'pending-typologies' },
       },
       {
+        href: '/admin/agent-definitions',
+        label: 'Agent Definitions',
+        icon: BrainCircuitIcon,
+        activePattern: /^\/admin\/agent-definitions(\/[^/]+)?$/,
+      },
+      {
+        href: '/admin/agent-definitions/playground',
+        label: 'Agent Playground',
+        icon: PlayCircleIcon,
+      },
+      {
         href: '/admin/agents/test',
         label: 'Agent Testing',
         icon: FlaskConicalIcon,

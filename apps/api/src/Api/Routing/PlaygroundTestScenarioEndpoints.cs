@@ -17,7 +17,7 @@ internal static class PlaygroundTestScenarioEndpoints
 {
     public static void MapPlaygroundTestScenarioEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/playground/scenarios");
+        var group = app.MapGroup("/admin/playground/scenarios");
 
         // GET /api/v1/admin/playground/scenarios
         group.MapGet("/", async (

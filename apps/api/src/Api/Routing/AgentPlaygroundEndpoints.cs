@@ -1,4 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.Filters;
+using Api.Infrastructure.Serialization;
 using MediatR;
 
 namespace Api.Routing;
@@ -12,7 +15,8 @@ internal static class AgentPlaygroundEndpoints
 {
     public static void MapAgentPlaygroundEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/agent-definitions/{agentId:guid}/playground");
+        var group = app.MapGroup("/admin/agent-definitions/{agentId:guid}/playground")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
 
         // POST /api/v1/admin/agent-definitions/{agentId}/playground/chat
         // SSE streaming chat endpoint with real AgentDefinition integration
@@ -31,14 +35,15 @@ internal static class AgentPlaygroundEndpoints
 
             var command = new PlaygroundChatCommand(
                 AgentDefinitionId: agentId,
-                Message: request.Message);
+                Message: request.Message,
+                GameId: Guid.TryParse(request.GameId, out var gid) ? gid : null);
 
             try
             {
                 await foreach (var @event in mediator.CreateStream(command, ct).ConfigureAwait(false))
                 {
                     await context.Response.WriteAsync(
-                        $"data: {System.Text.Json.JsonSerializer.Serialize(@event)}\n\n",
+                        $"data: {System.Text.Json.JsonSerializer.Serialize(@event, SseJsonOptions.Default)}\n\n",
                         ct).ConfigureAwait(false);
 
                     await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
@@ -58,7 +63,7 @@ internal static class AgentPlaygroundEndpoints
                     DateTime.UtcNow);
 
                 await context.Response.WriteAsync(
-                    $"data: {System.Text.Json.JsonSerializer.Serialize(errorEvent)}\n\n",
+                    $"data: {System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions.Default)}\n\n",
                     ct).ConfigureAwait(false);
 
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
@@ -74,4 +79,6 @@ internal static class AgentPlaygroundEndpoints
     }
 }
 
-internal sealed record PlaygroundChatRequest(string Message);
+internal sealed record PlaygroundChatRequest(
+    [Required, MinLength(1), MaxLength(4000)] string Message,
+    string? GameId = null);

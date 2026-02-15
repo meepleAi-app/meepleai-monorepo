@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Serialization;
 using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -293,7 +294,7 @@ internal static class BggImportQueueEndpoints
                 };
 
                 await httpContext.Response.WriteAsync(
-                    $"data: {System.Text.Json.JsonSerializer.Serialize(eventData)}\n\n",
+                    $"data: {System.Text.Json.JsonSerializer.Serialize(eventData, SseJsonOptions.Default)}\n\n",
                     cancellationToken).ConfigureAwait(false);
 
                 await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -335,7 +336,7 @@ internal static class BggImportQueueEndpoints
 
                 // Send progress event
                 await httpContext.Response.WriteAsync(
-                    $"event: progress\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                    $"event: progress\ndata: {System.Text.Json.JsonSerializer.Serialize(progress, SseJsonOptions.Default)}\n\n",
                     cancellationToken).ConfigureAwait(false);
 
                 await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -348,7 +349,7 @@ internal static class BggImportQueueEndpoints
                     {
                         // Send completion event and close stream
                         await httpContext.Response.WriteAsync(
-                            $"event: complete\ndata: {System.Text.Json.JsonSerializer.Serialize(progress)}\n\n",
+                            $"event: complete\ndata: {System.Text.Json.JsonSerializer.Serialize(progress, SseJsonOptions.Default)}\n\n",
                             cancellationToken).ConfigureAwait(false);
 
                         await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);

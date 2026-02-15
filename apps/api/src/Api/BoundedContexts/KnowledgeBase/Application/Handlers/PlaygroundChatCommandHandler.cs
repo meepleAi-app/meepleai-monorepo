@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Models;
 using Api.Services;
+using Api.Services.LlmClients;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -18,16 +19,19 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<PlaygroundChatCommand, RagStreamingEvent>
 {
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
-    private readonly ILlmService _llmService;
+    private readonly LlmProviderFactory _llmProviderFactory;
+    private readonly IHybridSearchService _hybridSearchService;
     private readonly ILogger<PlaygroundChatCommandHandler> _logger;
 
     public PlaygroundChatCommandHandler(
         IAgentDefinitionRepository agentDefinitionRepository,
-        ILlmService llmService,
+        LlmProviderFactory llmProviderFactory,
+        IHybridSearchService hybridSearchService,
         ILogger<PlaygroundChatCommandHandler> logger)
     {
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
-        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _llmProviderFactory = llmProviderFactory ?? throw new ArgumentNullException(nameof(llmProviderFactory));
+        _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -89,18 +93,83 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
         yield return CreateEvent(
             StreamingEventType.StateUpdate,
-            new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded. Generating response..."));
+            new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded."));
 
-        // 3. Stream LLM tokens
+        // 3. RAG retrieval (if GameId provided)
+        var retrievalStopwatch = Stopwatch.StartNew();
+        string userPrompt = command.Message;
+        double? ragConfidence = null;
+
+        if (command.GameId.HasValue)
+        {
+            yield return CreateEvent(
+                StreamingEventType.StateUpdate,
+                new StreamingStateUpdate("Searching game documents..."));
+
+            var searchResults = await _hybridSearchService.SearchAsync(
+                command.Message,
+                command.GameId.Value,
+                SearchMode.Hybrid,
+                limit: 5,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (searchResults.Count > 0)
+            {
+                var ragSnippets = searchResults.Select(r => new Snippet(
+                    r.Content,
+                    $"PDF:{r.PdfDocumentId}",
+                    r.PageNumber ?? 0,
+                    r.ChunkIndex,
+                    r.HybridScore
+                )).ToList();
+
+                yield return CreateEvent(
+                    StreamingEventType.Citations,
+                    new StreamingCitations(ragSnippets));
+
+                yield return CreateEvent(
+                    StreamingEventType.StateUpdate,
+                    new StreamingStateUpdate($"Found {searchResults.Count} relevant passages. Generating response..."));
+
+                ragConfidence = searchResults.Max(r => (double)r.HybridScore);
+
+                var context = string.Join("\n\n---\n\n",
+                    searchResults.Select(r => $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
+
+                userPrompt = $"Use the following context from the game rulebook to answer. " +
+                             $"Cite page numbers when possible.\n\nContext:\n{context}\n\nQuestion: {command.Message}";
+            }
+            else
+            {
+                yield return CreateEvent(
+                    StreamingEventType.StateUpdate,
+                    new StreamingStateUpdate("No relevant documents found. Generating response from general knowledge..."));
+            }
+        }
+        else
+        {
+            yield return CreateEvent(
+                StreamingEventType.StateUpdate,
+                new StreamingStateUpdate("Generating response..."));
+        }
+
+        retrievalStopwatch.Stop();
+
+        // 4. Stream LLM tokens via provider-specific client
+        var client = _llmProviderFactory.GetClientForModel(agentDefinition.Config.Model);
+
         var generationStopwatch = Stopwatch.StartNew();
         var responseBuilder = new StringBuilder();
         int tokenCount = 0;
         int promptTokens = 0;
         int completionTokens = 0;
 
-        await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(
+        await foreach (var chunk in client.GenerateCompletionStreamAsync(
+            agentDefinition.Config.Model,
             systemPrompt,
-            command.Message,
+            userPrompt,
+            agentDefinition.Config.Temperature,
+            agentDefinition.Config.MaxTokens,
             cancellationToken).ConfigureAwait(false))
         {
             if (chunk.IsFinal && chunk.Usage != null)
@@ -122,7 +191,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
         generationStopwatch.Stop();
 
-        // 4. Follow-up questions (if response is long enough)
+        // 5. Follow-up questions (if response is long enough)
         var fullResponse = responseBuilder.ToString();
         if (fullResponse.Length > 50)
         {
@@ -131,7 +200,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 new StreamingFollowUpQuestions(GenerateFollowUpQuestions(agentDefinition.Name)));
         }
 
-        // 5. Complete with metadata
+        // 6. Complete with metadata
         totalStopwatch.Stop();
 
         if (completionTokens == 0) completionTokens = tokenCount;
@@ -144,14 +213,16 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 promptTokens: promptTokens,
                 completionTokens: completionTokens,
                 totalTokens: totalTokens,
-                confidence: null,
+                confidence: ragConfidence,
                 agentConfig: new PlaygroundAgentConfigSnapshot(
                     agentDefinition.Name,
                     agentDefinition.Config.Model,
                     agentDefinition.Config.Temperature,
-                    agentDefinition.Config.MaxTokens),
+                    agentDefinition.Config.MaxTokens,
+                    client.ProviderName),
                 latencyBreakdown: new PlaygroundLatencyBreakdown(
                     totalMs: totalStopwatch.ElapsedMilliseconds,
+                    retrievalMs: retrievalStopwatch.ElapsedMilliseconds,
                     generationMs: generationStopwatch.ElapsedMilliseconds)));
 
         _logger.LogInformation(
@@ -212,11 +283,13 @@ internal record PlaygroundAgentConfigSnapshot(
     string AgentName,
     string Model,
     float Temperature,
-    int MaxTokens);
+    int MaxTokens,
+    string Provider);
 
 /// <summary>
 /// Latency breakdown for playground chat.
 /// </summary>
 internal record PlaygroundLatencyBreakdown(
     long totalMs,
+    long retrievalMs,
     long generationMs);

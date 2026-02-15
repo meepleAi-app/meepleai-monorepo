@@ -90,9 +90,9 @@ internal class BggRateLimitMiddleware
                 return;
             }
 
-            // Get tier-based limit
+            // Get tier-based limit (Editor role gets special limit)
             var userTier = UserTier.Parse(user.Tier);
-            var maxRequests = GetLimitForTier(userTier);
+            var maxRequests = GetLimitForTier(userTier, userRole);
             var refillRate = maxRequests / (double)_options.WindowSeconds;
 
             // Check rate limit using existing service (token bucket algorithm)
@@ -155,14 +155,18 @@ internal class BggRateLimitMiddleware
         return path?.StartsWith("/api/v1/bgg/", StringComparison.OrdinalIgnoreCase) == true;
     }
 
-    private int GetLimitForTier(UserTier tier)
+    private int GetLimitForTier(UserTier tier, Role userRole)
     {
+        // Editor role gets special rate limit regardless of subscription tier
+        if (userRole == Role.Editor)
+            return _options.EditorTier;
+
         return tier.Value switch
         {
-            "Free" => _options.FreeTier,
-            "Normal" => _options.NormalTier,
-            "Premium" => _options.PremiumTier,
-            "Editor" => _options.EditorTier,
+            "free" => _options.FreeTier,
+            "normal" => _options.NormalTier,
+            "premium" or "pro" => _options.PremiumTier,
+            "enterprise" => _options.PremiumTier,
             _ => _options.FreeTier // Default to most restrictive
         };
     }

@@ -1,4 +1,6 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using AuthUserDto = Api.BoundedContexts.Authentication.Application.DTOs.UserDto;
 using Api.Middleware;
 using Api.Models;
 using Api.Services;
@@ -81,12 +83,13 @@ public class BggRateLimitMiddlewareTests
     public async Task InvokeAsync_FreeTierUser_EnforcesFreeTierLimit()
     {
         // Arrange
+        var userId = TestGuid(1);
         var context = CreateHttpContext("/api/v1/bgg/search?query=wingspan");
-        SetupAuthenticatedUser(context, userId: "user-1", tier: "Free", role: "User");
+        SetupAuthenticatedUser(context, userId: userId, tier: "Free", role: "User");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(
-                "bgg:user-1",
+                $"bgg:{userId}",
                 5, // FreeTier limit
                 5.0 / 60.0, // Refill rate
                 It.IsAny<CancellationToken>()))
@@ -112,12 +115,13 @@ public class BggRateLimitMiddlewareTests
     public async Task InvokeAsync_NormalTierUser_EnforcesNormalTierLimit()
     {
         // Arrange
+        var userId = TestGuid(2);
         var context = CreateHttpContext("/api/v1/bgg/games/266192");
-        SetupAuthenticatedUser(context, userId: "user-2", tier: "Normal", role: "User");
+        SetupAuthenticatedUser(context, userId: userId, tier: "Normal", role: "User");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(
-                "bgg:user-2",
+                $"bgg:{userId}",
                 10, // NormalTier limit
                 10.0 / 60.0,
                 It.IsAny<CancellationToken>()))
@@ -142,12 +146,13 @@ public class BggRateLimitMiddlewareTests
     public async Task InvokeAsync_PremiumTierUser_EnforcesPremiumTierLimit()
     {
         // Arrange
+        var userId = TestGuid(3);
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "user-3", tier: "Premium", role: "User");
+        SetupAuthenticatedUser(context, userId: userId, tier: "Premium", role: "User");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(
-                "bgg:user-3",
+                $"bgg:{userId}",
                 20, // PremiumTier limit
                 20.0 / 60.0,
                 It.IsAny<CancellationToken>()))
@@ -167,12 +172,13 @@ public class BggRateLimitMiddlewareTests
     public async Task InvokeAsync_EditorTierUser_EnforcesEditorTierLimit()
     {
         // Arrange
+        var userId = TestGuid(11);
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "editor-1", tier: "Normal", role: "Editor");
+        SetupAuthenticatedUser(context, userId: userId, tier: "Normal", role: "Editor");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(
-                "bgg:editor-1",
+                $"bgg:{userId}",
                 15, // EditorTier limit
                 15.0 / 60.0,
                 It.IsAny<CancellationToken>()))
@@ -193,7 +199,7 @@ public class BggRateLimitMiddlewareTests
     {
         // Arrange
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "admin-1", tier: "Premium", role: "Admin");
+        SetupAuthenticatedUser(context, userId: TestGuid(21), tier: "Premium", role: "Admin");
 
         var middleware = CreateMiddleware();
 
@@ -216,12 +222,13 @@ public class BggRateLimitMiddlewareTests
     public async Task InvokeAsync_RateLimitExceeded_Returns429WithRetryAfter()
     {
         // Arrange
+        var userId = TestGuid(4);
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "user-4", tier: "Free", role: "User");
+        SetupAuthenticatedUser(context, userId: userId, tier: "Free", role: "User");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(
-                "bgg:user-4",
+                $"bgg:{userId}",
                 5,
                 5.0 / 60.0,
                 It.IsAny<CancellationToken>()))
@@ -257,7 +264,7 @@ public class BggRateLimitMiddlewareTests
     {
         // Arrange
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "user-5", tier: "Normal", role: "User");
+        SetupAuthenticatedUser(context, userId: TestGuid(5), tier: "Normal", role: "User");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
@@ -282,7 +289,7 @@ public class BggRateLimitMiddlewareTests
     {
         // Arrange
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "user-6", tier: "Normal", role: "User");
+        SetupAuthenticatedUser(context, userId: TestGuid(6), tier: "Normal", role: "User");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
@@ -310,45 +317,42 @@ public class BggRateLimitMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_UnknownTier_DefaultsToFreeTier()
+    public async Task InvokeAsync_UnknownTier_FailsOpenAndAllowsRequest()
     {
-        // Arrange
+        // Arrange: UserTier.Parse("UnknownTier") throws ValidationException,
+        // which is caught by the fail-open catch block
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "user-7", tier: "UnknownTier", role: "User");
-
-        _rateLimitServiceMock
-            .Setup(x => x.CheckRateLimitAsync(
-                "bgg:user-7",
-                5, // Should default to FreeTier
-                5.0 / 60.0,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RateLimitResult(true, 4, 0));
+        SetupAuthenticatedUser(context, userId: TestGuid(7), tier: "UnknownTier", role: "User");
 
         var middleware = CreateMiddleware();
 
         // Act
         await middleware.InvokeAsync(context, _rateLimitServiceMock.Object);
 
-        // Assert
-        Assert.Equal("5", context.Response.Headers["X-RateLimit-Limit"].ToString());
+        // Assert - fail-open: request is allowed with Error status header
+        Assert.Equal(200, context.Response.StatusCode);
+        Assert.True(_nextCalled, "Request should be allowed on tier parse failure (fail-open)");
+        Assert.Equal("Error", context.Response.Headers["X-RateLimit-Status"].ToString());
     }
 
     [Fact]
     public async Task InvokeAsync_MultipleUsers_SeparateRateLimitKeys()
     {
         // Arrange
+        var userId1 = TestGuid(8);
+        var userId2 = TestGuid(9);
         var user1Context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(user1Context, userId: "user-8", tier: "Normal", role: "User");
+        SetupAuthenticatedUser(user1Context, userId: userId1, tier: "Normal", role: "User");
 
         var user2Context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(user2Context, userId: "user-9", tier: "Normal", role: "User");
+        SetupAuthenticatedUser(user2Context, userId: userId2, tier: "Normal", role: "User");
 
         _rateLimitServiceMock
-            .Setup(x => x.CheckRateLimitAsync("bgg:user-8", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CheckRateLimitAsync($"bgg:{userId1}", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RateLimitResult(true, 9, 0));
 
         _rateLimitServiceMock
-            .Setup(x => x.CheckRateLimitAsync("bgg:user-9", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.CheckRateLimitAsync($"bgg:{userId2}", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RateLimitResult(true, 10, 0));
 
         var middleware = CreateMiddleware();
@@ -364,8 +368,8 @@ public class BggRateLimitMiddlewareTests
 
         // Assert
         Assert.True(user1Called && user2Called);
-        _rateLimitServiceMock.Verify(x => x.CheckRateLimitAsync("bgg:user-8", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Once);
-        _rateLimitServiceMock.Verify(x => x.CheckRateLimitAsync("bgg:user-9", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Once);
+        _rateLimitServiceMock.Verify(x => x.CheckRateLimitAsync($"bgg:{userId1}", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Once);
+        _rateLimitServiceMock.Verify(x => x.CheckRateLimitAsync($"bgg:{userId2}", It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -379,7 +383,7 @@ public class BggRateLimitMiddlewareTests
         };
 
         var context = CreateHttpContext("/api/v1/bgg/search");
-        SetupAuthenticatedUser(context, userId: "admin-2", tier: "Normal", role: "Admin");
+        SetupAuthenticatedUser(context, userId: TestGuid(22), tier: "Normal", role: "Admin");
 
         _rateLimitServiceMock
             .Setup(x => x.CheckRateLimitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
@@ -409,7 +413,7 @@ public class BggRateLimitMiddlewareTests
     {
         // Arrange
         var context = CreateHttpContext(path);
-        SetupAuthenticatedUser(context, userId: "user-10", tier: "Normal", role: "User");
+        SetupAuthenticatedUser(context, userId: TestGuid(10), tier: "Normal", role: "User");
 
         if (shouldApplyRateLimit)
         {
@@ -449,23 +453,30 @@ public class BggRateLimitMiddlewareTests
         return context;
     }
 
-    private void SetupAuthenticatedUser(HttpContext context, string userId, string tier, string role)
+    private static Guid TestGuid(int n) => new($"{n:D8}-0000-0000-0000-000000000000");
+
+    private static void SetupAuthenticatedUser(HttpContext context, Guid userId, string tier, string role)
     {
-        // Simulate ActiveSession set by SessionAuthenticationMiddleware
-        context.Items["ActiveSession"] = new
-        {
-            Authenticated = true,
-            Session = new
-            {
-                User = new
-                {
-                    Id = userId,
-                    Tier = tier,
-                    Role = role
-                }
-            },
-            Metadata = (object?)null
-        };
+        var userDto = new AuthUserDto(
+            Id: userId,
+            Email: $"test-{userId}@example.com",
+            DisplayName: "Test User",
+            Role: role,
+            Tier: tier,
+            CreatedAt: DateTime.UtcNow,
+            IsTwoFactorEnabled: false,
+            TwoFactorEnabledAt: null,
+            Level: 1,
+            ExperiencePoints: 0
+        );
+        var session = new SessionStatusDto(
+            IsValid: true,
+            User: userDto,
+            ExpiresAt: DateTime.UtcNow.AddHours(1),
+            LastSeenAt: DateTime.UtcNow,
+            SessionId: Guid.NewGuid()
+        );
+        context.Items[nameof(SessionStatusDto)] = session;
     }
 
     private BggRateLimitMiddleware CreateMiddleware(BggRateLimitOptions? options = null)

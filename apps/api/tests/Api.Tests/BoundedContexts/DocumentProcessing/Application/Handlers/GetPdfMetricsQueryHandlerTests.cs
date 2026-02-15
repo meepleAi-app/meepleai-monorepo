@@ -165,7 +165,7 @@ public class GetPdfMetricsQueryHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>()
-            .WithMessage($"PDF document {documentId} not found");
+            .WithMessage($"PDF document with identifier '{documentId}' was not found");
     }
 
     [Fact]
@@ -185,17 +185,17 @@ public class GetPdfMetricsQueryHandlerTests
             uploadedByUserId: userId
         );
 
-        // Transition to Ready state
-        document.TransitionTo(PdfProcessingState.Uploading);
-        document.TransitionTo(PdfProcessingState.Extracting);
-        document.TransitionTo(PdfProcessingState.Chunking);
-        document.TransitionTo(PdfProcessingState.Embedding);
-        document.TransitionTo(PdfProcessingState.Indexing);
-        document.TransitionTo(PdfProcessingState.Ready);
+        // Complete the document (sets ProcessedAt for TotalDuration calculation)
+        document.MarkAsCompleted(pageCount: 5);
 
         _repositoryMock
             .Setup(r => r.GetByIdAsync(documentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(document);
+
+        // Completed documents should return zero ETA from metrics service
+        _metricsServiceMock
+            .Setup(m => m.CalculateETAAsync(documentId, PdfProcessingState.Ready, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(TimeSpan.Zero);
 
         var handler = new GetPdfMetricsQueryHandler(
             _repositoryMock.Object,

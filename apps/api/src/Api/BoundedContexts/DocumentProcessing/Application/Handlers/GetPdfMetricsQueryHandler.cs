@@ -46,7 +46,7 @@ internal class GetPdfMetricsQueryHandler : IQueryHandler<GetPdfMetricsQuery, Pdf
         if (document == null)
         {
             _logger.LogWarning("PDF document {DocumentId} not found", query.DocumentId);
-            throw new NotFoundException($"PDF document {query.DocumentId} not found");
+            throw new NotFoundException("PDF document", query.DocumentId.ToString());
         }
 
         // Calculate state durations

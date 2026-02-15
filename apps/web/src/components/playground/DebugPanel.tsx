@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Clock, Cpu, Gauge, Route, Server, Workflow } from 'lucide-react';
+import { Activity, Clock, Cpu, DollarSign, Gauge, Route, Server, Workflow } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, ScrollArea } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, activeStrategy } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy } = usePlaygroundStore();
 
   // Aggregate message-level tokens
   const totalTokens = messages.reduce((sum, msg) => sum + (msg.metadata?.tokens || 0), 0);
@@ -97,10 +97,48 @@ export function DebugPanel() {
                 <span>Total</span>
                 <span className="font-mono">{tokenBreakdown.total.toLocaleString()}</span>
               </div>
-              {/* Rough cost estimate at $0.003/1K tokens */}
-              <div className="text-xs text-muted-foreground text-right">
-                ~${((tokenBreakdown.total / 1000) * 0.003).toFixed(4)} est.
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cost Breakdown */}
+      {costBreakdown && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Cost
+              {costBreakdown.isFree && (
+                <span className="text-[10px] bg-green-100 text-green-800 px-1 py-0.5 rounded leading-none">FREE</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Input</span>
+                <span className="font-mono">${costBreakdown.inputCost.toFixed(6)}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Output</span>
+                <span className="font-mono">${costBreakdown.outputCost.toFixed(6)}</span>
+              </div>
+              <div className="border-t pt-2 flex justify-between font-medium">
+                <span>This request</span>
+                <span className={cn(
+                  'font-mono',
+                  costBreakdown.isFree ? 'text-green-600' : costBreakdown.totalCost > 0.01 ? 'text-red-600' : 'text-amber-600'
+                )}>
+                  ${costBreakdown.totalCost.toFixed(6)}
+                </span>
+              </div>
+              {sessionTotalCost > 0 && (
+                <div className="border-t pt-2 flex justify-between text-xs text-muted-foreground">
+                  <span>Session total</span>
+                  <span className="font-mono">${sessionTotalCost.toFixed(6)}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

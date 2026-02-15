@@ -39,12 +39,15 @@ Latency <5s Rate:   100%       - ✅ PASS (target: ≥95%)
 
 **Backend** (xUnit + Testcontainers):
 - **Target**: 90%+ coverage
-- **Current**: [See FULL_SUITE_TEST_REPORT](../05-testing/FULL_SUITE_TEST_REPORT_2026-01-18.md)
+- **Current**: [See FULL_SUITE_TEST_REPORT](../05-testing/FULL_SUITE_TEST_REPORT_2026-02-15.md)
+- **Tests**: 13,134 total | 12,946 passed (98.6%) | Unit: 12,117/12,131 (99.98%)
 - **Epic**: [#3005 - Test Coverage](https://github.com/your-org/meepleai-monorepo/issues/3005)
 
-**Frontend** (Vitest + Playwright):
+**Frontend** (Vitest + v8 coverage):
 - **Target**: 85%+ coverage
-- **Current**: [See Frontend Test Plan](../05-testing/frontend/week4-frontend-component-test-plan.md)
+- **Current**: [See FULL_SUITE_TEST_REPORT](../05-testing/FULL_SUITE_TEST_REPORT_2026-02-15.md)
+- **Tests**: 13,606 total | 13,492 passed (99.2%) | 0 functional failures
+- **Coverage**: Branches 87.62% | Functions 79.10% | Lines 69.56% | Statements 69.56%
 - **Epic**: [#3005 - Test Coverage](https://github.com/your-org/meepleai-monorepo/issues/3005)
 
 **E2E** (Playwright):
@@ -89,5 +92,5 @@ cd apps/web && pnpm test:e2e
 
 ---
 
-**Last Updated**: 2026-01-31
+**Last Updated**: 2026-02-15
 **Maintainer**: QA Team

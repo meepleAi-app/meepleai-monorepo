@@ -199,7 +199,7 @@ dotnet ef database update
 
 ### Backend (Target: 90%+)
 
-**Stats**: 737 test files | 8,630+ tests | Unit 70% | Integration 25% | E2E 5%
+**Stats**: 930+ test classes | 13,134+ tests | Unit 76% | Integration 22% | E2E/Security/Perf 2%
 
 ```bash
 cd apps/api/src/Api

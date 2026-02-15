@@ -97,12 +97,11 @@ describe('StatsOverview', () => {
     await screen.findByText('8542');
     await screen.findByText('94%');
 
-    // StatCard renders trendValue only when `trend` prop is also provided.
-    // StatsOverview passes trendValue but not trend, so trendValue is not rendered.
-    // Verify the stat card labels are present instead.
-    expect(screen.getByText(/shared games/i)).toBeInTheDocument();
-    expect(screen.getByText(/community/i)).toBeInTheDocument();
-    expect(screen.getByText(/approval rate/i)).toBeInTheDocument();
+    // StatCard renders trend indicators when both trend and trendValue are provided
+    expect(screen.getByText(/1156 published/i)).toBeInTheDocument();
+    expect(screen.getByText(/3891 active/i)).toBeInTheDocument();
+    expect(screen.getByText(/23 pending/i)).toBeInTheDocument();
+    expect(screen.getByText(/last 7 days/i)).toBeInTheDocument();
   });
 
   it('handles API errors gracefully', () => {

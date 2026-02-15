@@ -10,6 +10,7 @@ export function StatsOverview() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => adminClient.getStats(),
+    staleTime: 5 * 60 * 1000,
   });
 
   return (
@@ -32,12 +33,14 @@ export function StatsOverview() {
         <StatCard
           label="Shared Games"
           value={data?.totalGames ?? 0}
+          trend={data?.publishedGames ? 'neutral' : undefined}
           trendValue={data?.publishedGames ? `${data.publishedGames} published` : undefined}
           loading={isLoading}
         />
         <StatCard
           label="Community"
           value={data?.totalUsers ?? 0}
+          trend={data?.activeUsers ? 'up' : undefined}
           trendValue={data?.activeUsers ? `${data.activeUsers} active` : undefined}
           loading={isLoading}
         />
@@ -51,12 +54,14 @@ export function StatsOverview() {
               ? 'warning'
               : 'default'
           }
+          trend={data?.pendingApprovals ? 'neutral' : undefined}
           trendValue={data?.pendingApprovals ? `${data.pendingApprovals} pending` : undefined}
           loading={isLoading}
         />
         <StatCard
           label="Recent Activity"
           value={data?.recentSubmissions ?? 0}
+          trend="neutral"
           trendValue="Last 7 days"
           loading={isLoading}
         />

@@ -110,6 +110,9 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
         services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
         services.AddSingleton<Domain.Services.MultiAgentRouter.AgentRouterService>();
+
+        // ISSUE-4337: Agent State Coordination (shared context across agents)
+        services.AddScoped<AgentStateCoordinator>();
     }
 
     private static void AddValidationServices(IServiceCollection services)

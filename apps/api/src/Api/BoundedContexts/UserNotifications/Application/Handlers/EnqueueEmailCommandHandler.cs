@@ -12,9 +12,14 @@ namespace Api.BoundedContexts.UserNotifications.Application.Handlers;
 /// Handler for EnqueueEmailCommand.
 /// Renders email template and enqueues for async delivery.
 /// Issue #4417: Email notification queue.
+/// Issue #4429: Email throttling (per-user rate limit + per-PDF dedup).
 /// </summary>
 internal class EnqueueEmailCommandHandler : ICommandHandler<EnqueueEmailCommand, Guid>
 {
+    private const int MaxEmailsPerUserPerHour = 10;
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromHours(1);
+    private static readonly TimeSpan DeduplicationWindow = TimeSpan.FromHours(1);
+
     private readonly IEmailQueueRepository _emailQueueRepository;
     private readonly IEmailTemplateService _emailTemplateService;
     private readonly IUnitOfWork _unitOfWork;
@@ -35,6 +40,36 @@ internal class EnqueueEmailCommandHandler : ICommandHandler<EnqueueEmailCommand,
     public async Task<Guid> Handle(EnqueueEmailCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        var now = DateTime.UtcNow;
+        var since = now - RateLimitWindow;
+
+        // Issue #4429: Per-PDF deduplication - skip if same user+subject within 1 hour
+        // Subject includes fileName (set by PdfNotificationEventHandler) so each PDF is unique
+        var isDuplicate = await _emailQueueRepository
+            .ExistsSimilarRecentAsync(command.UserId, command.Subject, now - DeduplicationWindow, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (isDuplicate)
+        {
+            _logger.LogWarning(
+                "Email throttled (duplicate): user {UserId}, subject \"{Subject}\" already enqueued within {Window}",
+                command.UserId, command.Subject, DeduplicationWindow);
+            return Guid.Empty;
+        }
+
+        // Issue #4429: Per-user rate limit - max 10 emails per user per hour
+        var recentCount = await _emailQueueRepository
+            .GetRecentCountByUserIdAsync(command.UserId, since, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (recentCount >= MaxEmailsPerUserPerHour)
+        {
+            _logger.LogWarning(
+                "Email throttled (rate limit): user {UserId} has {Count}/{Max} emails in last {Window}",
+                command.UserId, recentCount, MaxEmailsPerUserPerHour, RateLimitWindow);
+            return Guid.Empty;
+        }
 
         var htmlBody = command.TemplateName switch
         {

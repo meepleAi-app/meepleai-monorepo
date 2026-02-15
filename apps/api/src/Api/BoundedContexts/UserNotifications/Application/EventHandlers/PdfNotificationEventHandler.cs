@@ -91,7 +91,7 @@ internal class PdfNotificationEventHandler :
                 await _mediator.Send(new EnqueueEmailCommand(
                     UserId: evt.UploadedByUserId,
                     To: user.Email,
-                    Subject: "Your PDF is Ready - MeepleAI",
+                    Subject: $"Your PDF is Ready: {pdfDoc.FileName.Value} - MeepleAI",
                     TemplateName: "document_ready",
                     UserName: user.DisplayName,
                     FileName: pdfDoc.FileName.Value,
@@ -173,7 +173,7 @@ internal class PdfNotificationEventHandler :
                 await _mediator.Send(new EnqueueEmailCommand(
                     UserId: evt.UploadedByUserId,
                     To: user.Email,
-                    Subject: "PDF Processing Failed - MeepleAI",
+                    Subject: $"PDF Processing Failed: {pdfDoc.FileName.Value} - MeepleAI",
                     TemplateName: "document_failed",
                     UserName: user.DisplayName,
                     FileName: pdfDoc.FileName.Value,
@@ -255,7 +255,7 @@ internal class PdfNotificationEventHandler :
                 await _mediator.Send(new EnqueueEmailCommand(
                     UserId: evt.UploadedByUserId,
                     To: user.Email,
-                    Subject: "PDF Retry - MeepleAI",
+                    Subject: $"PDF Retry: {pdfDoc.FileName.Value} - MeepleAI",
                     TemplateName: "retry_available",
                     UserName: user.DisplayName,
                     FileName: pdfDoc.FileName.Value,

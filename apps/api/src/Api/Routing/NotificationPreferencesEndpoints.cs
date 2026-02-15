@@ -76,6 +76,22 @@ internal static class NotificationPreferencesEndpoints
         .RequireSession()
         .WithName("UnsubscribePushNotifications");
 
+        // Issue #4416: Send test push notification
+        group.MapPost("/notifications/push/test", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            var command = new SendTestPushNotificationCommand(session!.User!.Id);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(new { message = "Test notification sent" });
+        })
+        .RequireSession()
+        .WithName("SendTestPushNotification");
+
         group.MapGet("/notifications/push/vapid-key", async (IMediator mediator, CancellationToken ct) =>
         {
             var query = new GetVapidPublicKeyQuery();

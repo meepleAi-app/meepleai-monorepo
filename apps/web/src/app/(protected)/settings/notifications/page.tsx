@@ -7,7 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { Bell, Mail, Smartphone, MessageSquare, Save, Loader2, BellRing, BellOff } from 'lucide-react';
+import { Bell, Mail, Smartphone, MessageSquare, Save, Loader2, BellRing, BellOff, SendHorizontal } from 'lucide-react';
 
 import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
@@ -32,6 +32,7 @@ export default function NotificationSettingsPage() {
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const { toast } = useToast();
   const push = usePushNotifications();
 
@@ -81,6 +82,33 @@ export default function NotificationSettingsPage() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSendTest = async () => {
+    setIsSendingTest(true);
+    try {
+      const response = await fetch('/api/v1/notifications/push/test', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to send test notification');
+      }
+
+      toast({
+        title: 'Test Sent',
+        description: 'Check your browser for the test notification',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to send test notification',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -154,19 +182,37 @@ export default function NotificationSettingsPage() {
                 </p>
               </div>
             </div>
-            <Button
-              variant={push.isSubscribed ? 'outline' : 'default'}
-              onClick={push.isSubscribed ? push.unsubscribe : push.subscribe}
-              disabled={push.isLoading}
-            >
-              {push.isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : push.isSubscribed ? (
-                'Disable'
-              ) : (
-                'Enable'
+            <div className="flex items-center gap-2">
+              {push.isSubscribed && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSendTest}
+                  disabled={isSendingTest}
+                  data-testid="test-push-button"
+                >
+                  {isSendingTest ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <SendHorizontal className="mr-1 h-4 w-4" />
+                  )}
+                  Send Test
+                </Button>
               )}
-            </Button>
+              <Button
+                variant={push.isSubscribed ? 'outline' : 'default'}
+                onClick={push.isSubscribed ? push.unsubscribe : push.subscribe}
+                disabled={push.isLoading}
+              >
+                {push.isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : push.isSubscribed ? (
+                  'Disable'
+                ) : (
+                  'Enable'
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}

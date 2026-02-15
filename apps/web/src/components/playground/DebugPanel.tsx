@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
-import { Activity, ArrowDown, BarChart3, ChevronDown, ChevronRight, Clock, Copy, Cpu, Database, DollarSign, Download, FileText, Gauge, Globe, Layers, Route, Search, Server, Terminal, Workflow } from 'lucide-react';
+import { Activity, ArrowDown, BarChart3, ChevronDown, ChevronRight, Clock, Copy, Cpu, Database, DollarSign, Download, FileText, Gauge, Globe, Layers, Route, Search, Server, Shield, Terminal, Workflow } from 'lucide-react';
 
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, ScrollArea } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt, promptTemplateInfo } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt, promptTemplateInfo, tierInfo } = usePlaygroundStore();
   const [expandedTrace, setExpandedTrace] = useState<number | null>(null);
   const [logLevelFilter, setLogLevelFilter] = useState<Set<string>>(new Set(['info', 'warn', 'error', 'debug']));
   const [logSourceFilter, setLogSourceFilter] = useState<string>('all');
@@ -362,6 +362,36 @@ export function DebugPanel() {
                       </span>
                     </div>
                   )}
+                </div>
+              )}
+              {/* Tier Access Info (Issue #4471) */}
+              {tierInfo && (
+                <div className="border-t pt-2 space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Shield className="h-3 w-3" />
+                    Tier Access
+                  </span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Required</span>
+                    <span className={cn(
+                      'text-[10px] px-1.5 py-0.5 rounded leading-none font-semibold',
+                      tierInfo.requiredTier === 'free' && 'bg-green-100 text-green-800',
+                      tierInfo.requiredTier === 'premium' && 'bg-purple-100 text-purple-800',
+                      tierInfo.requiredTier === 'pro' && 'bg-amber-100 text-amber-800',
+                      tierInfo.requiredTier === 'enterprise' && 'bg-blue-100 text-blue-800',
+                    )}>{tierInfo.requiredTier}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Your tier</span>
+                    <span className="font-mono">{tierInfo.userTier}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Access</span>
+                    <span className={cn(
+                      'text-[10px] px-1.5 py-0.5 rounded leading-none font-semibold',
+                      tierInfo.hasAccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
+                    )}>{tierInfo.hasAccess ? 'Granted' : 'Denied'}</span>
+                  </div>
                 </div>
               )}
             </div>

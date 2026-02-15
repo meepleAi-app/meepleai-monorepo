@@ -41,14 +41,6 @@ vi.mock('../components/GameFAQTab', () => ({
   ),
 }));
 
-vi.mock('../components/GameChatTab', () => ({
-  GameChatTab: ({ gameId, gameTitle }: any) => (
-    <div data-testid="chat-tab">
-      Chat: {gameTitle} ({gameId})
-    </div>
-  ),
-}));
-
 // Mock fetch
 global.fetch = vi.fn();
 
@@ -173,8 +165,9 @@ describe('GameDetailClient', () => {
       const chatTab = screen.getByRole('tab', { name: /chat ai/i });
       await user.click(chatTab);
 
-      expect(screen.getByTestId('chat-tab')).toBeInTheDocument();
-      expect(screen.getByTestId('chat-tab')).toBeVisible();
+      // Chat tab now renders inline content (no separate GameChatTab component)
+      expect(screen.getByText('Chat AI', { selector: 'h3' })).toBeInTheDocument();
+      expect(screen.getByText('Avvia Chat AI')).toBeInTheDocument();
     });
 
     it('should hide other tabs when switching', async () => {
@@ -328,7 +321,7 @@ describe('GameDetailClient', () => {
       expect(screen.getByTestId('faq-tab')).toHaveTextContent('FAQ: Chess (game-123)');
     });
 
-    it('should pass correct props to GameChatTab', async () => {
+    it('should render chat link with game ID', async () => {
       const user = userEvent.setup();
       (global.fetch as any).mockResolvedValue({
         ok: true,
@@ -340,7 +333,9 @@ describe('GameDetailClient', () => {
       const chatTab = screen.getByRole('tab', { name: /chat ai/i });
       await user.click(chatTab);
 
-      expect(screen.getByTestId('chat-tab')).toHaveTextContent('Chat: Chess (game-123)');
+      // Chat tab now renders a link to unified chat with gameId param
+      const chatLink = screen.getByText('Avvia Chat AI');
+      expect(chatLink.closest('a')).toHaveAttribute('href', '/chat/new?gameId=game-123');
     });
   });
 

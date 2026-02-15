@@ -22,14 +22,6 @@ vi.mock('@/lib/api/agent-definitions.api', () => ({
   },
 }));
 
-vi.mock('@/components/admin/agents/AdminAgentChat', () => ({
-  AdminAgentChat: ({ agentName, channelEnabled }: { agentName: string; channelEnabled: boolean }) => (
-    <div data-testid="admin-agent-chat">
-      Chat: {agentName} (Channel: {channelEnabled ? 'Enabled' : 'Disabled'})
-    </div>
-  ),
-}));
-
 describe('AdminAgentViewPage', () => {
   const mockAgent = {
     id: 'agent-123',
@@ -121,29 +113,23 @@ describe('AdminAgentViewPage', () => {
       expect(screen.getByText('Agent Chat')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('admin-agent-chat')).toBeInTheDocument();
+    // Chat section now renders inline content with link to unified chat
+    expect(screen.getByText('Open Unified Chat')).toBeInTheDocument();
   });
 
-  it('passes channel status to AdminAgentChat', async () => {
+  it('shows chat migration notice with unified chat link', async () => {
     (agentDefinitionsApi.getById as ReturnType<typeof vi.fn>).mockResolvedValue(mockAgent);
 
     renderWithQuery(<AdminAgentViewPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('admin-agent-chat')).toBeInTheDocument();
+      expect(screen.getByText('Agent Chat')).toBeInTheDocument();
     });
 
-    // Initially disabled
-    expect(screen.getByText(/Channel: Disabled/i)).toBeInTheDocument();
-
-    // Enable channel
-    const enableBtn = screen.getByRole('button', { name: /Enable Channel/i });
-    fireEvent.click(enableBtn);
-
-    // Now enabled
-    await waitFor(() => {
-      expect(screen.getByText(/Channel: Enabled/i)).toBeInTheDocument();
-    });
+    // Chat section shows migration notice and link to unified chat
+    expect(screen.getByText(/unified chat system/i)).toBeInTheDocument();
+    const chatLink = screen.getByText('Open Unified Chat');
+    expect(chatLink.closest('a')).toHaveAttribute('href', '/chat/new');
   });
 
   it('has edit button linking to edit page', async () => {

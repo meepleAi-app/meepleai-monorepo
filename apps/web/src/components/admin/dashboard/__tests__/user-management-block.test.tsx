@@ -13,6 +13,8 @@ vi.mock('@/lib/api/admin-client', () => ({
     getUserBadges: vi.fn(),
     suspendUser: vi.fn(),
     unsuspendUser: vi.fn(),
+    updateUserTier: vi.fn(),
+    impersonateUser: vi.fn(),
   },
 }));
 
@@ -20,6 +22,10 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
     toast: vi.fn(),
   }),
+}));
+
+vi.mock('@/hooks/useDebounce', () => ({
+  useDebounce: (value: string) => value,
 }));
 
 describe('UserManagementBlock', () => {

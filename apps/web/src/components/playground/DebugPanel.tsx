@@ -34,7 +34,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo } = usePlaygroundStore();
 
   // Aggregate message-level tokens
   const totalTokens = messages.reduce((sum, msg) => sum + (msg.metadata?.tokens || 0), 0);
@@ -181,22 +181,60 @@ export function DebugPanel() {
         </Card>
       )}
 
-      {/* Active Strategy */}
-      {activeStrategy && (
+      {/* Strategy Info */}
+      {(activeStrategy || strategyInfo) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Route className="h-4 w-4" />
               Strategy
+              {strategyInfo?.type && (
+                <span className={cn(
+                  'text-[10px] px-1.5 py-0.5 rounded leading-none',
+                  strategyInfo.type === 'retrieval' && 'bg-blue-100 text-blue-800',
+                  strategyInfo.type === 'generation' && 'bg-amber-100 text-amber-800',
+                  strategyInfo.type === 'consensus' && 'bg-purple-100 text-purple-800',
+                  strategyInfo.type === 'validation' && 'bg-green-100 text-green-800',
+                  strategyInfo.type === 'custom' && 'bg-gray-100 text-gray-800',
+                )}>{strategyInfo.type}</span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm font-mono">{activeStrategy}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {activeStrategy === 'RetrievalOnly' && 'RAG chunks only, no LLM cost'}
-              {activeStrategy === 'SingleModel' && 'RAG + single LLM call (POC)'}
-              {activeStrategy === 'MultiModelConsensus' && 'RAG + dual-model consensus'}
-            </p>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Execution</span>
+                <span className="font-mono">{activeStrategy}</span>
+              </div>
+              {strategyInfo && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Agent Strategy</span>
+                    <span className="font-mono">{strategyInfo.name}</span>
+                  </div>
+                  {Object.keys(strategyInfo.parameters).length > 0 && (
+                    <div className="border-t pt-2 space-y-1.5">
+                      <span className="text-xs font-medium text-muted-foreground">Parameters</span>
+                      {Object.entries(strategyInfo.parameters).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{key}</span>
+                          <span className="font-mono truncate max-w-[120px]" title={String(value)}>
+                            {Array.isArray(value) ? value.join(', ') : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+              {!strategyInfo && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {activeStrategy === 'RetrievalOnly' && 'RAG chunks only, no LLM cost'}
+                  {activeStrategy === 'SingleModel' && 'RAG + single LLM call (POC)'}
+                  {activeStrategy === 'MultiModelConsensus' && 'RAG + dual-model consensus'}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

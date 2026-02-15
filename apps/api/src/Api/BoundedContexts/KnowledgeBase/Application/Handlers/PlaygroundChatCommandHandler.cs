@@ -350,7 +350,19 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             _logger.LogWarning(ex, "Failed to persist playground cost log");
         }
 
-        // 7. Complete with metadata
+        // 7. Build strategy info from agent definition
+        var strategyParams = new Dictionary<string, object>(StringComparer.Ordinal);
+        foreach (var kvp in agentDefinition.Strategy.Parameters)
+        {
+            strategyParams[kvp.Key] = kvp.Value;
+        }
+
+        var strategyInfo = new PlaygroundStrategyInfo(
+            name: agentDefinition.Strategy.Name,
+            type: CategorizeStrategy(agentDefinition.Strategy.Name),
+            parameters: strategyParams);
+
+        // 8. Complete with metadata
         totalStopwatch.Stop();
 
         yield return CreateEvent(
@@ -378,11 +390,27 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 latencyBreakdown: new PlaygroundLatencyBreakdown(
                     totalMs: totalStopwatch.ElapsedMilliseconds,
                     retrievalMs: retrievalStopwatch.ElapsedMilliseconds,
-                    generationMs: generationStopwatch.ElapsedMilliseconds)));
+                    generationMs: generationStopwatch.ElapsedMilliseconds),
+                strategyInfo: strategyInfo));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
             command.AgentDefinitionId, effectiveStrategy, totalTokens, costCalculation.TotalCost, totalStopwatch.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Categorizes a strategy name into a broad type for display.
+    /// </summary>
+    private static string CategorizeStrategy(string strategyName)
+    {
+        return strategyName switch
+        {
+            "RetrievalOnly" or "HybridSearch" or "VectorOnly" => "retrieval",
+            "SingleModel" => "generation",
+            "MultiModelConsensus" => "consensus",
+            "CitationValidation" or "ConfidenceScoring" => "validation",
+            _ => "custom"
+        };
     }
 
     /// <summary>
@@ -438,6 +466,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Issue #4392: Includes agent config snapshot and latency breakdown.
 /// Issue #4437: Added strategy field.
 /// Issue #4439: Added cost breakdown.
+/// Issue #4441: Added strategy info with parameters.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -448,7 +477,8 @@ internal record PlaygroundStreamingComplete(
     string strategy,
     PlaygroundCostBreakdown costBreakdown,
     PlaygroundAgentConfigSnapshot agentConfig,
-    PlaygroundLatencyBreakdown latencyBreakdown);
+    PlaygroundLatencyBreakdown latencyBreakdown,
+    PlaygroundStrategyInfo? strategyInfo = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -479,3 +509,12 @@ internal record PlaygroundLatencyBreakdown(
     long totalMs,
     long retrievalMs,
     long generationMs);
+
+/// <summary>
+/// Strategy info snapshot for playground debug panel.
+/// Issue #4441: Exposes strategy name, type, and parameters.
+/// </summary>
+internal record PlaygroundStrategyInfo(
+    string name,
+    string type,
+    Dictionary<string, object> parameters);

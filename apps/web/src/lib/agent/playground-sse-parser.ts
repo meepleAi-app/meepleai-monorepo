@@ -125,6 +125,7 @@ export interface CompletionMetadata {
   apiTraces?: ApiTrace[];
   logEntries?: LogEntry[];
   tomacLayers?: TomacLayer[];
+  systemPrompt?: string;
 }
 
 export interface StreamingError {

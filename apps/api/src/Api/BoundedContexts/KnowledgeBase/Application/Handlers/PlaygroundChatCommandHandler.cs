@@ -599,7 +599,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 cacheInfo: cacheInfo,
                 apiTraces: apiTraces,
                 logEntries: logEntries,
-                tomacLayers: tomacLayers));
+                tomacLayers: tomacLayers,
+                systemPrompt: systemPrompt));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -706,6 +707,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Issue #4444: Added API call traces.
 /// Issue #4445: Added structured log entries.
 /// Issue #4446: Added TOMAC-RAG layer visualization data.
+/// Issue #4468: Added resolved system prompt for debug panel preview.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -722,7 +724,8 @@ internal record PlaygroundStreamingComplete(
     PlaygroundCacheInfo? cacheInfo = null,
     List<PlaygroundApiTrace>? apiTraces = null,
     List<PlaygroundLogEntry>? logEntries = null,
-    List<PlaygroundTomacLayer>? tomacLayers = null);
+    List<PlaygroundTomacLayer>? tomacLayers = null,
+    string? systemPrompt = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.

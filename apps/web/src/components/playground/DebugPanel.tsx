@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
-import { Activity, ArrowDown, BarChart3, ChevronDown, ChevronRight, Clock, Cpu, Database, DollarSign, Download, Gauge, Globe, Layers, Route, Search, Server, Terminal, Workflow } from 'lucide-react';
+import { Activity, ArrowDown, BarChart3, ChevronDown, ChevronRight, Clock, Copy, Cpu, Database, DollarSign, Download, FileText, Gauge, Globe, Layers, Route, Search, Server, Terminal, Workflow } from 'lucide-react';
 
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, ScrollArea } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -36,11 +36,21 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt } = usePlaygroundStore();
   const [expandedTrace, setExpandedTrace] = useState<number | null>(null);
   const [logLevelFilter, setLogLevelFilter] = useState<Set<string>>(new Set(['info', 'warn', 'error', 'debug']));
   const [logSourceFilter, setLogSourceFilter] = useState<string>('all');
   const [logSearch, setLogSearch] = useState('');
+  const [systemPromptExpanded, setSystemPromptExpanded] = useState(false);
+  const [systemPromptCopied, setSystemPromptCopied] = useState(false);
+
+  const handleCopySystemPrompt = useCallback(() => {
+    if (!resolvedSystemPrompt) return;
+    navigator.clipboard.writeText(resolvedSystemPrompt).then(() => {
+      setSystemPromptCopied(true);
+      setTimeout(() => setSystemPromptCopied(false), 2000);
+    });
+  }, [resolvedSystemPrompt]);
 
   // Compute waterfall metrics
   const totalPipelineMs = pipelineTimings.reduce((sum, s) => sum + s.durationMs, 0);
@@ -295,6 +305,48 @@ export function DebugPanel() {
                   {activeStrategy === 'SingleModel' && 'RAG + single LLM call (POC)'}
                   {activeStrategy === 'MultiModelConsensus' && 'RAG + dual-model consensus'}
                 </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* System Prompt Preview (Issue #4468) */}
+      {resolvedSystemPrompt && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              System Prompt
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 ml-auto"
+                onClick={handleCopySystemPrompt}
+                title={systemPromptCopied ? 'Copied!' : 'Copy to clipboard'}
+              >
+                <Copy className={cn('h-3 w-3', systemPromptCopied && 'text-green-600')} />
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-xs font-mono whitespace-pre-wrap break-words text-muted-foreground leading-relaxed">
+                {systemPromptExpanded
+                  ? resolvedSystemPrompt
+                  : resolvedSystemPrompt.length > 200
+                    ? `${resolvedSystemPrompt.slice(0, 200)}...`
+                    : resolvedSystemPrompt
+                }
+              </p>
+              {resolvedSystemPrompt.length > 200 && (
+                <button
+                  type="button"
+                  onClick={() => setSystemPromptExpanded(!systemPromptExpanded)}
+                  className="text-[11px] text-primary hover:underline"
+                >
+                  {systemPromptExpanded ? 'Show less' : 'Show more'}
+                </button>
               )}
             </div>
           </CardContent>

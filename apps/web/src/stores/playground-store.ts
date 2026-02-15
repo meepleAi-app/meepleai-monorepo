@@ -67,6 +67,9 @@ interface PlaygroundState {
   // TOMAC-RAG layer visualization (Issue #4446)
   tomacLayers: TomacLayer[];
 
+  // Resolved system prompt from backend (Issue #4468)
+  resolvedSystemPrompt: string | null;
+
   // System message
   systemMessage: string;
 
@@ -153,6 +156,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       // TOMAC layers
       tomacLayers: [],
 
+      // Resolved system prompt
+      resolvedSystemPrompt: null,
+
       // System message
       systemMessage: '',
 
@@ -221,6 +227,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           apiTraces: [],
           logEntries: [],
           tomacLayers: [],
+          resolvedSystemPrompt: null,
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -252,6 +259,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           apiTraces: [],
           logEntries: [],
           tomacLayers: [],
+          resolvedSystemPrompt: null,
         }),
 
       endSession: () =>
@@ -314,6 +322,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
             apiTraces: metadata.apiTraces ?? [],
             logEntries: metadata.logEntries ?? [],
             tomacLayers: metadata.tomacLayers ?? [],
+            resolvedSystemPrompt: metadata.systemPrompt ?? null,
           };
         }),
 
@@ -338,6 +347,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           apiTraces: [],
           logEntries: [],
           tomacLayers: [],
+          resolvedSystemPrompt: null,
         }),
 
       // ─── System Message ──────────────────────────

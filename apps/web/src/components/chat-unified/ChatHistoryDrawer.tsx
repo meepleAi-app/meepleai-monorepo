@@ -94,12 +94,12 @@ export function ChatHistoryDrawer({
             return {
               gameId: game.id,
               gameName: game.title,
-              threads: (threads ?? []).map((t: { id: string; title: string; gameId: string; messageCount?: number; lastMessageAt: string }) => ({
+              threads: (threads ?? []).map((t) => ({
                 id: t.id,
-                title: t.title,
-                gameId: t.gameId,
+                title: t.title ?? 'Untitled',
+                gameId: t.gameId ?? game.id,
                 messageCount: t.messageCount ?? 0,
-                lastMessageAt: t.lastMessageAt,
+                lastMessageAt: t.lastMessageAt ?? t.createdAt,
                 createdAt: t.createdAt,
               })),
             };

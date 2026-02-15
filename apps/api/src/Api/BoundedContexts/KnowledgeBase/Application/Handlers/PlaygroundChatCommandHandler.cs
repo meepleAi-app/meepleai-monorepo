@@ -76,6 +76,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
     {
         var totalStopwatch = Stopwatch.StartNew();
         var pipelineTimings = new List<PlaygroundPipelineStep>();
+        var apiTraces = new List<PlaygroundApiTrace>();
         var stepStopwatch = Stopwatch.StartNew();
 
         // Resolve effective strategy: command override > agent definition default
@@ -166,12 +167,30 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 StreamingEventType.StateUpdate,
                 new StreamingStateUpdate("Searching game documents..."));
 
+            var searchStopwatch = Stopwatch.StartNew();
+            var searchRequestSize = Encoding.UTF8.GetByteCount(command.Message);
             var searchResults = await _hybridSearchService.SearchAsync(
                 command.Message,
                 command.GameId.Value,
                 SearchMode.Hybrid,
                 limit: 5,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+            searchStopwatch.Stop();
+
+            // API trace: vector search (embedding + Qdrant)
+            apiTraces.Add(new PlaygroundApiTrace(
+                service: "vector_search",
+                method: "POST",
+                url: "HybridSearchService",
+                requestSizeBytes: searchRequestSize,
+                responseSizeBytes: searchResults.Sum(r => Encoding.UTF8.GetByteCount(r.Content)),
+                statusCode: 200,
+                latencyMs: searchStopwatch.ElapsedMilliseconds,
+                detail: $"mode=Hybrid, limit=5, results={searchResults.Count}",
+                requestPreview: command.Message.Length > 500 ? command.Message[..500] : command.Message,
+                responsePreview: searchResults.Count > 0
+                    ? (searchResults[0].Content.Length > 500 ? searchResults[0].Content[..500] : searchResults[0].Content)
+                    : null));
 
             if (searchResults.Count > 0)
             {
@@ -292,6 +311,9 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                         StreamingEventType.StateUpdate,
                         new StreamingStateUpdate($"Querying model: {model}..."));
 
+                    var consensusLlmStopwatch = Stopwatch.StartNew();
+                    var consensusPromptSize = Encoding.UTF8.GetByteCount(systemPrompt) + Encoding.UTF8.GetByteCount(userPrompt);
+
                     try
                     {
                         var client = _llmProviderFactory.GetClientForModel(model);
@@ -319,12 +341,40 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                             }
                         }
 
+                        consensusLlmStopwatch.Stop();
                         modelResponses.Add((model, modelResponse.ToString()));
+
+                        // API trace: LLM call (consensus model)
+                        apiTraces.Add(new PlaygroundApiTrace(
+                            service: "llm",
+                            method: "POST",
+                            url: $"{client.ProviderName}/{model}",
+                            requestSizeBytes: consensusPromptSize,
+                            responseSizeBytes: Encoding.UTF8.GetByteCount(modelResponse.ToString()),
+                            statusCode: 200,
+                            latencyMs: consensusLlmStopwatch.ElapsedMilliseconds,
+                            detail: $"model={model}, consensus",
+                            requestPreview: userPrompt.Length > 500 ? userPrompt[..500] : userPrompt,
+                            responsePreview: null));
                     }
                     catch (Exception ex)
                     {
+                        consensusLlmStopwatch.Stop();
                         _logger.LogWarning(ex, "Model {Model} failed in consensus, skipping", model);
                         modelResponses.Add((model, $"[Error: {ex.Message}]"));
+
+                        // API trace: failed LLM call
+                        apiTraces.Add(new PlaygroundApiTrace(
+                            service: "llm",
+                            method: "POST",
+                            url: $"unknown/{model}",
+                            requestSizeBytes: consensusPromptSize,
+                            responseSizeBytes: 0,
+                            statusCode: 500,
+                            latencyMs: consensusLlmStopwatch.ElapsedMilliseconds,
+                            detail: $"model={model}, error={ex.Message}",
+                            requestPreview: null,
+                            responsePreview: null));
                     }
                 }
 
@@ -350,6 +400,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
                 var singleClient = _llmProviderFactory.GetClientForModel(effectiveModel);
                 providerName = singleClient.ProviderName;
+                var singleLlmStopwatch = Stopwatch.StartNew();
+                var singlePromptSize = Encoding.UTF8.GetByteCount(systemPrompt) + Encoding.UTF8.GetByteCount(userPrompt);
 
                 await foreach (var chunk in singleClient.GenerateCompletionStreamAsync(
                     effectiveModel,
@@ -375,6 +427,20 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                             new StreamingToken(chunk.Content));
                     }
                 }
+                singleLlmStopwatch.Stop();
+
+                // API trace: LLM call
+                apiTraces.Add(new PlaygroundApiTrace(
+                    service: "llm",
+                    method: "POST",
+                    url: $"{providerName}/{effectiveModel}",
+                    requestSizeBytes: singlePromptSize,
+                    responseSizeBytes: Encoding.UTF8.GetByteCount(responseBuilder.ToString()),
+                    statusCode: 200,
+                    latencyMs: singleLlmStopwatch.ElapsedMilliseconds,
+                    detail: $"model={effectiveModel}, temp={agentDefinition.Config.Temperature}, maxTokens={agentDefinition.Config.MaxTokens}",
+                    requestPreview: userPrompt.Length > 500 ? userPrompt[..500] : userPrompt,
+                    responsePreview: null));
                 break;
         }
 
@@ -473,7 +539,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     generationMs: generationStopwatch.ElapsedMilliseconds),
                 strategyInfo: strategyInfo,
                 pipelineTimings: pipelineTimings,
-                cacheInfo: cacheInfo));
+                cacheInfo: cacheInfo,
+                apiTraces: apiTraces));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -577,6 +644,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Issue #4441: Added strategy info with parameters.
 /// Issue #4442: Added pipeline timings.
 /// Issue #4443: Added cache info.
+/// Issue #4444: Added API call traces.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -590,7 +658,8 @@ internal record PlaygroundStreamingComplete(
     PlaygroundLatencyBreakdown latencyBreakdown,
     PlaygroundStrategyInfo? strategyInfo = null,
     List<PlaygroundPipelineStep>? pipelineTimings = null,
-    PlaygroundCacheInfo? cacheInfo = null);
+    PlaygroundCacheInfo? cacheInfo = null,
+    List<PlaygroundApiTrace>? apiTraces = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -651,6 +720,22 @@ internal record PlaygroundCacheInfo(
     string? cacheKey,
     double latencyMs,
     int ttlSeconds);
+
+/// <summary>
+/// API call trace for playground network inspector.
+/// Issue #4444: Track all external API calls with HTTP-level details.
+/// </summary>
+internal record PlaygroundApiTrace(
+    string service,
+    string method,
+    string url,
+    int requestSizeBytes,
+    int responseSizeBytes,
+    int statusCode,
+    long latencyMs,
+    string? detail,
+    string? requestPreview,
+    string? responsePreview);
 
 /// <summary>
 /// Internal cache entry for playground query deduplication.

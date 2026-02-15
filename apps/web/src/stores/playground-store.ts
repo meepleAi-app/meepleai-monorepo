@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, CacheInfo, CompletionMetadata, CostBreakdown, LatencyBreakdown, PipelineStepTiming, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, ApiTrace, CacheInfo, CompletionMetadata, CostBreakdown, LatencyBreakdown, PipelineStepTiming, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -57,6 +57,9 @@ interface PlaygroundState {
   cacheInfo: CacheInfo | null;
   sessionCacheHits: number;
   sessionCacheRequests: number;
+
+  // API call tracing (Issue #4444)
+  apiTraces: ApiTrace[];
 
   // System message
   systemMessage: string;
@@ -135,6 +138,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       sessionCacheHits: 0,
       sessionCacheRequests: 0,
 
+      // API call tracing
+      apiTraces: [],
+
       // System message
       systemMessage: '',
 
@@ -200,6 +206,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           cacheInfo: null,
           sessionCacheHits: 0,
           sessionCacheRequests: 0,
+          apiTraces: [],
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -228,6 +235,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           cacheInfo: null,
           sessionCacheHits: 0,
           sessionCacheRequests: 0,
+          apiTraces: [],
         }),
 
       endSession: () =>
@@ -287,6 +295,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
             cacheInfo: ci,
             sessionCacheRequests: state.sessionCacheRequests + (isRequest ? 1 : 0),
             sessionCacheHits: state.sessionCacheHits + (isHit ? 1 : 0),
+            apiTraces: metadata.apiTraces ?? [],
           };
         }),
 
@@ -308,6 +317,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           strategyInfo: null,
           pipelineTimings: [],
           cacheInfo: null,
+          apiTraces: [],
         }),
 
       // ─── System Message ──────────────────────────

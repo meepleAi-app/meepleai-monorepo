@@ -9,6 +9,7 @@
  * - Dropdown panel with notification list
  * - Keyboard accessible (Space/Enter to toggle)
  * - Auto-fetch unread count on mount
+ * - SSE real-time updates (Issue #4414)
  */
 
 'use client';
@@ -24,6 +25,7 @@ import {
   DropdownMenuContent,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
+import { useNotificationSSE } from '@/hooks/useNotificationSSE';
 import { useNotificationStore, selectUnreadCount } from '@/store/notification/store';
 
 import { NotificationPanel } from './NotificationPanel';
@@ -31,6 +33,9 @@ import { NotificationPanel } from './NotificationPanel';
 export function NotificationBell() {
   const unreadCount = useNotificationStore(selectUnreadCount);
   const fetchUnreadCount = useNotificationStore(state => state.fetchUnreadCount);
+
+  // SSE real-time notifications (Issue #4414)
+  useNotificationSSE();
 
   // Fetch unread count on mount
   useEffect(() => {

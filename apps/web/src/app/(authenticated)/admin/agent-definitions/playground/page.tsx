@@ -17,6 +17,7 @@ import {
 import { parsePlaygroundSSEChunk } from '@/lib/agent/playground-sse-parser';
 import type { PlaygroundSSEHandlers } from '@/lib/agent/playground-sse-parser';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
+import { useApiClient } from '@/lib/api/context';
 import type { PlaygroundTestScenarioDto } from '@/lib/api/schemas/playground-scenarios.schemas';
 import { usePlaygroundStore } from '@/stores/playground-store';
 
@@ -27,12 +28,22 @@ export default function AgentPlaygroundPage() {
     updateMessageMetadata, setStreaming, addCitations, addStateUpdate,
     setFollowUpQuestions, setCompletionMetadata, setLatencyMs, clearResponseState,
     systemMessage, setSystemMessage,
+    currentGameId, setCurrentGameId,
   } = usePlaygroundStore();
+
+  const apiClient = useApiClient();
 
   const { data: agents = [] } = useQuery({
     queryKey: ['admin', 'agent-definitions', { activeOnly: true }],
     queryFn: () => agentDefinitionsApi.getAll({ activeOnly: true }),
   });
+
+  const { data: gamesResult } = useQuery({
+    queryKey: ['shared-games', { pageSize: 100 }],
+    queryFn: () => apiClient.sharedGames.search({ pageSize: 100 }),
+  });
+
+  const games = gamesResult?.items ?? [];
 
   const handleSendMessage = async (message: string) => {
     if (!selectedAgentId) {
@@ -53,6 +64,7 @@ export default function AgentPlaygroundPage() {
         body: JSON.stringify({
           message,
           ...(systemMessage ? { systemMessage } : {}),
+          ...(currentGameId ? { gameId: currentGameId } : {}),
         }),
       });
 
@@ -172,7 +184,7 @@ export default function AgentPlaygroundPage() {
         </div>
       </div>
 
-      {/* Agent Selector */}
+      {/* Agent & Game Selectors */}
       <div className="flex gap-4 items-end">
         <div className="flex-1">
           <label className="text-sm font-medium mb-2 block">Select Agent</label>
@@ -187,6 +199,26 @@ export default function AgentPlaygroundPage() {
               {agents.map((agent) => (
                 <SelectItem key={agent.id} value={agent.id}>
                   {agent.name} ({agent.config.model})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1">
+          <label className="text-sm font-medium mb-2 block">Game Context (RAG)</label>
+          <Select
+            value={currentGameId ?? '__none__'}
+            onValueChange={(value) => setCurrentGameId(value === '__none__' ? null : value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="No game (pure LLM)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">No game (pure LLM)</SelectItem>
+              {games.map((game) => (
+                <SelectItem key={game.id} value={game.id}>
+                  {game.title}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -35,12 +35,28 @@ export interface Snippet {
   score: number;
 }
 
+export interface AgentConfigSnapshot {
+  agentName: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  provider: string;
+}
+
+export interface LatencyBreakdown {
+  totalMs: number;
+  retrievalMs: number;
+  generationMs: number;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
   confidence?: number;
+  agentConfig?: AgentConfigSnapshot;
+  latencyBreakdown?: LatencyBreakdown;
 }
 
 export interface StreamingError {

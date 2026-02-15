@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Serialization;
 using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -436,7 +437,7 @@ internal static class AgentEndpoints
             await foreach (var @event in mediator.CreateStream(command, cancellationToken).ConfigureAwait(false))
             {
                 await httpContext.Response.WriteAsync(
-                    $"data: {System.Text.Json.JsonSerializer.Serialize(@event)}\n\n",
+                    $"data: {System.Text.Json.JsonSerializer.Serialize(@event, SseJsonOptions.Default)}\n\n",
                     cancellationToken).ConfigureAwait(false);
 
                 await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -482,7 +483,7 @@ internal static class AgentEndpoints
             await foreach (var @event in mediator.CreateStream(command, cancellationToken).ConfigureAwait(false))
             {
                 await httpContext.Response.WriteAsync(
-                    $"data: {System.Text.Json.JsonSerializer.Serialize(@event)}\n\n",
+                    $"data: {System.Text.Json.JsonSerializer.Serialize(@event, SseJsonOptions.Default)}\n\n",
                     cancellationToken).ConfigureAwait(false);
 
                 await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);

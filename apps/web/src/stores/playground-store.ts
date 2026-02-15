@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { CompletionMetadata, Snippet } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, CompletionMetadata, LatencyBreakdown, Snippet } from '@/lib/agent/playground-sse-parser';
 
 export interface Message {
   id: string;
@@ -36,9 +36,14 @@ interface PlaygroundState {
   tokenBreakdown: { prompt: number; completion: number; total: number } | null;
   confidence: number | null;
   latencyMs: number | null;
+  agentConfig: AgentConfigSnapshot | null;
+  latencyBreakdown: LatencyBreakdown | null;
 
   // System message
   systemMessage: string;
+
+  // Game context for RAG
+  currentGameId: string | null;
 
   // Actions - Core
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
@@ -61,6 +66,9 @@ interface PlaygroundState {
 
   // Actions - System message
   setSystemMessage: (message: string) => void;
+
+  // Actions - Game context
+  setCurrentGameId: (gameId: string | null) => void;
 }
 
 export const usePlaygroundStore = create<PlaygroundState>()(
@@ -80,9 +88,14 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       tokenBreakdown: null,
       confidence: null,
       latencyMs: null,
+      agentConfig: null,
+      latencyBreakdown: null,
 
       // System message
       systemMessage: '',
+
+      // Game context
+      currentGameId: null,
 
       // ─── Core Actions ────────────────────────────
 
@@ -133,6 +146,8 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           tokenBreakdown: null,
           confidence: null,
           latencyMs: null,
+          agentConfig: null,
+          latencyBreakdown: null,
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -151,6 +166,8 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           tokenBreakdown: null,
           confidence: null,
           latencyMs: null,
+          agentConfig: null,
+          latencyBreakdown: null,
         }),
 
       endSession: () =>
@@ -186,6 +203,8 @@ export const usePlaygroundStore = create<PlaygroundState>()(
             total: metadata.totalTokens,
           },
           confidence: metadata.confidence ?? null,
+          agentConfig: metadata.agentConfig ?? null,
+          latencyBreakdown: metadata.latencyBreakdown ?? null,
         }),
 
       setLatencyMs: (latencyMs) => set({ latencyMs }),
@@ -199,11 +218,17 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           tokenBreakdown: null,
           confidence: null,
           latencyMs: null,
+          agentConfig: null,
+          latencyBreakdown: null,
         }),
 
       // ─── System Message ──────────────────────────
 
       setSystemMessage: (message) => set({ systemMessage: message }),
+
+      // ─── Game Context ─────────────────────────────
+
+      setCurrentGameId: (gameId) => set({ currentGameId: gameId }),
     }),
     {
       name: 'playground-storage',
@@ -211,6 +236,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
         messages: state.messages,
         currentAgentId: state.currentAgentId,
         systemMessage: state.systemMessage,
+        currentGameId: state.currentGameId,
       }),
     }
   )

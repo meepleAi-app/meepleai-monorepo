@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Clock, Cpu, Gauge, Workflow } from 'lucide-react';
+import { Activity, Clock, Cpu, Gauge, Server, Workflow } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, ScrollArea } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown } = usePlaygroundStore();
 
   // Aggregate message-level tokens
   const totalTokens = messages.reduce((sum, msg) => sum + (msg.metadata?.tokens || 0), 0);
@@ -100,6 +100,66 @@ export function DebugPanel() {
               {/* Rough cost estimate at $0.003/1K tokens */}
               <div className="text-xs text-muted-foreground text-right">
                 ~${((tokenBreakdown.total / 1000) * 0.003).toFixed(4)} est.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Agent Config */}
+      {agentConfig && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              Agent Config
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Provider</span>
+                <span className="font-mono">{agentConfig.provider}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Model</span>
+                <span className="font-mono text-xs truncate max-w-[160px]" title={agentConfig.model}>{agentConfig.model}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Temperature</span>
+                <span className="font-mono">{agentConfig.temperature}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Max Tokens</span>
+                <span className="font-mono">{agentConfig.maxTokens.toLocaleString()}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Latency Breakdown */}
+      {latencyBreakdown && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Latency Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Retrieval</span>
+                <span className="font-mono">{(latencyBreakdown.retrievalMs / 1000).toFixed(2)}s</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Generation</span>
+                <span className="font-mono">{(latencyBreakdown.generationMs / 1000).toFixed(2)}s</span>
+              </div>
+              <div className="border-t pt-2 flex justify-between font-medium">
+                <span>Total</span>
+                <span className="font-mono">{(latencyBreakdown.totalMs / 1000).toFixed(2)}s</span>
               </div>
             </div>
           </CardContent>

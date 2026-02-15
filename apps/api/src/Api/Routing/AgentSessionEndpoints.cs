@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.Extensions;
+using Api.Infrastructure.Serialization;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
@@ -126,7 +127,7 @@ internal static class AgentSessionEndpoints
         await foreach (var @event in mediator.CreateStream(command, cancellationToken).ConfigureAwait(false))
         {
             await httpContext.Response.WriteAsync(
-                $"data: {System.Text.Json.JsonSerializer.Serialize(@event)}\n\n",
+                $"data: {System.Text.Json.JsonSerializer.Serialize(@event, SseJsonOptions.Default)}\n\n",
                 cancellationToken).ConfigureAwait(false);
 
             await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);

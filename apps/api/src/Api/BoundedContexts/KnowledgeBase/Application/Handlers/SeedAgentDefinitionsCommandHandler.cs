@@ -34,32 +34,63 @@ internal sealed class SeedAgentDefinitionsCommandHandler : ICommandHandler<SeedA
         ArgumentNullException.ThrowIfNull(command);
 
         var all = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
+        var existingNames = new HashSet<string>(all.Select(a => a.Name), StringComparer.Ordinal);
+        int seeded = 0;
 
-        if (all.Count > 0)
+        // Agent 1: OpenRouter (cloud) - free Llama 3.3
+        if (!existingNames.Contains("MeepleAI Board Game Assistant"))
         {
-            _logger.LogInformation("Agent definitions already seeded ({Count} found). Skipping seed.", all.Count);
-            return;
+            var agent = AgentDefinitionEntity.Create(
+                name: "MeepleAI Board Game Assistant",
+                description: "A helpful AI assistant specialized in board games. Explains rules, suggests strategies, and answers questions about any board game.",
+                type: AgentType.RagAgent,
+                config: AgentDefinitionConfig.Create(
+                    model: "meta-llama/llama-3.3-70b-instruct:free",
+                    maxTokens: 4096,
+                    temperature: 0.7f),
+                strategy: AgentStrategy.HybridSearch(),
+                prompts: new List<AgentPromptTemplate>
+                {
+                    AgentPromptTemplate.Create(
+                        role: "system",
+                        content: "You are MeepleAI, a friendly and knowledgeable board game assistant. You help users understand rules, suggest strategies, recommend games, and answer any board game-related questions. Be concise, accurate, and enthusiastic about board games. When citing rules, reference the specific rulebook section when possible.")
+                });
+
+            await _repository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
+            seeded++;
         }
 
-        var agent = AgentDefinitionEntity.Create(
-            name: "MeepleAI Board Game Assistant",
-            description: "A helpful AI assistant specialized in board games. Explains rules, suggests strategies, and answers questions about any board game.",
-            type: AgentType.RagAgent,
-            config: AgentDefinitionConfig.Create(
-                model: "meta-llama/llama-3.3-70b-instruct:free",
-                maxTokens: 4096,
-                temperature: 0.7f),
-            strategy: AgentStrategy.HybridSearch(),
-            prompts: new List<AgentPromptTemplate>
-            {
-                AgentPromptTemplate.Create(
-                    role: "system",
-                    content: "You are MeepleAI, a friendly and knowledgeable board game assistant. You help users understand rules, suggest strategies, recommend games, and answer any board game-related questions. Be concise, accurate, and enthusiastic about board games. When citing rules, reference the specific rulebook section when possible.")
-            });
+        // Agent 2: Ollama (local) - for provider switching demo
+        if (!existingNames.Contains("MeepleAI Local Assistant"))
+        {
+            var ollamaAgent = AgentDefinitionEntity.Create(
+                name: "MeepleAI Local Assistant",
+                description: "Local Ollama-powered board game AI assistant using Llama 3.3. Runs on local hardware for privacy and low-latency responses.",
+                type: AgentType.RagAgent,
+                config: AgentDefinitionConfig.Create(
+                    model: "llama3.3:70b",
+                    maxTokens: 4096,
+                    temperature: 0.7f),
+                strategy: AgentStrategy.HybridSearch(),
+                prompts: new List<AgentPromptTemplate>
+                {
+                    AgentPromptTemplate.Create(
+                        role: "system",
+                        content: "You are MeepleAI, a friendly and knowledgeable board game assistant. You help users understand rules, suggest strategies, recommend games, and answer any board game-related questions. Be concise, accurate, and enthusiastic about board games. When citing rules, reference the specific rulebook section when possible.")
+                });
 
-        await _repository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _repository.AddAsync(ollamaAgent, cancellationToken).ConfigureAwait(false);
+            seeded++;
+        }
 
-        _logger.LogInformation("Agent definitions seeded successfully: 1 POC agent (MeepleAI Board Game Assistant)");
+        if (seeded > 0)
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("Agent definitions seeded successfully: {Count} agent(s) added", seeded);
+        }
+        else
+        {
+            _logger.LogInformation("Agent definitions already seeded ({Count} found). Skipping seed.", all.Count);
+        }
     }
 }

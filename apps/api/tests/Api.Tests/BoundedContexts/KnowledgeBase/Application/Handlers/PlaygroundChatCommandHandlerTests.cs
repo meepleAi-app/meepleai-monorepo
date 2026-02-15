@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using AgentDefinitionEntity = Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition;
 using Api.Models;
 using Api.Services;
+using Api.Services.LlmClients;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,18 +21,29 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public sealed class PlaygroundChatCommandHandlerTests
 {
     private readonly Mock<IAgentDefinitionRepository> _mockAgentDefinitionRepository;
-    private readonly Mock<ILlmService> _mockLlmService;
+    private readonly Mock<ILlmClient> _mockLlmClient;
+    private readonly LlmProviderFactory _llmProviderFactory;
+    private readonly Mock<IHybridSearchService> _mockHybridSearchService;
     private readonly Mock<ILogger<PlaygroundChatCommandHandler>> _mockLogger;
     private readonly PlaygroundChatCommandHandler _handler;
 
     public PlaygroundChatCommandHandlerTests()
     {
         _mockAgentDefinitionRepository = new Mock<IAgentDefinitionRepository>();
-        _mockLlmService = new Mock<ILlmService>();
+        _mockLlmClient = new Mock<ILlmClient>();
+        _mockLlmClient.Setup(c => c.ProviderName).Returns("TestProvider");
+        _mockLlmClient.Setup(c => c.SupportsModel(It.IsAny<string>())).Returns(true);
+
+        _llmProviderFactory = new LlmProviderFactory(
+            new[] { _mockLlmClient.Object },
+            new Mock<ILogger<LlmProviderFactory>>().Object);
+
+        _mockHybridSearchService = new Mock<IHybridSearchService>();
         _mockLogger = new Mock<ILogger<PlaygroundChatCommandHandler>>();
         _handler = new PlaygroundChatCommandHandler(
             _mockAgentDefinitionRepository.Object,
-            _mockLlmService.Object,
+            _llmProviderFactory,
+            _mockHybridSearchService.Object,
             _mockLogger.Object
         );
     }
@@ -55,12 +67,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             new StreamChunk("a popular board game where players collect resources and build settlements.")
         };
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks));
+        SetupLlmClientStream(chunks);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -147,12 +154,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agentDef);
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Chess is a strategy game.") }));
+        SetupLlmClientStream(new[] { new StreamChunk("Chess is a strategy game.") });
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -183,12 +185,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agentDef);
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Response text here") }));
+        SetupLlmClientStream(new[] { new StreamChunk("Response text here") });
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -205,6 +202,7 @@ public sealed class PlaygroundChatCommandHandlerTests
         Assert.NotNull(complete.agentConfig);
         Assert.Equal("Test Agent", complete.agentConfig.AgentName);
         Assert.Equal("gpt-4", complete.agentConfig.Model);
+        Assert.Equal("TestProvider", complete.agentConfig.Provider);
         Assert.NotNull(complete.latencyBreakdown);
         Assert.True(complete.latencyBreakdown.totalMs >= 0);
     }
@@ -223,12 +221,7 @@ public sealed class PlaygroundChatCommandHandlerTests
 
         // Generate a response longer than 50 chars to trigger follow-up questions
         var longResponse = new string('A', 60);
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk(longResponse) }));
+        SetupLlmClientStream(new[] { new StreamChunk(longResponse) });
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -264,12 +257,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             new StreamChunk("Token")
         };
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks));
+        SetupLlmClientStream(chunks);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -309,12 +297,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agentDef);
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Chess is a two-player strategy game") }));
+        SetupLlmClientStream(new[] { new StreamChunk("Chess is a two-player strategy game") });
 
         // Act
         await foreach (var _ in _handler.Handle(command, CancellationToken.None))
@@ -322,10 +305,13 @@ public sealed class PlaygroundChatCommandHandlerTests
             // Consume events
         }
 
-        // Assert - verify the system prompt from AgentDefinition was passed to LLM
-        _mockLlmService.Verify(s => s.GenerateCompletionStreamAsync(
+        // Assert - verify the system prompt from AgentDefinition was passed to LLM client
+        _mockLlmClient.Verify(c => c.GenerateCompletionStreamAsync(
+            "gpt-4",
             "You are a chess expert. Only discuss chess.",
             "Tell me about chess",
+            0.7,
+            2048,
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -341,12 +327,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agentDef);
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Hi!") }));
+        SetupLlmClientStream(new[] { new StreamChunk("Hi!") });
 
         // Act
         await foreach (var _ in _handler.Handle(command, CancellationToken.None))
@@ -355,9 +336,12 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert - fallback prompt should contain the agent name
-        _mockLlmService.Verify(s => s.GenerateCompletionStreamAsync(
+        _mockLlmClient.Verify(c => c.GenerateCompletionStreamAsync(
+            "gpt-4",
             It.Is<string>(p => p.Contains("Bare Agent", StringComparison.OrdinalIgnoreCase)),
             "Hello",
+            0.7,
+            2048,
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -380,12 +364,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             new StreamChunk(null, new LlmUsage(100, 50, 150), null, true)
         };
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks));
+        SetupLlmClientStream(chunks);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -415,12 +394,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agentDef);
 
-        _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Response") }));
+        SetupLlmClientStream(new[] { new StreamChunk("Response") });
 
         // Act
         await foreach (var _ in _handler.Handle(command, CancellationToken.None))
@@ -428,16 +402,118 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert - handler has no ChatThreadRepository dependency, so nothing persisted
-        // This is validated by the constructor not requiring IChatThreadRepository
-        _mockLlmService.Verify(
-            s => s.GenerateCompletionStreamAsync(
+        // Validated by verifying the LLM client was called once
+        _mockLlmClient.Verify(
+            c => c.GenerateCompletionStreamAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
+    [Fact]
+    public async Task Should_Emit_Citations_When_GameId_Provided()
+    {
+        // Arrange
+        var agentDefId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var agentDef = CreateActiveAgentDefinition(agentDefId, "RAG Agent");
+        var command = new PlaygroundChatCommand(agentDefId, "How do I set up the game?", gameId);
+
+        _mockAgentDefinitionRepository
+            .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agentDef);
+
+        _mockHybridSearchService
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), gameId, SearchMode.Hybrid, 5,
+                null, 0.7f, 0.3f, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>
+            {
+                new()
+                {
+                    ChunkId = "chunk-1",
+                    Content = "Place the board in the center of the table.",
+                    PdfDocumentId = Guid.NewGuid().ToString(),
+                    GameId = gameId,
+                    ChunkIndex = 0,
+                    PageNumber = 3,
+                    HybridScore = 0.85f,
+                    Mode = SearchMode.Hybrid
+                }
+            });
+
+        SetupLlmClientStream(new[] { new StreamChunk("Set up by placing the board in the center.") });
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var @event in _handler.Handle(command, CancellationToken.None))
+        {
+            events.Add(@event);
+        }
+
+        // Assert
+        Assert.Contains(events, e => e.Type == StreamingEventType.Citations);
+        var citationsEvent = events.First(e => e.Type == StreamingEventType.Citations);
+        var citations = Assert.IsType<StreamingCitations>(citationsEvent.Data);
+        Assert.Single(citations.citations);
+        Assert.Contains("Place the board", citations.citations[0].text, StringComparison.OrdinalIgnoreCase);
+
+        // Verify confidence is set from RAG results
+        var completeEvent = events.Last();
+        var complete = Assert.IsType<PlaygroundStreamingComplete>(completeEvent.Data);
+        Assert.NotNull(complete.confidence);
+        Assert.True(complete.confidence > 0);
+    }
+
+    [Fact]
+    public async Task Should_Not_Search_When_No_GameId()
+    {
+        // Arrange
+        var agentDefId = Guid.NewGuid();
+        var agentDef = CreateActiveAgentDefinition(agentDefId, "Pure LLM Agent");
+        var command = new PlaygroundChatCommand(agentDefId, "What is chess?");
+
+        _mockAgentDefinitionRepository
+            .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agentDef);
+
+        SetupLlmClientStream(new[] { new StreamChunk("Chess is a strategy game.") });
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var @event in _handler.Handle(command, CancellationToken.None))
+        {
+            events.Add(@event);
+        }
+
+        // Assert - no citations, no search called
+        Assert.DoesNotContain(events, e => e.Type == StreamingEventType.Citations);
+        _mockHybridSearchService.Verify(
+            s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(),
+                It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(),
+                It.IsAny<float>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     #region Helpers
+
+    private void SetupLlmClientStream(StreamChunk[] chunks)
+    {
+        _mockLlmClient
+            .Setup(c => c.GenerateCompletionStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<double>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(chunks));
+    }
 
     private static AgentDefinitionEntity CreateActiveAgentDefinition(
         Guid id, string name, string? systemPrompt = null)

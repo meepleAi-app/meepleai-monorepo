@@ -10,5 +10,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// </summary>
 internal record PlaygroundChatCommand(
     Guid AgentDefinitionId,
-    string Message
+    string Message,
+    Guid? GameId = null
 ) : IStreamingQuery<RagStreamingEvent>;

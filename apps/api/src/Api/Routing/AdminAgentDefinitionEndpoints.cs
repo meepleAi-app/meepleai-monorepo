@@ -15,7 +15,7 @@ internal static class AdminAgentDefinitionEndpoints
 {
     public static void MapAdminAgentDefinitionEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/agent-definitions")
+        var group = app.MapGroup("/admin/agent-definitions")
             .WithTags("Admin - Agent Definitions")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

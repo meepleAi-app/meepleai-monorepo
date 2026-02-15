@@ -235,7 +235,7 @@ export function ChatHistoryDrawer({
                 id: t.id,
                 title: t.title ?? 'Untitled',
                 gameId: t.gameId ?? game.id,
-                agentName: t.agentName ?? null,
+                agentName: (t as Record<string, unknown>).agentName as string | null ?? null,
                 messageCount: t.messageCount ?? 0,
                 lastMessageAt: t.lastMessageAt ?? t.createdAt,
                 createdAt: t.createdAt,

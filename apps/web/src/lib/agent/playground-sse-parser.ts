@@ -128,6 +128,7 @@ export interface CompletionMetadata {
   systemPrompt?: string;
   promptTemplateInfo?: PromptTemplateInfo;
   tierInfo?: TierInfo;
+  costEstimate?: CostEstimate;
 }
 
 export interface PromptTemplateInfo {
@@ -140,6 +141,14 @@ export interface TierInfo {
   requiredTier: string;
   userTier: string;
   hasAccess: boolean;
+}
+
+export interface CostEstimate {
+  minCost: number;
+  maxCost: number;
+  inputPricePer1M: number;
+  outputPricePer1M: number;
+  isFree: boolean;
 }
 
 export interface StreamingError {

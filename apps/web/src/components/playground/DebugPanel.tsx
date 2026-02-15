@@ -36,7 +36,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt, promptTemplateInfo, tierInfo } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt, promptTemplateInfo, tierInfo, costEstimate } = usePlaygroundStore();
   const [expandedTrace, setExpandedTrace] = useState<number | null>(null);
   const [logLevelFilter, setLogLevelFilter] = useState<Set<string>>(new Set(['info', 'warn', 'error', 'debug']));
   const [logSourceFilter, setLogSourceFilter] = useState<string>('all');
@@ -157,6 +157,45 @@ export function DebugPanel() {
                 <div className="border-t pt-2 flex justify-between text-xs text-muted-foreground">
                   <span>Session total</span>
                   <span className="font-mono">${sessionTotalCost.toFixed(6)}</span>
+                </div>
+              )}
+              {/* Cost Estimate vs Actual (Issue #4472) */}
+              {costEstimate && !costEstimate.isFree && (
+                <div className="border-t pt-2 space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Estimate</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Range</span>
+                    <span className={cn(
+                      'font-mono font-semibold',
+                      costEstimate.maxCost < 0.001 ? 'text-green-600' :
+                      costEstimate.maxCost < 0.01 ? 'text-amber-600' : 'text-red-600',
+                    )}>
+                      ${costEstimate.minCost.toFixed(6)} – ${costEstimate.maxCost.toFixed(6)}
+                    </span>
+                  </div>
+                  {costBreakdown && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Accuracy</span>
+                      <span className={cn(
+                        'font-mono text-[11px]',
+                        costBreakdown.totalCost >= costEstimate.minCost && costBreakdown.totalCost <= costEstimate.maxCost
+                          ? 'text-green-600'
+                          : 'text-amber-600',
+                      )}>
+                        {costBreakdown.totalCost >= costEstimate.minCost && costBreakdown.totalCost <= costEstimate.maxCost
+                          ? 'Within range'
+                          : costBreakdown.totalCost < costEstimate.minCost ? 'Below estimate' : 'Above estimate'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {costEstimate?.isFree && (
+                <div className="border-t pt-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Estimate</span>
+                    <span className="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded leading-none font-semibold">FREE</span>
+                  </div>
                 </div>
               )}
             </div>

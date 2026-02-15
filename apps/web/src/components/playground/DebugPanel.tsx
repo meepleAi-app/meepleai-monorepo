@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Clock, Cpu, DollarSign, Gauge, Route, Server, Workflow } from 'lucide-react';
+import { Activity, BarChart3, Clock, Cpu, DollarSign, Gauge, Route, Server, Workflow } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, ScrollArea } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,10 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings } = usePlaygroundStore();
+
+  // Compute waterfall metrics
+  const totalPipelineMs = pipelineTimings.reduce((sum, s) => sum + s.durationMs, 0);
 
   // Aggregate message-level tokens
   const totalTokens = messages.reduce((sum, msg) => sum + (msg.metadata?.tokens || 0), 0);
@@ -261,6 +264,68 @@ export function DebugPanel() {
               <div className="border-t pt-2 flex justify-between font-medium">
                 <span>Total</span>
                 <span className="font-mono">{(latencyBreakdown.totalMs / 1000).toFixed(2)}s</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pipeline Timing Waterfall */}
+      {pipelineTimings.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Pipeline Waterfall
+              <span className="text-[10px] text-muted-foreground font-normal ml-auto">
+                {totalPipelineMs > 0 ? `${(totalPipelineMs / 1000).toFixed(2)}s total` : ''}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {pipelineTimings.map((step, index) => {
+                const pct = totalPipelineMs > 0 ? (step.durationMs / totalPipelineMs) * 100 : 0;
+                return (
+                  <div key={index} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className={cn(
+                          'w-2 h-2 rounded-full shrink-0',
+                          step.type === 'retrieval' && 'bg-blue-500',
+                          step.type === 'compute' && 'bg-amber-500',
+                          step.type === 'llm' && 'bg-purple-500',
+                        )} />
+                        <span className="font-medium">{step.name}</span>
+                      </span>
+                      <span className="font-mono text-muted-foreground">
+                        {step.durationMs}ms ({pct.toFixed(0)}%)
+                      </span>
+                    </div>
+                    <div className="relative h-3 rounded-full bg-muted overflow-hidden" title={step.detail ?? undefined}>
+                      <div
+                        className={cn(
+                          'absolute inset-y-0 left-0 rounded-full transition-all',
+                          step.type === 'retrieval' && 'bg-blue-400',
+                          step.type === 'compute' && 'bg-amber-400',
+                          step.type === 'llm' && 'bg-purple-400',
+                        )}
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                      />
+                      {step.detail && (
+                        <span className="absolute inset-0 flex items-center px-1.5 text-[9px] text-muted-foreground truncate">
+                          {step.detail}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Legend */}
+              <div className="flex gap-3 pt-1 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" />retrieval</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />compute</span>
+                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-purple-500" />LLM</span>
               </div>
             </div>
           </CardContent>

@@ -197,6 +197,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IChatSessionRepository, ChatSessionRepository>(); // Issue #3483: Chat session persistence
         services.AddScoped<IAgentTestResultRepository, AgentTestResultRepository>(); // Issue #3379: Agent test results
         services.AddScoped<IArbitroValidationFeedbackRepository, ArbitroValidationFeedbackRepository>(); // Issue #4328: Arbitro beta testing feedback
+        services.AddScoped<IDecisoreMoveFeedbackRepository, DecisoreMoveFeedbackRepository>(); // Issue #4335: Decisore beta testing feedback
         services.AddScoped<ITierStrategyAccessRepository, TierStrategyAccessRepository>(); // Issue #3436: Tier-Strategy access
         services.AddScoped<IStrategyModelMappingRepository, StrategyModelMappingRepository>(); // Issue #3435: Strategy-Model mapping
         services.AddScoped<ICustomRagPipelineRepository, CustomRagPipelineRepository>(); // Issue #3120: Custom RAG pipeline management

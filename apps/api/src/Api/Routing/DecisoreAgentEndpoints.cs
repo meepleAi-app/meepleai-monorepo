@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.Decisore;
 using Api.Extensions;
 using Api.Filters;
@@ -22,6 +24,12 @@ internal static class DecisoreAgentEndpoints
             .AddEndpointFilter<RequireSessionFilter>()
             .AddEndpointFilter<DecisoreRateLimitFilter>();  // Issue #4334: Rate limiting (10 req/min)
 
+        MapAnalyzeEndpoint(group);
+        MapSubmitFeedbackEndpoint(group);
+    }
+
+    private static void MapAnalyzeEndpoint(RouteGroupBuilder group)
+    {
         // POST /api/v1/agents/decisore/analyze (SSE streaming)
         group.MapPost("/analyze", async (
             AnalyzeRequest request,
@@ -101,6 +109,40 @@ Analyzes chess position with Decisore Agent and streams real-time progress via S
 **Performance**: <5s P95 for expert analysis, <10s for deep (multi-model ensemble)
 ");
     }
+
+    private static void MapSubmitFeedbackEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/feedback", async (
+            DecisoreMoveFeedbackRequest req,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new SubmitDecisoreMoveFeedbackCommand
+            {
+                SuggestionId = req.SuggestionId,
+                GameSessionId = req.GameSessionId,
+                UserId = session.User!.Id,
+                Rating = req.Rating,
+                Quality = req.Quality,
+                Comment = req.Comment,
+                Outcome = req.Outcome,
+                SuggestionFollowed = req.SuggestionFollowed,
+                TopSuggestedMove = req.TopSuggestedMove,
+                PositionStrength = req.PositionStrength,
+                AnalysisDepth = req.AnalysisDepth
+            };
+
+            var feedbackId = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(new { FeedbackId = feedbackId, Message = "Feedback submitted successfully" });
+        })
+        .WithName("DecisoreSubmitFeedback")
+        .WithTags("Agents", "Decisore", "Beta Testing")
+        .WithSummary("Submit feedback on Decisore move suggestion");
+    }
 }
 
 
@@ -109,3 +151,15 @@ internal sealed record AnalyzeRequest(
     string PlayerName,
     string? AnalysisDepth = "standard",
     int? MaxSuggestions = 3);
+
+internal sealed record DecisoreMoveFeedbackRequest(
+    Guid SuggestionId,
+    Guid GameSessionId,
+    int Rating,
+    string Quality,
+    string? Comment,
+    string Outcome,
+    bool SuggestionFollowed,
+    string TopSuggestedMove,
+    double PositionStrength,
+    string AnalysisDepth);

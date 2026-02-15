@@ -54,6 +54,7 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
         ArgumentNullException.ThrowIfNull(state);
 
         var stopwatch = Stopwatch.StartNew();
+        var suggestionId = Guid.NewGuid(); // Issue #4335: Correlation ID for feedback tracking
 
         _logger.LogInformation(
             "Decisore analyzing position: player={Player}, turn={Turn}, maxSuggestions={Max}",
@@ -141,6 +142,7 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
 
         return new StrategicAnalysisResultDto
         {
+            SuggestionId = suggestionId,
             Suggestions = suggestions,
             PositionStrength = positionStrength,
             RiskLevel = riskLevel,
@@ -315,6 +317,7 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
     {
         return new StrategicAnalysisResultDto
         {
+            SuggestionId = Guid.NewGuid(),
             Suggestions = new List<MoveSuggestionDto>(),
             PositionStrength = -1.0,
             RiskLevel = "critical",

@@ -1,5 +1,5 @@
 /**
- * Notification Settings Page (Issue #4220)
+ * Notification Settings Page (Issue #4220, #4416)
  * Multi-channel notification preferences for PDF processing
  */
 
@@ -7,11 +7,12 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { Bell, Mail, Smartphone, MessageSquare, Save, Loader2 } from 'lucide-react';
+import { Bell, Mail, Smartphone, MessageSquare, Save, Loader2, BellRing, BellOff } from 'lucide-react';
 
 import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/use-toast';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface NotificationPreferences {
   userId: string;
@@ -24,6 +25,7 @@ interface NotificationPreferences {
   inAppOnDocumentReady: boolean;
   inAppOnDocumentFailed: boolean;
   inAppOnRetryAvailable: boolean;
+  hasPushSubscription: boolean;
 }
 
 export default function NotificationSettingsPage() {
@@ -31,6 +33,7 @@ export default function NotificationSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const push = usePushNotifications();
 
   useEffect(() => {
     const fetchPreferences = async () => {
@@ -81,7 +84,7 @@ export default function NotificationSettingsPage() {
     }
   };
 
-  const updatePref = (key: keyof Omit<NotificationPreferences, 'userId'>, value: boolean) => {
+  const updatePref = (key: keyof Omit<NotificationPreferences, 'userId' | 'hasPushSubscription'>, value: boolean) => {
     if (!prefs) return;
     setPrefs({ ...prefs, [key]: value });
   };
@@ -103,6 +106,8 @@ export default function NotificationSettingsPage() {
       </div>
     );
   }
+
+  const pushEnabled = push.isSupported && push.isSubscribed;
 
   return (
     <div className="container max-w-3xl mx-auto py-8">
@@ -127,6 +132,44 @@ export default function NotificationSettingsPage() {
           )}
         </Button>
       </div>
+
+      {/* Push Notification Subscription Card */}
+      {push.isSupported && (
+        <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`p-2 rounded-lg ${push.isSubscribed ? 'bg-green-100 dark:bg-green-900/20' : 'bg-muted'}`}>
+                {push.isSubscribed ? (
+                  <BellRing className="h-6 w-6 text-green-600 dark:text-green-400" />
+                ) : (
+                  <BellOff className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Browser Push Notifications</h2>
+                <p className="text-sm text-muted-foreground">
+                  {push.isSubscribed
+                    ? 'Push notifications are enabled for this browser'
+                    : 'Enable push notifications to receive alerts even when the app is in the background'}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant={push.isSubscribed ? 'outline' : 'default'}
+              onClick={push.isSubscribed ? push.unsubscribe : push.subscribe}
+              disabled={push.isLoading}
+            >
+              {push.isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : push.isSubscribed ? (
+                'Disable'
+              ) : (
+                'Enable'
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Document Ready Notifications */}
       <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
@@ -162,13 +205,15 @@ export default function NotificationSettingsPage() {
               <Smartphone className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">Push Notification</p>
-                <p className="text-sm text-muted-foreground">Browser push notification (coming soon)</p>
+                <p className="text-sm text-muted-foreground">
+                  {pushEnabled ? 'Browser push notification when document is ready' : 'Enable push notifications above to use this'}
+                </p>
               </div>
             </div>
             <Switch
               checked={prefs.pushOnDocumentReady}
               onCheckedChange={(checked) => updatePref('pushOnDocumentReady', checked)}
-              disabled
+              disabled={!pushEnabled}
             />
           </div>
 
@@ -222,13 +267,15 @@ export default function NotificationSettingsPage() {
               <Smartphone className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">Push Notification</p>
-                <p className="text-sm text-muted-foreground">Browser push notification (coming soon)</p>
+                <p className="text-sm text-muted-foreground">
+                  {pushEnabled ? 'Browser push notification on processing failure' : 'Enable push notifications above to use this'}
+                </p>
               </div>
             </div>
             <Switch
               checked={prefs.pushOnDocumentFailed}
               onCheckedChange={(checked) => updatePref('pushOnDocumentFailed', checked)}
-              disabled
+              disabled={!pushEnabled}
             />
           </div>
 
@@ -282,13 +329,15 @@ export default function NotificationSettingsPage() {
               <Smartphone className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">Push Notification</p>
-                <p className="text-sm text-muted-foreground">Browser push notification (coming soon)</p>
+                <p className="text-sm text-muted-foreground">
+                  {pushEnabled ? 'Browser push notification on retry' : 'Enable push notifications above to use this'}
+                </p>
               </div>
             </div>
             <Switch
               checked={prefs.pushOnRetryAvailable}
               onCheckedChange={(checked) => updatePref('pushOnRetryAvailable', checked)}
-              disabled
+              disabled={!pushEnabled}
             />
           </div>
 

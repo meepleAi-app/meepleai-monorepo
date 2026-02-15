@@ -18,6 +18,9 @@ internal class NotificationPreferencesEntityConfiguration : IEntityTypeConfigura
         builder.Property(e => e.PushOnDocumentReady).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.PushOnDocumentFailed).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.PushOnRetryAvailable).IsRequired().HasDefaultValue(false);
+        builder.Property(e => e.PushEndpoint).HasMaxLength(2048);
+        builder.Property(e => e.PushP256dhKey).HasMaxLength(512);
+        builder.Property(e => e.PushAuthKey).HasMaxLength(512);
         builder.Property(e => e.InAppOnDocumentReady).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.InAppOnDocumentFailed).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.InAppOnRetryAvailable).IsRequired().HasDefaultValue(true);

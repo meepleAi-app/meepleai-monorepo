@@ -59,6 +59,7 @@ export const NotificationPreferencesSchema = z.object({
   inAppOnDocumentReady: z.boolean(),
   inAppOnDocumentFailed: z.boolean(),
   inAppOnRetryAvailable: z.boolean(),
+  hasPushSubscription: z.boolean(),
 });
 export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>;
 

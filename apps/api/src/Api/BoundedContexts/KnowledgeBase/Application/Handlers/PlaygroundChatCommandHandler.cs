@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -78,6 +79,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         var pipelineTimings = new List<PlaygroundPipelineStep>();
         var apiTraces = new List<PlaygroundApiTrace>();
         var logEntries = new List<PlaygroundLogEntry>();
+        var dataFlowSteps = new List<PlaygroundDataFlowStep>();
         var stepStopwatch = Stopwatch.StartNew();
 
         void Log(string level, string source, string message) =>
@@ -85,6 +87,17 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
         // Resolve effective strategy: command override > agent definition default
         var effectiveStrategy = ResolveStrategy(command.Strategy);
+
+        // Data flow step 1: Query Input (Issue #4456)
+        dataFlowSteps.Add(new PlaygroundDataFlowStep(
+            "Query Input", "query",
+            $"User query ({command.Message.Length} chars)",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["rawQuery"] = command.Message.Length > 300 ? command.Message[..300] + "..." : command.Message,
+                ["strategy"] = effectiveStrategy,
+                ["gameContext"] = command.GameId.HasValue ? command.GameId.Value.ToString("D", CultureInfo.InvariantCulture) : "none",
+            }));
 
         Log("info", "Pipeline", $"Starting playground chat for agent {command.AgentDefinitionId}");
         Log("debug", "Strategy", $"Resolved strategy: {effectiveStrategy} (requested: {command.Strategy ?? "null"})");
@@ -140,12 +153,36 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded. Using {effectiveStrategy} strategy.{overrideInfo}"));
 
+        // Data flow step 2: Agent Config
+        dataFlowSteps.Add(new PlaygroundDataFlowStep(
+            "Agent Config", "config",
+            $"Agent '{agentDefinition.Name}' loaded",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["agent"] = agentDefinition.Name,
+                ["model"] = effectiveModel,
+                ["provider"] = isOverridden ? "override" : "default",
+                ["temperature"] = agentDefinition.Config.Temperature.ToString("F1", CultureInfo.InvariantCulture),
+                ["maxTokens"] = agentDefinition.Config.MaxTokens.ToString(CultureInfo.InvariantCulture),
+                ["promptCount"] = agentDefinition.Prompts.Count.ToString(CultureInfo.InvariantCulture),
+            }));
+
         pipelineTimings.Add(new PlaygroundPipelineStep(
             "Agent Loading", "retrieval", stepStopwatch.ElapsedMilliseconds, null));
         stepStopwatch.Restart();
 
         // 2. Build system prompt from AgentDefinition prompts
         var systemPrompt = BuildSystemPrompt(agentDefinition);
+
+        // Data flow step 3: System Prompt
+        dataFlowSteps.Add(new PlaygroundDataFlowStep(
+            "System Prompt", "prompt",
+            $"Built from {agentDefinition.Prompts.Count} template(s) ({systemPrompt.Length} chars)",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["promptLength"] = systemPrompt.Length.ToString(CultureInfo.InvariantCulture),
+                ["preview"] = systemPrompt.Length > 200 ? systemPrompt[..200] + "..." : systemPrompt,
+            }));
 
         pipelineTimings.Add(new PlaygroundPipelineStep(
             "Prompt Building", "compute", stepStopwatch.ElapsedMilliseconds, null));
@@ -275,6 +312,26 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             pipelineTimings.Add(new PlaygroundPipelineStep(
                 "RAG Retrieval", "retrieval", retrievalStopwatch.ElapsedMilliseconds,
                 ragSnippets != null ? $"{ragSnippets.Count} chunks (cache: {cacheInfo.status})" : "no results"));
+
+            // Data flow step 4: RAG Search Results
+            var searchItems = ragSnippets?.Select(s => new PlaygroundDataFlowItem(
+                $"Page {s.page}, chunk {s.line}",
+                s.score,
+                s.text.Length > 150 ? s.text[..150] + "..." : s.text
+            )).ToList();
+
+            dataFlowSteps.Add(new PlaygroundDataFlowStep(
+                "RAG Search", "search",
+                ragSnippets != null ? $"{ragSnippets.Count} results (max score: {ragSnippets.Max(s => s.score):F3})" : "No results",
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["mode"] = "Hybrid",
+                    ["limit"] = "5",
+                    ["resultCount"] = (ragSnippets?.Count ?? 0).ToString(CultureInfo.InvariantCulture),
+                    ["latencyMs"] = retrievalStopwatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture),
+                    ["cacheStatus"] = cacheInfo?.status ?? "skip",
+                },
+                searchItems));
         }
         stepStopwatch.Restart();
 
@@ -480,6 +537,33 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             "LLM Generation", "llm", generationStopwatch.ElapsedMilliseconds, generationDetail));
         stepStopwatch.Restart();
 
+        // Data flow step 5: Context Building
+        dataFlowSteps.Add(new PlaygroundDataFlowStep(
+            "Context Building", "context",
+            $"Assembled prompt ({Encoding.UTF8.GetByteCount(userPrompt)} bytes)",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["systemPromptChars"] = systemPrompt.Length.ToString(CultureInfo.InvariantCulture),
+                ["userPromptChars"] = userPrompt.Length.ToString(CultureInfo.InvariantCulture),
+                ["ragChunksIncluded"] = (ragSnippets?.Count ?? 0).ToString(CultureInfo.InvariantCulture),
+                ["contextPreview"] = userPrompt.Length > 200 ? userPrompt[..200] + "..." : userPrompt,
+            }));
+
+        // Data flow step 6: LLM Generation
+        dataFlowSteps.Add(new PlaygroundDataFlowStep(
+            "LLM Generation", "llm",
+            string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal)
+                ? "Skipped (RetrievalOnly)"
+                : $"{effectiveModel} ({generationStopwatch.ElapsedMilliseconds}ms)",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["strategy"] = effectiveStrategy,
+                ["model"] = effectiveModel,
+                ["provider"] = providerName,
+                ["latencyMs"] = generationStopwatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture),
+                ["tokensStreamed"] = tokenCount.ToString(CultureInfo.InvariantCulture),
+            }));
+
         // 5. Follow-up questions (if response is long enough and not RetrievalOnly)
         var fullResponse = responseBuilder.ToString();
         if (fullResponse.Length > 50 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal))
@@ -564,6 +648,21 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 "Validate response accuracy against source documents"),
         };
 
+        // Data flow step 7: Response Output
+        dataFlowSteps.Add(new PlaygroundDataFlowStep(
+            "Response", "output",
+            $"{fullResponse.Length} chars, {totalTokens} tokens",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["responseChars"] = fullResponse.Length.ToString(CultureInfo.InvariantCulture),
+                ["promptTokens"] = promptTokens.ToString(CultureInfo.InvariantCulture),
+                ["completionTokens"] = completionTokens.ToString(CultureInfo.InvariantCulture),
+                ["totalTokens"] = totalTokens.ToString(CultureInfo.InvariantCulture),
+                ["cost"] = $"${costCalculation.TotalCost:F6}",
+                ["confidence"] = ragConfidence?.ToString("F3", CultureInfo.InvariantCulture) ?? "n/a",
+                ["responsePreview"] = fullResponse.Length > 200 ? fullResponse[..200] + "..." : fullResponse,
+            }));
+
         // 9. Complete with metadata
         totalStopwatch.Stop();
         Log("info", "Pipeline", $"Pipeline completed in {totalStopwatch.ElapsedMilliseconds}ms (response: {fullResponse.Length} chars)");
@@ -609,7 +708,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     requiredTier: GetRequiredTierForStrategy(effectiveStrategy),
                     userTier: "admin",
                     hasAccess: true),
-                costEstimate: EstimateCostRange(effectiveStrategy, effectiveModel)));
+                costEstimate: EstimateCostRange(effectiveStrategy, effectiveModel),
+                dataFlowSteps: dataFlowSteps));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -789,7 +889,8 @@ internal record PlaygroundStreamingComplete(
     string? systemPrompt = null,
     PlaygroundPromptTemplateInfo? promptTemplateInfo = null,
     PlaygroundTierInfo? tierInfo = null,
-    PlaygroundCostEstimate? costEstimate = null);
+    PlaygroundCostEstimate? costEstimate = null,
+    List<PlaygroundDataFlowStep>? dataFlowSteps = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -907,6 +1008,25 @@ internal record PlaygroundTierInfo(
     string requiredTier,
     string userTier,
     bool hasAccess);
+
+/// <summary>
+/// Semantic data flow step capturing actual data at each pipeline stage.
+/// Issue #4456: End-to-end data flow visualization.
+/// </summary>
+internal record PlaygroundDataFlowStep(
+    string stepName,
+    string stepType,
+    string summary,
+    Dictionary<string, string> details,
+    List<PlaygroundDataFlowItem>? items = null);
+
+/// <summary>
+/// Sub-item within a data flow step (e.g., individual search result).
+/// </summary>
+internal record PlaygroundDataFlowItem(
+    string label,
+    double? score,
+    string? preview);
 
 /// <summary>
 /// Pre-execution cost estimate range for a strategy.

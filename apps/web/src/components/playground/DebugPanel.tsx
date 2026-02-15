@@ -36,7 +36,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt, promptTemplateInfo, tierInfo, costEstimate } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt, promptTemplateInfo, tierInfo, costEstimate, dataFlowSteps } = usePlaygroundStore();
   const [expandedTrace, setExpandedTrace] = useState<number | null>(null);
   const [logLevelFilter, setLogLevelFilter] = useState<Set<string>>(new Set(['info', 'warn', 'error', 'debug']));
   const [logSourceFilter, setLogSourceFilter] = useState<string>('all');
@@ -44,6 +44,7 @@ export function DebugPanel() {
   const [agentConfigExpanded, setAgentConfigExpanded] = useState(false);
   const [systemPromptExpanded, setSystemPromptExpanded] = useState(false);
   const [systemPromptCopied, setSystemPromptCopied] = useState(false);
+  const [expandedFlowStep, setExpandedFlowStep] = useState<number | null>(null);
 
   const handleCopySystemPrompt = useCallback(() => {
     if (!resolvedSystemPrompt) return;
@@ -475,6 +476,90 @@ export function DebugPanel() {
                   {systemPromptExpanded ? 'Show less' : 'Show more'}
                 </button>
               )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Data Flow Visualization (Issue #4456) */}
+      {dataFlowSteps.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Workflow className="h-4 w-4" />
+              Data Flow
+              <span className="text-[10px] text-muted-foreground font-normal ml-auto">
+                {dataFlowSteps.length} steps
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              {dataFlowSteps.map((step, index) => {
+                const isExpanded = expandedFlowStep === index;
+                const stepColors: Record<string, string> = {
+                  query: 'bg-blue-500',
+                  config: 'bg-gray-500',
+                  prompt: 'bg-purple-500',
+                  search: 'bg-green-500',
+                  context: 'bg-amber-500',
+                  llm: 'bg-purple-500',
+                  output: 'bg-emerald-500',
+                };
+                const dotColor = stepColors[step.stepType] ?? 'bg-gray-400';
+
+                return (
+                  <div key={index}>
+                    {index > 0 && (
+                      <div className="flex justify-center py-0.5">
+                        <ArrowDown className="h-2.5 w-2.5 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted/50 transition-colors"
+                      onClick={() => setExpandedFlowStep(isExpanded ? null : index)}
+                    >
+                      {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                      <span className={cn('w-2 h-2 rounded-full shrink-0', dotColor)} />
+                      <span className="font-medium">{step.stepName}</span>
+                      <span className="text-muted-foreground truncate flex-1 text-right">{step.summary}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="ml-7 pl-2 border-l-2 border-muted space-y-1 pb-1">
+                        {Object.entries(step.details).map(([key, value]) => (
+                          <div key={key} className="flex justify-between text-[11px]">
+                            <span className="text-muted-foreground">{key}</span>
+                            <span className="font-mono truncate max-w-[180px] text-right" title={value}>{value}</span>
+                          </div>
+                        ))}
+                        {step.items && step.items.length > 0 && (
+                          <div className="border-t pt-1 mt-1 space-y-0.5">
+                            <span className="text-[10px] font-medium text-muted-foreground">Items ({step.items.length})</span>
+                            {step.items.map((item, i) => (
+                              <div key={i} className="text-[11px] space-y-0.5 pl-1 border-l border-muted-foreground/20 ml-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium">{item.label}</span>
+                                  {item.score !== null && (
+                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                      score: {item.score.toFixed(3)}
+                                    </span>
+                                  )}
+                                </div>
+                                {item.preview && (
+                                  <p className="text-muted-foreground text-[10px] truncate" title={item.preview}>
+                                    {item.preview}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

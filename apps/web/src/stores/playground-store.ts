@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, ApiTrace, CacheInfo, CompletionMetadata, CostBreakdown, CostEstimate, LatencyBreakdown, LogEntry, PipelineStepTiming, PromptTemplateInfo, Snippet, StrategyInfo, TierInfo, TomacLayer } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, ApiTrace, CacheInfo, CompletionMetadata, CostBreakdown, CostEstimate, DataFlowStep, LatencyBreakdown, LogEntry, PipelineStepTiming, PromptTemplateInfo, Snippet, StrategyInfo, TierInfo, TomacLayer } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -78,6 +78,9 @@ interface PlaygroundState {
 
   // Cost estimate (Issue #4472)
   costEstimate: CostEstimate | null;
+
+  // Data flow (Issue #4456)
+  dataFlowSteps: DataFlowStep[];
 
   // System message
   systemMessage: string;
@@ -177,6 +180,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       // Cost estimate
       costEstimate: null,
 
+      // Data flow
+      dataFlowSteps: [],
+
       // System message
       systemMessage: '',
 
@@ -249,6 +255,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           promptTemplateInfo: null,
           tierInfo: null,
           costEstimate: null,
+          dataFlowSteps: [],
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -284,6 +291,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           promptTemplateInfo: null,
           tierInfo: null,
           costEstimate: null,
+          dataFlowSteps: [],
         }),
 
       endSession: () =>
@@ -350,6 +358,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
             promptTemplateInfo: metadata.promptTemplateInfo ?? null,
             tierInfo: metadata.tierInfo ?? null,
             costEstimate: metadata.costEstimate ?? null,
+            dataFlowSteps: metadata.dataFlowSteps ?? [],
           };
         }),
 
@@ -378,6 +387,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           promptTemplateInfo: null,
           tierInfo: null,
           costEstimate: null,
+          dataFlowSteps: [],
         }),
 
       // ─── System Message ──────────────────────────

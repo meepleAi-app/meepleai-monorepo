@@ -129,6 +129,7 @@ export interface CompletionMetadata {
   promptTemplateInfo?: PromptTemplateInfo;
   tierInfo?: TierInfo;
   costEstimate?: CostEstimate;
+  dataFlowSteps?: DataFlowStep[];
 }
 
 export interface PromptTemplateInfo {
@@ -141,6 +142,20 @@ export interface TierInfo {
   requiredTier: string;
   userTier: string;
   hasAccess: boolean;
+}
+
+export interface DataFlowStep {
+  stepName: string;
+  stepType: string;
+  summary: string;
+  details: Record<string, string>;
+  items?: DataFlowItem[];
+}
+
+export interface DataFlowItem {
+  label: string;
+  score: number | null;
+  preview: string | null;
 }
 
 export interface CostEstimate {

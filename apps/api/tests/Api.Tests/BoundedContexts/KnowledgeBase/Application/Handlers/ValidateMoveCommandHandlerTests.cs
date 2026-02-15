@@ -232,6 +232,7 @@ public class ValidateMoveCommandHandlerTests
     {
         return new MoveValidationResultDto
         {
+            ValidationId = Guid.NewGuid(),
             Decision = "VALID",
             Confidence = 0.95,
             Reasoning = "Move follows all applicable rules",

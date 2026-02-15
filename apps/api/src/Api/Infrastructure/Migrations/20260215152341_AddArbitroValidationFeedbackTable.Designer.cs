@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260215152341_AddArbitroValidationFeedbackTable")]
+    partial class AddArbitroValidationFeedbackTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -654,120 +657,6 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("playground_test_scenarios", "knowledge_base");
-                });
-
-            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.RagExecution", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<Guid?>("AgentDefinitionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("agent_definition_id");
-
-                    b.Property<string>("AgentName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("agent_name");
-
-                    b.Property<bool>("CacheHit")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("cache_hit");
-
-                    b.Property<int>("CompletionTokens")
-                        .HasColumnType("integer")
-                        .HasColumnName("completion_tokens");
-
-                    b.Property<double?>("Confidence")
-                        .HasColumnType("double precision")
-                        .HasColumnName("confidence");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("error_message");
-
-                    b.Property<string>("ExecutionTrace")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("execution_trace");
-
-                    b.Property<Guid?>("GameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("game_id");
-
-                    b.Property<bool>("IsPlayground")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_playground");
-
-                    b.Property<string>("Model")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("model");
-
-                    b.Property<int>("PromptTokens")
-                        .HasColumnType("integer")
-                        .HasColumnName("prompt_tokens");
-
-                    b.Property<string>("Provider")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("provider");
-
-                    b.Property<string>("Query")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("query");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Strategy")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("strategy");
-
-                    b.Property<decimal>("TotalCost")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("numeric(18,8)")
-                        .HasColumnName("total_cost");
-
-                    b.Property<int>("TotalLatencyMs")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_latency_ms");
-
-                    b.Property<int>("TotalTokens")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_tokens");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AgentDefinitionId")
-                        .HasDatabaseName("IX_rag_executions_agent_definition_id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_rag_executions_created_at");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("IX_rag_executions_status");
-
-                    b.HasIndex("Strategy")
-                        .HasDatabaseName("IX_rag_executions_strategy");
-
-                    b.ToTable("rag_executions", "knowledge_base");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>

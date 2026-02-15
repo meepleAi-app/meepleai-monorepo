@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, CompletionMetadata, LatencyBreakdown, Snippet } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, CompletionMetadata, CostBreakdown, LatencyBreakdown, Snippet } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -47,6 +47,8 @@ interface PlaygroundState {
   latencyMs: number | null;
   agentConfig: AgentConfigSnapshot | null;
   latencyBreakdown: LatencyBreakdown | null;
+  costBreakdown: CostBreakdown | null;
+  sessionTotalCost: number;
   activeStrategy: string | null;
 
   // System message
@@ -115,6 +117,8 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       latencyMs: null,
       agentConfig: null,
       latencyBreakdown: null,
+      costBreakdown: null,
+      sessionTotalCost: 0,
       activeStrategy: null,
 
       // System message
@@ -174,6 +178,8 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           latencyMs: null,
           agentConfig: null,
           latencyBreakdown: null,
+          costBreakdown: null,
+          sessionTotalCost: 0,
           activeStrategy: null,
         }),
 
@@ -195,6 +201,8 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           latencyMs: null,
           agentConfig: null,
           latencyBreakdown: null,
+          costBreakdown: null,
+          sessionTotalCost: 0,
           activeStrategy: null,
         }),
 
@@ -234,7 +242,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
         set({ followUpQuestions: questions }),
 
       setCompletionMetadata: (metadata) =>
-        set({
+        set((state) => ({
           tokenBreakdown: {
             prompt: metadata.promptTokens,
             completion: metadata.completionTokens,
@@ -243,8 +251,10 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           confidence: metadata.confidence ?? null,
           agentConfig: metadata.agentConfig ?? null,
           latencyBreakdown: metadata.latencyBreakdown ?? null,
+          costBreakdown: metadata.costBreakdown ?? null,
+          sessionTotalCost: state.sessionTotalCost + (metadata.costBreakdown?.totalCost ?? 0),
           activeStrategy: metadata.strategy ?? null,
-        }),
+        })),
 
       setLatencyMs: (latencyMs) => set({ latencyMs }),
 
@@ -259,6 +269,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           latencyMs: null,
           agentConfig: null,
           latencyBreakdown: null,
+          costBreakdown: null,
           activeStrategy: null,
         }),
 

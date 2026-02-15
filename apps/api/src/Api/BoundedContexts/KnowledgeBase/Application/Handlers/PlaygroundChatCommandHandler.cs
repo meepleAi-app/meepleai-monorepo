@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -24,17 +26,23 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
     private readonly LlmProviderFactory _llmProviderFactory;
     private readonly IHybridSearchService _hybridSearchService;
+    private readonly ILlmCostCalculator _costCalculator;
+    private readonly ILlmCostLogRepository _costLogRepository;
     private readonly ILogger<PlaygroundChatCommandHandler> _logger;
 
     public PlaygroundChatCommandHandler(
         IAgentDefinitionRepository agentDefinitionRepository,
         LlmProviderFactory llmProviderFactory,
         IHybridSearchService hybridSearchService,
+        ILlmCostCalculator costCalculator,
+        ILlmCostLogRepository costLogRepository,
         ILogger<PlaygroundChatCommandHandler> logger)
     {
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
         _llmProviderFactory = llmProviderFactory ?? throw new ArgumentNullException(nameof(llmProviderFactory));
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
+        _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
+        _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -314,11 +322,36 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 new StreamingFollowUpQuestions(GenerateFollowUpQuestions(agentDefinition.Name)));
         }
 
-        // 6. Complete with metadata
-        totalStopwatch.Stop();
-
+        // 6. Cost calculation
         if (completionTokens == 0 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal)) completionTokens = tokenCount;
         var totalTokens = promptTokens + completionTokens;
+
+        var costCalculation = string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal)
+            ? LlmCostCalculation.Empty
+            : _costCalculator.CalculateCost(effectiveModel, providerName, promptTokens, completionTokens);
+
+        // Persist cost log (fire-and-forget, don't block streaming)
+        try
+        {
+            await _costLogRepository.LogCostAsync(
+                userId: null,
+                userRole: "Playground",
+                cost: costCalculation,
+                endpoint: $"playground/chat?strategy={effectiveStrategy}",
+                success: true,
+                errorMessage: null,
+                latencyMs: (int)totalStopwatch.ElapsedMilliseconds,
+                ipAddress: null,
+                userAgent: null,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist playground cost log");
+        }
+
+        // 7. Complete with metadata
+        totalStopwatch.Stop();
 
         yield return CreateEvent(
             StreamingEventType.Complete,
@@ -329,6 +362,12 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 totalTokens: totalTokens,
                 confidence: ragConfidence,
                 strategy: effectiveStrategy,
+                costBreakdown: new PlaygroundCostBreakdown(
+                    llmCost: costCalculation.TotalCost,
+                    inputCost: costCalculation.InputCost,
+                    outputCost: costCalculation.OutputCost,
+                    totalCost: costCalculation.TotalCost,
+                    isFree: costCalculation.IsFree),
                 agentConfig: new PlaygroundAgentConfigSnapshot(
                     agentDefinition.Name,
                     effectiveModel,
@@ -342,8 +381,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     generationMs: generationStopwatch.ElapsedMilliseconds)));
 
         _logger.LogInformation(
-            "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, time={Time}ms",
-            command.AgentDefinitionId, effectiveStrategy, totalTokens, totalStopwatch.ElapsedMilliseconds);
+            "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
+            command.AgentDefinitionId, effectiveStrategy, totalTokens, costCalculation.TotalCost, totalStopwatch.ElapsedMilliseconds);
     }
 
     /// <summary>
@@ -398,6 +437,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Extended Complete event with playground-specific metadata.
 /// Issue #4392: Includes agent config snapshot and latency breakdown.
 /// Issue #4437: Added strategy field.
+/// Issue #4439: Added cost breakdown.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -406,6 +446,7 @@ internal record PlaygroundStreamingComplete(
     int totalTokens,
     double? confidence,
     string strategy,
+    PlaygroundCostBreakdown costBreakdown,
     PlaygroundAgentConfigSnapshot agentConfig,
     PlaygroundLatencyBreakdown latencyBreakdown);
 
@@ -419,6 +460,17 @@ internal record PlaygroundAgentConfigSnapshot(
     int MaxTokens,
     string Provider,
     bool IsModelOverride = false);
+
+/// <summary>
+/// Cost breakdown for playground chat.
+/// Issue #4439: Real cost tracking.
+/// </summary>
+internal record PlaygroundCostBreakdown(
+    decimal llmCost,
+    decimal inputCost,
+    decimal outputCost,
+    decimal totalCost,
+    bool isFree);
 
 /// <summary>
 /// Latency breakdown for playground chat.

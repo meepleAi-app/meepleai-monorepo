@@ -50,6 +50,14 @@ export interface LatencyBreakdown {
   generationMs: number;
 }
 
+export interface CostBreakdown {
+  llmCost: number;
+  inputCost: number;
+  outputCost: number;
+  totalCost: number;
+  isFree: boolean;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
@@ -57,6 +65,7 @@ export interface CompletionMetadata {
   totalTokens: number;
   confidence?: number;
   strategy?: string;
+  costBreakdown?: CostBreakdown;
   agentConfig?: AgentConfigSnapshot;
   latencyBreakdown?: LatencyBreakdown;
 }

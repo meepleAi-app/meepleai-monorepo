@@ -92,8 +92,15 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             )}
           </div>
 
-          {/* Message */}
-          <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+          {/* Message (truncated to 50 chars for dropdown preview) */}
+          <p
+            className="text-xs text-muted-foreground line-clamp-2"
+            title={notification.message.length > 50 ? notification.message : undefined}
+          >
+            {notification.message.length > 50
+              ? `${notification.message.slice(0, 50)}...`
+              : notification.message}
+          </p>
 
           {/* Timestamp */}
           <p className="text-xs text-muted-foreground/70 mt-1">{timeAgo}</p>

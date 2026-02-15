@@ -26,6 +26,8 @@ import {
   Map,
   Plus,
   Trash2,
+  Download,
+  Upload,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
@@ -49,6 +51,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { cn } from '@/lib/utils';
 import { usePipelineBuilderStore } from '@/stores/pipelineBuilderStore';
+import { exportPipelineAsJSON, importStrategyAsPipeline } from './converters/pipeline-to-strategy';
+import type { ExportedStrategy } from './converters/pipeline-to-strategy';
 
 // =============================================================================
 // Types
@@ -117,6 +121,7 @@ export function PipelineToolbar({ className }: PipelineToolbarProps) {
     showGrid,
     isLocked,
     createPipeline,
+    loadPipeline,
     savePipeline,
     clearPipeline,
     validatePipeline,
@@ -148,6 +153,35 @@ export function PipelineToolbar({ className }: PipelineToolbarProps) {
   const handleValidate = useCallback(() => {
     validatePipeline();
   }, [validatePipeline]);
+
+  const handleExport = useCallback(() => {
+    if (pipeline) {
+      exportPipelineAsJSON(pipeline);
+    }
+  }, [pipeline]);
+
+  const handleImport = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const strategy = JSON.parse(text) as ExportedStrategy;
+        if (strategy.sourceFormat !== 'pipeline-builder') {
+          throw new Error('Invalid strategy file format');
+        }
+        const imported = importStrategyAsPipeline(strategy);
+        loadPipeline(imported);
+      } catch {
+        // Could not parse file - silently ignore for now
+      }
+    };
+    input.click();
+  }, [loadPipeline]);
 
   const handleClear = useCallback(() => {
     if (confirm('Are you sure you want to clear the pipeline? This cannot be undone.')) {
@@ -211,6 +245,19 @@ export function PipelineToolbar({ className }: PipelineToolbarProps) {
           label={isDirty ? 'Save (unsaved changes)' : 'Save'}
           onClick={handleSave}
           disabled={!pipeline || isSaving}
+        />
+
+        <ToolbarButton
+          icon={<Download className="h-4 w-4" />}
+          label="Export as Strategy"
+          onClick={handleExport}
+          disabled={!pipeline || pipeline.nodes.length === 0}
+        />
+
+        <ToolbarButton
+          icon={<Upload className="h-4 w-4" />}
+          label="Import Strategy"
+          onClick={handleImport}
         />
       </div>
 

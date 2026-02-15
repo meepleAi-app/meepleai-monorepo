@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleCard Chat - Integrated Chat Interface</title>
+  <style>
+    /* ================================================
+       DESIGN TOKENS
+       ================================================ */
+    :root {
+      --chat-h: 220; --chat-s: 80%; --chat-l: 55%;
+      --chat-color: hsl(var(--chat-h) var(--chat-s) var(--chat-l));
+      --chat-color-05: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.05);
+      --chat-color-10: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.1);
+      --chat-color-15: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.15);
+      --chat-color-20: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.2);
+      --chat-color-30: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.3);
+      --chat-color-60: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.6);
+      --agent-color: hsl(38 92% 50%);
+      --agent-color-20: hsla(38, 92%, 50%, 0.2);
+      --game-color: hsl(25 95% 45%);
+      --status-active: hsl(142 71% 45%);
+      --status-waiting: hsl(45 93% 47%);
+    }
+
+    [data-theme="light"] {
+      --bg-page: hsl(220 14% 96%);
+      --bg-card: hsl(0 0% 100%);
+      --bg-card-90: hsla(0, 0%, 100%, 0.92);
+      --bg-muted: hsl(220 14% 96%);
+      --bg-hover: hsl(220 14% 92%);
+      --bg-input: hsl(0 0% 100%);
+      --bg-sidebar: hsl(220 14% 98%);
+      --text-primary: hsl(222 47% 11%);
+      --text-secondary: hsl(215 16% 47%);
+      --text-muted: hsl(215 16% 57%);
+      --border: hsl(214 32% 91%);
+      --border-focus: hsl(220 80% 55%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+      --glass-bg: hsla(0, 0%, 100%, 0.88);
+      --bubble-user-bg: var(--chat-color);
+      --bubble-user-text: white;
+      --bubble-agent-bg: hsl(220 14% 96%);
+      --bubble-agent-text: hsl(222 47% 11%);
+      --scrollbar-thumb: hsl(215 16% 82%);
+      --scrollbar-track: transparent;
+    }
+
+    [data-theme="dark"] {
+      --bg-page: hsl(222 47% 6%);
+      --bg-card: hsl(222 47% 11%);
+      --bg-card-90: hsla(222, 47%, 11%, 0.92);
+      --bg-muted: hsl(217 33% 17%);
+      --bg-hover: hsl(217 33% 22%);
+      --bg-input: hsl(222 47% 14%);
+      --bg-sidebar: hsl(222 47% 8%);
+      --text-primary: hsl(210 40% 98%);
+      --text-secondary: hsl(215 20% 65%);
+      --text-muted: hsl(215 16% 47%);
+      --border: hsl(217 33% 18%);
+      --border-focus: hsl(220 80% 55%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.25);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.35);
+      --glass-bg: hsla(222, 47%, 14%, 0.88);
+      --bubble-user-bg: var(--chat-color);
+      --bubble-user-text: white;
+      --bubble-agent-bg: hsl(217 33% 17%);
+      --bubble-agent-text: hsl(210 40% 98%);
+      --scrollbar-thumb: hsl(217 33% 26%);
+      --scrollbar-track: transparent;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.5;
+      transition: background 0.3s, color 0.3s;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ================================================
+       APP LAYOUT
+       ================================================ */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      height: 100vh;
+      overflow: hidden;
+      margin-top: 32px;
+      height: calc(100vh - 32px);
+    }
+
+    @media (max-width: 860px) {
+      .app-shell { grid-template-columns: 1fr; }
+    }
+
+    /* ================================================
+       SIDEBAR
+       ================================================ */
+    .sidebar {
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-header .chat-count {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--chat-color-15);
+      color: var(--chat-color);
+    }
+
+    .header-actions { display: flex; gap: 6px; }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .icon-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-focus);
+    }
+    .icon-btn svg { width: 16px; height: 16px; }
+
+    .search-bar { position: relative; }
+    .search-bar input {
+      width: 100%;
+      padding: 9px 12px 9px 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-bar input::placeholder { color: var(--text-muted); }
+    .search-bar input:focus { border-color: var(--border-focus); }
+    .search-bar .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      width: 16px;
+      height: 16px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 16px 20px 12px;
+      flex-shrink: 0;
+    }
+    .filter-tab {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .filter-tab.active { background: var(--chat-color-15); color: var(--chat-color); }
+
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .chat-list::-webkit-scrollbar { width: 5px; }
+    .chat-list::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    .chat-list::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+    .chat-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    .chat-item:hover { background: var(--bg-hover); }
+    .chat-item.selected { background: var(--chat-color-10); border-color: var(--chat-color-20); }
+    .chat-item.has-unread .item-title { font-weight: 700; }
+    .chat-item.has-unread .item-time { color: var(--chat-color); font-weight: 600; }
+
+    .agent-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--chat-color), hsl(260 70% 55%));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: white;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .agent-avatar.amber { background: linear-gradient(135deg, hsl(38 92% 50%), hsl(25 95% 45%)); }
+    .agent-avatar.slate { background: linear-gradient(135deg, hsl(210 40% 55%), hsl(220 50% 45%)); }
+    .agent-avatar.sm { width: 38px; height: 38px; font-size: 16px; }
+
+    .status-ring {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-sidebar);
+    }
+    .status-ring.active { background: var(--status-active); }
+    .status-ring.waiting { background: var(--status-waiting); }
+
+    .item-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .item-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .item-title { font-size: 14px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+    .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .item-preview { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    .item-preview .sender { font-weight: 600; color: var(--text-muted); font-size: 12px; }
+
+    .unread-badge {
+      min-width: 20px; height: 20px; padding: 0 6px;
+      border-radius: 10px; background: var(--chat-color); color: white;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    .game-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; padding: 1px 6px; border-radius: 4px;
+      background: var(--bg-muted); color: var(--text-muted); white-space: nowrap;
+    }
+    .game-tag .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--game-color); }
+
+    /* ================================================
+       CHAT PANEL
+       ================================================ */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-page);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card-90);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .chat-header-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .chat-header .status-ring { border-color: var(--bg-card-90); }
+    .chat-header-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .chat-header-title { font-size: 15px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .chat-header-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+    .chat-header-actions { display: flex; gap: 6px; }
+
+    .model-badge {
+      font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+      background: var(--agent-color-20); color: var(--agent-color);
+    }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+    }
+    .status-badge.active { background: hsla(142, 71%, 45%, 0.12); color: var(--status-active); }
+    .pulse-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Context bar */
+    .context-bar {
+      padding: 8px 24px;
+      background: var(--chat-color-05);
+      border-bottom: 1px solid var(--chat-color-15);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .context-bar .game-link {
+      display: flex; align-items: center; gap: 6px;
+      font-weight: 600; color: var(--game-color);
+      text-decoration: none; padding: 3px 10px; border-radius: 6px;
+      background: hsla(25, 95%, 45%, 0.1);
+    }
+    .context-bar .game-link .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--game-color); }
+    .context-bar .context-stats { display: flex; align-items: center; gap: 12px; color: var(--text-muted); }
+    .context-bar .context-stats span { display: flex; align-items: center; gap: 4px; }
+    .context-bar .context-stats svg { width: 13px; height: 13px; opacity: 0.6; }
+
+    /* ================================================
+       MESSAGES AREA
+       ================================================ */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .messages-area::-webkit-scrollbar { width: 5px; }
+    .messages-area::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    .messages-area::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+    .message-group { display: flex; flex-direction: column; gap: 3px; margin-bottom: 16px; }
+    .message-group.user { align-items: flex-end; }
+    .message-group.agent { align-items: flex-start; }
+
+    .group-label {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      padding: 0 4px; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .agent-mini-avatar {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--chat-color), hsl(260 70% 55%));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: white;
+    }
+
+    .bubble {
+      max-width: 72%;
+      padding: 10px 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      word-wrap: break-word;
+    }
+    .bubble.user {
+      background: var(--bubble-user-bg); color: var(--bubble-user-text);
+      border-radius: 18px 18px 6px 18px;
+    }
+    .bubble.agent {
+      background: var(--bubble-agent-bg); color: var(--bubble-agent-text);
+      border-radius: 18px 18px 18px 6px;
+      border: 1px solid var(--border);
+    }
+    .bubble .time { font-size: 10px; opacity: 0.5; margin-top: 4px; display: block; }
+    .bubble.user .time { text-align: right; }
+
+    .typing-bubble {
+      display: inline-flex; gap: 4px; padding: 12px 18px;
+      background: var(--bubble-agent-bg); border: 1px solid var(--border);
+      border-radius: 18px 18px 18px 6px; align-self: flex-start;
+    }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-muted); animation: typing 1.4s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    .system-msg {
+      text-align: center; font-size: 11px; color: var(--text-muted);
+      padding: 8px 0; display: flex; align-items: center; gap: 12px;
+    }
+    .system-msg::before, .system-msg::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* Welcome card */
+    .welcome-card {
+      align-self: center; max-width: 420px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      margin: 8px 0 16px; animation: fadeIn 0.3s ease-out;
+    }
+    .welcome-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--chat-color), hsl(260 70% 55%));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: white;
+    }
+    .welcome-card h4 { font-size: 16px; font-weight: 700; }
+    .welcome-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+    .welcome-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .welcome-chip {
+      font-size: 11px; padding: 4px 10px; border-radius: 8px;
+      background: var(--chat-color-10); color: var(--chat-color);
+      font-weight: 500; border: 1px solid var(--chat-color-15);
+    }
+
+    /* ================================================
+       INPUT BAR
+       ================================================ */
+    .input-bar {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card-90);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+    }
+    .input-wrapper {
+      display: flex; align-items: flex-end; gap: 10px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 6px 6px 6px 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-wrapper:focus-within {
+      border-color: var(--chat-color);
+      box-shadow: 0 0 0 3px var(--chat-color-15);
+    }
+    .input-wrapper textarea {
+      flex: 1; border: none; background: transparent;
+      color: var(--text-primary); font-size: 14px; font-family: inherit;
+      line-height: 1.5; resize: none; outline: none;
+      max-height: 120px; min-height: 24px; padding: 6px 0;
+    }
+    .input-wrapper textarea::placeholder { color: var(--text-muted); }
+
+    .send-btn {
+      width: 38px; height: 38px; border-radius: 12px;
+      border: none; background: var(--chat-color); color: white;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .send-btn:hover { filter: brightness(1.15); transform: scale(1.05); }
+    .send-btn:disabled { opacity: 0.4; cursor: default; transform: none; filter: none; }
+    .send-btn svg { width: 18px; height: 18px; }
+
+    .input-hint {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 8px 0; font-size: 11px; color: var(--text-muted);
+    }
+    .input-hint kbd {
+      font-family: inherit; font-size: 10px; padding: 1px 5px;
+      border-radius: 4px; border: 1px solid var(--border); background: var(--bg-muted);
+    }
+
+    /* ================================================
+       ANNOTATION STRIP
+       ================================================ */
+    .annotation-strip {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: var(--chat-color); color: white;
+      font-size: 12px; font-weight: 500; text-align: center;
+      padding: 6px 12px;
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+    }
+    .annotation-strip code {
+      background: hsla(0,0%,100%,0.2); padding: 1px 6px;
+      border-radius: 3px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    .slide-up { animation: slideUp 0.25s ease-out; }
+  </style>
+</head>
+<body>
+
+<div class="annotation-strip">
+  <span>MeepleCard Chat &mdash; Integrated Interface Mockup</span>
+  <code>entity: chatSession</code>
+  <code>color: 220 80% 55%</code>
+  <span>Sidebar (List) + Chat Panel con input/output interattivo</span>
+</div>
+
+<div class="app-shell" id="appShell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="top-row">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chat
+          <span class="chat-count">5</span>
+        </h2>
+        <div class="header-actions">
+          <button class="icon-btn" title="Nuova chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="icon-btn" title="Toggle Theme" onclick="toggleTheme()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="Cerca conversazioni...">
+      </div>
+    </div>
+
+    <div class="filter-tabs">
+      <button class="filter-tab active">Tutte</button>
+      <button class="filter-tab">Attive</button>
+      <button class="filter-tab">Archiviate</button>
+    </div>
+
+    <div class="chat-list" id="chatList">
+      <div class="chat-item selected has-unread" data-index="0" onclick="selectChat(0)">
+        <div class="agent-avatar"><span>&#129302;</span><div class="status-ring active"></div></div>
+        <div class="item-content">
+          <div class="item-header">
+            <span class="item-title">RuleBot &middot; Catan</span>
+            <span class="item-time">2 min</span>
+          </div>
+          <div class="item-bottom">
+            <span class="item-preview"><span class="sender">AI:</span> No, il porto generico offre 3:1...</span>
+            <span class="unread-badge">3</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-item" data-index="1" onclick="selectChat(1)">
+        <div class="agent-avatar amber"><span>&#129302;</span><div class="status-ring active"></div></div>
+        <div class="item-content">
+          <div class="item-header">
+            <span class="item-title">StrategyMaster &middot; Brass</span>
+            <span class="item-time">1h</span>
+          </div>
+          <div class="item-bottom">
+            <span class="item-preview"><span class="sender">Tu:</span> Conviene costruire cotonifici prima?</span>
+            <span class="game-tag"><span class="dot"></span>Brass</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-item has-unread" data-index="2" onclick="selectChat(2)">
+        <div class="agent-avatar slate"><span>&#129302;</span><div class="status-ring active"></div></div>
+        <div class="item-content">
+          <div class="item-header">
+            <span class="item-title">SetupHelper &middot; Gloomhaven</span>
+            <span class="item-time">25 min</span>
+          </div>
+          <div class="item-bottom">
+            <span class="item-preview"><span class="sender">AI:</span> Per 3 giocatori nella stanza 2...</span>
+            <span class="unread-badge">1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-item" data-index="3" onclick="selectChat(3)">
+        <div class="agent-avatar"><span>&#129302;</span></div>
+        <div class="item-content">
+          <div class="item-header">
+            <span class="item-title">RuleBot &middot; Terraforming Mars</span>
+            <span class="item-time">ieri</span>
+          </div>
+          <div class="item-bottom">
+            <span class="item-preview"><span class="sender">AI:</span> Il progresso tecnologico si gestisce...</span>
+            <span class="game-tag"><span class="dot"></span>TfM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-item" data-index="4" onclick="selectChat(4)" style="opacity:0.6">
+        <div class="agent-avatar slate"><span>&#129302;</span></div>
+        <div class="item-content">
+          <div class="item-header">
+            <span class="item-title">SetupHelper &middot; Spirit Island</span>
+            <span class="item-time">3g</span>
+          </div>
+          <div class="item-bottom">
+            <span class="item-preview"><span class="sender">Tu:</span> Quali spiriti consigli per 2 giocatori?</span>
+            <span class="game-tag" style="background:hsla(220,9%,46%,0.15);color:var(--text-muted);"><span class="dot" style="background:var(--text-muted);"></span>Archiviata</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CHAT PANEL -->
+  <main class="chat-panel" id="chatPanel">
+
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="agent-avatar sm"><span>&#129302;</span><div class="status-ring active"></div></div>
+        <div class="chat-header-info">
+          <div class="chat-header-title">
+            RuleBot
+            <span class="model-badge">GPT-4o</span>
+            <span class="status-badge active"><span class="pulse-dot"></span>Online</span>
+          </div>
+          <div class="chat-header-meta">Esperto regolamenti &middot; Risposte basate su RAG</div>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="icon-btn" title="Esporta chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        </button>
+        <button class="icon-btn" title="Archivia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 8-2-2H5L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+        </button>
+        <button class="icon-btn" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="context-bar">
+      <a class="game-link" href="#"><span class="dot"></span>Catan &mdash; Il gioco base</a>
+      <div class="context-stats" id="contextStats">
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span id="msgCountStat">24 messaggi</span>
+        </span>
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          12 min
+        </span>
+        <span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          6 regole citate
+        </span>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages-area" id="messagesArea">
+      <!-- Static initial messages rendered in HTML (safe, no dynamic injection) -->
+    </div>
+
+    <!-- Input -->
+    <div class="input-bar">
+      <div class="input-wrapper">
+        <textarea id="messageInput" placeholder="Chiedi qualcosa sulle regole di Catan..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4zM22 2 11 13"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">
+        <span>RuleBot risponde in base al regolamento ufficiale di Catan</span>
+        <span><kbd>Enter</kbd> invia &middot; <kbd>Shift+Enter</kbd> nuova riga</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ============================================================
+  // SAFE DOM HELPERS (no innerHTML with user content)
+  // ============================================================
+  function createEl(tag, className, textContent) {
+    var el = document.createElement(tag);
+    if (className) el.className = className;
+    if (textContent) el.textContent = textContent;
+    return el;
+  }
+
+  function createAgentMiniAvatar() {
+    var av = createEl('span', 'agent-mini-avatar');
+    av.textContent = '\u{1F916}';
+    return av;
+  }
+
+  // Build a message group with safe DOM methods
+  function buildMessageGroup(sender, segments, timeStr) {
+    var group = createEl('div', 'message-group ' + sender + ' slide-up');
+
+    // Label
+    var label = createEl('div', 'group-label');
+    if (sender === 'agent') {
+      label.appendChild(createAgentMiniAvatar());
+      label.appendChild(document.createTextNode('RuleBot'));
+    } else {
+      label.textContent = 'Tu';
+    }
+    group.appendChild(label);
+
+    // Bubble
+    var bubble = createEl('div', 'bubble ' + sender + ' single');
+
+    // segments is an array of {type: 'text'|'bold'|'br'|'emoji', value: string}
+    segments.forEach(function(seg) {
+      if (seg.type === 'bold') {
+        var b = document.createElement('strong');
+        b.textContent = seg.value;
+        bubble.appendChild(b);
+      } else if (seg.type === 'br') {
+        bubble.appendChild(document.createElement('br'));
+      } else if (seg.type === 'text' || seg.type === 'emoji') {
+        bubble.appendChild(document.createTextNode(seg.value));
+      }
+    });
+
+    if (timeStr) {
+      var time = createEl('span', 'time', timeStr);
+      bubble.appendChild(time);
+    }
+
+    group.appendChild(bubble);
+    return group;
+  }
+
+  function buildTypingIndicator() {
+    var group = createEl('div', 'message-group agent fade-in');
+    group.id = 'typingIndicator';
+
+    var label = createEl('div', 'group-label');
+    label.appendChild(createAgentMiniAvatar());
+    label.appendChild(document.createTextNode('RuleBot'));
+    group.appendChild(label);
+
+    var tb = createEl('div', 'typing-bubble');
+    for (var i = 0; i < 3; i++) {
+      tb.appendChild(createEl('span', 'typing-dot'));
+    }
+    group.appendChild(tb);
+    return group;
+  }
+
+  // Parse simple markdown-like text into segments
+  function parseSegments(text) {
+    var segments = [];
+    var parts = text.split(/(\*\*.*?\*\*|\n)/g);
+    parts.forEach(function(part) {
+      if (!part) return;
+      if (part === '\n') {
+        segments.push({type: 'br'});
+      } else if (part.startsWith('**') && part.endsWith('**')) {
+        segments.push({type: 'bold', value: part.slice(2, -2)});
+      } else {
+        segments.push({type: 'text', value: part});
+      }
+    });
+    return segments;
+  }
+
+  // ============================================================
+  // INITIAL MESSAGES (rendered safely via DOM)
+  // ============================================================
+  var messagesArea = document.getElementById('messagesArea');
+
+  // Welcome card
+  (function() {
+    var card = createEl('div', 'welcome-card');
+    var av = createEl('div', 'welcome-avatar');
+    av.textContent = '\u{1F916}';
+    card.appendChild(av);
+    card.appendChild(createEl('h4', '', 'RuleBot'));
+
+    var p = createEl('p');
+    p.appendChild(document.createTextNode('Ciao! Sono specializzato nelle regole di '));
+    var strong = document.createElement('strong');
+    strong.textContent = 'Catan';
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode('. Chiedimi qualsiasi cosa sul regolamento, setup, varianti o FAQ.'));
+    card.appendChild(p);
+
+    var chips = createEl('div', 'welcome-chips');
+    ['Regole base', 'Setup', 'Espansioni', 'FAQ'].forEach(function(t) {
+      chips.appendChild(createEl('span', 'welcome-chip', t));
+    });
+    card.appendChild(chips);
+    messagesArea.appendChild(card);
+  })();
+
+  // Date divider
+  var divider = createEl('div', 'system-msg', 'Oggi, 14:32');
+  messagesArea.appendChild(divider);
+
+  // Initial conversation
+  var initialMsgs = [
+    { sender: 'user', text: 'Come funzionano gli scambi commerciali nei porti?' },
+    { sender: 'agent', text: 'In Catan, i **porti** offrono tariffe di scambio migliori rispetto al commercio standard 4:1 con la banca:\n\n**Porto generico (3:1)** \u2014 Scambi 3 risorse uguali qualsiasi per 1 risorsa a scelta.\n\n**Porto specializzato (2:1)** \u2014 Scambi 2 risorse del tipo indicato per 1 risorsa a scelta. Esistono porti per: Legno, Argilla, Lana, Grano, Minerale.\n\nPer utilizzare un porto, devi avere un insediamento o una citta costruita su un angolo adiacente al porto.', time: '14:33' },
+    { sender: 'user', text: 'Posso scambiare 2:1 con qualsiasi risorsa al porto generico?' },
+    { sender: 'agent', text: 'No, il **porto generico** offre un rapporto **3:1**, non 2:1. Solo i **porti specializzati** offrono il rapporto 2:1, ma esclusivamente per la risorsa indicata.\n\nEsempio: Se hai il porto del Grano (2:1), puoi scambiare 2 Grano per 1 risorsa qualsiasi. Ma per le altre risorse, al porto generico servono sempre 3 unita.', time: '14:34' },
+    { sender: 'user', text: 'E gli scambi tra giocatori? Ci sono limiti?' },
+    { sender: 'agent', text: '\u2705 Puoi proporre scambi **solo durante il tuo turno**\n\u2705 Puoi scambiare **qualsiasi quantita e tipo** di risorse\n\u2705 Entrambi i giocatori devono essere **d\'accordo**\n\u274C Non puoi fare **donazioni** (scambi senza ricevere nulla)\n\u274C Non puoi fare **promesse future** ("ti do legno al prossimo turno")\n\nI giocatori non coinvolti nel turno corrente possono proporre contro-offerte al giocatore attivo, ma non possono commerciare tra di loro.', time: '14:35' }
+  ];
+
+  initialMsgs.forEach(function(msg) {
+    var segments = parseSegments(msg.text);
+    var group = buildMessageGroup(msg.sender, segments, msg.time || null);
+    messagesArea.appendChild(group);
+  });
+
+  // ============================================================
+  // SIMULATED AI RESPONSES
+  // ============================================================
+  var agentResponses = [
+    "Ottima domanda! In Catan, il **ladro** si muove quando un giocatore tira un 7 o gioca una carta Cavaliere. Il ladro blocca la produzione dell'esagono su cui viene piazzato e il giocatore che lo muove puo rubare 1 risorsa a caso da un giocatore con un insediamento/citta adiacente.",
+    "Le **citta** producono 2 risorse invece di 1 quando l'esagono adiacente viene attivato dal lancio dei dadi. Per costruire una citta serve: 2 Grano + 3 Minerale. La citta sostituisce un insediamento esistente.",
+    "La **strada piu lunga** vale 2 punti vittoria e richiede almeno 5 segmenti di strada consecutivi. Se un altro giocatore costruisce una strada piu lunga, il bonus si trasferisce a lui. Le biforcazioni contano: si misura il percorso piu lungo senza tornare indietro.",
+    "Per vincere a Catan servono **10 punti vittoria**. I punti si ottengono da: Insediamenti (1 PV), Citta (2 PV), Strada piu lunga (2 PV), Esercito piu grande (2 PV), Carte Punto Vittoria. I punti delle carte PV restano segreti fino a quando non dichiari la vittoria!",
+    "Il **setup iniziale** funziona cosi: i giocatori piazzano a turno 1 insediamento + 1 strada. Poi, in ordine inverso, piazzano il secondo insediamento + strada. Il secondo insediamento produce le risorse iniziali. Consiglio: diversifica i numeri e le risorse!",
+    "Le **carte sviluppo** si comprano con 1 Lana + 1 Grano + 1 Minerale. Tipi: Cavaliere (14 carte), Progresso (6 carte: Strada, Scoperta, Monopolio), Punto Vittoria (5 carte). Non puoi giocare una carta sviluppo nello stesso turno in cui l'hai comprata."
+  ];
+  var responseIndex = 0;
+  var msgCount = 24;
+
+  // ============================================================
+  // THEME
+  // ============================================================
+  function toggleTheme() {
+    var html = document.documentElement;
+    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  }
+
+  // ============================================================
+  // CHAT SELECTION
+  // ============================================================
+  function selectChat(index) {
+    document.querySelectorAll('.chat-item').forEach(function(item, i) {
+      item.classList.toggle('selected', i === index);
+      if (i === index) {
+        item.classList.remove('has-unread');
+        var badge = item.querySelector('.unread-badge');
+        if (badge) badge.style.display = 'none';
+      }
+    });
+  }
+
+  // ============================================================
+  // INPUT
+  // ============================================================
+  var messageInput = document.getElementById('messageInput');
+  var sendBtn = document.getElementById('sendBtn');
+
+  messageInput.addEventListener('input', function() {
+    sendBtn.disabled = messageInput.value.trim() === '';
+  });
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (messageInput.value.trim()) sendMessage();
+    }
+  }
+
+  // ============================================================
+  // SEND + RESPONSE
+  // ============================================================
+  function sendMessage() {
+    var text = messageInput.value.trim();
+    if (!text) return;
+
+    // User bubble (safe: textContent only)
+    var userSegments = [{type: 'text', value: text}];
+    messagesArea.appendChild(buildMessageGroup('user', userSegments, null));
+    msgCount++;
+
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+    sendBtn.disabled = true;
+    scrollToBottom();
+
+    // Typing indicator
+    messagesArea.appendChild(buildTypingIndicator());
+    scrollToBottom();
+
+    // Simulated response
+    var delay = 1200 + Math.random() * 1500;
+    setTimeout(function() {
+      var typing = document.getElementById('typingIndicator');
+      if (typing) typing.remove();
+
+      var response = agentResponses[responseIndex % agentResponses.length];
+      responseIndex++;
+
+      var now = new Date();
+      var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+      var agentSegments = parseSegments(response);
+      messagesArea.appendChild(buildMessageGroup('agent', agentSegments, timeStr));
+      msgCount++;
+      scrollToBottom();
+
+      // Update sidebar preview (safe: textContent)
+      var selectedPreview = document.querySelector('.chat-item.selected .item-preview');
+      if (selectedPreview) {
+        selectedPreview.textContent = '';
+        var senderSpan = createEl('span', 'sender', 'AI: ');
+        selectedPreview.appendChild(senderSpan);
+        selectedPreview.appendChild(document.createTextNode(response.replace(/\*\*/g, '').substring(0, 45) + '...'));
+      }
+      var selectedTime = document.querySelector('.chat-item.selected .item-time');
+      if (selectedTime) selectedTime.textContent = 'ora';
+
+      // Update message count in context bar
+      var statEl = document.getElementById('msgCountStat');
+      if (statEl) statEl.textContent = msgCount + ' messaggi';
+    }, delay);
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(function() {
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    });
+  }
+
+  // Initial scroll + focus
+  window.addEventListener('load', function() {
+    scrollToBottom();
+    messageInput.focus();
+  });
+</script>
+
+</body>
+</html>

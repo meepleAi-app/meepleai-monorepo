@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleCard Chat - Mockup Interattivo</title>
+  <style>
+    /* ================================================
+       DESIGN TOKENS (from MeepleCard system)
+       ================================================ */
+    :root {
+      /* chatSession entity color */
+      --chat-h: 220;
+      --chat-s: 80%;
+      --chat-l: 55%;
+      --chat-color: hsl(var(--chat-h) var(--chat-s) var(--chat-l));
+      --chat-color-10: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.1);
+      --chat-color-15: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.15);
+      --chat-color-20: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.2);
+      --chat-color-30: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.3);
+      --chat-color-40: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.4);
+      --chat-color-60: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.6);
+      --chat-color-90: hsla(var(--chat-h), var(--chat-s), var(--chat-l), 0.9);
+
+      /* Agent entity color (for agent badge) */
+      --agent-color: hsl(38 92% 50%);
+      --agent-color-20: hsla(38, 92%, 50%, 0.2);
+
+      /* Game entity color */
+      --game-color: hsl(25 95% 45%);
+
+      /* Status colors */
+      --status-active: hsl(142 71% 45%);
+      --status-waiting: hsl(45 93% 47%);
+      --status-archived: hsl(220 9% 46%);
+      --status-closed: hsl(0 84% 60%);
+
+      /* Unread badge */
+      --unread-bg: hsl(220 80% 55%);
+      --unread-text: white;
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg-page: hsl(0 0% 96%);
+      --bg-card: hsl(0 0% 100%);
+      --bg-card-90: hsla(0, 0%, 100%, 0.9);
+      --bg-muted: hsl(220 14% 96%);
+      --bg-hover: hsl(220 14% 92%);
+      --text-primary: hsl(222 47% 11%);
+      --text-secondary: hsl(215 16% 47%);
+      --text-muted: hsl(215 16% 57%);
+      --border: hsl(214 32% 91%);
+      --border-hover: hsl(214 32% 82%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 8px 10px rgba(0,0,0,0.04);
+      --glass-bg: hsla(0, 0%, 100%, 0.85);
+      --glass-border: hsla(0, 0%, 100%, 0.6);
+      --chip-bg: hsl(220 14% 96%);
+      --chip-text: hsl(215 16% 37%);
+    }
+
+    /* Dark theme */
+    [data-theme="dark"] {
+      --bg-page: hsl(222 47% 6%);
+      --bg-card: hsl(222 47% 11%);
+      --bg-card-90: hsla(222, 47%, 11%, 0.9);
+      --bg-muted: hsl(217 33% 17%);
+      --bg-hover: hsl(217 33% 22%);
+      --text-primary: hsl(210 40% 98%);
+      --text-secondary: hsl(215 20% 65%);
+      --text-muted: hsl(215 16% 47%);
+      --border: hsl(217 33% 18%);
+      --border-hover: hsl(217 33% 28%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.2);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.3), 0 4px 6px rgba(0,0,0,0.2);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.35), 0 8px 10px rgba(0,0,0,0.2);
+      --glass-bg: hsla(222, 47%, 14%, 0.85);
+      --glass-border: hsla(222, 47%, 20%, 0.6);
+      --chip-bg: hsl(217 33% 17%);
+      --chip-text: hsl(215 20% 65%);
+    }
+
+    /* ================================================
+       BASE STYLES
+       ================================================ */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding: 32px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ================================================
+       HEADER
+       ================================================ */
+    .mockup-header {
+      max-width: 1200px;
+      margin: 0 auto 48px;
+      text-align: center;
+    }
+
+    .mockup-header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--chat-color), hsl(260 80% 60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .mockup-header p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+      color: var(--text-primary);
+      font-size: 14px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s;
+    }
+    .theme-toggle:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-hover);
+    }
+
+    /* ================================================
+       SECTION LAYOUT
+       ================================================ */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto 64px;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .section-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--chat-color-15);
+      color: var(--chat-color);
+    }
+
+    /* ================================================
+       GRID LAYOUTS
+       ================================================ */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 24px;
+    }
+
+    .card-list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 420px;
+    }
+
+    .card-compact-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 320px;
+    }
+
+    .card-featured-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 24px;
+    }
+
+    .card-hero-container {
+      max-width: 800px;
+    }
+
+    .context-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .context-row { grid-template-columns: 1fr; }
+    }
+
+    /* ================================================
+       SHARED CARD STYLES
+       ================================================ */
+
+    /* Entity badge (vertical text) */
+    .entity-badge {
+      position: absolute;
+      left: 0;
+      top: 12px;
+      z-index: 10;
+      writing-mode: vertical-lr;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 6px 3px;
+      background: var(--chat-color);
+      color: white;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* Status dot */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.active { background: var(--status-active); box-shadow: 0 0 6px var(--status-active); }
+    .status-dot.waiting { background: var(--status-waiting); box-shadow: 0 0 6px var(--status-waiting); }
+    .status-dot.archived { background: var(--status-archived); }
+    .status-dot.closed { background: var(--status-closed); }
+
+    .status-dot.pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Unread badge */
+    .unread-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: var(--unread-bg);
+      color: var(--unread-text);
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Agent avatar */
+    .agent-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--chat-color), hsl(260 70% 55%));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: white;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .agent-avatar.large {
+      width: 48px;
+      height: 48px;
+      font-size: 20px;
+    }
+
+    .agent-avatar .status-ring {
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-card);
+    }
+    .agent-avatar .status-ring.active { background: var(--status-active); }
+    .agent-avatar .status-ring.waiting { background: var(--status-waiting); }
+
+    /* Model badge */
+    .model-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--agent-color-20);
+      color: var(--agent-color);
+      white-space: nowrap;
+    }
+
+    /* Game context chip */
+    .game-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+    .game-chip .game-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--game-color);
+      flex-shrink: 0;
+    }
+
+    /* Message preview */
+    .message-preview {
+      font-size: 13px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .message-preview .sender {
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Metadata chips */
+    .meta-chips {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .meta-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .meta-chip svg {
+      width: 13px;
+      height: 13px;
+      opacity: 0.7;
+    }
+
+    /* Quick actions (hover-reveal) */
+    .quick-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .quick-action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--glass-bg);
+      backdrop-filter: blur(8px);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      border: 1px solid var(--glass-border);
+    }
+    .quick-action-btn:hover {
+      background: var(--chat-color-20);
+      color: var(--chat-color);
+      transform: scale(1.1);
+    }
+    .quick-action-btn.danger:hover {
+      background: hsla(0, 84%, 60%, 0.15);
+      color: hsl(0 84% 60%);
+    }
+    .quick-action-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ================================================
+       VARIANT: GRID (7:10 ratio)
+       ================================================ */
+    .chat-card-grid {
+      position: relative;
+      aspect-ratio: 7/10;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--bg-card-90);
+      backdrop-filter: blur(12px) saturate(180%);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--chat-color);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-card-grid:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--chat-color-30);
+    }
+    .chat-card-grid:hover .quick-actions { opacity: 1; }
+
+    .chat-card-grid .card-top {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 16px 12px 24px;
+      gap: 10px;
+    }
+
+    .chat-card-grid .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chat-card-grid .agent-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-card-grid .agent-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-card-grid .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.4;
+    }
+
+    .chat-card-grid .chat-messages-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    .chat-card-grid .chat-bubble {
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      max-width: 85%;
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--chat-color);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-bubble.agent {
+      align-self: flex-start;
+      background: var(--bg-muted);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-card-grid .card-footer {
+      padding: 10px 16px 10px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-muted);
+    }
+
+    /* ================================================
+       VARIANT: LIST (sidebar)
+       ================================================ */
+    .chat-card-list {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--chat-color);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chat-card-list:hover {
+      transform: translateX(4px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--chat-color-30);
+    }
+    .chat-card-list:hover .quick-actions { opacity: 1; }
+    .chat-card-list.has-unread {
+      background: var(--chat-color-10);
+    }
+
+    .chat-card-list .list-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .chat-card-list .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chat-card-list .list-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-card-list.has-unread .list-title {
+      font-weight: 700;
+    }
+
+    .chat-card-list .list-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chat-card-list.has-unread .list-time {
+      color: var(--chat-color);
+      font-weight: 600;
+    }
+
+    .chat-card-list .list-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chat-card-list .list-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ================================================
+       VARIANT: COMPACT (dropdown/widget)
+       ================================================ */
+    .chat-card-compact {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .chat-card-compact:hover {
+      background: var(--bg-hover);
+    }
+    .chat-card-compact:hover .quick-actions { opacity: 1; }
+
+    .chat-card-compact .compact-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--chat-color);
+      flex-shrink: 0;
+    }
+
+    .chat-card-compact .compact-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .chat-card-compact .compact-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-card-compact .compact-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-card-compact .compact-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ================================================
+       VARIANT: FEATURED (16:9)
+       ================================================ */
+    .chat-card-featured {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--chat-color);
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .chat-card-featured:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-xl);
+      border-color: var(--chat-color-40);
+    }
+    .chat-card-featured:hover .quick-actions { opacity: 1; }
+
+    .chat-card-featured .featured-cover {
+      position: relative;
+      aspect-ratio: 16/7;
+      background: linear-gradient(135deg,
+        var(--chat-color-30),
+        hsla(260, 70%, 55%, 0.2),
+        var(--chat-color-15)
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .chat-card-featured .featured-cover .pattern-overlay {
+      position: absolute;
+      inset: 0;
+      opacity: 0.06;
+      background-image:
+        radial-gradient(circle at 20% 30%, var(--chat-color) 1px, transparent 1px),
+        radial-gradient(circle at 80% 70%, var(--chat-color) 1px, transparent 1px),
+        radial-gradient(circle at 50% 50%, var(--chat-color) 0.5px, transparent 0.5px);
+      background-size: 30px 30px, 40px 40px, 20px 20px;
+    }
+
+    .chat-card-featured .featured-cover .conversation-visual {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 20px 32px;
+      width: 100%;
+      max-width: 380px;
+      z-index: 1;
+    }
+
+    .chat-card-featured .conversation-visual .mini-bubble {
+      padding: 6px 14px;
+      border-radius: 14px;
+      font-size: 12px;
+      max-width: 75%;
+      line-height: 1.4;
+      opacity: 0.85;
+    }
+    .mini-bubble.user {
+      align-self: flex-end;
+      background: white;
+      color: hsl(222 47% 11%);
+      border-bottom-right-radius: 4px;
+    }
+    .mini-bubble.agent-msg {
+      align-self: flex-start;
+      background: hsla(0, 0%, 100%, 0.2);
+      backdrop-filter: blur(4px);
+      color: white;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-card-featured .featured-body {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .chat-card-featured .featured-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-card-featured .featured-agent {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-card-featured .featured-agent-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .chat-card-featured .featured-agent-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .chat-card-featured .featured-agent-model {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chat-card-featured .featured-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .chat-card-featured .featured-stats {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .chat-card-featured .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .stat-item svg { width: 15px; height: 15px; opacity: 0.6; }
+    .stat-item .stat-value { font-weight: 600; }
+
+    .chat-card-featured .featured-actions {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .action-btn {
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      transition: all 0.15s;
+    }
+    .action-btn:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-hover);
+    }
+    .action-btn.primary {
+      background: var(--chat-color);
+      color: white;
+      border-color: var(--chat-color);
+    }
+    .action-btn.primary:hover {
+      filter: brightness(1.1);
+    }
+
+    /* ================================================
+       VARIANT: HERO (full-bleed)
+       ================================================ */
+    .chat-card-hero {
+      position: relative;
+      min-height: 320px;
+      border-radius: 20px;
+      overflow: hidden;
+      background: linear-gradient(135deg,
+        hsl(220 80% 20%),
+        hsl(250 60% 25%),
+        hsl(220 70% 18%)
+      );
+      box-shadow: var(--shadow-xl);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .chat-card-hero:hover {
+      transform: scale(1.01);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+    }
+    .chat-card-hero:hover .quick-actions { opacity: 1; }
+
+    .chat-card-hero .hero-pattern {
+      position: absolute;
+      inset: 0;
+      opacity: 0.05;
+      background-image:
+        radial-gradient(circle at 10% 20%, white 1px, transparent 1px),
+        radial-gradient(circle at 90% 80%, white 1px, transparent 1px),
+        radial-gradient(circle at 50% 50%, white 0.5px, transparent 0.5px);
+      background-size: 40px 40px, 50px 50px, 25px 25px;
+    }
+
+    .chat-card-hero .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg,
+        transparent 0%,
+        var(--chat-color-10) 30%,
+        var(--chat-color-60) 70%,
+        var(--chat-color-90) 100%
+      );
+    }
+
+    .chat-card-hero .hero-ribbon {
+      position: absolute;
+      top: 0;
+      right: 40px;
+      width: 36px;
+      padding: 8px 4px 12px;
+      text-align: center;
+      background: var(--chat-color);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      writing-mode: vertical-lr;
+      border-radius: 0 0 6px 6px;
+      z-index: 10;
+    }
+
+    .chat-card-hero .hero-content {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: 320px;
+      padding: 32px;
+      color: white;
+    }
+
+    .chat-card-hero .hero-conversation {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+      max-width: 500px;
+    }
+
+    .hero-bubble {
+      padding: 10px 18px;
+      border-radius: 16px;
+      font-size: 14px;
+      max-width: 80%;
+      line-height: 1.5;
+    }
+    .hero-bubble.user {
+      align-self: flex-end;
+      background: white;
+      color: hsl(222 47% 11%);
+      border-bottom-right-radius: 4px;
+    }
+    .hero-bubble.agent-msg {
+      align-self: flex-start;
+      background: hsla(0, 0%, 100%, 0.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid hsla(0, 0%, 100%, 0.1);
+      color: white;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-card-hero .hero-info {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .chat-card-hero .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-card-hero .hero-agent {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero-agent .agent-avatar {
+      background: hsla(0, 0%, 100%, 0.2);
+      backdrop-filter: blur(4px);
+      border: 2px solid hsla(0, 0%, 100%, 0.3);
+    }
+
+    .chat-card-hero .hero-title {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .chat-card-hero .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    .hero-meta svg { width: 16px; height: 16px; }
+
+    .chat-card-hero .hero-right {
+      display: flex;
+      gap: 8px;
+    }
+
+    .hero-btn {
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+    .hero-btn.primary {
+      background: white;
+      color: hsl(220 80% 35%);
+    }
+    .hero-btn.primary:hover { transform: scale(1.05); }
+    .hero-btn.secondary {
+      background: hsla(0, 0%, 100%, 0.15);
+      color: white;
+      border: 1px solid hsla(0, 0%, 100%, 0.3);
+    }
+    .hero-btn.secondary:hover { background: hsla(0, 0%, 100%, 0.25); }
+
+    /* Quick actions positioning per variant */
+    .chat-card-grid .quick-actions { position: absolute; top: 12px; right: 12px; z-index: 15; }
+    .chat-card-list .quick-actions { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); z-index: 15; }
+    .chat-card-compact .quick-actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 15; }
+    .chat-card-featured .featured-cover .quick-actions { position: absolute; top: 12px; right: 12px; z-index: 15; }
+    .chat-card-hero .quick-actions { position: absolute; top: 16px; right: 16px; z-index: 15; }
+
+    /* ================================================
+       CHAT-SPECIFIC SUB-COMPONENTS
+       ================================================ */
+
+    /* ChatStatusBadge */
+    .chat-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .chat-status-badge.active {
+      background: hsla(142, 71%, 45%, 0.15);
+      color: var(--status-active);
+    }
+    .chat-status-badge.waiting {
+      background: hsla(45, 93%, 47%, 0.15);
+      color: var(--status-waiting);
+    }
+    .chat-status-badge.archived {
+      background: hsla(220, 9%, 46%, 0.15);
+      color: var(--status-archived);
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 3px;
+      padding: 8px 14px;
+      align-self: flex-start;
+      background: var(--bg-muted);
+      border-radius: 12px;
+      border-bottom-left-radius: 4px;
+    }
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      animation: typing 1.4s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* ================================================
+       ANNOTATIONS
+       ================================================ */
+    .annotation {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border: 1px dashed var(--border);
+      background: var(--bg-muted);
+      line-height: 1.5;
+    }
+    .annotation code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: var(--chat-color-15);
+      color: var(--chat-color);
+    }
+
+    /* Divider */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px auto;
+      max-width: 1200px;
+    }
+
+    /* SVG icons inline */
+    .icon { display: inline-flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()">
+  <span id="theme-icon">&#9790;</span> Toggle Theme
+</button>
+
+<div class="mockup-header">
+  <h1>MeepleCard &mdash; Chat Variant</h1>
+  <p>Entity type: <code>chatSession</code> &bull; Color: Blue <code>220 80% 55%</code> &bull; Conversazione con AI Agent</p>
+</div>
+
+<!-- ================================================
+     SECTION 1: GRID VARIANT (Dashboard)
+     ================================================ -->
+<div class="section">
+  <div class="section-title">
+    <span class="section-badge">Grid</span>
+    Variant: Grid &mdash; Dashboard Overview
+  </div>
+  <p class="section-subtitle">Panoramica conversazioni attive/recenti. Aspect ratio 7:10, glass morphism, hover lift.</p>
+
+  <div class="card-grid">
+
+    <!-- Card 1: Active chat with unread -->
+    <div class="chat-card-grid">
+      <div class="entity-badge">Chat</div>
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="Archivia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 8-2-2H5L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+        </button>
+        <button class="quick-action-btn danger" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+
+      <div class="card-top">
+        <div class="card-header">
+          <div class="agent-info">
+            <div class="agent-avatar">
+              <span>&#129302;</span>
+              <div class="status-ring active"></div>
+            </div>
+            <div>
+              <div class="agent-name">RuleBot</div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span class="model-badge">GPT-4o</span>
+                <span class="game-chip"><span class="game-dot"></span>Catan</span>
+              </div>
+            </div>
+          </div>
+          <div class="unread-badge">3</div>
+        </div>
+
+        <div class="card-title">Come funzionano gli scambi nel porto?</div>
+
+        <div class="chat-messages-area">
+          <div class="chat-bubble user">Posso scambiare 2:1 con qualsiasi risorsa al porto generico?</div>
+          <div class="chat-bubble agent">No, il porto generico offre un rapporto 3:1. Solo i porti specializzati...</div>
+          <div class="typing-indicator">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="meta-chips">
+          <span class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            24 msg
+          </span>
+          <span class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            2 min fa
+          </span>
+        </div>
+        <div class="chat-status-badge active">
+          <span class="status-dot active pulse"></span>
+          Attiva
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Waiting for response -->
+    <div class="chat-card-grid">
+      <div class="entity-badge">Chat</div>
+
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="Archivia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 8-2-2H5L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+        </button>
+        <button class="quick-action-btn danger" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+
+      <div class="card-top">
+        <div class="card-header">
+          <div class="agent-info">
+            <div class="agent-avatar" style="background: linear-gradient(135deg, hsl(38 92% 50%), hsl(25 95% 45%));">
+              <span>&#129302;</span>
+              <div class="status-ring waiting"></div>
+            </div>
+            <div>
+              <div class="agent-name">StrategyMaster</div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span class="model-badge">Claude 4</span>
+                <span class="game-chip"><span class="game-dot"></span>Brass: Birmingham</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-title">Strategia ottimale per l'era del canale</div>
+
+        <div class="chat-messages-area">
+          <div class="chat-bubble user">Conviene costruire cotonifici o fabbriche di ferro prima?</div>
+          <div class="chat-bubble agent">Dipende dalla posizione iniziale. Se parti da Birmingham, il ferro ha...</div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="meta-chips">
+          <span class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            18 msg
+          </span>
+          <span class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            1h fa
+          </span>
+        </div>
+        <div class="chat-status-badge waiting">
+          <span class="status-dot waiting pulse"></span>
+          In attesa
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Archived -->
+    <div class="chat-card-grid" style="opacity: 0.75;">
+      <div class="entity-badge" style="background: var(--status-archived);">Chat</div>
+
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="Ripristina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+        <button class="quick-action-btn danger" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+
+      <div class="card-top">
+        <div class="card-header">
+          <div class="agent-info">
+            <div class="agent-avatar" style="background: linear-gradient(135deg, hsl(210 40% 55%), hsl(220 50% 45%));">
+              <span>&#129302;</span>
+            </div>
+            <div>
+              <div class="agent-name">SetupHelper</div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span class="model-badge">Gemini 2.5</span>
+                <span class="game-chip"><span class="game-dot"></span>Gloomhaven</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-title">Setup scenario #14 - Frozen Hollow</div>
+
+        <div class="chat-messages-area">
+          <div class="chat-bubble user">Quali mostri vanno piazzati nella stanza 2?</div>
+          <div class="chat-bubble agent">Per 3 giocatori: 2 Living Bones (normal) e 1 Living Corpse (elite)...</div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="meta-chips">
+          <span class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            42 msg
+          </span>
+          <span class="meta-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            3 giorni fa
+          </span>
+        </div>
+        <div class="chat-status-badge archived">
+          <span class="status-dot archived"></span>
+          Archiviata
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="annotation">
+    <strong>Grid variant</strong>: Contesto <strong>Dashboard</strong>. Aspect ratio <code>7:10</code>, glass morphism, entity badge verticale.
+    Chat bubbles in preview, typing indicator per stato "attiva". Quick actions: Archivia + Elimina hover-reveal.
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ================================================
+     SECTION 2: LIST VARIANT (Sidebar)
+     ================================================ -->
+<div class="section">
+  <div class="section-title">
+    <span class="section-badge">List</span>
+    Variant: List &mdash; Sidebar Chat List
+  </div>
+  <p class="section-subtitle">Lista conversazioni stile messaging app. Hover slide-right, unread highlight, agent avatar 32px.</p>
+
+  <div class="card-list-container">
+
+    <!-- Unread chat -->
+    <div class="chat-card-list has-unread">
+      <div class="agent-avatar">
+        <span>&#129302;</span>
+        <div class="status-ring active"></div>
+      </div>
+      <div class="list-content">
+        <div class="list-header">
+          <span class="list-title">RuleBot &middot; Catan</span>
+          <span class="list-time">2 min</span>
+        </div>
+        <div class="list-bottom">
+          <div class="message-preview">
+            <span class="sender">AI:</span> No, il porto generico offre un rapporto 3:1. Solo i porti...
+          </div>
+          <div class="list-right">
+            <span class="unread-badge">3</span>
+          </div>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="Archivia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 8-2-2H5L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+        </button>
+        <button class="quick-action-btn danger" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Read chat, active -->
+    <div class="chat-card-list">
+      <div class="agent-avatar" style="background: linear-gradient(135deg, hsl(38 92% 50%), hsl(25 95% 45%));">
+        <span>&#129302;</span>
+        <div class="status-ring waiting"></div>
+      </div>
+      <div class="list-content">
+        <div class="list-header">
+          <span class="list-title">StrategyMaster &middot; Brass</span>
+          <span class="list-time">1h</span>
+        </div>
+        <div class="list-bottom">
+          <div class="message-preview">
+            <span class="sender">Tu:</span> Conviene costruire cotonifici o fabbriche di ferro prima?
+          </div>
+          <div class="list-right">
+            <span class="game-chip" style="font-size:10px; padding: 1px 6px;"><span class="game-dot"></span>Brass</span>
+          </div>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="Archivia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 8-2-2H5L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+        </button>
+        <button class="quick-action-btn danger" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Archived -->
+    <div class="chat-card-list" style="opacity: 0.65;">
+      <div class="agent-avatar" style="background: linear-gradient(135deg, hsl(210 40% 55%), hsl(220 50% 45%));">
+        <span>&#129302;</span>
+      </div>
+      <div class="list-content">
+        <div class="list-header">
+          <span class="list-title">SetupHelper &middot; Gloomhaven</span>
+          <span class="list-time">3g</span>
+        </div>
+        <div class="list-bottom">
+          <div class="message-preview">
+            <span class="sender">AI:</span> Per 3 giocatori: 2 Living Bones (normal) e 1 Living...
+          </div>
+          <div class="list-right">
+            <div class="chat-status-badge archived" style="font-size:10px; padding:2px 6px;">
+              <span class="status-dot archived" style="width:6px;height:6px;"></span>
+              Archiviata
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="Ripristina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
+        <button class="quick-action-btn danger" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="annotation">
+    <strong>List variant</strong>: Contesto <strong>Sidebar</strong>. Avatar 32px con status ring, message preview con sender indicator.
+    Unread: bg tinted <code>chat-color-10</code> + bold title + blue timestamp + badge contatore.
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ================================================
+     SECTION 3: COMPACT VARIANT (Dropdown/Widget)
+     ================================================ -->
+<div class="section">
+  <div class="section-title">
+    <span class="section-badge">Compact</span>
+    Variant: Compact &mdash; Dropdown / Widget
+  </div>
+  <p class="section-subtitle">Selezione rapida conversazione, no immagine, footprint minimo. Hover background change.</p>
+
+  <div class="card-compact-container" style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); padding: 4px; box-shadow: var(--shadow-sm);">
+
+    <div class="chat-card-compact">
+      <div class="compact-dot"></div>
+      <div class="compact-content">
+        <div class="compact-title">RuleBot &middot; Catan &mdash; Scambi porto</div>
+        <div class="compact-meta">24 messaggi &bull; 2 min fa</div>
+      </div>
+      <div class="compact-right">
+        <span class="unread-badge" style="min-width:18px; height:18px; font-size:10px;">3</span>
+        <span class="status-dot active pulse" style="width:6px;height:6px;"></span>
+      </div>
+    </div>
+
+    <div class="chat-card-compact">
+      <div class="compact-dot" style="background: var(--status-waiting);"></div>
+      <div class="compact-content">
+        <div class="compact-title">StrategyMaster &middot; Brass Birmingham</div>
+        <div class="compact-meta">18 messaggi &bull; 1h fa</div>
+      </div>
+      <div class="compact-right">
+        <span class="status-dot waiting pulse" style="width:6px;height:6px;"></span>
+      </div>
+    </div>
+
+    <div class="chat-card-compact" style="opacity: 0.6;">
+      <div class="compact-dot" style="background: var(--status-archived);"></div>
+      <div class="compact-content">
+        <div class="compact-title">SetupHelper &middot; Gloomhaven</div>
+        <div class="compact-meta">42 messaggi &bull; 3 giorni fa</div>
+      </div>
+      <div class="compact-right">
+        <span class="status-dot archived" style="width:6px;height:6px;"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="annotation">
+    <strong>Compact variant</strong>: Contesto <strong>Dropdown / Widget</strong>. Dot color = chat status, text-only, no image.
+    Minimal footprint per selettore rapido conversazione.
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ================================================
+     SECTION 4: FEATURED VARIANT
+     ================================================ -->
+<div class="section">
+  <div class="section-title">
+    <span class="section-badge">Featured</span>
+    Variant: Featured &mdash; Conversazione in evidenza
+  </div>
+  <p class="section-subtitle">Chat evidenziata con cover visuale e conversation preview. Action buttons, hover lift -8px.</p>
+
+  <div class="card-featured-grid">
+
+    <div class="chat-card-featured">
+      <div class="entity-badge" style="top:16px;">Chat</div>
+
+      <div class="featured-cover">
+        <div class="pattern-overlay"></div>
+        <div class="quick-actions">
+          <button class="quick-action-btn" title="Archivia" style="background:hsla(0,0%,100%,0.15); border-color:hsla(0,0%,100%,0.2); color:white;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 8-2-2H5L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+          </button>
+          <button class="quick-action-btn danger" title="Elimina" style="background:hsla(0,0%,100%,0.15); border-color:hsla(0,0%,100%,0.2); color:white;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </div>
+        <div class="conversation-visual">
+          <div class="mini-bubble user">Come si gioca l'azione di costruzione?</div>
+          <div class="mini-bubble agent-msg">L'azione di costruzione ti permette di piazzare un edificio dal tuo player board...</div>
+          <div class="mini-bubble user">E se non ho risorse sufficienti?</div>
+        </div>
+      </div>
+
+      <div class="featured-body">
+        <div class="featured-header">
+          <div class="featured-agent">
+            <div class="agent-avatar large">
+              <span>&#129302;</span>
+              <div class="status-ring active" style="width:14px;height:14px;bottom:-2px;right:-2px;border-width:2px;"></div>
+            </div>
+            <div class="featured-agent-info">
+              <div class="featured-agent-name">RuleBot</div>
+              <div class="featured-agent-model">
+                <span class="model-badge">GPT-4o</span>
+                <span class="game-chip"><span class="game-dot"></span>Brass: Birmingham</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="featured-title">Guida completa alle azioni di costruzione in Brass: Birmingham</div>
+
+        <div class="featured-stats">
+          <div class="stat-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span class="stat-value">47</span> messaggi
+          </div>
+          <div class="stat-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span class="stat-value">35 min</span> durata
+          </div>
+          <div class="stat-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <span class="stat-value">12</span> regole citate
+          </div>
+
+          <div class="featured-actions">
+            <button class="action-btn primary">Continua Chat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="annotation">
+    <strong>Featured variant</strong>: Contesto <strong>Evidenza</strong>. Cover <code>16:7</code> con conversation preview,
+    gradient pattern, agent info large (48px), statistiche conversazione, CTA "Continua Chat".
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ================================================
+     SECTION 5: HERO VARIANT
+     ================================================ -->
+<div class="section">
+  <div class="section-title">
+    <span class="section-badge">Hero</span>
+    Variant: Hero &mdash; Spotlight Chat
+  </div>
+  <p class="section-subtitle">Full-bleed con gradient overlay, ribbon entity, conversation showcase. Min-height 320px, scale on hover.</p>
+
+  <div class="card-hero-container">
+
+    <div class="chat-card-hero">
+      <div class="hero-pattern"></div>
+      <div class="hero-gradient"></div>
+      <div class="hero-ribbon">CHAT</div>
+
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="Archivia" style="background:hsla(0,0%,100%,0.15); border-color:hsla(0,0%,100%,0.2); color:white;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 8-2-2H5L3 8M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+        </button>
+        <button class="quick-action-btn danger" title="Elimina" style="background:hsla(0,0%,100%,0.15); border-color:hsla(0,0%,100%,0.2); color:white;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+
+      <div class="hero-content">
+        <div class="hero-conversation">
+          <div class="hero-bubble user">Quali sono le regole per lo sviluppo tecnologico?</div>
+          <div class="hero-bubble agent-msg">In Terraforming Mars, il progresso tecnologico si gestisce attraverso le carte progetto. Ogni carta ha un costo in MegaCrediti e potenzialmente prerequisiti di temperatura, ossigeno o oceani...</div>
+        </div>
+
+        <div class="hero-info">
+          <div class="hero-left">
+            <div class="hero-agent">
+              <div class="agent-avatar large" style="background: hsla(0,0%,100%,0.2); backdrop-filter:blur(4px); border: 2px solid hsla(0,0%,100%,0.3);">
+                <span>&#129302;</span>
+                <div class="status-ring active" style="border-color: transparent; width:14px; height:14px;"></div>
+              </div>
+              <div>
+                <div class="hero-title">Terraforming Mars &mdash; Masterclass Regole</div>
+                <div class="hero-meta" style="margin-top: 4px;">
+                  <span style="display:flex; align-items:center; gap:4px;">
+                    <span class="model-badge" style="background: hsla(0,0%,100%,0.2); color: white;">Claude 4</span>
+                    RuleBot
+                  </span>
+                  <span style="display:flex; align-items:center; gap:4px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    86 messaggi
+                  </span>
+                  <span style="display:flex; align-items:center; gap:4px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    1h 23m
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-right">
+            <button class="hero-btn secondary">Esporta</button>
+            <button class="hero-btn primary">Continua Chat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="annotation">
+    <strong>Hero variant</strong>: Contesto <strong>Spotlight</strong>. Full-bleed gradient <code>chat-color</code>,
+    ribbon entity, conversation showcase, CTA buttons. Scale <code>1.01</code> on hover.
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ================================================
+     SECTION 6: PROPS & SUB-COMPONENTS SPEC
+     ================================================ -->
+<div class="section">
+  <div class="section-title">
+    <span class="section-badge">Spec</span>
+    Nuove Props & Sub-Components
+  </div>
+  <p class="section-subtitle">Specifiche tecniche per estendere MeepleCard con le feature chat-specific.</p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--chat-color);">Nuove Props (chatSession)</h3>
+      <pre style="font-size: 12px; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; font-family: 'SF Mono', 'Fira Code', monospace;">
+chatStatus?: 'active' | 'waiting' | 'archived' | 'closed'
+
+chatAgent?: {
+  name: string
+  avatarUrl?: string
+  modelName: string
+}
+
+chatGame?: {
+  name: string
+  id: string
+}
+
+chatStats?: {
+  messageCount: number
+  duration?: string
+  lastMessageAt: string
+  rulesCount?: number
+}
+
+chatPreview?: {
+  messages: Array&lt;{
+    sender: 'user' | 'agent'
+    text: string
+  }&gt;
+  isTyping?: boolean
+}
+
+unreadCount?: number</pre>
+    </div>
+
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--chat-color);">Sub-Components</h3>
+      <div style="font-size: 13px; line-height: 1.8; color: var(--text-secondary);">
+        <p><strong style="color:var(--text-primary);">ChatStatusBadge</strong><br>
+        Stati: active (green pulse), waiting (yellow pulse), archived (gray), closed (red)<br>
+        Pattern: identico a AgentStatusBadge</p>
+
+        <p style="margin-top:12px;"><strong style="color:var(--text-primary);">ChatMessagePreview</strong><br>
+        Bubble-style preview con sender indicator (Tu/AI).<br>
+        Typing indicator animato per stato "active"</p>
+
+        <p style="margin-top:12px;"><strong style="color:var(--text-primary);">ChatUnreadBadge</strong><br>
+        Badge numerico circolare, chat-color bg.<br>
+        Highlight su list variant (bg tinted)</p>
+
+        <p style="margin-top:12px;"><strong style="color:var(--text-primary);">ChatGameContext</strong><br>
+        Chip con dot arancione (game entity color).<br>
+        Link al gioco associato</p>
+
+        <p style="margin-top:12px;"><strong style="color:var(--text-primary);">ChatStatsDisplay</strong><br>
+        Message count, durata, rules cited.<br>
+        Layout: horizontal | vertical (come AgentStatsDisplay)</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-icon').textContent = next === 'dark' ? '\u263E' : '\u2600';
+}
+</script>
+
+</body>
+</html>

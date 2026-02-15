@@ -98,6 +98,20 @@ internal class EmailQueueRepository : RepositoryBase, IEmailQueueRepository
             .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<int> GetRecentCountByUserIdAsync(Guid userId, DateTime since, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<EmailQueueEntity>()
+            .AsNoTracking()
+            .CountAsync(e => e.UserId == userId && e.CreatedAt >= since, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<bool> ExistsSimilarRecentAsync(Guid userId, string subject, DateTime since, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<EmailQueueEntity>()
+            .AsNoTracking()
+            .AnyAsync(e => e.UserId == userId && e.Subject == subject && e.CreatedAt >= since, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<EmailQueueEntity>()

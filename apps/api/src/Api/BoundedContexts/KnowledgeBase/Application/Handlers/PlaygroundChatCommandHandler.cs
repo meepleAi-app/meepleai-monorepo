@@ -77,10 +77,17 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         var totalStopwatch = Stopwatch.StartNew();
         var pipelineTimings = new List<PlaygroundPipelineStep>();
         var apiTraces = new List<PlaygroundApiTrace>();
+        var logEntries = new List<PlaygroundLogEntry>();
         var stepStopwatch = Stopwatch.StartNew();
+
+        void Log(string level, string source, string message) =>
+            logEntries.Add(new PlaygroundLogEntry(level, source, message, DateTime.UtcNow));
 
         // Resolve effective strategy: command override > agent definition default
         var effectiveStrategy = ResolveStrategy(command.Strategy);
+
+        Log("info", "Pipeline", $"Starting playground chat for agent {command.AgentDefinitionId}");
+        Log("debug", "Strategy", $"Resolved strategy: {effectiveStrategy} (requested: {command.Strategy ?? "null"})");
 
         _logger.LogInformation(
             "Playground chat starting for AgentDefinition {AgentDefinitionId} with strategy {Strategy}",
@@ -115,11 +122,18 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             yield break;
         }
 
+        Log("info", "Agent", $"Loaded agent '{agentDefinition.Name}' (active={agentDefinition.IsActive})");
+        Log("debug", "Agent", $"Config: model={agentDefinition.Config.Model}, temp={agentDefinition.Config.Temperature}, maxTokens={agentDefinition.Config.MaxTokens}");
+        Log("debug", "Agent", $"Prompts: {agentDefinition.Prompts.Count} prompt(s) defined");
+
         // Resolve model/provider overrides
         var effectiveModel = !string.IsNullOrWhiteSpace(command.ModelOverride)
             ? command.ModelOverride
             : agentDefinition.Config.Model;
         var isOverridden = !string.Equals(effectiveModel, agentDefinition.Config.Model, StringComparison.Ordinal);
+
+        if (isOverridden)
+            Log("warn", "Agent", $"Model override active: {agentDefinition.Config.Model} → {effectiveModel}");
 
         var overrideInfo = isOverridden ? $" Model override: {effectiveModel}." : string.Empty;
         yield return CreateEvent(
@@ -158,6 +172,11 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 cacheStatus = "hit";
                 cacheTier = "L1Memory";
                 cacheLatencyMs = 0.01; // In-memory lookup is sub-millisecond
+                Log("info", "Cache", $"Cache HIT for query (key: {cacheKey[..Math.Min(cacheKey.Length, 8)]}..., age: {(DateTime.UtcNow - cachedEntry.CachedAt).TotalSeconds:F0}s)");
+            }
+            else
+            {
+                Log("debug", "Cache", $"Cache MISS for query (key: {cacheKey[..Math.Min(cacheKey.Length, 8)]}...)");
             }
 
             // Evict expired entries lazily
@@ -192,8 +211,10 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     ? (searchResults[0].Content.Length > 500 ? searchResults[0].Content[..500] : searchResults[0].Content)
                     : null));
 
+            Log("info", "RAG", $"Hybrid search completed in {searchStopwatch.ElapsedMilliseconds}ms: {searchResults.Count} results");
             if (searchResults.Count > 0)
             {
+                Log("debug", "RAG", $"Top score: {searchResults.Max(r => r.HybridScore):F3}, min score: {searchResults.Min(r => r.HybridScore):F3}");
                 ragSnippets = searchResults.Select(r => new Snippet(
                     r.Content,
                     $"PDF:{r.PdfDocumentId}",
@@ -394,12 +415,14 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 break;
 
             default: // "SingleModel" or any other - standard flow
+                Log("info", "LLM", $"Starting SingleModel generation with {effectiveModel}");
                 yield return CreateEvent(
                     StreamingEventType.StateUpdate,
                     new StreamingStateUpdate($"Generating response with {effectiveModel}..."));
 
                 var singleClient = _llmProviderFactory.GetClientForModel(effectiveModel);
                 providerName = singleClient.ProviderName;
+                Log("debug", "LLM", $"Provider resolved: {providerName}, prompt size: {Encoding.UTF8.GetByteCount(userPrompt)} bytes");
                 var singleLlmStopwatch = Stopwatch.StartNew();
                 var singlePromptSize = Encoding.UTF8.GetByteCount(systemPrompt) + Encoding.UTF8.GetByteCount(userPrompt);
 
@@ -428,6 +451,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     }
                 }
                 singleLlmStopwatch.Stop();
+                Log("info", "LLM", $"Generation completed in {singleLlmStopwatch.ElapsedMilliseconds}ms ({tokenCount} tokens streamed)");
 
                 // API trace: LLM call
                 apiTraces.Add(new PlaygroundApiTrace(
@@ -468,10 +492,12 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         // 6. Cost calculation
         if (completionTokens == 0 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal)) completionTokens = tokenCount;
         var totalTokens = promptTokens + completionTokens;
+        Log("debug", "Cost", $"Token counts: prompt={promptTokens}, completion={completionTokens}, total={totalTokens}");
 
         var costCalculation = string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal)
             ? LlmCostCalculation.Empty
             : _costCalculator.CalculateCost(effectiveModel, providerName, promptTokens, completionTokens);
+        Log("info", "Cost", $"Cost: ${costCalculation.TotalCost:F6} (input: ${costCalculation.InputCost:F6}, output: ${costCalculation.OutputCost:F6}, free: {costCalculation.IsFree})");
 
         // Persist cost log (fire-and-forget, don't block streaming)
         try
@@ -510,6 +536,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
         // 8. Complete with metadata
         totalStopwatch.Stop();
+        Log("info", "Pipeline", $"Pipeline completed in {totalStopwatch.ElapsedMilliseconds}ms (response: {fullResponse.Length} chars)");
 
         yield return CreateEvent(
             StreamingEventType.Complete,
@@ -540,7 +567,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 strategyInfo: strategyInfo,
                 pipelineTimings: pipelineTimings,
                 cacheInfo: cacheInfo,
-                apiTraces: apiTraces));
+                apiTraces: apiTraces,
+                logEntries: logEntries));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -645,6 +673,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Issue #4442: Added pipeline timings.
 /// Issue #4443: Added cache info.
 /// Issue #4444: Added API call traces.
+/// Issue #4445: Added structured log entries.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -659,7 +688,8 @@ internal record PlaygroundStreamingComplete(
     PlaygroundStrategyInfo? strategyInfo = null,
     List<PlaygroundPipelineStep>? pipelineTimings = null,
     PlaygroundCacheInfo? cacheInfo = null,
-    List<PlaygroundApiTrace>? apiTraces = null);
+    List<PlaygroundApiTrace>? apiTraces = null,
+    List<PlaygroundLogEntry>? logEntries = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -720,6 +750,16 @@ internal record PlaygroundCacheInfo(
     string? cacheKey,
     double latencyMs,
     int ttlSeconds);
+
+/// <summary>
+/// Structured log entry for developer console.
+/// Issue #4445: Pipeline-level log with level/source metadata.
+/// </summary>
+internal record PlaygroundLogEntry(
+    string level,
+    string source,
+    string message,
+    DateTime timestamp);
 
 /// <summary>
 /// API call trace for playground network inspector.

@@ -92,6 +92,13 @@ export interface ApiTrace {
   responsePreview: string | null;
 }
 
+export interface LogEntry {
+  level: 'info' | 'warn' | 'error' | 'debug';
+  source: string;
+  message: string;
+  timestamp: string;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
@@ -106,6 +113,7 @@ export interface CompletionMetadata {
   pipelineTimings?: PipelineStepTiming[];
   cacheInfo?: CacheInfo;
   apiTraces?: ApiTrace[];
+  logEntries?: LogEntry[];
 }
 
 export interface StreamingError {

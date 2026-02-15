@@ -1,11 +1,12 @@
 /**
- * NotificationBell Component Tests (Issue #2053)
+ * NotificationBell Component Tests (Issue #2053, #4425)
  *
  * Tests for bell icon with badge:
  * - Badge visibility based on unread count
  * - Badge formatting (0 = hidden, 1-9 = number, 10+ = "9+")
  * - Accessibility (ARIA labels)
  * - Auto-fetch on mount
+ * - SSE integration (Issue #4425)
  *
  * Coverage target: 90%+
  */
@@ -15,6 +16,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationBell } from '../NotificationBell';
 import { useNotificationStore } from '@/store/notification/store';
+
+// Track if useNotificationSSE was called
+const mockUseNotificationSSE = vi.fn();
+vi.mock('@/hooks/useNotificationSSE', () => ({
+  useNotificationSSE: (...args: unknown[]) => mockUseNotificationSSE(...args),
+}));
 
 // Mock store with all selectors
 vi.mock('@/store/notification/store', () => ({
@@ -133,5 +140,39 @@ describe('NotificationBell', () => {
 
     const button = screen.getByRole('button');
     expect(button).toHaveAttribute('aria-label', 'Notifications (7 unread)');
+  });
+
+  // SSE Integration Tests (Issue #4425)
+  describe('SSE integration', () => {
+    it('should call useNotificationSSE() on mount', () => {
+      vi.mocked(useNotificationStore).mockImplementation(selector => {
+        const state = { unreadCount: 0, fetchUnreadCount: mockFetchUnreadCount };
+        return typeof selector === 'function' ? selector(state) : state;
+      });
+
+      render(<NotificationBell />);
+
+      expect(mockUseNotificationSSE).toHaveBeenCalledTimes(1);
+    });
+
+    it('should update badge count when store unread count changes', () => {
+      // First render with 0
+      vi.mocked(useNotificationStore).mockImplementation(selector => {
+        const state = { unreadCount: 0, fetchUnreadCount: mockFetchUnreadCount };
+        return typeof selector === 'function' ? selector(state) : state;
+      });
+
+      const { rerender } = render(<NotificationBell />);
+      expect(screen.queryByText(/\d+/)).not.toBeInTheDocument();
+
+      // Simulate store update (as if SSE delivered a new notification)
+      vi.mocked(useNotificationStore).mockImplementation(selector => {
+        const state = { unreadCount: 3, fetchUnreadCount: mockFetchUnreadCount };
+        return typeof selector === 'function' ? selector(state) : state;
+      });
+
+      rerender(<NotificationBell />);
+      expect(screen.getByText('3')).toBeInTheDocument();
+    });
   });
 });

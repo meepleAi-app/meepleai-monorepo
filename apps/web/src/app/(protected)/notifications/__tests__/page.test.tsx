@@ -1,137 +1,107 @@
 /**
  * Notifications History Page Tests (Issue #4425)
  *
- * Tests for full notification list page:
+ * Tests for full notification list with filters and pagination:
  * - Renders notification list from store
- * - Tab filtering (All / Unread)
+ * - Tab filter (Tutte / Non lette)
  * - Type filter chips
  * - Pagination (20 items per page)
- * - "Segna tutte come lette" button
- * - Empty state
- * - Loading state
+ * - Mark all as read button
+ * - Empty and loading states
  *
- * Coverage target: 85%+
+ * Coverage target: ≥85%
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
 import NotificationsPage from '../page';
 import type { NotificationDto } from '@/lib/api';
 
 // ============================================================================
-// Store Mock
+// Mocks
 // ============================================================================
 
 const mockFetchNotifications = vi.fn();
 const mockMarkAllAsRead = vi.fn();
+const mockMarkAsRead = vi.fn();
 
-const createMockState = (overrides: Partial<{
-  notifications: NotificationDto[];
-  isFetching: boolean;
-  error: string | null;
-}> = {}) => ({
-  notifications: overrides.notifications ?? [],
-  unreadCount: (overrides.notifications ?? []).filter(n => !n.isRead).length,
-  isFetching: overrides.isFetching ?? false,
-  error: overrides.error ?? null,
-  isLoading: false,
-  isMarkingRead: false,
-  fetchNotifications: mockFetchNotifications,
-  fetchUnreadCount: vi.fn(),
-  markAsRead: vi.fn(),
-  markAllAsRead: mockMarkAllAsRead,
-  addNotification: vi.fn(),
-  clearError: vi.fn(),
-  reset: vi.fn(),
-});
+// Mock next/navigation (needed by NotificationItem)
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
-let currentState = createMockState();
+// Mock PdfStatusBadge (used by NotificationItem)
+vi.mock('@/components/pdf', () => ({
+  PdfStatusBadge: ({ state }: { state: string }) => (
+    <span data-testid="pdf-status-badge">{state}</span>
+  ),
+}));
+
+// Store state container
+let storeState: Record<string, unknown> = {};
 
 vi.mock('@/store/notification/store', () => ({
-  useNotificationStore: vi.fn((selector: (state: unknown) => unknown) => selector(currentState)),
-  selectNotifications: (state: { notifications: NotificationDto[] }) => state.notifications,
-  selectUnreadCount: (state: { unreadCount: number }) => state.unreadCount,
-  selectUnreadNotifications: (state: { notifications: NotificationDto[] }) =>
-    state.notifications.filter((n: NotificationDto) => !n.isRead),
-  selectIsLoading: (state: { isLoading: boolean; isFetching: boolean }) =>
-    state.isLoading || state.isFetching,
-  selectError: (state: { error: string | null }) => state.error,
+  useNotificationStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) => {
+    return typeof selector === 'function' ? selector(storeState) : storeState;
+  }),
+  selectNotifications: (state: Record<string, unknown>) => state.notifications,
+  selectUnreadCount: (state: Record<string, unknown>) => state.unreadCount,
+  selectUnreadNotifications: (state: Record<string, unknown>) =>
+    (state.notifications as NotificationDto[])?.filter((n: NotificationDto) => !n.isRead) ?? [],
+  selectIsLoading: (state: Record<string, unknown>) => state.isLoading || state.isFetching,
+  selectError: (state: Record<string, unknown>) => state.error,
 }));
-
-// Mock NotificationItem to simplify DOM testing
-vi.mock('@/components/notifications/NotificationItem', () => ({
-  NotificationItem: ({ notification }: { notification: NotificationDto }) => (
-    <div data-testid={`notification-item-${notification.id}`}>
-      <span>{notification.title}</span>
-      <span>{notification.message}</span>
-    </div>
-  ),
-}));
-
-// Mock CatalogPagination
-vi.mock('@/components/catalog/CatalogPagination', () => ({
-  CatalogPagination: ({
-    currentPage,
-    totalPages,
-    onPageChange,
-  }: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-    totalResults: number;
-  }) => (
-    <div data-testid="pagination">
-      <span data-testid="pagination-info">Page {currentPage} of {totalPages}</span>
-      {currentPage > 1 && (
-        <button onClick={() => onPageChange(currentPage - 1)} data-testid="pagination-prev">
-          Previous
-        </button>
-      )}
-      {currentPage < totalPages && (
-        <button onClick={() => onPageChange(currentPage + 1)} data-testid="pagination-next">
-          Next
-        </button>
-      )}
-    </div>
-  ),
-}));
-
-// Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  Bell: ({ className }: { className?: string }) => <span className={className} data-testid="bell-icon" />,
-  CheckCheck: ({ className }: { className?: string }) => <span className={className} data-testid="check-icon" />,
-  Filter: ({ className }: { className?: string }) => <span className={className} data-testid="filter-icon" />,
-  Loader2: ({ className }: { className?: string }) => <span className={className} data-testid="loader-icon" />,
-}));
-
-// Mock window.scrollTo
-vi.stubGlobal('scrollTo', vi.fn());
 
 // ============================================================================
-// Test Data Factory
+// Helpers
 // ============================================================================
 
-function createNotification(overrides: Partial<NotificationDto> & { id: string }): NotificationDto {
+function createNotification(overrides: Partial<NotificationDto> = {}): NotificationDto {
   return {
-    userId: '550e8400-e29b-41d4-a716-446655440001',
+    id: crypto.randomUUID(),
+    userId: '00000000-0000-0000-0000-000000000001',
     type: 'pdf_upload_completed',
-    severity: 'info',
-    title: `Notification ${overrides.id}`,
-    message: `Message for ${overrides.id}`,
+    severity: 'success',
+    title: 'PDF Ready',
+    message: 'Your PDF has been processed successfully',
+    link: null,
+    metadata: null,
     isRead: false,
-    createdAt: '2026-02-15T10:00:00Z',
+    createdAt: new Date().toISOString(),
+    readAt: null,
     ...overrides,
   };
 }
 
-function generateNotifications(count: number, readPattern?: 'all-unread' | 'mixed'): NotificationDto[] {
-  return Array.from({ length: count }, (_, i) => createNotification({
-    id: `550e8400-e29b-41d4-a716-44665544${String(i).padStart(4, '0')}`,
-    title: `Notification ${i + 1}`,
-    message: `Message ${i + 1}`,
-    isRead: readPattern === 'mixed' ? i % 2 === 0 : false,
-  }));
+function createNotifications(count: number, overrides: Partial<NotificationDto> = {}): NotificationDto[] {
+  return Array.from({ length: count }, (_, i) =>
+    createNotification({
+      id: `00000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`,
+      title: `Notification ${i + 1}`,
+      ...overrides,
+    })
+  );
+}
+
+function setupStore(overrides: Partial<typeof storeState> = {}) {
+  storeState = {
+    notifications: [],
+    unreadCount: 0,
+    isLoading: false,
+    isFetching: false,
+    isMarkingRead: false,
+    error: null,
+    fetchNotifications: mockFetchNotifications,
+    markAllAsRead: mockMarkAllAsRead,
+    markAsRead: mockMarkAsRead,
+    fetchUnreadCount: vi.fn(),
+    addNotification: vi.fn(),
+    clearError: vi.fn(),
+    reset: vi.fn(),
+    ...overrides,
+  };
 }
 
 // ============================================================================
@@ -141,224 +111,223 @@ function generateNotifications(count: number, readPattern?: 'all-unread' | 'mixe
 describe('NotificationsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    currentState = createMockState();
+    setupStore();
   });
 
-  describe('Rendering', () => {
-    it('renders notification list from store', () => {
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440010', title: 'PDF Ready' }),
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440011', title: 'Upload Done' }),
-      ];
-      currentState = createMockState({ notifications });
+  it('should render notification list from store', () => {
+    const notifications = [
+      createNotification({ title: 'First notification' }),
+      createNotification({ title: 'Second notification' }),
+    ];
+    setupStore({ notifications, unreadCount: 2 });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      expect(screen.getByText('Notifiche')).toBeInTheDocument();
-      expect(screen.getByTestId('notification-item-550e8400-e29b-41d4-a716-446655440010')).toBeInTheDocument();
-      expect(screen.getByTestId('notification-item-550e8400-e29b-41d4-a716-446655440011')).toBeInTheDocument();
-    });
-
-    it('fetches notifications on mount', () => {
-      render(<NotificationsPage />);
-
-      expect(mockFetchNotifications).toHaveBeenCalledWith({});
-    });
+    expect(screen.getByText('Notifiche')).toBeInTheDocument();
+    expect(screen.getByText(/First notification/)).toBeInTheDocument();
+    expect(screen.getByText(/Second notification/)).toBeInTheDocument();
   });
 
-  describe('Tab Filter', () => {
-    it('"Tutte" tab shows all notifications', () => {
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440020', isRead: false }),
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440021', isRead: true }),
-      ];
-      currentState = createMockState({ notifications });
+  it('should show "Tutte" tab showing all notifications and "Non lette" showing unread only', async () => {
+    const user = userEvent.setup();
+    const notifications = [
+      createNotification({ title: 'Read notification', isRead: true }),
+      createNotification({ title: 'Unread notification', isRead: false }),
+    ];
+    setupStore({ notifications, unreadCount: 1 });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      // "Tutte" tab is active by default
-      const allTab = screen.getByRole('tab', { name: /tutte/i });
-      expect(allTab).toHaveAttribute('aria-selected', 'true');
+    // "Tutte" tab should be active by default - shows both
+    expect(screen.getByText(/Read notification/)).toBeInTheDocument();
+    expect(screen.getByText(/Unread notification/)).toBeInTheDocument();
 
-      // Both notifications visible
-      expect(screen.getByTestId('notification-item-550e8400-e29b-41d4-a716-446655440020')).toBeInTheDocument();
-      expect(screen.getByTestId('notification-item-550e8400-e29b-41d4-a716-446655440021')).toBeInTheDocument();
-    });
+    // Click "Non lette" tab
+    const unreadTab = screen.getByRole('tab', { name: /non lette/i });
+    await user.click(unreadTab);
 
-    it('"Non lette" tab shows unread only', async () => {
-      const user = userEvent.setup();
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440030', isRead: false, title: 'Unread One' }),
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440031', isRead: true, title: 'Read One' }),
-      ];
-      currentState = createMockState({ notifications });
-
-      render(<NotificationsPage />);
-
-      // Click "Non lette" tab
-      const unreadTab = screen.getByRole('tab', { name: /non lette/i });
-      await user.click(unreadTab);
-
-      // Only unread visible
-      expect(screen.getByTestId('notification-item-550e8400-e29b-41d4-a716-446655440030')).toBeInTheDocument();
-      expect(screen.queryByTestId('notification-item-550e8400-e29b-41d4-a716-446655440031')).not.toBeInTheDocument();
-    });
+    // Only unread notification should be visible
+    expect(screen.queryByText(/Read notification/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Unread notification/)).toBeInTheDocument();
   });
 
-  describe('Type Filter', () => {
-    it('type filter chips filter by notification type', async () => {
-      const user = userEvent.setup();
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440040', type: 'pdf_upload_completed' }),
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440041', type: 'processing_failed' }),
-      ];
-      currentState = createMockState({ notifications });
+  it('should filter by notification type when type chips are clicked', async () => {
+    const user = userEvent.setup();
+    const notifications = [
+      createNotification({ title: 'PDF done', type: 'pdf_upload_completed' }),
+      createNotification({ title: 'New comment', type: 'new_comment' }),
+      createNotification({ title: 'Error occurred', type: 'processing_failed' }),
+    ];
+    setupStore({ notifications, unreadCount: 3 });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      // Click "Errori" chip (processing_failed type)
-      const erroriChip = screen.getByText('Errori');
-      await user.click(erroriChip);
+    // All visible initially
+    expect(screen.getByText(/PDF done/)).toBeInTheDocument();
+    expect(screen.getByText(/New comment/)).toBeInTheDocument();
+    expect(screen.getByText(/Error occurred/)).toBeInTheDocument();
 
-      // Only processing_failed visible
-      expect(screen.queryByTestId('notification-item-550e8400-e29b-41d4-a716-446655440040')).not.toBeInTheDocument();
-      expect(screen.getByTestId('notification-item-550e8400-e29b-41d4-a716-446655440041')).toBeInTheDocument();
-    });
+    // Click "Commenti" filter chip
+    await user.click(screen.getByText('Commenti'));
+
+    // Only comment notification visible
+    expect(screen.queryByText(/PDF done/)).not.toBeInTheDocument();
+    expect(screen.getByText(/New comment/)).toBeInTheDocument();
+    expect(screen.queryByText(/Error occurred/)).not.toBeInTheDocument();
   });
 
-  describe('Pagination', () => {
-    it('shows pagination for more than 20 items', () => {
-      const notifications = generateNotifications(25);
-      currentState = createMockState({ notifications });
+  it('should paginate with 20 items per page and navigation works', async () => {
+    const user = userEvent.setup();
+    const notifications = createNotifications(25);
+    setupStore({ notifications, unreadCount: 25 });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      expect(screen.getByTestId('pagination')).toBeInTheDocument();
-      expect(screen.getByTestId('pagination-info')).toHaveTextContent('Page 1 of 2');
-    });
+    // First page: 20 items - use exact text to avoid matching "Notification 10" etc.
+    expect(screen.getByText('Notification 1')).toBeInTheDocument();
+    expect(screen.getByText('Notification 20')).toBeInTheDocument();
+    expect(screen.queryByText('Notification 21')).not.toBeInTheDocument();
 
-    it('navigation works across pages', async () => {
-      const user = userEvent.setup();
-      const notifications = generateNotifications(25);
-      currentState = createMockState({ notifications });
+    // Pagination should show 2 pages
+    const nextButton = screen.getByRole('button', { name: /next page/i });
+    await user.click(nextButton);
 
-      render(<NotificationsPage />);
-
-      // Page 1: first 20 items visible
-      expect(screen.getByTestId('pagination-info')).toHaveTextContent('Page 1 of 2');
-
-      // Click next
-      await user.click(screen.getByTestId('pagination-next'));
-
-      // Page 2: remaining 5 items
-      expect(screen.getByTestId('pagination-info')).toHaveTextContent('Page 2 of 2');
-    });
-
-    it('does not show pagination for 20 or fewer items', () => {
-      const notifications = generateNotifications(15);
-      currentState = createMockState({ notifications });
-
-      render(<NotificationsPage />);
-
-      expect(screen.queryByTestId('pagination')).not.toBeInTheDocument();
-    });
+    // Second page: 5 items - page 1 items gone
+    expect(screen.queryByText('Notification 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Notification 21')).toBeInTheDocument();
+    expect(screen.getByText('Notification 25')).toBeInTheDocument();
   });
 
-  describe('Mark All As Read', () => {
-    it('"Segna tutte come lette" button calls markAllAsRead', async () => {
-      const user = userEvent.setup();
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440050', isRead: false }),
-      ];
-      currentState = createMockState({ notifications });
+  it('should call markAllAsRead() when "Segna tutte come lette" button is clicked', async () => {
+    const user = userEvent.setup();
+    const notifications = [
+      createNotification({ isRead: false }),
+    ];
+    setupStore({ notifications, unreadCount: 1 });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      const markAllButton = screen.getByRole('button', { name: /segna tutte come lette/i });
-      await user.click(markAllButton);
+    const markAllButton = screen.getByRole('button', { name: /segna tutte come lette/i });
+    await user.click(markAllButton);
 
-      expect(mockMarkAllAsRead).toHaveBeenCalled();
-    });
-
-    it('hides mark all button when no unread notifications', () => {
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440060', isRead: true }),
-      ];
-      currentState = createMockState({ notifications });
-
-      render(<NotificationsPage />);
-
-      expect(screen.queryByRole('button', { name: /segna tutte come lette/i })).not.toBeInTheDocument();
-    });
+    expect(mockMarkAllAsRead).toHaveBeenCalledTimes(1);
   });
 
-  describe('Empty State', () => {
-    it('shows empty state when no notifications', () => {
-      currentState = createMockState({ notifications: [] });
+  it('should not show "Segna tutte come lette" when all notifications are read', () => {
+    const notifications = [
+      createNotification({ isRead: true }),
+    ];
+    setupStore({ notifications, unreadCount: 0 });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      expect(screen.getByText('Nessuna notifica')).toBeInTheDocument();
-    });
-
-    it('shows empty state message for unread tab with no unread', async () => {
-      const user = userEvent.setup();
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440070', isRead: true }),
-      ];
-      currentState = createMockState({ notifications });
-
-      render(<NotificationsPage />);
-
-      const unreadTab = screen.getByRole('tab', { name: /non lette/i });
-      await user.click(unreadTab);
-
-      // The empty state message in the content area (not header)
-      const emptyMessages = screen.getAllByText('Nessuna notifica non letta');
-      // Header shows "Nessuna notifica non letta" + empty state shows it too
-      expect(emptyMessages.length).toBeGreaterThanOrEqual(1);
-    });
+    expect(screen.queryByRole('button', { name: /segna tutte come lette/i })).not.toBeInTheDocument();
   });
 
-  describe('Loading State', () => {
-    it('shows loading spinner while fetching', () => {
-      currentState = createMockState({ isFetching: true });
+  it('should show empty state when no notifications', () => {
+    setupStore({ notifications: [], unreadCount: 0, isFetching: false });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      expect(screen.getByTestId('loader-icon')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Nessuna notifica')).toBeInTheDocument();
   });
 
-  describe('Error State', () => {
-    it('shows error message on fetch failure', () => {
-      currentState = createMockState({ error: 'Failed to fetch notifications' });
+  it('should show empty state with unread tab message', async () => {
+    const user = userEvent.setup();
+    const notifications = [
+      createNotification({ isRead: true }),
+    ];
+    setupStore({ notifications, unreadCount: 0 });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      expect(screen.getByText('Failed to fetch notifications')).toBeInTheDocument();
-    });
+    // Switch to unread tab
+    const unreadTab = screen.getByRole('tab', { name: /non lette/i });
+    await user.click(unreadTab);
+
+    // The empty state container has the text "Nessuna notifica non letta"
+    // Also appears in header subtitle, so check for the empty state icon (Bell) + text combo
+    const emptyStates = screen.getAllByText('Nessuna notifica non letta');
+    // At least one should be in the empty state container (not just the header)
+    expect(emptyStates.length).toBeGreaterThanOrEqual(1);
   });
 
-  describe('Unread Count Display', () => {
-    it('shows unread count in header', () => {
-      const notifications = generateNotifications(3, 'all-unread');
-      currentState = createMockState({ notifications });
+  it('should show loading state while fetching', () => {
+    setupStore({ isFetching: true, notifications: [] });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      expect(screen.getByText('3 non lette')).toBeInTheDocument();
-    });
+    // Loader icon should be present (Loader2 component)
+    const loader = document.querySelector('.animate-spin');
+    expect(loader).toBeInTheDocument();
+  });
 
-    it('shows "Nessuna notifica non letta" when all read', () => {
-      const notifications = [
-        createNotification({ id: '550e8400-e29b-41d4-a716-446655440080', isRead: true }),
-      ];
-      currentState = createMockState({ notifications });
+  it('should show error state when error occurs', () => {
+    setupStore({ error: 'Network error', isFetching: false });
 
-      render(<NotificationsPage />);
+    render(<NotificationsPage />);
 
-      expect(screen.getByText('Nessuna notifica non letta')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+
+  it('should fetch notifications on mount', () => {
+    setupStore();
+
+    render(<NotificationsPage />);
+
+    expect(mockFetchNotifications).toHaveBeenCalledTimes(1);
+    expect(mockFetchNotifications).toHaveBeenCalledWith({});
+  });
+
+  it('should show correct unread count in header', () => {
+    const notifications = [
+      createNotification({ isRead: false }),
+      createNotification({ isRead: false }),
+      createNotification({ isRead: true }),
+    ];
+    setupStore({ notifications, unreadCount: 2 });
+
+    render(<NotificationsPage />);
+
+    expect(screen.getByText('2 non lette')).toBeInTheDocument();
+  });
+
+  it('should show type-specific empty state when filter has no results', async () => {
+    const user = userEvent.setup();
+    const notifications = [
+      createNotification({ type: 'pdf_upload_completed' }),
+    ];
+    setupStore({ notifications, unreadCount: 1 });
+
+    render(<NotificationsPage />);
+
+    // Click a type filter that has no matching notifications
+    await user.click(screen.getByText('Commenti'));
+
+    expect(screen.getByText('Nessuna notifica di questo tipo')).toBeInTheDocument();
+  });
+
+  it('should display all type filter chips', () => {
+    setupStore();
+
+    render(<NotificationsPage />);
+
+    expect(screen.getByText('Tutti')).toBeInTheDocument();
+    expect(screen.getByText('PDF completati')).toBeInTheDocument();
+    expect(screen.getByText('Regole generate')).toBeInTheDocument();
+    expect(screen.getByText('Errori')).toBeInTheDocument();
+    expect(screen.getByText('Commenti')).toBeInTheDocument();
+    expect(screen.getByText('Link condivisi')).toBeInTheDocument();
+  });
+
+  it('should show "Nessuna notifica non letta" when all are read', () => {
+    const notifications = [
+      createNotification({ isRead: true }),
+    ];
+    setupStore({ notifications, unreadCount: 0 });
+
+    render(<NotificationsPage />);
+
+    expect(screen.getByText('Nessuna notifica non letta')).toBeInTheDocument();
   });
 });

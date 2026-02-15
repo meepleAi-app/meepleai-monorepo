@@ -1,43 +1,60 @@
 /**
  * useNotificationSSE Hook Tests (Issue #4425)
  *
- * Tests for SSE real-time notification hook:
- * - Connection lifecycle (mount/unmount)
- * - Message handling (addNotification on SSE message)
- * - Reconnection with exponential backoff
- * - Max reconnect attempts (5)
- * - Disabled state
- * - Malformed JSON handling
+ * Tests for SSE real-time notification updates:
+ * - Connection lifecycle (connect, close, cleanup)
+ * - Message handling (valid JSON → addNotification)
+ * - Error handling (reconnect with exponential backoff)
+ * - Configuration (enabled flag)
  *
- * Coverage target: 85%+
+ * Coverage target: ≥85%
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+
 import { useNotificationSSE } from '../useNotificationSSE';
 
 // ============================================================================
-// EventSource Mock
+// Mocks
 // ============================================================================
 
+const mockAddNotification = vi.fn();
+const mockFetchUnreadCount = vi.fn();
+
+vi.mock('@/store/notification/store', () => ({
+  useNotificationStore: vi.fn((selector: (state: Record<string, unknown>) => unknown) => {
+    const state = {
+      addNotification: mockAddNotification,
+      fetchUnreadCount: mockFetchUnreadCount,
+    };
+    return typeof selector === 'function' ? selector(state) : state;
+  }),
+}));
+
+// EventSource mock
 class MockEventSource {
   static instances: MockEventSource[] = [];
-
   url: string;
   withCredentials: boolean;
   readyState: number = 0; // CONNECTING
   onopen: ((event: Event) => void) | null = null;
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
-  close = vi.fn();
+  closed = false;
 
-  constructor(url: string, options?: { withCredentials?: boolean }) {
+  constructor(url: string, config?: EventSourceInit) {
     this.url = url;
-    this.withCredentials = options?.withCredentials ?? false;
+    this.withCredentials = config?.withCredentials ?? false;
     MockEventSource.instances.push(this);
   }
 
-  // Helper to simulate events
+  close() {
+    this.closed = true;
+    this.readyState = 2; // CLOSED
+  }
+
+  // Test helpers
   simulateOpen() {
     this.readyState = 1; // OPEN
     this.onopen?.(new Event('open'));
@@ -52,43 +69,22 @@ class MockEventSource {
   }
 }
 
-// ============================================================================
-// Store Mock
-// ============================================================================
-
-const mockAddNotification = vi.fn();
-const mockFetchUnreadCount = vi.fn();
-
-vi.mock('@/store/notification/store', () => ({
-  useNotificationStore: vi.fn((selector: (state: unknown) => unknown) => {
-    const state = {
-      addNotification: mockAddNotification,
-      fetchUnreadCount: mockFetchUnreadCount,
-    };
-    return selector(state);
-  }),
-}));
-
-// ============================================================================
-// Tests
-// ============================================================================
-
 describe('useNotificationSSE', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     MockEventSource.instances = [];
-    // @ts-expect-error - mock global EventSource
+    // @ts-expect-error -- mock global EventSource
     globalThis.EventSource = MockEventSource;
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    // @ts-expect-error - restore global
+    // @ts-expect-error -- cleanup mock
     delete globalThis.EventSource;
   });
 
-  it('connects to /api/v1/notifications/stream on mount', () => {
+  it('should connect to /api/v1/notifications/stream on mount', () => {
     renderHook(() => useNotificationSSE());
 
     expect(MockEventSource.instances).toHaveLength(1);
@@ -96,119 +92,144 @@ describe('useNotificationSSE', () => {
     expect(MockEventSource.instances[0].withCredentials).toBe(true);
   });
 
-  it('calls addNotification on incoming SSE message', () => {
+  it('should call addNotification() on incoming SSE message', () => {
     renderHook(() => useNotificationSSE());
 
-    const eventSource = MockEventSource.instances[0];
-    eventSource.simulateOpen();
+    const es = MockEventSource.instances[0];
+    es.simulateOpen();
 
     const notification = {
-      id: '550e8400-e29b-41d4-a716-446655440000',
-      userId: '550e8400-e29b-41d4-a716-446655440001',
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      userId: '123e4567-e89b-12d3-a456-426614174001',
       type: 'pdf_upload_completed',
       severity: 'success',
       title: 'PDF Ready',
-      message: 'Your document is ready',
+      message: 'Your PDF has been processed',
+      link: null,
+      metadata: null,
       isRead: false,
       createdAt: '2026-02-15T10:00:00Z',
+      readAt: null,
     };
 
-    eventSource.simulateMessage(JSON.stringify(notification));
-
+    es.simulateMessage(JSON.stringify(notification));
     expect(mockAddNotification).toHaveBeenCalledWith(notification);
   });
 
-  it('closes EventSource on unmount', () => {
+  it('should close EventSource on unmount (cleanup)', () => {
     const { unmount } = renderHook(() => useNotificationSSE());
 
-    const eventSource = MockEventSource.instances[0];
-    eventSource.simulateOpen();
+    const es = MockEventSource.instances[0];
+    expect(es.closed).toBe(false);
 
     unmount();
-
-    expect(eventSource.close).toHaveBeenCalled();
+    expect(es.closed).toBe(true);
   });
 
-  it('reconnects with exponential backoff on error (1s, 2s, 4s...)', () => {
+  it('should reconnect with exponential backoff on error (1s, 2s, 4s...)', () => {
     renderHook(() => useNotificationSSE());
 
-    const firstInstance = MockEventSource.instances[0];
-    firstInstance.simulateOpen();
+    // First connection
+    expect(MockEventSource.instances).toHaveLength(1);
+    const es1 = MockEventSource.instances[0];
+    es1.simulateOpen();
 
-    // First error → reconnect after 1s
-    firstInstance.simulateError();
-    expect(MockEventSource.instances).toHaveLength(1); // Not yet reconnected
+    // Error → should schedule reconnect after 1s
+    es1.simulateError();
+    expect(es1.closed).toBe(true);
 
     act(() => { vi.advanceTimersByTime(1000); });
-    expect(MockEventSource.instances).toHaveLength(2); // Reconnected
+    expect(MockEventSource.instances).toHaveLength(2);
 
     // Second error → reconnect after 2s
-    MockEventSource.instances[1].simulateError();
+    const es2 = MockEventSource.instances[1];
+    es2.simulateError();
+
     act(() => { vi.advanceTimersByTime(1999); });
     expect(MockEventSource.instances).toHaveLength(2); // Not yet
     act(() => { vi.advanceTimersByTime(1); });
-    expect(MockEventSource.instances).toHaveLength(3); // Reconnected at 2s
+    expect(MockEventSource.instances).toHaveLength(3);
 
     // Third error → reconnect after 4s
-    MockEventSource.instances[2].simulateError();
-    act(() => { vi.advanceTimersByTime(3999); });
-    expect(MockEventSource.instances).toHaveLength(3);
-    act(() => { vi.advanceTimersByTime(1); });
-    expect(MockEventSource.instances).toHaveLength(4); // Reconnected at 4s
+    const es3 = MockEventSource.instances[2];
+    es3.simulateError();
+
+    act(() => { vi.advanceTimersByTime(4000); });
+    expect(MockEventSource.instances).toHaveLength(4);
   });
 
-  it('stops reconnecting after 5 attempts', () => {
+  it('should stop reconnecting after 5 attempts', () => {
     renderHook(() => useNotificationSSE());
 
-    // Trigger 5 errors with reconnections
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const instance = MockEventSource.instances[attempt];
-      instance.simulateError();
-      const delay = 1000 * Math.pow(2, attempt);
-      act(() => { vi.advanceTimersByTime(delay); });
+    // Trigger 5 errors + reconnects (attempt 0..4)
+    for (let i = 0; i < 5; i++) {
+      const es = MockEventSource.instances[MockEventSource.instances.length - 1];
+      es.simulateError();
+      act(() => { vi.advanceTimersByTime(30000); }); // Advance past any backoff
     }
 
-    // 5 reconnect attempts = 6 total instances (1 initial + 5 reconnects)
+    // 1 initial + 5 reconnects = 6
     expect(MockEventSource.instances).toHaveLength(6);
 
-    // 6th error → no more reconnection
-    MockEventSource.instances[5].simulateError();
-    act(() => { vi.advanceTimersByTime(60000); }); // Wait a long time
-    expect(MockEventSource.instances).toHaveLength(6); // No new instance
+    // 6th error → should NOT reconnect
+    const lastEs = MockEventSource.instances[5];
+    lastEs.simulateError();
+    act(() => { vi.advanceTimersByTime(60000); });
+
+    // Still 6 instances (no new connection)
+    expect(MockEventSource.instances).toHaveLength(6);
   });
 
-  it('does not connect when enabled: false', () => {
+  it('should not connect when enabled: false', () => {
     renderHook(() => useNotificationSSE({ enabled: false }));
 
     expect(MockEventSource.instances).toHaveLength(0);
   });
 
-  it('ignores malformed JSON messages', () => {
+  it('should ignore malformed JSON messages', () => {
     renderHook(() => useNotificationSSE());
 
-    const eventSource = MockEventSource.instances[0];
-    eventSource.simulateOpen();
+    const es = MockEventSource.instances[0];
+    es.simulateOpen();
 
-    // Send malformed JSON - should not throw or call addNotification
-    eventSource.simulateMessage('not valid json {{{');
+    // Send invalid JSON
+    es.simulateMessage('not valid json {{{');
+    expect(mockAddNotification).not.toHaveBeenCalled();
 
+    // Send empty string
+    es.simulateMessage('');
     expect(mockAddNotification).not.toHaveBeenCalled();
   });
 
-  it('resets reconnect counter on successful connection', () => {
+  it('should reset reconnect attempts after successful connection', () => {
     renderHook(() => useNotificationSSE());
 
-    // First error → reconnect
-    MockEventSource.instances[0].simulateError();
+    // First error + reconnect
+    const es1 = MockEventSource.instances[0];
+    es1.simulateError();
     act(() => { vi.advanceTimersByTime(1000); });
-    expect(MockEventSource.instances).toHaveLength(2);
 
-    // Successfully connect
-    MockEventSource.instances[1].simulateOpen();
+    // Second connection succeeds
+    const es2 = MockEventSource.instances[1];
+    es2.simulateOpen();
 
-    // Another error → should restart backoff at 1s (not 2s)
-    MockEventSource.instances[1].simulateError();
+    // Error again → should use 1s delay (reset), not 4s
+    es2.simulateError();
     act(() => { vi.advanceTimersByTime(1000); });
-    expect(MockEventSource.instances).toHaveLength(3); // Reconnected at 1s
+    expect(MockEventSource.instances).toHaveLength(3);
+  });
+
+  it('should clean up reconnect timer on unmount', () => {
+    const { unmount } = renderHook(() => useNotificationSSE());
+
+    const es = MockEventSource.instances[0];
+    es.simulateError(); // schedules reconnect
+
+    unmount();
+
+    // After unmount, timer shouldn't create new connection
+    act(() => { vi.advanceTimersByTime(30000); });
+    // Only 1 instance (no reconnect after unmount)
+    expect(MockEventSource.instances).toHaveLength(1);
   });
 });

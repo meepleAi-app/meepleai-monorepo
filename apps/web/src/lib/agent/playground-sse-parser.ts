@@ -55,6 +55,7 @@ export interface CompletionMetadata {
   completionTokens: number;
   totalTokens: number;
   confidence?: number;
+  strategy?: string;
   agentConfig?: AgentConfigSnapshot;
   latencyBreakdown?: LatencyBreakdown;
 }

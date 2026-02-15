@@ -11,7 +11,7 @@ import { DebugPanel } from '@/components/playground/DebugPanel';
 import { RagContextViewer } from '@/components/playground/RagContextViewer';
 import { ScenarioManager } from '@/components/playground/ScenarioManager';
 import {
-  Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Button, Label, RadioGroup, RadioGroupItem, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Tabs, TabsContent, TabsList, TabsTrigger, Textarea,
 } from '@/components/ui';
 import { parsePlaygroundSSEChunk } from '@/lib/agent/playground-sse-parser';
@@ -20,6 +20,25 @@ import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 import { useApiClient } from '@/lib/api/context';
 import type { PlaygroundTestScenarioDto } from '@/lib/api/schemas/playground-scenarios.schemas';
 import { usePlaygroundStore } from '@/stores/playground-store';
+import type { PlaygroundStrategy } from '@/stores/playground-store';
+
+const STRATEGY_OPTIONS: { value: PlaygroundStrategy; label: string; description: string }[] = [
+  {
+    value: 'SingleModel',
+    label: 'SingleModel (POC)',
+    description: 'RAG + single LLM call via configured provider. Default for all agents.',
+  },
+  {
+    value: 'RetrievalOnly',
+    label: 'RetrievalOnly',
+    description: 'Return RAG chunks only, no LLM call. Zero cost.',
+  },
+  {
+    value: 'MultiModelConsensus',
+    label: 'MultiModelConsensus',
+    description: 'RAG + dual-model (GPT-4 + Claude) consensus response.',
+  },
+];
 
 export default function AgentPlaygroundPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
@@ -29,6 +48,7 @@ export default function AgentPlaygroundPage() {
     setFollowUpQuestions, setCompletionMetadata, setLatencyMs, clearResponseState,
     systemMessage, setSystemMessage,
     currentGameId, setCurrentGameId,
+    strategy, setStrategy,
   } = usePlaygroundStore();
 
   const apiClient = useApiClient();
@@ -65,6 +85,7 @@ export default function AgentPlaygroundPage() {
           message,
           ...(systemMessage ? { systemMessage } : {}),
           ...(currentGameId ? { gameId: currentGameId } : {}),
+          strategy,
         }),
       });
 
@@ -224,6 +245,26 @@ export default function AgentPlaygroundPage() {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Strategy Selector */}
+      <div>
+        <label className="text-sm font-medium mb-3 block">Execution Strategy</label>
+        <RadioGroup
+          value={strategy}
+          onValueChange={(value) => setStrategy(value as PlaygroundStrategy)}
+          className="flex gap-4"
+        >
+          {STRATEGY_OPTIONS.map((option) => (
+            <div key={option.value} className="flex items-start gap-2">
+              <RadioGroupItem value={option.value} id={`strategy-${option.value}`} className="mt-0.5" />
+              <Label htmlFor={`strategy-${option.value}`} className="cursor-pointer">
+                <span className="text-sm font-medium">{option.label}</span>
+                <p className="text-xs text-muted-foreground mt-0.5">{option.description}</p>
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
       </div>
 
       {/* System Message */}

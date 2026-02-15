@@ -41,6 +41,28 @@ public sealed record AgentStrategy
     }
 
     /// <summary>
+    /// Retrieval-only strategy: Skip LLM, return RAG chunks only (zero cost).
+    /// </summary>
+    public static AgentStrategy RetrievalOnly(int topK = 10, double minScore = 0.55)
+        => new(
+            name: "RetrievalOnly",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["TopK"] = topK,
+                ["MinScore"] = minScore
+            }
+        );
+
+    /// <summary>
+    /// Single model strategy (POC default): RAG + single LLM call via configured provider.
+    /// </summary>
+    public static AgentStrategy SingleModel()
+        => new(
+            name: "SingleModel",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+        );
+
+    /// <summary>
     /// Hybrid search strategy: Vector (70%) + Keyword (30%) with RRF fusion.
     /// </summary>
     public static AgentStrategy HybridSearch(

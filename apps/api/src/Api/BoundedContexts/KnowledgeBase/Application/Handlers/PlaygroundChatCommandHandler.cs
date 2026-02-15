@@ -15,9 +15,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for PlaygroundChatCommand.
 /// Implements SSE streaming for playground chat using real AgentDefinition config.
 /// Issue #4392: Replace placeholder with real AgentDefinition integration.
+/// Issue #4437: Strategy-based execution (RetrievalOnly, SingleModel, MultiModelConsensus).
 /// </summary>
 internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<PlaygroundChatCommand, RagStreamingEvent>
 {
+    private static readonly string[] DefaultConsensusModels = { "gpt-4", "claude-3-opus" };
+
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
     private readonly LlmProviderFactory _llmProviderFactory;
     private readonly IHybridSearchService _hybridSearchService;
@@ -55,9 +58,12 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
     {
         var totalStopwatch = Stopwatch.StartNew();
 
+        // Resolve effective strategy: command override > agent definition default
+        var effectiveStrategy = ResolveStrategy(command.Strategy);
+
         _logger.LogInformation(
-            "Playground chat starting for AgentDefinition {AgentDefinitionId}",
-            command.AgentDefinitionId);
+            "Playground chat starting for AgentDefinition {AgentDefinitionId} with strategy {Strategy}",
+            command.AgentDefinitionId, effectiveStrategy);
 
         // 1. Load AgentDefinition
         yield return CreateEvent(
@@ -88,17 +94,18 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             yield break;
         }
 
+        yield return CreateEvent(
+            StreamingEventType.StateUpdate,
+            new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded. Using {effectiveStrategy} strategy."));
+
         // 2. Build system prompt from AgentDefinition prompts
         var systemPrompt = BuildSystemPrompt(agentDefinition);
 
-        yield return CreateEvent(
-            StreamingEventType.StateUpdate,
-            new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded."));
-
-        // 3. RAG retrieval (if GameId provided)
+        // 3. RAG retrieval (for all strategies if GameId is provided)
         var retrievalStopwatch = Stopwatch.StartNew();
         string userPrompt = command.Message;
         double? ragConfidence = null;
+        List<Snippet>? ragSnippets = null;
 
         if (command.GameId.HasValue)
         {
@@ -115,7 +122,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
             if (searchResults.Count > 0)
             {
-                var ragSnippets = searchResults.Select(r => new Snippet(
+                ragSnippets = searchResults.Select(r => new Snippet(
                     r.Content,
                     $"PDF:{r.PdfDocumentId}",
                     r.PageNumber ?? 0,
@@ -127,10 +134,6 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     StreamingEventType.Citations,
                     new StreamingCitations(ragSnippets));
 
-                yield return CreateEvent(
-                    StreamingEventType.StateUpdate,
-                    new StreamingStateUpdate($"Found {searchResults.Count} relevant passages. Generating response..."));
-
                 ragConfidence = searchResults.Max(r => (double)r.HybridScore);
 
                 var context = string.Join("\n\n---\n\n",
@@ -138,62 +141,166 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
                 userPrompt = $"Use the following context from the game rulebook to answer. " +
                              $"Cite page numbers when possible.\n\nContext:\n{context}\n\nQuestion: {command.Message}";
+
+                yield return CreateEvent(
+                    StreamingEventType.StateUpdate,
+                    new StreamingStateUpdate($"Found {searchResults.Count} relevant passages."));
             }
             else
             {
                 yield return CreateEvent(
                     StreamingEventType.StateUpdate,
-                    new StreamingStateUpdate("No relevant documents found. Generating response from general knowledge..."));
+                    new StreamingStateUpdate("No relevant documents found."));
             }
-        }
-        else
-        {
-            yield return CreateEvent(
-                StreamingEventType.StateUpdate,
-                new StreamingStateUpdate("Generating response..."));
         }
 
         retrievalStopwatch.Stop();
 
-        // 4. Stream LLM tokens via provider-specific client
-        var client = _llmProviderFactory.GetClientForModel(agentDefinition.Config.Model);
-
+        // 4. Strategy-specific execution
         var generationStopwatch = Stopwatch.StartNew();
         var responseBuilder = new StringBuilder();
-        int tokenCount = 0;
         int promptTokens = 0;
         int completionTokens = 0;
+        int tokenCount = 0;
+        string providerName = "none";
 
-        await foreach (var chunk in client.GenerateCompletionStreamAsync(
-            agentDefinition.Config.Model,
-            systemPrompt,
-            userPrompt,
-            agentDefinition.Config.Temperature,
-            agentDefinition.Config.MaxTokens,
-            cancellationToken).ConfigureAwait(false))
+        switch (effectiveStrategy)
         {
-            if (chunk.IsFinal && chunk.Usage != null)
-            {
-                promptTokens = chunk.Usage.PromptTokens;
-                completionTokens = chunk.Usage.CompletionTokens;
-            }
+            case "RetrievalOnly":
+                // No LLM call - just return the RAG chunks
+                yield return CreateEvent(
+                    StreamingEventType.StateUpdate,
+                    new StreamingStateUpdate("RetrievalOnly: Returning raw retrieval results (no LLM call)."));
 
-            if (!string.IsNullOrEmpty(chunk.Content))
-            {
-                responseBuilder.Append(chunk.Content);
-                tokenCount++;
+                if (ragSnippets is { Count: > 0 })
+                {
+                    var retrievalResponse = string.Join("\n\n---\n\n",
+                        ragSnippets.Select((s, i) => $"**Result {i + 1}** (score: {s.score:F2}):\n{s.text}"));
+                    responseBuilder.Append(retrievalResponse);
+
+                    // Emit as tokens for streaming display
+                    yield return CreateEvent(
+                        StreamingEventType.Token,
+                        new StreamingToken(retrievalResponse));
+                }
+                else
+                {
+                    var noResults = "No retrieval results available. Select a game context to use RetrievalOnly strategy.";
+                    responseBuilder.Append(noResults);
+                    yield return CreateEvent(
+                        StreamingEventType.Token,
+                        new StreamingToken(noResults));
+                }
+                break;
+
+            case "MultiModelConsensus":
+                // Dual-model calls: use agent's configured model + a second model
+                var agentStrategy = agentDefinition.Strategy;
+                var models = agentStrategy.GetParameter("Models", DefaultConsensusModels);
 
                 yield return CreateEvent(
+                    StreamingEventType.StateUpdate,
+                    new StreamingStateUpdate($"MultiModelConsensus: Querying {models.Length} models..."));
+
+                var modelResponses = new List<(string Model, string Response)>();
+
+                foreach (var model in models)
+                {
+                    yield return CreateEvent(
+                        StreamingEventType.StateUpdate,
+                        new StreamingStateUpdate($"Querying model: {model}..."));
+
+                    try
+                    {
+                        var client = _llmProviderFactory.GetClientForModel(model);
+                        providerName = client.ProviderName;
+                        var modelResponse = new StringBuilder();
+
+                        await foreach (var chunk in client.GenerateCompletionStreamAsync(
+                            model,
+                            systemPrompt,
+                            userPrompt,
+                            agentDefinition.Config.Temperature,
+                            agentDefinition.Config.MaxTokens,
+                            cancellationToken).ConfigureAwait(false))
+                        {
+                            if (chunk.IsFinal && chunk.Usage != null)
+                            {
+                                promptTokens += chunk.Usage.PromptTokens;
+                                completionTokens += chunk.Usage.CompletionTokens;
+                            }
+
+                            if (!string.IsNullOrEmpty(chunk.Content))
+                            {
+                                modelResponse.Append(chunk.Content);
+                                tokenCount++;
+                            }
+                        }
+
+                        modelResponses.Add((model, modelResponse.ToString()));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Model {Model} failed in consensus, skipping", model);
+                        modelResponses.Add((model, $"[Error: {ex.Message}]"));
+                    }
+                }
+
+                // Build consensus response
+                var consensusResponse = new StringBuilder();
+                for (int i = 0; i < modelResponses.Count; i++)
+                {
+                    consensusResponse.AppendLine($"### Model: {modelResponses[i].Model}");
+                    consensusResponse.AppendLine(modelResponses[i].Response);
+                    if (i < modelResponses.Count - 1) consensusResponse.AppendLine("\n---\n");
+                }
+
+                responseBuilder.Append(consensusResponse);
+                yield return CreateEvent(
                     StreamingEventType.Token,
-                    new StreamingToken(chunk.Content));
-            }
+                    new StreamingToken(consensusResponse.ToString()));
+                break;
+
+            default: // "SingleModel" or any other - standard flow
+                yield return CreateEvent(
+                    StreamingEventType.StateUpdate,
+                    new StreamingStateUpdate("Generating response..."));
+
+                var singleClient = _llmProviderFactory.GetClientForModel(agentDefinition.Config.Model);
+                providerName = singleClient.ProviderName;
+
+                await foreach (var chunk in singleClient.GenerateCompletionStreamAsync(
+                    agentDefinition.Config.Model,
+                    systemPrompt,
+                    userPrompt,
+                    agentDefinition.Config.Temperature,
+                    agentDefinition.Config.MaxTokens,
+                    cancellationToken).ConfigureAwait(false))
+                {
+                    if (chunk.IsFinal && chunk.Usage != null)
+                    {
+                        promptTokens = chunk.Usage.PromptTokens;
+                        completionTokens = chunk.Usage.CompletionTokens;
+                    }
+
+                    if (!string.IsNullOrEmpty(chunk.Content))
+                    {
+                        responseBuilder.Append(chunk.Content);
+                        tokenCount++;
+
+                        yield return CreateEvent(
+                            StreamingEventType.Token,
+                            new StreamingToken(chunk.Content));
+                    }
+                }
+                break;
         }
 
         generationStopwatch.Stop();
 
-        // 5. Follow-up questions (if response is long enough)
+        // 5. Follow-up questions (if response is long enough and not RetrievalOnly)
         var fullResponse = responseBuilder.ToString();
-        if (fullResponse.Length > 50)
+        if (fullResponse.Length > 50 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal))
         {
             yield return CreateEvent(
                 StreamingEventType.FollowUpQuestions,
@@ -203,7 +310,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         // 6. Complete with metadata
         totalStopwatch.Stop();
 
-        if (completionTokens == 0) completionTokens = tokenCount;
+        if (completionTokens == 0 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal)) completionTokens = tokenCount;
         var totalTokens = promptTokens + completionTokens;
 
         yield return CreateEvent(
@@ -214,20 +321,36 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 completionTokens: completionTokens,
                 totalTokens: totalTokens,
                 confidence: ragConfidence,
+                strategy: effectiveStrategy,
                 agentConfig: new PlaygroundAgentConfigSnapshot(
                     agentDefinition.Name,
                     agentDefinition.Config.Model,
                     agentDefinition.Config.Temperature,
                     agentDefinition.Config.MaxTokens,
-                    client.ProviderName),
+                    providerName),
                 latencyBreakdown: new PlaygroundLatencyBreakdown(
                     totalMs: totalStopwatch.ElapsedMilliseconds,
                     retrievalMs: retrievalStopwatch.ElapsedMilliseconds,
                     generationMs: generationStopwatch.ElapsedMilliseconds)));
 
         _logger.LogInformation(
-            "Playground chat completed for AgentDefinition {AgentDefinitionId}: tokens={Tokens}, time={Time}ms",
-            command.AgentDefinitionId, totalTokens, totalStopwatch.ElapsedMilliseconds);
+            "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, time={Time}ms",
+            command.AgentDefinitionId, effectiveStrategy, totalTokens, totalStopwatch.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Resolves the effective strategy name from command override or defaults to SingleModel.
+    /// </summary>
+    private static string ResolveStrategy(string? strategyOverride)
+    {
+        if (string.IsNullOrWhiteSpace(strategyOverride))
+            return "SingleModel";
+
+        return strategyOverride switch
+        {
+            "RetrievalOnly" or "SingleModel" or "MultiModelConsensus" => strategyOverride,
+            _ => "SingleModel" // Unknown strategies fall back to default
+        };
     }
 
     private static string BuildSystemPrompt(
@@ -266,6 +389,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// <summary>
 /// Extended Complete event with playground-specific metadata.
 /// Issue #4392: Includes agent config snapshot and latency breakdown.
+/// Issue #4437: Added strategy field.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -273,6 +397,7 @@ internal record PlaygroundStreamingComplete(
     int completionTokens,
     int totalTokens,
     double? confidence,
+    string strategy,
     PlaygroundAgentConfigSnapshot agentConfig,
     PlaygroundLatencyBreakdown latencyBreakdown);
 

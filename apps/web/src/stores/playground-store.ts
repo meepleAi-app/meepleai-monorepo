@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 
 import type { AgentConfigSnapshot, CompletionMetadata, LatencyBreakdown, Snippet } from '@/lib/agent/playground-sse-parser';
 
+export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -28,6 +30,9 @@ interface PlaygroundState {
   isStreaming: boolean;
   currentAgentId: string | null;
 
+  // Strategy selection
+  strategy: PlaygroundStrategy;
+
   // SSE-derived state (per response cycle)
   citations: Snippet[];
   stateUpdates: string[];
@@ -38,6 +43,7 @@ interface PlaygroundState {
   latencyMs: number | null;
   agentConfig: AgentConfigSnapshot | null;
   latencyBreakdown: LatencyBreakdown | null;
+  activeStrategy: string | null;
 
   // System message
   systemMessage: string;
@@ -55,6 +61,9 @@ interface PlaygroundState {
   setCurrentAgent: (agentId: string | null) => void;
   startSession: () => void;
   endSession: () => void;
+
+  // Actions - Strategy
+  setStrategy: (strategy: PlaygroundStrategy) => void;
 
   // Actions - SSE state
   addCitations: (citations: Snippet[]) => void;
@@ -80,6 +89,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       isStreaming: false,
       currentAgentId: null,
 
+      // Strategy
+      strategy: 'SingleModel' as PlaygroundStrategy,
+
       // SSE-derived state
       citations: [],
       stateUpdates: [],
@@ -90,6 +102,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       latencyMs: null,
       agentConfig: null,
       latencyBreakdown: null,
+      activeStrategy: null,
 
       // System message
       systemMessage: '',
@@ -148,6 +161,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           latencyMs: null,
           agentConfig: null,
           latencyBreakdown: null,
+          activeStrategy: null,
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -168,6 +182,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           latencyMs: null,
           agentConfig: null,
           latencyBreakdown: null,
+          activeStrategy: null,
         }),
 
       endSession: () =>
@@ -175,6 +190,10 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           sessionId: null,
           isStreaming: false,
         }),
+
+      // ─── Strategy Actions ──────────────────────────
+
+      setStrategy: (strategy) => set({ strategy }),
 
       // ─── SSE State Actions ───────────────────────
 
@@ -205,6 +224,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           confidence: metadata.confidence ?? null,
           agentConfig: metadata.agentConfig ?? null,
           latencyBreakdown: metadata.latencyBreakdown ?? null,
+          activeStrategy: metadata.strategy ?? null,
         }),
 
       setLatencyMs: (latencyMs) => set({ latencyMs }),
@@ -220,6 +240,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           latencyMs: null,
           agentConfig: null,
           latencyBreakdown: null,
+          activeStrategy: null,
         }),
 
       // ─── System Message ──────────────────────────
@@ -237,6 +258,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
         currentAgentId: state.currentAgentId,
         systemMessage: state.systemMessage,
         currentGameId: state.currentGameId,
+        strategy: state.strategy,
       }),
     }
   )

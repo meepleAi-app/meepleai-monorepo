@@ -124,4 +124,134 @@ internal sealed class RagExecutionRepository : IRagExecutionRepository
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<List<AgentExecutionStats>> GetStatsByAgentAsync(
+        DateTime dateFrom,
+        DateTime dateTo,
+        Guid? agentDefinitionId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Set<RagExecution>()
+            .AsNoTracking()
+            .Where(e => e.AgentDefinitionId != null)
+            .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo);
+
+        if (agentDefinitionId.HasValue)
+            query = query.Where(e => e.AgentDefinitionId == agentDefinitionId.Value);
+
+        var rawResult = await query
+            .GroupBy(e => new { e.AgentDefinitionId, e.AgentName, e.Model, e.Provider })
+            .Select(g => new
+            {
+                g.Key.AgentDefinitionId,
+                g.Key.AgentName,
+                g.Key.Model,
+                g.Key.Provider,
+                ExecutionCount = g.Count(),
+                TotalTokens = g.Sum(e => e.TotalTokens),
+                AvgTokens = g.Average(e => (double)e.TotalTokens),
+                TotalCost = g.Sum(e => e.TotalCost),
+                SuccessCount = g.Count(e => e.Status == "Success"),
+                AvgLatencyMs = g.Average(e => (double)e.TotalLatencyMs),
+                AvgConfidence = g.Where(e => e.Confidence != null)
+                    .Select(e => e.Confidence!.Value)
+                    .DefaultIfEmpty(0)
+                    .Average(),
+                LastExecutedAt = g.Max(e => (DateTime?)e.CreatedAt)
+            })
+            .OrderByDescending(s => s.ExecutionCount)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rawResult.Select(r => new AgentExecutionStats(
+            r.AgentDefinitionId!.Value,
+            r.AgentName,
+            r.Model,
+            r.Provider,
+            r.ExecutionCount,
+            r.TotalTokens,
+            r.AvgTokens,
+            r.TotalCost,
+            r.ExecutionCount > 0 ? (double)r.SuccessCount / r.ExecutionCount : 0,
+            r.AvgLatencyMs,
+            r.AvgConfidence,
+            r.LastExecutedAt)).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<List<AgentTimeSeriesPoint>> GetTimeSeriesByAgentAsync(
+        Guid agentDefinitionId,
+        DateTime dateFrom,
+        DateTime dateTo,
+        CancellationToken cancellationToken = default)
+    {
+        var rawResult = await _context.Set<RagExecution>()
+            .AsNoTracking()
+            .Where(e => e.AgentDefinitionId == agentDefinitionId)
+            .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo)
+            .GroupBy(e => e.CreatedAt.Date)
+            .Select(g => new
+            {
+                Date = g.Key,
+                Executions = g.Count(),
+                TotalTokens = g.Sum(e => e.TotalTokens),
+                Cost = g.Sum(e => e.TotalCost),
+                AvgLatencyMs = g.Average(e => (double)e.TotalLatencyMs),
+                SuccessCount = g.Count(e => e.Status == "Success")
+            })
+            .OrderBy(p => p.Date)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rawResult.Select(r => new AgentTimeSeriesPoint(
+            r.Date,
+            r.Executions,
+            r.TotalTokens,
+            r.Cost,
+            r.AvgLatencyMs,
+            r.Executions > 0 ? (double)r.SuccessCount / r.Executions : 0)).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<Dictionary<Guid, List<AgentTimeSeriesPoint>>> GetTimeSeriesByAgentsAsync(
+        List<Guid> agentDefinitionIds,
+        DateTime dateFrom,
+        DateTime dateTo,
+        CancellationToken cancellationToken = default)
+    {
+        if (agentDefinitionIds.Count == 0)
+            return new Dictionary<Guid, List<AgentTimeSeriesPoint>>();
+
+        var rawResult = await _context.Set<RagExecution>()
+            .AsNoTracking()
+            .Where(e => e.AgentDefinitionId != null && agentDefinitionIds.Contains(e.AgentDefinitionId.Value))
+            .Where(e => e.CreatedAt >= dateFrom && e.CreatedAt <= dateTo)
+            .GroupBy(e => new { e.AgentDefinitionId, Date = e.CreatedAt.Date })
+            .Select(g => new
+            {
+                AgentId = g.Key.AgentDefinitionId!.Value,
+                g.Key.Date,
+                Executions = g.Count(),
+                TotalTokens = g.Sum(e => e.TotalTokens),
+                Cost = g.Sum(e => e.TotalCost),
+                AvgLatencyMs = g.Average(e => (double)e.TotalLatencyMs),
+                SuccessCount = g.Count(e => e.Status == "Success")
+            })
+            .OrderBy(p => p.Date)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rawResult
+            .GroupBy(r => r.AgentId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(r => new AgentTimeSeriesPoint(
+                    r.Date,
+                    r.Executions,
+                    r.TotalTokens,
+                    r.Cost,
+                    r.AvgLatencyMs,
+                    r.Executions > 0 ? (double)r.SuccessCount / r.Executions : 0)).ToList());
+    }
 }

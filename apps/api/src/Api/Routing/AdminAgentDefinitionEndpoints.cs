@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.RagExecution;
 using Api.Extensions;
 using Api.Filters;
 using MediatR;
@@ -168,6 +169,29 @@ internal static class AdminAgentDefinitionEndpoints
         .WithSummary("Delete agent definition (Admin - AI Lab)")
         .WithDescription("Delete an agent definition");
 
+        // GET /api/v1/admin/agent-definitions/catalog-stats
+        // Get agent catalog usage statistics aggregated from execution data
+        // Issue #3713: Agent Catalog & Usage Stats
+        group.MapGet("/catalog-stats", async (
+            [AsParameters] AgentCatalogStatsRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetAgentCatalogStatsQuery
+            {
+                Range = request.Range ?? "30d",
+                AgentDefinitionId = request.AgentDefinitionId
+            };
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .WithName("AdminGetAgentCatalogStats")
+        .WithTags("AgentDefinition", "Admin", "Stats", "Catalog")
+        .WithSummary("Get agent catalog usage statistics (Admin - AI Lab)")
+        .WithDescription("Get usage statistics for all agents aggregated from RAG execution data, including per-agent time series for charts");
+
         // GET /api/v1/admin/agent-definitions/stats
         // Get aggregated statistics for all agent definitions
         group.MapGet("/stats", async (
@@ -223,3 +247,7 @@ internal sealed record AgentDefinitionListRequest(
 
 internal sealed record AgentDefinitionStatsRequest(
     bool ActiveOnly = false);
+
+internal sealed record AgentCatalogStatsRequest(
+    string? Range = "30d",
+    Guid? AgentDefinitionId = null);

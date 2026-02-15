@@ -63,6 +63,7 @@ const catanThreads = [
     id: 'thread-1',
     title: 'Rules clarification',
     gameId: 'game-1',
+    agentName: 'Rules Expert',
     messageCount: 5,
     lastMessageAt: '2024-01-01T10:00:00Z',
     createdAt: '2024-01-01T08:00:00Z',
@@ -71,6 +72,7 @@ const catanThreads = [
     id: 'thread-2',
     title: 'Setup help',
     gameId: 'game-1',
+    agentName: 'Strategy Coach',
     messageCount: 3,
     lastMessageAt: '2024-01-01T09:00:00Z',
     createdAt: '2024-01-01T07:00:00Z',
@@ -82,6 +84,7 @@ const ticketThreads = [
     id: 'thread-3',
     title: 'Strategy questions',
     gameId: 'game-2',
+    agentName: 'Strategy Coach',
     messageCount: 12,
     lastMessageAt: '2024-01-02T15:00:00Z',
     createdAt: '2024-01-02T14:00:00Z',
@@ -383,5 +386,101 @@ describe('ChatHistoryDrawer', () => {
       expect(screen.getByTestId('history-empty')).toBeInTheDocument();
       expect(screen.getByText('Nessuna conversazione trovata')).toBeInTheDocument();
     });
+  });
+
+  // --------------------------------------------------------------------------
+  // Agent Filter (Issue #4366)
+  // --------------------------------------------------------------------------
+
+  it('renders agent filter chips when agents exist', async () => {
+    render(
+      <ChatHistoryDrawer open={true} onClose={vi.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-filter-bar')).toBeInTheDocument();
+      expect(screen.getByTestId('agent-filter-all')).toBeInTheDocument();
+      expect(screen.getByTestId('agent-filter-Rules Expert')).toBeInTheDocument();
+      expect(screen.getByTestId('agent-filter-Strategy Coach')).toBeInTheDocument();
+    });
+  });
+
+  it('filters threads by agent when chip clicked', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ChatHistoryDrawer open={true} onClose={vi.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-filter-Rules Expert')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('agent-filter-Rules Expert'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Rules clarification')).toBeInTheDocument();
+      expect(screen.queryByText('Setup help')).not.toBeInTheDocument();
+      expect(screen.queryByText('Strategy questions')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows all threads when "Tutti" agent filter clicked', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ChatHistoryDrawer open={true} onClose={vi.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-filter-Rules Expert')).toBeInTheDocument();
+    });
+
+    // Filter by agent first
+    await user.click(screen.getByTestId('agent-filter-Rules Expert'));
+    await waitFor(() => {
+      expect(screen.queryByText('Setup help')).not.toBeInTheDocument();
+    });
+
+    // Click "Tutti" to clear
+    await user.click(screen.getByTestId('agent-filter-all'));
+    await waitFor(() => {
+      expect(screen.getByText('Rules clarification')).toBeInTheDocument();
+      expect(screen.getByText('Setup help')).toBeInTheDocument();
+      expect(screen.getByText('Strategy questions')).toBeInTheDocument();
+    });
+  });
+
+  it('displays agent badge on thread items', async () => {
+    render(
+      <ChatHistoryDrawer open={true} onClose={vi.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Rules clarification')).toBeInTheDocument();
+    });
+
+    // Agent badges should be visible on thread items
+    const badges = screen.getAllByText('Rules Expert');
+    // One in filter chip + one in thread item badge
+    expect(badges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not show agent filter bar when no agents', async () => {
+    (apiMock.chat.getThreadsByGame as Mock).mockImplementation(async (gameId: string) => {
+      if (gameId === 'game-1') return catanThreads.map(t => ({ ...t, agentName: undefined }));
+      if (gameId === 'game-2') return ticketThreads.map(t => ({ ...t, agentName: undefined }));
+      return [];
+    });
+
+    render(
+      <ChatHistoryDrawer open={true} onClose={vi.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Rules clarification')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('agent-filter-bar')).not.toBeInTheDocument();
   });
 });

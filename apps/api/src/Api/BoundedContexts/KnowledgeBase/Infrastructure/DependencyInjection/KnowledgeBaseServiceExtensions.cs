@@ -106,6 +106,10 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3760: Arbitro Agent Service (AI-powered move validation)
         services.AddScoped<IArbitroAgentService, ArbitroAgentService>();
+
+        // ISSUE-4336: Multi-Agent Router (intelligent routing between Tutor/Arbitro/Decisore)
+        services.AddSingleton<Domain.Services.MultiAgentRouter.IntentClassifier>();
+        services.AddSingleton<Domain.Services.MultiAgentRouter.AgentRouterService>();
     }
 
     private static void AddValidationServices(IServiceCollection services)

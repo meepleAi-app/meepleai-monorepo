@@ -7,6 +7,7 @@ import { ChevronDown, Download, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ChatInterface } from '@/components/playground/ChatInterface';
+import { ComparisonView } from '@/components/playground/ComparisonView';
 import { DebugPanel } from '@/components/playground/DebugPanel';
 import { RagContextViewer } from '@/components/playground/RagContextViewer';
 import { ScenarioManager } from '@/components/playground/ScenarioManager';
@@ -352,9 +353,10 @@ export default function AgentPlaygroundPage() {
         </div>
         <div>
           <Tabs defaultValue="debug" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="debug">Debug</TabsTrigger>
               <TabsTrigger value="context">RAG</TabsTrigger>
+              <TabsTrigger value="compare">Compare</TabsTrigger>
               <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
             </TabsList>
             <TabsContent value="debug" className="mt-4">
@@ -362,6 +364,9 @@ export default function AgentPlaygroundPage() {
             </TabsContent>
             <TabsContent value="context" className="mt-4">
               <RagContextViewer />
+            </TabsContent>
+            <TabsContent value="compare" className="mt-4">
+              <ComparisonView agentId={selectedAgentId} />
             </TabsContent>
             <TabsContent value="scenarios" className="mt-4">
               <ScenarioManager

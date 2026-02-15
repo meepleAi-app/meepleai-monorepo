@@ -122,6 +122,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<StrategyModelMappingEntity> StrategyModelMappings => Set<StrategyModelMappingEntity>(); // ISSUE-3438: Strategy-model mapping
     public DbSet<ChatSessionEntity> ChatSessions => Set<ChatSessionEntity>(); // ISSUE-3483: Chat session persistence
     public DbSet<AgentTestResultEntity> AgentTestResults => Set<AgentTestResultEntity>(); // ISSUE-3379: Agent test results persistence
+    public DbSet<ArbitroValidationFeedbackEntity> ArbitroValidationFeedbacks => Set<ArbitroValidationFeedbackEntity>(); // ISSUE-4328: Arbitro beta testing feedback
     public DbSet<ConversationMemoryEntity> ConversationMemories => Set<ConversationMemoryEntity>(); // ISSUE-3493: Temporal RAG
     public DbSet<AgentGameStateSnapshotEntity> AgentGameStateSnapshots => Set<AgentGameStateSnapshotEntity>(); // ISSUE-3493: Position similarity
     public DbSet<StrategyPatternEntity> StrategyPatterns => Set<StrategyPatternEntity>(); // ISSUE-3493: Cached evaluations

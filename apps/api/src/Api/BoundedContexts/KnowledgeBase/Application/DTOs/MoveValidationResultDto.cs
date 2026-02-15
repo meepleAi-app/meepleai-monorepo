@@ -7,6 +7,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 public record MoveValidationResultDto
 {
     /// <summary>
+    /// Unique correlation ID for this validation (for feedback tracking).
+    /// Issue #4328: Arbitro beta testing feedback.
+    /// </summary>
+    public required Guid ValidationId { get; init; }
+
+    /// <summary>
     /// Validation decision: VALID, INVALID, or UNCERTAIN
     /// </summary>
     public required string Decision { get; init; }

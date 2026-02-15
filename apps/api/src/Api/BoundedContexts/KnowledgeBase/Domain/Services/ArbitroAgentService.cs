@@ -93,10 +93,16 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         ArgumentNullException.ThrowIfNull(move);
 
         var stopwatch = Stopwatch.StartNew();
+        var validationId = Guid.NewGuid(); // Issue #4328: Correlation ID for feedback tracking
+
+        // Issue #4328: Latency breakdown tracking for beta testing metrics
+        long stateRetrievalTime = 0, ruleRetrievalTime = 0, conflictDetectionTime = 0, llmInferenceTime = 0;
 
         _logger.LogInformation(
-            "Arbitro validating move: session={SessionId}, player={Player}, action={Action}",
+            "[Arbitro] Validation started: validationId={ValidationId}, session={SessionId}, game={GameId}, player={Player}, action={Action}",
+            validationId,
             session.Id,
+            session.GameId,
             move.PlayerName,
             move.Action);
 
@@ -104,6 +110,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         if (session.Status.IsFinished)
         {
             return CreateInvalidResult(
+                validationId: validationId,
                 decision: "INVALID",
                 confidence: 1.0,
                 reasoning: $"Session is {session.Status}, cannot validate moves",
@@ -116,6 +123,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         if (!session.HasPlayer(move.PlayerName))
         {
             return CreateInvalidResult(
+                validationId: validationId,
                 decision: "INVALID",
                 confidence: 1.0,
                 reasoning: $"Player '{move.PlayerName}' not in session",
@@ -126,21 +134,32 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         }
 
         // STEP 2: Retrieve game state context
+        var stateRetrievalStart = stopwatch.ElapsedMilliseconds;
         var gameStateContext = await RetrieveGameStateAsync(session.GameId, cancellationToken)
             .ConfigureAwait(false);
+        stateRetrievalTime = stopwatch.ElapsedMilliseconds - stateRetrievalStart;
 
         // STEP 3: Get applicable rules from domain service
+        var ruleRetrievalStart = stopwatch.ElapsedMilliseconds;
         var applicableRules = await _moveValidationService.GetApplicableRulesAsync(
             session.GameId,
             move,
             ruleSpecVersion: null,
             cancellationToken).ConfigureAwait(false);
+        ruleRetrievalTime = stopwatch.ElapsedMilliseconds - ruleRetrievalStart;
+
+        _logger.LogInformation(
+            "[Arbitro] Rule retrieval: validationId={ValidationId}, rulesFound={RuleCount}, latency={LatencyMs}ms",
+            validationId,
+            applicableRules.Count,
+            ruleRetrievalTime);
 
         if (applicableRules.Count == 0)
         {
             _logger.LogWarning("No applicable rules found for move action '{Action}'", move.Action);
 
             return CreateUncertainResult(
+                validationId: validationId,
                 confidence: 0.3,
                 reasoning: "No specific rules found for this type of move",
                 applicableRules: new List<ArbitroRuleAtomDto>(),
@@ -149,31 +168,52 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         }
 
         // STEP 3.5: NEW (Issue #3761) - Detect rule conflicts
+        var conflictDetectionStart = stopwatch.ElapsedMilliseconds;
         var conflicts = DetectRuleConflicts(applicableRules);
+        conflictDetectionTime = stopwatch.ElapsedMilliseconds - conflictDetectionStart;
+
+        if (conflicts.Count > 0)
+        {
+            _logger.LogInformation(
+                "[Arbitro] Conflicts detected: validationId={ValidationId}, conflictCount={ConflictCount}, types={ConflictTypes}, latency={LatencyMs}ms",
+                validationId,
+                conflicts.Count,
+                string.Join(", ", conflicts.Select(c => c.Type)),
+                conflictDetectionTime);
+        }
 
         // STEP 3.6: NEW (Issue #3761) - Check FAQ for known conflicts (fast path)
         if (conflicts.Count > 0)
         {
-            _logger.LogInformation("Detected {ConflictCount} rule conflicts, checking FAQ", conflicts.Count);
-
+            var faqLookupStart = stopwatch.ElapsedMilliseconds;
             var faqResolution = await _conflictFaqRepository.FindByPatternAsync(
                 session.GameId,
                 conflicts[0].Pattern,
                 cancellationToken).ConfigureAwait(false);
+            var faqLookupTime = stopwatch.ElapsedMilliseconds - faqLookupStart;
 
             if (faqResolution != null)
             {
                 _logger.LogInformation(
-                    "FAQ resolution found for pattern '{Pattern}', returning pre-defined resolution",
-                    faqResolution.Pattern);
+                    "[Arbitro] FAQ fast-path used: validationId={ValidationId}, pattern={Pattern}, faqId={FaqId}, usageCount={UsageCount}, faqLatency={FaqLatencyMs}ms",
+                    validationId,
+                    faqResolution.Pattern,
+                    faqResolution.Id,
+                    faqResolution.UsageCount + 1,
+                    faqLookupTime);
 
                 // Record usage and return FAQ resolution immediately
                 faqResolution.RecordUsage(_timeProvider);
                 await _conflictFaqRepository.UpdateAsync(faqResolution, cancellationToken).ConfigureAwait(false);
                 await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false); // Dispatch RuleConflictFAQUsedEvent
 
-                return CreateFaqResolvedResult(faqResolution, conflicts, applicableRules, stopwatch.ElapsedMilliseconds);
+                return CreateFaqResolvedResult(validationId, faqResolution, conflicts, applicableRules, stopwatch.ElapsedMilliseconds);
             }
+
+            _logger.LogInformation(
+                "[Arbitro] FAQ miss: validationId={ValidationId}, pattern={Pattern}, fallback=LLM",
+                validationId,
+                conflicts[0].Pattern);
         }
 
         // STEP 4: Assemble AI prompt (conflict-aware if conflicts detected)
@@ -182,16 +222,26 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
             : AssembleValidationPrompt(gameStateContext, applicableRules, move, session);
 
         // STEP 5: Call LLM for validation
+        var llmInferenceStart = stopwatch.ElapsedMilliseconds;
         var llmResult = await _llmService.GenerateCompletionAsync(
             systemPrompt: SystemPrompt,
             userPrompt: prompt,
             cancellationToken).ConfigureAwait(false);
+        llmInferenceTime = stopwatch.ElapsedMilliseconds - llmInferenceStart;
+
+        _logger.LogInformation(
+            "[Arbitro] LLM inference: validationId={ValidationId}, success={Success}, latency={LatencyMs}ms, hasConflicts={HasConflicts}",
+            validationId,
+            llmResult.Success,
+            llmInferenceTime,
+            conflicts.Count > 0);
 
         if (!llmResult.Success)
         {
             _logger.LogError("LLM validation failed: {Error}", llmResult.ErrorMessage);
 
             return CreateUncertainResult(
+                validationId: validationId,
                 confidence: 0.0,
                 reasoning: $"AI validation unavailable: {llmResult.ErrorMessage}",
                 applicableRules: MapToRuleAtomDtos(applicableRules),
@@ -200,7 +250,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         }
 
         // STEP 6: Parse AI response to structured result
-        var validationResult = ParseAiResponse(llmResult.Response, applicableRules, conflicts, stopwatch.ElapsedMilliseconds);
+        var validationResult = ParseAiResponse(validationId, llmResult.Response, applicableRules, conflicts, stopwatch.ElapsedMilliseconds);
 
         // STEP 7: NEW (Issue #3761) - Escalation check for low-confidence conflicts
         if (validationResult.Confidence < EscalationThreshold && conflicts.Count > 0)
@@ -218,12 +268,31 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
             };
         }
 
+        // FINAL LOGGING: Structured metrics for beta testing analysis
+        var totalLatency = stopwatch.ElapsedMilliseconds;
         _logger.LogInformation(
-            "Arbitro validation complete: decision={Decision}, confidence={Confidence:F2}, conflicts={ConflictCount}, latency={Latency}ms",
+            "[Arbitro] Validation complete: " +
+            "validationId={ValidationId}, " +
+            "decision={Decision}, " +
+            "confidence={Confidence:F3}, " +
+            "conflicts={ConflictCount}, " +
+            "resolution={Resolution}, " +
+            "totalLatency={TotalLatencyMs}ms, " +
+            "breakdown={{state:{StateMs}ms, rules:{RulesMs}ms, conflicts:{ConflictsMs}ms, llm:{LlmMs}ms}}, " +
+            "applicableRules={ApplicableRules}, " +
+            "violatedRules={ViolatedRules}",
+            validationId,
             validationResult.Decision,
             validationResult.Confidence,
             conflicts.Count,
-            stopwatch.ElapsedMilliseconds);
+            conflicts.Count > 0 ? (validationResult.ConflictsResolved?[0].ResolutionStrategy ?? "LLM") : "N/A",
+            totalLatency,
+            stateRetrievalTime,
+            ruleRetrievalTime,
+            conflictDetectionTime,
+            llmInferenceTime,
+            applicableRules.Count,
+            validationResult.ViolatedRules.Count);
 
         return validationResult;
     }
@@ -286,6 +355,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
     }
 
     private MoveValidationResultDto ParseAiResponse(
+        Guid validationId,
         string aiResponse,
         List<RuleAtom> applicableRules,
         List<RuleConflict> conflicts,
@@ -334,6 +404,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
 
             return new MoveValidationResultDto
             {
+                ValidationId = validationId,
                 Decision = decision,
                 Confidence = confidence,
                 Reasoning = reasoning,
@@ -354,6 +425,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
 
             // Fallback: treat as uncertain with raw response as reasoning
             return CreateUncertainResult(
+                validationId: validationId,
                 confidence: 0.5,
                 reasoning: $"AI response parsing failed: {aiResponse[..Math.Min(100, aiResponse.Length)]}",
                 applicableRules: MapToRuleAtomDtos(applicableRules),
@@ -363,6 +435,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
     }
 
     private MoveValidationResultDto CreateInvalidResult(
+        Guid validationId,
         string decision,
         double confidence,
         string reasoning,
@@ -373,6 +446,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
     {
         return new MoveValidationResultDto
         {
+            ValidationId = validationId,
             Decision = decision,
             Confidence = confidence,
             Reasoning = reasoning,
@@ -389,6 +463,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
     }
 
     private MoveValidationResultDto CreateUncertainResult(
+        Guid validationId,
         double confidence,
         string reasoning,
         List<ArbitroRuleAtomDto> applicableRules,
@@ -397,6 +472,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
     {
         return new MoveValidationResultDto
         {
+            ValidationId = validationId,
             Decision = "UNCERTAIN",
             Confidence = confidence,
             Reasoning = reasoning,
@@ -525,6 +601,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
     /// Issue #3761: FAQ-based resolution.
     /// </summary>
     private MoveValidationResultDto CreateFaqResolvedResult(
+        Guid validationId,
         RuleConflictFAQ faq,
         List<RuleConflict> conflicts,
         List<RuleAtom> applicableRules,
@@ -545,6 +622,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
 
         return new MoveValidationResultDto
         {
+            ValidationId = validationId,
             Decision = decision,
             Confidence = 0.95, // High confidence for FAQ resolutions
             Reasoning = faq.Resolution[..Math.Min(200, faq.Resolution.Length)],

@@ -16,6 +16,7 @@ internal static class ArbitroAgentEndpoints
     public static RouteGroupBuilder MapArbitroAgentEndpoints(this RouteGroupBuilder group)
     {
         MapValidateMoveEndpoint(group);
+        MapSubmitFeedbackEndpoint(group);
 
         return group;
     }
@@ -98,6 +99,88 @@ Validates a player move against game rules using the Arbitro Agent's AI reasonin
         .ProducesProblem(404, "application/problem+json")
         .ProducesProblem(500, "application/problem+json");
     }
+
+    /// <summary>
+    /// Submit user feedback on Arbitro Agent move validation.
+    /// </summary>
+    /// <remarks>
+    /// Collects user feedback for beta testing accuracy measurement and model improvement.
+    /// Users rate the validation and assess whether the AI decision was correct.
+    ///
+    /// This data enables:
+    /// - Accuracy metrics calculation (% correct decisions)
+    /// - Conflict resolution accuracy tracking
+    /// - FAQ database auto-expansion from validated patterns
+    /// - Model improvement through user ground truth labels
+    /// </remarks>
+    /// <response code="200">Feedback submitted successfully</response>
+    /// <response code="400">Invalid request (validation errors)</response>
+    /// <response code="401">Unauthorized (session required)</response>
+    /// <response code="404">Game session not found</response>
+    /// <response code="409">Feedback already exists for this validation</response>
+    /// <response code="500">Server error during submission</response>
+    private static void MapSubmitFeedbackEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/arbitro/feedback", async (
+            SubmitFeedbackRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Get current user from session
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new SubmitValidationFeedbackCommand
+            {
+                ValidationId = req.ValidationId,
+                GameSessionId = req.GameSessionId,
+                UserId = session.User!.Id,
+                Rating = req.Rating,
+                Accuracy = req.Accuracy,
+                Comment = req.Comment,
+                AiDecision = req.AiDecision,
+                AiConfidence = req.AiConfidence,
+                HadConflicts = req.HadConflicts
+            };
+
+            var feedbackId = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Feedback submitted: feedbackId={FeedbackId}, validation={ValidationId}, user={UserId}, rating={Rating}",
+                feedbackId, req.ValidationId, session.User!.Id, req.Rating);
+
+            return Results.Ok(new { FeedbackId = feedbackId, Message = "Feedback submitted successfully" });
+        })
+        .RequireSession()
+        .WithName("ArbitroSubmitFeedback")
+        .WithTags("Agents", "Arbitro", "Beta Testing")
+        .WithSummary("Submit feedback on Arbitro validation")
+        .WithDescription(@"
+Collects user feedback on move validation for accuracy measurement and model improvement.
+
+**Request Fields**:
+- `ValidationId`: Correlation ID from validation response
+- `GameSessionId`: Game session identifier
+- `Rating`: 1-5 star rating (1=Poor, 5=Excellent)
+- `Accuracy`: 'Correct', 'Incorrect', or 'Uncertain'
+- `Comment`: Optional text feedback (max 2000 chars)
+- `AiDecision`: AI's original decision (VALID/INVALID/UNCERTAIN)
+- `AiConfidence`: AI's confidence score (0.0-1.0)
+- `HadConflicts`: Whether conflicts were detected
+
+**Beta Testing Metrics**:
+- Target accuracy: >90% overall, >85% conflict resolution
+- Collected data used for FAQ auto-expansion and model tuning
+")
+        .Produces<object>(200, "application/json")
+        .ProducesProblem(400, "application/problem+json")
+        .ProducesValidationProblem(400, "application/problem+json")
+        .ProducesProblem(401, "application/problem+json")
+        .ProducesProblem(404, "application/problem+json")
+        .ProducesProblem(409, "application/problem+json")
+        .ProducesProblem(500, "application/problem+json");
+    }
 }
 
 /// <summary>
@@ -110,4 +193,19 @@ internal record ValidateMoveRequest(
     string Action,
     string? Position = null,
     Dictionary<string, string>? AdditionalContext = null
+);
+
+/// <summary>
+/// Request for submitting feedback on Arbitro validation.
+/// Issue #4328: Arbitro beta testing feedback.
+/// </summary>
+internal record SubmitFeedbackRequest(
+    Guid ValidationId,
+    Guid GameSessionId,
+    int Rating,
+    string Accuracy,
+    string? Comment,
+    string AiDecision,
+    double AiConfidence,
+    bool HadConflicts
 );

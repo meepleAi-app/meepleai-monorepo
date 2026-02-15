@@ -498,6 +498,7 @@ v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated
 v1Api.MapActivityTimelineEndpoints();  // Issue #4315: Activity timeline with page-based pagination
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
+v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admin tools
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)

@@ -63,6 +63,31 @@ Returns top agents sorted by the specified criteria.
 - cost: Highest cost agents
 - confidence: Highest confidence agents
 ");
+
+        // GET /api/v1/admin/agents/metrics/arbitro/beta
+        // Get Arbitro beta testing metrics
+        group.MapGet("/arbitro/beta", GetArbitroBetaMetrics)
+            .WithName("GetArbitroBetaMetrics")
+            .WithSummary("Get Arbitro Agent beta testing metrics")
+            .WithDescription(@"
+Returns comprehensive beta testing metrics for Arbitro Agent including:
+- Overall accuracy percentage (target: >90%)
+- Conflict resolution accuracy (target: >85%)
+- Average user satisfaction rating (target: >4.0/5.0)
+- Decision distribution (VALID/INVALID/UNCERTAIN breakdown)
+- FAQ fast-path hit rate and top FAQ entries
+- Accuracy trend over time (daily aggregates)
+
+**Filters:**
+- gameSessionId: Filter by specific game session
+- fromDate/toDate: Date range filter
+
+**Beta Testing Targets:**
+- Validation accuracy: >90%
+- Conflict resolution: >85%
+- User satisfaction: >4.0/5.0
+- Performance: <100ms P95 rule retrieval, <2s P95 total
+");
     }
 
     private static async Task<IResult> GetAgentMetrics(
@@ -127,5 +152,23 @@ Returns top agents sorted by the specified criteria.
 
         var topAgents = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(topAgents);
+    }
+
+    private static async Task<IResult> GetArbitroBetaMetrics(
+        [FromServices] IMediator mediator,
+        [FromQuery] Guid? gameSessionId,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        CancellationToken ct)
+    {
+        var query = new GetArbitroBetaMetricsQuery
+        {
+            GameSessionId = gameSessionId,
+            FromDate = fromDate,
+            ToDate = toDate
+        };
+
+        var metrics = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(metrics);
     }
 }

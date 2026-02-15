@@ -32,6 +32,7 @@ internal static class AgentEndpoints
         MapTutorQueryEndpoint(group); // ISSUE-3499
         MapChatWithAgentEndpoint(group); // Issue #4126: SSE chat streaming
         MapGetRecentAgentsEndpoint(group); // Issue #4126: Dashboard widget
+        MapUnifiedAgentQueryEndpoint(group); // Issue #4338: Unified API Gateway
 
         return group;
     }
@@ -450,6 +451,52 @@ internal static class AgentEndpoints
         .Produces(404)
         .Produces(500);
     }
+    /// <summary>
+    /// Unified API Gateway endpoint - routes queries to the appropriate agent automatically.
+    /// Issue #4338: Unified API Gateway - /api/v1/agents/query
+    /// </summary>
+    private static void MapUnifiedAgentQueryEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/query", async (
+            [FromBody] UnifiedAgentQueryRequest request,
+            [FromServices] IMediator mediator,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+
+            var command = new UnifiedAgentQueryCommand(
+                Query: request.Query,
+                UserId: session.User!.Id,
+                GameId: request.GameId,
+                ChatThreadId: request.ChatThreadId,
+                PreferredAgentId: request.PreferredAgentId
+            );
+
+            // Set SSE headers
+            httpContext.Response.ContentType = "text/event-stream";
+            httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+            httpContext.Response.Headers.Append("Connection", "keep-alive");
+
+            await foreach (var @event in mediator.CreateStream(command, cancellationToken).ConfigureAwait(false))
+            {
+                await httpContext.Response.WriteAsync(
+                    $"data: {System.Text.Json.JsonSerializer.Serialize(@event)}\n\n",
+                    cancellationToken).ConfigureAwait(false);
+
+                await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+        })
+        .RequireSession()
+        .WithName("UnifiedAgentQuery")
+        .WithTags("Agents", "Gateway")
+        .WithDescription("Unified API Gateway: automatically routes queries to the best agent based on intent classification (SSE streaming)")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(500);
+    }
 }
 
 /// <summary>
@@ -496,6 +543,17 @@ internal record InvokeAgentRequest(
 /// </summary>
 internal record UpdateAgentDocumentsRequest(
     IReadOnlyList<Guid>? DocumentIds
+);
+
+/// <summary>
+/// Request for the Unified API Gateway.
+/// Issue #4338: Unified API Gateway - /api/v1/agents/query
+/// </summary>
+internal record UnifiedAgentQueryRequest(
+    string Query,
+    Guid? GameId = null,
+    Guid? ChatThreadId = null,
+    Guid? PreferredAgentId = null
 );
 
 /// <summary>

@@ -534,7 +534,37 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             type: CategorizeStrategy(agentDefinition.Strategy.Name),
             parameters: strategyParams);
 
-        // 8. Complete with metadata
+        // 8. Build TOMAC-RAG layer visualization (Issue #4446)
+        var hasRag = command.GameId.HasValue && ragSnippets is { Count: > 0 };
+        var hasLlm = !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal);
+        var cacheWasActive = cacheInfo != null && !string.Equals(cacheInfo.status, "skip", StringComparison.Ordinal);
+
+        var tomacLayers = new List<PlaygroundTomacLayer>
+        {
+            new("L1", "Intelligent Routing", "planned", 0, 0, null,
+                "Route queries to optimal pipeline based on complexity and intent"),
+            new("L2", "Semantic Cache", cacheWasActive ? "active" : "planned",
+                cacheWasActive ? (long)cacheInfo!.latencyMs : 0,
+                cacheWasActive && string.Equals(cacheInfo!.status, "hit", StringComparison.Ordinal) ? 1 : 0,
+                null,
+                cacheWasActive ? $"Cache {cacheInfo!.status}" : "Cache similar queries to reduce latency and cost"),
+            new("L3", "Modular Retrieval", hasRag ? "active" : "bypassed",
+                retrievalStopwatch.ElapsedMilliseconds,
+                ragSnippets?.Count ?? 0,
+                ragConfidence,
+                hasRag ? $"{ragSnippets!.Count} chunks retrieved" : "No game context provided"),
+            new("L4", "CRAG Evaluation", "planned", 0, 0, null,
+                "Evaluate retrieval quality and trigger corrective actions"),
+            new("L5", "Adaptive Generation", hasLlm ? "active" : "bypassed",
+                generationStopwatch.ElapsedMilliseconds,
+                tokenCount,
+                null,
+                hasLlm ? $"{effectiveModel} via {providerName}" : "RetrievalOnly strategy - no LLM call"),
+            new("L6", "Self-Validation", "planned", 0, 0, null,
+                "Validate response accuracy against source documents"),
+        };
+
+        // 9. Complete with metadata
         totalStopwatch.Stop();
         Log("info", "Pipeline", $"Pipeline completed in {totalStopwatch.ElapsedMilliseconds}ms (response: {fullResponse.Length} chars)");
 
@@ -568,7 +598,8 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 pipelineTimings: pipelineTimings,
                 cacheInfo: cacheInfo,
                 apiTraces: apiTraces,
-                logEntries: logEntries));
+                logEntries: logEntries,
+                tomacLayers: tomacLayers));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -674,6 +705,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Issue #4443: Added cache info.
 /// Issue #4444: Added API call traces.
 /// Issue #4445: Added structured log entries.
+/// Issue #4446: Added TOMAC-RAG layer visualization data.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -689,7 +721,8 @@ internal record PlaygroundStreamingComplete(
     List<PlaygroundPipelineStep>? pipelineTimings = null,
     PlaygroundCacheInfo? cacheInfo = null,
     List<PlaygroundApiTrace>? apiTraces = null,
-    List<PlaygroundLogEntry>? logEntries = null);
+    List<PlaygroundLogEntry>? logEntries = null,
+    List<PlaygroundTomacLayer>? tomacLayers = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -776,6 +809,19 @@ internal record PlaygroundApiTrace(
     string? detail,
     string? requestPreview,
     string? responsePreview);
+
+/// <summary>
+/// TOMAC-RAG layer visualization data for playground debug panel.
+/// Issue #4446: Shows 6 TOMAC layers with implementation status and metrics.
+/// </summary>
+internal record PlaygroundTomacLayer(
+    string id,
+    string name,
+    string status,
+    long latencyMs,
+    int itemsProcessed,
+    double? score,
+    string description);
 
 /// <summary>
 /// Internal cache entry for playground query deduplication.

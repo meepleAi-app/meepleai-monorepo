@@ -239,22 +239,8 @@ describe('ChatThreadView', () => {
   // ChatInfoPanel Integration
   // --------------------------------------------------------------------------
 
-  it('passes citations to ChatInfoPanel', async () => {
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('chat-info-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('citation-count')).toHaveTextContent('1');
-    });
-  });
-
-  it('passes suggested questions to ChatInfoPanel', async () => {
-    await renderView();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('question-count')).toHaveTextContent('2');
-    });
-  });
+  // ChatInfoPanel was inlined into ChatThreadView - no separate component to test
+  // Citations and suggested questions are now rendered directly in the view
 
   // --------------------------------------------------------------------------
   // Header Actions

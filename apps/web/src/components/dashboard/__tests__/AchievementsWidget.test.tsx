@@ -43,6 +43,16 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Mock Radix Tooltip to render inline (avoids portal + pointer event issues in JSDOM)
+vi.mock('@/components/ui/overlays/tooltip', () => ({
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div role="tooltip" {...props}>{children}</div>
+  ),
+}));
+
 // Mock date-fns
 vi.mock('date-fns', () => ({
   formatDistanceToNow: vi.fn(() => '2 ore fa'),
@@ -88,6 +98,31 @@ const mockAchievements: Achievement[] = [
     rarity: 'common',
     points: 25,
     unlockedAt: '2026-02-01T10:00:00Z',
+  },
+];
+
+const mockLockedAchievements: Achievement[] = [
+  {
+    id: 'ach-locked-1',
+    name: 'Collezionista',
+    description: 'Aggiungi 50 giochi alla libreria',
+    category: 'collection',
+    rarity: 'rare',
+    points: 30,
+    unlockedAt: '',
+    isLocked: true,
+    unlockHint: 'Aggiungi altri 35 giochi alla tua libreria',
+  },
+  {
+    id: 'ach-locked-2',
+    name: 'Maestro Tattico',
+    description: 'Vinci 100 partite strategiche',
+    category: 'gameplay',
+    rarity: 'epic',
+    points: 75,
+    unlockedAt: '',
+    isLocked: true,
+    unlockHint: 'Vinci altre 67 partite strategiche',
   },
 ];
 
@@ -475,6 +510,81 @@ describe('AchievementsWidget', () => {
 
       const progressBar = screen.getByRole('progressbar');
       expect(progressBar).toHaveAccessibleName();
+    });
+  });
+
+  describe('Locked Badges & Tooltip', () => {
+    it('shows muted styling on locked achievement badges', () => {
+      renderComponent({ achievements: mockLockedAchievements });
+
+      const rareBadge = screen.getByTestId('rarity-badge-rare');
+      const epicBadge = screen.getByTestId('rarity-badge-epic');
+
+      // Locked badges have muted styling
+      expect(rareBadge).toHaveClass('bg-muted');
+      expect(epicBadge).toHaveClass('bg-muted');
+    });
+
+    it('does not show muted styling on unlocked badges', () => {
+      renderComponent({ achievements: mockAchievements });
+
+      const rareBadge = screen.getByTestId('rarity-badge-rare');
+      expect(rareBadge).not.toHaveClass('bg-muted');
+    });
+
+    it('renders tooltip with achievement name and unlock hint for locked badges', () => {
+      renderComponent({ achievements: mockLockedAchievements });
+
+      // Tooltip content is rendered inline (mocked)
+      expect(screen.getByTestId('unlock-tooltip-rare')).toBeInTheDocument();
+      expect(screen.getByTestId('unlock-tooltip-epic')).toBeInTheDocument();
+
+      // Check achievement name in tooltip
+      const tooltipNames = screen.getAllByTestId('unlock-tooltip-name');
+      expect(tooltipNames[0]).toHaveTextContent('Collezionista');
+      expect(tooltipNames[1]).toHaveTextContent('Maestro Tattico');
+
+      // Check unlock hint in tooltip
+      const tooltipHints = screen.getAllByTestId('unlock-tooltip-hint');
+      expect(tooltipHints[0]).toHaveTextContent('Aggiungi altri 35 giochi alla tua libreria');
+      expect(tooltipHints[1]).toHaveTextContent('Vinci altre 67 partite strategiche');
+    });
+
+    it('does not render tooltip for unlocked badges', () => {
+      renderComponent({ achievements: mockAchievements });
+
+      // No tooltip content should be present for unlocked badges
+      expect(screen.queryByTestId('unlock-tooltip-name')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('unlock-tooltip-hint')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(/^unlock-tooltip-/)).not.toBeInTheDocument();
+    });
+
+    it('tooltip has role="tooltip" for accessibility', () => {
+      renderComponent({ achievements: mockLockedAchievements });
+
+      const tooltips = screen.getAllByRole('tooltip');
+      expect(tooltips.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows locked badges alongside unlocked in mixed list', () => {
+      const mixedAchievements: Achievement[] = [
+        mockAchievements[2], // unlocked common (ach-3)
+        mockLockedAchievements[0], // locked rare (ach-locked-1)
+      ];
+
+      renderComponent({ achievements: mixedAchievements });
+
+      // Unlocked common badge should NOT be muted
+      const commonBadge = screen.getByTestId('rarity-badge-common');
+      expect(commonBadge).not.toHaveClass('bg-muted');
+
+      // Locked rare badge SHOULD be muted
+      const rareBadge = screen.getByTestId('rarity-badge-rare');
+      expect(rareBadge).toHaveClass('bg-muted');
+
+      // Tooltip only for locked badge
+      expect(screen.getByTestId('unlock-tooltip-rare')).toBeInTheDocument();
+      expect(screen.queryByTestId('unlock-tooltip-common')).not.toBeInTheDocument();
     });
   });
 });

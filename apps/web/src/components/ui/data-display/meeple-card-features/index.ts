@@ -17,3 +17,10 @@ export { HoverPreview, type HoverPreviewProps, type HoverPreviewData } from './H
 export { DragHandle, type DragHandleProps, type DragData } from './DragHandle';
 export { BulkSelectCheckbox, type BulkSelectCheckboxProps } from './BulkSelectCheckbox';
 export { FlipCard, type FlipCardProps, type MeepleCardFlipData } from './FlipCard';
+
+// Issue #4400: ChatSession-specific display components
+export { ChatStatusBadge, type ChatStatusBadgeProps, type ChatStatus } from './ChatStatusBadge';
+export { ChatAgentInfo, type ChatAgentInfoProps, type ChatAgent } from './ChatAgentInfo';
+export { ChatStatsDisplay, type ChatStatsDisplayProps, type ChatStats, formatDuration } from './ChatStatsDisplay';
+export { ChatGameContext, type ChatGameContextProps, type ChatGame } from './ChatGameContext';
+export { ChatUnreadBadge, type ChatUnreadBadgeProps } from './ChatUnreadBadge';

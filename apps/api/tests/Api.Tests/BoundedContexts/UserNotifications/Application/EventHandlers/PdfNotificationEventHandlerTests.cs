@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
@@ -11,20 +12,23 @@ using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Services;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
+using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.UserNotifications.Application.EventHandlers;
 
+[Trait("Category", TestCategories.Unit)]
 public sealed class PdfNotificationEventHandlerTests
 {
     private readonly Mock<INotificationPreferencesRepository> _preferencesRepo;
     private readonly Mock<INotificationRepository> _notificationRepo;
     private readonly Mock<IPdfDocumentRepository> _pdfRepo;
     private readonly Mock<IUserRepository> _userRepo;
-    private readonly Mock<IEmailService> _emailService;
+    private readonly Mock<IMediator> _mediator;
     private readonly Mock<IPushNotificationService> _pushService;
     private readonly Mock<ILogger<PdfNotificationEventHandler>> _logger;
     private readonly PdfNotificationEventHandler _sut;
@@ -40,7 +44,7 @@ public sealed class PdfNotificationEventHandlerTests
         _notificationRepo = new Mock<INotificationRepository>();
         _pdfRepo = new Mock<IPdfDocumentRepository>();
         _userRepo = new Mock<IUserRepository>();
-        _emailService = new Mock<IEmailService>();
+        _mediator = new Mock<IMediator>();
         _pushService = new Mock<IPushNotificationService>();
         _logger = new Mock<ILogger<PdfNotificationEventHandler>>();
 
@@ -49,7 +53,7 @@ public sealed class PdfNotificationEventHandlerTests
             _notificationRepo.Object,
             _pdfRepo.Object,
             _userRepo.Object,
-            _emailService.Object,
+            _mediator.Object,
             _pushService.Object,
             _logger.Object);
     }
@@ -103,11 +107,12 @@ public sealed class PdfNotificationEventHandlerTests
                 n.Title == "PDF Ready"),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _emailService.Verify(e => e.SendPdfReadyEmailAsync(
-            "test@example.com",
-            "Test User",
-            TestFileName,
-            _pdfDocumentId,
+        _mediator.Verify(m => m.Send(
+            It.Is<EnqueueEmailCommand>(c =>
+                c.To == "test@example.com" &&
+                c.UserName == "Test User" &&
+                c.FileName == TestFileName &&
+                c.TemplateName == "document_ready"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -154,11 +159,8 @@ public sealed class PdfNotificationEventHandlerTests
             It.IsAny<Notification>(),
             It.IsAny<CancellationToken>()), Times.Never);
 
-        _emailService.Verify(e => e.SendPdfReadyEmailAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<Guid>(),
+        _mediator.Verify(m => m.Send(
+            It.Is<EnqueueEmailCommand>(c => c.TemplateName == "document_ready"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -180,11 +182,8 @@ public sealed class PdfNotificationEventHandlerTests
             It.IsAny<Notification>(),
             It.IsAny<CancellationToken>()), Times.Never);
 
-        _emailService.Verify(e => e.SendPdfReadyEmailAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<Guid>(),
+        _mediator.Verify(m => m.Send(
+            It.IsAny<EnqueueEmailCommand>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -209,11 +208,8 @@ public sealed class PdfNotificationEventHandlerTests
             It.IsAny<Notification>(),
             It.IsAny<CancellationToken>()), Times.Never);
 
-        _emailService.Verify(e => e.SendPdfReadyEmailAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<Guid>(),
+        _mediator.Verify(m => m.Send(
+            It.IsAny<EnqueueEmailCommand>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -269,16 +265,18 @@ public sealed class PdfNotificationEventHandlerTests
                 n.Title == "PDF Processing Failed"),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _emailService.Verify(e => e.SendPdfFailedEmailAsync(
-            "test@example.com",
-            "Test User",
-            TestFileName,
-            "Network timeout",
+        _mediator.Verify(m => m.Send(
+            It.Is<EnqueueEmailCommand>(c =>
+                c.To == "test@example.com" &&
+                c.UserName == "Test User" &&
+                c.FileName == TestFileName &&
+                c.TemplateName == "document_failed" &&
+                c.ErrorMessage == "Network timeout"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_PdfFailed_EmailServiceThrows_ContinuesWithoutError()
+    public async Task Handle_PdfFailed_MediatorThrows_ContinuesWithoutError()
     {
         // Arrange
         var prefs = new NotificationPreferences(_userId);
@@ -303,13 +301,10 @@ public sealed class PdfNotificationEventHandlerTests
         _userRepo.Setup(r => r.GetByIdAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        _emailService.Setup(e => e.SendPdfFailedEmailAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
+        _mediator.Setup(m => m.Send(
+                It.IsAny<EnqueueEmailCommand>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Email service unavailable"));
+            .ThrowsAsync(new InvalidOperationException("Email queue unavailable"));
 
         var evt = new PdfFailedEvent(
             _pdfDocumentId,
@@ -375,11 +370,13 @@ public sealed class PdfNotificationEventHandlerTests
                 n.Title == "PDF Retry Started"),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _emailService.Verify(e => e.SendPdfRetryEmailAsync(
-            "test@example.com",
-            "Test User",
-            TestFileName,
-            2,
+        _mediator.Verify(m => m.Send(
+            It.Is<EnqueueEmailCommand>(c =>
+                c.To == "test@example.com" &&
+                c.UserName == "Test User" &&
+                c.FileName == TestFileName &&
+                c.TemplateName == "retry_available" &&
+                c.RetryCount == 2),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -409,11 +406,8 @@ public sealed class PdfNotificationEventHandlerTests
             It.IsAny<Notification>(),
             It.IsAny<CancellationToken>()), Times.Never);
 
-        _emailService.Verify(e => e.SendPdfRetryEmailAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<int>(),
+        _mediator.Verify(m => m.Send(
+            It.IsAny<EnqueueEmailCommand>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -447,11 +441,8 @@ public sealed class PdfNotificationEventHandlerTests
             It.IsAny<Notification>(),
             It.IsAny<CancellationToken>()), Times.Never);
 
-        _emailService.Verify(e => e.SendPdfReadyEmailAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<Guid>(),
+        _mediator.Verify(m => m.Send(
+            It.IsAny<EnqueueEmailCommand>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -490,11 +481,8 @@ public sealed class PdfNotificationEventHandlerTests
             It.IsAny<Notification>(),
             It.IsAny<CancellationToken>()), Times.Never);
 
-        _emailService.Verify(e => e.SendPdfReadyEmailAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<Guid>(),
+        _mediator.Verify(m => m.Send(
+            It.IsAny<EnqueueEmailCommand>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 

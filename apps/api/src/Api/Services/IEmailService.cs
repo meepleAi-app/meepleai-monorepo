@@ -168,4 +168,15 @@ internal interface IEmailService
         string fileName,
         int retryCount,
         CancellationToken ct = default);
+
+    // ISSUE-4417: Raw email sending for queue processor
+    /// <summary>
+    /// Sends a pre-rendered HTML email via SMTP.
+    /// Used by EmailProcessorJob for queue-based delivery.
+    /// </summary>
+    Task SendRawEmailAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        CancellationToken ct = default);
 }

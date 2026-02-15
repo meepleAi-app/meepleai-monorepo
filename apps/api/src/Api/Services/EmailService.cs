@@ -2478,4 +2478,46 @@ internal class EmailService : IEmailService
 </html>
 ";
     }
+
+    // ISSUE-4417: Raw email sending for queue processor
+    public async Task SendRawEmailAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail));
+            message.Subject = subject;
+            message.Body = htmlBody;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Raw email sent successfully to {Email}",
+                DataMasking.MaskEmail(toEmail));
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send raw email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send raw email", ex);
+        }
+    }
 }

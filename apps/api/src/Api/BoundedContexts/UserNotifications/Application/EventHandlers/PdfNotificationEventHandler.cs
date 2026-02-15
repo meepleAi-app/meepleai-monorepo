@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -11,8 +12,9 @@ using MediatR;
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 
 /// <summary>
-/// Handles PDF document events to send multi-channel notifications (in-app, email, push).
+/// Handles PDF document events to send multi-channel notifications (in-app, email via queue, push).
 /// Issue #4220: Multi-channel notification system for PDF pipeline.
+/// Issue #4417: Refactored to use email queue for async delivery.
 /// </summary>
 internal class PdfNotificationEventHandler :
     INotificationHandler<PdfStateChangedEvent>,
@@ -23,7 +25,7 @@ internal class PdfNotificationEventHandler :
     private readonly INotificationRepository _notificationRepo;
     private readonly IPdfDocumentRepository _pdfRepo;
     private readonly IUserRepository _userRepo;
-    private readonly IEmailService _emailService;
+    private readonly IMediator _mediator;
     private readonly IPushNotificationService _pushService;
     private readonly ILogger<PdfNotificationEventHandler> _logger;
 
@@ -32,7 +34,7 @@ internal class PdfNotificationEventHandler :
         INotificationRepository notificationRepo,
         IPdfDocumentRepository pdfRepo,
         IUserRepository userRepo,
-        IEmailService emailService,
+        IMediator mediator,
         IPushNotificationService pushService,
         ILogger<PdfNotificationEventHandler> logger)
     {
@@ -40,7 +42,7 @@ internal class PdfNotificationEventHandler :
         _notificationRepo = notificationRepo;
         _pdfRepo = pdfRepo;
         _userRepo = userRepo;
-        _emailService = emailService;
+        _mediator = mediator;
         _pushService = pushService;
         _logger = logger;
     }
@@ -81,24 +83,27 @@ internal class PdfNotificationEventHandler :
             _logger.LogInformation("PDF ready in-app notification created for user {UserId}", evt.UploadedByUserId);
         }
 
-        // Email Notification (best-effort)
+        // Email Notification via Queue (Issue #4417)
         if (prefs.EmailOnDocumentReady)
         {
             try
             {
-                await _emailService.SendPdfReadyEmailAsync(
-                    user.Email,
-                    user.DisplayName,
-                    pdfDoc.FileName.Value,
-                    evt.PdfDocumentId,
-                    cancellationToken).ConfigureAwait(false);
+                await _mediator.Send(new EnqueueEmailCommand(
+                    UserId: evt.UploadedByUserId,
+                    To: user.Email,
+                    Subject: "Your PDF is Ready - MeepleAI",
+                    TemplateName: "document_ready",
+                    UserName: user.DisplayName,
+                    FileName: pdfDoc.FileName.Value,
+                    DocumentUrl: $"/documents/{evt.PdfDocumentId}"
+                ), cancellationToken).ConfigureAwait(false);
 
-                _logger.LogInformation("PDF ready email sent to user {UserId}", evt.UploadedByUserId);
+                _logger.LogInformation("PDF ready email enqueued for user {UserId}", evt.UploadedByUserId);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send PDF ready email to user {UserId}", evt.UploadedByUserId);
+                _logger.LogError(ex, "Failed to enqueue PDF ready email for user {UserId}", evt.UploadedByUserId);
             }
 #pragma warning restore CA1031
         }
@@ -160,24 +165,27 @@ internal class PdfNotificationEventHandler :
             _logger.LogWarning("PDF failure in-app notification created for user {UserId}", evt.UploadedByUserId);
         }
 
-        // Email Notification (best-effort)
+        // Email Notification via Queue (Issue #4417)
         if (prefs.EmailOnDocumentFailed)
         {
             try
             {
-                await _emailService.SendPdfFailedEmailAsync(
-                    user.Email,
-                    user.DisplayName,
-                    pdfDoc.FileName.Value,
-                    evt.ErrorMessage,
-                    cancellationToken).ConfigureAwait(false);
+                await _mediator.Send(new EnqueueEmailCommand(
+                    UserId: evt.UploadedByUserId,
+                    To: user.Email,
+                    Subject: "PDF Processing Failed - MeepleAI",
+                    TemplateName: "document_failed",
+                    UserName: user.DisplayName,
+                    FileName: pdfDoc.FileName.Value,
+                    ErrorMessage: evt.ErrorMessage
+                ), cancellationToken).ConfigureAwait(false);
 
-                _logger.LogInformation("PDF failed email sent to user {UserId}", evt.UploadedByUserId);
+                _logger.LogInformation("PDF failed email enqueued for user {UserId}", evt.UploadedByUserId);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send PDF failed email to user {UserId}", evt.UploadedByUserId);
+                _logger.LogError(ex, "Failed to enqueue PDF failed email for user {UserId}", evt.UploadedByUserId);
             }
 #pragma warning restore CA1031
         }
@@ -239,24 +247,27 @@ internal class PdfNotificationEventHandler :
             _logger.LogInformation("PDF retry in-app notification created for user {UserId}", evt.UploadedByUserId);
         }
 
-        // Email Notification (best-effort)
+        // Email Notification via Queue (Issue #4417)
         if (prefs.EmailOnRetryAvailable)
         {
             try
             {
-                await _emailService.SendPdfRetryEmailAsync(
-                    user.Email,
-                    user.DisplayName,
-                    pdfDoc.FileName.Value,
-                    evt.RetryCount,
-                    cancellationToken).ConfigureAwait(false);
+                await _mediator.Send(new EnqueueEmailCommand(
+                    UserId: evt.UploadedByUserId,
+                    To: user.Email,
+                    Subject: "PDF Retry - MeepleAI",
+                    TemplateName: "retry_available",
+                    UserName: user.DisplayName,
+                    FileName: pdfDoc.FileName.Value,
+                    RetryCount: evt.RetryCount
+                ), cancellationToken).ConfigureAwait(false);
 
-                _logger.LogInformation("PDF retry email sent to user {UserId}", evt.UploadedByUserId);
+                _logger.LogInformation("PDF retry email enqueued for user {UserId}", evt.UploadedByUserId);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send PDF retry email to user {UserId}", evt.UploadedByUserId);
+                _logger.LogError(ex, "Failed to enqueue PDF retry email for user {UserId}", evt.UploadedByUserId);
             }
 #pragma warning restore CA1031
         }

@@ -20,6 +20,11 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
     public bool PushOnDocumentFailed { get; private set; } = true;
     public bool PushOnRetryAvailable { get; private set; }
 
+    // Push Subscription (Web Push API - Issue #4416)
+    public string? PushEndpoint { get; private set; }
+    public string? PushP256dhKey { get; private set; }
+    public string? PushAuthKey { get; private set; }
+
     // PDF Processing - In-App
     public bool InAppOnDocumentReady { get; private set; } = true;
     public bool InAppOnDocumentFailed { get; private set; } = true;
@@ -41,7 +46,8 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         Guid id, Guid userId,
         bool emailReady, bool emailFailed, bool emailRetry,
         bool pushReady, bool pushFailed, bool pushRetry,
-        bool inAppReady, bool inAppFailed, bool inAppRetry)
+        bool inAppReady, bool inAppFailed, bool inAppRetry,
+        string? pushEndpoint = null, string? pushP256dhKey = null, string? pushAuthKey = null)
     {
         return new NotificationPreferences
         {
@@ -55,7 +61,10 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
             PushOnRetryAvailable = pushRetry,
             InAppOnDocumentReady = inAppReady,
             InAppOnDocumentFailed = inAppFailed,
-            InAppOnRetryAvailable = inAppRetry
+            InAppOnRetryAvailable = inAppRetry,
+            PushEndpoint = pushEndpoint,
+            PushP256dhKey = pushP256dhKey,
+            PushAuthKey = pushAuthKey
         };
     }
 
@@ -72,6 +81,22 @@ internal sealed class NotificationPreferences : AggregateRoot<Guid>
         PushOnDocumentFailed = onFailed;
         PushOnRetryAvailable = onRetry;
     }
+
+    public void UpdatePushSubscription(string? endpoint, string? p256dhKey, string? authKey)
+    {
+        PushEndpoint = endpoint;
+        PushP256dhKey = p256dhKey;
+        PushAuthKey = authKey;
+    }
+
+    public void ClearPushSubscription()
+    {
+        PushEndpoint = null;
+        PushP256dhKey = null;
+        PushAuthKey = null;
+    }
+
+    public bool HasPushSubscription => !string.IsNullOrEmpty(PushEndpoint);
 
     public void UpdateInAppPreferences(bool onReady, bool onFailed, bool onRetry)
     {

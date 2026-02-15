@@ -25,7 +25,8 @@ internal class GetNotificationPreferencesQueryHandler : IQueryHandler<GetNotific
             prefs.UserId,
             prefs.EmailOnDocumentReady, prefs.EmailOnDocumentFailed, prefs.EmailOnRetryAvailable,
             prefs.PushOnDocumentReady, prefs.PushOnDocumentFailed, prefs.PushOnRetryAvailable,
-            prefs.InAppOnDocumentReady, prefs.InAppOnDocumentFailed, prefs.InAppOnRetryAvailable
+            prefs.InAppOnDocumentReady, prefs.InAppOnDocumentFailed, prefs.InAppOnRetryAvailable,
+            prefs.HasPushSubscription
         );
     }
 }

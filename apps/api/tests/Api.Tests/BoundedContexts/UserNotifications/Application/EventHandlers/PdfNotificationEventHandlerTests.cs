@@ -25,6 +25,7 @@ public sealed class PdfNotificationEventHandlerTests
     private readonly Mock<IPdfDocumentRepository> _pdfRepo;
     private readonly Mock<IUserRepository> _userRepo;
     private readonly Mock<IEmailService> _emailService;
+    private readonly Mock<IPushNotificationService> _pushService;
     private readonly Mock<ILogger<PdfNotificationEventHandler>> _logger;
     private readonly PdfNotificationEventHandler _sut;
 
@@ -40,6 +41,7 @@ public sealed class PdfNotificationEventHandlerTests
         _pdfRepo = new Mock<IPdfDocumentRepository>();
         _userRepo = new Mock<IUserRepository>();
         _emailService = new Mock<IEmailService>();
+        _pushService = new Mock<IPushNotificationService>();
         _logger = new Mock<ILogger<PdfNotificationEventHandler>>();
 
         _sut = new PdfNotificationEventHandler(
@@ -48,6 +50,7 @@ public sealed class PdfNotificationEventHandlerTests
             _pdfRepo.Object,
             _userRepo.Object,
             _emailService.Object,
+            _pushService.Object,
             _logger.Object);
     }
 

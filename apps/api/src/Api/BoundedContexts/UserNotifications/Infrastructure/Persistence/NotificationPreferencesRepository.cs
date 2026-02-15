@@ -67,7 +67,8 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             entity.Id, entity.UserId,
             entity.EmailOnDocumentReady, entity.EmailOnDocumentFailed, entity.EmailOnRetryAvailable,
             entity.PushOnDocumentReady, entity.PushOnDocumentFailed, entity.PushOnRetryAvailable,
-            entity.InAppOnDocumentReady, entity.InAppOnDocumentFailed, entity.InAppOnRetryAvailable
+            entity.InAppOnDocumentReady, entity.InAppOnDocumentFailed, entity.InAppOnRetryAvailable,
+            entity.PushEndpoint, entity.PushP256dhKey, entity.PushAuthKey
         );
     }
 
@@ -85,7 +86,10 @@ internal class NotificationPreferencesRepository : RepositoryBase, INotification
             PushOnRetryAvailable = domain.PushOnRetryAvailable,
             InAppOnDocumentReady = domain.InAppOnDocumentReady,
             InAppOnDocumentFailed = domain.InAppOnDocumentFailed,
-            InAppOnRetryAvailable = domain.InAppOnRetryAvailable
+            InAppOnRetryAvailable = domain.InAppOnRetryAvailable,
+            PushEndpoint = domain.PushEndpoint,
+            PushP256dhKey = domain.PushP256dhKey,
+            PushAuthKey = domain.PushAuthKey
         };
     }
 }

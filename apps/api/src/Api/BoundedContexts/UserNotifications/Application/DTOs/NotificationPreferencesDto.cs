@@ -14,5 +14,6 @@ internal record NotificationPreferencesDto(
     bool PushOnRetryAvailable,
     bool InAppOnDocumentReady,
     bool InAppOnDocumentFailed,
-    bool InAppOnRetryAvailable
+    bool InAppOnRetryAvailable,
+    bool HasPushSubscription
 );

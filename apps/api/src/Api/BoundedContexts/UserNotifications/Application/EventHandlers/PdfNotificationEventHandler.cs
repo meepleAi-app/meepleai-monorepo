@@ -24,6 +24,7 @@ internal class PdfNotificationEventHandler :
     private readonly IPdfDocumentRepository _pdfRepo;
     private readonly IUserRepository _userRepo;
     private readonly IEmailService _emailService;
+    private readonly IPushNotificationService _pushService;
     private readonly ILogger<PdfNotificationEventHandler> _logger;
 
     public PdfNotificationEventHandler(
@@ -32,6 +33,7 @@ internal class PdfNotificationEventHandler :
         IPdfDocumentRepository pdfRepo,
         IUserRepository userRepo,
         IEmailService emailService,
+        IPushNotificationService pushService,
         ILogger<PdfNotificationEventHandler> logger)
     {
         _preferencesRepo = preferencesRepo;
@@ -39,6 +41,7 @@ internal class PdfNotificationEventHandler :
         _pdfRepo = pdfRepo;
         _userRepo = userRepo;
         _emailService = emailService;
+        _pushService = pushService;
         _logger = logger;
     }
 
@@ -100,10 +103,26 @@ internal class PdfNotificationEventHandler :
 #pragma warning restore CA1031
         }
 
-        // Push Notification (future implementation - placeholder)
-        if (prefs.PushOnDocumentReady)
+        // Push Notification (Issue #4416)
+        if (prefs.PushOnDocumentReady && prefs.HasPushSubscription)
         {
-            _logger.LogInformation("Push notification would be sent (not yet implemented) for user {UserId}", evt.UploadedByUserId);
+            try
+            {
+                await _pushService.SendPushNotificationAsync(
+                    prefs.PushEndpoint!,
+                    prefs.PushP256dhKey!,
+                    prefs.PushAuthKey!,
+                    "PDF Ready",
+                    $"Your PDF '{pdfDoc.FileName.Value}' is ready for AI queries",
+                    $"/documents/{evt.PdfDocumentId}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send push notification for PDF ready to user {UserId}", evt.UploadedByUserId);
+            }
+#pragma warning restore CA1031
         }
     }
 
@@ -163,10 +182,26 @@ internal class PdfNotificationEventHandler :
 #pragma warning restore CA1031
         }
 
-        // Push Notification (future implementation - placeholder)
-        if (prefs.PushOnDocumentFailed)
+        // Push Notification (Issue #4416)
+        if (prefs.PushOnDocumentFailed && prefs.HasPushSubscription)
         {
-            _logger.LogInformation("Push notification would be sent (not yet implemented) for user {UserId}", evt.UploadedByUserId);
+            try
+            {
+                await _pushService.SendPushNotificationAsync(
+                    prefs.PushEndpoint!,
+                    prefs.PushP256dhKey!,
+                    prefs.PushAuthKey!,
+                    "PDF Processing Failed",
+                    $"Failed to process '{pdfDoc.FileName.Value}': {evt.ErrorMessage}",
+                    $"/documents/{evt.PdfDocumentId}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send push notification for PDF failure to user {UserId}", evt.UploadedByUserId);
+            }
+#pragma warning restore CA1031
         }
     }
 
@@ -226,10 +261,26 @@ internal class PdfNotificationEventHandler :
 #pragma warning restore CA1031
         }
 
-        // Push Notification (future implementation - placeholder)
-        if (prefs.PushOnRetryAvailable)
+        // Push Notification (Issue #4416)
+        if (prefs.PushOnRetryAvailable && prefs.HasPushSubscription)
         {
-            _logger.LogInformation("Push notification would be sent (not yet implemented) for user {UserId}", evt.UploadedByUserId);
+            try
+            {
+                await _pushService.SendPushNotificationAsync(
+                    prefs.PushEndpoint!,
+                    prefs.PushP256dhKey!,
+                    prefs.PushAuthKey!,
+                    "PDF Retry Started",
+                    $"Retrying '{pdfDoc.FileName.Value}' (Attempt #{evt.RetryCount})",
+                    $"/documents/{evt.PdfDocumentId}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send push notification for PDF retry to user {UserId}", evt.UploadedByUserId);
+            }
+#pragma warning restore CA1031
         }
     }
 }

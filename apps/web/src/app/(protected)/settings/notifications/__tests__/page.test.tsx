@@ -1,5 +1,5 @@
 /**
- * Tests for Notification Settings Page (Issue #4220)
+ * Tests for Notification Settings Page (Issue #4220, #4416)
  */
 
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
@@ -14,11 +14,27 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }));
 
+// Mock usePushNotifications
+const mockPush = {
+  isSubscribed: false,
+  isSupported: true,
+  isLoading: false,
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
+};
+
+vi.mock('@/hooks/usePushNotifications', () => ({
+  usePushNotifications: () => mockPush,
+}));
+
 global.fetch = vi.fn();
 
 describe('NotificationSettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPush.isSubscribed = false;
+    mockPush.isSupported = true;
+    mockPush.isLoading = false;
   });
 
   it('renders loading state initially', () => {
@@ -45,6 +61,7 @@ describe('NotificationSettingsPage', () => {
       inAppOnDocumentReady: true,
       inAppOnDocumentFailed: true,
       inAppOnRetryAvailable: true,
+      hasPushSubscription: false,
     };
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -75,6 +92,7 @@ describe('NotificationSettingsPage', () => {
       inAppOnDocumentReady: true,
       inAppOnDocumentFailed: false,
       inAppOnRetryAvailable: false,
+      hasPushSubscription: false,
     };
 
     (global.fetch as ReturnType<typeof vi.fn>)
@@ -120,6 +138,7 @@ describe('NotificationSettingsPage', () => {
       inAppOnDocumentReady: false,
       inAppOnDocumentFailed: false,
       inAppOnRetryAvailable: false,
+      hasPushSubscription: false,
     };
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -144,5 +163,98 @@ describe('NotificationSettingsPage', () => {
     await waitFor(() => {
       expect(emailReadySwitch).toHaveAttribute('aria-checked', 'true');
     });
+  });
+
+  it('shows push subscription card when push is supported', async () => {
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: true,
+      pushOnDocumentFailed: true,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: false,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => mockPrefs,
+    });
+
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Browser Push Notifications')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: 'Enable' })).toBeInTheDocument();
+  });
+
+  it('shows Disable button when push is subscribed', async () => {
+    mockPush.isSubscribed = true;
+
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: true,
+      pushOnDocumentFailed: true,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: true,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => mockPrefs,
+    });
+
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Disable' })).toBeInTheDocument();
+    });
+  });
+
+  it('push toggles are disabled when not subscribed', async () => {
+    mockPush.isSubscribed = false;
+
+    const mockPrefs = {
+      userId: 'user-123',
+      emailOnDocumentReady: true,
+      emailOnDocumentFailed: true,
+      emailOnRetryAvailable: false,
+      pushOnDocumentReady: true,
+      pushOnDocumentFailed: true,
+      pushOnRetryAvailable: false,
+      inAppOnDocumentReady: true,
+      inAppOnDocumentFailed: true,
+      inAppOnRetryAvailable: true,
+      hasPushSubscription: false,
+    };
+
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => mockPrefs,
+    });
+
+    render(<NotificationSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Document Ready')).toBeInTheDocument();
+    });
+
+    const switches = screen.getAllByRole('switch');
+    // Push switches (indices 1, 4, 7 — second in each section)
+    expect(switches[1]).toBeDisabled();
+    expect(switches[4]).toBeDisabled();
+    expect(switches[7]).toBeDisabled();
   });
 });

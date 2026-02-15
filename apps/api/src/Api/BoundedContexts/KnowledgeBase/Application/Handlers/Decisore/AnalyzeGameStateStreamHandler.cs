@@ -100,10 +100,15 @@ internal sealed class AnalyzeGameStateStreamHandler
 
     private static RagStreamingEvent CreateCompleteEvent(object result, long durationMs)
     {
+        _ = result; // Result available for future use
+        _ = durationMs;
+
         var completion = new StreamingComplete(
-            Result: result,
-            TotalDurationMs: (int)durationMs,
-            Message: "Analysis complete");
+            estimatedReadingTimeMinutes: 0,
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            confidence: null);
 
         return new RagStreamingEvent(
             StreamingEventType.Complete,

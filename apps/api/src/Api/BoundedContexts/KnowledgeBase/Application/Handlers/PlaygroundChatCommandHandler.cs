@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Models;
@@ -39,6 +40,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
     private readonly IHybridSearchService _hybridSearchService;
     private readonly ILlmCostCalculator _costCalculator;
     private readonly ILlmCostLogRepository _costLogRepository;
+    private readonly IRagExecutionRepository _ragExecutionRepository;
     private readonly ILogger<PlaygroundChatCommandHandler> _logger;
 
     public PlaygroundChatCommandHandler(
@@ -47,6 +49,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         IHybridSearchService hybridSearchService,
         ILlmCostCalculator costCalculator,
         ILlmCostLogRepository costLogRepository,
+        IRagExecutionRepository ragExecutionRepository,
         ILogger<PlaygroundChatCommandHandler> logger)
     {
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
@@ -54,6 +57,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
+        _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -714,6 +718,37 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
             command.AgentDefinitionId, effectiveStrategy, totalTokens, costCalculation.TotalCost, totalStopwatch.ElapsedMilliseconds);
+
+        // Persist execution for history (Issue #4458) - fire-and-forget
+        try
+        {
+            var executionTrace = System.Text.Json.JsonSerializer.Serialize(dataFlowSteps);
+            var execution = Domain.Entities.RagExecution.Create(
+                query: command.Message,
+                agentDefinitionId: command.AgentDefinitionId,
+                agentName: agentDefinition.Name,
+                strategy: effectiveStrategy,
+                model: effectiveModel,
+                provider: providerName,
+                gameId: command.GameId,
+                isPlayground: true,
+                totalLatencyMs: (int)totalStopwatch.ElapsedMilliseconds,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                totalTokens: totalTokens,
+                totalCost: costCalculation.TotalCost,
+                confidence: ragConfidence,
+                cacheHit: cacheInfo != null && string.Equals(cacheInfo.status, "hit", StringComparison.Ordinal),
+                status: "Success",
+                errorMessage: null,
+                executionTrace: executionTrace);
+
+            await _ragExecutionRepository.AddAsync(execution, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist RAG execution history");
+        }
     }
 
     /// <summary>

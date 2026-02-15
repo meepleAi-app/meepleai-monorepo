@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, Grid3x3, List, Shield, Award } from 'lucide-react';
+import { Search, Filter, Grid3x3, List, Shield, Award, Mail, ArrowUpDown, UserX, Eye } from 'lucide-react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/hooks/use-toast';
 import { adminClient } from '@/lib/api/admin-client';
 
@@ -24,6 +25,9 @@ interface UserDetailPanelProps {
 }
 
 function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: user } = useQuery({
     queryKey: ['user-detail', userId],
     queryFn: () => adminClient.getUserDetail(userId),
@@ -40,6 +44,40 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
     queryKey: ['user-badges', userId],
     queryFn: () => adminClient.getUserBadges(userId),
     enabled: isOpen,
+  });
+
+  const changeTierMutation = useMutation({
+    mutationFn: (tier: string) => adminClient.updateUserTier(userId, tier),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({ title: 'Tier updated', description: 'User tier has been changed' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to update tier', variant: 'destructive' });
+    },
+  });
+
+  const suspendMutation = useMutation({
+    mutationFn: () => user?.isActive ? adminClient.suspendUser(userId) : adminClient.unsuspendUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({
+        title: user?.isActive ? 'User suspended' : 'User unsuspended',
+        description: user?.isActive ? 'Account has been suspended' : 'Account has been reactivated',
+      });
+    },
+  });
+
+  const impersonateMutation = useMutation({
+    mutationFn: () => adminClient.impersonateUser(userId),
+    onSuccess: (result) => {
+      toast({ title: 'Impersonation started', description: `Session token: ${result.sessionToken.slice(0, 8)}...` });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to impersonate user', variant: 'destructive' });
+    },
   });
 
   return (
@@ -100,7 +138,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
               </div>
             </div>
 
-            {/* Library Stats - Simple Display */}
+            {/* Library Stats */}
             {libraryStats && (
               <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-amber-200/60 p-6">
                 <h4 className="font-quicksand font-semibold text-lg text-slate-900 mb-4">
@@ -170,6 +208,62 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                 </div>
               </div>
             )}
+
+            {/* Quick Actions */}
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-amber-200/60 p-6">
+              <h4 className="font-quicksand font-semibold text-lg text-slate-900 mb-4">
+                Quick Actions
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 justify-start"
+                  onClick={() => {
+                    if (user.email) {
+                      window.open(`mailto:${user.email}`, '_blank');
+                    }
+                  }}
+                >
+                  <Mail className="w-4 h-4" />
+                  Email
+                </Button>
+                <Select
+                  value={user.tier}
+                  onValueChange={(tier) => changeTierMutation.mutate(tier)}
+                >
+                  <SelectTrigger className="h-9 gap-2">
+                    <ArrowUpDown className="w-4 h-4" />
+                    <SelectValue placeholder="Change Tier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant={user.isActive ? 'destructive' : 'default'}
+                  size="sm"
+                  className="gap-2 justify-start"
+                  onClick={() => suspendMutation.mutate()}
+                  disabled={suspendMutation.isPending}
+                >
+                  <UserX className="w-4 h-4" />
+                  {user.isActive ? 'Suspend' : 'Unsuspend'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 justify-start"
+                  onClick={() => impersonateMutation.mutate()}
+                  disabled={impersonateMutation.isPending}
+                >
+                  <Eye className="w-4 h-4" />
+                  Impersonate
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </SheetContent>
@@ -183,40 +277,78 @@ export function UserManagementBlock() {
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const queryKey = ['admin-users', roleFilter, tierFilter, debouncedSearch];
+
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', roleFilter, tierFilter, searchQuery],
+    queryKey,
     queryFn: () =>
       adminClient.getUsers({
         page: 1,
         pageSize: 6,
         role: roleFilter !== 'all' ? roleFilter : undefined,
         tier: tierFilter !== 'all' ? tierFilter : undefined,
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
       }),
+    staleTime: 2 * 60 * 1000,
   });
 
   const suspendMutation = useMutation({
     mutationFn: (userId: string) => adminClient.suspendUser(userId),
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData(queryKey);
+      queryClient.setQueryData(queryKey, (old: typeof data) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map((u) =>
+            u.id === userId ? { ...u, isActive: false } : u
+          ),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _userId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+      toast({ title: 'Error', description: 'Failed to suspend user', variant: 'destructive' });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: 'User suspended',
-        description: 'User account has been suspended',
-      });
+      toast({ title: 'User suspended', description: 'User account has been suspended' });
     },
   });
 
   const unsuspendMutation = useMutation({
     mutationFn: (userId: string) => adminClient.unsuspendUser(userId),
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData(queryKey);
+      queryClient.setQueryData(queryKey, (old: typeof data) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map((u) =>
+            u.id === userId ? { ...u, isActive: true } : u
+          ),
+        };
+      });
+      return { previous };
+    },
+    onError: (_err, _userId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+      toast({ title: 'Error', description: 'Failed to unsuspend user', variant: 'destructive' });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({
-        title: 'User unsuspended',
-        description: 'User account has been reactivated',
-      });
+      toast({ title: 'User unsuspended', description: 'User account has been reactivated' });
     },
   });
 

@@ -27,6 +27,16 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+// Mock Radix Tooltip components
+vi.mock('@/components/ui/overlays/tooltip', () => ({
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => <>{children}</>,
+  TooltipContent: ({ children, ...props }: { children: React.ReactNode; side?: string; 'data-testid'?: string }) => (
+    <div data-testid={props['data-testid']} role="tooltip">{children}</div>
+  ),
+}));
+
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
@@ -442,6 +452,83 @@ describe('AchievementsWidget', () => {
       const widget = screen.getByTestId('achievements-widget');
       expect(widget).toHaveClass('rounded-2xl');
       expect(widget).toHaveClass('backdrop-blur-xl');
+    });
+  });
+
+  describe('Tooltip on Locked Badges', () => {
+    it('shows tooltip with unlock hint on locked badge', () => {
+      const lockedAchievements: Achievement[] = [
+        {
+          id: 'locked-1',
+          name: 'Locked Achievement',
+          description: 'You need to do X',
+          category: 'gameplay',
+          rarity: 'epic',
+          points: 100,
+          unlockedAt: '2026-02-04T10:00:00Z',
+          isLocked: true,
+          unlockHint: 'Complete 10 games to unlock',
+        },
+      ];
+
+      renderComponent({ achievements: lockedAchievements });
+
+      // Locked badge should show lock icon styling (muted bg)
+      const badge = screen.getByTestId('rarity-badge-epic');
+      expect(badge).toBeInTheDocument();
+
+      // Tooltip content should be rendered with unlock hint
+      const tooltip = screen.getByTestId('unlock-tooltip-epic');
+      expect(tooltip).toBeInTheDocument();
+      expect(tooltip).toHaveTextContent('Complete 10 games to unlock');
+    });
+
+    it('does not show tooltip on unlocked badge', () => {
+      const unlockedAchievements: Achievement[] = [
+        {
+          id: 'unlocked-1',
+          name: 'Unlocked Achievement',
+          description: 'Already unlocked',
+          category: 'gameplay',
+          rarity: 'rare',
+          points: 50,
+          unlockedAt: '2026-02-04T10:00:00Z',
+          isLocked: false,
+        },
+      ];
+
+      renderComponent({ achievements: unlockedAchievements });
+
+      // Badge should be present
+      const badge = screen.getByTestId('rarity-badge-rare');
+      expect(badge).toBeInTheDocument();
+
+      // No tooltip should be rendered for unlocked badge
+      expect(screen.queryByTestId('unlock-tooltip-rare')).not.toBeInTheDocument();
+    });
+
+    it('does not show tooltip on locked badge without unlockHint', () => {
+      const lockedNoHint: Achievement[] = [
+        {
+          id: 'locked-no-hint',
+          name: 'Locked No Hint',
+          description: 'No hint provided',
+          category: 'streak',
+          rarity: 'legendary',
+          points: 200,
+          unlockedAt: '2026-02-04T10:00:00Z',
+          isLocked: true,
+          // no unlockHint
+        },
+      ];
+
+      renderComponent({ achievements: lockedNoHint });
+
+      const badge = screen.getByTestId('rarity-badge-legendary');
+      expect(badge).toBeInTheDocument();
+
+      // No tooltip when unlockHint is missing
+      expect(screen.queryByTestId('unlock-tooltip-legendary')).not.toBeInTheDocument();
     });
   });
 

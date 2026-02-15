@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Playground Debug - Implementation Roadmap</title>
+<style>
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --bg-hover: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #334155;
+    --accent-a: #f59e0b;
+    --accent-a-bg: rgba(245,158,11,0.1);
+    --accent-b: #06b6d4;
+    --accent-b-bg: rgba(6,182,212,0.1);
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.1);
+    --orange: #f59e0b;
+    --orange-bg: rgba(245,158,11,0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.1);
+    --cyan: #06b6d4;
+    --pink: #ec4899;
+    --purple: #8b5cf6;
+    --purple-bg: rgba(139,92,246,0.1);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .header h1 { font-size: 1.5rem; font-weight: 700; }
+  .header h1 .accent-orange { color: var(--accent-a); }
+  .header h1 .accent-cyan { color: var(--accent-b); }
+  .header-sub {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 4px;
+  }
+  .header-stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .stat-chip.total { background: var(--purple-bg); color: var(--purple); }
+  .stat-chip.done { background: var(--green-bg); color: var(--green); }
+  .stat-chip.pending { background: var(--red-bg); color: var(--red); }
+  .stat-chip.waves { background: var(--accent-b-bg); color: var(--accent-b); }
+
+  .progress-bar-container {
+    margin-top: 16px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-a), var(--accent-b));
+    border-radius: 8px;
+    transition: width 0.5s ease;
+  }
+
+  /* Dependency flow */
+  .dep-flow {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+  }
+  .dep-flow h2 {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .wave-timeline {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .wave-node {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    transition: all 0.3s;
+    cursor: default;
+    white-space: nowrap;
+  }
+  .wave-node.active { border-color: var(--accent-a); color: var(--accent-a); background: var(--accent-a-bg); }
+  .wave-node.complete { border-color: var(--green); color: var(--green); background: var(--green-bg); text-decoration: line-through; }
+  .wave-arrow { color: var(--text-muted); font-size: 1.1rem; }
+
+  /* Filter bar */
+  .filter-bar {
+    padding: 12px 32px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+    background: rgba(15,23,42,0.8);
+  }
+  .filter-btn {
+    padding: 4px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--accent-a-bg);
+    color: var(--accent-a);
+    border-color: var(--accent-a);
+  }
+
+  /* Layout */
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 24px 32px;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1200px) { .container { grid-template-columns: 1fr; } }
+
+  /* Terminal columns */
+  .terminal {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .terminal-header {
+    padding: 16px 20px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-a .terminal-header { background: var(--accent-a-bg); color: var(--accent-a); border-left: 4px solid var(--accent-a); }
+  .terminal-b .terminal-header { background: var(--accent-b-bg); color: var(--accent-b); border-left: 4px solid var(--accent-b); }
+  .terminal-body { padding: 16px; }
+  .terminal-stats {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    font-size: 0.8rem;
+  }
+
+  /* Feature groups */
+  .feature-group {
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .feature-group-header {
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .feature-group-header:hover { background: var(--bg-hover); }
+  .feature-group-header .arrow {
+    transition: transform 0.3s;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .feature-group-header .arrow.open { transform: rotate(90deg); }
+  .feature-group-title { font-weight: 600; font-size: 0.95rem; flex: 1; }
+  .feature-group-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+  .badge-critical { background: var(--red-bg); color: var(--red); }
+  .badge-high { background: var(--orange-bg); color: var(--orange); }
+  .badge-medium { background: var(--purple-bg); color: var(--purple); }
+  .badge-low { background: var(--green-bg); color: var(--green); }
+  .badge-epic { background: rgba(236,72,153,0.15); color: var(--pink); }
+  .badge-wave {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    background: var(--accent-b-bg);
+    color: var(--accent-b);
+  }
+  .feature-group-counter {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .feature-group-body {
+    display: none;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+  }
+  .feature-group-body.open { display: block; }
+
+  /* Sequence labels */
+  .sequence-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 8px 4px 4px;
+    font-weight: 700;
+    border-top: 1px dashed var(--border);
+    margin-top: 4px;
+  }
+  .sequence-label:first-child { border-top: none; margin-top: 0; }
+
+  /* Issues */
+  .issue {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .issue:hover { background: var(--bg-hover); }
+  .issue input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border: 2px solid var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    margin-top: 2px;
+    transition: all 0.2s;
+  }
+  .issue input[type="checkbox"]:checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .issue input[type="checkbox"]:checked::after {
+    content: '\2713';
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .issue-content { flex: 1; }
+  .issue-number {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-a);
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+  }
+  .terminal-b .issue-number { color: var(--accent-b); }
+  .issue-title { font-size: 0.85rem; color: var(--text-primary); }
+  .issue.checked .issue-title {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+  .issue-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+  .issue-meta {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .issue-tag {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .tag-backend { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .tag-frontend { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .tag-fullstack { background: rgba(139,92,246,0.15); color: #a78bfa; }
+  .tag-testing { background: rgba(245,158,11,0.15); color: #fbbf24; }
+  .issue-link { color: inherit; text-decoration: none; }
+  .issue-link:hover { text-decoration: underline; }
+
+  .dep-note {
+    font-size: 0.7rem;
+    color: var(--orange);
+    margin-top: 2px;
+    padding-left: 4px;
+  }
+
+  .save-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid var(--green);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+  }
+  .save-indicator.show { opacity: 1; }
+
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+    margin-top: 24px;
+  }
+  .footer a { color: var(--accent-b); }
+
+  /* Context cards */
+  .context-section {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .context-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .context-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .context-card h4 {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .context-card .value {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  .context-card .sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  .status-dot.live { background: var(--green); }
+  .status-dot.planned { background: var(--orange); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span class="accent-orange">Agent Playground</span> <span class="accent-cyan">Debug</span> Roadmap</h1>
+  <p class="header-sub">
+    Epics #4435 + #4436 | 10 Issues | 6 Waves | Base: main-dev | Generato: 2026-02-15
+  </p>
+  <div class="header-stats">
+    <div class="stat-chip total" id="stat-total">10 Issues</div>
+    <div class="stat-chip done" id="stat-done">0 Completate</div>
+    <div class="stat-chip pending" id="stat-pending">10 Da Fare</div>
+    <div class="stat-chip waves" id="stat-waves">Wave 0/6</div>
+  </div>
+  <div class="progress-bar-container">
+    <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- Current State Context -->
+<div class="context-section">
+  <div class="context-grid">
+    <div class="context-card">
+      <h4>Playground Status</h4>
+      <div class="value"><span class="status-dot live"></span>Fully Functional E2E</div>
+      <div class="sub">SSE streaming, real LLM, real RAG, scenarios, export</div>
+    </div>
+    <div class="context-card">
+      <h4>Gap Principale</h4>
+      <div class="value"><span class="status-dot planned"></span>2 Handler Separati</div>
+      <div class="sub">PlaygroundChat (streaming, no strategy) vs AskAgentQuestion (3 strategies, no streaming)</div>
+    </div>
+    <div class="context-card">
+      <h4>Strategia POC</h4>
+      <div class="value">SingleModel = Default</div>
+      <div class="sub">RAG + single LLM call. Default per tutti gli agenti (creazione + playground + seed)</div>
+    </div>
+    <div class="context-card">
+      <h4>Debug Panel Attuale</h4>
+      <div class="value"><span class="status-dot live"></span>Basic Metrics</div>
+      <div class="sub">Tokens, latency totale, confidence, agent config. Manca: per-step timing, cache, API trace</div>
+    </div>
+  </div>
+</div>
+
+<!-- Wave Timeline -->
+<div class="dep-flow">
+  <h2>Dependency Flow</h2>
+  <div class="wave-timeline" id="wave-timeline">
+    <div class="wave-node active" data-wave="1">W1: #4437 Foundation</div>
+    <span class="wave-arrow">&rarr;</span>
+    <div class="wave-node" data-wave="2">W2: #4441 + #4438</div>
+    <span class="wave-arrow">&rarr;</span>
+    <div class="wave-node" data-wave="3">W3: #4439 + #4442</div>
+    <span class="wave-arrow">&rarr;</span>
+    <div class="wave-node" data-wave="4">W4: #4443 + #4444</div>
+    <span class="wave-arrow">&rarr;</span>
+    <div class="wave-node" data-wave="5">W5: #4445 Console</div>
+    <span class="wave-arrow">&rarr;</span>
+    <div class="wave-node" data-wave="6">W6: #4440 + #4446</div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" onclick="filterIssues('all')">Tutte</button>
+  <button class="filter-btn" onclick="filterIssues('backend')">Backend</button>
+  <button class="filter-btn" onclick="filterIssues('frontend')">Frontend</button>
+  <button class="filter-btn" onclick="filterIssues('fullstack')">Fullstack</button>
+  <button class="filter-btn" onclick="filterIssues('unchecked')">Solo Da Fare</button>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- TERMINAL A: Epic #4435 - POC Strategy          -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="terminal terminal-a">
+  <div class="terminal-header">
+    <span>Epic A</span> #4435 POC Strategy Integration
+    <div class="terminal-stats">
+      <span id="termA-count">0/4</span>
+    </div>
+  </div>
+  <div class="terminal-body">
+
+    <!-- Wave 1: Foundation -->
+    <div class="feature-group" data-group="foundation">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 1: Foundation</span>
+        <span class="feature-group-badge badge-critical">P1 CRITICAL</span>
+        <span class="badge-wave">WAVE 1</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="dep-note" style="padding:4px 4px 8px;">Blocca TUTTE le altre issue. Modifica core handler + SSE events + store.</div>
+        <div class="issue" data-type="fullstack" data-wave="1">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4437">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4437" target="_blank" class="issue-link">
+              <span class="issue-number">#4437</span>
+              <span class="issue-title">POC Strategy Selector - Default SingleModel</span>
+            </a>
+            <div class="issue-desc">
+              Estendere PlaygroundChatCommandHandler con 3 strategie (RetrievalOnly / SingleModel / MultiModelConsensus).
+              POC (SingleModel) come default. UI: radio group nel playground. Default anche per AgentDefinition.Create() e seed.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Blocca: #4441, #4438, #4439, #4440, #4442, #4443, #4444, #4445, #4446</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave 2: Quick Wins (A side) -->
+    <div class="feature-group" data-group="provider-override">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 2: LLM Provider Override</span>
+        <span class="feature-group-badge badge-high">P2</span>
+        <span class="badge-wave">WAVE 2</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="issue" data-type="fullstack" data-wave="2">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4438">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4438" target="_blank" class="issue-link">
+              <span class="issue-number">#4438</span>
+              <span class="issue-title">LLM Provider/Model Override</span>
+            </a>
+            <div class="issue-desc">
+              Permettere override di model e provider dal playground (Ollama / OpenRouter).
+              Collapsible "Advanced Options". Reset to agent default. Debug panel mostra model usato.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4437</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave 3: Cost Tracking -->
+    <div class="feature-group" data-group="cost-tracking">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 3: Real Cost Tracking</span>
+        <span class="feature-group-badge badge-high">P2</span>
+        <span class="badge-wave">WAVE 3</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="issue" data-type="fullstack" data-wave="3">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4439">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4439" target="_blank" class="issue-link">
+              <span class="issue-number">#4439</span>
+              <span class="issue-title">Real Cost Tracking</span>
+            </a>
+            <div class="issue-desc">
+              Sostituire stima costo con tracking reale dal POC flow. Breakdown: embedding + search + LLM.
+              Persist in LlmCostLog. Session cumulative cost. Color-coding per livello costo.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4437 | Blocca: #4440</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave 6: Comparison -->
+    <div class="feature-group" data-group="comparison">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 6: Strategy Comparison Mode</span>
+        <span class="feature-group-badge badge-low">P3</span>
+        <span class="badge-wave">WAVE 6</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="issue" data-type="frontend" data-wave="6">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4440">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4440" target="_blank" class="issue-link">
+              <span class="issue-number">#4440</span>
+              <span class="issue-title">Strategy Comparison Mode</span>
+            </a>
+            <div class="issue-desc">
+              Side-by-side: stessa domanda con 3 strategie. Split view 3 colonne.
+              Metrics comparison: costo, latency, qualita. Export risultati.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4437, #4439</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- TERMINAL B: Epic #4436 - RAG Debug Console     -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="terminal terminal-b">
+  <div class="terminal-header">
+    <span>Epic B</span> #4436 RAG Debug Console
+    <div class="terminal-stats">
+      <span id="termB-count">0/6</span>
+    </div>
+  </div>
+  <div class="terminal-body">
+
+    <!-- Wave 2: Strategy Info -->
+    <div class="feature-group" data-group="strategy-info">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 2: RAG Strategy Info Panel</span>
+        <span class="feature-group-badge badge-high">P2</span>
+        <span class="badge-wave">WAVE 2</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="issue" data-type="fullstack" data-wave="2">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4441">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4441" target="_blank" class="issue-link">
+              <span class="issue-number">#4441</span>
+              <span class="issue-title">RAG Strategy Info Panel</span>
+            </a>
+            <div class="issue-desc">
+              Mostrare nel debug panel: strategia attiva, parametri (TopK, MinScore, weights),
+              tipo di search (hybrid/vector/keyword), badge + tabella parametri collapsible.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4437</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave 3: Pipeline Timing -->
+    <div class="feature-group" data-group="pipeline-timing">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 3: Pipeline Timing Waterfall</span>
+        <span class="feature-group-badge badge-high">P2</span>
+        <span class="badge-wave">WAVE 3</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="issue" data-type="fullstack" data-wave="3">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4442">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4442" target="_blank" class="issue-link">
+              <span class="issue-number">#4442</span>
+              <span class="issue-title">Per-Step Pipeline Timing Waterfall</span>
+            </a>
+            <div class="issue-desc">
+              Instrumentare ogni step con Stopwatch: agent load, embedding, vector search, rerank, context build, LLM (first token + total).
+              Waterfall chart orizzontale con colori per tipo step. Hover tooltip.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4437 | Blocca: #4443, #4444, #4445, #4446</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave 4: Deep Observability -->
+    <div class="feature-group" data-group="deep-observability">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 4: Deep Observability</span>
+        <span class="feature-group-badge badge-medium">P2</span>
+        <span class="badge-wave">WAVE 4</span>
+        <span class="feature-group-counter">0/2</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="sequence-label">Cache Observability</div>
+        <div class="issue" data-type="fullstack" data-wave="4">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4443">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4443" target="_blank" class="issue-link">
+              <span class="issue-number">#4443</span>
+              <span class="issue-title">Cache Observability</span>
+            </a>
+            <div class="issue-desc">
+              HIT/MISS badge, cache key, TTL, age. Session hit rate.
+              Instrumentare HybridCache calls nel handler.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4442</div>
+          </div>
+        </div>
+        <div class="sequence-label">API Call Tracing</div>
+        <div class="issue" data-type="fullstack" data-wave="4">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4444">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4444" target="_blank" class="issue-link">
+              <span class="issue-number">#4444</span>
+              <span class="issue-title">API Call Tracing</span>
+            </a>
+            <div class="issue-desc">
+              Network tab nel debug panel. Traccia: embedding API, Qdrant, LLM API, reranker.
+              Per ogni call: service, method, status, size, latency. Expandable details. Filtro e sort.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4442</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave 5: Developer Console -->
+    <div class="feature-group" data-group="dev-console">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 5: Developer Console</span>
+        <span class="feature-group-badge badge-medium">P2</span>
+        <span class="badge-wave">WAVE 5</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="issue" data-type="frontend" data-wave="5">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4445">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4445" target="_blank" class="issue-link">
+              <span class="issue-number">#4445</span>
+              <span class="issue-title">Developer Console</span>
+            </a>
+            <div class="issue-desc">
+              Console tab stile DevTools. Log filtrabili per level (info/warn/error/debug) e source (RAG/LLM/Cache/API).
+              Text search, auto-scroll, export JSON/text. Color-coded.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-frontend">frontend</span>
+              <span class="issue-tag tag-backend">backend</span>
+            </div>
+            <div class="dep-note">Dipende: #4442, #4443, #4444</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wave 6: TOMAC Viz -->
+    <div class="feature-group" data-group="tomac-viz">
+      <div class="feature-group-header" onclick="toggleGroup(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="feature-group-title">Wave 6: TOMAC-RAG Layer Visualization</span>
+        <span class="feature-group-badge badge-low">P3</span>
+        <span class="badge-wave">WAVE 6</span>
+        <span class="feature-group-counter">0/1</span>
+      </div>
+      <div class="feature-group-body">
+        <div class="issue" data-type="fullstack" data-wave="6">
+          <input type="checkbox" onchange="updateProgress()" data-issue="4446">
+          <div class="issue-content">
+            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4446" target="_blank" class="issue-link">
+              <span class="issue-number">#4446</span>
+              <span class="issue-title">TOMAC-RAG Layer Visualization</span>
+            </a>
+            <div class="issue-desc">
+              6 layer TOMAC-RAG con stato: L1 Routing (planned), L2 Cache (planned), L3 Retrieval (active),
+              L4 CRAG Evaluation (planned), L5 Generation (active), L6 Validation (planned).
+              Pipeline verticale con metrics per layer attivi.
+            </div>
+            <div class="issue-meta">
+              <span class="issue-tag tag-backend">backend</span>
+              <span class="issue-tag tag-frontend">frontend</span>
+            </div>
+            <div class="dep-note">Dipende: #4442</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+
+<div class="save-indicator" id="save-indicator">Progresso salvato</div>
+
+<div class="footer">
+  Agent Playground Debug Roadmap |
+  <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4435" target="_blank">Epic A #4435</a> |
+  <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4436" target="_blank">Epic B #4436</a> |
+  <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues" target="_blank">All Issues</a>
+</div>
+
+<script>
+  const STORAGE_KEY = 'meepleai-playground-debug-roadmap';
+  const WAVE_MAP = {
+    '4437': 1, '4441': 2, '4438': 2, '4439': 3, '4442': 3,
+    '4443': 4, '4444': 4, '4445': 5, '4440': 6, '4446': 6
+  };
+
+  function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    try {
+      const state = JSON.parse(saved);
+      document.querySelectorAll('input[type="checkbox"][data-issue]').forEach(cb => {
+        if (state[cb.dataset.issue] !== undefined) cb.checked = state[cb.dataset.issue];
+      });
+    } catch(e) {}
+  }
+
+  function saveState() {
+    const state = {};
+    document.querySelectorAll('input[type="checkbox"][data-issue]').forEach(cb => {
+      state[cb.dataset.issue] = cb.checked;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const indicator = document.getElementById('save-indicator');
+    indicator.classList.add('show');
+    setTimeout(() => indicator.classList.remove('show'), 1500);
+  }
+
+  function updateProgress() {
+    saveState();
+
+    const allCbs = document.querySelectorAll('.container input[type="checkbox"][data-issue]');
+    const total = allCbs.length;
+    const checked = [...allCbs].filter(cb => cb.checked).length;
+    const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+    document.getElementById('stat-total').textContent = `${total} Issues`;
+    document.getElementById('stat-done').textContent = `${checked} Completate`;
+    document.getElementById('stat-pending').textContent = `${total - checked} Da Fare`;
+    document.getElementById('progress-bar').style.width = `${pct}%`;
+
+    // Wave progress
+    const waveComplete = {};
+    for (let w = 1; w <= 6; w++) waveComplete[w] = true;
+    document.querySelectorAll('.container input[type="checkbox"][data-issue]').forEach(cb => {
+      const wave = WAVE_MAP[cb.dataset.issue];
+      if (wave && !cb.checked) waveComplete[wave] = false;
+    });
+    let completedWaves = 0;
+    for (let w = 1; w <= 6; w++) { if (waveComplete[w]) completedWaves++; }
+    document.getElementById('stat-waves').textContent = `Wave ${completedWaves}/6`;
+
+    // Update wave timeline nodes
+    document.querySelectorAll('.wave-node[data-wave]').forEach(node => {
+      const w = parseInt(node.dataset.wave);
+      node.classList.remove('active', 'complete');
+      if (waveComplete[w]) {
+        node.classList.add('complete');
+      } else {
+        // Active = first incomplete wave
+        let isActive = true;
+        for (let prev = 1; prev < w; prev++) {
+          if (!waveComplete[prev]) { isActive = false; break; }
+        }
+        if (isActive) node.classList.add('active');
+      }
+    });
+
+    // Terminal counts
+    const termA = document.querySelector('.terminal-a .terminal-body');
+    const termB = document.querySelector('.terminal-b .terminal-body');
+    if (termA) {
+      const a = termA.querySelectorAll('input[type="checkbox"][data-issue]');
+      document.getElementById('termA-count').textContent = `${[...a].filter(c=>c.checked).length}/${a.length}`;
+    }
+    if (termB) {
+      const b = termB.querySelectorAll('input[type="checkbox"][data-issue]');
+      document.getElementById('termB-count').textContent = `${[...b].filter(c=>c.checked).length}/${b.length}`;
+    }
+
+    // Update group counters
+    document.querySelectorAll('.feature-group').forEach(group => {
+      const cbs = group.querySelectorAll('input[type="checkbox"]');
+      const done = [...cbs].filter(cb => cb.checked).length;
+      const counter = group.querySelector('.feature-group-counter');
+      if (counter) counter.textContent = `${done}/${cbs.length}`;
+    });
+
+    // Strikethrough
+    document.querySelectorAll('.issue').forEach(issue => {
+      const cb = issue.querySelector('input[type="checkbox"]');
+      if (cb && cb.checked) issue.classList.add('checked');
+      else issue.classList.remove('checked');
+    });
+  }
+
+  function toggleGroup(header) {
+    const body = header.nextElementSibling;
+    const arrow = header.querySelector('.arrow');
+    body.classList.toggle('open');
+    arrow.classList.toggle('open');
+  }
+
+  function filterIssues(type) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.issue').forEach(issue => {
+      if (type === 'all') {
+        issue.style.display = '';
+      } else if (type === 'unchecked') {
+        const cb = issue.querySelector('input[type="checkbox"]');
+        issue.style.display = (cb && !cb.checked) ? '' : 'none';
+      } else {
+        issue.style.display = (issue.dataset.type || '') === type ? '' : 'none';
+      }
+    });
+  }
+
+  // Init
+  loadState();
+  updateProgress();
+  document.querySelectorAll('.feature-group-body').forEach(b => b.classList.add('open'));
+  document.querySelectorAll('.feature-group-header .arrow').forEach(a => a.classList.add('open'));
+</script>
+
+</body>
+</html>

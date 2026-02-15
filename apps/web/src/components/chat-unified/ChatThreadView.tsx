@@ -133,7 +133,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           id: threadData.id,
           title: threadData.title ?? 'Chat',
           gameId: threadData.gameId,
-          agentId: threadData.agentId ?? null,
+          agentId: (threadData as Record<string, unknown>).agentId as string | null ?? null,
           status: 'Active',
           messages: mappedMessages,
         });

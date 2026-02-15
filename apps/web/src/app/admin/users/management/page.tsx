@@ -1,15 +1,23 @@
-import { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'User Management | Admin | MeepleAI',
-  description: 'Manage platform users and permissions',
-};
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+
+import { UserManagementSection } from '@/components/admin/dashboard/user-management-section';
 
 export default function UserManagementPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-orange-50/20 p-8">
       <div className="max-w-[1600px] mx-auto">
+        {/* Header */}
         <div className="mb-8">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-amber-700 transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
           <h1 className="font-quicksand font-bold text-4xl text-slate-900 mb-2">
             User Management
           </h1>
@@ -18,15 +26,8 @@ export default function UserManagementPage() {
           </p>
         </div>
 
-        {/* TODO: Implement full user management table */}
-        <div className="bg-white/70 backdrop-blur-md rounded-xl border border-amber-200/60 p-12 text-center">
-          <p className="font-nunito text-slate-500">
-            Full user management page - Implementation pending (Issue #4196)
-          </p>
-          <p className="font-nunito text-sm text-slate-400 mt-2">
-            Will include: Paginated table, advanced filters, bulk operations, activity timeline, export
-          </p>
-        </div>
+        {/* Full User Management Table */}
+        <UserManagementSection />
       </div>
     </div>
   );

@@ -45,6 +45,7 @@ describe('MeepleCard - ChatSession Entity Features (Issue #4400)', () => {
       render(
         <MeepleCard
           {...chatBaseProps}
+          variant="featured"
           chatAgent={{ name: 'Rules Bot', modelName: 'GPT-4o-mini' }}
         />
       );
@@ -64,6 +65,7 @@ describe('MeepleCard - ChatSession Entity Features (Issue #4400)', () => {
       render(
         <MeepleCard
           {...chatBaseProps}
+          variant="featured"
           chatGame={{ name: 'Catan', id: 'game-123' }}
         />
       );
@@ -75,6 +77,7 @@ describe('MeepleCard - ChatSession Entity Features (Issue #4400)', () => {
       render(
         <MeepleCard
           {...chatBaseProps}
+          variant="featured"
           chatGame={{ name: 'Catan', id: 'game-123' }}
         />
       );
@@ -113,6 +116,7 @@ describe('MeepleCard - ChatSession Entity Features (Issue #4400)', () => {
       render(
         <MeepleCard
           {...chatBaseProps}
+          variant="featured"
           chatStatus="active"
           chatPreview={{ lastMessage: 'How do I trade resources?', sender: 'user' }}
         />
@@ -126,6 +130,7 @@ describe('MeepleCard - ChatSession Entity Features (Issue #4400)', () => {
       render(
         <MeepleCard
           {...chatBaseProps}
+          variant="featured"
           chatStatus="active"
           chatPreview={{ lastMessage: 'You can trade during your turn.', sender: 'agent' }}
         />
@@ -173,10 +178,11 @@ describe('MeepleCard - ChatSession Entity Features (Issue #4400)', () => {
   });
 
   describe('Combined Chat Features', () => {
-    it('should render all chat features together', () => {
+    it('should render all chat features in featured variant', () => {
       render(
         <MeepleCard
           {...chatBaseProps}
+          variant="featured"
           chatStatus="active"
           chatAgent={{ name: 'Rules Bot', modelName: 'GPT-4o' }}
           chatGame={{ name: 'Catan' }}
@@ -191,15 +197,46 @@ describe('MeepleCard - ChatSession Entity Features (Issue #4400)', () => {
 
       // Status
       expect(screen.getByTestId('chat-status-active')).toBeInTheDocument();
-      // Agent
+      // Agent (visible in featured)
       expect(screen.getByText('Rules Bot')).toBeInTheDocument();
       expect(screen.getByText('GPT-4o')).toBeInTheDocument();
-      // Game
+      // Game (visible in featured)
       expect(screen.getByText('Catan')).toBeInTheDocument();
       // Stats
       expect(screen.getByText('42')).toBeInTheDocument();
-      // Preview
+      // Preview (visible in featured)
       expect(screen.getByText('Hello!')).toBeInTheDocument();
+      // Unread
+      expect(screen.getByTestId('chat-unread-badge')).toBeInTheDocument();
+    });
+
+    it('should render reduced info in grid variant (status + stats only)', () => {
+      render(
+        <MeepleCard
+          {...chatBaseProps}
+          variant="grid"
+          chatStatus="active"
+          chatAgent={{ name: 'Rules Bot', modelName: 'GPT-4o' }}
+          chatGame={{ name: 'Catan' }}
+          chatStats={{ messageCount: 42 }}
+          chatPreview={{ lastMessage: 'Hello!', sender: 'user' }}
+          unreadCount={3}
+        />
+      );
+
+      const section = screen.getByTestId('chat-info-section');
+      expect(section).toBeInTheDocument();
+
+      // Status (visible in grid)
+      expect(screen.getByTestId('chat-status-active')).toBeInTheDocument();
+      // Stats (visible in grid)
+      expect(screen.getByText('42')).toBeInTheDocument();
+      // Agent hidden in grid
+      expect(screen.queryByText('Rules Bot')).not.toBeInTheDocument();
+      // Game hidden in grid
+      expect(screen.queryByText('Catan')).not.toBeInTheDocument();
+      // Preview hidden in grid
+      expect(screen.queryByText('Hello!')).not.toBeInTheDocument();
       // Unread
       expect(screen.getByTestId('chat-unread-badge')).toBeInTheDocument();
     });

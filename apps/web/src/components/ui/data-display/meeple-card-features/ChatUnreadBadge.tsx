@@ -38,7 +38,7 @@ export const ChatUnreadBadge = React.memo(function ChatUnreadBadge({
   return (
     <span
       className={cn(
-        'absolute top-2 right-2 z-[15]',
+        'absolute top-3 right-4 z-[16]',
         'inline-flex items-center justify-center',
         'min-w-[20px] h-5 px-1.5 rounded-full',
         'bg-blue-500 text-white',

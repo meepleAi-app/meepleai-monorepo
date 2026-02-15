@@ -230,6 +230,8 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   onFlip?: (flipped: boolean) => void;
   /** Flip trigger mode: 'card' = click anywhere, 'button' = dedicated button */
   flipTrigger?: 'card' | 'button';
+  /** Link to entity detail page (shown on flip card back) */
+  detailHref?: string;
 
   // ========== NEW FEATURES (Issue #4030) ==========
 
@@ -313,7 +315,7 @@ const meepleCardVariants = cva(
     variants: {
       variant: {
         grid: [
-          'flex flex-col rounded-2xl',
+          'flex flex-col rounded-2xl overflow-hidden',
           'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
@@ -542,7 +544,12 @@ function CoverImage({
   const showOverlay = variant === 'hero' || variant === 'featured' || variant === 'grid';
 
   return (
-    <div className={cn(coverVariants({ variant }))}>
+    <div className={cn(
+      coverVariants({ variant }),
+      // ChatSession: shorter image to keep total card height like a playing card
+      entity === 'chatSession' && variant === 'grid' && 'aspect-[4/3]',
+      entity === 'chatSession' && variant === 'featured' && 'aspect-[3/1]',
+    )}>
       <Image
         src={imageSrc}
         alt={alt}
@@ -777,6 +784,7 @@ export const MeepleCard = React.memo(function MeepleCard({
   isFlipped,
   onFlip,
   flipTrigger,
+  detailHref,
   // Issue #4030: New action props
   entityQuickActions,
   showInfoButton,
@@ -928,7 +936,11 @@ export const MeepleCard = React.memo(function MeepleCard({
       <div className={contentVariants({ variant })}>
         {/* Feature: Top-right actions row (Issue #4030: QuickActions + InfoButton) */}
         {(entityQuickActions || showInfoButton || showWishlistBtn || hasQuickActions) && (
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-15">
+          <div className={cn(
+            "absolute right-2.5 flex items-center gap-1.5 z-15",
+            // Push actions below unread badge row for chatSession
+            entity === 'chatSession' && unreadCount && unreadCount > 0 ? 'top-10' : 'top-2.5',
+          )}>
             {/* New entity quick actions (Issue #4030) */}
             {entityQuickActions && entityQuickActions.length > 0 && (
               <MeepleCardQuickActions
@@ -1047,19 +1059,19 @@ export const MeepleCard = React.memo(function MeepleCard({
         {/* ChatSession-specific info (Issue #4400) */}
         {entity === 'chatSession' && variant !== 'compact' && (chatStatus || chatAgent || chatStats || chatGame) && (
           <div className="flex flex-col gap-1.5 mb-2" data-testid="chat-info-section">
-            {/* Row 1: Status + Agent */}
+            {/* Row 1: Status + Agent (grid: status only to save space) */}
             {(chatStatus || chatAgent) && (
               <div className="flex items-center gap-2 flex-wrap">
                 {chatStatus && <ChatStatusBadge status={chatStatus} size="sm" />}
-                {chatAgent && <ChatAgentInfo agent={chatAgent} />}
+                {variant !== 'grid' && chatAgent && <ChatAgentInfo agent={chatAgent} />}
               </div>
             )}
-            {/* Row 2: Game context */}
-            {chatGame && <ChatGameContext game={chatGame} />}
+            {/* Row 2: Game context (hidden in grid) */}
+            {variant !== 'grid' && chatGame && <ChatGameContext game={chatGame} />}
             {/* Row 3: Stats */}
             {chatStats && <ChatStatsDisplay stats={chatStats} layout="horizontal" className="text-muted-foreground" />}
-            {/* Row 4: Message preview */}
-            {chatPreview && (
+            {/* Row 4: Message preview (hidden in grid) */}
+            {variant !== 'grid' && chatPreview && (
               <p className="text-xs text-muted-foreground truncate" data-testid="chat-preview">
                 <span className="font-semibold">{chatPreview.sender === 'user' ? 'You' : 'Agent'}:</span>{' '}
                 {chatPreview.lastMessage}
@@ -1134,6 +1146,7 @@ export const MeepleCard = React.memo(function MeepleCard({
         isFlipped={isFlipped}
         onFlip={onFlip}
         flipTrigger={flipTrigger}
+        detailHref={detailHref}
       >
         {cardContent}
       </FlipCard>

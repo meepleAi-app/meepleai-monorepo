@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.BusinessSimulations.Domain.Events;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
@@ -870,6 +871,116 @@ internal class HybridLlmService : ILlmService
             "openrouter" => "meta-llama/llama-3.3-70b-instruct:free", // Free tier default
             _ => "llama3.3:70b" // Safe default
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> GenerateCompletionWithModelAsync(
+        string explicitModel,
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(explicitModel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(systemPrompt);
+        ArgumentException.ThrowIfNullOrWhiteSpace(userPrompt);
+
+        // Issue #4332: Find client that supports the explicit model
+        var client = _clients.FirstOrDefault(c => c.SupportsModel(explicitModel));
+        if (client == null)
+        {
+            _logger.LogError("No client found supporting model {Model}", explicitModel);
+            return LlmCompletionResult.CreateFailure($"No provider supports model: {explicitModel}");
+        }
+
+        var providerName = client.ProviderName;
+
+        // ISSUE-962: Check circuit breaker before attempting
+        lock (_monitoringLock)
+        {
+            if (_circuitBreakers.TryGetValue(providerName, out var breaker) && breaker.State == CircuitState.Open)
+            {
+                _logger.LogWarning("Circuit breaker OPEN for {Provider}, skipping explicit model call", providerName);
+                return LlmCompletionResult.CreateFailure($"Provider {providerName} circuit breaker open");
+            }
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            _logger.LogInformation(
+                "Generating completion with explicit model {Model} via {Provider}",
+                explicitModel, providerName);
+
+            var result = await client.GenerateCompletionAsync(
+                explicitModel,
+                systemPrompt,
+                userPrompt,
+                DefaultTemperature,
+                DefaultMaxTokens,
+                ct).ConfigureAwait(false);
+
+            stopwatch.Stop();
+
+            // ISSUE-962: Record latency
+            lock (_monitoringLock)
+            {
+                if (_latencyStats.TryGetValue(providerName, out var stats))
+                {
+                    stats.RecordLatency(stopwatch.ElapsedMilliseconds);
+                }
+            }
+
+            if (!result.Success)
+            {
+                _logger.LogWarning("Explicit model {Model} call failed: {Error}", explicitModel, result.ErrorMessage);
+
+                // ISSUE-962: Record failure in circuit breaker
+                lock (_monitoringLock)
+                {
+                    if (_circuitBreakers.TryGetValue(providerName, out var breaker))
+                    {
+                        breaker.RecordFailure();
+                    }
+                }
+
+                return result;
+            }
+
+            // ISSUE-962: Record success in circuit breaker
+            lock (_monitoringLock)
+            {
+                if (_circuitBreakers.TryGetValue(providerName, out var breaker))
+                {
+                    breaker.RecordSuccess();
+                }
+            }
+
+            // Log cost asynchronously (fire-and-forget)
+            _ = LogCostAsync(result, user: null, stopwatch.ElapsedMilliseconds, ct);
+
+            _logger.LogInformation(
+                "Explicit model {Model} completion successful (tokens: {Tokens}, cost: ${Cost:F6}, latency: {Latency}ms)",
+                explicitModel, result.Usage.TotalTokens, result.Cost.TotalCost, stopwatch.ElapsedMilliseconds);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "Unexpected error generating completion with explicit model {Model}", explicitModel);
+
+            // ISSUE-962: Record failure
+            lock (_monitoringLock)
+            {
+                if (_circuitBreakers.TryGetValue(providerName, out var breaker))
+                {
+                    breaker.RecordFailure();
+                }
+            }
+
+            return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
+        }
     }
 }
 

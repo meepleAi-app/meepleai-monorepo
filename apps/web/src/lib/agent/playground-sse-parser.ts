@@ -71,6 +71,14 @@ export interface PipelineStepTiming {
   detail: string | null;
 }
 
+export interface CacheInfo {
+  status: 'hit' | 'miss' | 'skip';
+  tier: string | null;
+  cacheKey: string | null;
+  latencyMs: number;
+  ttlSeconds: number;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
@@ -83,6 +91,7 @@ export interface CompletionMetadata {
   latencyBreakdown?: LatencyBreakdown;
   strategyInfo?: StrategyInfo;
   pipelineTimings?: PipelineStepTiming[];
+  cacheInfo?: CacheInfo;
 }
 
 export interface StreamingError {

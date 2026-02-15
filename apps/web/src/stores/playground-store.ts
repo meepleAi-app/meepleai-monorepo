@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, CompletionMetadata, CostBreakdown, LatencyBreakdown, PipelineStepTiming, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, CacheInfo, CompletionMetadata, CostBreakdown, LatencyBreakdown, PipelineStepTiming, Snippet, StrategyInfo } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -52,6 +52,11 @@ interface PlaygroundState {
   activeStrategy: string | null;
   strategyInfo: StrategyInfo | null;
   pipelineTimings: PipelineStepTiming[];
+
+  // Cache observability (Issue #4443)
+  cacheInfo: CacheInfo | null;
+  sessionCacheHits: number;
+  sessionCacheRequests: number;
 
   // System message
   systemMessage: string;
@@ -125,6 +130,11 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       strategyInfo: null,
       pipelineTimings: [],
 
+      // Cache observability
+      cacheInfo: null,
+      sessionCacheHits: 0,
+      sessionCacheRequests: 0,
+
       // System message
       systemMessage: '',
 
@@ -187,6 +197,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           activeStrategy: null,
           strategyInfo: null,
           pipelineTimings: [],
+          cacheInfo: null,
+          sessionCacheHits: 0,
+          sessionCacheRequests: 0,
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -212,6 +225,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           activeStrategy: null,
           strategyInfo: null,
           pipelineTimings: [],
+          cacheInfo: null,
+          sessionCacheHits: 0,
+          sessionCacheRequests: 0,
         }),
 
       endSession: () =>
@@ -250,21 +266,29 @@ export const usePlaygroundStore = create<PlaygroundState>()(
         set({ followUpQuestions: questions }),
 
       setCompletionMetadata: (metadata) =>
-        set((state) => ({
-          tokenBreakdown: {
-            prompt: metadata.promptTokens,
-            completion: metadata.completionTokens,
-            total: metadata.totalTokens,
-          },
-          confidence: metadata.confidence ?? null,
-          agentConfig: metadata.agentConfig ?? null,
-          latencyBreakdown: metadata.latencyBreakdown ?? null,
-          costBreakdown: metadata.costBreakdown ?? null,
-          sessionTotalCost: state.sessionTotalCost + (metadata.costBreakdown?.totalCost ?? 0),
-          activeStrategy: metadata.strategy ?? null,
-          strategyInfo: metadata.strategyInfo ?? null,
-          pipelineTimings: metadata.pipelineTimings ?? [],
-        })),
+        set((state) => {
+          const ci = metadata.cacheInfo ?? null;
+          const isRequest = ci && ci.status !== 'skip';
+          const isHit = ci?.status === 'hit';
+          return {
+            tokenBreakdown: {
+              prompt: metadata.promptTokens,
+              completion: metadata.completionTokens,
+              total: metadata.totalTokens,
+            },
+            confidence: metadata.confidence ?? null,
+            agentConfig: metadata.agentConfig ?? null,
+            latencyBreakdown: metadata.latencyBreakdown ?? null,
+            costBreakdown: metadata.costBreakdown ?? null,
+            sessionTotalCost: state.sessionTotalCost + (metadata.costBreakdown?.totalCost ?? 0),
+            activeStrategy: metadata.strategy ?? null,
+            strategyInfo: metadata.strategyInfo ?? null,
+            pipelineTimings: metadata.pipelineTimings ?? [],
+            cacheInfo: ci,
+            sessionCacheRequests: state.sessionCacheRequests + (isRequest ? 1 : 0),
+            sessionCacheHits: state.sessionCacheHits + (isHit ? 1 : 0),
+          };
+        }),
 
       setLatencyMs: (latencyMs) => set({ latencyMs }),
 
@@ -283,6 +307,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           activeStrategy: null,
           strategyInfo: null,
           pipelineTimings: [],
+          cacheInfo: null,
         }),
 
       // ─── System Message ──────────────────────────

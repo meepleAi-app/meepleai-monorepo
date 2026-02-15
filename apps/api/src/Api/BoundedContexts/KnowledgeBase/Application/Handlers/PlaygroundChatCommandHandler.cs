@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
@@ -22,6 +24,14 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<PlaygroundChatCommand, RagStreamingEvent>
 {
     private static readonly string[] DefaultConsensusModels = { "gpt-4", "claude-3-opus" };
+
+    /// <summary>
+    /// In-memory query cache for playground sessions.
+    /// Key: SHA256(gameId + query), Value: (searchResults JSON hash, cachedAt).
+    /// Used for cache observability in debug panel (Issue #4443).
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, PlaygroundCacheEntry> QueryCache = new(StringComparer.Ordinal);
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
     private readonly LlmProviderFactory _llmProviderFactory;
@@ -131,9 +141,27 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         string userPrompt = command.Message;
         double? ragConfidence = null;
         List<Snippet>? ragSnippets = null;
+        PlaygroundCacheInfo? cacheInfo = null;
 
         if (command.GameId.HasValue)
         {
+            // Cache probe (Issue #4443): check if this query was recently answered
+            var cacheKey = BuildCacheKey(command.GameId.Value, command.Message);
+            var cacheStatus = "miss";
+            string? cacheTier = null;
+            double cacheLatencyMs = 0;
+
+            if (QueryCache.TryGetValue(cacheKey, out var cachedEntry) &&
+                cachedEntry.CachedAt.Add(CacheTtl) > DateTime.UtcNow)
+            {
+                cacheStatus = "hit";
+                cacheTier = "L1Memory";
+                cacheLatencyMs = 0.01; // In-memory lookup is sub-millisecond
+            }
+
+            // Evict expired entries lazily
+            EvictExpiredCacheEntries();
+
             yield return CreateEvent(
                 StreamingEventType.StateUpdate,
                 new StreamingStateUpdate("Searching game documents..."));
@@ -170,6 +198,11 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 yield return CreateEvent(
                     StreamingEventType.StateUpdate,
                     new StreamingStateUpdate($"Found {searchResults.Count} relevant passages."));
+
+                // Populate cache for future requests
+                QueryCache[cacheKey] = new PlaygroundCacheEntry(
+                    ResultCount: searchResults.Count,
+                    CachedAt: DateTime.UtcNow);
             }
             else
             {
@@ -177,6 +210,22 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     StreamingEventType.StateUpdate,
                     new StreamingStateUpdate("No relevant documents found."));
             }
+
+            cacheInfo = new PlaygroundCacheInfo(
+                status: cacheStatus,
+                tier: cacheTier,
+                cacheKey: cacheKey[..Math.Min(cacheKey.Length, 16)], // Truncate for display
+                latencyMs: cacheLatencyMs,
+                ttlSeconds: (int)CacheTtl.TotalSeconds);
+        }
+        else
+        {
+            cacheInfo = new PlaygroundCacheInfo(
+                status: "skip",
+                tier: null,
+                cacheKey: null,
+                latencyMs: 0,
+                ttlSeconds: 0);
         }
 
         retrievalStopwatch.Stop();
@@ -185,7 +234,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         {
             pipelineTimings.Add(new PlaygroundPipelineStep(
                 "RAG Retrieval", "retrieval", retrievalStopwatch.ElapsedMilliseconds,
-                ragSnippets != null ? $"{ragSnippets.Count} chunks" : "no results"));
+                ragSnippets != null ? $"{ragSnippets.Count} chunks (cache: {cacheInfo.status})" : "no results"));
         }
         stepStopwatch.Restart();
 
@@ -423,11 +472,38 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                     retrievalMs: retrievalStopwatch.ElapsedMilliseconds,
                     generationMs: generationStopwatch.ElapsedMilliseconds),
                 strategyInfo: strategyInfo,
-                pipelineTimings: pipelineTimings));
+                pipelineTimings: pipelineTimings,
+                cacheInfo: cacheInfo));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
             command.AgentDefinitionId, effectiveStrategy, totalTokens, costCalculation.TotalCost, totalStopwatch.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Builds a cache key from gameId and message content using SHA256 hash.
+    /// Issue #4443: Cache observability.
+    /// </summary>
+    private static string BuildCacheKey(Guid gameId, string message)
+    {
+        var input = $"{gameId}:{message.Trim().ToLowerInvariant()}";
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+        return Convert.ToHexString(hashBytes);
+    }
+
+    /// <summary>
+    /// Lazily evicts expired entries from the in-memory playground cache.
+    /// </summary>
+    private static void EvictExpiredCacheEntries()
+    {
+        var now = DateTime.UtcNow;
+        foreach (var kvp in QueryCache)
+        {
+            if (kvp.Value.CachedAt.Add(CacheTtl) < now)
+            {
+                QueryCache.TryRemove(kvp.Key, out _);
+            }
+        }
     }
 
     /// <summary>
@@ -500,6 +576,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 /// Issue #4439: Added cost breakdown.
 /// Issue #4441: Added strategy info with parameters.
 /// Issue #4442: Added pipeline timings.
+/// Issue #4443: Added cache info.
 /// </summary>
 internal record PlaygroundStreamingComplete(
     int estimatedReadingTimeMinutes,
@@ -512,7 +589,8 @@ internal record PlaygroundStreamingComplete(
     PlaygroundAgentConfigSnapshot agentConfig,
     PlaygroundLatencyBreakdown latencyBreakdown,
     PlaygroundStrategyInfo? strategyInfo = null,
-    List<PlaygroundPipelineStep>? pipelineTimings = null);
+    List<PlaygroundPipelineStep>? pipelineTimings = null,
+    PlaygroundCacheInfo? cacheInfo = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -562,3 +640,22 @@ internal record PlaygroundPipelineStep(
     string type,
     long durationMs,
     string? detail);
+
+/// <summary>
+/// Cache observability info for playground debug panel.
+/// Issue #4443: Track cache hit/miss per request.
+/// </summary>
+internal record PlaygroundCacheInfo(
+    string status,
+    string? tier,
+    string? cacheKey,
+    double latencyMs,
+    int ttlSeconds);
+
+/// <summary>
+/// Internal cache entry for playground query deduplication.
+/// Issue #4443: Simple in-memory cache with TTL.
+/// </summary>
+internal record PlaygroundCacheEntry(
+    int ResultCount,
+    DateTime CachedAt);

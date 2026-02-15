@@ -82,6 +82,12 @@ import { MeepleCardQuickActions } from './meeple-card-quick-actions';
 import { AgentModelInfo, type ModelParameters } from './meeple-card-features/AgentModelInfo';
 import { AgentStatsDisplay, type AgentStats } from './meeple-card-features/AgentStatsDisplay';
 import { AgentStatusBadge, type AgentStatus } from './meeple-card-features/AgentStatusBadge';
+// Issue #4400: ChatSession-specific display components
+import { ChatAgentInfo, type ChatAgent } from './meeple-card-features/ChatAgentInfo';
+import { ChatGameContext, type ChatGame } from './meeple-card-features/ChatGameContext';
+import { ChatStatsDisplay, type ChatStats } from './meeple-card-features/ChatStatsDisplay';
+import { ChatStatusBadge, type ChatStatus } from './meeple-card-features/ChatStatusBadge';
+import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -260,6 +266,21 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   agentStats?: AgentStats;
   /** Agent capabilities list (e.g., ['rag', 'vision', 'code']) */
   capabilities?: string[];
+
+  // ========== CHAT SESSION ENTITY FEATURES (Issue #4400) ==========
+
+  /** Chat session status (active/waiting/archived/closed) */
+  chatStatus?: ChatStatus;
+  /** Chat agent info (name + model powering the chat) */
+  chatAgent?: ChatAgent;
+  /** Chat game context (game associated with chat) */
+  chatGame?: ChatGame;
+  /** Chat session statistics */
+  chatStats?: ChatStats;
+  /** Chat message preview */
+  chatPreview?: { lastMessage: string; sender: 'user' | 'agent' };
+  /** Unread message count */
+  unreadCount?: number;
 }
 
 // ============================================================================
@@ -770,6 +791,13 @@ export const MeepleCard = React.memo(function MeepleCard({
   agentModel,
   agentStats,
   capabilities,
+  // Issue #4400: ChatSession entity features
+  chatStatus,
+  chatAgent,
+  chatGame,
+  chatStats,
+  chatPreview,
+  unreadCount,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1016,6 +1044,35 @@ export const MeepleCard = React.memo(function MeepleCard({
           </div>
         )}
 
+        {/* ChatSession-specific info (Issue #4400) */}
+        {entity === 'chatSession' && variant !== 'compact' && (chatStatus || chatAgent || chatStats || chatGame) && (
+          <div className="flex flex-col gap-1.5 mb-2" data-testid="chat-info-section">
+            {/* Row 1: Status + Agent */}
+            {(chatStatus || chatAgent) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {chatStatus && <ChatStatusBadge status={chatStatus} size="sm" />}
+                {chatAgent && <ChatAgentInfo agent={chatAgent} />}
+              </div>
+            )}
+            {/* Row 2: Game context */}
+            {chatGame && <ChatGameContext game={chatGame} />}
+            {/* Row 3: Stats */}
+            {chatStats && <ChatStatsDisplay stats={chatStats} layout="horizontal" className="text-muted-foreground" />}
+            {/* Row 4: Message preview */}
+            {chatPreview && (
+              <p className="text-xs text-muted-foreground truncate" data-testid="chat-preview">
+                <span className="font-semibold">{chatPreview.sender === 'user' ? 'You' : 'Agent'}:</span>{' '}
+                {chatPreview.lastMessage}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ChatSession unread badge (positioned on card overlay) */}
+        {entity === 'chatSession' && unreadCount !== undefined && unreadCount > 0 && (
+          <ChatUnreadBadge count={unreadCount} />
+        )}
+
         {/* Metadata (non-grid variants render inline; grid uses footer below) */}
         {metadata.length > 0 && variant !== 'compact' && variant !== 'grid' && (
           <MetadataChips
@@ -1111,3 +1168,7 @@ export type { MeepleCardFlipData } from './meeple-card-features/FlipCard';
 export type { AgentStatus } from './meeple-card-features/AgentStatusBadge';
 export type { AgentStats } from './meeple-card-features/AgentStatsDisplay';
 export type { ModelParameters } from './meeple-card-features/AgentModelInfo';
+export type { ChatStatus } from './meeple-card-features/ChatStatusBadge';
+export type { ChatAgent } from './meeple-card-features/ChatAgentInfo';
+export type { ChatStats } from './meeple-card-features/ChatStatsDisplay';
+export type { ChatGame } from './meeple-card-features/ChatGameContext';

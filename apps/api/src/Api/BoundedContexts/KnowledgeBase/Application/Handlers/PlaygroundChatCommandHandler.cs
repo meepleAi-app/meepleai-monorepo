@@ -94,9 +94,16 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             yield break;
         }
 
+        // Resolve model/provider overrides
+        var effectiveModel = !string.IsNullOrWhiteSpace(command.ModelOverride)
+            ? command.ModelOverride
+            : agentDefinition.Config.Model;
+        var isOverridden = !string.Equals(effectiveModel, agentDefinition.Config.Model, StringComparison.Ordinal);
+
+        var overrideInfo = isOverridden ? $" Model override: {effectiveModel}." : string.Empty;
         yield return CreateEvent(
             StreamingEventType.StateUpdate,
-            new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded. Using {effectiveStrategy} strategy."));
+            new StreamingStateUpdate($"Agent '{agentDefinition.Name}' loaded. Using {effectiveStrategy} strategy.{overrideInfo}"));
 
         // 2. Build system prompt from AgentDefinition prompts
         var systemPrompt = BuildSystemPrompt(agentDefinition);
@@ -264,13 +271,13 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
             default: // "SingleModel" or any other - standard flow
                 yield return CreateEvent(
                     StreamingEventType.StateUpdate,
-                    new StreamingStateUpdate("Generating response..."));
+                    new StreamingStateUpdate($"Generating response with {effectiveModel}..."));
 
-                var singleClient = _llmProviderFactory.GetClientForModel(agentDefinition.Config.Model);
+                var singleClient = _llmProviderFactory.GetClientForModel(effectiveModel);
                 providerName = singleClient.ProviderName;
 
                 await foreach (var chunk in singleClient.GenerateCompletionStreamAsync(
-                    agentDefinition.Config.Model,
+                    effectiveModel,
                     systemPrompt,
                     userPrompt,
                     agentDefinition.Config.Temperature,
@@ -324,10 +331,11 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 strategy: effectiveStrategy,
                 agentConfig: new PlaygroundAgentConfigSnapshot(
                     agentDefinition.Name,
-                    agentDefinition.Config.Model,
+                    effectiveModel,
                     agentDefinition.Config.Temperature,
                     agentDefinition.Config.MaxTokens,
-                    providerName),
+                    providerName,
+                    isOverridden),
                 latencyBreakdown: new PlaygroundLatencyBreakdown(
                     totalMs: totalStopwatch.ElapsedMilliseconds,
                     retrievalMs: retrievalStopwatch.ElapsedMilliseconds,
@@ -409,7 +417,8 @@ internal record PlaygroundAgentConfigSnapshot(
     string Model,
     float Temperature,
     int MaxTokens,
-    string Provider);
+    string Provider,
+    bool IsModelOverride = false);
 
 /// <summary>
 /// Latency breakdown for playground chat.

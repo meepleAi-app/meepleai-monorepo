@@ -37,7 +37,9 @@ internal static class AgentPlaygroundEndpoints
                 AgentDefinitionId: agentId,
                 Message: request.Message,
                 GameId: Guid.TryParse(request.GameId, out var gid) ? gid : null,
-                Strategy: request.Strategy);
+                Strategy: request.Strategy,
+                ModelOverride: request.ModelOverride,
+                ProviderOverride: request.ProviderOverride);
 
             try
             {
@@ -83,4 +85,6 @@ internal static class AgentPlaygroundEndpoints
 internal sealed record PlaygroundChatRequest(
     [Required, MinLength(1), MaxLength(4000)] string Message,
     string? GameId = null,
-    string? Strategy = null);
+    string? Strategy = null,
+    string? ModelOverride = null,
+    string? ProviderOverride = null);

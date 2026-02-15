@@ -13,5 +13,7 @@ internal record PlaygroundChatCommand(
     Guid AgentDefinitionId,
     string Message,
     Guid? GameId = null,
-    string? Strategy = null
+    string? Strategy = null,
+    string? ModelOverride = null,
+    string? ProviderOverride = null
 ) : IStreamingQuery<RagStreamingEvent>;

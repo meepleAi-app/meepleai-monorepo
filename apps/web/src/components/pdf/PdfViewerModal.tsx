@@ -1,15 +1,15 @@
 /**
- * PdfViewerModal - Modal for PDF viewing (BGAI-074, #4133)
- * Migration: react-pdf → @react-pdf-viewer/core
+ * PdfViewerModal - Modal for PDF viewing (BGAI-074, #4133, #4252)
+ * Uses react-pdf with pdfjs-dist v5 for security (GHSA-wgrm-67xf-hhpq).
  */
 
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
-import { Viewer, Worker } from '@react-pdf-viewer/core';
-import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
-import { pageNavigationPlugin } from '@react-pdf-viewer/page-navigation';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 import {
   Dialog,
@@ -18,8 +18,10 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 export interface PdfViewerModalProps {
   open: boolean;
@@ -36,19 +38,26 @@ export function PdfViewerModal({
   initialPage = 1,
   documentName = 'PDF Document',
 }: PdfViewerModalProps) {
-  const pageNavigationPluginInstance = pageNavigationPlugin();
-  const { jumpToPage } = pageNavigationPluginInstance;
-  const defaultLayoutPluginInstance = defaultLayoutPlugin();
+  const [numPages, setNumPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Jump to initial page when modal opens
+  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+  }, []);
+
+  // Reset to initial page when modal opens
   useEffect(() => {
-    if (open && initialPage > 1) {
-      const timer = setTimeout(() => {
-        jumpToPage(initialPage - 1); // 0-indexed
-      }, 200);
-      return () => clearTimeout(timer);
+    if (open) {
+      setCurrentPage(initialPage);
     }
-  }, [open, initialPage, jumpToPage]);
+  }, [open, initialPage]);
+
+  const goToPage = useCallback((page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, numPages)));
+  }, [numPages]);
+
+  if (!open) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,13 +65,34 @@ export function PdfViewerModal({
         <DialogHeader>
           <DialogTitle>{documentName}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden">
-          <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.0.279/build/pdf.worker.min.js">
-            <Viewer
-              fileUrl={pdfUrl}
-              plugins={[defaultLayoutPluginInstance, pageNavigationPluginInstance]}
-            />
-          </Worker>
+
+        {/* Navigation controls */}
+        {numPages > 0 && (
+          <div className="flex items-center justify-center gap-4 py-2 border-b">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="px-3 py-1 text-sm rounded border disabled:opacity-50 hover:bg-gray-100"
+            >
+              Precedente
+            </button>
+            <span className="text-sm">
+              Pag. {currentPage} / {numPages}
+            </span>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= numPages}
+              className="px-3 py-1 text-sm rounded border disabled:opacity-50 hover:bg-gray-100"
+            >
+              Successiva
+            </button>
+          </div>
+        )}
+
+        <div ref={containerRef} className="flex-1 overflow-auto flex justify-center">
+          <Document file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
+            <Page pageNumber={currentPage} width={800} />
+          </Document>
         </div>
       </DialogContent>
     </Dialog>

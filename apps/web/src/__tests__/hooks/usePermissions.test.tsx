@@ -21,7 +21,9 @@ describe('usePermissions', () => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: {
-          retry: false, // Disable retries in tests
+          retry: false,
+          gcTime: 0,
+          retryDelay: 0, // PermissionProvider uses retry: 2, so make retries instant
         },
       },
     });

@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
 
 /// <summary>
 /// Validator for SendAgentMessageCommand
-/// Issue #4126
+/// Issue #4126, Issue #4386: SSE Stream → ChatThread Persistence Hook
 /// </summary>
 internal sealed class SendAgentMessageCommandValidator : AbstractValidator<SendAgentMessageCommand>
 {
@@ -20,5 +20,13 @@ internal sealed class SendAgentMessageCommandValidator : AbstractValidator<SendA
             .WithMessage("User question cannot be empty")
             .MaximumLength(2000)
             .WithMessage("Question must be 2000 characters or less");
+
+        RuleFor(x => x.UserId)
+            .NotEmpty()
+            .WithMessage("User ID is required");
+
+        RuleFor(x => x.ChatThreadId)
+            .Must(id => !id.HasValue || id.Value != Guid.Empty)
+            .WithMessage("ChatThreadId must not be an empty GUID");
     }
 }

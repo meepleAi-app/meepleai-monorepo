@@ -149,9 +149,65 @@ public sealed class GetActivityTimelineQueryValidatorTests
             Guid.NewGuid(),
             Types: ["game_added", "session_completed"],
             SearchTerm: "wingspan",
+            DateFrom: new DateTime(2026, 1, 1),
+            DateTo: new DateTime(2026, 6, 30),
             Skip: 10,
             Take: 50,
             Order: SortDirection.Ascending);
+        var result = _validator.TestValidate(query);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_DateToBeforeDateFrom_ShouldFail()
+    {
+        var query = new GetActivityTimelineQuery(
+            Guid.NewGuid(),
+            DateFrom: new DateTime(2026, 6, 1),
+            DateTo: new DateTime(2026, 1, 1));
+        var result = _validator.TestValidate(query);
+        result.ShouldHaveValidationErrorFor(x => x.DateTo);
+    }
+
+    [Fact]
+    public void Validate_DateRangeExceeds365Days_ShouldFail()
+    {
+        var query = new GetActivityTimelineQuery(
+            Guid.NewGuid(),
+            DateFrom: new DateTime(2025, 1, 1),
+            DateTo: new DateTime(2026, 2, 1));
+        var result = _validator.TestValidate(query);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors,
+            e => e.ErrorMessage == "Date range must not exceed 1 year (365 days)");
+    }
+
+    [Fact]
+    public void Validate_DateRangeExactly365Days_ShouldPass()
+    {
+        var from = new DateTime(2025, 2, 14);
+        var to = from.AddDays(365);
+        var query = new GetActivityTimelineQuery(
+            Guid.NewGuid(), DateFrom: from, DateTo: to);
+        var result = _validator.TestValidate(query);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_OnlyDateFrom_ShouldPass()
+    {
+        var query = new GetActivityTimelineQuery(
+            Guid.NewGuid(), DateFrom: new DateTime(2026, 1, 1));
+        var result = _validator.TestValidate(query);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_SameDateFromAndDateTo_ShouldPass()
+    {
+        var date = new DateTime(2026, 6, 15);
+        var query = new GetActivityTimelineQuery(
+            Guid.NewGuid(), DateFrom: date, DateTo: date);
         var result = _validator.TestValidate(query);
         result.ShouldNotHaveAnyValidationErrors();
     }

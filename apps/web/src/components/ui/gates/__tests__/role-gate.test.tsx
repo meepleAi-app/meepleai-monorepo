@@ -3,7 +3,7 @@
  * Epic #4068 - Issue #4178
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PermissionProvider } from '@/contexts/PermissionContext';
@@ -14,7 +14,12 @@ import type { UserPermissions } from '@/types/permissions';
 vi.mock('@/lib/api/permissions');
 
 describe('RoleGate', () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
@@ -55,14 +60,13 @@ describe('RoleGate', () => {
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
 
     render(
-      <RoleGate role="admin">
+      <RoleGate role="admin" fallback={<div>Role Denied</div>}>
         <div>Admin Panel</div>
       </RoleGate>,
       { wrapper }
     );
 
-    await screen.findByText(/./);
-
+    expect(await screen.findByText('Role Denied')).toBeInTheDocument();
     expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument();
   });
 

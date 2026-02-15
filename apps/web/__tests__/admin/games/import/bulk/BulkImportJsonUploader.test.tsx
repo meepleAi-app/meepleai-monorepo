@@ -323,7 +323,7 @@ describe('BulkImportJsonUploader', () => {
       await user.click(screen.getByTestId('preview-button'));
       await user.click(screen.getByTestId('confirm-import'));
 
-      expect(screen.getByTestId('import-result')).toBeInTheDocument();
+      expect(screen.getByTestId('bulk-import-results')).toBeInTheDocument();
     });
 
     it('displays summary stats in result', async () => {
@@ -366,7 +366,7 @@ describe('BulkImportJsonUploader', () => {
       await user.click(screen.getByTestId('preview-button'));
       await user.click(screen.getByTestId('confirm-import'));
 
-      expect(screen.getByTestId('import-another')).toBeInTheDocument();
+      expect(screen.getByTestId('new-import-button')).toBeInTheDocument();
     });
 
     it('resets to initial state when import another is clicked', async () => {
@@ -379,11 +379,11 @@ describe('BulkImportJsonUploader', () => {
       await user.click(screen.getByTestId('preview-button'));
       await user.click(screen.getByTestId('confirm-import'));
 
-      expect(screen.getByTestId('import-result')).toBeInTheDocument();
+      expect(screen.getByTestId('bulk-import-results')).toBeInTheDocument();
 
-      await user.click(screen.getByTestId('import-another'));
+      await user.click(screen.getByTestId('new-import-button'));
 
-      expect(screen.queryByTestId('import-result')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('bulk-import-results')).not.toBeInTheDocument();
       expect(screen.getByTestId('json-textarea')).toBeInTheDocument();
       expect(screen.getByTestId('json-textarea')).toHaveValue('');
     });

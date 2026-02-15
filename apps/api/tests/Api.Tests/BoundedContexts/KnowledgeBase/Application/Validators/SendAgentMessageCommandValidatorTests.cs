@@ -9,6 +9,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Validators;
 /// <summary>
 /// Unit tests for SendAgentMessageCommandValidator
 /// Issue #4126: API Integration for Agent Chat
+/// Issue #4386: SSE Stream → ChatThread Persistence Hook
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class SendAgentMessageCommandValidatorTests
@@ -21,7 +22,8 @@ public sealed class SendAgentMessageCommandValidatorTests
         // Arrange
         var command = new SendAgentMessageCommand(
             AgentId: Guid.NewGuid(),
-            UserQuestion: "What are the rules for Catan?"
+            UserQuestion: "What are the rules for Catan?",
+            UserId: Guid.NewGuid()
         );
 
         // Act
@@ -37,7 +39,8 @@ public sealed class SendAgentMessageCommandValidatorTests
         // Arrange
         var command = new SendAgentMessageCommand(
             AgentId: Guid.Empty,
-            UserQuestion: "What are the rules for Catan?"
+            UserQuestion: "What are the rules for Catan?",
+            UserId: Guid.NewGuid()
         );
 
         // Act
@@ -57,7 +60,8 @@ public sealed class SendAgentMessageCommandValidatorTests
         // Arrange
         var command = new SendAgentMessageCommand(
             AgentId: Guid.NewGuid(),
-            UserQuestion: question!
+            UserQuestion: question!,
+            UserId: Guid.NewGuid()
         );
 
         // Act
@@ -75,7 +79,8 @@ public sealed class SendAgentMessageCommandValidatorTests
         var longQuestion = new string('x', 2001);
         var command = new SendAgentMessageCommand(
             AgentId: Guid.NewGuid(),
-            UserQuestion: longQuestion
+            UserQuestion: longQuestion,
+            UserId: Guid.NewGuid()
         );
 
         // Act
@@ -93,7 +98,8 @@ public sealed class SendAgentMessageCommandValidatorTests
         var maxLengthQuestion = new string('x', 2000);
         var command = new SendAgentMessageCommand(
             AgentId: Guid.NewGuid(),
-            UserQuestion: maxLengthQuestion
+            UserQuestion: maxLengthQuestion,
+            UserId: Guid.NewGuid()
         );
 
         // Act
@@ -109,7 +115,8 @@ public sealed class SendAgentMessageCommandValidatorTests
         // Arrange
         var command = new SendAgentMessageCommand(
             AgentId: Guid.NewGuid(),
-            UserQuestion: "What's the cost of 'Catan'? Is it $50?"
+            UserQuestion: "What's the cost of 'Catan'? Is it $50?",
+            UserId: Guid.NewGuid()
         );
 
         // Act
@@ -117,5 +124,78 @@ public sealed class SendAgentMessageCommandValidatorTests
 
         // Assert
         result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Should_Fail_When_UserId_Is_Empty()
+    {
+        // Arrange
+        var command = new SendAgentMessageCommand(
+            AgentId: Guid.NewGuid(),
+            UserQuestion: "Test question",
+            UserId: Guid.Empty
+        );
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.UserId)
+            .WithErrorMessage("User ID is required");
+    }
+
+    [Fact]
+    public void Should_Pass_When_ChatThreadId_Is_Null()
+    {
+        // Arrange
+        var command = new SendAgentMessageCommand(
+            AgentId: Guid.NewGuid(),
+            UserQuestion: "Test question",
+            UserId: Guid.NewGuid(),
+            ChatThreadId: null
+        );
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Should_Pass_When_ChatThreadId_Is_Valid_Guid()
+    {
+        // Arrange
+        var command = new SendAgentMessageCommand(
+            AgentId: Guid.NewGuid(),
+            UserQuestion: "Test question",
+            UserId: Guid.NewGuid(),
+            ChatThreadId: Guid.NewGuid()
+        );
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Should_Fail_When_ChatThreadId_Is_Empty_Guid()
+    {
+        // Arrange
+        var command = new SendAgentMessageCommand(
+            AgentId: Guid.NewGuid(),
+            UserQuestion: "Test question",
+            UserId: Guid.NewGuid(),
+            ChatThreadId: Guid.Empty
+        );
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.ChatThreadId)
+            .WithErrorMessage("ChatThreadId must not be an empty GUID");
     }
 }

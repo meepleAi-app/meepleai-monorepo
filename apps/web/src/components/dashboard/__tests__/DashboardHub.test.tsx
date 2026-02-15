@@ -177,14 +177,14 @@ describe('DashboardHub', () => {
       });
     });
 
-    it('renders all 8 main sections', async () => {
+    it('renders all 9 main sections', async () => {
       const { container } = render(<DashboardHub />, { wrapper: createQueryWrapper() });
 
       await waitFor(() => {
         // Count only direct child sections of the grid (child components also render <section>)
         const grid = container.querySelector('.grid');
         const directSections = grid?.querySelectorAll(':scope > section');
-        expect(directSections?.length).toBe(8); // Hero, Sessions, Library, Activity, Wishlist, CatalogTrending, Chat, QuickActions
+        expect(directSections?.length).toBe(9); // Hero, Sessions, Library, Activity, Wishlist, Achievements, CatalogTrending, Chat, QuickActions
       });
     });
 
@@ -297,8 +297,8 @@ describe('DashboardHub', () => {
         // LazySection renders animate-pulse divs when inView=false
         const grid = container.querySelector('.grid');
         const skeletons = grid?.querySelectorAll('.animate-pulse');
-        // 6 below-fold sections: Library, Activity, Wishlist, CatalogTrending, Chat, QuickActions
-        expect(skeletons?.length).toBe(6);
+        // 7 below-fold sections: Library, Activity, Wishlist, Achievements, CatalogTrending, Chat, QuickActions
+        expect(skeletons?.length).toBe(7);
       });
     });
 

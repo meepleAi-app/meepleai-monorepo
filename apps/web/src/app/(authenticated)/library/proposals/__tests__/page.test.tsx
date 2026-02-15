@@ -32,6 +32,11 @@ vi.mock('@/components/library', () => ({
   LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 
+// Mock MyProposalsClient to isolate page-level testing
+vi.mock('../MyProposalsClient', () => ({
+  default: () => <div data-testid="my-proposals-client">Le Mie Proposte</div>,
+}));
+
 const mockGetCurrentUser = getCurrentUser as Mock;
 const mockUseRouter = useRouter as Mock;
 
@@ -65,7 +70,7 @@ describe('MyProposalsPage', () => {
     renderWithQuery(<MyProposalsPage />);
 
     // Wait for RequireRole to complete auth check
-    expect(await screen.findByText('My Proposals')).toBeInTheDocument();
+    expect(await screen.findByText('Le Mie Proposte')).toBeInTheDocument();
   });
 
   it('should redirect to login when user is not authenticated', async () => {
@@ -92,7 +97,7 @@ describe('MyProposalsPage', () => {
 
     renderWithQuery(<MyProposalsPage />);
 
-    expect(await screen.findByText('My Proposals')).toBeInTheDocument();
+    expect(await screen.findByText('Le Mie Proposte')).toBeInTheDocument();
   });
 
   it('should show proposals content for Editor role', async () => {
@@ -103,7 +108,7 @@ describe('MyProposalsPage', () => {
 
     renderWithQuery(<MyProposalsPage />);
 
-    expect(await screen.findByText('My Proposals')).toBeInTheDocument();
+    expect(await screen.findByText('Le Mie Proposte')).toBeInTheDocument();
   });
 
   it('should render LibraryNavTabs when authenticated (Issue #4055)', async () => {

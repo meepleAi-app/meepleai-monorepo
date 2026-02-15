@@ -2,7 +2,7 @@
  * Tests for Notification Settings Page (Issue #4220)
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import NotificationSettingsPage from '../page';
@@ -26,9 +26,11 @@ describe('NotificationSettingsPage', () => {
       () => new Promise(() => {}) // Never resolves
     );
 
-    render(<NotificationSettingsPage />);
+    const { container } = render(<NotificationSettingsPage />);
 
-    expect(screen.getByRole('img', { hidden: true })).toBeInTheDocument(); // Loader icon
+    // Loader2 SVG has aria-hidden="true", so query it via class name
+    const loader = container.querySelector('.animate-spin');
+    expect(loader).toBeInTheDocument();
   });
 
   it('loads and displays notification preferences', async () => {
@@ -122,10 +124,9 @@ describe('NotificationSettingsPage', () => {
 
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => mockPrefs,
+      json: async () => ({ ...mockPrefs }),
     });
 
-    const user = userEvent.setup();
     render(<NotificationSettingsPage />);
 
     await waitFor(() => {
@@ -138,8 +139,10 @@ describe('NotificationSettingsPage', () => {
 
     expect(emailReadySwitch).toHaveAttribute('aria-checked', 'false');
 
-    await user.click(emailReadySwitch);
+    fireEvent.click(emailReadySwitch);
 
-    expect(emailReadySwitch).toHaveAttribute('aria-checked', 'true');
+    await waitFor(() => {
+      expect(emailReadySwitch).toHaveAttribute('aria-checked', 'true');
+    });
   });
 });

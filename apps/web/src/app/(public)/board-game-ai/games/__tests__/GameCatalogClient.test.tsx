@@ -12,8 +12,9 @@
  * - Empty state
  */
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { GameCatalogClient } from '../GameCatalogClient';
 
 // Mock Next.js router
@@ -53,21 +54,21 @@ vi.mock('@/lib/errors', () => ({
   createErrorContext: vi.fn(() => ({})),
 }));
 
-// Mock GameCard to simplify tests
-vi.mock('@/components/games/GameCard', () => ({
-  GameCard: ({
+// Mock MeepleGameCard to simplify tests (component uses MeepleGameCard, not GameCard)
+vi.mock('@/components/games/MeepleGameCard', () => ({
+  MeepleGameCard: ({
     game,
     onClick,
     variant,
   }: {
     game: { id: string; title: string };
-    onClick?: () => void;
+    onClick?: (id: string) => void;
     variant?: string;
   }) => (
     <div
       data-testid={`game-card-${game.id}`}
       data-variant={variant}
-      onClick={onClick}
+      onClick={() => onClick?.(game.id)}
       role="button"
     >
       {game.title}
@@ -155,7 +156,7 @@ describe('GameCatalogClient', () => {
 
   describe('Rendering', () => {
     it('should render search bar, view toggle, and game cards', async () => {
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/cerca giochi/i)).toBeInTheDocument();
@@ -167,7 +168,7 @@ describe('GameCatalogClient', () => {
     });
 
     it('should display game count after loading', async () => {
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByText(/3 giochi trovati/i)).toBeInTheDocument();
@@ -175,7 +176,7 @@ describe('GameCatalogClient', () => {
     });
 
     it('should render in grid variant by default', async () => {
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         const gameCard = screen.getByTestId('game-card-game-1');
@@ -191,7 +192,7 @@ describe('GameCatalogClient', () => {
   describe('Search Functionality', () => {
     it('should update search input value on typing', async () => {
       const user = userEvent.setup();
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
@@ -206,7 +207,7 @@ describe('GameCatalogClient', () => {
     it('should trigger API call with search param after debounce', async () => {
       const user = userEvent.setup();
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       // Wait for initial load
       await waitFor(() => {
@@ -227,7 +228,7 @@ describe('GameCatalogClient', () => {
 
     it('should show clear button when search has value', async () => {
       const user = userEvent.setup();
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
@@ -241,7 +242,7 @@ describe('GameCatalogClient', () => {
 
     it('should clear search when clear button clicked', async () => {
       const user = userEvent.setup();
-      render(<GameCatalogClient initialView="grid" initialSearch="Initial" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="Initial" initialPage={1} />);
 
       const clearButton = await screen.findByRole('button', { name: /cancella ricerca/i });
       await user.click(clearButton);
@@ -257,7 +258,7 @@ describe('GameCatalogClient', () => {
 
   describe('View Toggle', () => {
     it('should render grid view toggle as selected by default', async () => {
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         const gridButton = screen.getByRole('radio', { name: /vista griglia/i });
@@ -267,7 +268,7 @@ describe('GameCatalogClient', () => {
 
     it('should switch to list view when list toggle clicked', async () => {
       const user = userEvent.setup();
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
@@ -285,7 +286,7 @@ describe('GameCatalogClient', () => {
     });
 
     it('should render in list variant when initialView is list', async () => {
-      render(<GameCatalogClient initialView="list" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="list" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         const gameCard = screen.getByTestId('game-card-game-1');
@@ -307,7 +308,7 @@ describe('GameCatalogClient', () => {
       });
       mockGetAll.mockReturnValue(delayedPromise);
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       // Should show skeletons during loading - use a more specific selector
       const container = document.querySelector('.space-y-6');
@@ -324,7 +325,7 @@ describe('GameCatalogClient', () => {
     it('should display error message when API fails', async () => {
       mockGetAll.mockRejectedValue(new Error('Network error'));
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByText(/impossibile caricare i giochi/i)).toBeInTheDocument();
@@ -334,7 +335,7 @@ describe('GameCatalogClient', () => {
     it('should show retry button on error', async () => {
       mockGetAll.mockRejectedValue(new Error('Network error'));
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /riprova/i })).toBeInTheDocument();
@@ -347,7 +348,7 @@ describe('GameCatalogClient', () => {
         .mockResolvedValueOnce(mockPaginatedResponse);
 
       const user = userEvent.setup();
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /riprova/i })).toBeInTheDocument();
@@ -377,7 +378,7 @@ describe('GameCatalogClient', () => {
         totalPages: 0,
       });
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         // Look for the empty state heading specifically (not the results count)
@@ -395,7 +396,7 @@ describe('GameCatalogClient', () => {
         totalPages: 0,
       });
 
-      render(<GameCatalogClient initialView="grid" initialSearch="NonExistent" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="NonExistent" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /cancella ricerca/i })).toBeInTheDocument();
@@ -411,7 +412,7 @@ describe('GameCatalogClient', () => {
     it('should show pagination when multiple pages exist', async () => {
       mockGetAll.mockResolvedValue(mockPaginatedResponseMultiPage);
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByText(/pagina 1 di 3/i)).toBeInTheDocument();
@@ -422,7 +423,7 @@ describe('GameCatalogClient', () => {
       mockGetAll.mockResolvedValue(mockPaginatedResponseMultiPage);
 
       const user = userEvent.setup();
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /pagina successiva/i })).toBeInTheDocument();
@@ -442,7 +443,7 @@ describe('GameCatalogClient', () => {
     it('should disable previous button on first page', async () => {
       mockGetAll.mockResolvedValue(mockPaginatedResponseMultiPage);
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         const prevButton = screen.getByRole('button', { name: /pagina precedente/i });
@@ -451,7 +452,7 @@ describe('GameCatalogClient', () => {
     });
 
     it('should not show pagination when only one page', async () => {
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
@@ -468,7 +469,7 @@ describe('GameCatalogClient', () => {
   describe('Game Card Interactions', () => {
     it('should navigate to ask page when game card clicked', async () => {
       const user = userEvent.setup();
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
@@ -480,15 +481,16 @@ describe('GameCatalogClient', () => {
       expect(mockPush).toHaveBeenCalledWith('/board-game-ai/ask?gameId=game-1');
     });
 
-    it('should show hover overlay with ask button', async () => {
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
+    it('should render all game cards from response', async () => {
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={1} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
       });
 
-      // The overlay with "Chiedi all'AI" button should exist (hidden by default)
-      expect(screen.getAllByText(/chiedi all'ai/i).length).toBeGreaterThan(0);
+      // All 3 games from mockGames should be rendered
+      expect(screen.getByTestId('game-card-game-2')).toBeInTheDocument();
+      expect(screen.getByTestId('game-card-game-3')).toBeInTheDocument();
     });
   });
 
@@ -500,7 +502,7 @@ describe('GameCatalogClient', () => {
     it('should initialize with provided search value', async () => {
       mockGetAll.mockResolvedValue(mockPaginatedResponse);
 
-      render(<GameCatalogClient initialView="grid" initialSearch="Catan" initialPage={1} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="Catan" initialPage={1} />);
 
       const searchInput = screen.getByPlaceholderText(/cerca giochi/i);
       expect(searchInput).toHaveValue('Catan');
@@ -509,7 +511,7 @@ describe('GameCatalogClient', () => {
     it('should initialize with provided page', async () => {
       mockGetAll.mockResolvedValue(mockPaginatedResponseMultiPage);
 
-      render(<GameCatalogClient initialView="grid" initialSearch="" initialPage={2} />);
+      renderWithQuery(<GameCatalogClient initialView="grid" initialSearch="" initialPage={2} />);
 
       await waitFor(() => {
         expect(mockGetAll).toHaveBeenCalledWith(undefined, expect.any(Object), 2, 20);

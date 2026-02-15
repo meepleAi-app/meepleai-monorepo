@@ -403,6 +403,88 @@ public sealed class ActivityTimelineServiceFilterTests : IDisposable
 
     #endregion
 
+    #region Date Range Filtering
+
+    [Fact]
+    public async Task GetFilteredActivities_FiltersByDateFrom()
+    {
+        // Arrange
+        SeedChatThread("Old chat", new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        SeedChatThread("New chat", new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var (events, totalCount) = await _service.GetFilteredActivitiesAsync(
+            _userId,
+            dateFrom: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        // Assert
+        Assert.Equal(1, totalCount);
+        Assert.Single(events);
+    }
+
+    [Fact]
+    public async Task GetFilteredActivities_FiltersByDateTo()
+    {
+        // Arrange
+        SeedChatThread("Old chat", new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        SeedChatThread("New chat", new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var (events, totalCount) = await _service.GetFilteredActivitiesAsync(
+            _userId,
+            dateTo: new DateTime(2025, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+
+        // Assert
+        Assert.Equal(1, totalCount);
+        Assert.Single(events);
+    }
+
+    [Fact]
+    public async Task GetFilteredActivities_FiltersByDateRange()
+    {
+        // Arrange
+        SeedChatThread("Before", new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        SeedChatThread("In range", new DateTime(2025, 7, 15, 0, 0, 0, DateTimeKind.Utc));
+        SeedChatThread("After", new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var (events, totalCount) = await _service.GetFilteredActivitiesAsync(
+            _userId,
+            dateFrom: new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            dateTo: new DateTime(2025, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+
+        // Assert
+        Assert.Equal(1, totalCount);
+        Assert.Single(events);
+    }
+
+    [Fact]
+    public async Task GetFilteredActivities_DateRangeWithTypeFilter()
+    {
+        // Arrange
+        SeedSharedGameAndEntry("Catan", new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc));
+        SeedSharedGameAndEntry("Old Game", new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        SeedChatThread("Chat in range", new DateTime(2026, 1, 20, 0, 0, 0, DateTimeKind.Utc));
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var (events, totalCount) = await _service.GetFilteredActivitiesAsync(
+            _userId,
+            types: ["game_added"],
+            dateFrom: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            dateTo: new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+
+        // Assert
+        Assert.Equal(1, totalCount);
+        Assert.Single(events);
+        Assert.Equal("game_added", events[0].Type);
+    }
+
+    #endregion
+
     #region Edge Cases
 
     [Fact]

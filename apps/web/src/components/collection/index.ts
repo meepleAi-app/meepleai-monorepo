@@ -9,7 +9,8 @@
 export { CollectionDashboard, type CollectionDashboardProps, type ViewMode, type SortOption } from './CollectionDashboard';
 
 // Grid and Display
-export { CollectionGrid } from './CollectionGrid';
+// CollectionGrid removed in Issue #3894 - superseded by EntityListView
+// CollectionDashboard renders MeepleCards directly with its own grid layout
 
 // Cards
 // MeepleCard removed - use @/components/ui/data-display/meeple-card instead

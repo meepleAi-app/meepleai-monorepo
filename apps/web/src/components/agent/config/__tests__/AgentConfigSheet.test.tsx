@@ -58,14 +58,6 @@ vi.mock('../CostPreview', () => ({
   CostPreview: () => <div data-testid="cost-preview">Cost Preview</div>,
 }));
 
-vi.mock('../../shared/ActionBar', () => ({
-  ActionBar: ({ onCancel }: { onCancel: () => void }) => (
-    <div data-testid="action-bar">
-      <button onClick={onCancel} data-testid="cancel-button">Cancel</button>
-    </div>
-  ),
-}));
-
 // Import after mocks
 import { AgentConfigSheet } from '../AgentConfigSheet';
 
@@ -109,9 +101,9 @@ describe('AgentConfigSheet', () => {
       expect(screen.getByTestId('cost-preview')).toBeInTheDocument();
     });
 
-    it('renders action bar', () => {
+    it('renders cancel button in footer', () => {
       render(<AgentConfigSheet {...defaultProps} />);
-      expect(screen.getByTestId('action-bar')).toBeInTheDocument();
+      expect(screen.getByText('Cancel')).toBeInTheDocument();
     });
   });
 
@@ -128,9 +120,9 @@ describe('AgentConfigSheet', () => {
   });
 
   describe('Close Behavior', () => {
-    it('calls onClose when action bar cancel is clicked', () => {
+    it('calls onClose when cancel button is clicked', () => {
       render(<AgentConfigSheet {...defaultProps} />);
-      fireEvent.click(screen.getByTestId('cancel-button'));
+      fireEvent.click(screen.getByText('Cancel'));
       expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
   });

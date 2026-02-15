@@ -72,7 +72,7 @@ internal record RagStreamingEvent(
 );
 
 // Specific data models for streaming events
-internal record StreamingStateUpdate(string message);
+internal record StreamingStateUpdate(string message, Guid? chatThreadId = null);
 internal record StreamingCitations(IReadOnlyList<Snippet> citations);
 internal record StreamingOutline(ExplainOutline outline);
 internal record StreamingScriptChunk(string chunk, int chunkIndex, int totalChunks);
@@ -81,7 +81,8 @@ internal record StreamingComplete(
     int promptTokens,
     int completionTokens,
     int totalTokens,
-    double? confidence
+    double? confidence,
+    Guid? chatThreadId = null
 );
 internal record StreamingError(string errorMessage, string? errorCode = null);
 internal record StreamingHeartbeat(string message = "keep-alive");

@@ -28,6 +28,15 @@ export function useCatalogTrending(limit = 5): UseQueryResult<TrendingGame[], Er
   return useQuery({
     queryKey: ['catalog', 'trending', limit],
     queryFn: () => fetchCatalogTrending(limit),
+    select: (data) =>
+      data.map((g, i) => ({
+        id: g.gameId,
+        name: g.title,
+        trend: g.percentageChange ?? 0,
+        rank: i + 1,
+        previousRank: i + 1,
+        imageUrl: g.imageUrl,
+      })),
     staleTime: TWELVE_HOURS_MS,
     refetchInterval: TWELVE_HOURS_MS,
     retry: 2,

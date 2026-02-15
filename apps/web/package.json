@@ -112,10 +112,6 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@react-pdf-viewer/core": "^3.12.0",
-    "@react-pdf-viewer/default-layout": "^3.12.0",
-    "@react-pdf-viewer/page-navigation": "^3.12.0",
-    "@react-pdf-viewer/toolbar": "^3.12.0",
     "@rjsf/core": "^6.2.4",
     "@rjsf/utils": "^6.2.4",
     "@rjsf/validator-ajv8": "^6.2.4",
@@ -163,10 +159,12 @@
     "react-intersection-observer": "^10.0.0",
     "react-intl": "^7.1.14",
     "react-markdown": "^10.1.0",
+    "react-pdf": "^10.3.0",
     "react-resizable-panels": "^4.6.0",
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^2.2.3",
     "recharts": "^3.5.1",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "swr": "^2.4.0",
     "tailwind-merge": "^3.4.0",
@@ -251,7 +249,8 @@
     "tsx": "^4.21.0",
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vitest-axe": "^0.1.0"
   },
   "pnpm": {
     "overrides": {

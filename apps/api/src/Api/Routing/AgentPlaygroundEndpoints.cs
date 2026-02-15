@@ -36,7 +36,8 @@ internal static class AgentPlaygroundEndpoints
             var command = new PlaygroundChatCommand(
                 AgentDefinitionId: agentId,
                 Message: request.Message,
-                GameId: Guid.TryParse(request.GameId, out var gid) ? gid : null);
+                GameId: Guid.TryParse(request.GameId, out var gid) ? gid : null,
+                Strategy: request.Strategy);
 
             try
             {
@@ -81,4 +82,5 @@ internal static class AgentPlaygroundEndpoints
 
 internal sealed record PlaygroundChatRequest(
     [Required, MinLength(1), MaxLength(4000)] string Message,
-    string? GameId = null);
+    string? GameId = null,
+    string? Strategy = null);

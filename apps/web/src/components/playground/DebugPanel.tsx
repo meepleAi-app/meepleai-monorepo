@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Clock, Cpu, Gauge, Server, Workflow } from 'lucide-react';
+import { Activity, Clock, Cpu, Gauge, Route, Server, Workflow } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, ScrollArea } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, activeStrategy } = usePlaygroundStore();
 
   // Aggregate message-level tokens
   const totalTokens = messages.reduce((sum, msg) => sum + (msg.metadata?.tokens || 0), 0);
@@ -134,6 +134,26 @@ export function DebugPanel() {
                 <span className="font-mono">{agentConfig.maxTokens.toLocaleString()}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Strategy */}
+      {activeStrategy && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Route className="h-4 w-4" />
+              Strategy
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm font-mono">{activeStrategy}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {activeStrategy === 'RetrievalOnly' && 'RAG chunks only, no LLM cost'}
+              {activeStrategy === 'SingleModel' && 'RAG + single LLM call (POC)'}
+              {activeStrategy === 'MultiModelConsensus' && 'RAG + dual-model consensus'}
+            </p>
           </CardContent>
         </Card>
       )}

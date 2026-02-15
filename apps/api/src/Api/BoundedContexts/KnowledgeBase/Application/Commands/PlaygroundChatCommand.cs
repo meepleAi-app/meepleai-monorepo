@@ -7,9 +7,11 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Streaming command for playground chat with an AgentDefinition.
 /// Returns SSE events: StateUpdate → Citations → Token(s) → FollowUpQuestions → Complete
 /// Issue #4392: Replace placeholder endpoint with real AgentDefinition integration.
+/// Issue #4437: Added Strategy parameter for POC strategy selection.
 /// </summary>
 internal record PlaygroundChatCommand(
     Guid AgentDefinitionId,
     string Message,
-    Guid? GameId = null
+    Guid? GameId = null,
+    string? Strategy = null
 ) : IStreamingQuery<RagStreamingEvent>;

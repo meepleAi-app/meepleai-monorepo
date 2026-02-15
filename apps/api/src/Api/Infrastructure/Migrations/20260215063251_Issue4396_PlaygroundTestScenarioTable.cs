@@ -37,11 +37,6 @@ namespace Api.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserLibraryEntries_UserId_AddedAt",
-                table: "user_library_entries",
-                columns: new[] { "UserId", "AddedAt" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_playground_test_scenarios_agent_definition_id",
                 schema: "knowledge_base",
                 table: "playground_test_scenarios",
@@ -85,10 +80,6 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "playground_test_scenarios",
                 schema: "knowledge_base");
-
-            migrationBuilder.DropIndex(
-                name: "IX_UserLibraryEntries_UserId_AddedAt",
-                table: "user_library_entries");
         }
     }
 }

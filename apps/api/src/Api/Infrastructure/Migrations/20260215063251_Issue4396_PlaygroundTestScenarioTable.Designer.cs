@@ -13,7 +13,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260215061828_Issue4396_PlaygroundTestScenarioTable")]
+    [Migration("20260215063251_Issue4396_PlaygroundTestScenarioTable")]
 #pragma warning disable CA1707
     partial class Issue4396_PlaygroundTestScenarioTable
 #pragma warning restore CA1707

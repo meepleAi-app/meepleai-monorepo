@@ -2,15 +2,16 @@
  * ChatHistoryDrawer - Thread History Drawer grouped by game (Issue #4366)
  *
  * Shows all user chat threads grouped by game in a right-side drawer.
- * Features: search, active thread highlight, thread actions (delete).
+ * Features: search, agent filter, active thread highlight, swipe-to-delete (mobile).
  * Opens from the "History" button in ChatThreadHeader.
  */
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import {
+  Bot,
   Clock,
   MessageSquare,
   Plus,
@@ -38,6 +39,7 @@ interface ThreadItem {
   id: string;
   title: string | null;
   gameId: string | null;
+  agentName: string | null;
   messageCount: number;
   lastMessageAt: string | null;
   createdAt: string;
@@ -61,6 +63,140 @@ export interface ChatHistoryDrawerProps {
 }
 
 // ============================================================================
+// SwipeableThreadItem - Thread row with swipe-to-delete on mobile
+// ============================================================================
+
+const SWIPE_THRESHOLD = 80;
+
+interface SwipeableThreadItemProps {
+  thread: ThreadItem;
+  isActive: boolean;
+  onClick: () => void;
+  onDelete: (threadId: string, e?: React.MouseEvent) => Promise<void>;
+}
+
+function SwipeableThreadItem({ thread, isActive, onClick, onDelete }: SwipeableThreadItemProps) {
+  const itemRef = useRef<HTMLDivElement>(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    setIsSwiping(false);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.touches[0].clientX - touchStartRef.current.x;
+    const dy = e.touches[0].clientY - touchStartRef.current.y;
+
+    // Only swipe left, and only if horizontal movement is dominant
+    if (Math.abs(dx) > Math.abs(dy) && dx < 0) {
+      setIsSwiping(true);
+      setSwipeX(Math.max(dx, -SWIPE_THRESHOLD - 20));
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (Math.abs(swipeX) >= SWIPE_THRESHOLD) {
+      // Past threshold: trigger delete
+      void onDelete(thread.id);
+    }
+    setSwipeX(0);
+    setIsSwiping(false);
+    touchStartRef.current = null;
+  }, [swipeX, thread.id, onDelete]);
+
+  return (
+    <div className="relative overflow-hidden">
+      {/* Delete background revealed on swipe */}
+      <div className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-500 text-white px-4">
+        <Trash2 className="h-4 w-4" />
+      </div>
+
+      {/* Swipeable foreground */}
+      <div
+        ref={itemRef}
+        role="button"
+        tabIndex={0}
+        data-testid={`thread-item-${thread.id}`}
+        onClick={() => !isSwiping && onClick()}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={cn(
+          'w-full text-left px-4 py-2.5 transition-colors group relative cursor-pointer bg-background',
+          isActive
+            ? 'bg-amber-50 dark:bg-amber-500/10 border-l-2 border-amber-500'
+            : 'hover:bg-muted/50 border-l-2 border-transparent'
+        )}
+        style={{
+          transform: `translateX(${swipeX}px)`,
+          transition: isSwiping ? 'none' : 'transform 200ms ease-out',
+        }}
+        aria-current={isActive ? 'true' : undefined}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p
+                className={cn(
+                  'text-sm font-medium truncate font-nunito',
+                  isActive && 'text-amber-900 dark:text-amber-200'
+                )}
+              >
+                {thread.title ?? 'Chat senza titolo'}
+              </p>
+              {thread.agentName && (
+                <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 flex-shrink-0">
+                  <Bot className="h-2.5 w-2.5" />
+                  {thread.agentName}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-0.5">
+                <MessageSquare className="h-3 w-3" />
+                {thread.messageCount}
+              </span>
+              {thread.lastMessageAt && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-0.5">
+                    <Clock className="h-3 w-3" />
+                    {formatRelativeTime(new Date(thread.lastMessageAt))}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Delete button (desktop hover) */}
+          <button
+            onClick={e => { e.stopPropagation(); void onDelete(thread.id, e); }}
+            className={cn(
+              'p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity',
+              'hover:bg-red-100 dark:hover:bg-red-500/10 text-muted-foreground hover:text-red-600'
+            )}
+            aria-label={`Elimina ${thread.title ?? 'thread'}`}
+            data-testid={`thread-delete-${thread.id}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -73,6 +209,7 @@ export function ChatHistoryDrawer({
   const [groups, setGroups] = useState<GameGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [agentFilter, setAgentFilter] = useState<string | null>(null);
 
   // Load thread history
   useEffect(() => {
@@ -98,6 +235,7 @@ export function ChatHistoryDrawer({
                 id: t.id,
                 title: t.title ?? 'Untitled',
                 gameId: t.gameId ?? game.id,
+                agentName: t.agentName ?? null,
                 messageCount: t.messageCount ?? 0,
                 lastMessageAt: t.lastMessageAt ?? t.createdAt,
                 createdAt: t.createdAt,
@@ -130,22 +268,38 @@ export function ChatHistoryDrawer({
     void loadHistory();
   }, [open]);
 
-  // Filter by search query
-  const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) return groups;
+  // Distinct agent names across all threads
+  const agentNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const group of groups) {
+      for (const thread of group.threads) {
+        if (thread.agentName) names.add(thread.agentName);
+      }
+    }
+    return Array.from(names).sort();
+  }, [groups]);
 
-    const query = searchQuery.toLowerCase();
+  // Filter by search query and agent
+  const filteredGroups = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
     return groups
       .map(group => ({
         ...group,
-        threads: group.threads.filter(
-          t =>
-            (t.title ?? '').toLowerCase().includes(query) ||
-            group.gameName.toLowerCase().includes(query)
-        ),
+        threads: group.threads.filter(t => {
+          // Agent filter
+          if (agentFilter && t.agentName !== agentFilter) return false;
+          // Search filter
+          if (query) {
+            return (
+              (t.title ?? '').toLowerCase().includes(query) ||
+              group.gameName.toLowerCase().includes(query)
+            );
+          }
+          return true;
+        }),
       }))
       .filter(group => group.threads.length > 0);
-  }, [groups, searchQuery]);
+  }, [groups, searchQuery, agentFilter]);
 
   // Total thread count
   const totalThreads = useMemo(
@@ -162,10 +316,10 @@ export function ChatHistoryDrawer({
     [onThreadSelect, onClose]
   );
 
-  // Handle delete thread
+  // Handle delete thread (called from both click and swipe)
   const handleDeleteThread = useCallback(
-    async (threadId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
+    async (threadId: string, e?: React.MouseEvent) => {
+      e?.stopPropagation();
       try {
         await api.chat.deleteThread(threadId);
         setGroups(prev =>
@@ -226,6 +380,40 @@ export function ChatHistoryDrawer({
               </button>
             )}
           </div>
+
+          {/* Agent filter chips */}
+          {agentNames.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar" data-testid="agent-filter-bar">
+              <button
+                onClick={() => setAgentFilter(null)}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors',
+                  agentFilter === null
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                )}
+                data-testid="agent-filter-all"
+              >
+                Tutti
+              </button>
+              {agentNames.map(name => (
+                <button
+                  key={name}
+                  onClick={() => setAgentFilter(agentFilter === name ? null : name)}
+                  className={cn(
+                    'flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors',
+                    agentFilter === name
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                  )}
+                  data-testid={`agent-filter-${name}`}
+                >
+                  <Bot className="h-3 w-3" />
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
         </SheetHeader>
 
         {/* Thread list */}
@@ -265,72 +453,15 @@ export function ChatHistoryDrawer({
                   </div>
 
                   {/* Threads */}
-                  {group.threads.map(thread => {
-                    const isActive = thread.id === activeThreadId;
-                    return (
-                      <div
-                        key={thread.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleThreadClick(thread.id)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleThreadClick(thread.id);
-                          }
-                        }}
-                        className={cn(
-                          'w-full text-left px-4 py-2.5 transition-colors group relative cursor-pointer',
-                          isActive
-                            ? 'bg-amber-50 dark:bg-amber-500/10 border-l-2 border-amber-500'
-                            : 'hover:bg-muted/50 border-l-2 border-transparent'
-                        )}
-                        aria-current={isActive ? 'true' : undefined}
-                        data-testid={`thread-item-${thread.id}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={cn(
-                                'text-sm font-medium truncate font-nunito',
-                                isActive && 'text-amber-900 dark:text-amber-200'
-                              )}
-                            >
-                              {thread.title ?? 'Chat senza titolo'}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
-                              <span className="flex items-center gap-0.5">
-                                <MessageSquare className="h-3 w-3" />
-                                {thread.messageCount}
-                              </span>
-                              {thread.lastMessageAt && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-0.5">
-                                    <Clock className="h-3 w-3" />
-                                    {formatRelativeTime(new Date(thread.lastMessageAt))}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Delete button */}
-                          <button
-                            onClick={e => void handleDeleteThread(thread.id, e)}
-                            className={cn(
-                              'p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity',
-                              'hover:bg-red-100 dark:hover:bg-red-500/10 text-muted-foreground hover:text-red-600'
-                            )}
-                            aria-label={`Elimina ${thread.title ?? 'thread'}`}
-                            data-testid={`thread-delete-${thread.id}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {group.threads.map(thread => (
+                    <SwipeableThreadItem
+                      key={thread.id}
+                      thread={thread}
+                      isActive={thread.id === activeThreadId}
+                      onClick={() => handleThreadClick(thread.id)}
+                      onDelete={handleDeleteThread}
+                    />
+                  ))}
                 </div>
               ))}
             </div>

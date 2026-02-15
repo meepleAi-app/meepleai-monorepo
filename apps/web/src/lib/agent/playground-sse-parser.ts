@@ -126,6 +126,13 @@ export interface CompletionMetadata {
   logEntries?: LogEntry[];
   tomacLayers?: TomacLayer[];
   systemPrompt?: string;
+  promptTemplateInfo?: PromptTemplateInfo;
+}
+
+export interface PromptTemplateInfo {
+  role: string;
+  promptCount: number;
+  lastModified: string | null;
 }
 
 export interface StreamingError {

@@ -36,7 +36,7 @@ function MetricCard({
 }
 
 export function DebugPanel() {
-  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt } = usePlaygroundStore();
+  const { messages, tokenBreakdown, confidence, latencyMs, pipelineSteps, agentConfig, latencyBreakdown, costBreakdown, sessionTotalCost, activeStrategy, strategyInfo, pipelineTimings, cacheInfo, sessionCacheHits, sessionCacheRequests, apiTraces, logEntries, tomacLayers, resolvedSystemPrompt, promptTemplateInfo } = usePlaygroundStore();
   const [expandedTrace, setExpandedTrace] = useState<number | null>(null);
   const [logLevelFilter, setLogLevelFilter] = useState<Set<string>>(new Set(['info', 'warn', 'error', 'debug']));
   const [logSourceFilter, setLogSourceFilter] = useState<string>('all');
@@ -305,6 +305,29 @@ export function DebugPanel() {
                   {activeStrategy === 'SingleModel' && 'RAG + single LLM call (POC)'}
                   {activeStrategy === 'MultiModelConsensus' && 'RAG + dual-model consensus'}
                 </p>
+              )}
+              {/* Prompt Template Info (Issue #4469) */}
+              {promptTemplateInfo && (
+                <div className="border-t pt-2 space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Prompt Template</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Role</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-mono">{promptTemplateInfo.role}</span>
+                      <span className="text-[10px] bg-blue-100 text-blue-800 px-1 py-0.5 rounded leading-none">
+                        {promptTemplateInfo.promptCount} prompt{promptTemplateInfo.promptCount !== 1 ? 's' : ''}
+                      </span>
+                    </span>
+                  </div>
+                  {promptTemplateInfo.lastModified && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Modified</span>
+                      <span className="font-mono text-[11px]" title={new Date(promptTemplateInfo.lastModified).toISOString()}>
+                        {new Date(promptTemplateInfo.lastModified).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </CardContent>

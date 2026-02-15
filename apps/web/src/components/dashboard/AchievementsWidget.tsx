@@ -42,6 +42,7 @@ import {
   Flame,
   Target,
   ChevronRight,
+  Lock,
   Sparkles,
   Star,
 } from 'lucide-react';
@@ -49,6 +50,12 @@ import Link from 'next/link';
 
 import { Progress } from '@/components/ui/feedback/progress';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { useRecentAchievements } from '@/hooks/useRecentAchievements';
 import { cn } from '@/lib/utils';
@@ -69,6 +76,10 @@ export interface Achievement {
   points: number;
   unlockedAt: string;
   icon?: string;
+  /** Hint on how to unlock (shown in tooltip for locked badges) */
+  unlockHint?: string;
+  /** Whether this achievement is locked (not yet unlocked) */
+  isLocked?: boolean;
 }
 
 export interface NextAchievementProgress {
@@ -201,21 +212,43 @@ function CategoryIcon({ category, className }: { category: AchievementCategory; 
 // Rarity Badge Component
 // ============================================================================
 
-function RarityBadge({ rarity }: { rarity: AchievementRarity }) {
+function RarityBadge({
+  rarity,
+  isLocked,
+  unlockHint,
+}: {
+  rarity: AchievementRarity;
+  isLocked?: boolean;
+  unlockHint?: string;
+}) {
   const colors = RARITY_COLORS[rarity];
 
-  return (
+  const badge = (
     <span
       className={cn(
-        'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
-        colors.bg,
-        colors.text
+        'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1',
+        isLocked ? 'bg-muted text-muted-foreground' : colors.bg,
+        !isLocked && colors.text
       )}
       data-testid={`rarity-badge-${rarity}`}
     >
+      {isLocked && <Lock className="h-2.5 w-2.5" />}
       {RARITY_LABELS[rarity]}
     </span>
   );
+
+  if (isLocked && unlockHint) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{badge}</TooltipTrigger>
+        <TooltipContent side="left" data-testid={`unlock-tooltip-${rarity}`}>
+          <p className="font-medium text-xs">{unlockHint}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return badge;
 }
 
 // ============================================================================
@@ -330,7 +363,11 @@ function AchievementCard({ achievement, index, isCelebrating }: AchievementCardP
         </div>
 
         {/* Rarity Badge */}
-        <RarityBadge rarity={achievement.rarity} />
+        <RarityBadge
+          rarity={achievement.rarity}
+          isLocked={achievement.isLocked}
+          unlockHint={achievement.unlockHint}
+        />
       </Link>
     </motion.div>
   );
@@ -439,6 +476,7 @@ export function AchievementsWidget({
   }
 
   return (
+    <TooltipProvider>
     <section
       className={cn(
         'rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xl p-4',
@@ -517,6 +555,7 @@ export function AchievementsWidget({
         </>
       )}
     </section>
+    </TooltipProvider>
   );
 }
 

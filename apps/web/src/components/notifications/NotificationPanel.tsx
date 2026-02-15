@@ -16,7 +16,8 @@
 
 import { useEffect } from 'react';
 
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
@@ -38,7 +39,7 @@ export function NotificationPanel() {
 
   // Fetch notifications on panel open
   useEffect(() => {
-    void fetchNotifications({ limit: 50 });
+    void fetchNotifications({ limit: 5 });
   }, [fetchNotifications]);
 
   const hasUnread = notifications.some(n => !n.isRead);
@@ -100,6 +101,21 @@ export function NotificationPanel() {
           </div>
         )}
       </div>
+
+      {/* Footer - View All */}
+      {!error && notifications.length > 0 && (
+        <>
+          <Separator />
+          <Link
+            href="/notifications"
+            className="flex items-center justify-center gap-1 p-3 text-sm text-muted-foreground hover:text-primary transition-colors"
+            data-testid="view-all-notifications-link"
+          >
+            Vedi tutte le notifiche
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </>
+      )}
     </div>
   );
 }

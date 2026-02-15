@@ -1,6 +1,7 @@
-import { httpClient } from './http-client';
+import { apiClient } from './client';
+import { NotFoundError } from './core/errors';
 
-interface PagedResult<T> {
+export interface PagedResult<T> {
   items: T[];
   totalCount: number;
   page: number;
@@ -8,7 +9,7 @@ interface PagedResult<T> {
   totalPages: number;
 }
 
-interface AdminStats {
+export interface AdminStats {
   totalGames: number;
   publishedGames: number;
   pendingGames: number;
@@ -20,7 +21,7 @@ interface AdminStats {
   recentSubmissions: number;
 }
 
-interface ApprovalQueueItem {
+export interface ApprovalQueueItem {
   gameId: string;
   title: string;
   submittedBy: string;
@@ -29,7 +30,7 @@ interface ApprovalQueueItem {
   pdfCount: number;
 }
 
-interface User {
+export interface User {
   id: string;
   displayName: string;
   email: string;
@@ -43,7 +44,7 @@ interface User {
   emailVerified: boolean;
 }
 
-interface UserLibraryStats {
+export interface UserLibraryStats {
   gamesOwned: number;
   totalPlays: number;
   wishlistCount: number;
@@ -51,12 +52,17 @@ interface UserLibraryStats {
   favoriteCategory: string;
 }
 
-interface UserBadge {
+export interface UserBadge {
   id: string;
   name: string;
   description: string;
   icon: string;
   earnedAt: string;
+}
+
+/** Empty paged result for fallback on auth failure */
+function emptyPagedResult<T>(): PagedResult<T> {
+  return { items: [], totalCount: 0, page: 1, pageSize: 0, totalPages: 0 };
 }
 
 export const adminClient = {
@@ -66,9 +72,18 @@ export const adminClient = {
     if (params?.days) query.set('days', params.days.toString());
 
     // Backend returns DashboardStatsDto, we extract metrics
-    const response = await httpClient.get<{ metrics: Record<string, number> }>(
-      `/admin/dashboard/stats?${query.toString()}`
+    const response = await apiClient.get<{ metrics: Record<string, number> }>(
+      `/api/v1/admin/dashboard/stats?${query.toString()}`
     );
+
+    // GET returns null on 401 - return zeroed stats
+    if (!response) {
+      return {
+        totalGames: 0, publishedGames: 0, pendingGames: 0,
+        totalUsers: 0, activeUsers: 0, newUsers: 0,
+        approvalRate: 0, pendingApprovals: 0, recentSubmissions: 0,
+      };
+    }
 
     // Map backend DashboardMetrics to frontend AdminStats
     return {
@@ -97,17 +112,18 @@ export const adminClient = {
     if (params?.status) query.set('status', params.status);
     if (params?.search) query.set('search', params.search);
 
-    return await httpClient.get<PagedResult<ApprovalQueueItem>>(
-      `/admin/shared-games/approval-queue?${query.toString()}`
+    const result = await apiClient.get<PagedResult<ApprovalQueueItem>>(
+      `/api/v1/admin/shared-games/approval-queue?${query.toString()}`
     );
+    return result ?? emptyPagedResult<ApprovalQueueItem>();
   },
 
   async batchApproveGames(gameIds: string[]): Promise<void> {
-    await httpClient.post('/admin/shared-games/batch-approve', { gameIds });
+    await apiClient.post('/api/v1/admin/shared-games/batch-approve', { gameIds });
   },
 
   async batchRejectGames(gameIds: string[]): Promise<void> {
-    await httpClient.post('/admin/shared-games/batch-reject', { gameIds });
+    await apiClient.post('/api/v1/admin/shared-games/batch-reject', { gameIds });
   },
 
   // User Management
@@ -125,46 +141,52 @@ export const adminClient = {
     if (params?.tier) query.set('tier', params.tier);
     if (params?.search) query.set('search', params.search);
 
-    return await httpClient.get<PagedResult<User>>(
-      `/admin/users?${query.toString()}`
+    const result = await apiClient.get<PagedResult<User>>(
+      `/api/v1/admin/users?${query.toString()}`
     );
+    return result ?? emptyPagedResult<User>();
   },
 
   async getUserDetail(userId: string): Promise<User> {
-    return await httpClient.get<User>(`/admin/users/${userId}`);
+    const result = await apiClient.get<User>(`/api/v1/admin/users/${userId}`);
+    if (!result) throw new NotFoundError({ message: `User ${userId} not found` });
+    return result;
   },
 
   async getUserLibraryStats(userId: string): Promise<UserLibraryStats> {
-    return await httpClient.get<UserLibraryStats>(
-      `/admin/users/${userId}/library/stats`
+    const result = await apiClient.get<UserLibraryStats>(
+      `/api/v1/admin/users/${userId}/library/stats`
     );
+    if (!result) throw new NotFoundError({ message: `Library stats for user ${userId} not found` });
+    return result;
   },
 
   async getUserBadges(userId: string): Promise<UserBadge[]> {
-    return await httpClient.get<UserBadge[]>(
-      `/admin/users/${userId}/badges`
+    const result = await apiClient.get<UserBadge[]>(
+      `/api/v1/admin/users/${userId}/badges`
     );
+    return result ?? [];
   },
 
   async suspendUser(userId: string): Promise<void> {
-    await httpClient.post(`/admin/users/${userId}/suspend`);
+    await apiClient.post('/api/v1/admin/users/' + userId + '/suspend');
   },
 
   async unsuspendUser(userId: string): Promise<void> {
-    await httpClient.post(`/admin/users/${userId}/unsuspend`);
+    await apiClient.post('/api/v1/admin/users/' + userId + '/unsuspend');
   },
 
   async updateUserTier(userId: string, tier: string): Promise<void> {
-    await httpClient.put(`/admin/users/${userId}/tier`, { tier });
+    await apiClient.put('/api/v1/admin/users/' + userId + '/tier', { tier });
   },
 
   async resetUserPassword(userId: string): Promise<void> {
-    await httpClient.post(`/admin/users/${userId}/reset-password`);
+    await apiClient.post('/api/v1/admin/users/' + userId + '/reset-password');
   },
 
   async impersonateUser(userId: string): Promise<{ sessionToken: string }> {
-    return await httpClient.post<{ sessionToken: string }>(
-      `/admin/users/${userId}/impersonate`
+    return await apiClient.post<{ sessionToken: string }>(
+      '/api/v1/admin/users/' + userId + '/impersonate'
     );
   },
 };

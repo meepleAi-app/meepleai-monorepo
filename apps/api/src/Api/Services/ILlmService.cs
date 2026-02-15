@@ -54,6 +54,21 @@ internal interface ILlmService
         string systemPrompt,
         string userPrompt,
         CancellationToken ct = default) where T : class;
+
+    /// <summary>
+    /// Issue #4332: Generate completion with explicit model (bypassing routing strategy).
+    /// Used for multi-model ensemble evaluation requiring specific models.
+    /// </summary>
+    /// <param name="explicitModel">Model ID with provider prefix (e.g., "openai/gpt-4", "anthropic/claude-3.5-sonnet")</param>
+    /// <param name="systemPrompt">System-level instructions for the LLM</param>
+    /// <param name="userPrompt">User's input prompt</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>LLM completion result with usage and cost tracking</returns>
+    Task<LlmCompletionResult> GenerateCompletionWithModelAsync(
+        string explicitModel,
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken ct = default);
 }
 
 /// <summary>

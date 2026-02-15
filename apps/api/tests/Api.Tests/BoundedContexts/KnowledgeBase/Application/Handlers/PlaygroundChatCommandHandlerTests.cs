@@ -1,6 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
-using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -26,6 +25,8 @@ public sealed class PlaygroundChatCommandHandlerTests
     private readonly Mock<ILlmClient> _mockLlmClient;
     private readonly LlmProviderFactory _llmProviderFactory;
     private readonly Mock<IHybridSearchService> _mockHybridSearchService;
+    private readonly Mock<ILlmCostCalculator> _mockCostCalculator;
+    private readonly Mock<ILlmCostLogRepository> _mockCostLogRepository;
     private readonly Mock<ILogger<PlaygroundChatCommandHandler>> _mockLogger;
     private readonly PlaygroundChatCommandHandler _handler;
 
@@ -41,18 +42,15 @@ public sealed class PlaygroundChatCommandHandlerTests
             new Mock<ILogger<LlmProviderFactory>>().Object);
 
         _mockHybridSearchService = new Mock<IHybridSearchService>();
+        _mockCostCalculator = new Mock<ILlmCostCalculator>();
+        _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
         _mockLogger = new Mock<ILogger<PlaygroundChatCommandHandler>>();
-        var mockCostCalculator = new Mock<ILlmCostCalculator>();
-        mockCostCalculator
-            .Setup(c => c.CalculateCost(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(LlmCostCalculation.Empty);
-        var mockCostLogRepository = new Mock<ILlmCostLogRepository>();
         _handler = new PlaygroundChatCommandHandler(
             _mockAgentDefinitionRepository.Object,
             _llmProviderFactory,
             _mockHybridSearchService.Object,
-            mockCostCalculator.Object,
-            mockCostLogRepository.Object,
+            _mockCostCalculator.Object,
+            _mockCostLogRepository.Object,
             _mockLogger.Object
         );
     }

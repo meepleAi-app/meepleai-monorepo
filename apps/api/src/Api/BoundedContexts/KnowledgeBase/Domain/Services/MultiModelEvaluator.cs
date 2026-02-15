@@ -1,6 +1,8 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
-using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -11,7 +13,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// </summary>
 internal sealed class MultiModelEvaluator : IMultiModelEvaluator
 {
-    private readonly HybridLlmService _llmService;
+    private readonly ILlmService _llmService;
+    private readonly IHybridCacheService _cacheService;
     private readonly ILogger<MultiModelEvaluator> _logger;
 
     private const string SystemPrompt = """
@@ -19,9 +22,13 @@ internal sealed class MultiModelEvaluator : IMultiModelEvaluator
         {"score": 0.85, "reasoning": "...", "pros": [...], "cons": [...], "expectedOutcome": "..."}
         """;
 
-    public MultiModelEvaluator(HybridLlmService llmService, ILogger<MultiModelEvaluator> logger)
+    public MultiModelEvaluator(
+        ILlmService llmService,
+        IHybridCacheService cacheService,
+        ILogger<MultiModelEvaluator> logger)
     {
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -31,39 +38,84 @@ internal sealed class MultiModelEvaluator : IMultiModelEvaluator
         string playerColor,
         CancellationToken cancellationToken = default)
     {
+        // Issue #4332: Position caching for cost optimization
+        // Cache key: hash(FEN + player + move notation)
+        var cacheKey = GeneratePositionCacheKey(state, playerColor, move);
+
+        return await _cacheService.GetOrCreateAsync(
+            cacheKey,
+            factory: async ct => await EvaluateUncachedAsync(move, state, playerColor, ct).ConfigureAwait(false),
+            tags: ["multi-model", "decisore", $"player:{playerColor}"],
+            expiration: TimeSpan.FromHours(24),  // Chess positions are deterministic
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ConsensusResult> EvaluateUncachedAsync(
+        CandidateMove move,
+        ParsedGameState state,
+        string playerColor,
+        CancellationToken cancellationToken)
+    {
         var prompt = BuildPrompt(move, state, playerColor);
 
-        // Parallel LLM calls (simulated - actual multi-model requires multiple API keys)
-        // For MVP: Call same LLM 3 times to validate parallel execution pattern
+        // Issue #4332: Real multi-model evaluation with GPT-4 + Claude + DeepSeek
+        // OpenRouter model IDs: https://openrouter.ai/docs#models
         var evaluationTasks = new[]
         {
-            EvaluateWithModelAsync("gpt-4", prompt, cancellationToken),
-            EvaluateWithModelAsync("claude-3.5", prompt, cancellationToken),
-            EvaluateWithModelAsync("deepseek", prompt, cancellationToken)
+            EvaluateWithModelAsync("openai/gpt-4", prompt, cancellationToken),
+            EvaluateWithModelAsync("anthropic/claude-3.5-sonnet", prompt, cancellationToken),
+            EvaluateWithModelAsync("deepseek/deepseek-chat", prompt, cancellationToken)
         };
 
         var evaluations = await Task.WhenAll(evaluationTasks).ConfigureAwait(false);
 
-        // Calculate consensus
-        var scores = evaluations.Where(e => e != null).Select(e => e!.Score).ToList();
+        // Calculate consensus with weighted voting
+        // Issue #4332: Model-specific weights based on capabilities
+        var modelWeights = new Dictionary<string, double>(StringComparer.Ordinal)
+        {
+            ["openai/gpt-4"] = 0.40,           // Highest weight for strategic analysis
+            ["anthropic/claude-3.5-sonnet"] = 0.35,  // Strong reasoning
+            ["deepseek/deepseek-chat"] = 0.25         // Economical baseline
+        };
 
-        if (scores.Count == 0)
+        var weightedScores = new List<(double score, double weight, string model)>();
+        for (int i = 0; i < evaluations.Length; i++)
+        {
+            var eval = evaluations[i];
+            if (eval != null)
+            {
+                var modelId = i == 0 ? "openai/gpt-4" : i == 1 ? "anthropic/claude-3.5-sonnet" : "deepseek/deepseek-chat";
+                var weight = modelWeights.GetValueOrDefault(modelId, 1.0 / evaluations.Length);
+                weightedScores.Add((eval.Score, weight, modelId));
+            }
+        }
+
+        if (weightedScores.Count == 0)
         {
             _logger.LogWarning("All ensemble evaluations failed");
             return CreateFallbackResult(move);
         }
 
-        var meanScore = scores.Average();
+        // Weighted consensus score
+        var totalWeight = weightedScores.Sum(x => x.weight);
+        var weightedMeanScore = weightedScores.Sum(x => x.score * x.weight) / totalWeight;
+
+        // Variance for confidence calculation (unweighted for agreement measure)
+        var scores = weightedScores.Select(x => x.score).ToList();
         var variance = CalculateVariance(scores);
         var agreement = ClassifyAgreement(variance);
         var confidence = CalculateConfidence(variance);
+
+        _logger.LogInformation(
+            "Multi-model consensus: score={Score:F2}, variance={Variance:F4}, agreement={Agreement}, models={Count}",
+            weightedMeanScore, variance, agreement, weightedScores.Count);
 
         // Use first successful evaluation for reasoning
         var primaryEval = evaluations.FirstOrDefault(e => e != null);
 
         return new ConsensusResult
         {
-            Score = meanScore,
+            Score = weightedMeanScore,  // Issue #4332: Weighted consensus score
             Confidence = confidence,
             Agreement = agreement,
             Reasoning = primaryEval?.Reasoning ?? "Consensus evaluation",
@@ -81,16 +133,26 @@ internal sealed class MultiModelEvaluator : IMultiModelEvaluator
     {
         try
         {
-            // MVP: Use same LLM service (will be extended to actual multi-model in Phase 2)
-            var result = await _llmService.GenerateCompletionAsync(
+            // Issue #4332: Call specific model via GenerateCompletionWithModelAsync
+            var result = await _llmService.GenerateCompletionWithModelAsync(
+                modelName,  // Explicit model ID (e.g., "openai/gpt-4")
                 SystemPrompt,
                 prompt,
                 cancellationToken).ConfigureAwait(false);
 
             if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
+            {
+                _logger.LogWarning("Model {Model} returned no response", modelName);
                 return null;
+            }
 
             var evaluation = JsonSerializer.Deserialize<ModelEvaluation>(result.Response);
+            if (evaluation == null)
+            {
+                _logger.LogWarning("Failed to parse JSON from model {Model}", modelName);
+                return null;
+            }
+
             return evaluation;
         }
         catch (Exception ex)
@@ -154,4 +216,14 @@ internal sealed class MultiModelEvaluator : IMultiModelEvaluator
         List<string> Pros,
         List<string> Cons,
         string ExpectedOutcome);
+
+    /// <summary>
+    /// Issue #4332: Generate deterministic cache key for position evaluation.
+    /// </summary>
+    private static string GeneratePositionCacheKey(ParsedGameState state, string playerColor, CandidateMove move)
+    {
+        var input = $"{state.GetFen()}|{playerColor}|{move.ToAlgebraicNotation()}";
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(input)));
+        return $"multimodel:eval:{hash[..16]}";  // Use first 16 hex chars (64 bits)
+    }
 }

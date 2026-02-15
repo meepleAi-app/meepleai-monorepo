@@ -127,12 +127,19 @@ export interface CompletionMetadata {
   tomacLayers?: TomacLayer[];
   systemPrompt?: string;
   promptTemplateInfo?: PromptTemplateInfo;
+  tierInfo?: TierInfo;
 }
 
 export interface PromptTemplateInfo {
   role: string;
   promptCount: number;
   lastModified: string | null;
+}
+
+export interface TierInfo {
+  requiredTier: string;
+  userTier: string;
+  hasAccess: boolean;
 }
 
 export interface StreamingError {

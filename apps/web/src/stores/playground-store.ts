@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { AgentConfigSnapshot, ApiTrace, CacheInfo, CompletionMetadata, CostBreakdown, LatencyBreakdown, LogEntry, PipelineStepTiming, PromptTemplateInfo, Snippet, StrategyInfo, TomacLayer } from '@/lib/agent/playground-sse-parser';
+import type { AgentConfigSnapshot, ApiTrace, CacheInfo, CompletionMetadata, CostBreakdown, LatencyBreakdown, LogEntry, PipelineStepTiming, PromptTemplateInfo, Snippet, StrategyInfo, TierInfo, TomacLayer } from '@/lib/agent/playground-sse-parser';
 
 export type PlaygroundStrategy = 'RetrievalOnly' | 'SingleModel' | 'MultiModelConsensus';
 
@@ -72,6 +72,9 @@ interface PlaygroundState {
 
   // Prompt template info (Issue #4469)
   promptTemplateInfo: PromptTemplateInfo | null;
+
+  // Tier info (Issue #4471)
+  tierInfo: TierInfo | null;
 
   // System message
   systemMessage: string;
@@ -165,6 +168,9 @@ export const usePlaygroundStore = create<PlaygroundState>()(
       // Prompt template info
       promptTemplateInfo: null,
 
+      // Tier info
+      tierInfo: null,
+
       // System message
       systemMessage: '',
 
@@ -235,6 +241,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           tomacLayers: [],
           resolvedSystemPrompt: null,
           promptTemplateInfo: null,
+          tierInfo: null,
         }),
 
       setStreaming: (isStreaming) => set({ isStreaming }),
@@ -268,6 +275,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           tomacLayers: [],
           resolvedSystemPrompt: null,
           promptTemplateInfo: null,
+          tierInfo: null,
         }),
 
       endSession: () =>
@@ -332,6 +340,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
             tomacLayers: metadata.tomacLayers ?? [],
             resolvedSystemPrompt: metadata.systemPrompt ?? null,
             promptTemplateInfo: metadata.promptTemplateInfo ?? null,
+            tierInfo: metadata.tierInfo ?? null,
           };
         }),
 
@@ -358,6 +367,7 @@ export const usePlaygroundStore = create<PlaygroundState>()(
           tomacLayers: [],
           resolvedSystemPrompt: null,
           promptTemplateInfo: null,
+          tierInfo: null,
         }),
 
       // ─── System Message ──────────────────────────

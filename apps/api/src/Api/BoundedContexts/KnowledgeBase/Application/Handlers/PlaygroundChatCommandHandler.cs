@@ -604,7 +604,11 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 promptTemplateInfo: new PlaygroundPromptTemplateInfo(
                     role: "system",
                     promptCount: agentDefinition.Prompts.Count,
-                    lastModified: agentDefinition.UpdatedAt ?? agentDefinition.CreatedAt)));
+                    lastModified: agentDefinition.UpdatedAt ?? agentDefinition.CreatedAt),
+                tierInfo: new PlaygroundTierInfo(
+                    requiredTier: GetRequiredTierForStrategy(effectiveStrategy),
+                    userTier: "admin",
+                    hasAccess: true)));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -694,6 +698,21 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
         };
     }
 
+    /// <summary>
+    /// Maps a strategy name to its minimum required user tier.
+    /// Issue #4471: Tier display in debug panel.
+    /// </summary>
+    private static string GetRequiredTierForStrategy(string strategy)
+    {
+        return strategy switch
+        {
+            "RetrievalOnly" => "free",
+            "SingleModel" => "free",
+            "MultiModelConsensus" => "premium",
+            _ => "free"
+        };
+    }
+
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)
     {
         return new RagStreamingEvent(type, data, DateTime.UtcNow);
@@ -730,7 +749,8 @@ internal record PlaygroundStreamingComplete(
     List<PlaygroundLogEntry>? logEntries = null,
     List<PlaygroundTomacLayer>? tomacLayers = null,
     string? systemPrompt = null,
-    PlaygroundPromptTemplateInfo? promptTemplateInfo = null);
+    PlaygroundPromptTemplateInfo? promptTemplateInfo = null,
+    PlaygroundTierInfo? tierInfo = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -839,6 +859,15 @@ internal record PlaygroundPromptTemplateInfo(
     string role,
     int promptCount,
     DateTime? lastModified);
+
+/// <summary>
+/// Tier information for strategy access display.
+/// Issue #4471: Shows required tier vs user access.
+/// </summary>
+internal record PlaygroundTierInfo(
+    string requiredTier,
+    string userTier,
+    bool hasAccess);
 
 /// <summary>
 /// Internal cache entry for playground query deduplication.

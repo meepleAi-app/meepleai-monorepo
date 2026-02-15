@@ -79,6 +79,19 @@ export interface CacheInfo {
   ttlSeconds: number;
 }
 
+export interface ApiTrace {
+  service: 'vector_search' | 'llm' | 'embedding' | 'reranker' | string;
+  method: string;
+  url: string;
+  requestSizeBytes: number;
+  responseSizeBytes: number;
+  statusCode: number;
+  latencyMs: number;
+  detail: string | null;
+  requestPreview: string | null;
+  responsePreview: string | null;
+}
+
 export interface CompletionMetadata {
   estimatedReadingTimeMinutes?: number;
   promptTokens: number;
@@ -92,6 +105,7 @@ export interface CompletionMetadata {
   strategyInfo?: StrategyInfo;
   pipelineTimings?: PipelineStepTiming[];
   cacheInfo?: CacheInfo;
+  apiTraces?: ApiTrace[];
 }
 
 export interface StreamingError {

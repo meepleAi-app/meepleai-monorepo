@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
@@ -195,7 +196,7 @@ public sealed class PdfMetricsIntegrationTests : IAsyncLifetime
 
         // Assert: TotalDuration should be positive
         pdf.TotalDuration.Should().NotBeNull();
-        pdf.TotalDuration!.Value.Should().BeGreaterOrEqualTo(TimeSpan.Zero);
+        pdf.TotalDuration!.Value.Should().BeGreaterThanOrEqualTo(TimeSpan.Zero);
     }
 
     [Fact]
@@ -287,11 +288,11 @@ public sealed class PdfMetricsIntegrationTests : IAsyncLifetime
         pdf.TransitionTo(PdfProcessingState.Extracting);
 
         // Fail at Extracting
-        pdf.MarkAsFailed("Extraction timeout", "timeout", PdfProcessingState.Extracting);
+        pdf.MarkAsFailed("Extraction timeout", ErrorCategory.Network, PdfProcessingState.Extracting);
         pdf.RetryCount.Should().Be(0);
 
         // Retry
-        pdf.RetryProcessing();
+        pdf.Retry();
         pdf.RetryCount.Should().Be(1);
 
         // Complete successfully

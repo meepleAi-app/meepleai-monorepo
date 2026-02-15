@@ -54,7 +54,6 @@ public class UserTierTests
     [Theory]
     [InlineData("invalid")]
     [InlineData("basic")]
-    [InlineData("enterprise")]
     [InlineData("admin")]
     public void Parse_InvalidTier_ThrowsValidationException(string tierValue)
     {

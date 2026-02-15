@@ -44,6 +44,7 @@ internal class EmailQueueRepository : RepositoryBase, IEmailQueueRepository
     {
         var now = DateTime.UtcNow;
         var entities = await DbContext.Set<EmailQueueEntity>()
+            .AsNoTracking()
             .Where(e =>
                 (e.Status == "pending") ||
                 (e.Status == "failed" && e.NextRetryAt != null && e.NextRetryAt <= now))
@@ -86,7 +87,20 @@ internal class EmailQueueRepository : RepositoryBase, IEmailQueueRepository
     {
         CollectDomainEvents(item);
         var entity = MapToPersistence(item);
-        DbContext.Set<EmailQueueEntity>().Update(entity);
+
+        var tracked = DbContext.ChangeTracker.Entries<EmailQueueEntity>()
+            .FirstOrDefault(e => e.Entity.Id == entity.Id);
+
+        if (tracked != null)
+        {
+            tracked.CurrentValues.SetValues(entity);
+            tracked.State = EntityState.Modified;
+        }
+        else
+        {
+            DbContext.Set<EmailQueueEntity>().Update(entity);
+        }
+
         await Task.CompletedTask.ConfigureAwait(false);
     }
 

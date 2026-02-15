@@ -110,7 +110,7 @@ export function usePushNotifications(): UsePushNotificationsResult {
         title: 'Push Notifications Enabled',
         description: 'You will now receive browser push notifications',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to enable push notifications',
@@ -143,7 +143,7 @@ export function usePushNotifications(): UsePushNotificationsResult {
         title: 'Push Notifications Disabled',
         description: 'You will no longer receive browser push notifications',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to disable push notifications',

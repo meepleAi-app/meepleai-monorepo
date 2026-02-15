@@ -19,7 +19,6 @@ import type { JSX } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import {
-  Upload,
   FileJson,
   AlertCircle,
   Info,

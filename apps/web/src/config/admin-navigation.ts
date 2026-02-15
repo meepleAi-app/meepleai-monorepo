@@ -226,6 +226,7 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         href: '/admin/agent-definitions',
         label: 'Agent Definitions',
         icon: BrainCircuitIcon,
+        // eslint-disable-next-line security/detect-unsafe-regex
         activePattern: /^\/admin\/agent-definitions(\/[^/]+)?$/,
       },
       {

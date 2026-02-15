@@ -2,7 +2,7 @@
  * ProgressCard Storybook Stories (Issue #4210)
  */
 
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 import { vi } from 'vitest';
 
 import { usePdfProgress } from '@/hooks/usePdfProgress';

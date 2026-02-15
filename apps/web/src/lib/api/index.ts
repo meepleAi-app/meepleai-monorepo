@@ -46,6 +46,7 @@ import {
   createTierStrategyClient,
   createDashboardClient,
   createKnowledgeBaseClient,
+  createRagExecutionClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -72,6 +73,7 @@ import {
   type TierStrategyClient,
   type DashboardClient,
   type KnowledgeBaseClient,
+  type RagExecutionClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -233,6 +235,9 @@ export interface ApiClient {
   /** Knowledge Base Status (Issue #4065) */
   knowledgeBase: KnowledgeBaseClient;
 
+  /** RAG Execution Replay & Compare (Issue #4459) */
+  ragExecution: RagExecutionClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -309,6 +314,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     tierStrategy: createTierStrategyClient({ httpClient }), // ISSUE-3440
     dashboard: createDashboardClient({ httpClient }), // ISSUE-3316, ISSUE-3319
     knowledgeBase: createKnowledgeBaseClient({ httpClient }), // ISSUE-4065
+    ragExecution: createRagExecutionClient({ httpClient }), // ISSUE-4459
     delete: (path: string) => httpClient.delete(path),
   };
 

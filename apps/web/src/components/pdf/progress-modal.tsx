@@ -80,7 +80,7 @@ const PROCESSING_STEPS = [
 // Helper Functions
 // ============================================================================
 
-function getStateFromStep(step: string): string {
+function _getStateFromStep(step: string): string {
   // Map ProcessingStep enum to PdfState
   const mapping: Record<string, string> = {
     'Uploading': 'uploading',
@@ -118,7 +118,7 @@ export function ProgressModal({
     metrics,
     isConnected,
     isPolling,
-    isLoading,
+    isLoading: _isLoading,
     error,
     metricsError,
   } = usePdfProgress(documentId, {

@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 import { cn } from '@/lib/utils';
-import { useBggRateLimit, formatCountdown } from '@/lib/hooks/use-bgg-rate-limit';
+import { useBggRateLimit } from '@/lib/hooks/use-bgg-rate-limit';
 
 export interface BggGameSearchProps {
   onSelect: (result: BggSearchResult) => void;
@@ -42,7 +42,7 @@ export function BggGameSearch({
   const [error, setError] = useState<string | null>(null);
 
   // Issue #4274: BGG rate limit tracking
-  const { quota, updateFromHeaders } = useBggRateLimit();
+  const _rateLimit = useBggRateLimit();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);

@@ -96,7 +96,7 @@ export const AgentStatusBadge = React.memo(function AgentStatusBadge({
   className,
 }: AgentStatusBadgeProps) {
   const config = statusConfig[status];
-  const Icon = config.icon;
+  const _Icon = config.icon;
   const isPulsating = status === 'active' || status === 'training';
 
   return (

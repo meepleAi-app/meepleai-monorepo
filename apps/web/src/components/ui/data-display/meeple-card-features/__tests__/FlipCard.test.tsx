@@ -98,14 +98,14 @@ describe('FlipCard', () => {
       expect(screen.getByText('Informazioni')).toBeInTheDocument();
     });
 
-    it('should render "Gira" button on back', () => {
+    it('should render flip hint text on front for non-row variants', () => {
       render(
         <FlipCard flipData={sampleFlipData}>
           {frontContent}
         </FlipCard>,
       );
 
-      expect(screen.getByText('Gira')).toBeInTheDocument();
+      expect(screen.getByText('Clicca per girare la carta')).toBeInTheDocument();
     });
 
     it('should render flip hint for non-row variants', () => {
@@ -232,8 +232,8 @@ describe('FlipCard', () => {
     });
   });
 
-  describe('Gira Button', () => {
-    it('should flip back when "Gira" button is clicked', () => {
+  describe('Flip Back (Card Mode)', () => {
+    it('should flip back when container is clicked again', () => {
       const onFlip = vi.fn();
       render(
         <FlipCard flipData={sampleFlipData} onFlip={onFlip}>
@@ -245,8 +245,8 @@ describe('FlipCard', () => {
       fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
       expect(onFlip).toHaveBeenCalledWith(true);
 
-      // Click "Gira" button to flip back to front
-      fireEvent.click(screen.getByText('Gira'));
+      // Click container again to flip back to front
+      fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
       expect(onFlip).toHaveBeenCalledWith(false);
     });
   });

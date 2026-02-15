@@ -3,7 +3,7 @@
 exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for fully loaded game card 1`] = `
 <div
   aria-label="Game: Twilight Imperium"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="game"
   data-testid="complete-game-card"
   data-variant="grid"
@@ -349,7 +349,7 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for collection entity 1`] = `
 <article
   aria-label="Custom: Euro Games Essentials"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="custom"
   data-testid="meeple-card"
   data-variant="grid"
@@ -432,7 +432,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custom entity 1`] = `
 <article
   aria-label="Custom: Custom Entity"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="custom"
   data-testid="meeple-card"
   data-variant="grid"
@@ -506,7 +506,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event entity 1`] = `
 <article
   aria-label="Event: Saturday Game Night"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="event"
   data-testid="meeple-card"
   data-variant="grid"
@@ -639,7 +639,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game entity 1`] = `
 <article
   aria-label="Game: Azul"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
@@ -776,7 +776,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for player entity 1`] = `
 <article
   aria-label="Player: Marco Rossi"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="player"
   data-testid="meeple-card"
   data-variant="grid"
@@ -1098,7 +1098,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for grid variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
@@ -1639,7 +1639,7 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for feat
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for grid skeleton 1`] = `
 <div
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1 animate-pulse pointer-events-none"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1 animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
@@ -1732,7 +1732,7 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for list
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for loading prop 1`] = `
 <div
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1 animate-pulse pointer-events-none"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1 animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
@@ -1764,7 +1764,7 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for load
 exports[`MeepleCard - Snapshots > Special States > should match snapshot with badge 1`] = `
 <article
   aria-label="Game: New Release"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
@@ -1905,7 +1905,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
 exports[`MeepleCard - Snapshots > Special States > should match snapshot with minimal props 1`] = `
 <article
   aria-label="Game: Minimal Card"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
@@ -1960,7 +1960,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
 exports[`MeepleCard - Snapshots > Special States > should match snapshot with onClick (interactive) 1`] = `
 <div
   aria-label="Game: Clickable Card"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
@@ -2022,7 +2022,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
 exports[`MeepleCard - Snapshots > Special States > should match snapshot without image 1`] = `
 <article
   aria-label="Game: No Image Game"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"

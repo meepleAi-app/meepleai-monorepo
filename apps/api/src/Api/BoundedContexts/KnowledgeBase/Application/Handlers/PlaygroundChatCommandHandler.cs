@@ -600,7 +600,11 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 apiTraces: apiTraces,
                 logEntries: logEntries,
                 tomacLayers: tomacLayers,
-                systemPrompt: systemPrompt));
+                systemPrompt: systemPrompt,
+                promptTemplateInfo: new PlaygroundPromptTemplateInfo(
+                    role: "system",
+                    promptCount: agentDefinition.Prompts.Count,
+                    lastModified: agentDefinition.UpdatedAt ?? agentDefinition.CreatedAt)));
 
         _logger.LogInformation(
             "Playground chat completed for AgentDefinition {AgentDefinitionId}: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, time={Time}ms",
@@ -725,7 +729,8 @@ internal record PlaygroundStreamingComplete(
     List<PlaygroundApiTrace>? apiTraces = null,
     List<PlaygroundLogEntry>? logEntries = null,
     List<PlaygroundTomacLayer>? tomacLayers = null,
-    string? systemPrompt = null);
+    string? systemPrompt = null,
+    PlaygroundPromptTemplateInfo? promptTemplateInfo = null);
 
 /// <summary>
 /// Snapshot of the agent configuration used during playground chat.
@@ -825,6 +830,15 @@ internal record PlaygroundTomacLayer(
     int itemsProcessed,
     double? score,
     string description);
+
+/// <summary>
+/// Prompt template metadata for debug panel.
+/// Issue #4469: Shows which prompt template is active.
+/// </summary>
+internal record PlaygroundPromptTemplateInfo(
+    string role,
+    int promptCount,
+    DateTime? lastModified);
 
 /// <summary>
 /// Internal cache entry for playground query deduplication.

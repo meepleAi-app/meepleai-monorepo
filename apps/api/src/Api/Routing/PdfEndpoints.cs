@@ -1,5 +1,6 @@
 using System.Globalization;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.ProcessPendingPdfs;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -244,6 +245,7 @@ internal static class PdfEndpoints
         MapPdfIndexEndpoint(group);
         MapPdfExtractEndpoint(group);
         MapPdfRetryEndpoint(group); // Issue #4216: Manual retry
+        MapBatchProcessPendingEndpoint(group); // Batch process all pending PDFs
     }
 
     private static void MapPdfIndexEndpoint(RouteGroupBuilder group)
@@ -270,6 +272,51 @@ internal static class PdfEndpoints
                 operation.Description = "Attempts to retry processing of a PDF that failed. Maximum 3 retries allowed. Only the document owner can initiate retry.";
                 return operation;
             });
+    }
+
+    private static void MapBatchProcessPendingEndpoint(RouteGroupBuilder group)
+    {
+        // Batch process all pending PDFs (admin-only)
+        group.MapPost("/admin/pdfs/process-pending", HandleProcessPendingPdfs)
+            .RequireSession()
+            .WithName("ProcessPendingPdfs")
+            .WithOpenApi(operation =>
+            {
+                operation.Summary = "Batch process all pending PDFs";
+                operation.Description = "Triggers processing for all PDFs stuck in 'pending' or 'processing' status. Admin-only operation for fixing stuck PDF processing pipeline.";
+                return operation;
+            });
+    }
+
+    private static async Task<IResult> HandleProcessPendingPdfs(
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Validate admin session
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new ProcessPendingPdfsCommand();
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "Admin {UserId} triggered batch PDF processing: {Triggered}/{Total} PDFs triggered, {Failed} failed",
+            session!.User!.Id,
+            result.Triggered,
+            result.TotalPending,
+            result.Failed);
+
+        return Results.Ok(new
+        {
+            success = true,
+            totalPending = result.TotalPending,
+            triggered = result.Triggered,
+            failed = result.Failed,
+            pdfIds = result.PdfIds,
+            message = $"Triggered processing for {result.Triggered} PDFs. Check logs for individual progress."
+        });
     }
 
     private static async Task<IResult> HandleRetryPdfProcessing(

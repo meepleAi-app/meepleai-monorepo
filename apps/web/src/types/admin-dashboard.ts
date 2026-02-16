@@ -50,11 +50,11 @@ export interface User {
 }
 
 export interface UserLibraryStats {
-  gamesOwned: number;
-  totalPlays: number;
-  wishlistCount: number;
-  averageRating: number;
-  favoriteCategory: string;
+  totalGames: number;
+  favoriteGames: number;
+  sessionsPlayed: number;
+  oldestAddedAt: string | null;
+  newestAddedAt: string | null;
 }
 
 export interface UserBadge {

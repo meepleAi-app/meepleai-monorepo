@@ -142,7 +142,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-gradient-to-br from-amber-100/60 to-orange-100/40 rounded-lg border border-amber-200/40">
                     <div className="font-quicksand font-bold text-3xl text-amber-900">
-                      {libraryStats.gamesOwned}
+                      {libraryStats.totalGames}
                     </div>
                     <div className="font-nunito text-xs text-amber-700 uppercase tracking-wider mt-1">
                       Games Owned
@@ -150,26 +150,28 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-emerald-100/60 to-green-100/40 rounded-lg border border-emerald-200/40">
                     <div className="font-quicksand font-bold text-3xl text-emerald-900">
-                      {libraryStats.totalPlays}
+                      {libraryStats.sessionsPlayed}
                     </div>
                     <div className="font-nunito text-xs text-emerald-700 uppercase tracking-wider mt-1">
-                      Total Plays
+                      Sessions Played
                     </div>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-blue-100/60 to-cyan-100/40 rounded-lg border border-blue-200/40">
                     <div className="font-quicksand font-bold text-3xl text-blue-900">
-                      {libraryStats.wishlistCount}
+                      {libraryStats.favoriteGames}
                     </div>
                     <div className="font-nunito text-xs text-blue-700 uppercase tracking-wider mt-1">
-                      Wishlist
+                      Favorites
                     </div>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-purple-100/60 to-pink-100/40 rounded-lg border border-purple-200/40">
                     <div className="font-quicksand font-bold text-3xl text-purple-900">
-                      {libraryStats.averageRating.toFixed(1)}
+                      {libraryStats.newestAddedAt
+                        ? new Date(libraryStats.newestAddedAt).toLocaleDateString()
+                        : '-'}
                     </div>
                     <div className="font-nunito text-xs text-purple-700 uppercase tracking-wider mt-1">
-                      Avg Rating
+                      Last Added
                     </div>
                   </div>
                 </div>

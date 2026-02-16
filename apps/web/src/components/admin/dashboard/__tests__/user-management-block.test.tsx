@@ -185,11 +185,11 @@ describe('UserManagementBlock', () => {
     });
 
     vi.mocked(adminClientModule.adminClient.getUserLibraryStats).mockResolvedValue({
-      gamesOwned: 47,
-      totalPlays: 234,
-      wishlistCount: 12,
-      averageRating: 8.4,
-      favoriteCategory: 'Strategy',
+      totalGames: 47,
+      favoriteGames: 12,
+      sessionsPlayed: 234,
+      oldestAddedAt: '2024-01-15T00:00:00Z',
+      newestAddedAt: '2024-06-10T00:00:00Z',
     });
 
     vi.mocked(adminClientModule.adminClient.getUserBadges).mockResolvedValue([

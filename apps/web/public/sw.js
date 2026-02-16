@@ -7,7 +7,7 @@
  * - Session data: StaleWhileRevalidate
  */
 
-const CACHE_VERSION = 'meepleai-v2';  // Bumped: Fix chrome-extension caching
+const CACHE_VERSION = 'meepleai-v3';  // Bumped: Fix menu flickering (removed aggressive default caching)
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -119,8 +119,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Default - StaleWhileRevalidate
-  event.respondWith(staleWhileRevalidateStrategy(request));
+  // For all other requests, let browser handle them normally
+  // Do NOT cache everything by default (causes flickering with dynamic content)
 });
 
 // ============================================================================

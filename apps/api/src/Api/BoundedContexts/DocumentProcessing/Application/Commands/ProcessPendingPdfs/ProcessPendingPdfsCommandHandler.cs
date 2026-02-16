@@ -52,7 +52,13 @@ internal sealed class ProcessPendingPdfsCommandHandler : ICommandHandler<Process
         {
             try
             {
-                // Trigger IndexPdfCommand for each pending PDF
+                // Step 1: Extract text if not already done
+                _logger.LogInformation("Extracting text for PDF {PdfId} ({FileName})", pdf.Id, pdf.FileName);
+                var extractCommand = new ExtractPdfTextCommand(pdf.Id);
+                await _mediator.Send(extractCommand, cancellationToken).ConfigureAwait(false);
+
+                // Step 2: Index PDF (chunking + embedding)
+                _logger.LogInformation("Indexing PDF {PdfId} ({FileName})", pdf.Id, pdf.FileName);
                 var indexCommand = new IndexPdfCommand(pdf.Id.ToString());
                 await _mediator.Send(indexCommand, cancellationToken).ConfigureAwait(false);
 
@@ -60,7 +66,7 @@ internal sealed class ProcessPendingPdfsCommandHandler : ICommandHandler<Process
                 pdfIds.Add(pdf.Id.ToString());
 
                 _logger.LogInformation(
-                    "Triggered processing for PDF {PdfId} ({FileName})",
+                    "Successfully processed PDF {PdfId} ({FileName})",
                     pdf.Id,
                     pdf.FileName);
             }
@@ -69,7 +75,7 @@ internal sealed class ProcessPendingPdfsCommandHandler : ICommandHandler<Process
                 failed++;
                 _logger.LogError(
                     ex,
-                    "Failed to trigger processing for PDF {PdfId} ({FileName})",
+                    "Failed to process PDF {PdfId} ({FileName})",
                     pdf.Id,
                     pdf.FileName);
             }

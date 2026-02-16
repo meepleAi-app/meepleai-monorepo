@@ -159,6 +159,21 @@ internal static class WebApplicationExtensions
 
         // ISSUE #3672: Email verification enforcement middleware (must be after session quota)
         app.UseEmailVerificationEnforcement();
+
+        // Reset body stream position for [FromBody] parameter binding.
+        // .NET 9 issue: the body stream position may advance during the middleware pipeline
+        // even though no middleware explicitly reads it. Without this reset, [FromBody]
+        // deserialization fails with "The input does not contain any JSON tokens".
+        // Must be the LAST middleware so it runs right before endpoint parameter binding.
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Body.CanSeek)
+            {
+                context.Request.Body.Position = 0;
+            }
+
+            await next().ConfigureAwait(false);
+        });
     }
 
     public static IServiceCollection AddCorsServices(

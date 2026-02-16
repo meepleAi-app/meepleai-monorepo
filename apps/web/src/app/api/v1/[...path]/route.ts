@@ -22,40 +22,73 @@ const API_BASE =
 // eslint-disable-next-line no-console
 console.log('[API Proxy] Module initialized with API_BASE:', API_BASE);
 
+/**
+ * Build forwarding headers from the incoming request.
+ * Excludes headers that must not be forwarded (host, connection, content-length, expect).
+ */
+function buildForwardHeaders(request: NextRequest): Headers {
+  const headers = new Headers();
+  const excludedHeaders = ['host', 'connection', 'content-length', 'expect'];
+  request.headers.forEach((value, key) => {
+    if (!excludedHeaders.includes(key.toLowerCase())) {
+      headers.set(key, value);
+    }
+  });
+  return headers;
+}
+
+/**
+ * Copy response headers to NextResponse, with special Set-Cookie handling.
+ * Issue #2778: getSetCookie() returns array of all Set-Cookie headers.
+ */
+function copyResponseHeaders(source: Response, target: NextResponse, apiPath: string): void {
+  const setCookies = source.headers.getSetCookie();
+  if (setCookies.length > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[API Proxy] Set-Cookie headers received: ${setCookies.length} cookie(s)`);
+    for (const cookie of setCookies) {
+      target.headers.append('set-cookie', cookie);
+    }
+  }
+
+  source.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== 'set-cookie') {
+      target.headers.set(key, value);
+    }
+  });
+
+  if (apiPath.includes('/auth/')) {
+    // eslint-disable-next-line no-console
+    console.log(`[API Proxy] Auth response: ${source.status} ${source.statusText}, Set-Cookie: ${setCookies.length > 0 ? `${setCookies.length} cookie(s)` : 'absent'}`);
+  }
+
+  target.headers.set('x-no-compression', '1');
+}
+
+/**
+ * Check if a response is an SSE stream that should be piped without buffering.
+ */
+function isStreamingResponse(response: Response): boolean {
+  const contentType = response.headers.get('content-type') ?? '';
+  return contentType.includes('text/event-stream');
+}
+
 async function proxyRequest(request: NextRequest, method: string) {
   try {
-    // Extract path segments after /api/v1/
     const pathname = request.nextUrl.pathname;
     const apiPath = pathname.replace('/api/v1/', '/api/v1/');
-
-    // Build target URL
     const targetUrl = `${API_BASE}${apiPath}${request.nextUrl.search}`;
     // eslint-disable-next-line no-console
     console.log(`[API Proxy] ${method} ${targetUrl}`);
 
-    // Get request body for methods that support it
-    // Issue #2432: Use arrayBuffer() instead of text() to preserve exact binary content
-    // text() can corrupt special characters in JSON (e.g., '!' in passwords),
-    // causing "invalid escapable character" deserialization errors on the backend
+    // Issue #2432: Use arrayBuffer() to preserve exact binary content
     let body: BodyInit | null = null;
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       body = await request.arrayBuffer();
     }
 
-    // Forward headers (exclude problematic headers)
-    // - host: Must match target server
-    // - connection: Managed by HTTP client
-    // - content-length: Recalculated for body
-    // - expect: Node.js fetch doesn't support Expect: 100-continue
-    const headers = new Headers();
-    const excludedHeaders = ['host', 'connection', 'content-length', 'expect'];
-    request.headers.forEach((value, key) => {
-      if (!excludedHeaders.includes(key.toLowerCase())) {
-        headers.set(key, value);
-      }
-    });
+    const headers = buildForwardHeaders(request);
 
-    // Make proxied request
     const response = await fetch(targetUrl, {
       method,
       headers,
@@ -63,46 +96,24 @@ async function proxyRequest(request: NextRequest, method: string) {
       credentials: 'include',
     });
 
-    // Get response body as ArrayBuffer to avoid compression issues
-    const responseBody = await response.arrayBuffer();
+    // SSE streaming: pipe the response body directly instead of buffering
+    // This enables real-time streaming for playground chat and other SSE endpoints
+    if (isStreamingResponse(response) && response.body) {
+      const nextResponse = new NextResponse(response.body as ReadableStream, {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      copyResponseHeaders(response, nextResponse, apiPath);
+      return nextResponse;
+    }
 
-    // Create Next.js response with same status
+    // Non-streaming: buffer the full response (original behavior)
+    const responseBody = await response.arrayBuffer();
     const nextResponse = new NextResponse(responseBody, {
       status: response.status,
       statusText: response.statusText,
     });
-
-    // Copy response headers with special handling for Set-Cookie
-    // Issue #2778: headers.get('set-cookie') doesn't handle multiple cookies correctly
-    // Fix: Use getSetCookie() which returns an array of all Set-Cookie headers
-    // This is critical for login which sets both meepleai_session and meepleai_user_role cookies
-    const setCookies = response.headers.getSetCookie();
-    if (setCookies.length > 0) {
-      // Debug logging for auth troubleshooting
-      // eslint-disable-next-line no-console
-      console.log(`[API Proxy] Set-Cookie headers received: ${setCookies.length} cookie(s)`);
-      // Append each Set-Cookie header separately (required by HTTP spec)
-      for (const cookie of setCookies) {
-        nextResponse.headers.append('set-cookie', cookie);
-      }
-    }
-
-    // Copy other response headers (excluding set-cookie which was already handled)
-    response.headers.forEach((value, key) => {
-      const lowerKey = key.toLowerCase();
-      if (lowerKey !== 'set-cookie') {
-        nextResponse.headers.set(key, value);
-      }
-    });
-
-    // Debug: Log response status for auth endpoints
-    if (apiPath.includes('/auth/')) {
-      // eslint-disable-next-line no-console
-      console.log(`[API Proxy] Auth response: ${response.status} ${response.statusText}, Set-Cookie: ${setCookies.length > 0 ? `${setCookies.length} cookie(s)` : 'absent'}`);
-    }
-
-    // Disable Next.js compression to prevent ERR_CONTENT_DECODING_FAILED
-    nextResponse.headers.set('x-no-compression', '1');
+    copyResponseHeaders(response, nextResponse, apiPath);
 
     return nextResponse;
   } catch (error) {

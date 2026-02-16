@@ -57,6 +57,9 @@ internal interface IOAuthService
     /// <param name="provider">OAuth provider (google, discord, github)</param>
     /// <param name="code">Authorization code from provider</param>
     /// <returns>Token response from provider</returns>
+    /// <exception cref="BoundedContexts.Authentication.Domain.Exceptions.OAuthTokenExchangeException">
+    /// Thrown when token exchange fails (Issue #2568 pattern: domain-specific exceptions)
+    /// </exception>
     Task<OAuthTokenResponse> ExchangeCodeForTokenAsync(string provider, string code);
 
     /// <summary>
@@ -65,5 +68,8 @@ internal interface IOAuthService
     /// <param name="provider">OAuth provider (google, discord, github)</param>
     /// <param name="accessToken">Access token from provider</param>
     /// <returns>User info from provider</returns>
+    /// <exception cref="BoundedContexts.Authentication.Domain.Exceptions.OAuthUserInfoException">
+    /// Thrown when user info retrieval fails (Issue #2568 pattern: domain-specific exceptions)
+    /// </exception>
     Task<OAuthUserInfo> GetUserInfoAsync(string provider, string accessToken);
 }

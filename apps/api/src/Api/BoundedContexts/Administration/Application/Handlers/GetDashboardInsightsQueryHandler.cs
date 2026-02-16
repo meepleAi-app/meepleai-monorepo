@@ -17,6 +17,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
     private readonly MeepleAiDbContext _dbContext;
     private readonly HybridCache _cache;
     private readonly ILogger<GetDashboardInsightsQueryHandler> _logger;
+    private readonly TimeProvider _timeProvider;
 
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(15);
     private const int MaxInsights = 5;
@@ -26,11 +27,13 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
     public GetDashboardInsightsQueryHandler(
         MeepleAiDbContext dbContext,
         HybridCache cache,
-        ILogger<GetDashboardInsightsQueryHandler> logger)
+        ILogger<GetDashboardInsightsQueryHandler> logger,
+        TimeProvider timeProvider)
     {
         _dbContext = dbContext;
         _cache = cache;
         _logger = logger;
+        _timeProvider = timeProvider;
     }
 
     public async Task<DashboardInsightsResponseDto> Handle(
@@ -68,7 +71,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
                     .Take(MaxInsights)
                     .ToList();
 
-                var now = DateTime.UtcNow;
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
                 return new DashboardInsightsResponseDto(
                     Insights: sortedInsights,
                     GeneratedAt: now,
@@ -93,7 +96,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
     {
         try
         {
-            var thresholdDate = DateTime.UtcNow.AddDays(-BacklogThresholdDays);
+            var thresholdDate = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-BacklogThresholdDays);
 
             // Get games not played recently (LastPlayed property per entity definition)
             var unplayedGames = await _dbContext.UserLibraryEntries
@@ -119,7 +122,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
             return
             [
                 new DashboardInsightDto(
-                    Id: $"backlog-{userId}-{DateTime.UtcNow:yyyyMMdd}",
+                    Id: $"backlog-{userId}-{_timeProvider.GetUtcNow().UtcDateTime:yyyyMMdd}",
                     Type: InsightType.Backlog,
                     Icon: "🎯",
                     Title: $"{count} giochi non giocati da 30+ giorni",
@@ -144,7 +147,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
     {
         try
         {
-            var thresholdDate = DateTime.UtcNow.AddDays(-RecentRulesThresholdDays);
+            var thresholdDate = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-RecentRulesThresholdDays);
 
             // Get recent chats (with game association, indicating rules discussion)
             var recentChats = await _dbContext.ChatThreads
@@ -160,7 +163,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
                 return Array.Empty<DashboardInsightDto>();
 
             var mostRecent = recentChats[0];
-            var daysAgo = (DateTime.UtcNow - mostRecent.CreatedAt).Days;
+            var daysAgo = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent.CreatedAt).Days;
             var daysText = daysAgo == 0 ? "oggi" : daysAgo == 1 ? "ieri" : $"{daysAgo} giorni fa";
 
             return
@@ -229,7 +232,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
             return
             [
                 new DashboardInsightDto(
-                    Id: $"recommendation-{userId}-{DateTime.UtcNow:yyyyMMdd}",
+                    Id: $"recommendation-{userId}-{_timeProvider.GetUtcNow().UtcDateTime:yyyyMMdd}",
                     Type: InsightType.Recommendation,
                     Icon: "🆕",
                     Title: $"{displayCount} giochi simili a \"{topGame.Title}\"",
@@ -264,7 +267,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
                 .AsNoTracking()
                 .Where(e => e.UserId == userId)
                 .SelectMany(e => e.Sessions)
-                .Where(s => s.PlayedAt >= DateTime.UtcNow.AddDays(-30))
+                .Where(s => s.PlayedAt >= _timeProvider.GetUtcNow().UtcDateTime.AddDays(-30))
                 .Select(s => s.PlayedAt.Date)
                 .Distinct()
                 .OrderByDescending(d => d)
@@ -276,7 +279,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
 
             // Calculate streak
             var streak = 0;
-            var expectedDate = DateTime.UtcNow.Date;
+            var expectedDate = _timeProvider.GetUtcNow().UtcDateTime.Date;
 
             foreach (var sessionDate in recentSessions)
             {
@@ -294,7 +297,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
             if (streak < 2)
                 return Array.Empty<DashboardInsightDto>();
 
-            var playedToday = recentSessions.Contains(DateTime.UtcNow.Date);
+            var playedToday = recentSessions.Contains(_timeProvider.GetUtcNow().UtcDateTime.Date);
             var description = playedToday
                 ? "Ottimo lavoro! Continua così!"
                 : "Gioca oggi per mantenere la tua serie";
@@ -302,7 +305,7 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
             return
             [
                 new DashboardInsightDto(
-                    Id: $"streak-{userId}-{DateTime.UtcNow:yyyyMMdd}",
+                    Id: $"streak-{userId}-{_timeProvider.GetUtcNow().UtcDateTime:yyyyMMdd}",
                     Type: InsightType.Streak,
                     Icon: "🔥",
                     Title: $"Streak: {streak} giorni{(playedToday ? "" : " - Mantienilo!")}",

@@ -17,3 +17,7 @@
 apps/web/src/lib/api/generated/*.ts text eol=lf
 apps/web/src/lib/api/generated/*.json text eol=lf
 apps/web/src/lib/api/generated/*.md text eol=lf
+
+# Auto-generated EF Core migration files - collapse in PRs (Issue #async-improvement)
+**/Migrations/*.Designer.cs linguist-generated=true
+**/Migrations/*ModelSnapshot.cs linguist-generated=true

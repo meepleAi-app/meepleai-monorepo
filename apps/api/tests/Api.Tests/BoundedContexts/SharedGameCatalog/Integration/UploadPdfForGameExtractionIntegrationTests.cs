@@ -112,7 +112,7 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var filename = Path.GetFileName(result.FilePath!);
         var fileId = filename.Split('_')[0]; // Extract GUID part before underscore
 
-        _blobStorageService!.Exists(fileId, "wizard-temp").Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId, "wizard-temp")).Should().BeTrue();
 
         // Verify file can be retrieved
         using var retrievedStream = await _blobStorageService.RetrieveAsync(fileId, "wizard-temp");
@@ -139,7 +139,7 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var filename = Path.GetFileName(result.FilePath!);
         var fileId = filename.Split('_')[0];
 
-        _blobStorageService!.Exists(fileId, "wizard-temp").Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId, "wizard-temp")).Should().BeTrue();
 
         // Cleanup
         await _blobStorageService.DeleteAsync(fileId, "wizard-temp");
@@ -179,9 +179,9 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var fileId3 = filename3.Split('_')[0];
 
         // Verify all files exist independently
-        _blobStorageService!.Exists(fileId1, "wizard-temp").Should().BeTrue();
-        _blobStorageService.Exists(fileId2, "wizard-temp").Should().BeTrue();
-        _blobStorageService.Exists(fileId3, "wizard-temp").Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId1, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService.ExistsAsync(fileId2, "wizard-temp")).Should().BeTrue();
+        (await _blobStorageService.ExistsAsync(fileId3, "wizard-temp")).Should().BeTrue();
 
         // Verify unique file IDs
         result1.FileId!.Value.Should().NotBe(result2.FileId!.Value);
@@ -224,7 +224,7 @@ public sealed class UploadPdfForGameExtractionIntegrationTests : IAsyncLifetime
         var filename = Path.GetFileName(result.FilePath!);
         var fileId = filename.Split('_')[0];
 
-        _blobStorageService!.Exists(fileId, "wizard-temp").Should().BeTrue();
+        (await _blobStorageService!.ExistsAsync(fileId, "wizard-temp")).Should().BeTrue();
 
         // Cleanup
         await _blobStorageService.DeleteAsync(fileId, "wizard-temp");

@@ -3,14 +3,18 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
 internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQuery, AgentStatsResult>
 {
     private readonly MeepleAiDbContext _db;
+    private readonly HybridCache _cache;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<GetAgentStatsQueryHandler> _logger;
 
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
     private static readonly Dictionary<string, AgentMetadata> AgentMetadataMap = new(StringComparer.OrdinalIgnoreCase)
     {
         ["qa-agent"] = new("Q&A Agent", "Answer questions about board games", "OpenRouter", "deepseek/deepseek-chat"),
@@ -27,10 +31,16 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
 
     private sealed record AgentMetadata(string DisplayName, string Description, string ModelProvider, string ModelName);
 
-    public GetAgentStatsQueryHandler(MeepleAiDbContext db, TimeProvider? timeProvider = null)
+    public GetAgentStatsQueryHandler(
+        MeepleAiDbContext db,
+        HybridCache cache,
+        ILogger<GetAgentStatsQueryHandler> logger,
+        TimeProvider timeProvider)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
-        _timeProvider = timeProvider ?? TimeProvider.System;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<AgentStatsResult> Handle(GetAgentStatsQuery query, CancellationToken cancellationToken)
@@ -41,37 +51,60 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
         var startDate = query.StartDate ?? now.AddDays(-30);
         var endDate = query.EndDate ?? now;
 
-        var logsQuery = _db.AiRequestLogs
-            .Where(l => l.CreatedAt >= startDate && l.CreatedAt <= endDate);
+        // Build cache key from query parameters
+        var cacheKey = $"agent-stats:{query.AgentName ?? "all"}:{startDate:yyyyMMdd}:{endDate:yyyyMMdd}:{query.IsActive}";
 
-        if (!string.IsNullOrEmpty(query.AgentName))
-        {
-            logsQuery = logsQuery.Where(l => l.Endpoint.Contains(query.AgentName));
-        }
+        return await _cache.GetOrCreateAsync<AgentStatsResult>(
+            cacheKey,
+            async cancel =>
+            {
+                _logger.LogInformation(
+                    "Cache miss for agent stats (Agent:{AgentName}, Start:{Start}, End:{End}), querying database",
+                    query.AgentName ?? "all",
+                    startDate,
+                    endDate);
 
-        var logs = await logsQuery.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+                var logsQuery = _db.AiRequestLogs
+                    .Where(l => l.CreatedAt >= startDate && l.CreatedAt <= endDate);
 
-        var agentGroups = logs
-            .GroupBy(l => ExtractAgentName(l.Endpoint), StringComparer.OrdinalIgnoreCase)
-            .Where(g => AgentMetadataMap.ContainsKey(g.Key))
-            .ToList();
+                if (!string.IsNullOrEmpty(query.AgentName))
+                {
+                    logsQuery = logsQuery.Where(l => l.Endpoint.Contains(query.AgentName));
+                }
 
-        var agents = agentGroups
-            .Select(CreateAgentStat)
-            .Where(agent => !query.IsActive.HasValue || agent.IsActive == query.IsActive.Value)
-            .OrderByDescending(a => a.ExecutionCount)
-            .ToList();
+                var logs = await logsQuery.AsNoTracking().ToListAsync(cancel).ConfigureAwait(false);
 
-        var totals = new AgentAggregateStats
-        {
-            TotalAgents = AgentMetadataMap.Count,
-            ActiveAgents = agents.Count(a => a.IsActive),
-            TotalExecutions = agents.Sum(a => a.ExecutionCount),
-            TotalTokens = agents.Sum(a => a.TotalTokens),
-            AverageLatency = agents.Count > 0 ? agents.Average(a => a.AverageLatencyMs) : 0
-        };
+                var agentGroups = logs
+                    .GroupBy(l => ExtractAgentName(l.Endpoint), StringComparer.OrdinalIgnoreCase)
+                    .Where(g => AgentMetadataMap.ContainsKey(g.Key))
+                    .ToList();
 
-        return new AgentStatsResult { Agents = agents, Totals = totals };
+                var agents = agentGroups
+                    .Select(g => CreateAgentStat(g, now))
+                    .Where(agent => !query.IsActive.HasValue || agent.IsActive == query.IsActive.Value)
+                    .OrderByDescending(a => a.ExecutionCount)
+                    .ToList();
+
+                var totals = new AgentAggregateStats
+                {
+                    TotalAgents = AgentMetadataMap.Count,
+                    ActiveAgents = agents.Count(a => a.IsActive),
+                    TotalExecutions = agents.Sum(a => a.ExecutionCount),
+                    TotalTokens = agents.Sum(a => a.TotalTokens),
+                    AverageLatency = agents.Count > 0 ? agents.Average(a => a.AverageLatencyMs) : 0
+                };
+
+                return new AgentStatsResult { Agents = agents, Totals = totals };
+            },
+            new HybridCacheEntryOptions
+            {
+                Expiration = CacheDuration,
+                LocalCacheExpiration = TimeSpan.FromMinutes(30),
+                Flags = HybridCacheEntryFlags.DisableCompression // Stats data compresses poorly
+            },
+            tags: ["agent-stats"],
+            cancellationToken: cancellationToken
+        ).ConfigureAwait(false);
     }
 
     private static string ExtractAgentName(string endpoint)
@@ -83,7 +116,7 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
         return AgentMetadataMap.ContainsKey(agentName) ? agentName : "unknown";
     }
 
-    private static AgentStatDto CreateAgentStat(IGrouping<string, AiRequestLogEntity> group)
+    private static AgentStatDto CreateAgentStat(IGrouping<string, AiRequestLogEntity> group, DateTime now)
     {
         var agentName = group.Key;
         var metadata = AgentMetadataMap[agentName];
@@ -117,7 +150,7 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
             Description = metadata.Description,
             ModelProvider = metadata.ModelProvider,
             ModelName = metadata.ModelName,
-            IsActive = logs.Any(l => l.CreatedAt >= DateTime.UtcNow.AddDays(-7)),
+            IsActive = logs.Any(l => l.CreatedAt >= now.AddDays(-7)),
             ExecutionCount = totalExecutions,
             TotalTokens = logs.Sum(l => l.TokenCount),
             InputTokens = logs.Sum(l => l.PromptTokens),

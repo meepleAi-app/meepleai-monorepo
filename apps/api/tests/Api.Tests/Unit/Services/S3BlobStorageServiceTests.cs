@@ -308,7 +308,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
     }
 
     [Fact]
-    public void Exists_FileExists_ReturnsTrue()
+    public async Task ExistsAsync_FileExists_ReturnsTrue()
     {
         // Arrange
         var fileId = "file123";
@@ -329,14 +329,14 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(listResponse);
 
         // Act
-        var result = _sut.Exists(fileId, gameId);
+        var result = await _sut.ExistsAsync(fileId, gameId);
 
         // Assert
         Assert.True(result);
     }
 
     [Fact]
-    public void Exists_FileNotFound_ReturnsFalse()
+    public async Task ExistsAsync_FileNotFound_ReturnsFalse()
     {
         // Arrange
         var fileId = "nonexistent";
@@ -354,21 +354,21 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(listResponse);
 
         // Act
-        var result = _sut.Exists(fileId, gameId);
+        var result = await _sut.ExistsAsync(fileId, gameId);
 
         // Assert
         Assert.False(result);
     }
 
     [Fact]
-    public void Exists_InvalidGameId_ReturnsFalse()
+    public async Task ExistsAsync_InvalidGameId_ReturnsFalse()
     {
         // Arrange
         var fileId = "file123";
         var invalidGameId = "../../../etc/passwd";
 
         // Act
-        var result = _sut.Exists(fileId, invalidGameId);
+        var result = await _sut.ExistsAsync(fileId, invalidGameId);
 
         // Assert
         Assert.False(result);

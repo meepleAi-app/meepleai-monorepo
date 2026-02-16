@@ -992,7 +992,7 @@ internal static class SharedGameCatalogEndpoints
 
         var command = new ImportGameFromBggCommand(request.BggId, userId);
         var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Created($"/api/v1/shared-games/{gameId}", gameId);
+        return Results.Created($"/api/v1/shared-games/{gameId}", new { id = gameId });
     }
 
     private static async Task<IResult> HandleBulkImport(

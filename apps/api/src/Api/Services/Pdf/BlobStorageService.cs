@@ -176,7 +176,7 @@ internal class BlobStorageService : IBlobStorageService
         return Path.Combine(gameDir, $"{fileId}_{sanitizedFileName}");
     }
 
-    public bool Exists(string fileId, string gameId)
+    public Task<bool> ExistsAsync(string fileId, string gameId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -187,21 +187,21 @@ internal class BlobStorageService : IBlobStorageService
             var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
             if (!Directory.Exists(gameDir))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             var files = Directory.GetFiles(gameDir, $"{fileId}_*");
-            return files.Length > 0;
+            return Task.FromResult(files.Length > 0);
         }
         catch (ArgumentException)
         {
             // Invalid gameId - path traversal attempt
-            return false;
+            return Task.FromResult(false);
         }
         catch (System.Security.SecurityException)
         {
             // Path traversal attempt detected
-            return false;
+            return Task.FromResult(false);
         }
     }
 

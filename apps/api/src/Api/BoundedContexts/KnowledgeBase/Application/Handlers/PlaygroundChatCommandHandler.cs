@@ -229,28 +229,68 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
 
             var searchStopwatch = Stopwatch.StartNew();
             var searchRequestSize = Encoding.UTF8.GetByteCount(command.Message);
-            var searchResults = await _hybridSearchService.SearchAsync(
-                command.Message,
-                command.GameId.Value,
-                SearchMode.Hybrid,
-                limit: 5,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            List<HybridSearchResult> searchResults;
+            string? searchError = null;
+
+            try
+            {
+                searchResults = await _hybridSearchService.SearchAsync(
+                    command.Message,
+                    command.GameId.Value,
+                    SearchMode.Hybrid,
+                    limit: 5,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                searchStopwatch.Stop();
+                _logger.LogError(ex, "Hybrid search failed for game {GameId}", command.GameId.Value);
+                Log("error", "RAG", $"Search failed: {ex.Message}");
+
+                // Graceful degradation: continue without RAG context
+                searchResults = new List<HybridSearchResult>();
+                searchError = ex.Message;
+
+                apiTraces.Add(new PlaygroundApiTrace(
+                    service: "vector_search",
+                    method: "POST",
+                    url: "HybridSearchService",
+                    requestSizeBytes: searchRequestSize,
+                    responseSizeBytes: 0,
+                    statusCode: 500,
+                    latencyMs: searchStopwatch.ElapsedMilliseconds,
+                    detail: $"error: {ex.Message}",
+                    requestPreview: command.Message.Length > 500 ? command.Message[..500] : command.Message,
+                    responsePreview: null));
+            }
+
             searchStopwatch.Stop();
 
-            // API trace: vector search (embedding + Qdrant)
-            apiTraces.Add(new PlaygroundApiTrace(
-                service: "vector_search",
-                method: "POST",
-                url: "HybridSearchService",
-                requestSizeBytes: searchRequestSize,
-                responseSizeBytes: searchResults.Sum(r => Encoding.UTF8.GetByteCount(r.Content)),
-                statusCode: 200,
-                latencyMs: searchStopwatch.ElapsedMilliseconds,
-                detail: $"mode=Hybrid, limit=5, results={searchResults.Count}",
-                requestPreview: command.Message.Length > 500 ? command.Message[..500] : command.Message,
-                responsePreview: searchResults.Count > 0
-                    ? (searchResults[0].Content.Length > 500 ? searchResults[0].Content[..500] : searchResults[0].Content)
-                    : null));
+            // Emit search failure notification outside catch block (CS1631: yield not allowed in catch)
+            if (searchError != null)
+            {
+                yield return CreateEvent(
+                    StreamingEventType.StateUpdate,
+                    new StreamingStateUpdate("Document search unavailable. Answering without game context."));
+            }
+
+            // API trace: vector search (embedding + Qdrant) - only if not already added by error handler
+            if (searchError == null)
+            {
+                apiTraces.Add(new PlaygroundApiTrace(
+                    service: "vector_search",
+                    method: "POST",
+                    url: "HybridSearchService",
+                    requestSizeBytes: searchRequestSize,
+                    responseSizeBytes: searchResults.Sum(r => Encoding.UTF8.GetByteCount(r.Content)),
+                    statusCode: 200,
+                    latencyMs: searchStopwatch.ElapsedMilliseconds,
+                    detail: $"mode=Hybrid, limit=5, results={searchResults.Count}",
+                    requestPreview: command.Message.Length > 500 ? command.Message[..500] : command.Message,
+                    responsePreview: searchResults.Count > 0
+                        ? (searchResults[0].Content.Length > 500 ? searchResults[0].Content[..500] : searchResults[0].Content)
+                        : null));
+            }
 
             Log("info", "RAG", $"Hybrid search completed in {searchStopwatch.ElapsedMilliseconds}ms: {searchResults.Count} results");
             if (searchResults.Count > 0)
@@ -568,8 +608,21 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 ["tokensStreamed"] = tokenCount.ToString(CultureInfo.InvariantCulture),
             }));
 
-        // 5. Follow-up questions (if response is long enough and not RetrievalOnly)
+        // 5. Detect empty LLM response (provider error, rate-limit, model unavailable)
         var fullResponse = responseBuilder.ToString();
+        if (fullResponse.Length == 0 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal))
+        {
+            Log("warn", "LLM", $"LLM returned empty response. Provider '{providerName}' may be rate-limited or unavailable.");
+            var emptyMsg = $"The LLM provider ({providerName}/{effectiveModel}) returned an empty response. " +
+                           "This usually means the model is rate-limited or temporarily unavailable. " +
+                           "Try again in a few seconds, or switch to a different model in Advanced Options.";
+            yield return CreateEvent(
+                StreamingEventType.Token,
+                new StreamingToken(emptyMsg));
+            responseBuilder.Append(emptyMsg);
+        }
+
+        // Follow-up questions (if response is long enough and not RetrievalOnly)
         if (fullResponse.Length > 50 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal))
         {
             yield return CreateEvent(

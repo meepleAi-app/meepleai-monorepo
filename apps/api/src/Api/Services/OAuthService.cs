@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.Interfaces;
+using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -262,7 +263,7 @@ internal class OAuthService : IOAuthService
             var tokenData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
 
             var accessToken = tokenData.GetProperty("access_token").GetString()
-                ?? throw new InvalidOperationException("No access token in response");
+                ?? throw new OAuthTokenExchangeException(provider, "No access token in response");
 
             var refreshToken = tokenData.TryGetProperty("refresh_token", out var rt) ? rt.GetString() : null;
             var expiresIn = tokenData.TryGetProperty("expires_in", out var ei) ? ei.GetInt32() : (int?)null;
@@ -274,7 +275,7 @@ internal class OAuthService : IOAuthService
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Failed to exchange OAuth code for token. Provider: {Provider}", provider);
-            throw new InvalidOperationException($"OAuth token exchange failed for {provider}", ex);
+            throw new OAuthTokenExchangeException(provider, "HTTP request failed", ex);
         }
     }
 
@@ -322,7 +323,7 @@ internal class OAuthService : IOAuthService
                 "google" => ParseGoogleUserInfo(userData),
                 "discord" => ParseDiscordUserInfo(userData),
                 "github" => await ParseGitHubUserInfoAsync(userData, accessToken).ConfigureAwait(false),
-                _ => throw new InvalidOperationException($"Unsupported provider: {provider}")
+                _ => throw new OAuthUserInfoException(provider, $"Unsupported provider: {provider}")
             };
 
             _logger.LogDebug("Retrieved user info from OAuth provider. Provider: {Provider}", provider);
@@ -331,7 +332,7 @@ internal class OAuthService : IOAuthService
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Failed to get user info from OAuth provider. Provider: {Provider}", provider);
-            throw new InvalidOperationException($"Failed to get user info from {provider}", ex);
+            throw new OAuthUserInfoException(provider, "HTTP request failed", ex);
         }
     }
 
@@ -344,17 +345,17 @@ internal class OAuthService : IOAuthService
             : userData.GetProperty("sub").GetString();
 
         if (string.IsNullOrEmpty(id))
-            throw new InvalidOperationException("No user ID found in Google response");
+            throw new OAuthUserInfoException("google", "No user ID found in Google response");
 
-        var email = userData.GetProperty("email").GetString() ?? throw new InvalidOperationException("No email");
+        var email = userData.GetProperty("email").GetString() ?? throw new OAuthUserInfoException("google", "No email in response");
         var name = userData.TryGetProperty("name", out var n) ? n.GetString() : null;
         return (id, email, name);
     }
 
     private static (string Id, string Email, string? Name) ParseDiscordUserInfo(JsonElement userData)
     {
-        var id = userData.GetProperty("id").GetString() ?? throw new InvalidOperationException("No user ID");
-        var email = userData.GetProperty("email").GetString() ?? throw new InvalidOperationException("No email");
+        var id = userData.GetProperty("id").GetString() ?? throw new OAuthUserInfoException("discord", "No user ID in response");
+        var email = userData.GetProperty("email").GetString() ?? throw new OAuthUserInfoException("discord", "No email in response");
         var username = userData.TryGetProperty("username", out var u) ? u.GetString() : null;
         return (id, email, username);
     }
@@ -373,7 +374,7 @@ internal class OAuthService : IOAuthService
 
         if (string.IsNullOrEmpty(email))
         {
-            throw new InvalidOperationException("Could not retrieve email from GitHub");
+            throw new OAuthUserInfoException("github", "Could not retrieve email from GitHub");
         }
 
         return (id, email, name);
@@ -412,7 +413,7 @@ internal class OAuthService : IOAuthService
             return verifiedEmail!;
         }
 
-        throw new InvalidOperationException("No verified primary email found on GitHub account");
+        throw new OAuthUserInfoException("github", "No verified primary email found on GitHub account");
     }
 
     /// <summary>

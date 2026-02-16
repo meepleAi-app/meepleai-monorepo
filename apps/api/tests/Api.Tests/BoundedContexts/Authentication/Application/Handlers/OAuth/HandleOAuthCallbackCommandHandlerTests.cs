@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -372,7 +373,7 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
 
         _oauthServiceMock
             .Setup(s => s.ExchangeCodeForTokenAsync(command.Provider, command.Code))
-            .ThrowsAsync(new InvalidOperationException("Token exchange failed"));
+            .ThrowsAsync(new OAuthTokenExchangeException("google", "Token exchange failed"));
 
         // Act
         var result = await _handler.Handle(command, TestCancellationToken);
@@ -399,7 +400,7 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
 
         _oauthServiceMock
             .Setup(s => s.GetUserInfoAsync(command.Provider, tokenResponse.AccessToken))
-            .ThrowsAsync(new InvalidOperationException("Failed to retrieve user info"));
+            .ThrowsAsync(new OAuthUserInfoException("google", "Failed to retrieve user info"));
 
         // Act
         var result = await _handler.Handle(command, TestCancellationToken);
@@ -493,7 +494,7 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
     {
         // Arrange
         var command = CreateTestCommand("google");
-        var exception = new InvalidOperationException("Token exchange failed");
+        var exception = new OAuthTokenExchangeException("google", "Token exchange failed");
 
         _oauthServiceMock
             .Setup(s => s.ValidateStateAsync(command.State))

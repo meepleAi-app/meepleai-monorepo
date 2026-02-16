@@ -208,7 +208,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         return GetS3Key(fileId, gameId, sanitizedFileName);
     }
 
-    public bool Exists(string fileId, string gameId)
+    public async Task<bool> ExistsAsync(string fileId, string gameId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -225,8 +225,9 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 MaxKeys = 1
             };
 
-            // Synchronous wait for async operation (acceptable for bool check)
-            var listResponse = _s3Client.ListObjectsV2Async(listRequest).GetAwaiter().GetResult();
+            // Proper async with cancellation support
+            var listResponse = await _s3Client.ListObjectsV2Async(listRequest, cancellationToken)
+                .ConfigureAwait(false);
 
             return listResponse.S3Objects.Count > 0;
         }

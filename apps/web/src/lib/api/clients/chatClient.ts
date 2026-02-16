@@ -74,6 +74,7 @@ export interface ChatClient {
   reopenThread(threadId: string): Promise<ChatThreadDto>;
   deleteThread(threadId: string): Promise<void>;
   updateThreadTitle(threadId: string, title: string): Promise<ChatThreadDto>;
+  switchThreadAgent(threadId: string, agentType: string): Promise<ChatThreadDto>;
 
   // Chat Messages
   updateMessage(chatId: string, messageId: string, content: string): Promise<ChatMessageResponse>;
@@ -180,6 +181,14 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       return httpClient.patch(
         `/api/v1/chat-threads/${encodeURIComponent(threadId)}`,
         { title },
+        ChatThreadDtoSchema
+      );
+    },
+
+    async switchThreadAgent(threadId: string, agentType: string): Promise<ChatThreadDto> {
+      return httpClient.patch(
+        `/api/v1/chat-threads/${encodeURIComponent(threadId)}/agent`,
+        { agentType },
         ChatThreadDtoSchema
       );
     },

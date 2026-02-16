@@ -22,6 +22,7 @@ import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import type { Citation } from '@/types';
 import { cn } from '@/lib/utils';
 
+import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
 import { ChatThreadHeader } from './ChatThreadHeader';
 
 // ============================================================================
@@ -66,6 +67,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [showAgentConfirm, setShowAgentConfirm] = useState(false);
+  const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
 
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
@@ -243,6 +247,30 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     }
   }, [threadId, router]);
 
+  // Agent switching with confirmation (Issue #4465)
+  const handleAgentChangeRequest = useCallback((newAgent: AgentType) => {
+    if (newAgent === (thread?.agentId as AgentType ?? 'auto')) return;
+    setPendingAgent(newAgent);
+    setShowAgentConfirm(true);
+  }, [thread?.agentId]);
+
+  const handleAgentChangeConfirm = useCallback(async () => {
+    if (!pendingAgent || !thread) return;
+    setShowAgentConfirm(false);
+    try {
+      await api.chat.switchThreadAgent(thread.id, pendingAgent);
+      setThread(prev => prev ? { ...prev, agentId: pendingAgent } : prev);
+    } catch {
+      setError('Errore nel cambio agente');
+    }
+    setPendingAgent(null);
+  }, [pendingAgent, thread]);
+
+  const handleAgentChangeCancel = useCallback(() => {
+    setShowAgentConfirm(false);
+    setPendingAgent(null);
+  }, []);
+
   // Handle question click
   const handleQuestionClick = useCallback(
     (question: string) => {
@@ -297,10 +325,49 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <ChatThreadHeader
         title={thread?.title ?? 'Chat'}
         gameName={game?.title}
-        agentName={undefined}
+        agentName={thread?.agentId ? AGENT_NAMES[(thread.agentId as AgentType) ?? 'auto'] : undefined}
         onTitleChange={handleTitleChange}
         onDelete={handleDelete}
       />
+
+      {/* Agent Selector */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80">
+        <AgentSelector
+          value={(thread?.agentId as AgentType) ?? 'auto'}
+          onChange={handleAgentChangeRequest}
+          disabled={isSending || streamState.isStreaming}
+          className="flex-1"
+        />
+      </div>
+
+      {/* Agent switch confirmation dialog */}
+      {showAgentConfirm && pendingAgent && (
+        <div
+          className="mx-4 mt-2 p-3 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200 dark:border-amber-500/20 flex items-center justify-between gap-3"
+          role="alertdialog"
+          data-testid="agent-switch-confirm"
+        >
+          <p className="text-sm font-nunito text-amber-900 dark:text-amber-200">
+            Vuoi cambiare agente a <strong>{AGENT_NAMES[pendingAgent]}</strong>? La cronologia viene mantenuta.
+          </p>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => void handleAgentChangeConfirm()}
+              className="px-3 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors"
+              data-testid="agent-switch-confirm-btn"
+            >
+              Conferma
+            </button>
+            <button
+              onClick={handleAgentChangeCancel}
+              className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-card text-muted-foreground rounded-md border hover:bg-muted/50 transition-colors"
+              data-testid="agent-switch-cancel-btn"
+            >
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (

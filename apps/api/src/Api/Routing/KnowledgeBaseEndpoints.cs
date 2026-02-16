@@ -125,6 +125,12 @@ internal static class KnowledgeBaseEndpoints
         .WithName("UpdateChatThreadTitle")
         .RequireSession()
         .WithTags("ChatThreads");
+
+        // ISSUE-4465: Switch agent type mid-conversation
+        group.MapPatch("/chat-threads/{threadId:guid}/agent", HandleSwitchThreadAgent)
+        .WithName("SwitchThreadAgent")
+        .RequireSession()
+        .WithTags("ChatThreads");
     }
 
     private static void MapChatMessageEndpoints(RouteGroupBuilder group)
@@ -557,6 +563,47 @@ internal static class KnowledgeBaseEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleSwitchThreadAgent(
+        Guid threadId,
+        SwitchThreadAgentRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        if (string.IsNullOrWhiteSpace(req.AgentType))
+        {
+            return Results.BadRequest(new { error = "AgentType is required" });
+        }
+
+        var threadQuery = new GetChatThreadByIdQuery(threadId);
+        var existingThread = await mediator.Send(threadQuery, ct).ConfigureAwait(false);
+
+        if (existingThread == null)
+        {
+            return Results.NotFound(new { error = "Thread not found" });
+        }
+
+        if (existingThread.UserId != userId &&
+            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("User {UserId} denied access to switch agent on thread {ThreadId} (owner: {OwnerId})",
+                userId, threadId, existingThread.UserId);
+            return Results.Forbid();
+        }
+
+        var command = new SwitchThreadAgentCommand(threadId, req.AgentType);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} switched agent to {AgentType} on thread {ThreadId}",
+            userId, req.AgentType, threadId);
+
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleAddMessageToThread(
         Guid threadId,
         AddMessageRequest req,
@@ -777,6 +824,13 @@ internal record KnowledgeBaseSearchRequest(
 /// </summary>
 internal record UpdateChatThreadTitleRequest(
     string Title
+);
+
+/// <summary>
+/// Request model for switching agent type on a chat thread (Issue #4465).
+/// </summary>
+internal record SwitchThreadAgentRequest(
+    string AgentType
 );
 
 /// <summary>

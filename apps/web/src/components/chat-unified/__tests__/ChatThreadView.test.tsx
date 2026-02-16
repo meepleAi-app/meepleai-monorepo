@@ -39,6 +39,7 @@ vi.mock('@/lib/api', () => ({
       addMessage: vi.fn(),
       updateThreadTitle: vi.fn(),
       deleteThread: vi.fn(),
+      switchThreadAgent: vi.fn(),
     },
     games: {
       getAll: vi.fn(),
@@ -79,6 +80,29 @@ vi.mock('@/components/chat/ChatInfoPanel', () => ({
       <span data-testid="question-count">{suggestedQuestions?.length ?? 0}</span>
     </div>
   ),
+}));
+
+// Mock AgentSelector (Issue #4465)
+vi.mock('@/components/agent/AgentSelector', () => ({
+  AgentSelector: ({ value, onChange, disabled }: any) => (
+    <select
+      data-testid="agent-selector"
+      value={value}
+      onChange={(e: any) => onChange(e.target.value)}
+      disabled={disabled}
+    >
+      <option value="auto">Auto</option>
+      <option value="tutor">Tutor</option>
+      <option value="arbitro">Arbitro</option>
+      <option value="decisore">Decisore</option>
+    </select>
+  ),
+  AGENT_NAMES: {
+    auto: 'Auto (Orchestrator)',
+    tutor: 'Tutor',
+    arbitro: 'Arbitro',
+    decisore: 'Decisore',
+  },
 }));
 
 // Mock store

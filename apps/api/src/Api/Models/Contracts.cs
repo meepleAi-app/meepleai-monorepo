@@ -82,7 +82,9 @@ internal record StreamingComplete(
     int completionTokens,
     int totalTokens,
     double? confidence,
-    Guid? chatThreadId = null
+    Guid? chatThreadId = null,
+    string? routingIntent = null,
+    double? routingLatencyMs = null
 );
 internal record StreamingError(string errorMessage, string? errorCode = null);
 internal record StreamingHeartbeat(string message = "keep-alive");

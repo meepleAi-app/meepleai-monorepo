@@ -201,6 +201,28 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Switches the agent type on an active thread (Issue #4465).
+    /// </summary>
+    public void SwitchAgent(string agentType)
+    {
+        if (string.IsNullOrWhiteSpace(agentType))
+            throw new ArgumentException("AgentType cannot be empty", nameof(agentType));
+
+        if (Status.IsClosed)
+            throw new InvalidOperationException("Cannot switch agent on a closed thread");
+
+        var validTypes = new[] { "auto", "tutor", "arbitro", "decisore" };
+        var normalized = agentType.Trim().ToLowerInvariant();
+        if (!validTypes.Contains(normalized, StringComparer.Ordinal))
+            throw new ArgumentException($"Invalid agent type: {agentType}. Valid types: {string.Join(", ", validTypes)}", nameof(agentType));
+
+        var previousType = AgentType;
+        AgentType = normalized;
+
+        AddDomainEvent(new Events.AgentSwitchedInThreadEvent(Id, previousType, normalized));
+    }
+
+    /// <summary>
     /// Gets total message count.
     /// </summary>
     public int MessageCount => _messages.Count;

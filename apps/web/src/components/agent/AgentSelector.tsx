@@ -55,6 +55,13 @@ export interface AgentSelectorProps {
 // Agent Definitions
 // ============================================================================
 
+export const AGENT_NAMES: Record<AgentType, string> = {
+  auto: 'Auto (Orchestrator)',
+  tutor: 'Tutor',
+  arbitro: 'Arbitro',
+  decisore: 'Decisore',
+};
+
 const AGENTS: Record<AgentType, Omit<Agent, 'status'>> = {
   auto: {
     id: 'auto',

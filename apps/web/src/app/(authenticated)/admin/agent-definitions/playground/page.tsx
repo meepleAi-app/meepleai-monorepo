@@ -101,6 +101,10 @@ export default function AgentPlaygroundPage() {
 
   const games = gamesResult?.items ?? [];
 
+  // Note: Currently no games have RAG documents in DB (all show as "No RAG")
+  // TODO: Add backend filter or document count field to show only RAG-ready games
+  // For now, show all games with visual indicator
+
   const handleSendMessage = async (message: string) => {
     if (!selectedAgentId) {
       toast.error('Please select an agent first');
@@ -297,12 +301,23 @@ export default function AgentPlaygroundPage() {
                 <span className="font-medium">No game</span>
                 <span className="text-xs text-muted-foreground ml-2">(pure LLM, no RAG)</span>
               </SelectItem>
+              {games.length === 0 && (
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  No games available. Upload rulebooks in Admin → Shared Games.
+                </div>
+              )}
               {games.map((game) => (
                 <SelectItem key={game.id} value={game.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{game.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {game.yearPublished} • {game.minPlayers}-{game.maxPlayers} players
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-medium truncate">{game.title}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {game.yearPublished} • {game.minPlayers}-{game.maxPlayers} players
+                      </span>
+                    </div>
+                    {/* TODO: Replace with actual hasDocuments check when backend provides it */}
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 shrink-0">
+                      No RAG
                     </span>
                   </div>
                 </SelectItem>

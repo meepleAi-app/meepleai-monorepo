@@ -345,4 +345,86 @@ public class AgentStrategyTests
     }
 
     #endregion
+
+    #region Advanced RAG Strategies (Epic #3356)
+
+    [Fact]
+    public void SentenceWindowRAG_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.SentenceWindowRAG();
+
+        strategy.Name.Should().Be("SentenceWindowRAG");
+        strategy.GetParameter<int>("WindowSize").Should().Be(3);
+        strategy.GetParameter<int>("TopK").Should().Be(5);
+    }
+
+    [Fact]
+    public void ColBERTReranking_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.ColBERTReranking();
+
+        strategy.Name.Should().Be("ColBERTReranking");
+        strategy.GetParameter<int>("TopK").Should().Be(5);
+        strategy.GetParameter<int>("RerankTopN").Should().Be(20);
+    }
+
+    [Fact]
+    public void ChainOfThoughtRAG_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.ChainOfThoughtRAG();
+
+        strategy.Name.Should().Be("ChainOfThoughtRAG");
+        strategy.GetParameter<bool>("EnableReasoning").Should().BeTrue();
+    }
+
+    [Fact]
+    public void QueryDecomposition_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.QueryDecomposition();
+
+        strategy.Name.Should().Be("QueryDecomposition");
+        strategy.GetParameter<int>("MaxSubQueries").Should().Be(3);
+        strategy.GetParameter<string>("MergeStrategy").Should().Be("weighted");
+    }
+
+    [Fact]
+    public void MultiAgentRAG_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.MultiAgentRAG();
+
+        strategy.Name.Should().Be("MultiAgentRAG");
+        strategy.GetParameter<int>("AgentCount").Should().Be(3);
+        strategy.GetParameter<string>("Tier").Should().Be("PRECISE");
+    }
+
+    [Fact]
+    public void RAGFusion_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.RAGFusion();
+
+        strategy.Name.Should().Be("RAGFusion");
+        strategy.GetParameter<int>("QueryVariants").Should().Be(3);
+        strategy.GetParameter<string>("FusionMethod").Should().Be("RRF");
+    }
+
+    [Fact]
+    public void StepBackPrompting_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.StepBackPrompting();
+
+        strategy.Name.Should().Be("StepBackPrompting");
+        strategy.GetParameter<bool>("EnableAbstraction").Should().BeTrue();
+    }
+
+    [Fact]
+    public void QueryExpansion_WithDefaults_CreatesStrategy()
+    {
+        var strategy = AgentStrategy.QueryExpansion();
+
+        strategy.Name.Should().Be("QueryExpansion");
+        strategy.GetParameter<int>("ExpansionTerms").Should().Be(3);
+        strategy.GetParameter<string>("ExpansionMethod").Should().Be("semantic");
+    }
+
+    #endregion
 }

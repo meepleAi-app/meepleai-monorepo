@@ -172,6 +172,124 @@ public sealed record AgentStrategy
         );
 
     /// <summary>
+    /// Sentence Window RAG: Context window expansion around matched sentences (+7% accuracy, 3,250 tokens).
+    /// Issue #4553: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy SentenceWindowRAG(int windowSize = 3, int topK = 5, double minScore = 0.6)
+        => new(
+            name: "SentenceWindowRAG",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["WindowSize"] = windowSize,
+                ["TopK"] = topK,
+                ["MinScore"] = minScore
+            }
+        );
+
+    /// <summary>
+    /// ColBERT Reranking: Late interaction reranking for better relevance (+12% accuracy, 3,250 tokens).
+    /// Issue #4554: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy ColBERTReranking(int topK = 5, int rerankTopN = 20, double minScore = 0.6)
+        => new(
+            name: "ColBERTReranking",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["TopK"] = topK,
+                ["RerankTopN"] = rerankTopN,
+                ["MinScore"] = minScore
+            }
+        );
+
+    /// <summary>
+    /// Chain-of-Thought RAG: CoT prompting in RAG pipeline (+18% accuracy, 3,650 tokens).
+    /// Issue #4555: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy ChainOfThoughtRAG(bool enableReasoning = true, int topK = 5)
+        => new(
+            name: "ChainOfThoughtRAG",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["EnableReasoning"] = enableReasoning,
+                ["TopK"] = topK
+            }
+        );
+
+    /// <summary>
+    /// Query Decomposition: Break complex queries into sub-queries (+12% accuracy, 6,550 tokens).
+    /// Issue #4556: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy QueryDecomposition(int maxSubQueries = 3, int topK = 5)
+        => new(
+            name: "QueryDecomposition",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["MaxSubQueries"] = maxSubQueries,
+                ["TopK"] = topK,
+                ["MergeStrategy"] = "weighted"
+            }
+        );
+
+    /// <summary>
+    /// Multi-Agent RAG: Multi-agent consensus for highest accuracy (+20%, 12,900 tokens, PRECISE tier).
+    /// Issue #4557: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy MultiAgentRAG(int agentCount = 3, double consensusThreshold = 0.8)
+        => new(
+            name: "MultiAgentRAG",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["AgentCount"] = agentCount,
+                ["ConsensusThreshold"] = consensusThreshold,
+                ["Tier"] = "PRECISE"
+            }
+        );
+
+    /// <summary>
+    /// RAG-Fusion: Query generation variants with reciprocal rank fusion (+11%, 11,550 tokens).
+    /// Issue #4558: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy RAGFusion(int queryVariants = 3, int topK = 5)
+        => new(
+            name: "RAGFusion",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["QueryVariants"] = queryVariants,
+                ["TopK"] = topK,
+                ["FusionMethod"] = "RRF"
+            }
+        );
+
+    /// <summary>
+    /// Step-Back Prompting: Abstract reasoning before retrieval (+10%, 5,740 tokens).
+    /// Issue #4559: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy StepBackPrompting(bool enableAbstraction = true, int topK = 5)
+        => new(
+            name: "StepBackPrompting",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["EnableAbstraction"] = enableAbstraction,
+                ["TopK"] = topK
+            }
+        );
+
+    /// <summary>
+    /// Query Expansion: Expand with synonyms and related terms (+7%, 4,110 tokens).
+    /// Issue #4560: Epic #3356 - Advanced RAG Strategies
+    /// </summary>
+    public static AgentStrategy QueryExpansion(int expansionTerms = 3, int topK = 5)
+        => new(
+            name: "QueryExpansion",
+            parameters: new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["ExpansionTerms"] = expansionTerms,
+                ["TopK"] = topK,
+                ["ExpansionMethod"] = "semantic"
+            }
+        );
+
+    /// <summary>
     /// Custom strategy for extensibility.
     /// </summary>
     public static AgentStrategy Custom(string name, IDictionary<string, object> parameters)

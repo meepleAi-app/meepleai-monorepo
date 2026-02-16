@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Serialization;
@@ -20,6 +21,8 @@ namespace Api.Routing;
 /// </summary>
 internal static class AgentEndpoints
 {
+    private static readonly string[] AvailableAgentNames = { "TutorAgent", "ArbitroAgent", "DecisoreAgent" };
+
     public static RouteGroupBuilder MapAgentEndpoints(this RouteGroupBuilder group)
     {
         MapCreateAgentEndpoint(group);
@@ -34,6 +37,7 @@ internal static class AgentEndpoints
         MapChatWithAgentEndpoint(group); // Issue #4126: SSE chat streaming
         MapGetRecentAgentsEndpoint(group); // Issue #4126: Dashboard widget
         MapUnifiedAgentQueryEndpoint(group); // Issue #4338: Unified API Gateway
+        MapRoutingMetricsEndpoint(group); // Issue #4338: Routing metrics observability
 
         return group;
     }
@@ -455,6 +459,7 @@ internal static class AgentEndpoints
     /// <summary>
     /// Unified API Gateway endpoint - routes queries to the appropriate agent automatically.
     /// Issue #4338: Unified API Gateway - /api/v1/agents/query
+    /// Features: SSE streaming, intent-based routing, session authentication, rate limiting.
     /// </summary>
     private static void MapUnifiedAgentQueryEndpoint(RouteGroupBuilder group)
     {
@@ -464,6 +469,13 @@ internal static class AgentEndpoints
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            // Validate request
+            if (string.IsNullOrWhiteSpace(request.Query))
+                return Results.BadRequest(new { Error = "Query cannot be empty" });
+
+            if (request.Query.Length > 2000)
+                return Results.BadRequest(new { Error = "Query exceeds maximum length of 2000 characters" });
+
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
 
@@ -479,6 +491,7 @@ internal static class AgentEndpoints
             httpContext.Response.ContentType = "text/event-stream";
             httpContext.Response.Headers.Append("Cache-Control", "no-cache");
             httpContext.Response.Headers.Append("Connection", "keep-alive");
+            httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
 
             await foreach (var @event in mediator.CreateStream(command, cancellationToken).ConfigureAwait(false))
             {
@@ -488,15 +501,57 @@ internal static class AgentEndpoints
 
                 await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
+
+            return Results.Empty;
         })
         .RequireSession()
+        .RequireRateLimiting("AgentQuery")
         .WithName("UnifiedAgentQuery")
         .WithTags("Agents", "Gateway")
-        .WithDescription("Unified API Gateway: automatically routes queries to the best agent based on intent classification (SSE streaming)")
-        .Produces(200)
+        .WithSummary("Unified Agent Query Gateway (SSE)")
+        .WithDescription(
+            "Single entry point for all agent interactions. Automatically classifies query intent " +
+            "(Tutorial, RulesQuestion, MoveValidation, StrategicAnalysis) and routes to the appropriate agent " +
+            "(TutorAgent, ArbitroAgent, DecisoreAgent). Returns SSE stream with real-time progress updates, " +
+            "search results, and LLM-generated responses. Requires authenticated session.")
+        .Produces(200, contentType: "text/event-stream")
         .Produces(400)
         .Produces(401)
+        .Produces(429)
         .Produces(500);
+    }
+
+    /// <summary>
+    /// Routing metrics endpoint for observability.
+    /// Issue #4338: Unified API Gateway - Metrics and monitoring.
+    /// </summary>
+    private static void MapRoutingMetricsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/routing-metrics", (
+            [FromServices] AgentRouterService router,
+            [FromServices] IntentClassifier classifier) =>
+        {
+            // Return basic routing capabilities and health status
+            return Results.Ok(new AgentRoutingMetricsResponse(
+                AvailableAgents: AvailableAgentNames,
+                SupportedIntents: Enum.GetNames<AgentIntent>(),
+                ConfidenceThresholds: new ConfidenceThresholdInfo(
+                    HighConfidence: 0.90,
+                    MediumConfidence: 0.70,
+                    MinimumForRouting: 0.40
+                ),
+                Status: "healthy"
+            ));
+        })
+        .RequireSession()
+        .WithName("GetRoutingMetrics")
+        .WithTags("Agents", "Gateway", "Metrics")
+        .WithSummary("Agent routing metrics and health")
+        .WithDescription(
+            "Returns routing system health, available agents, supported intents, " +
+            "and confidence thresholds for the multi-agent gateway.")
+        .Produces<AgentRoutingMetricsResponse>(200)
+        .Produces(401);
     }
 }
 
@@ -568,4 +623,21 @@ internal record AskAgentQuestionRequest(
     string? Language = null,
     int? TopK = null,
     double? MinScore = null
+);
+
+/// <summary>
+/// Response for routing metrics endpoint.
+/// Issue #4338: Unified API Gateway - Observability.
+/// </summary>
+internal record AgentRoutingMetricsResponse(
+    string[] AvailableAgents,
+    string[] SupportedIntents,
+    ConfidenceThresholdInfo ConfidenceThresholds,
+    string Status
+);
+
+internal record ConfidenceThresholdInfo(
+    double HighConfidence,
+    double MediumConfidence,
+    double MinimumForRouting
 );

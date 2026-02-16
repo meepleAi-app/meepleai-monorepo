@@ -81,6 +81,10 @@ internal static class RateLimitingServiceExtensions
                 // Issue #4354: Bulk import rate limiting policy
                 options.AddPolicy("BulkImportAdmin", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #4338: Agent query rate limiting policy
+                options.AddPolicy("AgentQuery", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
             return services;
@@ -287,6 +291,23 @@ internal static class RateLimitingServiceExtensions
                         Window = TimeSpan.FromMinutes(5),
                         PermitLimit = 1, // Max 1 bulk import every 5 minutes
                         SegmentsPerWindow = 5, // 1-minute segments
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 12: AgentQuery - 30 req/min for agent query operations (Issue #4338)
+            options.AddPolicy("AgentQuery", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"agent-query-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 30, // 30 queries/min per user (AI queries are expensive)
+                        SegmentsPerWindow = 6, // 10-second segments
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });

@@ -35,6 +35,7 @@ internal static class PdfEndpoints
         MapProcessingStateEndpoints(group);
         MapProcessingActionsEndpoints(group);
         MapBggExtractionEndpoint(group); // ISSUE-2513: BGG games extraction from PDF
+        MapAdminPdfListEndpoint(group); // Admin: List all PDFs with status
 
         return group;
     }
@@ -1147,6 +1148,36 @@ internal static class PdfEndpoints
         .Produces(400)
         .Produces(401)
         .Produces(404);
+    }
+
+    private static void MapAdminPdfListEndpoint(RouteGroupBuilder group)
+    {
+        // Admin: List all PDFs with processing status
+        group.MapGet("/admin/pdfs", HandleGetAllPdfs)
+            .RequireSession()
+            .WithName("GetAllPdfs")
+            .WithOpenApi(operation =>
+            {
+                operation.Summary = "Get all PDF documents (admin-only)";
+                operation.Description = "Returns list of all PDFs with processing status, game association, and chunk counts.";
+                return operation;
+            });
+    }
+
+    private static async Task<IResult> HandleGetAllPdfs(
+        HttpContext context,
+        IMediator mediator,
+        [FromQuery] string? status,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] int page = 1,
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetAllPdfsQuery(status, pageSize, page);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 }
 

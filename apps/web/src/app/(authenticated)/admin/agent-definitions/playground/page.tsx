@@ -270,7 +270,7 @@ export default function AgentPlaygroundPage() {
                 <SelectItem key={agent.id} value={agent.id}>
                   {agent.name}
                   <span className="text-xs text-muted-foreground ml-2">
-                    ({agent.config.provider}/{agent.config.model})
+                    ({agent.config.model})
                   </span>
                 </SelectItem>
               ))}

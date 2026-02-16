@@ -219,5 +219,11 @@ export default defineConfig({
             url: 'http://localhost:3000',
             reuseExistingServer: !process.env.CI,
             timeout: 180 * 1000, // 3min for server startup
+            // E2E test auth bypass: allows Playwright tests to mock auth via page.route()
+            // without needing a running backend for session validation.
+            // Only active in development (guarded by NODE_ENV !== 'production' in middleware).
+            env: {
+              PLAYWRIGHT_AUTH_BYPASS: 'true',
+            },
           },
 });

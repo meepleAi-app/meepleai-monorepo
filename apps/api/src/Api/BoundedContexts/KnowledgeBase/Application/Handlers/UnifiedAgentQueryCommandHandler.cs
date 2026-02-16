@@ -2,6 +2,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -14,7 +16,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
 /// Handler for the Unified API Gateway query command.
-/// Classifies query intent, selects the best agent, and streams the response.
+/// Uses AgentRouterService for intent-based routing and streams the response.
+/// Issue #4336: Multi-Agent Router integration.
 /// Issue #4338: Unified API Gateway - /api/v1/agents/query
 /// </summary>
 internal sealed class UnifiedAgentQueryCommandHandler
@@ -25,6 +28,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILlmService _llmService;
     private readonly AgentOrchestrationService _orchestrationService;
+    private readonly AgentRouterService _routerService;
     private readonly ILogger<UnifiedAgentQueryCommandHandler> _logger;
 
     public UnifiedAgentQueryCommandHandler(
@@ -33,6 +37,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
         IUnitOfWork unitOfWork,
         ILlmService llmService,
         AgentOrchestrationService orchestrationService,
+        AgentRouterService routerService,
         ILogger<UnifiedAgentQueryCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -40,6 +45,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _orchestrationService = orchestrationService ?? throw new ArgumentNullException(nameof(orchestrationService));
+        _routerService = routerService ?? throw new ArgumentNullException(nameof(routerService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -65,12 +71,13 @@ internal sealed class UnifiedAgentQueryCommandHandler
             "Unified gateway query from User {UserId}: \"{Query}\" (preferred={PreferredAgentId})",
             command.UserId, command.Query, command.PreferredAgentId);
 
-        // Phase 1: Agent Selection
+        // Phase 1: Agent Selection (via Router or explicit preference)
         yield return CreateEvent(
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Classifying query intent..."));
 
         Agent? selectedAgent;
+        AgentRoutingDecision? routingDecision = null;
 
         if (command.PreferredAgentId.HasValue)
         {
@@ -91,7 +98,9 @@ internal sealed class UnifiedAgentQueryCommandHandler
         }
         else
         {
-            // Automatic intent-based routing
+            // Intent-based routing via AgentRouterService
+            routingDecision = _routerService.RouteQuery(command.Query);
+
             var allAgents = await _agentRepository
                 .GetAllActiveAsync(cancellationToken)
                 .ConfigureAwait(false);
@@ -104,7 +113,18 @@ internal sealed class UnifiedAgentQueryCommandHandler
                 yield break;
             }
 
-            selectedAgent = _orchestrationService.SelectAgentForQuery(command.Query, allAgents);
+            // Map routing decision to actual agent entity
+            selectedAgent = FindAgentByRouterTarget(allAgents, routingDecision.TargetAgent);
+
+            // Fallback: use orchestration service if router target not found
+            if (selectedAgent == null)
+            {
+                _logger.LogWarning(
+                    "Router target agent {TargetAgent} not found in active agents, falling back to orchestration service",
+                    routingDecision.TargetAgent);
+
+                selectedAgent = _orchestrationService.SelectAgentForQuery(command.Query, allAgents);
+            }
 
             if (selectedAgent == null)
             {
@@ -119,11 +139,14 @@ internal sealed class UnifiedAgentQueryCommandHandler
             "Unified gateway routed to agent {AgentId} ({AgentName}, type={AgentType})",
             selectedAgent.Id, selectedAgent.Name, selectedAgent.Type.Value);
 
-        // Phase 2: Notify routing decision
+        // Phase 2: Notify routing decision (with metadata from router)
+        var routingMessage = routingDecision != null
+            ? $"Routed to {selectedAgent.Name} ({selectedAgent.Type.Value}) — intent: {routingDecision.Intent}, confidence: {routingDecision.Confidence:F2}"
+            : $"Routed to {selectedAgent.Name} ({selectedAgent.Type.Value}) — explicit selection";
+
         yield return CreateEvent(
             StreamingEventType.StateUpdate,
-            new StreamingStateUpdate(
-                $"Routed to {selectedAgent.Name} ({selectedAgent.Type.Value})"));
+            new StreamingStateUpdate(routingMessage));
 
         // Phase 3: Resolve or create ChatThread
         ChatThread? thread = null;
@@ -196,7 +219,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
             thread.AddAssistantMessageWithMetadata(
                 content: fullResponse,
                 agentType: selectedAgent.Type.Value,
-                confidence: 0.85f,
+                confidence: (float)(routingDecision?.Confidence ?? 0.85),
                 tokenCount: tokenCount);
 
             await _chatThreadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
@@ -215,8 +238,33 @@ internal sealed class UnifiedAgentQueryCommandHandler
                 promptTokens: 0,
                 completionTokens: tokenCount,
                 totalTokens: tokenCount,
-                confidence: 0.85,
-                chatThreadId: thread.Id));
+                confidence: routingDecision?.Confidence ?? 0.85,
+                chatThreadId: thread.Id,
+                routingIntent: routingDecision?.Intent.ToString(),
+                routingLatencyMs: routingDecision?.RoutingDuration.TotalMilliseconds));
+    }
+
+    /// <summary>
+    /// Maps the router's target agent name to an actual Agent entity.
+    /// </summary>
+    private static Agent? FindAgentByRouterTarget(List<Agent> agents, string targetAgentName)
+    {
+        // Map router agent names to AgentType values
+        var typeValue = targetAgentName switch
+        {
+            "TutorAgent" => AgentType.RagAgent.Value,          // Tutor uses RAG agent type
+            "ArbitroAgent" => AgentType.RulesInterpreter.Value, // Arbitro validates rules
+            "DecisoreAgent" => AgentType.RagAgent.Value,        // Decisore uses RAG for analysis
+            _ => null
+        };
+
+        if (typeValue == null)
+            return null;
+
+        return agents.FirstOrDefault(a =>
+            string.Equals(a.Type.Value, typeValue, StringComparison.Ordinal))
+            ?? agents.FirstOrDefault(a =>
+                a.Name.Contains(targetAgentName.Replace("Agent", ""), StringComparison.OrdinalIgnoreCase));
     }
 
     private static string BuildSystemPrompt(Agent agent)

@@ -45,12 +45,14 @@ public sealed class PlaygroundChatCommandHandlerTests
         _mockCostCalculator = new Mock<ILlmCostCalculator>();
         _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
         _mockLogger = new Mock<ILogger<PlaygroundChatCommandHandler>>();
+        var mockRagExecutionRepository = new Mock<IRagExecutionRepository>();
         _handler = new PlaygroundChatCommandHandler(
             _mockAgentDefinitionRepository.Object,
             _llmProviderFactory,
             _mockHybridSearchService.Object,
             _mockCostCalculator.Object,
             _mockCostLogRepository.Object,
+            mockRagExecutionRepository.Object,
             _mockLogger.Object
         );
     }

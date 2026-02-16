@@ -319,7 +319,20 @@ export async function middleware(request: NextRequest) {
   const sessionCookieValue = sessionCookie?.value;
   let isAuthenticated = false;
 
-  if (sessionCookieValue) {
+  // ============================================================================
+  // E2E Test Auth Bypass (development only)
+  // ============================================================================
+  // When PLAYWRIGHT_AUTH_BYPASS=true (dev only), trust session cookies without
+  // server-side backend validation. This allows Playwright E2E tests to mock
+  // auth at the browser level via page.route() without needing a running backend.
+  // Safety: Guarded by NODE_ENV !== 'production' - cannot activate in production.
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
+    sessionCookieValue
+  ) {
+    isAuthenticated = true;
+  } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
   }
 

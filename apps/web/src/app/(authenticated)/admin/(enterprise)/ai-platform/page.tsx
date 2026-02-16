@@ -13,6 +13,7 @@ import React from 'react';
 import { EnterpriseSectionPage } from '@/components/admin/enterprise/EnterpriseSectionPage';
 import { ENTERPRISE_SECTIONS } from '@/config/enterprise-navigation';
 
+import { ChatAnalyticsTab } from './components/ChatAnalyticsTab';
 import { PdfAnalyticsTab } from './components/PdfAnalyticsTab';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -23,6 +24,7 @@ export default function AiPlatformPage() {
     <EnterpriseSectionPage
       section={section}
       tabContent={{
+        'chat-analytics': <ChatAnalyticsTab />,
         'pdf-analytics': <PdfAnalyticsTab />,
       }}
     />

@@ -109,6 +109,8 @@ import {
   type BulkImportFromJsonResult,
   PdfAnalyticsDtoSchema,
   type PdfAnalyticsDto,
+  ChatAnalyticsDtoSchema,
+  type ChatAnalyticsDto,
 } from '../schemas';
 import {
   AgentCostEstimationResultSchema,
@@ -1827,6 +1829,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return httpClient.get(
         `/api/v1/admin/pdf-analytics?days=${days}`,
         PdfAnalyticsDtoSchema
+      );
+    },
+
+    /**
+     * Get chat analytics
+     * GET /api/v1/admin/chat-analytics?days={days}
+     *
+     * Issue #3714: Aggregated chat thread metrics
+     */
+    async getChatAnalytics(days: number = 30): Promise<ChatAnalyticsDto | null> {
+      return httpClient.get(
+        `/api/v1/admin/chat-analytics?days=${days}`,
+        ChatAnalyticsDtoSchema
       );
     },
   };

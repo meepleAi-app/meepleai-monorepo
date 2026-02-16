@@ -59,10 +59,13 @@ export interface UserLibraryStats {
 
 export interface UserBadge {
   id: string;
+  code: string;
   name: string;
   description: string;
-  icon: string;
+  iconUrl: string | null;
+  tier: string;
   earnedAt: string;
+  isDisplayed: boolean;
 }
 
 export interface UserActivityEvent {

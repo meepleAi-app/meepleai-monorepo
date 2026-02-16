@@ -195,10 +195,13 @@ describe('UserManagementBlock', () => {
     vi.mocked(adminClientModule.adminClient.getUserBadges).mockResolvedValue([
       {
         id: '1',
+        code: 'early-adopter',
         name: 'Early Adopter',
         description: 'Joined in the first year',
-        icon: '🎖️',
+        iconUrl: '🎖️',
+        tier: 'gold',
         earnedAt: new Date().toISOString(),
+        isDisplayed: true,
       },
     ]);
 

@@ -196,7 +196,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                       key={badge.id}
                       className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50/50 rounded-lg border border-amber-200/40"
                     >
-                      {badge.icon && <span className="text-2xl">{badge.icon}</span>}
+                      {badge.iconUrl && <span className="text-2xl">{badge.iconUrl}</span>}
                       <div className="flex-1">
                         <div className="font-nunito font-semibold text-sm text-slate-900">
                           {badge.name}

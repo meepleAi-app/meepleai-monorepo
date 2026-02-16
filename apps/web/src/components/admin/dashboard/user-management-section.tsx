@@ -190,7 +190,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                       key={badge.id}
                       className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-100/80 to-orange-100/60 rounded-lg border border-amber-200/60"
                     >
-                      <span className="text-2xl">{badge.icon}</span>
+                      {badge.iconUrl && <span className="text-2xl">{badge.iconUrl}</span>}
                       <div>
                         <div className="font-nunito font-semibold text-sm text-slate-900">
                           {badge.name}

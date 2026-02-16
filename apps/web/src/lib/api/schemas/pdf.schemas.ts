@@ -111,3 +111,37 @@ export const PdfMetricsSchema = z.object({
 });
 
 export type PdfMetrics = z.infer<typeof PdfMetricsSchema>;
+
+// ========== PDF Analytics (Issue #3715) ==========
+
+/**
+ * Daily upload stats for time series chart.
+ * @see apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/DTOs/PdfAnalyticsDto.cs
+ */
+export const DailyUploadStatsSchema = z.object({
+  date: z.string(), // DateOnly serialized as "YYYY-MM-DD"
+  totalCount: z.number().int().nonnegative(),
+  successCount: z.number().int().nonnegative(),
+  failedCount: z.number().int().nonnegative(),
+});
+
+export type DailyUploadStats = z.infer<typeof DailyUploadStatsSchema>;
+
+/**
+ * Aggregated PDF analytics response.
+ * Issue #3715: PDF processing metrics for admin dashboard.
+ * TimeSpan fields serialized as "HH:mm:ss.fffffff" strings by .NET.
+ */
+export const PdfAnalyticsDtoSchema = z.object({
+  totalUploaded: z.number().int().nonnegative(),
+  successCount: z.number().int().nonnegative(),
+  failedCount: z.number().int().nonnegative(),
+  successRate: z.number().nonnegative(),
+  avgProcessingTime: z.string().nullable(),
+  p95ProcessingTime: z.string().nullable(),
+  totalStorageBytes: z.number().nonnegative(),
+  storageByTier: z.record(z.string(), z.number()),
+  uploadsByDay: z.array(DailyUploadStatsSchema),
+});
+
+export type PdfAnalyticsDto = z.infer<typeof PdfAnalyticsDtoSchema>;

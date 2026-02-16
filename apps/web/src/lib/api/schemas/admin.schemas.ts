@@ -236,6 +236,19 @@ export const AdminStatsSchema = z.object({
 
 export type AdminStats = z.infer<typeof AdminStatsSchema>;
 
+// Issue #4198: Lightweight overview stats for StatsOverview component
+export const AdminOverviewStatsSchema = z.object({
+  totalGames: z.number(),
+  publishedGames: z.number(),
+  totalUsers: z.number(),
+  activeUsers: z.number(),
+  approvalRate: z.number(),
+  pendingApprovals: z.number(),
+  recentSubmissions: z.number(),
+});
+
+export type AdminOverviewStats = z.infer<typeof AdminOverviewStatsSchema>;
+
 export const AiRequestsResponseSchema = z.object({
   requests: z.array(AiRequestSchema),
   totalCount: z.number(),

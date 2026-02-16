@@ -107,6 +107,16 @@ internal static class AnalyticsEndpoints
             return operation;
         });
 
+        // Issue #4198: Lightweight overview stats for StatsOverview component
+        group.MapGet("/admin/overview-stats", HandleGetOverviewStats)
+        .WithName("GetOverviewStats")
+        .WithTags("Admin", "Dashboard")
+        .WithSummary("Admin Overview Statistics")
+        .WithDescription("Lightweight overview stats: game counts, user counts, approval rate, pending approvals, recent submissions.")
+        .Produces<Api.BoundedContexts.Administration.Application.DTOs.AdminOverviewStatsDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+
         // Issue #874: Activity feed endpoint for admin dashboard
         // Issue #874: Activity feed endpoint for admin dashboard
         group.MapGet("/admin/activity", HandleGetRecentActivity)
@@ -298,6 +308,22 @@ internal static class AnalyticsEndpoints
         if (!authorized) return error!;
 
         var query = new GetAdminStatsQuery(fromDate, toDate, days, gameId, roleFilter);
+        var stats = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(stats);
+    }
+
+    /// <summary>
+    /// Issue #4198: Lightweight overview stats for StatsOverview component.
+    /// </summary>
+    private static async Task<IResult> HandleGetOverviewStats(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new Api.BoundedContexts.Administration.Application.Queries.GetAdminOverviewStatsQuery();
         var stats = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(stats);
     }

@@ -92,3 +92,6 @@ export * from './knowledge-base.schemas';
 
 // Chat Analytics schemas (Issue #3714)
 export * from './chat-analytics.schemas';
+
+// Model Performance schemas (Issue #3716)
+export * from './model-performance.schemas';

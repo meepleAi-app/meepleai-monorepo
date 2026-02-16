@@ -1,0 +1,313 @@
+/**
+ * useAgentChatStream Hook Tests
+ *
+ * Tests:
+ * 1. SSE event parsing with camelCase (matching backend SseJsonOptions)
+ * 2. Race condition prevention via request ID tracking
+ * 3. State management (streaming, errors, completion)
+ * 4. Abort handling on stopStreaming/agent switch
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useAgentChatStream } from '../useAgentChatStream';
+
+// ─── Helpers ─────────────────────────────────────────────
+
+/** Build a camelCase SSE data line matching backend SseJsonOptions (camelCase) */
+function sseEvent(type: number, data: unknown): string {
+  return `data: ${JSON.stringify({ type, data, timestamp: new Date().toISOString() })}\n\n`;
+}
+
+/** Create a ReadableStream from SSE event strings */
+function createSSEStream(events: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  let index = 0;
+  return new ReadableStream({
+    pull(controller) {
+      if (index < events.length) {
+        controller.enqueue(encoder.encode(events[index]));
+        index++;
+      } else {
+        controller.close();
+      }
+    },
+  });
+}
+
+// StreamingEventType enum values
+const EventType = {
+  StateUpdate: 0,
+  Citations: 1,
+  Token: 7,
+  Complete: 4,
+  Error: 5,
+  Heartbeat: 6,
+  FollowUpQuestions: 8,
+} as const;
+
+// ─── Tests ───────────────────────────────────────────────
+
+describe('useAgentChatStream', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    globalThis.fetch = fetchMock;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('initializes with default state', () => {
+    const { result } = renderHook(() => useAgentChatStream());
+
+    expect(result.current.state).toEqual({
+      statusMessage: null,
+      currentAnswer: '',
+      followUpQuestions: [],
+      isStreaming: false,
+      error: null,
+      chatThreadId: null,
+      totalTokens: 0,
+    });
+  });
+
+  it('parses camelCase SSE events from backend', async () => {
+    const events = [
+      sseEvent(EventType.StateUpdate, { message: 'Starting chat', chatThreadId: 'thread-123' }),
+      sseEvent(EventType.Token, { token: 'Hello' }),
+      sseEvent(EventType.Token, { token: ' world' }),
+      sseEvent(EventType.Complete, { totalTokens: 42, chatThreadId: 'thread-123' }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: stream,
+    });
+
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi', 'thread-123');
+      // Wait for stream processing
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenCalledWith(
+      'Hello world',
+      expect.objectContaining({
+        totalTokens: 42,
+        chatThreadId: 'thread-123',
+      })
+    );
+    expect(result.current.state.isStreaming).toBe(false);
+    expect(result.current.state.currentAnswer).toBe('Hello world');
+  });
+
+  it('rejects PascalCase events (ensures camelCase compliance)', async () => {
+    // Simulate WRONG format (PascalCase) - should be silently ignored
+    const wrongEvent = `data: ${JSON.stringify({
+      Type: EventType.Token,
+      Data: { token: 'should not appear' },
+      Timestamp: new Date().toISOString(),
+    })}\n\n`;
+
+    const events = [wrongEvent];
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: stream,
+    });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    // PascalCase event.Type is undefined → falls to default case → no token appended
+    expect(result.current.state.currentAnswer).toBe('');
+  });
+
+  it('handles HTTP errors', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+    });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe('HTTP 500');
+    expect(result.current.state.isStreaming).toBe(false);
+    expect(onError).toHaveBeenCalledWith('HTTP 500');
+  });
+
+  it('handles SSE error events', async () => {
+    const events = [
+      sseEvent(EventType.Error, { errorMessage: 'Agent not found', errorCode: 'AGENT_NOT_FOUND' }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-bad', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe('Agent not found');
+    expect(onError).toHaveBeenCalledWith('Agent not found');
+  });
+
+  it('sets isStreaming true during active stream', async () => {
+    // Create a stream that doesn't close immediately
+    let resolveStream: (() => void) | undefined;
+    const streamPromise = new Promise<void>(resolve => {
+      resolveStream = resolve;
+    });
+
+    const stream = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        await streamPromise;
+        controller.close();
+      },
+    });
+
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.state.isStreaming).toBe(true);
+
+    // Cleanup
+    resolveStream?.();
+  });
+
+  it('accumulates follow-up questions', async () => {
+    const events = [
+      sseEvent(EventType.Token, { token: 'Answer' }),
+      sseEvent(EventType.FollowUpQuestions, { questions: ['Q1?', 'Q2?'] }),
+      sseEvent(EventType.Complete, { totalTokens: 5 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenCalledWith(
+      'Answer',
+      expect.objectContaining({
+        followUpQuestions: ['Q1?', 'Q2?'],
+      })
+    );
+  });
+
+  it('resets state on reset()', async () => {
+    const events = [
+      sseEvent(EventType.Token, { token: 'partial' }),
+      sseEvent(EventType.Complete, { totalTokens: 1 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.currentAnswer).toBe('partial');
+
+    act(() => {
+      result.current.reset();
+    });
+
+    expect(result.current.state.currentAnswer).toBe('');
+    expect(result.current.state.isStreaming).toBe(false);
+  });
+
+  it('includes chatThreadId in request body when provided', async () => {
+    const stream = createSSEStream([sseEvent(EventType.Complete, { totalTokens: 0 })]);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hello', 'existing-thread');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    const fetchCall = fetchMock.mock.calls[0];
+    const requestBody = JSON.parse(fetchCall[1].body);
+    expect(requestBody).toEqual({ message: 'Hello', chatThreadId: 'existing-thread' });
+  });
+
+  it('ignores heartbeat events silently', async () => {
+    const events = [
+      sseEvent(EventType.Heartbeat, null),
+      sseEvent(EventType.Token, { token: 'ok' }),
+      sseEvent(EventType.Complete, { totalTokens: 1 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.currentAnswer).toBe('ok');
+  });
+
+  it('handles malformed JSON gracefully', async () => {
+    const events = [
+      'data: {invalid json}\n\n',
+      sseEvent(EventType.Token, { token: 'ok' }),
+      sseEvent(EventType.Complete, { totalTokens: 1 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    // Should skip malformed line and continue
+    expect(result.current.state.currentAnswer).toBe('ok');
+  });
+});

@@ -89,3 +89,6 @@ export * from './ai-usage.schemas';
 
 // Knowledge Base Status schemas (Issue #4065)
 export * from './knowledge-base.schemas';
+
+// Chat Analytics schemas (Issue #3714)
+export * from './chat-analytics.schemas';

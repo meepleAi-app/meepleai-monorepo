@@ -146,11 +146,14 @@ public sealed record SharedGameDetailDto(
 /// Data transfer object for approval queue items.
 /// Provides game info and approval metadata for admin review.
 /// Issue #3533: Admin API Endpoints - Approval Queue Management
+/// Issue #4199: Extended with user display name and email
 /// </summary>
 public sealed record ApprovalQueueItemDto(
     Guid GameId,
     string Title,
     Guid SubmittedBy,
+    string SubmittedByName,
+    string SubmittedByEmail,
     DateTime SubmittedAt,
     int DaysPending,
     int PdfCount);

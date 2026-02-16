@@ -213,6 +213,26 @@ public sealed class GetApprovalQueueQueryHandlerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Handle_ReturnsSubmitterNameAndEmail()
+    {
+        // Arrange - Issue #4199: Verify user info is included
+        await SeedPendingApprovalGamesAsync();
+        var query = new GetApprovalQueueQuery(Submitter: EditorUserId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().AllSatisfy(item =>
+        {
+            item.SubmittedBy.Should().Be(EditorUserId);
+            item.SubmittedByEmail.Should().Be("editor@meepleai.dev");
+            item.SubmittedByName.Should().NotBeNullOrEmpty();
+        });
+    }
+
+    [Fact]
     public async Task Handle_ReturnsGamesOrderedBySubmittedAtAscending()
     {
         // Arrange

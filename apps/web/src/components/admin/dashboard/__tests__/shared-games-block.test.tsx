@@ -27,7 +27,9 @@ const mockItems = [
   {
     gameId: '1',
     title: 'Twilight Imperium',
-    submittedBy: 'user@example.com',
+    submittedBy: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    submittedByName: 'user@example.com',
+    submittedByEmail: 'user@example.com',
     submittedAt: new Date().toISOString(),
     daysPending: 5,
     pdfCount: 3,
@@ -35,7 +37,9 @@ const mockItems = [
   {
     gameId: '2',
     title: 'Gloomhaven',
-    submittedBy: 'admin@example.com',
+    submittedBy: 'ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee',
+    submittedByName: 'admin@example.com',
+    submittedByEmail: 'admin@example.com',
     submittedAt: new Date().toISOString(),
     daysPending: 10,
     pdfCount: 2,

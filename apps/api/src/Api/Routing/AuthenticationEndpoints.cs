@@ -54,10 +54,6 @@ internal static class AuthenticationEndpoints
     {
         group.MapPost("/auth/register", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            // Manually read the body to work around .NET 9 body stream consumption issue.
-            // The framework's [FromBody] parameter binding fails with "no JSON tokens" because
-            // the request body stream is consumed before the endpoint handler runs.
-            context.Request.Body.Position = 0;
             RegisterPayload? payload;
             try
             {
@@ -104,10 +100,6 @@ internal static class AuthenticationEndpoints
     {
         group.MapPost("/auth/login", async (HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            // Manually read the body to work around .NET 9 body stream consumption issue.
-            // The framework's [FromBody] parameter binding fails with "no JSON tokens" because
-            // the request body stream is consumed before the endpoint handler runs.
-            context.Request.Body.Position = 0;
             LoginPayload? payload;
             try
             {

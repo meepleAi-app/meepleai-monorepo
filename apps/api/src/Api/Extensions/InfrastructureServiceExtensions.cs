@@ -381,6 +381,29 @@ internal static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true
         });
 
+        // Named HttpClient "BggApi" used by BggApiService and BggApiHealthCheck
+        // Must share the same Bearer token as the typed IBggApiClient above
+        services.AddHttpClient("BggApi", client =>
+        {
+#pragma warning disable S1075 // URIs should not be hardcoded - Official BGG API endpoint
+            client.BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2/");
+#pragma warning restore S1075
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0");
+
+            if (!string.IsNullOrWhiteSpace(bggTokenForClient))
+            {
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bggTokenForClient}");
+            }
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 20,
+            EnableMultipleHttp2Connections = true
+        });
+
         // Configure BGG settings from appsettings.json
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
 

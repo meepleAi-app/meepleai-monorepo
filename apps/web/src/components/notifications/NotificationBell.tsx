@@ -35,7 +35,8 @@ export function NotificationBell() {
   const fetchUnreadCount = useNotificationStore(state => state.fetchUnreadCount);
 
   // SSE real-time notifications (Issue #4414)
-  useNotificationSSE();
+  // Disabled until backend endpoint /api/v1/notifications/stream is implemented
+  useNotificationSSE({ enabled: false });
 
   // Fetch unread count on mount
   useEffect(() => {

@@ -51,12 +51,13 @@ internal interface IBlobStorageService
     string GetStoragePath(string fileId, string gameId, string fileName);
 
     /// <summary>
-    /// Checks if a file exists
+    /// Checks if a file exists asynchronously
     /// </summary>
     /// <param name="fileId">File ID to check</param>
     /// <param name="gameId">Game ID for organization</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>True if file exists</returns>
-    bool Exists(string fileId, string gameId);
+    Task<bool> ExistsAsync(string fileId, string gameId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

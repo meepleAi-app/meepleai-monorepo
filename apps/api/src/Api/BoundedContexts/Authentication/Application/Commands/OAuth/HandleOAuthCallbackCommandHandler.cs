@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -241,6 +242,32 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 SessionToken = sessionToken
             };
         }
+        catch (OAuthTokenExchangeException ex)
+        {
+            _logger.LogError(ex, "OAuth token exchange failed for provider {Provider}", command.Provider);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            }
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "OAuth token exchange failed. Please try again."
+            };
+        }
+        catch (OAuthUserInfoException ex)
+        {
+            _logger.LogError(ex, "OAuth user info retrieval failed for provider {Provider}", command.Provider);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            }
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "Failed to get user information from OAuth provider. Please try again."
+            };
+        }
         catch (SharedKernel.Domain.Exceptions.ValidationException ex)
         {
             _logger.LogError(ex, "Validation failed during OAuth callback for provider {Provider}", command.Provider);
@@ -321,20 +348,15 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             _logger.LogError(ex, "HTTP error during OAuth token exchange. Provider: {Provider}", provider);
             return (false, "OAuth token exchange failed due to provider error. Please try again.", null);
         }
+        catch (OAuthTokenExchangeException ex)
+        {
+            _logger.LogError(ex, "Failed to exchange OAuth code for token. Provider: {Provider}", provider);
+            return (false, "OAuth token exchange failed. Please try again.", null);
+        }
         catch (TaskCanceledException ex)
         {
             _logger.LogError(ex, "Timeout during OAuth token exchange. Provider: {Provider}", provider);
             return (false, "OAuth token exchange timed out. Please try again.", null);
-        }
-        // NOTE: InvalidOperationException catch for backward compatibility with IOAuthService
-        // CLAUDE.md prohibits InvalidOperationException, but IOAuthService currently throws it
-        // Future: Update IOAuthService to throw domain-specific exceptions
-#pragma warning disable S1135 // Complete the task associated to this 'TODO' comment
-        catch (InvalidOperationException ex)
-#pragma warning restore S1135
-        {
-            _logger.LogError(ex, "Failed to exchange OAuth code for token. Provider: {Provider}", provider);
-            return (false, "OAuth token exchange failed. Please try again.", null);
         }
 
         // Get user info from provider
@@ -348,20 +370,15 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             _logger.LogError(ex, "HTTP error retrieving user info from OAuth provider. Provider: {Provider}", provider);
             return (false, "Failed to get user information from OAuth provider. Please try again.", null);
         }
+        catch (OAuthUserInfoException ex)
+        {
+            _logger.LogError(ex, "Failed to get user info from OAuth provider. Provider: {Provider}", provider);
+            return (false, "Failed to get user information from OAuth provider. Please try again.", null);
+        }
         catch (TaskCanceledException ex)
         {
             _logger.LogError(ex, "Timeout retrieving user info from OAuth provider. Provider: {Provider}", provider);
             return (false, "OAuth provider timed out. Please try again.", null);
-        }
-        // NOTE: InvalidOperationException catch for backward compatibility with IOAuthService
-        // CLAUDE.md prohibits InvalidOperationException, but IOAuthService currently throws it
-        // Future: Update IOAuthService to throw domain-specific exceptions
-#pragma warning disable S1135 // Complete the task associated to this 'TODO' comment
-        catch (InvalidOperationException ex)
-#pragma warning restore S1135
-        {
-            _logger.LogError(ex, "Failed to get user info from OAuth provider. Provider: {Provider}", provider);
-            return (false, "Failed to get user information from OAuth provider. Please try again.", null);
         }
 
         // Validate user info is not null

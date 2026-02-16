@@ -19,13 +19,16 @@ internal sealed class DashboardStreamEventHandler :
 {
     private readonly IDashboardStreamService _streamService;
     private readonly ILogger<DashboardStreamEventHandler> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public DashboardStreamEventHandler(
         IDashboardStreamService streamService,
-        ILogger<DashboardStreamEventHandler> logger)
+        ILogger<DashboardStreamEventHandler> logger,
+        TimeProvider timeProvider)
     {
         _streamService = streamService ?? throw new ArgumentNullException(nameof(streamService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -94,7 +97,7 @@ internal sealed class DashboardStreamEventHandler :
         {
             ActivityType = "config_updated",
             Title = $"Configuration updated: {notification.Key.Value}",
-            Timestamp = DateTime.UtcNow
+            Timestamp = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         await _streamService.PublishEventAsync(activityEvent, cancellationToken).ConfigureAwait(false);

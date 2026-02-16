@@ -27,8 +27,12 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     private readonly ConcurrentDictionary<string, bool> _enabledState = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, HealthCheckResult> _healthCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private bool _isInitialized;
-    private readonly SemaphoreSlim _initLock = new(1, 1);
+    // Thread-safe lazy initialization pattern (Issue #async-antipattern)
+    // Lazy<Task> ensures InitializeAsync runs once, safely handles concurrent access
+    private Lazy<Task> _initialization;
+
+    // Separate lock for RefreshAsync to support reinitialization
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private bool _disposed;
 
     /// <summary>
@@ -42,14 +46,24 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _options = options?.Value ?? new PluginRegistryOptions();
+
+        // Initialize lazy async task for thread-safe initialization
+        _initialization = new Lazy<Task>(() => InitializeInternalAsync(CancellationToken.None));
     }
 
     #region Discovery
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// WARNING: This sync method blocks on first call. Prefer async methods for production code.
+    /// </remarks>
     public IReadOnlyList<PluginMetadata> GetAllPlugins()
     {
-        EnsureInitialized();
+        // SYNC METHOD: Blocks thread if not yet initialized (first call only)
+        if (!_initialization.IsValueCreated)
+        {
+            _initialization.Value.GetAwaiter().GetResult();
+        }
         return _plugins.Values
             .Select(r => r.Metadata)
             .OrderBy(m => m.Category)
@@ -60,7 +74,11 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     /// <inheritdoc/>
     public IReadOnlyList<PluginMetadata> GetPluginsByCategory(PluginCategory category)
     {
-        EnsureInitialized();
+        // Sync method: blocks if not yet initialized
+        if (!_initialization.IsValueCreated)
+        {
+            _initialization.Value.GetAwaiter().GetResult();
+        }
         return _plugins.Values
             .Where(r => r.Metadata.Category == category)
             .Select(r => r.Metadata)
@@ -72,7 +90,11 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     public PluginMetadata? GetPlugin(string pluginId, string? version = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-        EnsureInitialized();
+        // Sync method: blocks if not yet initialized
+        if (!_initialization.IsValueCreated)
+        {
+            _initialization.Value.GetAwaiter().GetResult();
+        }
 
         var key = CreateKey(pluginId, version);
         if (_plugins.TryGetValue(key, out var registration))
@@ -117,7 +139,11 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     public IRagPlugin LoadPlugin(string pluginId, string? version = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-        EnsureInitialized();
+        // Sync method: blocks if not yet initialized
+        if (!_initialization.IsValueCreated)
+        {
+            _initialization.Value.GetAwaiter().GetResult();
+        }
 
         var registration = GetRegistration(pluginId, version)
             ?? throw new PluginNotFoundException(pluginId, version);
@@ -172,7 +198,7 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     /// <inheritdoc/>
     public async Task<PluginHealthReport> GetHealthReportAsync(CancellationToken cancellationToken = default)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync().ConfigureAwait(false);
 
         var stopwatch = Stopwatch.StartNew();
         var entries = new Dictionary<string, PluginHealthEntry>(StringComparer.OrdinalIgnoreCase);
@@ -247,7 +273,7 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     public async Task<HealthCheckResult> CheckPluginHealthAsync(string pluginId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-        EnsureInitialized();
+        await EnsureInitializedAsync().ConfigureAwait(false);
 
         var registration = GetRegistration(pluginId, null);
         if (registration == null)
@@ -309,10 +335,10 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     #region Management
 
     /// <inheritdoc/>
-    public Task EnablePluginAsync(string pluginId, CancellationToken cancellationToken = default)
+    public async Task EnablePluginAsync(string pluginId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-        EnsureInitialized();
+        await EnsureInitializedAsync().ConfigureAwait(false);
 
         var registration = GetRegistration(pluginId, null)
             ?? throw new PluginNotFoundException(pluginId);
@@ -321,14 +347,13 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
         _enabledState[key] = true;
 
         _logger.LogInformation("Enabled plugin {PluginId}", pluginId);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task DisablePluginAsync(string pluginId, CancellationToken cancellationToken = default)
+    public async Task DisablePluginAsync(string pluginId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-        EnsureInitialized();
+        await EnsureInitializedAsync().ConfigureAwait(false);
 
         var registration = GetRegistration(pluginId, null)
             ?? throw new PluginNotFoundException(pluginId);
@@ -337,24 +362,26 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
         _enabledState[key] = false;
 
         _logger.LogInformation("Disabled plugin {PluginId}", pluginId);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             _plugins.Clear();
             _healthCache.Clear();
-            _isInitialized = false;
 
-            await InitializeAsync(cancellationToken).ConfigureAwait(false);
+            // Recreate Lazy<Task> for new initialization
+            _initialization = new Lazy<Task>(() => InitializeInternalAsync(CancellationToken.None));
+
+            // Trigger initialization immediately
+            await _initialization.Value.ConfigureAwait(false);
         }
         finally
         {
-            _initLock.Release();
+            _refreshLock.Release();
         }
     }
 
@@ -362,25 +389,17 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
 
     #region Private Methods
 
-    private void EnsureInitialized()
-    {
-        if (_isInitialized) return;
+    /// <summary>
+    /// Ensures plugin registry is initialized asynchronously.
+    /// Thread-safe via Lazy pattern - initialization runs once.
+    /// </summary>
+    private Task EnsureInitializedAsync() => _initialization.Value;
 
-        _initLock.Wait();
-        try
-        {
-            if (!_isInitialized)
-            {
-                InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
-            }
-        }
-        finally
-        {
-            _initLock.Release();
-        }
-    }
-
-    private Task InitializeAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Internal initialization logic called once by Lazy pattern.
+    /// Discovers and registers all plugins from configured assemblies.
+    /// </summary>
+    private Task InitializeInternalAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing plugin registry...");
 
@@ -401,7 +420,6 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
             }
         }
 
-        _isInitialized = true;
         _logger.LogInformation("Plugin registry initialized with {PluginCount} plugins", _plugins.Count);
 
         return Task.CompletedTask;
@@ -531,7 +549,7 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _initLock.Dispose();
+        _refreshLock.Dispose();
         _disposed = true;
     }
 

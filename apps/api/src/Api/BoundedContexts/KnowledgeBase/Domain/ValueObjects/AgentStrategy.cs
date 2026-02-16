@@ -147,6 +147,31 @@ public sealed record AgentStrategy
         );
 
     /// <summary>
+    /// Iterative RAG strategy: Multi-round retrieval with query refinement for +14% accuracy.
+    /// Uses retrieval-iterative-v1 plugin with progressive context building.
+    /// Issue #3358: Advanced RAG - Iterative Strategy
+    /// </summary>
+    public static AgentStrategy IterativeRAG(
+        int maxIterations = 3,
+        int topK = 5,
+        int topKPerIteration = 3,
+        double minScore = 0.6,
+        double refinementThreshold = 0.7)
+        => new(
+            name: "IterativeRAG",
+            parameters: new Dictionary<string, object>
+(StringComparer.Ordinal)
+            {
+                ["MaxIterations"] = maxIterations,
+                ["TopK"] = topK,
+                ["TopKPerIteration"] = topKPerIteration,
+                ["MinScore"] = minScore,
+                ["RefinementThreshold"] = refinementThreshold,
+                ["Collection"] = "game-rules"
+            }
+        );
+
+    /// <summary>
     /// Custom strategy for extensibility.
     /// </summary>
     public static AgentStrategy Custom(string name, IDictionary<string, object> parameters)

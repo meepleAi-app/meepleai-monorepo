@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
@@ -66,6 +67,45 @@ internal static class DashboardEndpoints
 
 **Authorization**: Requires active session (cookie-based authentication).")
             .Produces<DashboardInsightsResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .WithOpenApi();
+
+        // Issue #4124: AI insight accuracy metrics
+        group.MapGet("/dashboard/insights/accuracy", HandleGetInsightAccuracy)
+            .RequireSession()
+            .RequireAuthorization()
+            .WithName("GetInsightAccuracy")
+            .WithTags("Dashboard")
+            .WithSummary("Get AI insight accuracy metrics from user feedback")
+            .WithDescription(@"Returns accuracy metrics calculated from user feedback on AI insights.
+Accuracy = (relevant feedback / total feedback) × 100. Target: >75%.
+
+**Breakdown**: Overall accuracy + per insight type breakdown.
+
+**Authorization**: Requires active session (cookie-based authentication).")
+            .Produces<InsightAccuracyResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .WithOpenApi();
+
+        // Issue #4124: AI insight feedback for accuracy tracking
+        group.MapPost("/dashboard/insights/feedback", HandleSubmitInsightFeedback)
+            .RequireSession()
+            .RequireAuthorization()
+            .WithName("SubmitInsightFeedback")
+            .WithTags("Dashboard")
+            .WithSummary("Submit feedback on a dashboard AI insight")
+            .WithDescription(@"Allows users to rate the relevance of AI-generated insights.
+Feedback is used to calculate accuracy metrics (target: >75% relevance).
+
+**Request Body**:
+- `insightId`: The insight ID from the insights response
+- `insightType`: One of Backlog, RulesReminder, Recommendation, Streak, Achievement
+- `isRelevant`: Whether the insight was useful/relevant to the user
+- `comment`: Optional text feedback (max 500 chars)
+
+**Authorization**: Requires active session (cookie-based authentication).")
+            .Produces<InsightFeedbackResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .WithOpenApi();
 
@@ -267,4 +307,53 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
 
         return Results.Json(result);
     }
+
+    private static async Task<IResult> HandleGetInsightAccuracy(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var query = new GetInsightAccuracyQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Json(result);
+    }
+
+    private static async Task<IResult> HandleSubmitInsightFeedback(
+        HttpContext context,
+        IMediator mediator,
+        InsightFeedbackRequestDto request,
+        CancellationToken ct = default)
+    {
+        // Session validated by RequireSession filter
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        var command = new SubmitInsightFeedbackCommand
+        {
+            UserId = session.User!.Id,
+            InsightId = request.InsightId,
+            InsightType = request.InsightType,
+            IsRelevant = request.IsRelevant,
+            Comment = request.Comment
+        };
+
+        var feedbackId = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        return Results.Json(new InsightFeedbackResponseDto(feedbackId));
+    }
 }
+
+/// <summary>
+/// Request DTO for insight feedback submission (Issue #4124).
+/// </summary>
+public record InsightFeedbackRequestDto(
+    string InsightId,
+    string InsightType,
+    bool IsRelevant,
+    string? Comment = null
+);
+
+/// <summary>
+/// Response DTO for insight feedback submission (Issue #4124).
+/// </summary>
+public record InsightFeedbackResponseDto(Guid FeedbackId);

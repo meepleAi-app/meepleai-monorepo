@@ -15,7 +15,8 @@ internal class GetAlertTemplatesQueryHandler : IRequestHandler<GetAlertTemplates
             new("High CPU Usage", "HighCPU", "Warning", 80.0, "%", 15, "Triggers when CPU usage exceeds 80% for 15 minutes", "Infrastructure"),
             new("Low Disk Space", "LowDisk", "Error", 20.0, "%", 30, "Triggers when disk space falls below 20%", "Infrastructure"),
             new("High Memory Usage", "HighMemory", "Warning", 85.0, "%", 10, "Triggers when memory usage exceeds 85% for 10 minutes", "Infrastructure"),
-            new("API Rate Limit Exceeded", "RateLimitExceeded", "Warning", 100.0, "count", 5, "Triggers when API rate limit is exceeded", "Security")
+            new("API Rate Limit Exceeded", "RateLimitExceeded", "Warning", 100.0, "count", 5, "Triggers when API rate limit is exceeded", "Security"),
+            new("Insight Generation Slow", "InsightPerformanceDegraded", "Warning", 1000.0, "ms", 5, "Triggers when AI insight generation exceeds 1000ms P95 threshold", "AI Insights")
         };
         return Task.FromResult(templates);
     }

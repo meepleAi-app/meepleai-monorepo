@@ -70,9 +70,5 @@ public sealed class ArbitroValidationFeedbackConfiguration : IEntityTypeConfigur
 
         builder.HasIndex(f => new { f.Accuracy, f.SubmittedAt })
             .HasDatabaseName("ix_arbitro_validation_feedback_accuracy_submitted_at");
-
-        // Navigation properties (optional, depends on DbContext setup)
-        // builder.HasOne(f => f.GameSession).WithMany().HasForeignKey(f => f.GameSessionId);
-        // builder.HasOne(f => f.User).WithMany().HasForeignKey(f => f.UserId);
     }
 }

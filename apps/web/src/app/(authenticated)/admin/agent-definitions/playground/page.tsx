@@ -268,12 +268,10 @@ export default function AgentPlaygroundPage() {
             <SelectContent>
               {agents.map((agent) => (
                 <SelectItem key={agent.id} value={agent.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{agent.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {agent.config.provider}/{agent.config.model} • {agent.description}
-                    </span>
-                  </div>
+                  {agent.name}
+                  <span className="text-xs text-muted-foreground ml-2">
+                    ({agent.config.provider}/{agent.config.model})
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>

@@ -40,20 +40,22 @@ export interface RequestOptions extends RequestInit {
 /**
  * Get API base URL from environment with fallback
  *
- * In development (browser runtime), returns empty string to use Next.js API proxy (prevents CORS).
- * In test/production, returns absolute URL from NEXT_PUBLIC_API_BASE or localhost.
+ * Browser runtime: Always returns empty string to use Next.js API proxy.
+ * This prevents CORS issues and ensures cookies (SameSite=Lax) are sent correctly.
+ *
+ * Server runtime (SSR/middleware): Returns absolute URL from environment or fallback.
  *
  * @see apps/web/src/app/api/v1/[...path]/route.ts - Next.js API proxy
  * @see Issue #2366 - BGG search CORS fix
  */
 export function getApiBase(): string {
-  // Development (browser only): Use Next.js API proxy (relative paths, no CORS)
+  // Browser: Always use Next.js API proxy (relative paths, no CORS, cookies work)
   // Skip in test environment to maintain test mock compatibility
-  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
     return '';
   }
 
-  // Production/Test: Use absolute URL from environment
+  // Server-side (SSR) / Test: Use absolute URL from environment
   const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
   if (envBase && envBase !== 'undefined' && envBase !== 'null') {
     return envBase;

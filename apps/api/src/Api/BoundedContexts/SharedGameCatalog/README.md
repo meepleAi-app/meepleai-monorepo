@@ -390,6 +390,71 @@ See: `docs/01-architecture/adr/`
 
 ---
 
+## PDF Wizard (Epic #4136)
+
+### Overview
+
+Multi-step import wizard enabling Admin/Editor to create SharedGame entries by uploading board game PDF rulebooks. The wizard extracts metadata using AI, optionally enriches from BGG, and creates the game entry.
+
+### Architecture
+
+```
+PDF Upload → Temp Storage → AI Extraction → BGG Enrichment → SharedGame Created
+   Step 1        Step 1         Step 2          Step 3            Step 4
+```
+
+**Backend Pipeline**: `EnhancedPdfProcessingOrchestrator` (3-stage fallback)
+- **Stage 1** (Unstructured): Primary extractor, quality threshold >= 0.80
+- **Stage 2** (SmolDocling): Fallback, quality threshold >= 0.70
+- **Stage 3** (Docnet): Best-effort fallback (local, fast)
+
+### Wizard Endpoints
+
+**Base**: `POST /api/v1/admin/games/wizard/*` (AdminOrEditorPolicy)
+
+| Step | Endpoint | Command/Query | Response |
+|------|----------|---------------|----------|
+| 1 | `/upload-pdf` | `UploadPdfForGameExtractionCommand` | `TempPdfUploadResult` |
+| 2 | `/extract-metadata` | `ExtractGameMetadataFromPdfQuery` | `GameMetadataDto` |
+| 3 | `/enrich-from-bgg` | `EnrichGameMetadataFromBggCommand` | `EnrichedGameDto` |
+| 4 | `/confirm-import` | `ImportGameFromBggCommand` | `Guid` (201 Created) |
+
+### Key DTOs
+
+**GameMetadataDto** (Step 2 output):
+- Title, Year, MinPlayers, MaxPlayers, PlayingTime, MinAge, Description
+- `ConfidenceScore`: 0.0-1.0 (>= 0.80 high, 0.50-0.79 medium, < 0.50 low)
+
+**EnrichedGameDto** (Step 3 output):
+- All game fields (BGG values preferred when available)
+- `Conflicts`: List of `MetadataConflict` (field mismatches between PDF and BGG)
+- `BggEnrichmentSucceeded`: Whether BGG data was successfully fetched
+- `EnrichmentWarning`: Error message if BGG failed (PDF data preserved)
+
+### Error Handling
+
+- **Upload validation**: PDF only, max 100MB, non-empty
+- **Extraction failure**: Returns empty metadata with `ConfidenceScore = 0.0`
+- **BGG failure**: Graceful fallback, preserves PDF-extracted data
+- **Duplicate detection**: 409 Conflict on BGG ID collision
+
+### Integration with DocumentProcessing BC
+
+The wizard bridges SharedGameCatalog and DocumentProcessing bounded contexts:
+- `IBlobStorageService`: Temporary PDF storage (24h auto-cleanup)
+- `IPdfTextExtractor`: Text extraction via 3-stage pipeline
+- `ILlmService`: AI-powered metadata parsing from extracted text
+
+### Performance
+
+See: `docs/05-testing/performance/pdf-wizard-performance-report.md`
+
+- Stage timing targets: Stage 1 < 5s, Stage 2 < 10s, Stage 3 < 3s
+- Concurrent: Up to 20 simultaneous extractions validated
+- Large files: PDFs >= 50MB use temp file strategy, max 100MB
+
+---
+
 ## Future Enhancements
 
 - **Semantic Search**: "Find similar games" using Qdrant vector similarity
@@ -437,5 +502,5 @@ curl https://boardgamegeek.com/xmlapi2/thing?id=13
 
 ---
 
-**Last Updated**: 2026-01-14
+**Last Updated**: 2026-02-16
 **Maintainer**: MeepleAI Development Team

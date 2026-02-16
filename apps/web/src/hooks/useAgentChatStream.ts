@@ -62,6 +62,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
   const [state, setState] = useState<AgentChatStreamState>(INITIAL_STATE);
   const abortControllerRef = useRef<AbortController | null>(null);
   const callbacksRef = useRef(callbacks);
+  const activeRequestIdRef = useRef<number>(0);
   callbacksRef.current = callbacks;
 
   const stopStreaming = useCallback(() => {
@@ -80,6 +81,10 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
   const sendMessage = useCallback(
     (agentId: string, message: string, chatThreadId?: string) => {
       stopStreaming();
+
+      // Track request ID to ignore stale completions after agent switch
+      const requestId = Date.now();
+      activeRequestIdRef.current = requestId;
 
       setState({
         ...INITIAL_STATE,
@@ -120,6 +125,9 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
             const { done, value } = await reader.read();
             if (done) break;
 
+            // Ignore events from stale requests (agent was switched)
+            if (activeRequestIdRef.current !== requestId) break;
+
             buffer += decoder.decode(value, { stream: true });
 
             // Process complete SSE messages (separated by \n\n)
@@ -133,16 +141,17 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
               const dataMatch = part.match(/data:\s*([\s\S]+)/);
               if (!dataMatch) continue;
 
-              let event: { Type: number; Data: unknown; Timestamp: string };
+              // Backend uses camelCase serialization (SseJsonOptions.cs)
+              let event: { type: number; data: unknown; timestamp: string };
               try {
                 event = JSON.parse(dataMatch[1]);
               } catch {
                 continue;
               }
 
-              switch (event.Type) {
+              switch (event.type) {
                 case StreamingEventType.StateUpdate: {
-                  const data = event.Data as { message?: string; chatThreadId?: string };
+                  const data = event.data as { message?: string; chatThreadId?: string };
                   setState(prev => ({
                     ...prev,
                     statusMessage: data?.message || null,
@@ -152,7 +161,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                 }
 
                 case StreamingEventType.Token: {
-                  const data = event.Data as { token?: string };
+                  const data = event.data as { token?: string };
                   if (data?.token) {
                     setState(prev => ({
                       ...prev,
@@ -164,7 +173,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                 }
 
                 case StreamingEventType.FollowUpQuestions: {
-                  const data = event.Data as { questions?: string[] };
+                  const data = event.data as { questions?: string[] };
                   setState(prev => ({
                     ...prev,
                     followUpQuestions: data?.questions || [],
@@ -173,7 +182,10 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                 }
 
                 case StreamingEventType.Complete: {
-                  const data = event.Data as {
+                  // Ignore stale completions from a previous request
+                  if (activeRequestIdRef.current !== requestId) break;
+
+                  const data = event.data as {
                     totalTokens?: number;
                     chatThreadId?: string;
                     completionTokens?: number;
@@ -203,7 +215,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                 }
 
                 case StreamingEventType.Error: {
-                  const data = event.Data as { errorMessage?: string; errorCode?: string };
+                  const data = event.data as { errorMessage?: string; errorCode?: string };
                   const errorMsg = data?.errorMessage || 'Unknown error';
                   setState(prev => ({
                     ...prev,
@@ -225,12 +237,14 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
           }
 
           // If stream ended without Complete event
-          setState(prev => {
-            if (prev.isStreaming) {
-              return { ...prev, isStreaming: false, statusMessage: null };
-            }
-            return prev;
-          });
+          if (activeRequestIdRef.current === requestId) {
+            setState(prev => {
+              if (prev.isStreaming) {
+                return { ...prev, isStreaming: false, statusMessage: null };
+              }
+              return prev;
+            });
+          }
         })
         .catch(error => {
           if (error.name === 'AbortError') {

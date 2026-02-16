@@ -478,7 +478,7 @@ describe('GameCatalogClient', () => {
       const gameCard = screen.getByTestId('game-card-game-1');
       await user.click(gameCard);
 
-      expect(mockPush).toHaveBeenCalledWith('/board-game-ai/ask?gameId=game-1');
+      expect(mockPush).toHaveBeenCalledWith('/chat/new?gameId=game-1');
     });
 
     it('should render all game cards from response', async () => {

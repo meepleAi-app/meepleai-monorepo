@@ -190,7 +190,7 @@ export function GameCatalogClient({
 
   const handleGameClick = useCallback(
     (gameId: string) => {
-      router.push(`/board-game-ai/ask?gameId=${gameId}`);
+      router.push(`/chat/new?gameId=${gameId}`);
     },
     [router]
   );

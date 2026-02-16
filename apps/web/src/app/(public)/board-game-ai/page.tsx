@@ -63,9 +63,9 @@ export default function BoardGameAI() {
 
   const handleGetStarted = () => {
     if (authUser) {
-      void router.push('/board-game-ai/ask');
+      void router.push('/chat/new');
     } else {
-      void router.push('/login?redirect=/board-game-ai/ask');
+      void router.push('/login?redirect=/chat/new');
     }
   };
 

@@ -116,7 +116,7 @@ export default async function BoardGameAIGamesPage({
 
           <nav className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/board-game-ai/ask">Fai una domanda</Link>
+              <Link href="/chat/new">Fai una domanda</Link>
             </Button>
             <Button variant="default" size="sm" asChild>
               <Link href="/login">Accedi</Link>

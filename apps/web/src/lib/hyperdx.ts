@@ -49,10 +49,16 @@ export function initializeHyperDX(): void {
     return;
   }
 
+  // Skip initialization if API key not configured (prevents module errors)
+  if (!process.env.NEXT_PUBLIC_HYPERDX_API_KEY) {
+    console.log('[HyperDX] Skipped - API key not configured');
+    return;
+  }
+
   try {
     HyperDX.init({
       // Authentication
-      apiKey: process.env.NEXT_PUBLIC_HYPERDX_API_KEY || 'demo',
+      apiKey: process.env.NEXT_PUBLIC_HYPERDX_API_KEY,
       service: 'meepleai-web',
 
       // Trace Propagation (correlate frontend → backend)

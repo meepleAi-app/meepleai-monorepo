@@ -7,7 +7,7 @@
  * - Session data: StaleWhileRevalidate
  */
 
-const CACHE_VERSION = 'meepleai-v1';
+const CACHE_VERSION = 'meepleai-v2';  // Bumped: Fix chrome-extension caching
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -91,8 +91,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip blob: URLs (e.g., PDF preview from File objects)
-  if (request.url.startsWith('blob:')) {
+  // Skip non-HTTP(S) schemes (chrome-extension://, blob:, data:, etc.)
+  if (!request.url.startsWith('http://') && !request.url.startsWith('https://')) {
     return;
   }
 

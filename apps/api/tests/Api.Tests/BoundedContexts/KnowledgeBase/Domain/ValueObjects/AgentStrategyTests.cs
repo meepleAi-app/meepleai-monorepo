@@ -282,4 +282,67 @@ public class AgentStrategyTests
         act.Should().Throw<ArgumentException>()
             .WithMessage("*Strategy name cannot be empty*");
     }
+
+    #region Iterative RAG Strategy Tests (Issue #3358)
+
+    [Fact]
+    public void IterativeRAG_WithDefaultParameters_CreatesStrategy()
+    {
+        // Act
+        var strategy = AgentStrategy.IterativeRAG();
+
+        // Assert
+        strategy.Name.Should().Be("IterativeRAG");
+        strategy.GetParameter<int>("MaxIterations").Should().Be(3);
+        strategy.GetParameter<int>("TopK").Should().Be(5);
+        strategy.GetParameter<int>("TopKPerIteration").Should().Be(3);
+        strategy.GetParameter<double>("MinScore").Should().Be(0.6);
+        strategy.GetParameter<double>("RefinementThreshold").Should().Be(0.7);
+        strategy.GetParameter<string>("Collection").Should().Be("game-rules");
+    }
+
+    [Fact]
+    public void IterativeRAG_WithCustomParameters_CreatesStrategy()
+    {
+        // Act
+        var strategy = AgentStrategy.IterativeRAG(
+            maxIterations: 5,
+            topK: 10,
+            topKPerIteration: 5,
+            minScore: 0.7,
+            refinementThreshold: 0.8);
+
+        // Assert
+        strategy.Name.Should().Be("IterativeRAG");
+        strategy.GetParameter<int>("MaxIterations").Should().Be(5);
+        strategy.GetParameter<int>("TopK").Should().Be(10);
+        strategy.GetParameter<int>("TopKPerIteration").Should().Be(5);
+        strategy.GetParameter<double>("MinScore").Should().Be(0.7);
+        strategy.GetParameter<double>("RefinementThreshold").Should().Be(0.8);
+    }
+
+    [Fact]
+    public void IterativeRAG_AllParameters_ArePresentAndTyped()
+    {
+        // Arrange
+        var strategy = AgentStrategy.IterativeRAG();
+
+        // Act & Assert - verify all expected parameters exist
+        strategy.HasParameter("MaxIterations").Should().BeTrue();
+        strategy.HasParameter("TopK").Should().BeTrue();
+        strategy.HasParameter("TopKPerIteration").Should().BeTrue();
+        strategy.HasParameter("MinScore").Should().BeTrue();
+        strategy.HasParameter("RefinementThreshold").Should().BeTrue();
+        strategy.HasParameter("Collection").Should().BeTrue();
+
+        // Verify types
+        strategy.GetParameter<int>("MaxIterations").Should().BeGreaterThan(0);
+        strategy.GetParameter<int>("TopK").Should().BeGreaterThan(0);
+        strategy.GetParameter<int>("TopKPerIteration").Should().BeGreaterThan(0);
+        strategy.GetParameter<double>("MinScore").Should().BeInRange(0.0, 1.0);
+        strategy.GetParameter<double>("RefinementThreshold").Should().BeInRange(0.0, 1.0);
+        strategy.GetParameter<string>("Collection").Should().NotBeNullOrEmpty();
+    }
+
+    #endregion
 }

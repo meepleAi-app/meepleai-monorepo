@@ -27,6 +27,7 @@ public sealed class PlaygroundChatCommandHandlerTests
     private readonly Mock<IHybridSearchService> _mockHybridSearchService;
     private readonly Mock<ILlmCostCalculator> _mockCostCalculator;
     private readonly Mock<ILlmCostLogRepository> _mockCostLogRepository;
+    private readonly Mock<IRagExecutionRepository> _mockRagExecutionRepository;
     private readonly Mock<ILogger<PlaygroundChatCommandHandler>> _mockLogger;
     private readonly PlaygroundChatCommandHandler _handler;
 
@@ -44,15 +45,15 @@ public sealed class PlaygroundChatCommandHandlerTests
         _mockHybridSearchService = new Mock<IHybridSearchService>();
         _mockCostCalculator = new Mock<ILlmCostCalculator>();
         _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
+        _mockRagExecutionRepository = new Mock<IRagExecutionRepository>();
         _mockLogger = new Mock<ILogger<PlaygroundChatCommandHandler>>();
-        var mockRagExecutionRepository = new Mock<IRagExecutionRepository>();
         _handler = new PlaygroundChatCommandHandler(
             _mockAgentDefinitionRepository.Object,
             _llmProviderFactory,
             _mockHybridSearchService.Object,
             _mockCostCalculator.Object,
             _mockCostLogRepository.Object,
-            mockRagExecutionRepository.Object,
+            _mockRagExecutionRepository.Object,
             _mockLogger.Object
         );
     }

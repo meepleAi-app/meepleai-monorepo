@@ -1,6 +1,9 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
+using Api.Observability;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -41,19 +44,25 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
         CancellationToken cancellationToken)
     {
         var cacheKey = $"dashboard-insights:{query.UserId}";
+        var overallStopwatch = Stopwatch.StartNew();
+        var wasCacheHit = true; // Assume cache hit; set to false in factory
 
-        return await _cache.GetOrCreateAsync<DashboardInsightsResponseDto>(
+        var result = await _cache.GetOrCreateAsync<DashboardInsightsResponseDto>(
             cacheKey,
             async cancel =>
             {
+                wasCacheHit = false;
                 _logger.LogInformation("Cache miss for dashboard insights {UserId}, generating fresh insights", query.UserId);
 
-                // Parallel execution for performance
-                var backlogTask = GetBacklogInsightsAsync(query.UserId, cancel);
-                var rulesTask = GetRulesReminderInsightsAsync(query.UserId, cancel);
-                var recommendationTask = GetRecommendationInsightsAsync(query.UserId, cancel);
-                var streakTask = GetStreakInsightsAsync(query.UserId, cancel);
-                var achievementTask = GetAchievementInsightsAsync(query.UserId, cancel);
+                var generationStopwatch = Stopwatch.StartNew();
+                var analyzerDurations = new ConcurrentDictionary<string, double>(StringComparer.Ordinal);
+
+                // Parallel execution for performance with per-analyzer timing
+                var backlogTask = TimedAnalyzerAsync("backlog", () => GetBacklogInsightsAsync(query.UserId, cancel), analyzerDurations);
+                var rulesTask = TimedAnalyzerAsync("rules", () => GetRulesReminderInsightsAsync(query.UserId, cancel), analyzerDurations);
+                var recommendationTask = TimedAnalyzerAsync("recommendation", () => GetRecommendationInsightsAsync(query.UserId, cancel), analyzerDurations);
+                var streakTask = TimedAnalyzerAsync("streak", () => GetStreakInsightsAsync(query.UserId, cancel), analyzerDurations);
+                var achievementTask = TimedAnalyzerAsync("achievement", () => GetAchievementInsightsAsync(query.UserId, cancel), analyzerDurations);
 
                 await Task.WhenAll(backlogTask, rulesTask, recommendationTask, streakTask, achievementTask)
                     .ConfigureAwait(false);
@@ -71,6 +80,42 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
                     .Take(MaxInsights)
                     .ToList();
 
+                generationStopwatch.Stop();
+
+                // Record per-type insight counts
+                foreach (var group in sortedInsights.GroupBy(i => i.Type))
+                {
+                    MeepleAiMetrics.InsightsGeneratedByType.Add(
+                        group.Count(),
+                        new System.Diagnostics.TagList { { "insight_type", group.Key.ToString().ToLowerInvariant() } });
+                }
+
+                // Record generation metrics (cache miss = actual generation)
+                MeepleAiMetrics.RecordInsightGeneration(
+                    generationStopwatch.Elapsed.TotalMilliseconds,
+                    sortedInsights.Count,
+                    cacheHit: false,
+                    analyzerDurations: analyzerDurations);
+
+                // Performance alert: check if generation exceeded threshold
+                if (generationStopwatch.Elapsed.TotalMilliseconds > MeepleAiMetrics.InsightPerformanceThresholdMs)
+                {
+                    MeepleAiMetrics.InsightPerformanceDegraded.Add(1, new System.Diagnostics.TagList
+                    {
+                        { "duration_ms", generationStopwatch.Elapsed.TotalMilliseconds.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) }
+                    });
+                    _logger.LogWarning(
+                        "Insight generation for user {UserId} exceeded performance threshold: {DurationMs:F1}ms > {ThresholdMs}ms. Slowest analyzers: {SlowAnalyzers}",
+                        query.UserId,
+                        generationStopwatch.Elapsed.TotalMilliseconds,
+                        MeepleAiMetrics.InsightPerformanceThresholdMs,
+                        string.Join(", ", analyzerDurations.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key}={kv.Value:F0}ms")));
+                }
+
+                _logger.LogInformation(
+                    "Generated {InsightCount} insights for user {UserId} in {DurationMs:F1}ms",
+                    sortedInsights.Count, query.UserId, generationStopwatch.Elapsed.TotalMilliseconds);
+
                 var now = _timeProvider.GetUtcNow().UtcDateTime;
                 return new DashboardInsightsResponseDto(
                     Insights: sortedInsights,
@@ -87,6 +132,63 @@ internal sealed class GetDashboardInsightsQueryHandler : IRequestHandler<GetDash
             tags: ["dashboard-insights", $"user:{query.UserId}"],
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
+
+        overallStopwatch.Stop();
+
+        // Record overall request duration (includes cache lookup)
+        if (wasCacheHit)
+        {
+            MeepleAiMetrics.RecordInsightGeneration(
+                overallStopwatch.Elapsed.TotalMilliseconds,
+                result.Insights.Count,
+                cacheHit: true);
+        }
+
+        // Performance alert for ALL requests (cache hit or miss)
+        if (overallStopwatch.Elapsed.TotalMilliseconds > MeepleAiMetrics.InsightPerformanceThresholdMs)
+        {
+            MeepleAiMetrics.InsightPerformanceDegraded.Add(1, new System.Diagnostics.TagList
+            {
+                { "cache_hit", wasCacheHit.ToString().ToLowerInvariant() },
+                { "duration_ms", overallStopwatch.Elapsed.TotalMilliseconds.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) }
+            });
+
+            if (wasCacheHit)
+            {
+                _logger.LogWarning(
+                    "Insight request for user {UserId} exceeded threshold (cache hit): {DurationMs:F1}ms > {ThresholdMs}ms. Check cache/Redis latency.",
+                    query.UserId, overallStopwatch.Elapsed.TotalMilliseconds, MeepleAiMetrics.InsightPerformanceThresholdMs);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Wraps an analyzer call with timing instrumentation.
+    /// Uses ConcurrentDictionary for thread-safe duration tracking across parallel analyzers.
+    /// </summary>
+    private static async Task<IReadOnlyList<DashboardInsightDto>> TimedAnalyzerAsync(
+        string analyzerName,
+        Func<Task<IReadOnlyList<DashboardInsightDto>>> analyzerFunc,
+        ConcurrentDictionary<string, double> durations)
+    {
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            var result = await analyzerFunc().ConfigureAwait(false);
+            sw.Stop();
+            durations[analyzerName] = sw.Elapsed.TotalMilliseconds;
+            return result;
+        }
+        catch (Exception)
+        {
+            sw.Stop();
+            durations[analyzerName] = sw.Elapsed.TotalMilliseconds;
+            MeepleAiMetrics.InsightGenerationErrors.Add(1,
+                new System.Diagnostics.TagList { { "analyzer", analyzerName } });
+            throw;
+        }
     }
 
     /// <summary>

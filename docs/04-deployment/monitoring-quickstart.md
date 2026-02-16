@@ -43,11 +43,17 @@ cd infra
 # Start all monitoring services
 docker compose up -d grafana prometheus node-exporter postgres-exporter redis-exporter
 
+# Start log aggregation (Loki + Fluent Bit) - Issue #3367
+docker compose -f docker-compose.logging.yml up -d
+
 # Verify all running
-docker ps | grep -E 'grafana|prometheus|exporter'
+docker ps | grep -E 'grafana|prometheus|loki|fluent|exporter'
 
 # Check Prometheus targets
 curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job, health}'
+
+# Check Loki ready
+curl http://localhost:3100/ready
 ```
 
 ### Access Grafana
@@ -63,13 +69,23 @@ ssh -L 3000:localhost:3000 user@95.217.163.246
 
 ## 3. Essential Configuration
 
-### Add Prometheus Data Source
+### Add Data Sources
+
+**Prometheus** (Metrics):
 1. Grafana → Configuration (⚙️) → Data Sources → Add data source
 2. Select **Prometheus**
 3. Configure:
    - **URL**: `http://prometheus:9090`
    - **Access**: Server (default)
    - **Scrape interval**: 15s
+4. Save & Test → ✅ "Data source is working"
+
+**Loki** (Logs - Issue #3367):
+1. Grafana → Configuration (⚙️) → Data Sources → Add data source
+2. Select **Loki**
+3. Configure:
+   - **URL**: `http://loki:3100`
+   - **Access**: Server (default)
 4. Save & Test → ✅ "Data source is working"
 
 ### Import Pre-Built Dashboards

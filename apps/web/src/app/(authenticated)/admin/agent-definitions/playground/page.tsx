@@ -41,6 +41,37 @@ const STRATEGY_OPTIONS: { value: PlaygroundStrategy; label: string; description:
   },
 ];
 
+// Available models per provider
+const PROVIDER_MODELS: Record<string, { value: string; label: string; description?: string }[]> = {
+  OpenRouter: [
+    { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet', description: 'Best quality' },
+    { value: 'anthropic/claude-3-opus', label: 'Claude 3 Opus', description: 'Most capable' },
+    { value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku', description: 'Fastest' },
+    { value: 'openai/gpt-4o', label: 'GPT-4o', description: 'Latest OpenAI' },
+    { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast & cheap' },
+    { value: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B', description: 'Paid tier' },
+    { value: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B Free', description: 'Rate limited' },
+    { value: 'google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash Free' },
+    { value: 'deepseek/deepseek-chat', label: 'DeepSeek Chat', description: 'Good value' },
+  ],
+  Ollama: [
+    { value: 'llama3.1:8b', label: 'Llama 3.1 8B', description: '4.9GB' },
+    { value: 'llama3.1:70b', label: 'Llama 3.1 70B', description: '40GB' },
+    { value: 'llama3:8b', label: 'Llama 3 8B', description: '4.7GB' },
+    { value: 'llama3:70b', label: 'Llama 3 70B', description: '39GB' },
+    { value: 'mistral:7b', label: 'Mistral 7B', description: '4.1GB' },
+    { value: 'mixtral:8x7b', label: 'Mixtral 8x7B', description: '26GB' },
+    { value: 'qwen2.5:7b', label: 'Qwen 2.5 7B', description: '4.7GB' },
+    { value: 'phi3:mini', label: 'Phi-3 Mini', description: '2.3GB' },
+    { value: 'gemma2:9b', label: 'Gemma 2 9B', description: '5.4GB' },
+  ],
+  Anthropic: [
+    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
+  ],
+};
+
 export default function AgentPlaygroundPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -215,7 +246,14 @@ export default function AgentPlaygroundPage() {
       {/* Agent & Game Selectors */}
       <div className="flex gap-4 items-end">
         <div className="flex-1">
-          <label className="text-sm font-medium mb-2 block">Select Agent</label>
+          <label className="text-sm font-medium mb-2 block">
+            Select Agent
+            {selectedAgentId && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                ({agents.find(a => a.id === selectedAgentId)?.description || 'Selected'})
+              </span>
+            )}
+          </label>
           <Select value={selectedAgentId} onValueChange={(value) => {
             setSelectedAgentId(value);
             setCurrentAgent(value);
@@ -226,7 +264,12 @@ export default function AgentPlaygroundPage() {
             <SelectContent>
               {agents.map((agent) => (
                 <SelectItem key={agent.id} value={agent.id}>
-                  {agent.name} ({agent.config.model})
+                  <div className="flex flex-col">
+                    <span className="font-medium">{agent.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {agent.config.provider}/{agent.config.model} • {agent.description}
+                    </span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -234,7 +277,14 @@ export default function AgentPlaygroundPage() {
         </div>
 
         <div className="flex-1">
-          <label className="text-sm font-medium mb-2 block">Game Context (RAG)</label>
+          <label className="text-sm font-medium mb-2 block">
+            Game Context (RAG)
+            {currentGameId && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                Active: {games.find(g => g.id === currentGameId)?.title}
+              </span>
+            )}
+          </label>
           <Select
             value={currentGameId ?? '__none__'}
             onValueChange={(value) => setCurrentGameId(value === '__none__' ? null : value)}
@@ -243,10 +293,18 @@ export default function AgentPlaygroundPage() {
               <SelectValue placeholder="No game (pure LLM)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">No game (pure LLM)</SelectItem>
+              <SelectItem value="__none__">
+                <span className="font-medium">No game</span>
+                <span className="text-xs text-muted-foreground ml-2">(pure LLM, no RAG)</span>
+              </SelectItem>
               {games.map((game) => (
                 <SelectItem key={game.id} value={game.id}>
-                  {game.title}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{game.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {game.yearPublished} • {game.minPlayers}-{game.maxPlayers} players
+                    </span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -290,21 +348,22 @@ export default function AgentPlaygroundPage() {
         {showAdvanced && (
           <div className="mt-3 space-y-3 pl-6 border-l-2 border-muted">
             <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <Label htmlFor="model-override" className="text-sm">Model Override</Label>
-                <Input
-                  id="model-override"
-                  placeholder="e.g. gpt-4o, claude-3-opus, mistral-large..."
-                  value={modelOverride ?? ''}
-                  onChange={(e) => setModelOverride(e.target.value || null)}
-                  className="mt-1 text-sm font-mono"
-                />
-              </div>
               <div className="w-48">
                 <Label htmlFor="provider-override" className="text-sm">Provider</Label>
                 <Select
                   value={providerOverride ?? '__none__'}
-                  onValueChange={(value) => setProviderOverride(value === '__none__' ? null : value)}
+                  onValueChange={(value) => {
+                    const newProvider = value === '__none__' ? null : value;
+                    setProviderOverride(newProvider);
+                    // Clear model override when provider changes
+                    if (newProvider && modelOverride) {
+                      const providerModels = PROVIDER_MODELS[newProvider] || [];
+                      const isValidModel = providerModels.some(m => m.value === modelOverride);
+                      if (!isValidModel) {
+                        setModelOverride(null);
+                      }
+                    }
+                  }}
                 >
                   <SelectTrigger id="provider-override" className="mt-1">
                     <SelectValue placeholder="Agent default" />
@@ -313,6 +372,28 @@ export default function AgentPlaygroundPage() {
                     <SelectItem value="__none__">Agent default</SelectItem>
                     <SelectItem value="OpenRouter">OpenRouter</SelectItem>
                     <SelectItem value="Ollama">Ollama</SelectItem>
+                    <SelectItem value="Anthropic">Anthropic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="model-override" className="text-sm">Model Override</Label>
+                <Select
+                  value={modelOverride ?? '__none__'}
+                  onValueChange={(value) => setModelOverride(value === '__none__' ? null : value)}
+                  disabled={!providerOverride}
+                >
+                  <SelectTrigger id="model-override" className="mt-1">
+                    <SelectValue placeholder={providerOverride ? "Select model..." : "Select provider first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Agent default model</SelectItem>
+                    {providerOverride && PROVIDER_MODELS[providerOverride]?.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                        {model.description && ` - ${model.description}`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

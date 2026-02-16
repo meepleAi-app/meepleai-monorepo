@@ -14,6 +14,7 @@ import { EnterpriseSectionPage } from '@/components/admin/enterprise/EnterpriseS
 import { ENTERPRISE_SECTIONS } from '@/config/enterprise-navigation';
 
 import { ChatAnalyticsTab } from './components/ChatAnalyticsTab';
+import { ModelPerformanceTab } from './components/ModelPerformanceTab';
 import { PdfAnalyticsTab } from './components/PdfAnalyticsTab';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -25,6 +26,7 @@ export default function AiPlatformPage() {
       section={section}
       tabContent={{
         'chat-analytics': <ChatAnalyticsTab />,
+        models: <ModelPerformanceTab />,
         'pdf-analytics': <PdfAnalyticsTab />,
       }}
     />

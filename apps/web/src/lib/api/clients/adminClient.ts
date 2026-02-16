@@ -111,6 +111,8 @@ import {
   type PdfAnalyticsDto,
   ChatAnalyticsDtoSchema,
   type ChatAnalyticsDto,
+  ModelPerformanceDtoSchema,
+  type ModelPerformanceDto,
 } from '../schemas';
 import {
   AgentCostEstimationResultSchema,
@@ -1842,6 +1844,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return httpClient.get(
         `/api/v1/admin/chat-analytics?days=${days}`,
         ChatAnalyticsDtoSchema
+      );
+    },
+
+    /**
+     * Get model performance analytics
+     * GET /api/v1/admin/model-performance?days={days}
+     *
+     * Issue #3716: Per-model latency, cost, usage metrics
+     */
+    async getModelPerformance(days: number = 30): Promise<ModelPerformanceDto | null> {
+      return httpClient.get(
+        `/api/v1/admin/model-performance?days=${days}`,
+        ModelPerformanceDtoSchema
       );
     },
   };

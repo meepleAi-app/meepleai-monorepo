@@ -24,7 +24,7 @@ public class UnifiedAgentGatewayTests
     public void RouteQuery_ClearIntentQueries_RoutesToCorrectAgent(string query, string expectedAgent)
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         var decision = router.RouteQuery(query);
 
@@ -35,7 +35,7 @@ public class UnifiedAgentGatewayTests
     public void RouteQuery_EmptyQuery_ThrowsArgumentException()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         Assert.Throws<ArgumentException>(() => router.RouteQuery(""));
     }
@@ -44,7 +44,7 @@ public class UnifiedAgentGatewayTests
     public void RouteQuery_WhitespaceQuery_ThrowsArgumentException()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         Assert.Throws<ArgumentException>(() => router.RouteQuery("   "));
     }
@@ -53,7 +53,7 @@ public class UnifiedAgentGatewayTests
     public void RouteQuery_ReturnsRoutingDecisionWithAllFields()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         var decision = router.RouteQuery("validate move e2 to e4");
 
@@ -66,7 +66,7 @@ public class UnifiedAgentGatewayTests
     public void RouteQuery_HighConfidenceQuery_ShouldRouteIsTrue()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         var decision = router.RouteQuery("validate move");
 
@@ -78,7 +78,7 @@ public class UnifiedAgentGatewayTests
     public void RouteQuery_AmbiguousQuery_ReturnsFallbackAgents()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         var decision = router.RouteQuery("hello world");
 
@@ -127,7 +127,7 @@ public class UnifiedAgentGatewayTests
     public void IntentClassifier_AllIntentTypes_AreMapped()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         // Verify all non-Unknown intents map to a specific agent
         var testQueries = new Dictionary<string, string>
@@ -149,7 +149,7 @@ public class UnifiedAgentGatewayTests
     public void IntentClassifier_UnknownIntent_DefaultsToTutorAgent()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         var decision = router.RouteQuery("what time is it?");
 
@@ -210,7 +210,7 @@ public class UnifiedAgentGatewayTests
     {
         var expectedIntent = Enum.Parse<AgentIntent>(expectedIntentName);
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         var decision = router.RouteQuery(query);
 
@@ -221,7 +221,7 @@ public class UnifiedAgentGatewayTests
     public void EndToEnd_RoutingDecision_IncludesConfirmationFlag()
     {
         var classifier = new IntentClassifier();
-        var router = new AgentRouterService(classifier, new Mock<ILogger<AgentRouterService>>().Object);
+        var router = new AgentRouterService(classifier, new RoutingMetricsCollector(Mock.Of<ILogger<RoutingMetricsCollector>>()), Mock.Of<ILogger<AgentRouterService>>());
 
         var highConfidence = router.RouteQuery("validate move e2 to e4");
         var ambiguous = router.RouteQuery("something about games");

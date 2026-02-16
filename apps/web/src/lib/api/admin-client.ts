@@ -57,10 +57,13 @@ export interface UserLibraryStats {
 
 export interface UserBadge {
   id: string;
+  code: string;
   name: string;
   description: string;
-  icon: string;
+  iconUrl: string | null;
+  tier: string;
   earnedAt: string;
+  isDisplayed: boolean;
 }
 
 /** Empty paged result for fallback on auth failure */

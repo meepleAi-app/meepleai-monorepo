@@ -43,9 +43,10 @@ export interface User {
   level: number;
   experiencePoints: number;
   createdAt: string;
+  lastSeenAt: string | null;
   isActive: boolean;
-  isTwoFactorEnabled: boolean;
-  emailVerified: boolean;
+  isSuspended: boolean;
+  suspendReason: string | null;
 }
 
 export interface UserLibraryStats {

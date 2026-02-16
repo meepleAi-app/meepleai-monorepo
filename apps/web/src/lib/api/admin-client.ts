@@ -41,9 +41,10 @@ export interface User {
   level: number;
   experiencePoints: number;
   createdAt: string;
+  lastSeenAt: string | null;
   isActive: boolean;
-  isTwoFactorEnabled: boolean;
-  emailVerified: boolean;
+  isSuspended: boolean;
+  suspendReason: string | null;
 }
 
 export interface UserLibraryStats {
@@ -65,6 +66,39 @@ export interface UserBadge {
 /** Empty paged result for fallback on auth failure */
 function emptyPagedResult<T>(): PagedResult<T> {
   return { items: [], totalCount: 0, page: 1, pageSize: 0, totalPages: 0 };
+}
+
+/** Raw DTO shape from backend (uses isSuspended, not isActive) */
+interface RawUserDto {
+  id: string;
+  displayName: string;
+  email: string;
+  role: string;
+  tier: string;
+  level: number;
+  experiencePoints: number;
+  createdAt: string;
+  lastSeenAt: string | null;
+  isSuspended: boolean;
+  suspendReason: string | null;
+}
+
+/** Map backend UserDto to frontend User (derive isActive from isSuspended) */
+function mapRawUserToUser(raw: RawUserDto): User {
+  return {
+    id: raw.id,
+    displayName: raw.displayName ?? raw.email,
+    email: raw.email,
+    role: (raw.role?.toLowerCase() ?? 'user') as 'user' | 'admin',
+    tier: (raw.tier?.toLowerCase() ?? 'free') as 'free' | 'normal' | 'premium',
+    level: raw.level ?? 1,
+    experiencePoints: raw.experiencePoints ?? 0,
+    createdAt: raw.createdAt,
+    lastSeenAt: raw.lastSeenAt ?? null,
+    isActive: !raw.isSuspended,
+    isSuspended: raw.isSuspended ?? false,
+    suspendReason: raw.suspendReason ?? null,
+  };
 }
 
 export const adminClient = {
@@ -129,6 +163,7 @@ export const adminClient = {
     pageSize?: number;
     role?: string;
     tier?: string;
+    status?: string;
     search?: string;
   }): Promise<PagedResult<User>> {
     const query = new URLSearchParams();
@@ -136,18 +171,23 @@ export const adminClient = {
     if (params?.pageSize) query.set('pageSize', params.pageSize.toString());
     if (params?.role) query.set('role', params.role);
     if (params?.tier) query.set('tier', params.tier);
+    if (params?.status) query.set('status', params.status);
     if (params?.search) query.set('search', params.search);
 
-    const result = await apiClient.get<PagedResult<User>>(
+    const result = await apiClient.get<PagedResult<RawUserDto>>(
       `/api/v1/admin/users?${query.toString()}`
     );
-    return result ?? emptyPagedResult<User>();
+    if (!result) return emptyPagedResult<User>();
+    return {
+      ...result,
+      items: result.items.map(mapRawUserToUser),
+    };
   },
 
   async getUserDetail(userId: string): Promise<User> {
-    const result = await apiClient.get<User>(`/api/v1/admin/users/${userId}`);
+    const result = await apiClient.get<RawUserDto>(`/api/v1/admin/users/${userId}`);
     if (!result) throw new NotFoundError({ message: `User ${userId} not found` });
-    return result;
+    return mapRawUserToUser(result);
   },
 
   async getUserLibraryStats(userId: string): Promise<UserLibraryStats> {

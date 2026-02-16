@@ -10,7 +10,7 @@ import { adminClient } from '@/lib/api/admin-client';
 export default function CollectionOverviewPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-stats', 'overview'],
-    queryFn: () => adminClient.getStats({ days: 30 }),
+    queryFn: () => adminClient.getStats(),
     staleTime: 5 * 60 * 1000,
   });
 

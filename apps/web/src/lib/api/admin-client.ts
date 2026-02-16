@@ -66,14 +66,10 @@ function emptyPagedResult<T>(): PagedResult<T> {
 }
 
 export const adminClient = {
-  // Stats - adapted to use real backend DashboardStatsDto
-  async getStats(params?: { days?: number }): Promise<AdminStats> {
-    const query = new URLSearchParams();
-    if (params?.days) query.set('days', params.days.toString());
-
-    // Backend returns DashboardStatsDto, we extract metrics
-    const response = await apiClient.get<{ metrics: Record<string, number> }>(
-      `/api/v1/admin/dashboard/stats?${query.toString()}`
+  // Stats - Issue #4198: Uses dedicated overview-stats endpoint
+  async getStats(): Promise<AdminStats> {
+    const response = await apiClient.get<AdminStats>(
+      '/api/v1/admin/overview-stats'
     );
 
     // GET returns null on 401 - return zeroed stats
@@ -85,17 +81,16 @@ export const adminClient = {
       };
     }
 
-    // Map backend DashboardMetrics to frontend AdminStats
     return {
-      totalGames: response.metrics?.totalGames ?? 0,
-      publishedGames: 0, // TODO: Calculate from SharedGameCatalog
-      pendingGames: 0,   // TODO: Get from approval queue count
-      totalUsers: response.metrics?.totalUsers ?? 0,
-      activeUsers: response.metrics?.totalUsers ?? 0, // Approximate with total
-      newUsers: 0, // TODO: Calculate from userTrend
-      approvalRate: 90, // TODO: Calculate from approval stats
-      pendingApprovals: 0, // TODO: Get from approval queue
-      recentSubmissions: 0, // TODO: Calculate from trends
+      totalGames: response.totalGames ?? 0,
+      publishedGames: response.publishedGames ?? 0,
+      pendingGames: 0,
+      totalUsers: response.totalUsers ?? 0,
+      activeUsers: response.activeUsers ?? 0,
+      newUsers: 0,
+      approvalRate: response.approvalRate ?? 0,
+      pendingApprovals: response.pendingApprovals ?? 0,
+      recentSubmissions: response.recentSubmissions ?? 0,
     };
   },
 

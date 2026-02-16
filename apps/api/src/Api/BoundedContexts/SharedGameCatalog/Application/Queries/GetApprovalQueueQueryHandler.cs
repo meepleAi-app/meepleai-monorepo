@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -49,16 +50,22 @@ internal sealed class GetApprovalQueueQueryHandler : IRequestHandler<GetApproval
             dbQuery = dbQuery.Where(g => g.CreatedBy == query.Submitter.Value);
         }
 
-        // Get all matching games with their document counts
+        // Get all matching games with their document counts, joining users for display info
         var games = await dbQuery
-            .Select(g => new
-            {
-                g.Id,
-                g.Title,
-                g.CreatedBy,
-                g.CreatedAt,
-                DocumentCount = g.Documents.Count()
-            })
+            .Join(
+                _context.Users,
+                g => g.CreatedBy,
+                u => u.Id,
+                (g, u) => new
+                {
+                    g.Id,
+                    g.Title,
+                    g.CreatedBy,
+                    g.CreatedAt,
+                    UserDisplayName = u.DisplayName ?? u.Email,
+                    UserEmail = u.Email,
+                    DocumentCount = g.Documents.Count()
+                })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -88,6 +95,8 @@ internal sealed class GetApprovalQueueQueryHandler : IRequestHandler<GetApproval
                 GameId: g.Id,
                 Title: g.Title,
                 SubmittedBy: g.CreatedBy,
+                SubmittedByName: g.UserDisplayName,
+                SubmittedByEmail: g.UserEmail,
                 SubmittedAt: g.CreatedAt,
                 DaysPending: (now - g.CreatedAt).Days,
                 PdfCount: g.DocumentCount))

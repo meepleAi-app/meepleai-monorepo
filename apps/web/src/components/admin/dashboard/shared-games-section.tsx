@@ -17,6 +17,8 @@ interface _ApprovalQueueItem {
   gameId: string;
   title: string;
   submittedBy: string;
+  submittedByName: string;
+  submittedByEmail: string;
   submittedAt: string;
   daysPending: number;
   pdfCount: number;
@@ -211,7 +213,7 @@ export function SharedGamesSection() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-nunito text-sm text-slate-600">
-                        {item.submittedBy}
+                        {item.submittedByName}
                       </div>
                       <div className="font-nunito text-xs text-slate-400">
                         {new Date(item.submittedAt).toLocaleDateString()}

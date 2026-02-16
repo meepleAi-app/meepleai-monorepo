@@ -27,6 +27,8 @@ export interface ApprovalQueueItem {
   gameId: string;
   title: string;
   submittedBy: string;
+  submittedByName: string;
+  submittedByEmail: string;
   submittedAt: string;
   daysPending: number;
   pdfCount: number;

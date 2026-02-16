@@ -286,7 +286,7 @@ export function SharedGamesBlock() {
                 entity="game"
                 variant={viewMode === 'grid' ? 'grid' : 'list'}
                 title={item.title}
-                subtitle={`Submitted by ${item.submittedBy}`}
+                subtitle={`Submitted by ${item.submittedByName}`}
                 metadata={[
                   { label: `${item.daysPending} days pending` },
                   { label: `${item.pdfCount} PDFs` },

@@ -20,7 +20,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
-import type { ActivityEventType } from '@/components/dashboard/ActivityFeed';
+import type { ActivityEventType } from './useActivityTimeline';
 
 // ============================================================================
 // Types

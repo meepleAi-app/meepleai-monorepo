@@ -16,11 +16,17 @@
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import type { ActivityEventType } from '@/components/dashboard/ActivityFeed';
+// ============================================================================
+// Types (ActivityEventType was from old ActivityFeed - now inline)
+// ============================================================================
 
-// ============================================================================
-// Types
-// ============================================================================
+export type ActivityEventType =
+  | 'game_added'
+  | 'session_completed'
+  | 'chat_saved'
+  | 'wishlist_added'
+  | 'pdf_uploaded'
+  | 'achievement_unlocked';
 
 export interface ActivityTimelineRequest {
   types: ActivityEventType[];

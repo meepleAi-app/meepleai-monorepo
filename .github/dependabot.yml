@@ -3,6 +3,7 @@ updates:
   # .NET dependencies (weekly updates, security updates prioritized automatically)
   - package-ecosystem: "nuget"
     directory: "/apps/api"
+    target-branch: "main-dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -35,6 +36,7 @@ updates:
   # Frontend dependencies (weekly updates, security updates prioritized automatically)
   - package-ecosystem: "npm"
     directory: "/apps/web"
+    target-branch: "main-dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -69,6 +71,7 @@ updates:
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "main-dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -87,6 +90,7 @@ updates:
   # Docker dependencies
   - package-ecosystem: "docker"
     directory: "/infra"
+    target-branch: "main-dev"
     schedule:
       interval: "weekly"
       day: "monday"

@@ -188,7 +188,7 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
           'md:hidden',
 
           // Height with safe area
-          'h-[72px]',
+          'h-[56px]',
           'pb-[env(safe-area-inset-bottom)]',
 
           // Glass morphism effect (matches existing design)
@@ -212,8 +212,9 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
             'px-2 sm:px-4'
           )}
         >
-          {/* Navigation Items */}
-          {visibleNavItems.map((item, index) => (
+          {/* Navigation Items — split around central FAB */}
+          {/* Items before FAB (e.g., Home, Libreria) */}
+          {visibleNavItems.slice(0, 2).map((item, index) => (
             <UnifiedActionBarItem
               key={item.id}
               item={item}
@@ -223,8 +224,8 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
             />
           ))}
 
-          {/* Integrated FAB - Primary Action Button */}
-          {fabConfig && (
+          {/* Central FAB — Chat/AI action */}
+          {fabConfig ? (
             <div className="relative">
               {/* Quick Menu (shown on long press) */}
               {isQuickMenuOpen && (
@@ -269,8 +270,7 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
                 type="button"
                 className={cn(
                   'flex flex-col items-center justify-center gap-0.5',
-                  'min-w-[52px] min-h-[52px]',
-                  'px-3 py-2',
+                  'w-12 h-12 -mt-3',
                   'rounded-full',
                   'bg-primary text-primary-foreground',
                   'shadow-lg hover:shadow-xl',
@@ -301,16 +301,38 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
                 />
               </button>
             </div>
+          ) : (
+            /* Fallback central FAB linking to /chat */
+            <Link
+              href="/chat"
+              className={cn(
+                'flex items-center justify-center',
+                'w-12 h-12 -mt-3',
+                'rounded-full',
+                'bg-primary text-primary-foreground',
+                'shadow-lg hover:shadow-xl',
+                'transition-all duration-200',
+                'hover:scale-105 active:scale-95',
+                'focus-visible:outline-none focus-visible:ring-2',
+                'focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2'
+              )}
+              aria-label="Open chat"
+              data-testid="actionbar-fab"
+            >
+              <MessageSquare className="h-5 w-5" aria-hidden="true" />
+            </Link>
           )}
 
-          {/* Overflow Menu */}
-          {hasOverflow && (
-            <UnifiedOverflowMenu
-              items={overflowItems}
-              onItemClick={handleItemClick}
-              animationDelay={(navItemCount + 1) * staggerDelay}
+          {/* Items after FAB (e.g., Catalogo) */}
+          {visibleNavItems.slice(2).map((item, index) => (
+            <UnifiedActionBarItem
+              key={item.id}
+              item={item}
+              onClick={() => handleItemClick(item)}
+              animationDelay={(index + 3) * staggerDelay}
+              variant="icon-label"
             />
-          )}
+          ))}
         </div>
       </nav>
     );
@@ -334,7 +356,7 @@ export function UnifiedActionBarSpacer({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'h-[72px]',
+        'h-[56px]',
         'pb-[env(safe-area-inset-bottom)]',
         className
       )}

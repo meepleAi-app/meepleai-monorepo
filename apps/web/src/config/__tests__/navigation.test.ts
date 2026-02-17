@@ -59,6 +59,18 @@ describe('UNIFIED_NAV_ITEMS', () => {
     const dashboard = UNIFIED_NAV_ITEMS.find(item => item.id === 'dashboard');
     expect(dashboard?.visibility?.authOnly).toBe(true);
   });
+
+  it('profile has hideFromMainNav flag', () => {
+    const profile = UNIFIED_NAV_ITEMS.find(item => item.id === 'profile');
+    expect(profile?.hideFromMainNav).toBe(true);
+  });
+
+  it('agents and sessions have group strumenti', () => {
+    const agents = UNIFIED_NAV_ITEMS.find(item => item.id === 'agents');
+    const sessions = UNIFIED_NAV_ITEMS.find(item => item.id === 'sessions');
+    expect(agents?.group).toBe('strumenti');
+    expect(sessions?.group).toBe('strumenti');
+  });
 });
 
 describe('filterNavItemsByRole', () => {
@@ -210,13 +222,18 @@ describe('isUnifiedNavItemActive', () => {
 });
 
 describe('Legacy NAV_ITEMS', () => {
-  it('is derived from UNIFIED_NAV_ITEMS', () => {
-    expect(NAV_ITEMS.length).toBeGreaterThan(0);
-    // Should contain dashboard (as "home"), library, chat, catalog, profile
+  it('contains exactly 3 items for ActionBar', () => {
+    expect(NAV_ITEMS).toHaveLength(3);
     const ids = NAV_ITEMS.map(item => item.id);
     expect(ids).toContain('home'); // dashboard mapped to "home"
     expect(ids).toContain('library');
     expect(ids).toContain('catalog');
+  });
+
+  it('does not contain chat or profile', () => {
+    const ids = NAV_ITEMS.map(item => item.id);
+    expect(ids).not.toContain('chat');
+    expect(ids).not.toContain('profile');
   });
 
   it('uses string icons', () => {
@@ -227,12 +244,12 @@ describe('Legacy NAV_ITEMS', () => {
 });
 
 describe('getNavItemsForBreakpoint', () => {
-  it('returns 4 items for mobile', () => {
+  it('returns max 3 items for mobile', () => {
     const items = getNavItemsForBreakpoint('mobile');
-    expect(items.length).toBeLessThanOrEqual(4);
+    expect(items.length).toBeLessThanOrEqual(3);
   });
 
-  it('returns 5 items for tablet', () => {
+  it('returns max 5 items for tablet', () => {
     const items = getNavItemsForBreakpoint('tablet');
     expect(items.length).toBeLessThanOrEqual(5);
   });

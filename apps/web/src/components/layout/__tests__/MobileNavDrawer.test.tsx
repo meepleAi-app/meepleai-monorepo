@@ -274,6 +274,41 @@ describe('MobileNavDrawer', () => {
     });
   });
 
+  describe('Strumenti Group', () => {
+    it('renders Strumenti group label and items', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      await user.click(screen.getByTestId('mobile-nav-trigger'));
+
+      expect(screen.getByText('Strumenti')).toBeInTheDocument();
+      expect(screen.getByText('Agenti')).toBeInTheDocument();
+      expect(screen.getByText('Sessioni')).toBeInTheDocument();
+    });
+
+    it('renders a separator before Strumenti group', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      await user.click(screen.getByTestId('mobile-nav-trigger'));
+
+      // The separator is inside the Sheet portal — use screen query
+      const drawer = screen.getByTestId('mobile-nav-drawer');
+      const hr = drawer.querySelector('hr');
+      expect(hr).toBeInTheDocument();
+    });
+
+    it('does not render Profile in main nav (hidden by hideFromMainNav)', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      await user.click(screen.getByTestId('mobile-nav-trigger'));
+
+      // Profile should NOT appear in the navigation
+      expect(screen.queryByText('Profilo')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Responsive Behavior', () => {
     it('has md:hidden class on trigger', () => {
       renderDrawer();

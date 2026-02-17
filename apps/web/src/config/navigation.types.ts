@@ -64,4 +64,8 @@ export interface UnifiedNavItem {
   visibility?: NavItemVisibility;
   /** Sub-items (e.g., Library children: Collezione, Giochi Privati, Proposte) */
   children?: UnifiedNavSubItem[];
+  /** Navigation group for sidebar organization (e.g., 'strumenti') */
+  group?: string;
+  /** Hide from main nav lists (item accessible elsewhere, e.g. user dropdown) */
+  hideFromMainNav?: boolean;
 }

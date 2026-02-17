@@ -1,166 +1,336 @@
-# MeepleAI Frontend Documentation
+# Frontend Documentation
 
-> Design system, layout specifications, and component architecture for MeepleAI web application.
-
----
-
-## Quick Links
-
-| Document | Description |
-|----------|-------------|
-| [Layout Spec](./layout-spec.md) | Complete layout specification v1.0 |
-| [Layout Wireframes](./layout-wireframes.md) | ASCII wireframes for all viewports |
-| [Layout Components](./layout-components.md) | React component breakdown |
-| [Mobile Mock](./mocks/layout-mobile-mock.html) | Interactive mobile HTML mock |
-| [Desktop Mock](./mocks/layout-desktop-mock.html) | Interactive desktop HTML mock |
+**Next.js 14 App Router + React 18**
 
 ---
 
-## Layout System Overview
+## Quick Start
 
-### Structure
+**Prerequisites**:
+- Node.js 20+
+- pnpm 8+
 
-```
-┌─────────────────────────────────┐
-│           Navbar                │  ← Navigation + Search + Profile
-├─────────────────────────────────┤
-│                                 │
-│         Main Content            │  ← Page-specific content
-│                                 │
-│                          [FAB]  │  ← Smart FAB (mobile only)
-│   [Breadcrumb]                  │  ← Context indicator
-├─────────────────────────────────┤
-│         ActionBar               │  ← Context-aware actions
-└─────────────────────────────────┘
+**Setup**:
+```bash
+cd apps/web
+pnpm install
+cp .env.development.example .env.local
+pnpm dev  # http://localhost:3000
 ```
 
-### Key Features
+---
 
-| Feature | Mobile | Desktop |
-|---------|--------|---------|
-| **Navbar** | Hamburger + Logo + Icons | Full nav + Search input |
-| **FAB** | Smart contextual FAB | None (hidden) |
-| **ActionBar** | 3 actions + overflow | 5-6 actions, sticky bottom |
-| **Breadcrumb** | Below FAB | Above ActionBar |
+## Architecture
 
-### Smart FAB Contexts
+### Tech Stack
 
-| Context | Icon | Action |
-|---------|------|--------|
-| Library | ➕ | Add game |
-| Game Detail | ▶️ | Start session |
-| Session | 🤖 | Ask AI |
-| Document | 🤖 | Ask about section |
+**Framework**:
+- Next.js 14 (App Router)
+- React 18 (Server + Client Components)
+- TypeScript 5
+
+**UI**:
+- Tailwind CSS 3
+- shadcn/ui components
+- Radix UI primitives
+- Lucide icons
+
+**State Management**:
+- Zustand (client state)
+- React Query (server state)
+- React Hook Form (forms)
+
+**Routing**:
+- File-based routing (`src/app/`)
+- Route groups for organization
+- Server-side data fetching
 
 ---
 
-## Design Tokens
-
-The layout uses MeepleAI's existing design system:
-
-- **Colors**: `--color-primary` (orange), `--color-accent` (purple)
-- **Fonts**: Quicksand (headings), Nunito (body)
-- **Spacing**: 4px base unit system
-- **Shadows**: `shadow-sm`, `shadow-md`, `shadow-lg`
-- **Radius**: `rounded-lg`, `rounded-xl`, `rounded-2xl`
-- **Animations**: 200ms ease-out transitions
-
-See [design-tokens.css](../../apps/web/src/styles/design-tokens.css) for full token list.
-
----
-
-## Component Hierarchy
+## Project Structure
 
 ```
-LayoutProvider
-├── Navbar
-│   ├── HamburgerButton
-│   ├── Logo
-│   ├── NavItems
-│   ├── GlobalSearch
-│   └── ProfileBar
-├── HamburgerMenu
-├── MainContent
-├── SmartFAB
-│   └── QuickMenu
-├── Breadcrumb
-└── ActionBar
-    ├── ActionBarItem
-    ├── OverflowMenu
-    └── MultiSelectBar
+apps/web/
+├── src/
+│   ├── app/                   # App Router pages
+│   │   ├── (auth)/           # Auth route group
+│   │   ├── (dashboard)/      # Dashboard route group
+│   │   └── layout.tsx        # Root layout
+│   ├── components/           # React components
+│   │   ├── ui/              # shadcn/ui components
+│   │   └── features/        # Feature components
+│   ├── lib/                  # Utilities & services
+│   │   ├── api/             # API clients
+│   │   ├── hooks/           # Custom hooks
+│   │   └── utils/           # Utility functions
+│   └── styles/              # Global styles
+├── public/                   # Static assets
+└── __tests__/               # Test files
 ```
 
-**Total: 23 components, 10 hooks, 3 config files**
+---
+
+## Development Workflow
+
+### Adding Features
+
+1. **Create Component**:
+```tsx
+// src/components/features/game/GameCard.tsx
+import { Card } from "@/components/ui/card"
+
+interface GameCardProps {
+  game: GameData
+  onSelect: (id: string) => void
+}
+
+export function GameCard({ game, onSelect }: GameCardProps) {
+  return (
+    <Card className="p-4">
+      <h3>{game.name}</h3>
+    </Card>
+  )
+}
+```
+
+2. **Add Route**:
+```tsx
+// src/app/(dashboard)/games/page.tsx
+import { GameCard } from "@/components/features/game/GameCard"
+
+export default async function GamesPage() {
+  const games = await fetchGames()
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {games.map(game => (
+        <GameCard key={game.id} game={game} />
+      ))}
+    </div>
+  )
+}
+```
+
+3. **Add Tests**:
+```tsx
+// __tests__/components/GameCard.test.tsx
+import { render, screen } from '@testing-library/react'
+import { GameCard } from '@/components/features/game/GameCard'
+
+test('renders game name', () => {
+  render(<GameCard game={{ name: "Chess" }} />)
+  expect(screen.getByText("Chess")).toBeInTheDocument()
+})
+```
 
 ---
 
-## Implementation Phases
+## State Management Patterns
 
-### Phase 1: Core Structure
-- [ ] LayoutProvider + types
-- [ ] Layout wrapper
-- [ ] useResponsive hook
-- [ ] Basic Navbar
+### Zustand Store
 
-### Phase 2: Navigation
-- [ ] NavItems + NavItem
-- [ ] HamburgerMenu
-- [ ] ProfileBar
-- [ ] GlobalSearch
+```tsx
+// src/lib/stores/gameStore.ts
+import { create } from 'zustand'
 
-### Phase 3: ActionBar
-- [ ] ActionBar + ActionBarItem
-- [ ] OverflowMenu
-- [ ] useActionBar hook
-- [ ] Context-action mapping
+interface GameStore {
+  games: GameData[]
+  selectedGame: GameData | null
+  setSelectedGame: (game: GameData) => void
+  fetchGames: () => Promise<void>
+}
 
-### Phase 4: Smart FAB
-- [ ] SmartFAB
-- [ ] useFAB + useLongPress
-- [ ] QuickMenu
-- [ ] Visibility logic
+export const useGameStore = create<GameStore>((set) => ({
+  games: [],
+  selectedGame: null,
+  setSelectedGame: (game) => set({ selectedGame: game }),
+  fetchGames: async () => {
+    const games = await fetch('/api/v1/games').then(r => r.json())
+    set({ games })
+  }
+}))
+```
 
-### Phase 5: Polish
-- [ ] Breadcrumb
-- [ ] MultiSelectBar
-- [ ] Animations
-- [ ] Accessibility audit
+### React Query
+
+```tsx
+// src/lib/hooks/useGames.ts
+import { useQuery } from '@tanstack/react-query'
+import { gamesClient } from '@/lib/api/clients/gamesClient'
+
+export function useGames() {
+  return useQuery({
+    queryKey: ['games'],
+    queryFn: () => gamesClient.getGames()
+  })
+}
+```
 
 ---
 
-## Viewing Mocks
+## Testing
 
-Open the HTML mocks in a browser:
+### Unit Tests (Vitest)
 
 ```bash
-# Mobile mock (375x812 viewport frames)
-open docs/frontend/mocks/layout-mobile-mock.html
-
-# Desktop mock (full width)
-open docs/frontend/mocks/layout-desktop-mock.html
+pnpm test              # Run tests
+pnpm test:coverage     # With coverage
+pnpm test:ui           # Interactive UI
 ```
+
+### E2E Tests (Playwright)
+
+```bash
+pnpm test:e2e          # Run E2E tests
+pnpm test:e2e:ui       # Interactive mode
+```
+
+**Target**: 85%+ coverage
+
+---
+
+## Performance Optimization
+
+### Server Components
+
+Use Server Components by default, Client Components only when needed:
+
+```tsx
+// ✅ Server Component (default)
+export default async function GamesPage() {
+  const games = await fetchGames()
+  return <GamesList games={games} />
+}
+
+// ✅ Client Component (only when needed)
+'use client'
+export function InteractiveGameCard() {
+  const [expanded, setExpanded] = useState(false)
+  return <Card onClick={() => setExpanded(!expanded)} />
+}
+```
+
+### Image Optimization
+
+```tsx
+import Image from 'next/image'
+
+<Image
+  src="/games/chess.jpg"
+  alt="Chess"
+  width={300}
+  height={200}
+  placeholder="blur"
+  priority={false}
+/>
+```
+
+### Code Splitting
+
+```tsx
+import dynamic from 'next/dynamic'
+
+const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
+  loading: () => <Spinner />,
+  ssr: false
+})
+```
+
+---
+
+## Styling
+
+### Tailwind Conventions
+
+**Spacing**: Use Tailwind spacing scale (4px increments)
+```tsx
+<div className="p-4 mb-6 gap-2">
+```
+
+**Colors**: Use theme colors from `tailwind.config.ts`
+```tsx
+<button className="bg-primary text-primary-foreground">
+```
+
+**Responsive**: Mobile-first approach
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+```
+
+### shadcn/ui Components
+
+```bash
+# Add component
+npx shadcn-ui@latest add button
+
+# Usage
+import { Button } from "@/components/ui/button"
+<Button variant="outline">Click me</Button>
+```
+
+---
+
+## API Integration
+
+### API Clients
+
+```tsx
+// src/lib/api/clients/gamesClient.ts
+import { apiClient } from './apiClient'
+
+export const gamesClient = {
+  getGames: () => apiClient.get<GameData[]>('/games'),
+  getGame: (id: string) => apiClient.get<GameData>(`/games/${id}`),
+  createGame: (data: CreateGameDto) => apiClient.post('/games', data)
+}
+```
+
+### Error Handling
+
+```tsx
+import { toast } from '@/components/ui/use-toast'
+
+try {
+  await gamesClient.createGame(data)
+  toast({ title: "Success", description: "Game created" })
+} catch (error) {
+  toast({
+    title: "Error",
+    description: error.message,
+    variant: "destructive"
+  })
+}
+```
+
+---
+
+## Code Standards
+
+**Naming**:
+- PascalCase: Components, types
+- camelCase: Functions, variables
+- UPPER_SNAKE_CASE: Constants
+
+**File Organization**:
+- One component per file
+- Co-locate tests with components
+- Group by feature, not by type
+
+**Type Safety**:
+- Use TypeScript strict mode
+- Avoid `any`, prefer `unknown`
+- Define prop interfaces
 
 ---
 
 ## Related Documentation
 
-- [Design Tokens CSS](../../apps/web/src/styles/design-tokens.css)
-- [Global Styles](../../apps/web/src/styles/globals.css)
-- [UI Components](../../apps/web/src/components/ui/)
-- [Tailwind Config](../../apps/web/tailwind.config.js)
+- [API Documentation](../03-api/README.md)
+- [Testing Guide](../05-testing/README.md)
+- [User Flows](../11-user-flows/README.md)
+- [Development Guide](../02-development/README.md)
 
 ---
 
-## Decisions Log
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| FAB visibility | Mobile only | Desktop uses sticky ActionBar instead |
-| Long-press FAB | Quick menu 2-3 items | Balance discoverability and simplicity |
-| ActionBar slots | Dynamic by breakpoint | 3/4/6 based on screen width |
-| Transitions | Morph animations | Smooth context switching |
-| Breadcrumb position | Below FAB, above ActionBar | Clear context without blocking content |
-
----
-
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-01-31
+**Maintainer**: Frontend Team

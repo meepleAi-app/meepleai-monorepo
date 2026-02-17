@@ -72,8 +72,13 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
   // eslint-disable-next-line security/detect-object-injection
   const entityColor = customColor || entityColors[entityType].hsl;
 
-  const buttonSize = size === 'sm' ? 'w-[30px] h-[30px]' : 'w-[36px] h-[36px]';
-  const iconSize = size === 'sm' ? 'w-[15px] h-[15px]' : 'w-[18px] h-[18px]';
+  // Mobile: 44px touch targets (WCAG), Desktop: compact sizes
+  const buttonSize = size === 'sm'
+    ? 'w-11 h-11 md:w-[30px] md:h-[30px]'
+    : 'w-11 h-11 md:w-[36px] md:h-[36px]';
+  const iconSize = size === 'sm'
+    ? 'w-5 h-5 md:w-[15px] md:h-[15px]'
+    : 'w-5 h-5 md:w-[18px] md:h-[18px]';
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -107,9 +112,9 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
                   // Disabled state
                   'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
-                  // Fade in on parent card hover
-                  'opacity-0 pointer-events-none',
-                  'group-hover:opacity-100 group-hover:pointer-events-auto',
+                  // Mobile: always visible. Desktop: fade in on card hover
+                  'md:opacity-0 md:pointer-events-none',
+                  'md:group-hover:opacity-100 md:group-hover:pointer-events-auto',
                 )}
                 style={{
                   transitionDelay: `${delay}ms`,

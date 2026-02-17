@@ -17,7 +17,7 @@ Next.js uses **separate runtime environments**:
 **Problem**: These runtimes **do not share memory/global state**. Variables in middleware are invisible to API routes.
 
 ```typescript
-// middleware.ts (Edge Runtime)
+// proxy.ts (Edge Runtime)
 sessionMetrics.cacheHit++;  // Increments in Edge Runtime memory
 
 // /metrics/route.ts (Node.js Runtime)
@@ -30,7 +30,7 @@ getPrometheusMetrics()      // Reads from Node.js Runtime memory (different!)
 
 **Files**:
 - `apps/web/src/lib/metrics/session-cache-metrics.ts` - Metrics manager
-- `apps/web/middleware.ts` - Calls `recordCacheHit()`, etc.
+- `apps/web/proxy.ts` - Calls `recordCacheHit()`, etc.
 - `apps/web/src/app/metrics/route.ts` - Exposes `/metrics` endpoint
 
 **Status**: Code is correct, but runtime isolation prevents data sharing.
@@ -65,7 +65,7 @@ getPrometheusMetrics()      // Reads from Node.js Runtime memory (different!)
 
 **Implementation**:
 ```typescript
-// middleware.ts
+// proxy.ts
 await redis.incr('middleware:cache_hit');
 
 // /metrics/route.ts
@@ -90,7 +90,7 @@ const cacheHit = await redis.get('middleware:cache_hit');
 
 **Implementation**:
 ```typescript
-// middleware.ts
+// proxy.ts
 console.log('[METRICS] cache_hit=1');
 
 // Prometheus log exporter parses logs
@@ -114,7 +114,7 @@ console.log('[METRICS] cache_hit=1');
 
 **Implementation**:
 ```typescript
-// middleware.ts
+// proxy.ts
 response.headers.set('X-Cache-Hit', '1');
 
 // Collector service reads headers from responses

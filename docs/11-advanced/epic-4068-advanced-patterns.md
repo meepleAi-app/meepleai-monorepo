@@ -743,10 +743,10 @@ function MyComponent() {
 
 ### Pattern 17: Permission-Based Routing Guards
 
-**Scenario**: Protect routes based on permissions (Next.js middleware)
+**Scenario**: Protect routes based on permissions (Next.js proxy)
 
 ```typescript
-// middleware.ts
+// proxy.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 

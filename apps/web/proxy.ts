@@ -1,5 +1,5 @@
 /**
- * Next.js 15 Middleware - Authentication Gating
+ * Next.js 16 Proxy - Authentication Gating
  *
  * Issue #1080: FE-IMP-004 — AuthContext + Edge Middleware
  *
@@ -21,7 +21,7 @@
  * - /register - Registration page
  *
  * Cookie-Based Auth:
- * The middleware checks for the presence of authentication session cookies
+ * The proxy checks for the presence of authentication session cookies
  * that are set by the backend API after successful login.
  */
 
@@ -67,7 +67,7 @@ const SESSION_COOKIE_NAME = 'meepleai_session';
 const USER_ROLE_COOKIE = 'meepleai_user_role';
 
 // ============================================================================
-// Middleware Function
+// Proxy Function
 // ============================================================================
 
 // Cache API origin at module level for performance (only computed once)
@@ -107,7 +107,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
 
     // Debug logging for session validation (use warn which is allowed by ESLint)
     // eslint-disable-next-line no-console
-    console.log(`[middleware] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`);
+    console.log(`[proxy] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`);
     return cached.valid;
   }
 
@@ -117,7 +117,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
     // eslint-disable-next-line no-console
-    console.log('[middleware] No cookie header found in request');
+    console.log('[proxy] No cookie header found in request');
     cacheSessionValidation(cookieValue, false);
     return false;
   }
@@ -132,7 +132,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     // eslint-disable-next-line no-console
-    console.log(`[middleware] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`);
+    console.log(`[proxy] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`);
 
     try {
       const response = await fetch(apiUrl, {
@@ -154,7 +154,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
       }
 
       // eslint-disable-next-line no-console
-      console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
+      console.log(`[proxy] Session validation response: ${response.status} ok=${response.ok}`);
       cacheSessionValidation(cookieValue, response.ok);
       return response.ok;
     } catch (fetchError) {
@@ -163,17 +163,17 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
       // Metrics: Track timeout vs other errors
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         metrics.recordValidationTimeout();
-        console.error('[middleware] Session validation TIMEOUT after 5s');
+        console.error('[proxy] Session validation TIMEOUT after 5s');
       } else {
         metrics.recordValidationFailure();
-        console.error('[middleware] Session validation fetch error:', fetchError);
+        console.error('[proxy] Session validation fetch error:', fetchError);
       }
 
       cacheSessionValidation(cookieValue, false);
       return false;
     }
   } catch (error) {
-    console.error('[middleware] Failed to validate session cookie:', error);
+    console.error('[proxy] Failed to validate session cookie:', error);
     cacheSessionValidation(cookieValue, false);
     return false;
   }
@@ -187,7 +187,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
  * Uses API_BASE_URL for server-side (Docker service name like http://api:8080)
  * and NEXT_PUBLIC_API_BASE for client-side (http://localhost:8080)
  *
- * Issue: Client-side JavaScript may use NEXT_PUBLIC_API_BASE while middleware
+ * Issue: Client-side JavaScript may use NEXT_PUBLIC_API_BASE while proxy
  * uses API_BASE_URL - CSP must allow both origins
  */
 function getApiOrigins(): string[] {
@@ -294,10 +294,10 @@ function addSecurityHeaders(response: NextResponse, requestOrigin?: string): Nex
 }
 
 /**
- * Middleware function that runs on every request
+ * Proxy function that runs on every request
  * Checks authentication status and redirects as needed
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestOrigin = request.nextUrl.origin;
   const hostname = request.nextUrl.hostname;
@@ -387,11 +387,11 @@ export async function middleware(request: NextRequest) {
 }
 
 // ============================================================================
-// Middleware Configuration
+// Proxy Configuration
 // ============================================================================
 
 /**
- * Configure which routes the middleware should run on
+ * Configure which routes the proxy should run on
  *
  * Matcher patterns:
  * - Include: Protected routes and public auth routes

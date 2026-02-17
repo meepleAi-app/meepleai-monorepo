@@ -1,7 +1,7 @@
 /**
  * Session Cache Metrics Manager
  *
- * Collects metrics about middleware session cache performance
+ * Collects metrics about proxy session cache performance
  * for monitoring via Prometheus endpoint.
  *
  * Issue #3797: Created to monitor cache effectiveness and

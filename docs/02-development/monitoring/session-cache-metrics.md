@@ -286,7 +286,7 @@ Added to `infra/prometheus.yml`:
 
 Metrics collected in:
 - `apps/web/src/lib/metrics/session-cache-metrics.ts`
-- `apps/web/middleware.ts` (instrumentation)
+- `apps/web/proxy.ts` (instrumentation)
 - `apps/web/src/app/metrics/route.ts` (Prometheus endpoint)
 
 ---

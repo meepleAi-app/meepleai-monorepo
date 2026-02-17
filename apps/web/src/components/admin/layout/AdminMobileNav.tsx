@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { MenuIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -34,6 +34,12 @@ export function AdminMobileNav({ section, badges = {} }: AdminMobileNavProps) {
   const pathname = usePathname() ?? '';
   const [open, setOpen] = useState(false);
 
+  const handleOpenAutoFocus = useCallback((e: Event) => {
+    e.preventDefault();
+    const firstLink = document.querySelector('[data-testid="admin-mobile-nav"] a') as HTMLElement;
+    firstLink?.focus();
+  }, []);
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -53,6 +59,7 @@ export function AdminMobileNav({ section, badges = {} }: AdminMobileNavProps) {
           'w-80 p-0 flex flex-col',
           'bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl'
         )}
+        onOpenAutoFocus={handleOpenAutoFocus}
         data-testid="admin-mobile-nav"
       >
         <SheetTitle className="px-4 py-3 border-b border-slate-200/60 dark:border-zinc-700/40 shrink-0">
@@ -77,6 +84,7 @@ export function AdminMobileNav({ section, badges = {} }: AdminMobileNavProps) {
               {DASHBOARD_SECTIONS.map((s) => {
                 const isActive = isSectionActive(s, pathname);
                 const Icon = s.icon;
+                if (!Icon) return null;
                 const badgeCount = s.sidebarItems.reduce((total, item) => {
                   if (item.badgeKey && badges[item.badgeKey]) {
                     return total + badges[item.badgeKey];
@@ -119,6 +127,7 @@ export function AdminMobileNav({ section, badges = {} }: AdminMobileNavProps) {
                 {section.sidebarItems.map((item) => {
                   const isActive = isSidebarItemActive(item, pathname);
                   const Icon = item.icon;
+                  if (!Icon) return null;
                   const badgeCount = item.badgeKey ? badges[item.badgeKey] : undefined;
 
                   return (

@@ -95,16 +95,12 @@ export function AdminContextualSidebar({
   className,
 }: AdminContextualSidebarProps) {
   const pathname = usePathname() ?? '';
-  const [collapsed, setCollapsed] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem(ADMIN_DASHBOARD_SIDEBAR_COLLAPSED_KEY);
-    if (stored === 'true') {
-      setCollapsed(true);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(ADMIN_DASHBOARD_SIDEBAR_COLLAPSED_KEY) === 'true';
     }
-  }, []);
+    return false;
+  });
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
@@ -116,29 +112,8 @@ export function AdminContextualSidebar({
 
   if (!section) return null;
 
+  if (!section.icon) return null;
   const SectionIcon = section.icon;
-
-  // SSR placeholder
-  if (!mounted) {
-    return (
-      <aside
-        className={cn(
-          'hidden lg:flex lg:flex-col w-60 shrink-0',
-          'bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md',
-          'border-r border-slate-200/60 dark:border-zinc-700/40',
-          className
-        )}
-      >
-        <div className="flex-1 p-3">
-          <div className="animate-pulse space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-10 bg-muted/20 rounded-xl" />
-            ))}
-          </div>
-        </div>
-      </aside>
-    );
-  }
 
   return (
     <aside

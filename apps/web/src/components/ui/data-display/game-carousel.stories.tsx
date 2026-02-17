@@ -1,11 +1,18 @@
 /**
- * GameCarousel Storybook Stories (Issue #3589)
+ * GameCarousel Storybook Stories (Issue #3589, Epic #4604 v2)
  *
  * Comprehensive visual documentation and interactive testing for the
  * GameCarousel immersive 3D carousel component.
  *
+ * v2 Updates (Epic #4604):
+ * - Center card: scale 1.1x (enhanced prominence)
+ * - Side cards: scale 0.85x, opacity 0.6 (consistent fade)
+ * - Warm shadows: var(--shadow-warm-2xl) on center card
+ * - Entity glow inherited from MeepleCard hover
+ *
  * @module components/ui/data-display/game-carousel.stories
  * @see Issue #3585 - Epic: GameCarousel Integration & Production Readiness
+ * @see Issue #4612 - Enhanced Carousel v2
  */
 
 import { useState } from 'react';

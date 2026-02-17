@@ -1,16 +1,20 @@
 /**
  * HoverPreview - Hover Tooltip Preview for MeepleCard
  * Issue #3827, #3859 - Epic #3820
+ * Issue #4620 - Mobile: tap navigates directly to detail page
  *
- * Displays rich game information on hover with smooth animations.
- * Uses Popover component for consistent overlay behavior.
+ * Desktop: displays rich game information on hover with smooth animations.
+ * Mobile: wraps children in a Link to navigate directly to game detail page.
  */
 
 'use client';
 
 import * as React from 'react';
 
+import Link from 'next/link';
+
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/overlays';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 export interface HoverPreviewData {
   description?: string;
@@ -28,13 +32,15 @@ export interface HoverPreviewProps {
   delay?: number;
   disabled?: boolean;
   children: React.ReactNode;
+  /** Detail page href for mobile direct navigation (default: /games/{gameId}) */
+  detailHref?: string;
 }
 
 /**
  * HoverPreview Component
  *
- * Shows game details in a popover on hover.
- * Supports static data or async loading via onFetchPreview.
+ * Desktop: Shows game details in a popover on hover.
+ * Mobile: Wraps card in a link to navigate directly to detail page.
  */
 export function HoverPreview({
   gameId,
@@ -43,15 +49,17 @@ export function HoverPreview({
   delay = 500,
   disabled = false,
   children,
+  detailHref,
 }: HoverPreviewProps) {
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const [data, setData] = React.useState<HoverPreviewData | null>(previewData ?? null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // Fetch preview data on hover if not provided
+  // Fetch preview data on hover if not provided (desktop only)
   React.useEffect(() => {
-    if (!isOpen || data || !onFetchPreview || disabled) return;
+    if (!isOpen || data || !onFetchPreview || disabled || isMobile) return;
 
     let isMounted = true;
     const timeoutId = setTimeout(async () => {
@@ -80,16 +88,27 @@ export function HoverPreview({
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [isOpen, data, onFetchPreview, gameId, delay, disabled]);
+  }, [isOpen, data, onFetchPreview, gameId, delay, disabled, isMobile]);
 
   if (disabled) {
     return <>{children}</>;
   }
 
+  // Mobile: wrap in Link for direct navigation to detail page
+  if (isMobile) {
+    const href = detailHref || `/games/${gameId}`;
+    return (
+      <Link href={href} className="block">
+        {children}
+      </Link>
+    );
+  }
+
+  // Desktop: popover on hover
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-80" align="start">
+      <PopoverContent className="w-full max-w-sm md:w-80" align="start">
         {isLoading ? (
           <div className="space-y-2">
             <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />

@@ -51,6 +51,8 @@ export interface TagBadgeProps extends VariantProps<typeof tagBadgeVariants> {
   iconOnly?: boolean;
   /** Show icon alongside label */
   showIcon?: boolean;
+  /** Enable pulse animation (for "new" or featured tags) */
+  animated?: boolean;
   /** Custom className */
   className?: string;
   /** Accessibility label */
@@ -66,6 +68,7 @@ export const TagBadge = React.memo(function TagBadge({
   variant = 'desktop',
   iconOnly = false,
   showIcon = true,
+  animated = false,
   className,
   'aria-label': ariaLabel,
 }: TagBadgeProps) {
@@ -97,6 +100,7 @@ export const TagBadge = React.memo(function TagBadge({
               bgClass,
               textClass,
               'select-none',
+              animated && 'animate-mc-badge-pulse',
               className
             )}
             data-testid={`tag-badge-${config.key}`}

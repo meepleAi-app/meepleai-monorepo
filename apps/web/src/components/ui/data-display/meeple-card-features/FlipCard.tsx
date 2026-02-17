@@ -55,6 +55,12 @@ export interface FlipCardProps {
   flipTrigger?: 'card' | 'button';
   /** Link to entity detail page (shown on back) */
   detailHref?: string;
+  /** Entity color HSL string for v2 styled back (e.g. "25 95% 45%") */
+  entityColor?: string;
+  /** Entity type name for back header (e.g. "Game") */
+  entityName?: string;
+  /** Card title for back header */
+  title?: string;
   /** Additional CSS classes */
   className?: string;
 }
@@ -123,10 +129,14 @@ function BackContent({
   flipData,
   variant = 'grid',
   detailHref,
+  entityColor = '25 95% 45%',
+  title,
 }: {
   flipData: MeepleCardFlipData;
   variant: MeepleCardVariant;
   detailHref?: string;
+  entityColor?: string;
+  title?: string;
 }) {
   // eslint-disable-next-line security/detect-object-injection
   const config = variantConfigs[variant];
@@ -134,30 +144,53 @@ function BackContent({
 
   return (
     <div className={cn(
-      'flex h-full flex-col overflow-y-auto',
-      isCompact ? 'p-3 pl-5' : 'p-6 pl-8',
+      'flex h-full flex-col overflow-hidden',
     )}>
-      {/* Header */}
-      <div className={cn('flex items-center justify-between', isCompact ? 'mb-2' : 'mb-4')}>
-        <h2 className={cn(
-          'font-quicksand font-bold text-[#2D2A26]',
-          isCompact ? 'text-sm' : 'text-xl',
-        )}>
-          Informazioni
-        </h2>
-      </div>
+      {/* Entity-colored header — v2 (Issue #4607) */}
+      {!isCompact && (
+        <div
+          className="relative overflow-hidden px-5 pb-3 pt-5"
+          style={{ backgroundColor: `hsl(${entityColor})` }}
+        >
+          {/* Diagonal stripe pattern overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.12]"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px)',
+            }}
+            aria-hidden="true"
+          />
+          <h2 className="relative z-[1] font-quicksand text-lg font-bold text-white">
+            {title || 'Informazioni'}
+          </h2>
+        </div>
+      )}
+
+      {/* Content area */}
+      <div className={cn(
+        'flex flex-1 flex-col overflow-y-auto',
+        isCompact ? 'p-3 pl-5' : 'px-5 py-4',
+      )}>
+      {/* Compact header fallback */}
+      {isCompact && (
+        <div className="mb-2">
+          <h2 className="font-quicksand text-sm font-bold text-card-foreground">
+            {title || 'Informazioni'}
+          </h2>
+        </div>
+      )}
 
       {/* Description */}
       {flipData.description && (
-        <div className={isCompact ? 'mb-2' : 'mb-4'}>
+        <div className={isCompact ? 'mb-2' : 'mb-3'}>
           <h3 className={cn(
-            'mb-1.5 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-[#9C958A]',
-            isCompact ? 'text-xs' : 'text-sm',
+            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+            isCompact ? 'text-xs' : 'text-xs',
           )}>
             Descrizione
           </h3>
           <p className={cn(
-            'font-nunito leading-relaxed text-[#6B665C]',
+            'font-nunito leading-relaxed text-card-foreground/80',
             isCompact ? 'text-xs' : 'text-sm',
             config.descriptionLines,
           )}>
@@ -168,19 +201,23 @@ function BackContent({
 
       {/* Categories */}
       {config.maxCategories > 0 && flipData.categories && flipData.categories.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-4'}>
+        <div className={isCompact ? 'mb-2' : 'mb-3'}>
           <h3 className={cn(
-            'mb-1.5 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-[#9C958A]',
-            isCompact ? 'text-xs' : 'text-sm',
+            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+            isCompact ? 'text-xs' : 'text-xs',
           )}>
-            <Tag className="h-3.5 w-3.5" />
+            <Tag className="h-3 w-3" />
             Categorie
           </h3>
           <div className="flex flex-wrap gap-1.5">
             {flipData.categories.slice(0, config.maxCategories).map((cat) => (
               <span
                 key={cat.id}
-                className="rounded-lg bg-[hsla(262,83%,62%,0.1)] px-2.5 py-1 font-nunito text-xs font-medium text-[hsl(262,83%,62%)]"
+                className="rounded-md px-2 py-0.5 font-nunito text-xs font-medium"
+                style={{
+                  backgroundColor: `hsla(${entityColor}, 0.1)`,
+                  color: `hsl(${entityColor})`,
+                }}
               >
                 {cat.name}
               </span>
@@ -191,19 +228,19 @@ function BackContent({
 
       {/* Mechanics */}
       {config.maxMechanics > 0 && flipData.mechanics && flipData.mechanics.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-4'}>
+        <div className={isCompact ? 'mb-2' : 'mb-3'}>
           <h3 className={cn(
-            'mb-1.5 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-[#9C958A]',
-            isCompact ? 'text-xs' : 'text-sm',
+            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+            isCompact ? 'text-xs' : 'text-xs',
           )}>
-            <Cog className="h-3.5 w-3.5" />
+            <Cog className="h-3 w-3" />
             Meccaniche
           </h3>
           <div className="flex flex-wrap gap-1.5">
             {flipData.mechanics.slice(0, config.maxMechanics).map((mech) => (
               <span
                 key={mech.id}
-                className="rounded-lg bg-[hsla(25,95%,38%,0.1)] px-2.5 py-1 font-nunito text-xs font-medium text-[hsl(25,95%,38%)]"
+                className="rounded-md bg-muted px-2 py-0.5 font-nunito text-xs font-medium text-muted-foreground"
               >
                 {mech.name}
               </span>
@@ -214,15 +251,15 @@ function BackContent({
 
       {/* Designers */}
       {config.showDesigners && flipData.designers && flipData.designers.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-4'}>
+        <div className={isCompact ? 'mb-2' : 'mb-3'}>
           <h3 className={cn(
-            'mb-1.5 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-[#9C958A]',
-            isCompact ? 'text-xs' : 'text-sm',
+            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+            isCompact ? 'text-xs' : 'text-xs',
           )}>
-            <User className="h-3.5 w-3.5" />
+            <User className="h-3 w-3" />
             Designer
           </h3>
-          <p className={cn('font-nunito text-[#6B665C]', isCompact ? 'text-xs' : 'text-sm')}>
+          <p className={cn('font-nunito text-card-foreground/80', isCompact ? 'text-xs' : 'text-sm')}>
             {flipData.designers.map((d) => d.name).join(', ')}
           </p>
         </div>
@@ -230,40 +267,49 @@ function BackContent({
 
       {/* Publishers */}
       {config.showPublishers && flipData.publishers && flipData.publishers.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-4'}>
+        <div className={isCompact ? 'mb-2' : 'mb-3'}>
           <h3 className={cn(
-            'mb-1.5 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-[#9C958A]',
-            isCompact ? 'text-xs' : 'text-sm',
+            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+            isCompact ? 'text-xs' : 'text-xs',
           )}>
-            <Paintbrush className="h-3.5 w-3.5" />
+            <Paintbrush className="h-3 w-3" />
             Editori
           </h3>
-          <p className={cn('font-nunito text-[#6B665C]', isCompact ? 'text-xs' : 'text-sm')}>
+          <p className={cn('font-nunito text-card-foreground/80', isCompact ? 'text-xs' : 'text-sm')}>
             {flipData.publishers.map((p) => p.name).join(', ')}
           </p>
         </div>
       )}
 
-      {/* Min Age */}
-      {config.showMinAge && flipData.minAge && (
-        <div className="mt-auto">
-          <span className="rounded-lg bg-[rgba(45,42,38,0.04)] px-3 py-1.5 font-nunito text-sm text-[#6B665C]">
-            Età minima: {flipData.minAge}+
-          </span>
+      {/* Complexity + Min Age row */}
+      {(flipData.complexityRating || flipData.minAge) && !isCompact && (
+        <div className="mb-3 flex items-center gap-3">
+          {flipData.complexityRating && (
+            <span className="rounded-md bg-muted px-2 py-1 font-nunito text-xs text-muted-foreground">
+              Peso: {flipData.complexityRating.toFixed(2)} / 5
+            </span>
+          )}
+          {config.showMinAge && flipData.minAge && (
+            <span className="rounded-md bg-muted px-2 py-1 font-nunito text-xs text-muted-foreground">
+              Età: {flipData.minAge}+
+            </span>
+          )}
         </div>
       )}
 
       {/* Detail page link */}
       {detailHref && (
-        <div className="mt-auto pt-3">
+        <div className="mt-auto pt-2">
           <Link
             href={detailHref}
             className={cn(
               'inline-flex items-center gap-1.5 font-nunito font-medium',
-              'text-[hsl(262,83%,62%)] hover:text-[hsl(262,83%,52%)]',
               'transition-colors duration-200',
               isCompact ? 'text-xs' : 'text-sm',
             )}
+            style={{
+              color: `hsl(${entityColor})`,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <ExternalLink className={cn(isCompact ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
@@ -271,6 +317,7 @@ function BackContent({
           </Link>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -287,6 +334,9 @@ export function FlipCard({
   onFlip,
   flipTrigger = 'card',
   detailHref,
+  entityColor = '25 95% 45%',
+  entityName: _entityName,
+  title,
   className,
 }: FlipCardProps) {
   // Internal state for uncontrolled mode
@@ -346,7 +396,7 @@ export function FlipCard({
         className,
       )}
       style={{
-        perspective: '2000px',
+        perspective: '1200px',
       }}
       {...(isCardMode ? {
         role: 'button' as const,
@@ -365,7 +415,7 @@ export function FlipCard({
           ...(isRowBased && containerHeight ? { minHeight: containerHeight } : {}),
         }}
         animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
       >
         {/* Front */}
         <div
@@ -411,25 +461,25 @@ export function FlipCard({
         <div
           className={cn(
             'absolute inset-0 overflow-hidden',
-            isRowBased ? 'rounded-xl' : 'rounded-3xl',
-            'border border-[rgba(45,42,38,0.08)] bg-[#FFFDF9]',
+            isRowBased ? 'rounded-xl' : 'rounded-2xl',
+            'border bg-card',
             'flex flex-col',
           )}
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
             transform: 'rotateY(180deg)',
-            boxShadow: '0 8px 32px rgba(45, 42, 38, 0.12)',
+            boxShadow: 'var(--shadow-warm-lg)',
+            borderColor: `hsla(${entityColor}, 0.15)`,
           }}
           data-testid="meeple-card-back"
         >
-          {/* Purple left border indicator for back */}
-          <div className="absolute bottom-0 left-0 top-0 w-[5px] rounded-l-3xl bg-gradient-to-b from-[hsl(262,83%,62%)] to-[hsl(262,83%,72%)]" />
-
           <BackContent
             flipData={flipData}
             variant={variant}
             detailHref={detailHref}
+            entityColor={entityColor}
+            title={title}
           />
         </div>
       </motion.div>

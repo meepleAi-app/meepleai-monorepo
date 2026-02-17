@@ -2,13 +2,22 @@
 
 > The canonical card component for all MeepleAI entity displays
 
-**Epic #4029** | **Updated**: 2026-02-11
+**Epic #4604 (v2)** | **Updated**: 2026-02-17
 
 ## Introduction
 
 MeepleCard is MeepleAI's universal card component, designed to display games, players, sessions, agents, documents, chat conversations, events, and custom entities with a consistent, accessible interface.
 
-**Latest Updates (Epic #4029)**:
+**Latest Updates (Epic #4604 - v2 Visual Redesign)**:
+- ✅ **Warm aesthetics**: Glassmorphism bg-white/90, warm shadows (rgba(180,130,80,...))
+- ✅ **Entity glow rings**: Hover outline-2 with entity color @ 40% opacity
+- ✅ **3D card flip**: Perspective 1200px, 0.7s transition, entity-colored back header
+- ✅ **Enhanced carousel**: Center 1.1x scale, warm shadow-2xl
+- ✅ **Tag animations**: Pulse effect for "new" tags
+- ✅ **Shimmer effects**: Cover image shimmer on hover
+- ✅ **Dark mode**: Entity color CSS variables, consistent tokens
+
+**Previous Updates (Epic #4029)**:
 - ✅ Extended to **7 entity types** (added session, agent, document, chatSession)
 - ✅ Entity-specific **quick actions** with hover reveal
 - ✅ **Info button** for detail page navigation
@@ -26,6 +35,41 @@ MeepleCard is MeepleAI's universal card component, designed to display games, pl
 ### Replacing Legacy Components
 
 **GameCard/PlayerCard are deprecated**. For migration guide, see `/apps/web/MIGRATION_GAMECARD_TO_MEEPLECARD.md`.
+
+## v2 Visual Design (Epic #4604)
+
+**Approved Mockup**: `apps/web/src/components/ui/meeple-card-v2-mockup.html`
+
+**Key Design Tokens**:
+```css
+/* Shadows - warm toned */
+--shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+--shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+
+/* Entity Colors */
+--color-entity-game: 25 95% 45%;      /* Orange */
+--color-entity-player: 262 83% 58%;   /* Purple */
+--color-entity-session: 240 60% 55%;  /* Indigo */
+--color-entity-agent: 38 92% 50%;     /* Amber */
+--color-entity-document: 210 40% 55%; /* Slate */
+--color-entity-chat: 220 80% 55%;     /* Blue */
+--color-entity-event: 350 89% 60%;    /* Rose */
+
+/* Typography */
+font-family: Quicksand (headings), Nunito (body)
+
+/* Glassmorphism */
+background: rgba(255,255,255,0.9);
+backdrop-filter: blur(12px) saturate(180%);
+```
+
+**Visual Features**:
+- **Entity Glow Rings**: Hover outline-2 with entity color @ 40% opacity
+- **Warm Shadows**: Layered shadows with warm brown tones
+- **Shimmer Effect**: Cover image shimmer on hover
+- **3D Flip**: Perspective 1200px, smooth 0.7s cubic-bezier transition
+- **Pulse Tags**: Animated "new" tags with scale pulse
+- **Enhanced Carousel**: Center card 1.1x scale with entity glow
 
 ## Entity Types (7 Total)
 

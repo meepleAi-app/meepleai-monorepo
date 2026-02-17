@@ -796,3 +796,136 @@ export const ResponsiveDemo: Story = {
     },
   },
 };
+
+/**
+ * v2 Visual Showcase (Epic #4604)
+ *
+ * Demonstrates new v2 visual enhancements:
+ * - Warm shadows and glassmorphism
+ * - Entity glow rings on hover
+ * - Shimmer effects
+ * - Tag pulse animations
+ * - Enhanced carousel scaling
+ */
+export const V2VisualShowcase: StoryObj<typeof MeepleCard> = {
+  render: () => (
+    <div className="space-y-8 p-8">
+      <div>
+        <h2 className="mb-4 font-quicksand text-2xl font-bold">v2 Visual Enhancements</h2>
+        <p className="mb-6 text-muted-foreground">
+          Hover over cards to see entity glow rings, shimmer effects, and warm shadows.
+        </p>
+      </div>
+
+      {/* Grid with animated tags */}
+      <div>
+        <h3 className="mb-3 font-quicksand text-lg font-semibold">Animated Tags</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <MeepleCard
+            entity="game"
+            title="Wingspan"
+            subtitle="Stonemaier Games"
+            imageUrl="https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=400&h=600&fit=crop"
+            rating={8.1}
+            metadata={[{ icon: Users, value: "1-5" }, { icon: Clock, value: "40-70m" }]}
+            tags={['new', 'sale']}
+          />
+          <MeepleCard
+            entity="player"
+            variant="grid"
+            title="Sarah Chen"
+            subtitle="@sarahgames"
+            avatarUrl="https://i.pravatar.cc/300?img=1"
+            metadata={[{ label: "234 plays" }]}
+            tags={['owned']}
+          />
+          <MeepleCard
+            entity="agent"
+            title="StrategyBot"
+            subtitle="GPT-4 · Active"
+            imageUrl="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=600&fit=crop"
+            metadata={[{ label: "1.2k calls" }]}
+            tags={['wishlist']}
+          />
+        </div>
+      </div>
+
+      {/* Entity glow rings showcase */}
+      <div>
+        <h3 className="mb-3 font-quicksand text-lg font-semibold">Entity Glow Rings (Hover)</h3>
+        <div className="grid grid-cols-4 gap-4">
+          {(['game', 'player', 'session', 'agent'] as const).map((entity) => (
+            <MeepleCard
+              key={entity}
+              entity={entity}
+              variant="grid"
+              title={`${entity.charAt(0).toUpperCase() + entity.slice(1)} Card`}
+              subtitle="Hover to see glow"
+              imageUrl="https://images.unsplash.com/photo-1611891487601-cf62a016cf97?w=400&h=600&fit=crop"
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Flip cards with entity colors */}
+      <div>
+        <h3 className="mb-3 font-quicksand text-lg font-semibold">3D Flip with Entity Headers</h3>
+        <div className="grid grid-cols-3 gap-4">
+          <MeepleCard
+            entity="game"
+            title="Everdell"
+            subtitle="Starling Games"
+            imageUrl="https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=400&h=600&fit=crop"
+            flippable
+            flipData={{
+              description: "Build a civilization of woodland critters in this charming worker placement game.",
+              categories: [
+                { id: '1', name: 'City Building' },
+                { id: '2', name: 'Fantasy' },
+              ],
+              mechanics: [
+                { id: '1', name: 'Worker Placement' },
+                { id: '2', name: 'Tableau Building' },
+              ],
+              designers: [{ id: '1', name: 'James Wilson' }],
+            }}
+            flipTrigger="card"
+          />
+          <MeepleCard
+            entity="player"
+            title="Alex Turner"
+            subtitle="@alexgaming"
+            avatarUrl="https://i.pravatar.cc/300?img=3"
+            flippable
+            flipData={{
+              description: "Competitive strategy gamer specializing in engine builders and euro games.",
+            }}
+            flipTrigger="card"
+          />
+          <MeepleCard
+            entity="agent"
+            title="StrategyHelper"
+            subtitle="Claude Opus · Active"
+            imageUrl="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=600&fit=crop"
+            flippable
+            flipData={{
+              description: "AI assistant for game strategy analysis and decision-making support.",
+            }}
+            flipTrigger="card"
+          />
+        </div>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          Click cards to flip. Notice entity-colored headers on card backs.
+        </p>
+      </div>
+    </div>
+  ),
+  parameters: {
+    layout: 'fullscreen',
+    docs: {
+      description: {
+        story: 'Showcases v2 visual enhancements including warm shadows, entity glow rings, tag animations, and 3D flip with entity-colored backs.',
+      },
+    },
+  },
+};

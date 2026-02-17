@@ -39,7 +39,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
       {/* Logo */}
       <div className={cn('flex items-center border-b border-sidebar-border', isCollapsed ? 'justify-center px-2 py-4' : 'px-4 py-4')}>
-        <Link href="/" className="flex items-center gap-2" aria-label="MeepleAI Home">
+        <Link href="/dashboard" className="flex items-center gap-2" aria-label="MeepleAI Home">
           <MeepleLogo variant="icon" size="sm" />
           {!isCollapsed && (
             <span className="font-quicksand font-bold text-lg text-sidebar-foreground">

@@ -3,15 +3,8 @@
  * Updated: Issue #3104 - Use UnifiedHeader
  *
  * Layout wrapper per pagine pubbliche dell'applicazione.
- * Compone UnifiedHeader + content area + PublicFooter + BottomNav (mobile).
- *
- * @deprecated For authenticated pages - Issue #3479
- * For authenticated routes, use AuthenticatedLayout instead which provides:
- * - UnifiedHeader (desktop nav + settings + notifications)
- * - UnifiedActionBar (mobile bottom nav with integrated FAB)
- * - Better mobile-first experience
- *
- * This component should only be used for truly public pages (marketing, login, etc.)
+ * - Authenticated users: Sidebar (desktop) + compact header (mobile) + ActionBar
+ * - Unauthenticated users: UnifiedHeader (all sizes) + BottomNav (mobile)
  *
  * Features:
  * - Container responsive
@@ -25,8 +18,12 @@
 
 import { ReactNode } from 'react';
 
+import { UnifiedActionBar, UnifiedActionBarSpacer } from '@/components/layout/ActionBar';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 
 import { PublicFooter } from './PublicFooter';
@@ -58,24 +55,58 @@ export function PublicLayout({
 }: PublicLayoutProps) {
   // eslint-disable-next-line security/detect-object-injection
   const containerClass = CONTAINER_WIDTHS[containerWidth] || CONTAINER_WIDTHS.full;
+  const { data: user } = useCurrentUser();
+  const isAuthenticated = !!user;
+  const { isCollapsed, toggle } = useSidebarState();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Unified Header (handles auth internally) */}
-      <UnifiedHeader />
+      {/* Sidebar for authenticated users on desktop */}
+      {isAuthenticated && (
+        <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
+      )}
 
-      {/* Main Content - add padding bottom for mobile bottom nav */}
-      <main id="main-content" className={cn('flex-1 w-full pb-20 md:pb-0', className)}>
+      {/* Header: mobile-only for authenticated (sidebar handles desktop), all sizes for guests */}
+      <div className={isAuthenticated ? 'md:hidden' : undefined}>
+        <UnifiedHeader />
+      </div>
+
+      {/* Main Content */}
+      <main
+        id="main-content"
+        className={cn(
+          'flex-1 w-full',
+          // Bottom padding for mobile bottom nav (unauthenticated uses BottomNav)
+          !isAuthenticated && 'pb-20 md:pb-0',
+          // Desktop sidebar offset for authenticated users
+          isAuthenticated && (isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]'),
+          isAuthenticated && 'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none',
+          className
+        )}
+      >
         <div className={cn('mx-auto px-4 sm:px-6 lg:px-8 py-8', containerClass)}>{children}</div>
       </main>
 
-      {/* Footer - hidden on mobile to make room for BottomNav */}
-      <div className="hidden md:block">
+      {/* Footer - hidden on mobile to make room for bottom nav */}
+      <div
+        className={cn(
+          'hidden md:block',
+          isAuthenticated && (isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]'),
+          isAuthenticated && 'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none'
+        )}
+      >
         <PublicFooter showNewsletter={showNewsletter} />
       </div>
 
       {/* Bottom Navigation (mobile only) */}
-      <BottomNav />
+      {isAuthenticated ? (
+        <>
+          <UnifiedActionBar />
+          <UnifiedActionBarSpacer />
+        </>
+      ) : (
+        <BottomNav />
+      )}
     </div>
   );
 }

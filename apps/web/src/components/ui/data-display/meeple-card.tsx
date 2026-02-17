@@ -901,8 +901,8 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       )}
 
-      {/* Status Badge for non-grid/non-featured variants */}
-      {status && variant !== 'grid' && variant !== 'featured' && (
+      {/* Status Badge for non-grid/non-featured/non-list variants */}
+      {status && variant !== 'grid' && variant !== 'featured' && variant !== 'list' && (
         <StatusBadge
           status={status}
           showIcon={showStatusIcon}
@@ -1103,8 +1103,8 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
-        {/* Badge overlay (only for non-grid/non-featured variants without VerticalTagStack) */}
-        {badge && variant !== 'grid' && variant !== 'featured' && !isHeroOrFeatured && (
+        {/* Badge overlay (only for non-grid/non-featured/non-list variants without VerticalTagStack) */}
+        {badge && variant !== 'grid' && variant !== 'featured' && variant !== 'list' && !isHeroOrFeatured && (
           <span className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
             {badge}
           </span>

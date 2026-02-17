@@ -132,12 +132,12 @@
     --shadow-modal: var(--shadow-2xl);
     --shadow-dropdown: var(--shadow-lg);
 
-    /* MeepleCard v2 warm shadows (Issue #4604) */
-    --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
-    --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
-    --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
-    --shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
-    --shadow-warm-2xl: 0 25px 60px rgba(180,130,80,0.2), 0 12px 24px rgba(180,130,80,0.1);
+    /* MeepleCard v2 warm shadows (Issue #4604) — boosted ~2x for visibility */
+    --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.12), 0 1px 2px rgba(180,130,80,0.08);
+    --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.15), 0 2px 4px rgba(180,130,80,0.08);
+    --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.18), 0 4px 8px rgba(180,130,80,0.10);
+    --shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.22), 0 8px 16px rgba(180,130,80,0.12);
+    --shadow-warm-2xl: 0 25px 60px rgba(180,130,80,0.28), 0 12px 24px rgba(180,130,80,0.15);
 
     /* Focus ring */
     --ring-width: 2px;

@@ -29,6 +29,7 @@ export interface CreateChatClientParams {
 
 export interface CreateChatThreadRequest {
   gameId?: string | null;
+  agentId?: string | null;
   title?: string | null;
   initialMessage?: string | null;
 }

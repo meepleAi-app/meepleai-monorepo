@@ -2,22 +2,23 @@
  * AgentInfoCard - Tabbed Info Panel for Agent Detail Pages
  *
  * Companion card for MeepleCard (agent variant) showing:
- * - Tab 1: Chat interface with SSE streaming
+ * - Tab 1: Chat interface with SSE streaming (embedded ChatThreadView)
  * - Tab 2: Chat history (previous sessions)
  * - Tab 3: Knowledge Base documents
  *
- * Follows MeepleInfoCard pattern for games.
- *
- * POC: Agent chat page with tabbed UI
+ * Validates agent readiness (KB populated, RAG initialized) before enabling chat.
+ * Shows blocking UI if agent not ready with link to configuration.
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
 
-import { MessageSquare, History, Book, FileText, Loader2 } from 'lucide-react';
+import { MessageSquare, History, Book, FileText, Loader2, AlertCircle, Settings, Maximize2, Minimize2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
+import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -71,6 +72,8 @@ export function AgentInfoCard({
   className,
 }: AgentInfoCardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('chat');
+  const [chatThreadId, setChatThreadId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [documents, setDocuments] = useState<Array<{
     id: string;
     fileName: string;
@@ -79,6 +82,9 @@ export function AgentInfoCard({
   }>>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [docsError, setDocsError] = useState<string | null>(null);
+
+  // Agent readiness validation
+  const { status: agentStatus, isLoading: statusLoading, error: statusError } = useAgentStatus(agentId);
 
   // Fetch agent documents
   useEffect(() => {
@@ -163,27 +169,122 @@ export function AgentInfoCard({
 
       {/* Tab Content */}
       <div className="flex h-[calc(100%-57px)] flex-col">
-        {/* Chat Tab - Redirects to unified chat system */}
+        {/* Chat Tab - Embedded chat with readiness validation */}
         {activeTab === 'chat' && (
-          <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsla(25,95%,38%,0.1)]">
-              <MessageSquare className="h-8 w-8 text-[hsl(25,95%,38%)]" />
-            </div>
-            <h4 className="mb-2 font-quicksand text-lg font-semibold text-[#2D2A26]">
-              Chat AI
-            </h4>
-            <p className="max-w-xs font-nunito text-sm text-[#6B665C] mb-4">
-              Usa il sistema di chat unificato per parlare con {agentName}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.location.href = '/chat/new'}
-              className="rounded-full"
-            >
-              Vai alla Chat
-            </Button>
-          </div>
+          <>
+            {/* Loading status */}
+            {statusLoading && (
+              <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+                <Loader2 className="mb-3 h-8 w-8 animate-spin text-[hsl(25,95%,38%)]" />
+                <p className="font-nunito text-sm text-[#6B665C]">Verifica disponibilità agente...</p>
+              </div>
+            )}
+
+            {/* Error loading status */}
+            {statusError && !statusLoading && (
+              <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50">
+                  <AlertCircle className="h-8 w-8 text-red-400" />
+                </div>
+                <h4 className="mb-2 font-quicksand text-lg font-semibold text-[#2D2A26]">
+                  Errore
+                </h4>
+                <p className="max-w-xs font-nunito text-sm text-red-600 mb-4">
+                  {statusError}
+                </p>
+              </div>
+            )}
+
+            {/* Agent not ready - Blocking UI */}
+            {!statusLoading && !statusError && agentStatus && !agentStatus.isReady && (
+              <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50">
+                  <AlertCircle className="h-8 w-8 text-amber-500" />
+                </div>
+                <h4 className="mb-2 font-quicksand text-lg font-semibold text-[#2D2A26]">
+                  Agente non configurato
+                </h4>
+                <p className="max-w-xs font-nunito text-sm text-[#6B665C] mb-1">
+                  {agentStatus.blockingReason || 'Configura la Knowledge Base per abilitare la chat'}
+                </p>
+                <p className="max-w-xs font-nunito text-xs text-[#9C958A] mb-4">
+                  Documenti: {agentStatus.documentCount} | Status RAG: {agentStatus.ragStatus}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = `/admin/ai-lab/agents/${agentId}/edit`}
+                  className="rounded-full gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Configura Agente
+                </Button>
+              </div>
+            )}
+
+            {/* Agent ready - Embedded chat */}
+            {!statusLoading && !statusError && agentStatus?.isReady && (
+              <>
+                {chatThreadId ? (
+                  <div className="flex-1 min-h-0 flex flex-col relative">
+                    {/* Fullscreen toggle button */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <button
+                        onClick={() => setIsFullscreen(!isFullscreen)}
+                        className="p-2 rounded-lg bg-white/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-white dark:hover:bg-card transition-colors"
+                        title={isFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
+                        data-testid="fullscreen-toggle"
+                      >
+                        {isFullscreen ? (
+                          <Minimize2 className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Maximize2 className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
+
+                    {!isFullscreen && (
+                      <div className="flex-1 min-h-0">
+                        <ChatThreadView threadId={chatThreadId} />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsla(25,95%,38%,0.1)]">
+                      <MessageSquare className="h-8 w-8 text-[hsl(25,95%,38%)]" />
+                    </div>
+                    <h4 className="mb-2 font-quicksand text-lg font-semibold text-[#2D2A26]">
+                      Chat con {agentName}
+                    </h4>
+                    <p className="max-w-xs font-nunito text-sm text-[#6B665C] mb-4">
+                      Pronto per chattare • {agentStatus.documentCount} documenti nella KB
+                    </p>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const thread = await api.chat.createThread({
+                            agentId,
+                            title: `Chat con ${agentName}`,
+                          });
+                          if (thread?.id) {
+                            setChatThreadId(thread.id);
+                          }
+                        } catch {
+                          // Handle error
+                        }
+                      }}
+                      className="rounded-full"
+                    >
+                      Inizia Conversazione
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
 
         {/* History Tab */}
@@ -282,6 +383,31 @@ export function AgentInfoCard({
           </div>
         )}
       </div>
+
+      {/* Fullscreen Modal */}
+      {isFullscreen && chatThreadId && (
+        <div
+          className="fixed inset-0 z-50 bg-background"
+          data-testid="fullscreen-chat-modal"
+        >
+          {/* Close fullscreen button */}
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="p-2 rounded-lg bg-white/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-white dark:hover:bg-card transition-colors"
+              title="Esci da schermo intero"
+              data-testid="fullscreen-close"
+            >
+              <Minimize2 className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </div>
+
+          {/* Fullscreen chat */}
+          <div className="h-full w-full">
+            <ChatThreadView threadId={chatThreadId} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

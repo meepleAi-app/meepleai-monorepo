@@ -89,6 +89,41 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     },
 
     /**
+     * Get agent chat readiness status
+     * Validates KB populated and RAG initialized
+     * @param id Agent ID (GUID format)
+     */
+    async getStatus(id: string): Promise<{
+      agentId: string;
+      name: string;
+      isActive: boolean;
+      isReady: boolean;
+      hasConfiguration: boolean;
+      hasDocuments: boolean;
+      documentCount: number;
+      ragStatus: string;
+      blockingReason?: string | null;
+    }> {
+      const response = await httpClient.get<{
+        agentId: string;
+        name: string;
+        isActive: boolean;
+        isReady: boolean;
+        hasConfiguration: boolean;
+        hasDocuments: boolean;
+        documentCount: number;
+        ragStatus: string;
+        blockingReason?: string | null;
+      }>(`/api/v1/agents/${encodeURIComponent(id)}/status`);
+
+      if (!response) {
+        throw new Error('Failed to get agent status: no response from server');
+      }
+
+      return response;
+    },
+
+    /**
      * Get approved agent typologies (authenticated endpoint)
      * Issue #3186 (AGT-012): Agent Config Modal
      * @param status Filter by status (default: 'Approved')

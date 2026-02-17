@@ -28,6 +28,7 @@ internal static class AgentEndpoints
         MapCreateAgentEndpoint(group);
         MapGetAgentByIdEndpoint(group);
         MapGetAllAgentsEndpoint(group);
+        MapGetAgentStatusEndpoint(group); // Agent chat readiness validation
         MapConfigureAgentEndpoint(group);
         MapInvokeAgentEndpoint(group);
         MapUpdateAgentDocumentsEndpoint(group);
@@ -139,6 +140,41 @@ internal static class AgentEndpoints
         .RequireSession() // Issue #1446: Automatic session validation
         .WithName("GetAllAgents")
         .Produces(200)
+        .Produces(500);
+    }
+
+    private static void MapGetAgentStatusEndpoint(RouteGroupBuilder group)
+    {
+        // Get agent readiness status for chat
+        group.MapGet("/agents/{id:guid}/status", async (
+            Guid id,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            _ = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new GetAgentStatusQuery(id);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (result == null)
+            {
+                return Results.NotFound(new { error = $"Agent {id} not found" });
+            }
+
+            logger.LogInformation(
+                "Agent status check: {AgentId} - Ready={IsReady}, Documents={DocumentCount}",
+                id, result.IsReady, result.DocumentCount);
+
+            return Results.Ok(result);
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .WithName("GetAgentStatus")
+        .WithDescription("Check if agent is ready for chat (has KB documents and RAG initialized)")
+        .Produces<AgentStatusDto>(200)
+        .Produces(404)
         .Produces(500);
     }
 

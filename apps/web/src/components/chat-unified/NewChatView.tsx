@@ -326,7 +326,7 @@ export function NewChatView() {
   }, []);
 
   // Resolve actual agent ID from backend agents list
-  const _resolveAgentId = useCallback(
+  const resolveAgentId = useCallback(
     (agentType: string | null): string | undefined => {
       if (!agentType || agentType === 'auto') return undefined;
       const match = agents.find(a => a.type === agentType);
@@ -354,8 +354,11 @@ export function NewChatView() {
 
       try {
         const gameId = selectedGameId && selectedGameId !== '' ? selectedGameId : undefined;
+        const agentId = resolveAgentId(selectedAgentType);
+
         const thread = await api.chat.createThread({
           gameId: gameId ?? null,
+          agentId: agentId ?? null,
           title: selectedGame?.title
             ? `Chat: ${selectedGame.title}`
             : 'Nuova conversazione',
@@ -371,7 +374,7 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, router]
+    [selectedGameId, selectedGame?.title, selectedAgentType, resolveAgentId, router]
   );
 
   const handleQuickStart = useCallback(

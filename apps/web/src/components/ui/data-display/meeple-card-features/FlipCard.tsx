@@ -335,7 +335,7 @@ export function FlipCard({
   flipTrigger = 'card',
   detailHref,
   entityColor = '25 95% 45%',
-  entityName,
+  entityName: _entityName,
   title,
   className,
 }: FlipCardProps) {

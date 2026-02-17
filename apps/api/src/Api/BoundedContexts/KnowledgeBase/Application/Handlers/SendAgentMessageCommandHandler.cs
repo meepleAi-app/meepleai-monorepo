@@ -1,13 +1,16 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -23,6 +26,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILlmService _llmService;
+    private readonly IQdrantService _qdrantService;
+    private readonly IEmbeddingService _embeddingService;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     public SendAgentMessageCommandHandler(
@@ -30,12 +36,18 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         IChatThreadRepository chatThreadRepository,
         IUnitOfWork unitOfWork,
         ILlmService llmService,
+        IQdrantService qdrantService,
+        IEmbeddingService embeddingService,
+        MeepleAiDbContext dbContext,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -73,6 +85,52 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 new StreamingError($"Agent {command.AgentId} not found", "AGENT_NOT_FOUND"));
             yield break;
         }
+
+        // Load agent configuration and validate KB readiness
+        var agentConfig = await _dbContext.AgentConfigurations
+            .FirstOrDefaultAsync(
+                c => c.AgentId == command.AgentId && c.IsCurrent,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (agentConfig == null)
+        {
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(
+                    "Agent non configurato. Configura l'agente prima di chattare.",
+                    "AGENT_NOT_CONFIGURED"));
+            yield break;
+        }
+
+        // Parse and validate selected documents
+        var selectedDocumentIds = new List<Guid>();
+        if (!string.IsNullOrEmpty(agentConfig.SelectedDocumentIdsJson))
+        {
+            try
+            {
+                selectedDocumentIds = JsonSerializer.Deserialize<List<Guid>>(agentConfig.SelectedDocumentIdsJson)
+                    ?? new List<Guid>();
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to parse document IDs for agent {AgentId}", command.AgentId);
+            }
+        }
+
+        if (selectedDocumentIds.Count == 0)
+        {
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(
+                    "Agent non ha documenti nella Knowledge Base. Aggiungi documenti per abilitare la chat.",
+                    "AGENT_NO_DOCUMENTS"));
+            yield break;
+        }
+
+        _logger.LogInformation(
+            "Agent {AgentId} has {DocumentCount} documents in KB",
+            command.AgentId, selectedDocumentIds.Count);
 
         // Resolve or create ChatThread
         ChatThread? thread = null;
@@ -116,14 +174,93 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate($"Starting chat with {agent.Name}", thread.Id));
 
-        // Stream LLM response tokens and accumulate full response
+        // RAG Pipeline: Retrieve relevant context from Knowledge Base
+        yield return CreateEvent(
+            StreamingEventType.StateUpdate,
+            new StreamingStateUpdate("Searching knowledge base...", thread.Id));
+
+        // Step 1: Generate embedding for user question
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
+            command.UserQuestion,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        {
+            _logger.LogError("Embedding generation failed for agent {AgentId}", command.AgentId);
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError("Failed to generate embedding for query", "EMBEDDING_FAILED"));
+            yield break;
+        }
+
+        // Step 2: Vector search in Qdrant with document filtering
+        var gameId = thread.GameId?.ToString() ?? "default";
+        var documentIdsForSearch = selectedDocumentIds.Select(id => id.ToString()).ToList();
+
+        var searchResult = await _qdrantService.SearchAsync(
+            gameId,
+            embeddingResult.Embeddings[0],
+            limit: 10,
+            documentIds: documentIdsForSearch,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!searchResult.Success)
+        {
+            _logger.LogError("Vector search failed for agent {AgentId}: {Error}",
+                command.AgentId, searchResult.ErrorMessage);
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError($"Vector search failed: {searchResult.ErrorMessage}", "SEARCH_FAILED"));
+            yield break;
+        }
+
+        // Step 3: Filter results by minimum score and build context
+        var minScore = 0.6; // Configurable threshold
+        var relevantChunks = searchResult.Results
+            .Where(r => r.Score >= minScore)
+            .ToList();
+
+        _logger.LogInformation(
+            "Retrieved {ChunkCount} relevant chunks (score >= {MinScore}) for agent {AgentId}",
+            relevantChunks.Count, minScore, command.AgentId);
+
+        var ragContext = BuildContextFromChunks(relevantChunks);
+
+        // Step 4: Emit citations for frontend display
+        if (relevantChunks.Count > 0)
+        {
+            var citations = relevantChunks.Select(c => new
+            {
+                documentId = c.PdfId,
+                pageNumber = c.Page,
+                score = c.Score
+            }).ToList();
+
+            yield return CreateEvent(
+                StreamingEventType.Citations,
+                citations);
+        }
+
+        yield return CreateEvent(
+            StreamingEventType.StateUpdate,
+            new StreamingStateUpdate("Generating response...", thread.Id));
+
+        // Stream LLM response tokens with RAG context
         var responseBuilder = new StringBuilder();
-        var systemPrompt = $"You are {agent.Name}, a board game AI assistant. Answer questions about board games.";
+        var systemPrompt = $"You are {agent.Name}, a specialized board game AI assistant. " +
+                          "Answer questions based ONLY on the provided context from the game rules and documentation. " +
+                          "If the context doesn't contain the answer, say so clearly. " +
+                          "Always cite the page number when referencing specific rules.";
+
+        var userPrompt = string.IsNullOrEmpty(ragContext)
+            ? $"Question: {command.UserQuestion}\n\nNote: No relevant context found in knowledge base."
+            : $"Context from game documents:\n{ragContext}\n\nQuestion: {command.UserQuestion}\n\nProvide a clear answer based on the context above.";
+
         int tokenCount = 0;
 
         await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(
             systemPrompt,
-            command.UserQuestion,
+            userPrompt,
             cancellationToken).ConfigureAwait(false))
         {
             if (!string.IsNullOrEmpty(chunk.Content))
@@ -165,6 +302,21 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 totalTokens: tokenCount,
                 confidence: 0.85,
                 chatThreadId: thread.Id));
+    }
+
+    /// <summary>
+    /// Builds formatted context string from retrieved chunks for LLM prompt.
+    /// Pattern from AskAgentQuestionCommandHandler.
+    /// </summary>
+    private static string BuildContextFromChunks(List<SearchResultItem> chunks)
+    {
+        if (chunks.Count == 0)
+            return string.Empty;
+
+        var contextParts = chunks.Select((chunk, index) =>
+            $"[{index + 1}] (Score: {chunk.Score:F2}, Page: {chunk.Page})\n{chunk.Text}");
+
+        return string.Join("\n\n---\n\n", contextParts);
     }
 
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

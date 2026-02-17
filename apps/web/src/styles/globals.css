@@ -16,6 +16,11 @@
   --animate-bounce-subtle: bounceSubtle 0.35s ease-out;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-pulse-meeple: pulseMeeple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  /* MeepleCard v2 animations (Issue #4604) */
+  --animate-mc-shimmer: mc-shimmer 0.8s ease-out forwards;
+  --animate-mc-float-up: mc-float-up 0.35s ease-out both;
+  --animate-mc-badge-pulse: mc-badge-pulse 2s ease-in-out infinite;
 }
 
 @keyframes fadeIn {
@@ -63,6 +68,22 @@
   50% {
     opacity: 0.5;
   }
+}
+
+/* MeepleCard v2 animations (Issue #4604) */
+@keyframes mc-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes mc-float-up {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mc-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
 }
 
 @layer base {

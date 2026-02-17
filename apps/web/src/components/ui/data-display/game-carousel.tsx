@@ -802,12 +802,7 @@ export const GameCarousel = React.memo(function GameCarousel({
                     flipTrigger="button"
                     className={cn(
                       // Enhanced shadow & glow for center card — v2 (Issue #4612)
-                      isCenter && [
-                        '[box-shadow:var(--shadow-warm-2xl)]',
-                        'dark:shadow-[0_25px_60px_rgba(0,0,0,0.6)]',
-                        // Entity glow ring (already uses entity color from meeple-card.tsx)
-                        'ring-2',
-                      ]
+                      isCenter && '[box-shadow:var(--shadow-warm-2xl)]',
                     )}
                     data-testid={`carousel-card-${position.index}`}
                     // Issue #4040: Quick actions + Info button (only on center card)

@@ -31,7 +31,7 @@ const API_BASE =
   process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 /**
- * Session cookie name (matches middleware.ts and backend CookieHelpers.cs)
+ * Session cookie name (matches proxy.ts and backend CookieHelpers.cs)
  */
 const SESSION_COOKIE_NAME = 'meepleai_session';
 

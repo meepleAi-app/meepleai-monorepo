@@ -13,7 +13,7 @@
  * - Responsive design
  *
  * Security Layers:
- * 1. middleware.ts: Redirects if no session cookie
+ * 1. proxy.ts: Redirects if no session cookie
  * 2. RequireRole: Validates role via getCurrentUser() action
  * 3. Backend API: Final authorization check (403 if role insufficient)
  */

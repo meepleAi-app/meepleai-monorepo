@@ -1097,8 +1097,8 @@ function AdminSection() {
 ### Pattern 3: Permission-Based Routing
 
 ```tsx
-// middleware.ts
-export function middleware(request: NextRequest) {
+// proxy.ts
+export function proxy(request: NextRequest) {
   const permissions = await getServerPermissions(request);
 
   if (request.nextUrl.pathname.startsWith('/admin') && !permissions.role.includes('admin')) {

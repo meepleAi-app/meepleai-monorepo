@@ -161,6 +161,12 @@ const nextConfig = {
         destination: '/games/:id*',
         permanent: true, // 301 redirect for SEO (update index)
       },
+      // Legacy board-game-ai/ask redirect (consolidated from deleted src/middleware.ts)
+      {
+        source: '/board-game-ai/ask/:path*',
+        destination: '/chat/new',
+        permanent: true,
+      },
     ];
   },
 

@@ -1,12 +1,31 @@
 /**
- * Old Dashboard Redirect - Issue #4588
- * Epic #4575: Gaming Hub Dashboard - Phase 4
+ * Gaming Hub Dashboard - Issue #4584
+ * Epic #4575: Gaming Hub Dashboard - Phase 2
  *
- * Redirects /dashboard to new Gaming Hub homepage at /
+ * Authenticated user dashboard with gaming-focused hub
  */
 
-import { redirect } from 'next/navigation';
+import { RequireRole } from '@/components/auth/RequireRole';
+import { GamingHubClient } from '../gaming-hub-client';
+import type { Metadata } from 'next';
 
-export default function OldDashboardRedirect() {
-  redirect('/');
+export const metadata: Metadata = {
+  title: 'Gaming Hub | MeepleAI',
+  description:
+    'Your personal board game hub. Track sessions, manage your collection, and view your gaming statistics.',
+  openGraph: {
+    title: 'Gaming Hub | MeepleAI',
+    description: 'Your personal board game hub.',
+    type: 'website',
+  },
+};
+
+export const dynamic = 'force-dynamic';
+
+export default function GamingHubDashboardPage() {
+  return (
+    <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
+      <GamingHubClient />
+    </RequireRole>
+  );
 }

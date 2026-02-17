@@ -292,6 +292,15 @@
     --font-heading: var(--font-quicksand);     /* Headings: Quicksand bold */
     --font-body: var(--font-nunito);           /* Body: Nunito regular */
 
+    /* MeepleCard Entity Colors - v2 (Issue #4604, #4613) */
+    --color-entity-game: 25 95% 45%;      /* Orange */
+    --color-entity-player: 262 83% 58%;   /* Purple */
+    --color-entity-session: 240 60% 55%;  /* Indigo */
+    --color-entity-agent: 38 92% 50%;     /* Amber */
+    --color-entity-document: 210 40% 55%; /* Slate */
+    --color-entity-chat: 220 80% 55%;     /* Blue */
+    --color-entity-event: 350 89% 60%;    /* Rose */
+
     /* ============================================================================
      * SEMANTIC COLORS (Game-specific)
      * Extended palette for game badges and categorization

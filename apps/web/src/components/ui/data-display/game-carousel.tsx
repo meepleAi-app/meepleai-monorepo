@@ -495,8 +495,9 @@ function calculateCardPositions(
     const visible = absOffset <= halfVisible;
 
     // Calculate visual properties based on offset
-    const scale = visible ? 1 - absOffset * 0.15 : 0.5;
-    const opacity = visible ? 1 - absOffset * 0.3 : 0;
+    // v2: Center card 1.1x, side cards 0.85x (Issue #4612)
+    const scale = visible ? (absOffset === 0 ? 1.1 : 0.85) : 0.5;
+    const opacity = visible ? (absOffset === 0 ? 1 : 0.6) : 0;
     const zIndex = visible ? 10 - absOffset : 0;
     const blur = absOffset * 2;
 
@@ -800,12 +801,12 @@ export const GameCarousel = React.memo(function GameCarousel({
                     flipData={flippable && game.description ? { description: game.description } : undefined}
                     flipTrigger="button"
                     className={cn(
-                      // Enhanced shadow for center card
+                      // Enhanced shadow & glow for center card — v2 (Issue #4612)
                       isCenter && [
-                        'shadow-2xl',
-                        'dark:shadow-[0_20px_60px_-15px_hsl(25_95%_45%/0.4)]',
-                        // Orange glow ring
-                        'ring-2 ring-primary/20',
+                        '[box-shadow:var(--shadow-warm-2xl)]',
+                        'dark:shadow-[0_25px_60px_rgba(0,0,0,0.6)]',
+                        // Entity glow ring (already uses entity color from meeple-card.tsx)
+                        'ring-2',
                       ]
                     )}
                     data-testid={`carousel-card-${position.index}`}

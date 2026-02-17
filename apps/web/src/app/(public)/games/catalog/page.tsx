@@ -21,16 +21,16 @@
 
 'use client';
 
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useCallback } from 'react';
 
 import { AlertCircle, Library, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { CatalogFilters } from '@/components/catalog/CatalogFilters';
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
-import { GameCatalogCard } from '@/components/catalog/GameCatalogCard';
+import { MeepleGameCatalogCard, MeepleGameCatalogCardSkeleton } from '@/components/catalog/MeepleGameCatalogCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useSharedGames, useGameCategories, useGameMechanics } from '@/hooks/queries';
 import { useCatalogSearchParams, type SortByField } from '@/hooks/useCatalogSearchParams';
@@ -40,6 +40,8 @@ import type { SearchSharedGamesParams } from '@/lib/api';
  * Inner component that uses useSearchParams (requires Suspense boundary)
  */
 function CatalogContent() {
+  const router = useRouter();
+
   // URL-synced filter and pagination state (#2876)
   const { params, setParams, resetParams, setPage } = useCatalogSearchParams();
 
@@ -89,6 +91,11 @@ function CatalogContent() {
   const games = gamesData?.items || [];
   const total = gamesData?.total || 0;
   const totalPages = gamesData ? Math.ceil(total / params.pageSize) : 0;
+
+  // Navigate to game detail page
+  const handleGameClick = useCallback((gameId: string) => {
+    router.push(`/games/${gameId}`);
+  }, [router]);
 
   // Handlers - update URL params (resets page to 1 for filter changes)
   const handleSearch = (term: string) => {
@@ -155,13 +162,13 @@ function CatalogContent() {
             {topRatedLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-72 w-full" />
+                  <MeepleGameCatalogCardSkeleton key={i} />
                 ))}
               </div>
             ) : topRatedGames.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {topRatedGames.map((game) => (
-                  <GameCatalogCard key={game.id} game={game} />
+                  <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                 ))}
               </div>
             ) : (
@@ -178,13 +185,13 @@ function CatalogContent() {
             {latestAddedLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-72 w-full" />
+                  <MeepleGameCatalogCardSkeleton key={i} />
                 ))}
               </div>
             ) : latestAddedGames.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {latestAddedGames.map((game) => (
-                  <GameCatalogCard key={game.id} game={game} />
+                  <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                 ))}
               </div>
             ) : (
@@ -235,7 +242,7 @@ function CatalogContent() {
             {isLoading && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-96 w-full" />
+                  <MeepleGameCatalogCardSkeleton key={i} />
                 ))}
               </div>
             )}
@@ -259,7 +266,7 @@ function CatalogContent() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   {games.map((game) => (
-                    <GameCatalogCard key={game.id} game={game} />
+                    <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                   ))}
                 </div>
 
@@ -290,10 +297,9 @@ export default function SharedGamesCatalogPage() {
       fallback={
         <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
           <div className="container mx-auto px-4 py-8 max-w-7xl">
-            <Skeleton className="h-12 w-64 mb-8" />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-96 w-full" />
+                <MeepleGameCatalogCardSkeleton key={i} />
               ))}
             </div>
           </div>

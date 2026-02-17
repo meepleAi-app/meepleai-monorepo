@@ -174,18 +174,26 @@ export function useAddGameToLibrary(): UseMutationResult<
       // Cancel any outgoing refetches to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: libraryKeys.gameStatus(gameId) });
       await queryClient.cancelQueries({ queryKey: libraryKeys.quota() });
+      // Cross-cache: also cancel useCollectionActions query
+      await queryClient.cancelQueries({ queryKey: ['library-status', gameId] });
 
       // Snapshot previous values for rollback
       const previousGameStatus = queryClient.getQueryData<GameInLibraryStatus>(
         libraryKeys.gameStatus(gameId)
       );
       const previousQuota = queryClient.getQueryData<LibraryQuotaResponse>(libraryKeys.quota());
+      const previousCollectionStatus = queryClient.getQueryData(['library-status', gameId]);
 
       // Optimistically update game status to 'InLibrary'
       queryClient.setQueryData<GameInLibraryStatus>(
         libraryKeys.gameStatus(gameId),
         (old) => (old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false })
       );
+
+      // Cross-cache: also update useCollectionActions cache for immediate MeepleCard sync
+      queryClient.setQueryData(['library-status', gameId], (old: Record<string, unknown> | undefined) => (
+        old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false, associatedData: null }
+      ));
 
       // Optimistically update quota
       if (previousQuota) {
@@ -202,7 +210,7 @@ export function useAddGameToLibrary(): UseMutationResult<
         });
       }
 
-      return { previousGameStatus, previousQuota };
+      return { previousGameStatus, previousQuota, previousCollectionStatus };
     },
     onError: (_err, { gameId }, context) => {
       // Rollback to previous data on error
@@ -212,6 +220,9 @@ export function useAddGameToLibrary(): UseMutationResult<
       if (context?.previousQuota) {
         queryClient.setQueryData(libraryKeys.quota(), context.previousQuota);
       }
+      if (context?.previousCollectionStatus) {
+        queryClient.setQueryData(['library-status', gameId], context.previousCollectionStatus);
+      }
     },
     onSettled: (_data, _err, { gameId }) => {
       // Refetch to ensure cache consistency with server
@@ -219,6 +230,9 @@ export function useAddGameToLibrary(): UseMutationResult<
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+
+      // Cross-cache: invalidate useCollectionActions cache
+      queryClient.invalidateQueries({ queryKey: ['library-status', gameId] });
 
       // Issue #4: Invalidate game search cache to show updated library status
       queryClient.invalidateQueries({ queryKey: ['games', 'search'] });
@@ -255,6 +269,8 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       await queryClient.cancelQueries({ queryKey: libraryKeys.lists() });
       await queryClient.cancelQueries({ queryKey: libraryKeys.gameStatus(gameId) });
       await queryClient.cancelQueries({ queryKey: libraryKeys.quota() });
+      // Cross-cache: also cancel useCollectionActions query
+      await queryClient.cancelQueries({ queryKey: ['library-status', gameId] });
 
       // Snapshot previous values for rollback
       const previousLibrary = queryClient.getQueriesData<PaginatedLibraryResponse>({
@@ -265,6 +281,7 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       );
       const previousQuota = queryClient.getQueryData<LibraryQuotaResponse>(libraryKeys.quota());
       const previousStats = queryClient.getQueryData<UserLibraryStats>(libraryKeys.stats());
+      const previousCollectionStatus = queryClient.getQueryData(['library-status', gameId]);
 
       // Optimistically remove game from library lists
       queryClient.setQueriesData<PaginatedLibraryResponse>(
@@ -284,6 +301,11 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
         libraryKeys.gameStatus(gameId),
         (old) => (old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false })
       );
+
+      // Cross-cache: also update useCollectionActions cache for immediate MeepleCard sync
+      queryClient.setQueryData(['library-status', gameId], (old: Record<string, unknown> | undefined) => (
+        old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false, associatedData: null }
+      ));
 
       // Optimistically update quota
       if (previousQuota) {
@@ -311,7 +333,7 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
         });
       }
 
-      return { previousLibrary, previousGameStatus, previousQuota, previousStats };
+      return { previousLibrary, previousGameStatus, previousQuota, previousStats, previousCollectionStatus };
     },
     onError: (_err, gameId, context) => {
       // Rollback to previous data on error
@@ -329,6 +351,9 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       if (context?.previousStats) {
         queryClient.setQueryData(libraryKeys.stats(), context.previousStats);
       }
+      if (context?.previousCollectionStatus) {
+        queryClient.setQueryData(['library-status', gameId], context.previousCollectionStatus);
+      }
     },
     onSettled: (_data, _err, gameId) => {
       // Refetch to ensure cache consistency with server
@@ -336,6 +361,9 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+
+      // Cross-cache: invalidate useCollectionActions cache
+      queryClient.invalidateQueries({ queryKey: ['library-status', gameId] });
 
       // Issue #4: Invalidate game search cache to show updated library status
       queryClient.invalidateQueries({ queryKey: ['games', 'search'] });

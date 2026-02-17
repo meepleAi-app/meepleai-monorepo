@@ -4,12 +4,18 @@
  * Provides optimistic UI updates, error handling with rollback, and associated
  * data retrieval for removal warnings.
  *
+ * Cross-cache sync: Both ['library-status', gameId] (this hook) and
+ * ['library', 'status', gameId] (useGameInLibraryStatus) are kept in sync
+ * via optimistic updates and invalidation.
+ *
  * @module hooks/use-collection-actions
  * @see Issue #4259 - Collection Quick Actions for MeepleCard
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 
 // ============================================================================
 // Types
@@ -64,6 +70,8 @@ export function useCollectionActions(
 ): CollectionActions {
   const queryClient = useQueryClient();
   const queryKey = ['library-status', gameId];
+  // Cross-cache key used by useGameInLibraryStatus
+  const libraryStatusKey = libraryKeys.gameStatus(gameId);
 
   // Fetch library status
   const { data, isLoading } = useQuery<LibraryStatusResponse>({
@@ -103,30 +111,44 @@ export function useCollectionActions(
     onMutate: async () => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey });
+      await queryClient.cancelQueries({ queryKey: libraryStatusKey });
 
-      // Snapshot previous value
+      // Snapshot previous values
       const previous = queryClient.getQueryData<LibraryStatusResponse>(queryKey);
+      const previousLibraryStatus = queryClient.getQueryData(libraryStatusKey);
 
-      // Optimistic update
+      // Optimistic update: this hook's cache
       queryClient.setQueryData<LibraryStatusResponse>(queryKey, (old) => ({
         inLibrary: true,
         isFavorite: old?.isFavorite ?? false,
         associatedData: null,
       }));
 
-      return { previous };
+      // Optimistic update: useGameInLibraryStatus cache (cross-cache sync)
+      queryClient.setQueryData(libraryStatusKey, (old: Record<string, unknown> | undefined) => (
+        old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false }
+      ));
+
+      return { previous, previousLibraryStatus };
     },
     onError: (_err, _variables, context) => {
       // Rollback on error
       if (context?.previous) {
         queryClient.setQueryData(queryKey, context.previous);
       }
+      if (context?.previousLibraryStatus) {
+        queryClient.setQueryData(libraryStatusKey, context.previousLibraryStatus);
+      }
       toast.error('Impossibile aggiungere il gioco alla collezione');
     },
-    onSuccess: () => {
+    onSettled: () => {
       toast.success('Gioco aggiunto alla collezione!');
-      // Invalidate related queries
+      // Invalidate all related caches for consistency
       queryClient.invalidateQueries({ queryKey: ['user-library'] });
+      queryClient.invalidateQueries({ queryKey: libraryStatusKey });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
     },
   });
 
@@ -145,26 +167,41 @@ export function useCollectionActions(
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<LibraryStatusResponse>(queryKey);
+      await queryClient.cancelQueries({ queryKey: libraryStatusKey });
 
-      // Optimistic update
+      const previous = queryClient.getQueryData<LibraryStatusResponse>(queryKey);
+      const previousLibraryStatus = queryClient.getQueryData(libraryStatusKey);
+
+      // Optimistic update: this hook's cache
       queryClient.setQueryData<LibraryStatusResponse>(queryKey, () => ({
         inLibrary: false,
         isFavorite: false,
         associatedData: null,
       }));
 
-      return { previous };
+      // Optimistic update: useGameInLibraryStatus cache (cross-cache sync)
+      queryClient.setQueryData(libraryStatusKey, (old: Record<string, unknown> | undefined) => (
+        old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false }
+      ));
+
+      return { previous, previousLibraryStatus };
     },
     onError: (_err, _variables, context) => {
       if (context?.previous) {
         queryClient.setQueryData(queryKey, context.previous);
       }
+      if (context?.previousLibraryStatus) {
+        queryClient.setQueryData(libraryStatusKey, context.previousLibraryStatus);
+      }
       toast.error('Impossibile rimuovere il gioco dalla collezione');
     },
-    onSuccess: () => {
+    onSettled: () => {
       toast.success('Gioco rimosso dalla collezione');
       queryClient.invalidateQueries({ queryKey: ['user-library'] });
+      queryClient.invalidateQueries({ queryKey: libraryStatusKey });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
     },
   });
 

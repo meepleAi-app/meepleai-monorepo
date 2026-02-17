@@ -91,10 +91,10 @@ describe('UnifiedHeader', () => {
   });
 
   describe('Mobile-Only Layout', () => {
-    it('should have md:hidden class (desktop-hidden)', () => {
+    it('should not have md:hidden (parent layouts control visibility)', () => {
       render(<UnifiedHeader />);
       const header = screen.getByTestId('unified-header');
-      expect(header).toHaveClass('md:hidden');
+      expect(header).not.toHaveClass('md:hidden');
     });
 
     it('should have compact h-12 height (48px)', () => {

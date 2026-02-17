@@ -196,7 +196,6 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
     <header
       className={cn(
         'sticky top-0 z-50 w-full border-b',
-        'md:hidden',
         // Glass morphism
         'bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%]',
         'dark:bg-card dark:backdrop-blur-none',

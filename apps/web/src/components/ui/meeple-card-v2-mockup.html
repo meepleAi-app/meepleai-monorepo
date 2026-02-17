@@ -1,0 +1,2366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleCard v2 — Design Mockup for Approval</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       DESIGN TOKENS
+    ================================================================ */
+    :root {
+      --bg: hsl(30 25% 97%);
+      --fg: hsl(30 15% 15%);
+      --card: hsl(0 0% 100%);
+      --card-fg: hsl(30 15% 15%);
+      --muted: hsl(30 20% 90%);
+      --muted-fg: hsl(30 12% 45%);
+      --border: hsl(30 15% 85%);
+      --primary: hsl(25 95% 42%);
+      --primary-light: hsl(25 95% 55%);
+
+      /* Entity Colors */
+      --e-game: 25, 95%, 45%;
+      --e-player: 262, 83%, 58%;
+      --e-session: 240, 60%, 55%;
+      --e-agent: 38, 92%, 50%;
+      --e-document: 210, 40%, 55%;
+      --e-chat: 220, 80%, 55%;
+      --e-event: 350, 89%, 60%;
+
+      --radius: 16px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
+      --font-display: 'Quicksand', sans-serif;
+      --font-body: 'Nunito', sans-serif;
+
+      --shadow-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+      --shadow-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
+      --shadow-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
+      --shadow-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+      --shadow-2xl: 0 25px 60px rgba(180,130,80,0.2), 0 12px 24px rgba(180,130,80,0.1);
+    }
+
+    .dark {
+      --bg: hsl(20 10% 8%);
+      --fg: hsl(30 20% 90%);
+      --card: hsl(20 8% 14%);
+      --card-fg: hsl(30 20% 90%);
+      --muted: hsl(20 6% 20%);
+      --muted-fg: hsl(30 10% 60%);
+      --border: hsl(20 6% 24%);
+      --primary: hsl(25 95% 58%);
+      --primary-light: hsl(25 95% 65%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.4);
+      --shadow-xl: 0 20px 50px rgba(0,0,0,0.5);
+      --shadow-2xl: 0 25px 60px rgba(0,0,0,0.6);
+    }
+
+    /* ================================================================
+       RESET & BASE
+    ================================================================ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      min-height: 100vh;
+      transition: background 0.4s, color 0.4s;
+      overflow-x: hidden;
+    }
+
+    /* Wood texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(180,120,60,0.012) 2px, rgba(180,120,60,0.012) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(140,90,50,0.015) 3px, rgba(140,90,50,0.015) 5px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .dark body::before { opacity: 0.15; }
+
+    /* ================================================================
+       ANIMATIONS
+    ================================================================ */
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+      50% { box-shadow: 0 0 12px 4px currentColor; }
+    }
+
+    @keyframes badge-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    @keyframes float-up {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin-slow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes unread-bounce {
+      0%, 100% { transform: scale(1); }
+      30% { transform: scale(1.2); }
+      60% { transform: scale(0.95); }
+    }
+
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ================================================================
+       LAYOUT
+    ================================================================ */
+    .page-wrap { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 6rem; }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2rem 0 1rem;
+    }
+    .page-header h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.02em;
+    }
+    .page-header p { color: var(--muted-fg); font-size: 1.05rem; }
+    .page-header .version-badge {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.25rem 1rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, hsl(var(--e-game)), hsl(var(--e-event)));
+      color: #fff;
+    }
+
+    .section {
+      margin-bottom: 4rem;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 0.35rem;
+      position: relative;
+      display: inline-block;
+    }
+    .section-title::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -4px;
+      width: 50%;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--primary);
+    }
+    .section-desc { color: var(--muted-fg); font-size: 0.95rem; margin-bottom: 2rem; }
+
+    /* Dark mode toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 999;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: var(--shadow-md);
+      transition: all 0.3s;
+    }
+    .theme-toggle:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
+
+    /* ================================================================
+       CARD BASE
+    ================================================================ */
+    .mc {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: var(--card);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .mc::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(12px) saturate(180%);
+      z-index: 0;
+      border-radius: inherit;
+    }
+    .dark .mc::before { background: rgba(30,25,20,0.7); }
+    .mc > * { position: relative; z-index: 1; }
+
+    /* Entity left accent */
+    .mc .entity-accent {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      z-index: 2;
+      transition: width 0.25s;
+    }
+    .mc:hover .entity-accent { width: 6px; }
+
+    /* Hover effects */
+    .mc.hoverable:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* Entity badge */
+    .entity-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    /* Cover image */
+    .mc-cover {
+      position: relative;
+      overflow: hidden;
+    }
+    .mc-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .mc:hover .mc-cover img { transform: scale(1.06); }
+
+    /* Cover gradient overlay */
+    .mc-cover .gradient-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    /* Shimmer effect on hover */
+    .mc-cover .shimmer {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%);
+      transform: translateX(-100%);
+      pointer-events: none;
+    }
+    .mc:hover .mc-cover .shimmer {
+      animation: shimmer 0.8s ease-out forwards;
+    }
+
+    /* Content area */
+    .mc-content { padding: 1rem 1.1rem; }
+    .mc-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      line-height: 1.3;
+      color: var(--card-fg);
+      margin-bottom: 2px;
+    }
+    .mc-subtitle {
+      font-size: 0.82rem;
+      color: var(--muted-fg);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Rating */
+    .mc-rating { display: flex; align-items: center; gap: 4px; margin-bottom: 0.5rem; }
+    .mc-rating .star { font-size: 0.85rem; }
+    .mc-rating .star.filled { color: hsl(42, 95%, 50%); }
+    .mc-rating .star.half { color: hsl(42, 95%, 50%, 0.5); }
+    .mc-rating .star.empty { color: var(--muted); }
+    .mc-rating .score { font-size: 0.75rem; color: var(--muted-fg); margin-left: 4px; font-weight: 600; }
+
+    /* Footer metadata bar */
+    .mc-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      padding: 0.65rem 1rem;
+      border-top: 1px solid var(--border);
+      background: color-mix(in srgb, var(--muted) 60%, transparent);
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+    .mc-footer .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: color-mix(in srgb, var(--fg) 70%, transparent);
+    }
+    .mc-footer .meta-icon {
+      width: 14px; height: 14px;
+      opacity: 0.65;
+    }
+
+    /* Tag stack (top-left, INSIDE cover image) */
+    .tag-stack {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* Vertical tag strip (left edge, INSIDE cover image) */
+    .tag-strip {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .tag-pill.pulse { animation: badge-pulse 2s ease-in-out infinite; }
+
+    /* Quick Action Buttons */
+    .quick-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+      display: flex;
+      gap: 6px;
+    }
+    .qa-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      color: hsl(30, 12%, 40%);
+    }
+    .qa-btn:hover {
+      background: #fff;
+      transform: scale(1.15);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    .dark .qa-btn {
+      background: rgba(40,35,30,0.85);
+      border-color: rgba(255,255,255,0.15);
+      color: hsl(30, 20%, 75%);
+    }
+
+    /* Fade-in for side cards (hidden quick actions) */
+    .qa-hidden { opacity: 0; pointer-events: none; }
+
+    /* Always visible for focus card */
+    .qa-always .qa-btn { opacity: 1; pointer-events: auto; }
+
+    /* Stagger animation */
+    .qa-stagger .qa-btn:nth-child(1) { animation: float-up 0.35s 0.08s both; }
+    .qa-stagger .qa-btn:nth-child(2) { animation: float-up 0.35s 0.16s both; }
+    .qa-stagger .qa-btn:nth-child(3) { animation: float-up 0.35s 0.24s both; }
+    .qa-stagger .qa-btn:nth-child(4) { animation: float-up 0.35s 0.32s both; }
+
+    /* Info button */
+    .info-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.6);
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: hsl(30, 12%, 40%);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .info-btn:hover {
+      background: #fff;
+      transform: scale(1.15);
+    }
+    .dark .info-btn {
+      background: rgba(40,35,30,0.85);
+      border-color: rgba(255,255,255,0.15);
+      color: hsl(30, 20%, 75%);
+    }
+
+    /* Entity glow ring on hover */
+    .mc.glow-hover:hover {
+      outline: 2px solid;
+      outline-offset: 2px;
+    }
+
+    /* ================================================================
+       CARD FLIP (3D)
+    ================================================================ */
+    .mc-flip-container {
+      perspective: 1200px;
+      cursor: pointer;
+    }
+    .mc-flip-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+    .mc-flip-container.flipped .mc-flip-inner {
+      transform: rotateY(180deg);
+    }
+    .mc-flip-front,
+    .mc-flip-back {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .mc-flip-front {
+      position: relative;
+    }
+    .mc-flip-back {
+      position: absolute;
+      inset: 0;
+      transform: rotateY(180deg);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Card back design */
+    .mc-back-inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: var(--card);
+    }
+    .mc-back-header {
+      padding: 1.2rem 1.2rem 0.8rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .mc-back-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.12;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        currentColor 10px,
+        currentColor 11px
+      );
+    }
+    .mc-back-header .back-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      color: #fff;
+      position: relative;
+      z-index: 1;
+    }
+    .mc-back-header .back-entity-icon {
+      font-size: 1.6rem;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 4px;
+    }
+    .mc-back-body {
+      flex: 1;
+      padding: 1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      font-size: 0.82rem;
+      color: var(--card-fg);
+      overflow-y: auto;
+    }
+    .mc-back-body .back-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .mc-back-body .back-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .mc-back-body .back-label {
+      font-weight: 600;
+      color: var(--muted-fg);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .mc-back-body .back-value {
+      font-weight: 700;
+      text-align: right;
+    }
+    .mc-back-body .back-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .mc-back-body .back-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: var(--muted);
+      color: var(--muted-fg);
+    }
+    .mc-back-footer {
+      padding: 0.75rem 1.2rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted-fg);
+      background: color-mix(in srgb, var(--muted) 60%, transparent);
+    }
+    .mc-back-footer span {
+      opacity: 0.7;
+    }
+
+    /* Flip hint indicator */
+    .flip-hint {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      z-index: 10;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--muted-fg);
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      border: 1px solid var(--border);
+    }
+    .mc-flip-container:hover .flip-hint {
+      opacity: 1;
+    }
+    .mc-flip-container.flipped .flip-hint {
+      opacity: 1;
+    }
+
+    /* ================================================================
+       SECTION 1: CAROUSEL
+    ================================================================ */
+    .carousel-wrapper {
+      position: relative;
+      overflow-x: hidden;  /* hide horizontal overflow for side fades */
+      overflow-y: visible; /* allow center card glow/outline to show vertically */
+      padding: 40px 0;     /* room for center card glow + outline + badge overhang */
+      margin: -40px 0;     /* compensate padding so layout doesn't shift */
+    }
+    .carousel-stage {
+      position: relative;
+      height: 520px;
+      perspective: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 0;
+    }
+
+    .carousel-card {
+      position: absolute;
+      width: 260px;
+      transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform, opacity, filter;
+    }
+
+    /* Side fades on the wrapper */
+    .carousel-wrapper::before,
+    .carousel-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 40px; bottom: 40px;  /* match padding to avoid covering glow */
+      width: 120px;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .carousel-wrapper::before { left: 0; background: linear-gradient(90deg, var(--bg), transparent); }
+    .carousel-wrapper::after { right: 0; background: linear-gradient(-90deg, var(--bg), transparent); }
+
+    /* Nav arrows */
+    .carousel-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 30;
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: var(--fg);
+      box-shadow: var(--shadow-md);
+      transition: all 0.3s;
+    }
+    .carousel-nav:hover { transform: translateY(-50%) scale(1.1); box-shadow: var(--shadow-lg); }
+    .carousel-nav.prev { left: 16px; }
+    .carousel-nav.next { right: 16px; }
+
+    /* Center card focus glow — applied via JS class */
+    .carousel-card.is-center .mc {
+      box-shadow:
+        var(--shadow-2xl),
+        0 0 40px hsla(var(--e-game), 0.35),
+        0 0 80px hsla(var(--e-game), 0.15);
+      outline: 2.5px solid hsla(var(--e-game), 0.6);
+      outline-offset: 3px;
+    }
+    .carousel-card.is-center .mc:hover {
+      box-shadow:
+        var(--shadow-2xl),
+        0 0 50px hsla(var(--e-game), 0.45),
+        0 0 100px hsla(var(--e-game), 0.2);
+    }
+
+    /* Quick actions hidden on side cards, visible on center */
+    .carousel-card .quick-actions { opacity: 0; pointer-events: none; transition: opacity 0.3s 0.15s; }
+    .carousel-card.is-center .quick-actions { opacity: 1; pointer-events: auto; }
+
+    /* Carousel dots */
+    .carousel-dots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 1rem;
+    }
+    .carousel-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      border: none;
+      background: var(--muted);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .carousel-dot.active {
+      width: 28px;
+      border-radius: 6px;
+      background: var(--primary);
+    }
+
+    /* ================================================================
+       SECTION 2: ENTITY GALLERY (grid)
+    ================================================================ */
+    .entity-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+    .mc-grid { display: flex; flex-direction: column; }
+    .mc-grid .mc-cover { aspect-ratio: 7/10; }
+
+    /* Status chips */
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* Live indicator */
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: live-pulse 1.5s ease-in-out infinite;
+    }
+
+    /* Online dot */
+    .online-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      border: 2px solid var(--card);
+      position: absolute;
+      bottom: 2px; right: 2px;
+    }
+
+    /* Capability chip */
+    .cap-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    /* Unread badge (inside cover) */
+    .unread-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 10;
+      min-width: 22px;
+      height: 22px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      padding: 0 6px;
+      animation: unread-bounce 0.6s ease;
+    }
+
+    /* ================================================================
+       SECTION 3: HOVER STATES
+    ================================================================ */
+    .hover-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .hover-grid { grid-template-columns: 1fr; max-width: 320px; margin: 0 auto; } }
+
+    .hover-label {
+      text-align: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--muted-fg);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Tilt effect for "hovered" demo */
+    .tilt-demo .mc {
+      transform: translateY(-8px) perspective(600px) rotateX(2deg) rotateY(-3deg);
+      box-shadow: var(--shadow-xl), 0 0 30px hsla(var(--e-game), 0.25);
+      outline: 2px solid hsla(var(--e-game), 0.4);
+      outline-offset: 2px;
+    }
+    .tilt-demo .mc .mc-cover .shimmer {
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    /* Actions revealed demo */
+    .actions-demo .quick-actions { opacity: 1 !important; pointer-events: auto !important; }
+
+    /* ================================================================
+       SECTION 4: TAG SYSTEM
+    ================================================================ */
+    .tag-showcase { display: flex; gap: 2.5rem; align-items: flex-start; flex-wrap: wrap; }
+    .tag-card-wrap { width: 260px; flex-shrink: 0; }
+    .tag-legend {
+      flex: 1;
+      min-width: 280px;
+      padding: 1.5rem;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    .tag-legend h4 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--fg);
+    }
+    .tag-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+    .tag-legend-item:last-child { border-bottom: none; }
+
+    /* Glow tag */
+    .tag-glow {
+      box-shadow: 0 0 8px 2px currentColor;
+    }
+
+    /* Overflow badge */
+    .tag-overflow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px; height: 18px;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 800;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted-fg);
+      cursor: help;
+    }
+
+    /* ================================================================
+       SECTION 5: QUICK ACTIONS COMPARISON
+    ================================================================ */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+    }
+    @media (max-width: 768px) { .comparison-grid { grid-template-columns: 1fr; } }
+    .comparison-col { text-align: center; }
+    .comparison-label {
+      display: inline-block;
+      padding: 4px 16px;
+      border-radius: 999px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .comparison-label.old-label { background: var(--muted); color: var(--muted-fg); }
+    .comparison-label.new-label { background: hsl(var(--e-game)); color: #fff; }
+
+    /* Old style buttons */
+    .qa-old .qa-btn {
+      background: rgba(200,200,200,0.6);
+      border-color: rgba(200,200,200,0.4);
+      color: #999;
+    }
+
+    /* New style entity-colored */
+    .qa-new .qa-btn:hover {
+      outline: 2px solid hsl(var(--e-game));
+      outline-offset: 2px;
+      box-shadow: 0 0 16px hsla(var(--e-game), 0.4);
+    }
+
+    /* ================================================================
+       SECTION 6: LAYOUT VARIANTS
+    ================================================================ */
+    .variants-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .variant-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+    .variant-label-side {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      writing-mode: vertical-lr;
+      text-orientation: mixed;
+      min-width: 30px;
+      padding-top: 0.5rem;
+    }
+
+    /* List variant */
+    .mc-list {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      max-width: 600px;
+      width: 100%;
+    }
+    .mc-list .mc-cover { width: 64px; height: 64px; border-radius: var(--radius-xs); flex-shrink: 0; }
+    .mc-list .mc-content { padding: 0; flex: 1; min-width: 0; }
+    .mc-list .mc-title { font-size: 0.95rem; }
+    .mc-list .entity-accent { display: none; }
+    .mc-list .entity-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Compact variant */
+    .mc-compact {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-xs);
+      max-width: 400px;
+    }
+    .mc-compact .mc-cover { width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0; }
+    .mc-compact .mc-content { padding: 0; flex: 1; min-width: 0; }
+    .mc-compact .mc-title { font-size: 0.85rem; }
+    .mc-compact .entity-accent { display: none; }
+
+    /* Featured variant */
+    .mc-featured { display: flex; flex-direction: column; max-width: 500px; width: 100%; }
+    .mc-featured .mc-cover { aspect-ratio: 16/9; }
+    .mc-featured .mc-content { padding: 1.25rem; }
+    .mc-featured .mc-title { font-size: 1.2rem; }
+    .mc-featured .action-row { display: flex; gap: 8px; margin-top: 0.75rem; }
+    .mc-featured .action-btn {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-xs);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .mc-featured .action-btn.primary-btn {
+      background: hsl(var(--e-game));
+      color: #fff;
+    }
+    .mc-featured .action-btn.primary-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    .mc-featured .action-btn.secondary-btn {
+      background: var(--muted);
+      color: var(--fg);
+    }
+
+    /* Hero variant */
+    .mc-hero {
+      position: relative;
+      min-height: 280px;
+      border-radius: 20px;
+      max-width: 700px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .mc-hero .mc-cover { position: absolute; inset: 0; }
+    .mc-hero .mc-content {
+      position: relative;
+      z-index: 2;
+      margin-top: auto;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: 280px;
+      background: linear-gradient(180deg, transparent 0%, hsla(var(--e-game), 0.15) 30%, hsla(var(--e-game), 0.7) 70%, hsla(var(--e-game), 0.92) 100%);
+    }
+    .mc-hero .mc-title { font-size: 1.8rem; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .mc-hero .mc-subtitle { color: rgba(255,255,255,0.85); }
+    .mc-hero .entity-ribbon {
+      position: absolute;
+      top: 18px;
+      right: -32px;
+      z-index: 10;
+      padding: 4px 40px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #fff;
+      transform: rotate(45deg);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .mc-hero .entity-accent { display: none; }
+
+    /* ================================================================
+       UTILITIES
+    ================================================================ */
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .gap-1 { gap: 4px; }
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+    .mt-1 { margin-top: 4px; }
+    .mt-2 { margin-top: 8px; }
+    .mb-1 { margin-bottom: 4px; }
+    .text-xs { font-size: 0.75rem; }
+    .text-sm { font-size: 0.85rem; }
+    .fw-600 { font-weight: 600; }
+    .fw-700 { font-weight: 700; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Placeholder images */
+    .img-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    /* Avatar */
+    .avatar-circle {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .entity-grid { grid-template-columns: repeat(2, 1fr); }
+      .carousel-card { width: 200px; }
+      .carousel-stage { height: 440px; }
+    }
+    @media (max-width: 480px) {
+      .entity-grid { grid-template-columns: 1fr; max-width: 300px; margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="document.documentElement.classList.toggle('dark'); this.textContent = document.documentElement.classList.contains('dark') ? '☀️' : '🌙';" aria-label="Toggle dark mode">🌙</button>
+
+  <div class="page-wrap">
+    <!-- ============================================================
+         HEADER
+    ============================================================ -->
+    <header class="page-header">
+      <h1>MeepleCard v2</h1>
+      <p>Design Mockup — Enhanced Card System for MeepleAI</p>
+      <span class="version-badge">Ready for Approval</span>
+    </header>
+
+    <!-- ============================================================
+         SECTION 1: ENHANCED CAROUSEL
+    ============================================================ -->
+    <section class="section">
+      <h2 class="section-title">1. Enhanced Carousel</h2>
+      <p class="section-desc">Center card with Scale + Glow focus effect. Entity-colored shadow, always-visible quick actions, and smooth 3D transitions. Click arrows or dots to navigate.</p>
+
+      <div class="carousel-wrapper">
+        <div class="carousel-stage" id="carouselStage">
+
+          <!-- Card 0: Carcassonne -->
+          <div class="carousel-card" data-index="0">
+            <div class="mc mc-grid">
+              <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+              <div class="mc-cover" style="aspect-ratio: 7/10;">
+                <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(30,60%,85%), hsl(20,70%,75%));">🏰</div>
+                <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                <div class="tag-stack">
+                  <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                </div>
+                <div class="quick-actions qa-stagger">
+                  <button class="qa-btn" title="Wishlist">♡</button>
+                  <button class="qa-btn" title="Share">↗</button>
+                  <button class="qa-btn" title="Bookmark">⚑</button>
+                  <button class="info-btn" title="View details">ℹ</button>
+                </div>
+              </div>
+              <div class="mc-content">
+                <div class="mc-title truncate">Carcassonne</div>
+                <div class="mc-subtitle">Hans im Glück</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 1: Everdell -->
+          <div class="carousel-card" data-index="1">
+            <div class="mc mc-grid">
+              <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+              <div class="mc-cover" style="aspect-ratio: 7/10;">
+                <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(200,50%,80%), hsl(220,60%,70%));">🐉</div>
+                <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                <div class="tag-stack">
+                  <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                </div>
+                <div class="quick-actions qa-stagger">
+                  <button class="qa-btn" title="Wishlist">♡</button>
+                  <button class="qa-btn" title="Share">↗</button>
+                  <button class="qa-btn" title="Bookmark">⚑</button>
+                  <button class="info-btn" title="View details">ℹ</button>
+                </div>
+              </div>
+              <div class="mc-content">
+                <div class="mc-title truncate">Everdell</div>
+                <div class="mc-subtitle">Starling Games</div>
+              </div>
+              <div class="mc-footer">
+                <span class="meta-item">👥 1-4</span>
+                <span class="meta-item">⏱ 40-80m</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Wingspan (CENTER) -->
+          <div class="carousel-card" data-index="2">
+            <div class="mc mc-grid">
+              <div class="entity-accent" style="background: hsl(var(--e-game)); width: 5px;"></div>
+              <div class="mc-cover" style="aspect-ratio: 7/10;">
+                <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(280,40%,75%), hsl(260,50%,60%));">🦅</div>
+                <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                <div class="shimmer"></div>
+                <div class="tag-stack">
+                  <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                  <span class="tag-pill" style="background: hsl(142, 76%, 36%);">✦ New</span>
+                </div>
+                <div class="quick-actions qa-always qa-stagger">
+                  <button class="qa-btn" title="Wishlist">♡</button>
+                  <button class="qa-btn" title="Share">↗</button>
+                  <button class="qa-btn" title="Bookmark">⚑</button>
+                  <button class="info-btn" title="View details">ℹ</button>
+                </div>
+              </div>
+              <div class="mc-content">
+                <div class="mc-title">Wingspan</div>
+                <div class="mc-subtitle">Stonemaier Games</div>
+                <div class="mc-rating">
+                  <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span><span class="star empty">★</span>
+                  <span class="score">7.2</span>
+                </div>
+              </div>
+              <div class="mc-footer">
+                <span class="meta-item">👥 1-5</span>
+                <span class="meta-item">⏱ 40-70m</span>
+                <span class="meta-item">⭐ BGG 8.1</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Gloomhaven -->
+          <div class="carousel-card" data-index="3">
+            <div class="mc mc-grid">
+              <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+              <div class="mc-cover" style="aspect-ratio: 7/10;">
+                <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(15,60%,80%), hsl(35,70%,65%));">⚔️</div>
+                <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                <div class="tag-stack">
+                  <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                </div>
+                <div class="quick-actions qa-stagger">
+                  <button class="qa-btn" title="Wishlist">♡</button>
+                  <button class="qa-btn" title="Share">↗</button>
+                  <button class="qa-btn" title="Bookmark">⚑</button>
+                  <button class="info-btn" title="View details">ℹ</button>
+                </div>
+              </div>
+              <div class="mc-content">
+                <div class="mc-title truncate">Gloomhaven</div>
+                <div class="mc-subtitle">Cephalofair Games</div>
+              </div>
+              <div class="mc-footer">
+                <span class="meta-item">👥 1-4</span>
+                <span class="meta-item">⏱ 60-120m</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Terraforming Mars -->
+          <div class="carousel-card" data-index="4">
+            <div class="mc mc-grid">
+              <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+              <div class="mc-cover" style="aspect-ratio: 7/10;">
+                <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(45,60%,80%), hsl(30,70%,70%));">🌾</div>
+                <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                <div class="tag-stack">
+                  <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                </div>
+                <div class="quick-actions qa-stagger">
+                  <button class="qa-btn" title="Wishlist">♡</button>
+                  <button class="qa-btn" title="Share">↗</button>
+                  <button class="qa-btn" title="Bookmark">⚑</button>
+                  <button class="info-btn" title="View details">ℹ</button>
+                </div>
+              </div>
+              <div class="mc-content">
+                <div class="mc-title truncate">Terraforming Mars</div>
+                <div class="mc-subtitle">FryxGames</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nav arrows -->
+          <button class="carousel-nav prev" id="carouselPrev" aria-label="Previous">‹</button>
+          <button class="carousel-nav next" id="carouselNext" aria-label="Next">›</button>
+        </div>
+      </div>
+
+      <div class="carousel-dots" id="carouselDots">
+        <button class="carousel-dot" data-index="0"></button>
+        <button class="carousel-dot" data-index="1"></button>
+        <button class="carousel-dot active" data-index="2"></button>
+        <button class="carousel-dot" data-index="3"></button>
+        <button class="carousel-dot" data-index="4"></button>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION 2: ENTITY TYPE GALLERY
+    ============================================================ -->
+    <section class="section">
+      <h2 class="section-title">2. Entity Type Cards</h2>
+      <p class="section-desc">All 7 entity types in grid variant with color-coded accents, entity badges, tags, and semantic metadata.</p>
+
+      <div class="entity-grid">
+
+        <!-- GAME -->
+        <div class="mc-flip-container" data-flippable>
+          <div class="mc-flip-inner">
+            <div class="mc-flip-front">
+              <div class="mc mc-grid hoverable glow-hover" style="--glow-color: var(--e-game); outline-color: hsla(var(--e-game), 0.4);">
+                <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+                <div class="mc-cover" style="aspect-ratio: 7/10;">
+                  <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(280,40%,75%), hsl(260,50%,60%));">🦅</div>
+                  <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                  <div class="shimmer"></div>
+                  <div class="tag-stack">
+                    <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                    <span class="tag-pill" style="background: hsl(142, 76%, 36%);">New</span>
+                    <span class="tag-pill" style="background: hsl(0, 84%, 60%);">Sale</span>
+                  </div>
+                  <div class="quick-actions qa-hidden" style="transition: opacity 0.3s;">
+                    <button class="qa-btn">♡</button>
+                    <button class="info-btn">ℹ</button>
+                  </div>
+                </div>
+                <div class="mc-content">
+                  <div class="mc-title">Wingspan</div>
+                  <div class="mc-subtitle">Stonemaier Games</div>
+                  <div class="mc-rating">
+                    <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span><span class="star empty">★</span>
+                    <span class="score">7.2</span>
+                  </div>
+                </div>
+                <div class="mc-footer">
+                  <span class="meta-item">👥 2-4</span>
+                  <span class="meta-item">⏱ 60min</span>
+                </div>
+              </div>
+              <div class="flip-hint">↻</div>
+            </div>
+            <div class="mc-flip-back">
+              <div class="mc-back-inner">
+                <div class="mc-back-header" style="background: hsl(var(--e-game)); color: hsl(var(--e-game));">
+                  <div class="back-entity-icon">🦅</div>
+                  <div class="back-title">Wingspan</div>
+                </div>
+                <div class="mc-back-body">
+                  <div class="back-row"><span class="back-label">Designer</span><span class="back-value">Elizabeth Hargrave</span></div>
+                  <div class="back-row"><span class="back-label">Year</span><span class="back-value">2019</span></div>
+                  <div class="back-row"><span class="back-label">Weight</span><span class="back-value">2.45 / 5</span></div>
+                  <div class="back-row"><span class="back-label">BGG Rank</span><span class="back-value">#22</span></div>
+                  <div class="back-row">
+                    <span class="back-label">Mechanics</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Engine Building</span>
+                      <span class="back-chip">Hand Mgmt</span>
+                      <span class="back-chip">Set Collection</span>
+                    </div>
+                  </div>
+                  <div class="back-row">
+                    <span class="back-label">Categories</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Animals</span>
+                      <span class="back-chip">Card Game</span>
+                      <span class="back-chip">Educational</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mc-back-footer"><span>↻ Tap to flip back</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLAYER -->
+        <div class="mc-flip-container" data-flippable>
+          <div class="mc-flip-inner">
+            <div class="mc-flip-front">
+              <div class="mc mc-grid hoverable glow-hover" style="outline-color: hsla(var(--e-player), 0.4);">
+                <div class="entity-accent" style="background: hsl(var(--e-player));"></div>
+                <div class="mc-cover" style="aspect-ratio: 7/10; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, hsl(262,30%,90%), hsl(262,40%,80%));">
+                  <div style="position: relative;">
+                    <div class="avatar-circle" style="width: 100px; height: 100px; background: hsl(var(--e-player));">M</div>
+                    <div class="online-dot"></div>
+                  </div>
+                  <div class="tag-stack">
+                    <span class="entity-badge" style="background: hsl(var(--e-player));">Player</span>
+                  </div>
+                </div>
+                <div class="mc-content">
+                  <div class="mc-title">Marco Rossi</div>
+                  <div class="mc-subtitle">@marco_games</div>
+                  <div class="flex gap-2 mt-1">
+                    <span class="status-chip" style="background: hsl(262,83%,95%); color: hsl(var(--e-player));">142 plays</span>
+                    <span class="status-chip" style="background: hsl(42,95%,90%); color: hsl(42,80%,35%);">Top 5%</span>
+                  </div>
+                </div>
+                <div class="mc-footer">
+                  <span class="meta-item">🏆 12 wins</span>
+                  <span class="meta-item">⭐ Level 8</span>
+                </div>
+              </div>
+              <div class="flip-hint">↻</div>
+            </div>
+            <div class="mc-flip-back">
+              <div class="mc-back-inner">
+                <div class="mc-back-header" style="background: hsl(var(--e-player)); color: hsl(var(--e-player));">
+                  <div class="back-entity-icon">👤</div>
+                  <div class="back-title">Marco Rossi</div>
+                </div>
+                <div class="mc-back-body">
+                  <div class="back-row"><span class="back-label">Member Since</span><span class="back-value">Jan 2024</span></div>
+                  <div class="back-row"><span class="back-label">Total Plays</span><span class="back-value">142</span></div>
+                  <div class="back-row"><span class="back-label">Win Rate</span><span class="back-value">34%</span></div>
+                  <div class="back-row"><span class="back-label">Avg Session</span><span class="back-value">1h 45m</span></div>
+                  <div class="back-row">
+                    <span class="back-label">Top Games</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Wingspan</span>
+                      <span class="back-chip">Everdell</span>
+                      <span class="back-chip">Ark Nova</span>
+                    </div>
+                  </div>
+                  <div class="back-row">
+                    <span class="back-label">Badges</span>
+                    <div class="back-tags">
+                      <span class="back-chip">🏆 Champion</span>
+                      <span class="back-chip">🔥 Streak 7</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mc-back-footer"><span>↻ Tap to flip back</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SESSION -->
+        <div class="mc-flip-container" data-flippable>
+          <div class="mc-flip-inner">
+            <div class="mc-flip-front">
+              <div class="mc mc-grid hoverable glow-hover" style="outline-color: hsla(var(--e-session), 0.4);">
+                <div class="entity-accent" style="background: hsl(var(--e-session));"></div>
+                <div class="mc-cover" style="aspect-ratio: 7/10;">
+                  <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(240,30%,85%), hsl(240,40%,70%));">🎲</div>
+                  <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                  <div class="tag-stack">
+                    <span class="entity-badge" style="background: hsl(var(--e-session));">Session</span>
+                    <span class="tag-pill" style="background: hsl(142, 76%, 36%); display: flex; align-items: center; gap: 4px;"><span class="live-dot" style="width:6px;height:6px;"></span> Live</span>
+                  </div>
+                </div>
+                <div class="mc-content">
+                  <div class="mc-title">Friday Night Gaming</div>
+                  <div class="mc-subtitle">Playing Wingspan</div>
+                  <div class="flex gap-2 mt-1">
+                    <span class="status-chip" style="background: hsl(240,60%,95%); color: hsl(var(--e-session));">👥 4 players</span>
+                  </div>
+                </div>
+                <div class="mc-footer">
+                  <span class="meta-item">⏱ 1h 23m</span>
+                  <span class="meta-item">🎯 Round 5</span>
+                </div>
+              </div>
+              <div class="flip-hint">↻</div>
+            </div>
+            <div class="mc-flip-back">
+              <div class="mc-back-inner">
+                <div class="mc-back-header" style="background: hsl(var(--e-session)); color: hsl(var(--e-session));">
+                  <div class="back-entity-icon">🎲</div>
+                  <div class="back-title">Friday Night Gaming</div>
+                </div>
+                <div class="mc-back-body">
+                  <div class="back-row"><span class="back-label">Game</span><span class="back-value">Wingspan</span></div>
+                  <div class="back-row"><span class="back-label">Started</span><span class="back-value">7:30 PM</span></div>
+                  <div class="back-row"><span class="back-label">Round</span><span class="back-value">5 / 8</span></div>
+                  <div class="back-row">
+                    <span class="back-label">Players</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Marco</span>
+                      <span class="back-chip">Sofia</span>
+                      <span class="back-chip">Luca</span>
+                      <span class="back-chip">Emma</span>
+                    </div>
+                  </div>
+                  <div class="back-row">
+                    <span class="back-label">Scores</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Marco: 42</span>
+                      <span class="back-chip">Sofia: 38</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mc-back-footer"><span>↻ Tap to flip back</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AGENT -->
+        <div class="mc-flip-container" data-flippable>
+          <div class="mc-flip-inner">
+            <div class="mc-flip-front">
+              <div class="mc mc-grid hoverable glow-hover" style="outline-color: hsla(var(--e-agent), 0.4);">
+                <div class="entity-accent" style="background: hsl(var(--e-agent));"></div>
+                <div class="mc-cover" style="aspect-ratio: 7/10;">
+                  <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(38,40%,85%), hsl(38,60%,70%));">🤖</div>
+                  <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                  <div class="tag-stack">
+                    <span class="entity-badge" style="background: hsl(var(--e-agent));">Agent</span>
+                  </div>
+                </div>
+                <div class="mc-content">
+                  <div class="mc-title">RulesExpert AI</div>
+                  <div class="mc-subtitle">Game rules assistant</div>
+                  <div class="flex items-center gap-2 mt-1" style="flex-wrap: wrap;">
+                    <span class="status-chip" style="background: hsl(142,76%,92%); color: hsl(142,76%,30%); display:flex; align-items:center; gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:hsl(142,76%,36%);"></span> Active</span>
+                    <span class="text-xs fw-600" style="color: var(--muted-fg);">GPT-4</span>
+                  </div>
+                  <div class="flex gap-1 mt-1" style="flex-wrap: wrap;">
+                    <span class="cap-chip" style="background: hsl(38,92%,90%); color: hsl(38,80%,30%);">RAG</span>
+                    <span class="cap-chip" style="background: hsl(38,92%,90%); color: hsl(38,80%,30%);">Vision</span>
+                    <span class="cap-chip" style="background: hsl(38,92%,90%); color: hsl(38,80%,30%);">Code</span>
+                  </div>
+                </div>
+                <div class="mc-footer">
+                  <span class="meta-item">📊 2.4k calls</span>
+                  <span class="meta-item">⚡ 1.2s avg</span>
+                </div>
+              </div>
+              <div class="flip-hint">↻</div>
+            </div>
+            <div class="mc-flip-back">
+              <div class="mc-back-inner">
+                <div class="mc-back-header" style="background: hsl(var(--e-agent)); color: hsl(var(--e-agent));">
+                  <div class="back-entity-icon">🤖</div>
+                  <div class="back-title">RulesExpert AI</div>
+                </div>
+                <div class="mc-back-body">
+                  <div class="back-row"><span class="back-label">Model</span><span class="back-value">GPT-4 Turbo</span></div>
+                  <div class="back-row"><span class="back-label">Uptime</span><span class="back-value">99.7%</span></div>
+                  <div class="back-row"><span class="back-label">Avg Latency</span><span class="back-value">1.2s</span></div>
+                  <div class="back-row"><span class="back-label">Total Calls</span><span class="back-value">2,412</span></div>
+                  <div class="back-row">
+                    <span class="back-label">Capabilities</span>
+                    <div class="back-tags">
+                      <span class="back-chip">RAG</span>
+                      <span class="back-chip">Vision</span>
+                      <span class="back-chip">Code</span>
+                      <span class="back-chip">Search</span>
+                    </div>
+                  </div>
+                  <div class="back-row">
+                    <span class="back-label">Games Known</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Wingspan</span>
+                      <span class="back-chip">Everdell</span>
+                      <span class="back-chip">+148</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mc-back-footer"><span>↻ Tap to flip back</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DOCUMENT -->
+        <div class="mc-flip-container" data-flippable>
+          <div class="mc-flip-inner">
+            <div class="mc-flip-front">
+              <div class="mc mc-grid hoverable glow-hover" style="outline-color: hsla(var(--e-document), 0.4);">
+                <div class="entity-accent" style="background: hsl(var(--e-document));"></div>
+                <div class="mc-cover" style="aspect-ratio: 7/10;">
+                  <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(210,20%,88%), hsl(210,30%,78%));">📄</div>
+                  <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                  <div class="tag-stack">
+                    <span class="entity-badge" style="background: hsl(var(--e-document));">Document</span>
+                    <span class="tag-pill" style="background: hsl(210, 40%, 55%);">PDF</span>
+                  </div>
+                </div>
+                <div class="mc-content">
+                  <div class="mc-title">Wingspan Rulebook</div>
+                  <div class="mc-subtitle">Official Rules v2.1</div>
+                  <div class="flex gap-2 mt-1">
+                    <span class="status-chip" style="background: hsl(142,76%,92%); color: hsl(142,76%,30%);">✓ Ready</span>
+                  </div>
+                </div>
+                <div class="mc-footer">
+                  <span class="meta-item">📃 24 pages</span>
+                  <span class="meta-item">💾 3.2 MB</span>
+                </div>
+              </div>
+              <div class="flip-hint">↻</div>
+            </div>
+            <div class="mc-flip-back">
+              <div class="mc-back-inner">
+                <div class="mc-back-header" style="background: hsl(var(--e-document)); color: hsl(var(--e-document));">
+                  <div class="back-entity-icon">📄</div>
+                  <div class="back-title">Wingspan Rulebook</div>
+                </div>
+                <div class="mc-back-body">
+                  <div class="back-row"><span class="back-label">Format</span><span class="back-value">PDF</span></div>
+                  <div class="back-row"><span class="back-label">Pages</span><span class="back-value">24</span></div>
+                  <div class="back-row"><span class="back-label">Size</span><span class="back-value">3.2 MB</span></div>
+                  <div class="back-row"><span class="back-label">Processed</span><span class="back-value">Feb 12, 2026</span></div>
+                  <div class="back-row"><span class="back-label">Chunks</span><span class="back-value">47 extracted</span></div>
+                  <div class="back-row">
+                    <span class="back-label">Topics</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Setup</span>
+                      <span class="back-chip">Turns</span>
+                      <span class="back-chip">Scoring</span>
+                      <span class="back-chip">FAQ</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mc-back-footer"><span>↻ Tap to flip back</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHAT SESSION -->
+        <div class="mc-flip-container" data-flippable>
+          <div class="mc-flip-inner">
+            <div class="mc-flip-front">
+              <div class="mc mc-grid hoverable glow-hover" style="outline-color: hsla(var(--e-chat), 0.4);">
+                <div class="entity-accent" style="background: hsl(var(--e-chat));"></div>
+                <div class="mc-cover" style="aspect-ratio: 4/3;">
+                  <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(220,30%,88%), hsl(220,50%,75%));">💬</div>
+                  <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 40%, var(--card) 100%);"></div>
+                  <div class="tag-stack">
+                    <span class="entity-badge" style="background: hsl(var(--e-chat));">Chat</span>
+                  </div>
+                  <div class="unread-badge" style="background: hsl(var(--e-chat));">3</div>
+                </div>
+                <div class="mc-content">
+                  <div class="mc-title">Rules Q&A</div>
+                  <div class="mc-subtitle">with RulesExpert AI</div>
+                  <div class="text-xs mt-1" style="color: var(--muted-fg);">
+                    <span class="fw-600">Agent:</span> The wingspan of the Eurasian...
+                  </div>
+                </div>
+                <div class="mc-footer">
+                  <span class="meta-item">💬 12 msgs</span>
+                  <span class="meta-item">⏱ 5m ago</span>
+                </div>
+              </div>
+              <div class="flip-hint">↻</div>
+            </div>
+            <div class="mc-flip-back">
+              <div class="mc-back-inner">
+                <div class="mc-back-header" style="background: hsl(var(--e-chat)); color: hsl(var(--e-chat));">
+                  <div class="back-entity-icon">💬</div>
+                  <div class="back-title">Rules Q&A</div>
+                </div>
+                <div class="mc-back-body">
+                  <div class="back-row"><span class="back-label">Agent</span><span class="back-value">RulesExpert AI</span></div>
+                  <div class="back-row"><span class="back-label">Messages</span><span class="back-value">12</span></div>
+                  <div class="back-row"><span class="back-label">Started</span><span class="back-value">15 min ago</span></div>
+                  <div class="back-row"><span class="back-label">Unread</span><span class="back-value" style="color: hsl(var(--e-chat));">3 new</span></div>
+                  <div class="back-row">
+                    <span class="back-label">Topics</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Bird Powers</span>
+                      <span class="back-chip">Food Tokens</span>
+                      <span class="back-chip">End-of-Round</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mc-back-footer"><span>↻ Tap to flip back</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EVENT -->
+        <div class="mc-flip-container" data-flippable>
+          <div class="mc-flip-inner">
+            <div class="mc-flip-front">
+              <div class="mc mc-grid hoverable glow-hover" style="outline-color: hsla(var(--e-event), 0.4);">
+                <div class="entity-accent" style="background: hsl(var(--e-event));"></div>
+                <div class="mc-cover" style="aspect-ratio: 7/10;">
+                  <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%));">🏆</div>
+                  <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                  <div class="tag-stack">
+                    <span class="entity-badge" style="background: hsl(var(--e-event));">Event</span>
+                  </div>
+                </div>
+                <div class="mc-content">
+                  <div class="mc-title">MeepleAI Tournament</div>
+                  <div class="mc-subtitle">Grand Finals 2026</div>
+                  <div class="flex gap-2 mt-1" style="flex-wrap: wrap;">
+                    <span class="status-chip" style="background: hsl(350,89%,95%); color: hsl(var(--e-event));">📅 Mar 15</span>
+                    <span class="status-chip" style="background: hsl(350,89%,95%); color: hsl(var(--e-event));">📍 Milan</span>
+                  </div>
+                </div>
+                <div class="mc-footer">
+                  <span class="meta-item">👥 64 RSVP</span>
+                  <span class="meta-item">🎯 8 slots</span>
+                </div>
+              </div>
+              <div class="flip-hint">↻</div>
+            </div>
+            <div class="mc-flip-back">
+              <div class="mc-back-inner">
+                <div class="mc-back-header" style="background: hsl(var(--e-event)); color: hsl(var(--e-event));">
+                  <div class="back-entity-icon">🏆</div>
+                  <div class="back-title">MeepleAI Tournament</div>
+                </div>
+                <div class="mc-back-body">
+                  <div class="back-row"><span class="back-label">Date</span><span class="back-value">Mar 15, 2026</span></div>
+                  <div class="back-row"><span class="back-label">Location</span><span class="back-value">Milan, IT</span></div>
+                  <div class="back-row"><span class="back-label">Format</span><span class="back-value">Swiss, 5 rounds</span></div>
+                  <div class="back-row"><span class="back-label">Entry Fee</span><span class="back-value">Free</span></div>
+                  <div class="back-row"><span class="back-label">RSVP</span><span class="back-value">64 / 128</span></div>
+                  <div class="back-row">
+                    <span class="back-label">Games</span>
+                    <div class="back-tags">
+                      <span class="back-chip">Wingspan</span>
+                      <span class="back-chip">Everdell</span>
+                      <span class="back-chip">Ark Nova</span>
+                    </div>
+                  </div>
+                  <div class="back-row">
+                    <span class="back-label">Prizes</span>
+                    <div class="back-tags">
+                      <span class="back-chip">🥇 Trophy</span>
+                      <span class="back-chip">🎁 Games</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mc-back-footer"><span>↻ Tap to flip back</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION 3: HOVER EFFECTS SHOWCASE
+    ============================================================ -->
+    <section class="section">
+      <h2 class="section-title">3. Hover Effects</h2>
+      <p class="section-desc">Three interaction states: Default, Hovered (parallax tilt + shimmer + glow), and Quick Actions revealed with stagger animation.</p>
+
+      <div class="hover-grid">
+        <!-- DEFAULT -->
+        <div>
+          <div class="hover-label">Default</div>
+          <div class="mc mc-grid" style="max-width: 260px; margin: 0 auto;">
+            <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+            <div class="mc-cover" style="aspect-ratio: 7/10;">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(15,60%,80%), hsl(35,70%,65%));">⚔️</div>
+              <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+              <div class="tag-stack">
+                <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+              </div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title">Gloomhaven</div>
+              <div class="mc-subtitle">Cephalofair Games</div>
+              <div class="mc-rating">
+                <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span>
+                <span class="score">8.7</span>
+              </div>
+            </div>
+            <div class="mc-footer">
+              <span class="meta-item">👥 1-4</span>
+              <span class="meta-item">⏱ 60-120m</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- HOVERED (static demo) -->
+        <div class="tilt-demo">
+          <div class="hover-label">Hovered (Tilt + Shimmer + Glow)</div>
+          <div class="mc mc-grid" style="max-width: 260px; margin: 0 auto;">
+            <div class="entity-accent" style="background: hsl(var(--e-game)); width: 6px;"></div>
+            <div class="mc-cover" style="aspect-ratio: 7/10;">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(15,60%,80%), hsl(35,70%,65%)); transform: scale(1.06);">⚔️</div>
+              <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+              <div class="shimmer" style="animation: shimmer 1.5s ease-in-out infinite;"></div>
+              <div class="tag-stack">
+                <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+              </div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title">Gloomhaven</div>
+              <div class="mc-subtitle">Cephalofair Games</div>
+              <div class="mc-rating">
+                <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span>
+                <span class="score">8.7</span>
+              </div>
+            </div>
+            <div class="mc-footer">
+              <span class="meta-item">👥 1-4</span>
+              <span class="meta-item">⏱ 60-120m</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK ACTIONS REVEALED -->
+        <div class="actions-demo">
+          <div class="hover-label">Quick Actions Revealed</div>
+          <div class="mc mc-grid hoverable" style="max-width: 260px; margin: 0 auto;">
+            <div class="entity-accent" style="background: hsl(var(--e-game)); width: 6px;"></div>
+            <div class="mc-cover" style="aspect-ratio: 7/10;">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(15,60%,80%), hsl(35,70%,65%));">⚔️</div>
+              <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+              <div class="tag-stack">
+                <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+              </div>
+              <div class="quick-actions qa-stagger" style="opacity: 1; pointer-events: auto;">
+                <button class="qa-btn" title="Wishlist">♡</button>
+                <button class="qa-btn" title="Share">↗</button>
+                <button class="qa-btn" title="Bookmark">⚑</button>
+                <button class="info-btn" title="Details">ℹ</button>
+              </div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title">Gloomhaven</div>
+              <div class="mc-subtitle">Cephalofair Games</div>
+              <div class="mc-rating">
+                <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span>
+                <span class="score">8.7</span>
+              </div>
+            </div>
+            <div class="mc-footer">
+              <span class="meta-item">👥 1-4</span>
+              <span class="meta-item">⏱ 60-120m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION 4: TAG & BADGE SYSTEM
+    ============================================================ -->
+    <section class="section">
+      <h2 class="section-title">4. Tag & Badge System</h2>
+      <p class="section-desc">Vertical tag strip, animated badges (pulse, glow), status badges, and overflow counter.</p>
+
+      <div class="tag-showcase">
+        <div class="tag-card-wrap">
+          <div class="mc mc-grid" style="position: relative;">
+            <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+            <div class="mc-cover" style="aspect-ratio: 7/10;">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(200,50%,80%), hsl(220,60%,70%));">🐉</div>
+              <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+              <!-- Tag stack (top-left) -->
+              <div class="tag-stack">
+                <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                <span class="status-chip" style="background: hsl(142,76%,92%); color: hsl(142,76%,30%); font-size: 9px;">✓ Owned</span>
+                <span class="status-chip" style="background: hsl(340,82%,92%); color: hsl(340,82%,45%); font-size: 9px;">♡ Wishlisted</span>
+              </div>
+              <!-- Vertical tag strip (bottom-left of cover) -->
+              <div class="tag-strip">
+                <span class="tag-pill pulse" style="background: hsl(142, 76%, 36%); color: hsl(142, 76%, 36%);">✦ New</span>
+                <span class="tag-pill" style="background: hsl(0, 84%, 60%);">🏷 Sale</span>
+                <span class="tag-pill tag-glow" style="background: linear-gradient(135deg, hsl(42,95%,50%), hsl(38,90%,45%)); color: hsl(42,95%,50%);">★ Exclusive</span>
+                <span class="tag-overflow" title="Preorder, Limited Edition">+2</span>
+              </div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title">Everdell: Collector's Ed.</div>
+              <div class="mc-subtitle">Starling Games</div>
+              <div class="mc-rating">
+                <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star empty">★</span>
+                <span class="score">8.0</span>
+              </div>
+            </div>
+            <div class="mc-footer">
+              <span class="meta-item">👥 1-4</span>
+              <span class="meta-item">⏱ 40-80m</span>
+              <span class="meta-item">⚖ 2.8</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tag-legend">
+          <h4>Tag & Badge Legend</h4>
+          <div class="tag-legend-item">
+            <span class="tag-pill pulse" style="background: hsl(142, 76%, 36%); font-size: 10px;">✦ New</span>
+            <span>Animated pulse — draws attention to new items</span>
+          </div>
+          <div class="tag-legend-item">
+            <span class="tag-pill" style="background: hsl(0, 84%, 60%); font-size: 10px;">🏷 Sale</span>
+            <span>Static tag — standard visibility</span>
+          </div>
+          <div class="tag-legend-item">
+            <span class="tag-pill tag-glow" style="background: linear-gradient(135deg, hsl(42,95%,50%), hsl(38,90%,45%)); color: hsl(42,95%,50%); font-size: 10px;">★ Exclusive</span>
+            <span>Glow effect — premium/rare indicator</span>
+          </div>
+          <div class="tag-legend-item">
+            <span class="tag-overflow">+2</span>
+            <span>Overflow counter — shows hidden tags on hover</span>
+          </div>
+          <div class="tag-legend-item">
+            <span class="status-chip" style="background: hsl(142,76%,92%); color: hsl(142,76%,30%); font-size: 10px;">✓ Owned</span>
+            <span>Status badge — collection state indicator</span>
+          </div>
+          <div class="tag-legend-item">
+            <span class="status-chip" style="background: hsl(340,82%,92%); color: hsl(340,82%,45%); font-size: 10px;">♡ Wishlisted</span>
+            <span>Status badge — wishlist state indicator</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION 5: QUICK ACTIONS COMPARISON
+    ============================================================ -->
+    <section class="section">
+      <h2 class="section-title">5. Quick Actions Redesign</h2>
+      <p class="section-desc">Before vs After: Entity-colored hover glow, glassmorphism, stagger animation, always-visible on featured/hero.</p>
+
+      <div class="comparison-grid">
+        <!-- OLD -->
+        <div class="comparison-col">
+          <div class="comparison-label old-label">Before (v1)</div>
+          <div style="display: flex; gap: 10px; justify-content: center; padding: 2rem; background: var(--muted); border-radius: var(--radius); border: 1px solid var(--border);">
+            <div class="qa-old" style="display: flex; gap: 8px;">
+              <button class="qa-btn" style="background: rgba(200,200,200,0.5); border-color: rgba(200,200,200,0.3); color: #aaa; opacity: 0.5;">♡</button>
+              <button class="qa-btn" style="background: rgba(200,200,200,0.5); border-color: rgba(200,200,200,0.3); color: #aaa; opacity: 0.5;">↗</button>
+              <button class="qa-btn" style="background: rgba(200,200,200,0.5); border-color: rgba(200,200,200,0.3); color: #aaa; opacity: 0.5;">⚑</button>
+            </div>
+          </div>
+          <ul style="text-align: left; margin-top: 1rem; color: var(--muted-fg); font-size: 0.85rem; list-style: none; padding: 0;">
+            <li style="padding: 4px 0;">❌ Only visible on hover</li>
+            <li style="padding: 4px 0;">❌ Gray, no entity color</li>
+            <li style="padding: 4px 0;">❌ No focus glow</li>
+            <li style="padding: 4px 0;">❌ No stagger animation</li>
+          </ul>
+        </div>
+
+        <!-- NEW -->
+        <div class="comparison-col">
+          <div class="comparison-label new-label">After (v2)</div>
+          <div style="display: flex; gap: 10px; justify-content: center; padding: 2rem; background: var(--muted); border-radius: var(--radius); border: 2px solid hsla(var(--e-game), 0.3);">
+            <div class="qa-new qa-stagger" style="display: flex; gap: 8px;">
+              <button class="qa-btn" style="opacity:1; pointer-events:auto;">♡</button>
+              <button class="qa-btn" style="opacity:1; pointer-events:auto;">↗</button>
+              <button class="qa-btn" style="opacity:1; pointer-events:auto;">⚑</button>
+              <button class="info-btn" style="opacity:1; pointer-events:auto;">ℹ</button>
+            </div>
+          </div>
+          <ul style="text-align: left; margin-top: 1rem; color: var(--fg); font-size: 0.85rem; list-style: none; padding: 0;">
+            <li style="padding: 4px 0;">✅ Always visible on featured/hero</li>
+            <li style="padding: 4px 0;">✅ Entity-colored glow on hover</li>
+            <li style="padding: 4px 0;">✅ Glassmorphism backdrop</li>
+            <li style="padding: 4px 0;">✅ Staggered fade-in (40ms delay)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION 6: LAYOUT VARIANTS
+    ============================================================ -->
+    <section class="section">
+      <h2 class="section-title">6. Layout Variants</h2>
+      <p class="section-desc">One game entity ("Wingspan") shown across all 5 layout variants: Grid, List, Compact, Featured, Hero.</p>
+
+      <div class="variants-grid">
+
+        <!-- GRID -->
+        <div class="variant-row">
+          <div class="variant-label-side">Grid</div>
+          <div style="width: 240px;">
+            <div class="mc mc-grid hoverable">
+              <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+              <div class="mc-cover" style="aspect-ratio: 7/10;">
+                <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(280,40%,75%), hsl(260,50%,60%));">🦅</div>
+                <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 50%, var(--card) 100%);"></div>
+                <div class="shimmer"></div>
+                <div class="tag-stack">
+                  <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+                </div>
+              </div>
+              <div class="mc-content">
+                <div class="mc-title">Wingspan</div>
+                <div class="mc-subtitle">Stonemaier Games</div>
+                <div class="mc-rating">
+                  <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span><span class="star empty">★</span>
+                  <span class="score">7.2</span>
+                </div>
+              </div>
+              <div class="mc-footer">
+                <span class="meta-item">👥 1-5</span>
+                <span class="meta-item">⏱ 40-70m</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIST -->
+        <div class="variant-row">
+          <div class="variant-label-side">List</div>
+          <div class="mc mc-list hoverable" style="max-width: 500px;">
+            <span class="entity-dot" style="background: hsl(var(--e-game));"></span>
+            <div class="mc-cover">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(280,40%,75%), hsl(260,50%,60%)); border-radius: 8px;">🦅</div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title">Wingspan</div>
+              <div class="mc-subtitle">Stonemaier Games · 1-5 players · 40-70min</div>
+            </div>
+            <div class="mc-rating" style="flex-shrink: 0;">
+              <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span><span class="star empty">★</span>
+              <span class="score">7.2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMPACT -->
+        <div class="variant-row">
+          <div class="variant-label-side">Compact</div>
+          <div class="mc mc-compact hoverable" style="max-width: 320px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--e-game)); flex-shrink: 0;"></span>
+            <div class="mc-cover">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(280,40%,75%), hsl(260,50%,60%)); border-radius: 6px; font-size: 1.2rem;">🦅</div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title truncate">Wingspan</div>
+              <div class="text-xs" style="color: var(--muted-fg);">1-5 · 40-70m</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FEATURED -->
+        <div class="variant-row">
+          <div class="variant-label-side">Featured</div>
+          <div class="mc mc-featured hoverable">
+            <div class="entity-accent" style="background: hsl(var(--e-game));"></div>
+            <div class="mc-cover" style="aspect-ratio: 16/9;">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(280,40%,75%), hsl(260,50%,60%)); font-size: 4rem;">🦅</div>
+              <div class="gradient-overlay" style="background: linear-gradient(180deg, transparent 40%, hsla(var(--e-game), 0.15) 70%, hsla(var(--e-game), 0.4) 100%);"></div>
+              <div class="shimmer"></div>
+              <div class="tag-stack">
+                <span class="entity-badge" style="background: hsl(var(--e-game));">Game</span>
+              </div>
+              <div class="quick-actions qa-always">
+                <button class="qa-btn">♡</button>
+                <button class="qa-btn">↗</button>
+                <button class="info-btn">ℹ</button>
+              </div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title" style="font-size: 1.2rem;">Wingspan</div>
+              <div class="mc-subtitle">Stonemaier Games · Award-winning engine-building game</div>
+              <div class="mc-rating">
+                <span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star half">★</span><span class="star empty">★</span>
+                <span class="score">7.2</span>
+              </div>
+              <div class="action-row">
+                <button class="action-btn primary-btn">Play Now</button>
+                <button class="action-btn secondary-btn">Details</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HERO -->
+        <div class="variant-row">
+          <div class="variant-label-side">Hero</div>
+          <div class="mc mc-hero hoverable">
+            <div class="entity-ribbon" style="background: hsl(var(--e-game));">Game</div>
+            <div class="mc-cover" style="position: absolute; inset: 0;">
+              <div class="img-placeholder" style="background: linear-gradient(135deg, hsl(280,30%,55%), hsl(260,50%,40%)); font-size: 5rem;">🦅</div>
+            </div>
+            <div class="mc-content">
+              <div class="mc-title">Wingspan</div>
+              <div class="mc-subtitle">Stonemaier Games — The award-winning engine-building game about birds</div>
+              <div class="mc-rating" style="margin-top: 0.5rem;">
+                <span class="star filled" style="color: hsl(42,95%,65%);">★</span>
+                <span class="star filled" style="color: hsl(42,95%,65%);">★</span>
+                <span class="star filled" style="color: hsl(42,95%,65%);">★</span>
+                <span class="star half" style="color: hsl(42,95%,50%);">★</span>
+                <span class="star empty" style="color: rgba(255,255,255,0.3);">★</span>
+                <span class="score" style="color: rgba(255,255,255,0.8);">7.2</span>
+              </div>
+              <div style="display: flex; gap: 12px; margin-top: 0.5rem;">
+                <span style="color: rgba(255,255,255,0.85); font-size: 0.85rem;">👥 1-5 players</span>
+                <span style="color: rgba(255,255,255,0.85); font-size: 0.85rem;">⏱ 40-70 min</span>
+                <span style="color: rgba(255,255,255,0.85); font-size: 0.85rem;">⭐ BGG 8.1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FOOTER
+    ============================================================ -->
+    <footer style="text-align: center; padding: 2rem 0; border-top: 1px solid var(--border); color: var(--muted-fg); font-size: 0.85rem;">
+      <p style="font-family: var(--font-display); font-weight: 700; color: var(--primary);">MeepleCard v2 Design Mockup</p>
+      <p style="margin-top: 0.25rem;">Awaiting approval · Next: Entity Components + Implementation</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // ================================================================
+    // CAROUSEL LOGIC
+    // ================================================================
+    (function() {
+      const cards = document.querySelectorAll('#carouselStage .carousel-card');
+      const dots = document.querySelectorAll('#carouselDots .carousel-dot');
+      const prevBtn = document.getElementById('carouselPrev');
+      const nextBtn = document.getElementById('carouselNext');
+      const totalCards = cards.length;
+      let currentIndex = 2; // Start centered on Wingspan
+
+      // Position presets per absolute offset from center
+      const positions = [
+        { scale: 1.1,  tx: 0,   ry: 0,   opacity: 1,    blur: 0,  z: 15 }, // center
+        { scale: 0.85, tx: 280, ry: -5,  opacity: 0.6,  blur: 2,  z: 10 }, // ±1
+        { scale: 0.7,  tx: 500, ry: -10, opacity: 0.35, blur: 3,  z: 5  }, // ±2
+      ];
+
+      function updateCarousel() {
+        cards.forEach((card, i) => {
+          const offset = i - currentIndex;
+          const absOffset = Math.abs(offset);
+          const sign = offset >= 0 ? 1 : -1;
+
+          // Hide cards beyond ±2
+          if (absOffset > 2) {
+            card.style.opacity = '0';
+            card.style.pointerEvents = 'none';
+            card.style.zIndex = '0';
+            card.classList.remove('is-center');
+            return;
+          }
+
+          const pos = positions[absOffset];
+          const translateX = pos.tx * sign;
+
+          card.style.transform = `translateX(${translateX}px) scale(${pos.scale}) rotateY(${pos.ry * sign}deg)`;
+          card.style.opacity = String(pos.opacity);
+          card.style.filter = pos.blur > 0 ? `blur(${pos.blur}px)` : 'none';
+          card.style.zIndex = String(pos.z);
+          // Side cards are clickable (navigate to them), center card is fully interactive
+          card.style.pointerEvents = 'auto';
+          card.style.cursor = absOffset === 0 ? 'pointer' : 'pointer';
+
+          // Toggle center class for glow + quick actions visibility
+          if (absOffset === 0) {
+            card.classList.add('is-center');
+          } else {
+            card.classList.remove('is-center');
+            // Unflip non-center cards when navigating
+            const flipEl = card.querySelector('.mc-flip-container');
+            if (flipEl) flipEl.classList.remove('flipped');
+          }
+        });
+
+        // Update dots
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === currentIndex);
+        });
+      }
+
+      function goTo(index) {
+        currentIndex = Math.max(0, Math.min(totalCards - 1, index));
+        updateCarousel();
+      }
+
+      prevBtn.addEventListener('click', () => goTo(currentIndex - 1));
+      nextBtn.addEventListener('click', () => goTo(currentIndex + 1));
+
+      // Click: side cards navigate, center card flips
+      cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.qa-btn') || e.target.closest('.info-btn')) return;
+          const idx = parseInt(card.dataset.index, 10);
+          if (idx !== currentIndex) {
+            goTo(idx);
+          } else {
+            // Center card: toggle flip
+            const flipEl = card.querySelector('.mc-flip-container');
+            if (flipEl) flipEl.classList.toggle('flipped');
+          }
+        });
+      });
+
+      dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+          goTo(parseInt(dot.dataset.index, 10));
+        });
+      });
+
+      // Click on empty carousel stage area (outside cards) navigates based on side
+      document.getElementById('carouselStage').addEventListener('click', (e) => {
+        // Only trigger if clicking directly on the stage, not on a card or nav
+        if (e.target.closest('.carousel-card') || e.target.closest('.carousel-nav')) return;
+        const stageRect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - stageRect.left;
+        const midpoint = stageRect.width / 2;
+        if (clickX < midpoint) {
+          goTo(currentIndex - 1);
+        } else {
+          goTo(currentIndex + 1);
+        }
+      });
+
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
+        if (e.key === 'ArrowRight') goTo(currentIndex + 1);
+      });
+
+      // Initial render
+      updateCarousel();
+    })();
+
+    // ================================================================
+    // ENTITY GALLERY: show quick actions on hover
+    // ================================================================
+    document.querySelectorAll('.mc.hoverable').forEach(card => {
+      const qa = card.querySelector('.qa-hidden');
+      if (qa) {
+        card.addEventListener('mouseenter', () => { qa.style.opacity = '1'; qa.style.pointerEvents = 'auto'; });
+        card.addEventListener('mouseleave', () => { qa.style.opacity = '0'; qa.style.pointerEvents = 'none'; });
+      }
+    });
+
+    // ================================================================
+    // CARD FLIP - Section 2 (already wrapped in HTML)
+    // ================================================================
+    document.querySelectorAll('.mc-flip-container[data-flippable]').forEach(container => {
+      container.addEventListener('click', (e) => {
+        if (e.target.closest('.qa-btn') || e.target.closest('.info-btn')) return;
+        container.classList.toggle('flipped');
+      });
+    });
+
+    // ================================================================
+    // AUTO-FLIP: Dynamically wrap ALL remaining cards (Sections 1,3,4,6)
+    // Excludes: List, Compact variants, already-wrapped Section 2 cards
+    // ================================================================
+    (function setupAllFlips() {
+      var cardBacks = {
+        'Wingspan': { icon: '\u{1F985}', pub: 'Stonemaier Games', designer: 'Elizabeth Hargrave', year: '2019', weight: '2.45 / 5', rank: '#26', mechanics: ['Engine Building', 'Hand Mgmt', 'Dice Rolling'], cats: ['Animals', 'Card Game'] },
+        'Gloomhaven': { icon: '\u2694\uFE0F', pub: 'Cephalofair Games', designer: 'Isaac Childres', year: '2017', weight: '3.86 / 5', rank: '#3', mechanics: ['Dungeon Crawl', 'Hand Mgmt', 'Co-op'], cats: ['Fantasy', 'Adventure'] },
+        'Everdell': { icon: '\u{1F409}', pub: 'Starling Games', designer: 'James A. Wilson', year: '2018', weight: '2.80 / 5', rank: '#38', mechanics: ['Worker Placement', 'Tableau Building'], cats: ['Animals', 'City Building'] },
+        "Everdell: Collector's Ed.": { icon: '\u{1F409}', pub: 'Starling Games', designer: 'James A. Wilson', year: '2018', weight: '2.80 / 5', rank: '#38', mechanics: ['Worker Placement', 'Tableau Building'], cats: ['Animals', 'City Building'] },
+        'Carcassonne': { icon: '\u{1F3F0}', pub: 'Hans im Gl\u00FCck', designer: 'Klaus-J\u00FCrgen Wrede', year: '2000', weight: '1.90 / 5', rank: '#197', mechanics: ['Tile Placement', 'Area Control'], cats: ['Medieval', 'Territory'] },
+        'Terraforming Mars': { icon: '\u{1F33E}', pub: 'FryxGames', designer: 'Jacob Fryxelius', year: '2016', weight: '3.24 / 5', rank: '#5', mechanics: ['Engine Building', 'Drafting', 'Tile Placement'], cats: ['Sci-Fi', 'Economic'] },
+      };
+
+      function generateBackDOM(title, entityColor) {
+        var d = cardBacks[title] || { icon: '\u{1F3B2}', pub: 'Unknown', designer: 'Unknown', year: '-', weight: '-', rank: '-', mechanics: ['\u2014'], cats: ['\u2014'] };
+
+        var inner = document.createElement('div');
+        inner.className = 'mc-back-inner';
+
+        var header = document.createElement('div');
+        header.className = 'mc-back-header';
+        header.style.background = 'hsl(' + entityColor + ')';
+        header.style.color = 'white';
+        var iconEl = document.createElement('div');
+        iconEl.className = 'back-entity-icon';
+        iconEl.textContent = d.icon;
+        var titleEl = document.createElement('div');
+        titleEl.className = 'back-title';
+        titleEl.textContent = title;
+        var subEl = document.createElement('div');
+        subEl.className = 'back-subtitle';
+        subEl.textContent = d.pub;
+        header.append(iconEl, titleEl, subEl);
+
+        var body = document.createElement('div');
+        body.className = 'mc-back-body';
+
+        function addRow(label, value) {
+          var row = document.createElement('div');
+          row.className = 'back-row';
+          var lbl = document.createElement('span');
+          lbl.className = 'back-label';
+          lbl.textContent = label;
+          var val = document.createElement('span');
+          val.className = 'back-value';
+          val.textContent = value;
+          row.append(lbl, val);
+          body.appendChild(row);
+        }
+
+        function addChipRow(label, chips) {
+          var row = document.createElement('div');
+          row.className = 'back-row';
+          var lbl = document.createElement('span');
+          lbl.className = 'back-label';
+          lbl.textContent = label;
+          var val = document.createElement('span');
+          val.className = 'back-value';
+          var tags = document.createElement('span');
+          tags.className = 'back-tags';
+          chips.forEach(function(txt) {
+            var chip = document.createElement('span');
+            chip.className = 'back-chip';
+            chip.textContent = txt;
+            tags.appendChild(chip);
+          });
+          val.appendChild(tags);
+          row.append(lbl, val);
+          body.appendChild(row);
+        }
+
+        addRow('Designer', d.designer);
+        addRow('Year', d.year);
+        addRow('Weight', d.weight);
+        addRow('BGG Rank', d.rank);
+        addChipRow('Mechanics', d.mechanics);
+        addChipRow('Categories', d.cats);
+
+        var footer = document.createElement('div');
+        footer.className = 'mc-back-footer';
+        var footSpan = document.createElement('span');
+        footSpan.textContent = '\u21BB Tap to flip back';
+        footer.appendChild(footSpan);
+
+        inner.append(header, body, footer);
+        return inner;
+      }
+
+      function wrapCard(mc, isCarousel) {
+        var tEl = mc.querySelector('.mc-title');
+        if (!tEl) return;
+        var title = tEl.textContent.trim();
+        var entityColor = 'var(--e-game)';
+
+        var flipContainer = document.createElement('div');
+        flipContainer.className = 'mc-flip-container' + (isCarousel ? ' carousel-flip' : '');
+        if (!isCarousel) flipContainer.setAttribute('data-flippable', '');
+
+        var flipInner = document.createElement('div');
+        flipInner.className = 'mc-flip-inner';
+
+        var flipFront = document.createElement('div');
+        flipFront.className = 'mc-flip-front';
+
+        var flipBack = document.createElement('div');
+        flipBack.className = 'mc-flip-back';
+        flipBack.appendChild(generateBackDOM(title, entityColor));
+
+        var flipHint = document.createElement('div');
+        flipHint.className = 'flip-hint';
+        flipHint.textContent = '\u21BB';
+
+        mc.parentNode.insertBefore(flipContainer, mc);
+        flipFront.appendChild(mc);
+        flipFront.appendChild(flipHint);
+        flipInner.appendChild(flipFront);
+        flipInner.appendChild(flipBack);
+        flipContainer.appendChild(flipInner);
+
+        if (!isCarousel) {
+          flipContainer.addEventListener('click', function(e) {
+            if (e.target.closest('.qa-btn') || e.target.closest('.info-btn') || e.target.closest('.action-btn')) return;
+            flipContainer.classList.toggle('flipped');
+          });
+        }
+      }
+
+      // 1) Wrap non-carousel, non-list, non-compact cards
+      document.querySelectorAll('.mc').forEach(function(card) {
+        if (card.closest('.mc-flip-container')) return;
+        if (card.classList.contains('mc-list') || card.classList.contains('mc-compact')) return;
+        if (card.closest('.carousel-card')) return;
+        wrapCard(card, false);
+      });
+
+      // 2) Wrap carousel card inners
+      document.querySelectorAll('.carousel-card').forEach(function(carouselCard) {
+        var mc = carouselCard.querySelector('.mc');
+        if (!mc) return;
+        wrapCard(mc, true);
+      });
+    })();
+  </script>
+</body>
+</html>

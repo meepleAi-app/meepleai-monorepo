@@ -66,7 +66,15 @@ import {
 } from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
+import { AgentModelInfo, type ModelParameters } from './meeple-card-features/AgentModelInfo';
+import { AgentStatsDisplay, type AgentStats } from './meeple-card-features/AgentStatsDisplay';
+import { AgentStatusBadge, type AgentStatus } from './meeple-card-features/AgentStatusBadge';
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
+import { ChatAgentInfo, type ChatAgent } from './meeple-card-features/ChatAgentInfo';
+import { ChatGameContext, type ChatGame } from './meeple-card-features/ChatGameContext';
+import { ChatStatsDisplay, type ChatStats } from './meeple-card-features/ChatStatsDisplay';
+import { ChatStatusBadge, type ChatStatus } from './meeple-card-features/ChatStatusBadge';
+import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
 import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
@@ -79,15 +87,7 @@ import { WishlistButton } from './meeple-card-features/WishlistButton';
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
 // Issue #4361: Agent-specific display components
-import { AgentModelInfo, type ModelParameters } from './meeple-card-features/AgentModelInfo';
-import { AgentStatsDisplay, type AgentStats } from './meeple-card-features/AgentStatsDisplay';
-import { AgentStatusBadge, type AgentStatus } from './meeple-card-features/AgentStatusBadge';
 // Issue #4400: ChatSession-specific display components
-import { ChatAgentInfo, type ChatAgent } from './meeple-card-features/ChatAgentInfo';
-import { ChatGameContext, type ChatGame } from './meeple-card-features/ChatGameContext';
-import { ChatStatsDisplay, type ChatStats } from './meeple-card-features/ChatStatsDisplay';
-import { ChatStatusBadge, type ChatStatus } from './meeple-card-features/ChatStatusBadge';
-import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -305,10 +305,10 @@ const entityColors: Record<MeepleEntityType, { hsl: string; name: string }> = {
 // ============================================================================
 
 const meepleCardVariants = cva(
-  // Base styles for all variants
+  // Base styles for all variants — v2 warm styling (Issue #4604)
   [
     'group relative overflow-hidden cursor-pointer',
-    'transition-all duration-300 ease-out',
+    'transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   ],
   {
@@ -319,13 +319,13 @@ const meepleCardVariants = cva(
           'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
-          'shadow-sm hover:shadow-lg',
-          'hover:-translate-y-1',
+          '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
+          'hover:-translate-y-1.5',
         ],
         list: [
           'flex flex-row items-center gap-4 p-3 rounded-xl',
           'bg-card border border-border/50',
-          'shadow-sm hover:shadow-md',
+          '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)]',
           'hover:translate-x-1',
         ],
         compact: [
@@ -335,14 +335,16 @@ const meepleCardVariants = cva(
         ],
         featured: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card border border-border/50',
-          'shadow-md hover:shadow-xl',
+          'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
+          'dark:bg-card dark:backdrop-blur-none',
+          'border border-border/50',
+          '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
           'hover:-translate-y-2',
         ],
         hero: [
           'relative flex flex-col rounded-3xl overflow-hidden',
           'min-h-[320px]',
-          'shadow-xl hover:shadow-2xl',
+          '[box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)]',
           'hover:scale-[1.01]',
         ],
       },
@@ -372,8 +374,8 @@ const contentVariants = cva('', {
       grid: 'flex-1 flex flex-col p-4',
       list: 'flex-1 min-w-0 py-1',
       compact: 'flex-1 min-w-0',
-      featured: 'flex-1 flex flex-col p-5',
-      hero: 'relative z-10 mt-auto flex flex-col justify-end p-5 bg-black/80 backdrop-blur-sm',
+      featured: 'flex-1 flex flex-col px-5 py-4',
+      hero: 'relative z-10 mt-auto flex flex-col justify-end p-6',
     },
   },
   defaultVariants: { variant: 'grid' },
@@ -420,11 +422,11 @@ function EntityIndicator({
   }
 
   if (variant === 'featured' || variant === 'grid') {
-    // Left border accent only; entity badge is rendered by VerticalTagStack
+    // Left border accent (4px → 6px on hover) — v2 style (Issue #4604)
     return (
       <span
         className={cn(
-          'absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200',
+          'absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250',
           className
         )}
         style={{ backgroundColor: `hsl(${color})` }}
@@ -583,6 +585,18 @@ function CoverImage({
                 : variant === 'featured'
                   ? `linear-gradient(180deg, transparent 40%, hsla(${color}, 0.15) 70%, hsla(${color}, 0.4) 100%)`
                   : `linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%)`,
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Shimmer effect on hover — v2 (Issue #4604) */}
+      {showOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none opacity-0 group-hover:animate-mc-shimmer"
+          style={{
+            background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)',
+            transform: 'translateX(-100%)',
           }}
           aria-hidden="true"
         />
@@ -834,10 +848,17 @@ export const MeepleCard = React.memo(function MeepleCard({
     <Component
       className={cn(
         meepleCardVariants({ variant }),
+        // Entity glow ring on hover — v2 (Issue #4604)
+        variant !== 'compact' && 'hover:outline hover:outline-2 hover:outline-offset-2',
         selected && 'ring-2 ring-offset-2 bg-accent/10',
         selected && `ring-[hsl(${color})]`,
         className
       )}
+      style={{
+        // Entity glow color for hover outline
+        '--mc-entity-color': `hsl(${color})`,
+        outlineColor: `hsl(${color} / 0.4)`,
+      } as React.CSSProperties}
       onClick={isInteractive ? onClick : undefined}
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
@@ -984,7 +1005,7 @@ export const MeepleCard = React.memo(function MeepleCard({
           className={cn(
             'font-quicksand font-bold leading-tight',
             variant === 'hero'
-              ? 'text-2xl text-white mb-1 drop-shadow-lg'
+              ? 'text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]'
               : variant === 'featured'
                 ? 'text-xl mb-1'
                 : variant === 'list'
@@ -1147,6 +1168,9 @@ export const MeepleCard = React.memo(function MeepleCard({
         onFlip={onFlip}
         flipTrigger={flipTrigger}
         detailHref={detailHref}
+        entityColor={color}
+        entityName={entityColors[entity].name}
+        title={title}
       >
         {cardContent}
       </FlipCard>

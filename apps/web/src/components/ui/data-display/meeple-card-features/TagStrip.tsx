@@ -84,6 +84,8 @@ export const TagStrip = React.memo(function TagStrip({
       {/* Visible tags */}
       {visibleTags.map((tag, index) => {
         const key = typeof tag === 'string' ? tag : tag.key;
+        // Pulse animation for "new" tags — v2 (Issue #4610)
+        const shouldAnimate = key === 'new';
         return (
           <div key={`${key}-${index}`} role="listitem">
             <TagBadge
@@ -91,6 +93,7 @@ export const TagStrip = React.memo(function TagStrip({
               variant={variant}
               iconOnly={iconOnly}
               showIcon={true}
+              animated={shouldAnimate}
             />
           </div>
         );

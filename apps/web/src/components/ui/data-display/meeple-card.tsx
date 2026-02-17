@@ -1168,6 +1168,9 @@ export const MeepleCard = React.memo(function MeepleCard({
         onFlip={onFlip}
         flipTrigger={flipTrigger}
         detailHref={detailHref}
+        entityColor={color}
+        entityName={entityColors[entity].name}
+        title={title}
       >
         {cardContent}
       </FlipCard>

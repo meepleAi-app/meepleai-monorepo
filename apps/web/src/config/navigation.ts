@@ -143,6 +143,7 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-profile',
     activePattern: /^\/profile/,
     visibility: { authOnly: true },
+    hideFromMainNav: true,
   },
   {
     id: 'agents',
@@ -155,6 +156,7 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-agents',
     activePattern: /^\/agents/,
     visibility: { authOnly: true },
+    group: 'strumenti',
   },
   {
     id: 'sessions',
@@ -167,6 +169,7 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     testId: 'nav-sessions',
     activePattern: /^\/sessions/,
     visibility: { authOnly: true },
+    group: 'strumenti',
   },
 ];
 
@@ -296,7 +299,7 @@ export function getContextActionSlots(
 export const NAV_ITEMS: NavItem[] = UNIFIED_NAV_ITEMS
   .filter(item => item.visibility?.authOnly || !item.visibility) // ActionBar only for auth users
   .filter(item => !item.visibility?.anonOnly)
-  .filter(item => ['dashboard', 'library', 'chat', 'catalog', 'profile'].includes(item.id)) // ActionBar subset
+  .filter(item => ['dashboard', 'library', 'catalog'].includes(item.id)) // ActionBar subset (3 items + central FAB)
   .map(item => ({
     id: item.id === 'dashboard' ? 'home' : item.id,
     href: item.href,
@@ -312,7 +315,7 @@ export const NAV_ITEMS: NavItem[] = UNIFIED_NAV_ITEMS
  * Maximum visible navigation items per breakpoint (ActionBar).
  */
 export const MAX_NAV_ITEMS = {
-  mobile: 4,
+  mobile: 3,
   tablet: 5,
   desktop: 6,
 } as const;

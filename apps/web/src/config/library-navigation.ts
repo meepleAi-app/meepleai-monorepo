@@ -6,6 +6,7 @@
 import {
   type LucideIcon,
   BookOpenIcon,
+  Heart,
   LockIcon,
   SendIcon,
 } from 'lucide-react';
@@ -46,6 +47,12 @@ export const LIBRARY_TABS: LibraryTab[] = [
     icon: SendIcon,
     href: '/library/proposals',
   },
+  {
+    id: 'wishlist',
+    label: 'Wishlist',
+    icon: Heart,
+    href: '/library/wishlist',
+  },
 ];
 
 /**
@@ -54,6 +61,7 @@ export const LIBRARY_TABS: LibraryTab[] = [
 export function getActiveLibraryTab(pathname: string): string {
   if (pathname.startsWith('/library/private')) return 'private';
   if (pathname.startsWith('/library/proposals')) return 'proposals';
+  if (pathname.startsWith('/library/wishlist')) return 'wishlist';
   if (pathname === '/library') return 'collection';
   return 'collection';
 }

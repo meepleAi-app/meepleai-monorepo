@@ -59,8 +59,9 @@ export function MobileNavDrawer({
   const libraryItem = navItems.find(item => item.id === 'library');
   const libraryChildren = libraryItem?.children ?? [];
 
-  // Items without library (library is rendered separately with expandable section)
-  const itemsWithoutLibrary = navItems.filter(item => item.id !== 'library');
+  // Split items: main (no group, no library) vs strumenti group
+  const mainItems = navItems.filter(item => item.id !== 'library' && !item.group);
+  const strumentiItems = navItems.filter(item => item.group === 'strumenti');
 
   // Close drawer on navigation
   const handleLinkClick = () => {
@@ -90,7 +91,8 @@ export function MobileNavDrawer({
         </SheetHeader>
 
         <nav className="flex flex-col gap-1 mt-6" aria-label="Mobile navigation">
-          {itemsWithoutLibrary.map(item => {
+          {/* Main navigation items */}
+          {mainItems.map(item => {
             const Icon = item.icon;
             const active = isItemActive(item, pathname ?? '');
             return (
@@ -184,6 +186,41 @@ export function MobileNavDrawer({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Strumenti group */}
+          {strumentiItems.length > 0 && (
+            <>
+              <hr className="my-3 border-border/50" />
+              <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Strumenti
+              </p>
+              {strumentiItems.map(item => {
+                const Icon = item.icon;
+                const active = isItemActive(item, pathname ?? '');
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    aria-label={item.ariaLabel}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
+                      'transition-colors duration-200',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                      active
+                        ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
+                        : 'text-muted-foreground hover:text-primary hover:bg-muted'
+                    )}
+                    onClick={handleLinkClick}
+                    data-testid={`mobile-nav-item-${item.href.split('/').filter(Boolean).join('-') || item.id}`}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </>
           )}
         </nav>
 

@@ -2,14 +2,9 @@
  * AuthenticatedLayout Component
  * Issue #3479 - Layout System v2: Unified Layout for Authenticated Pages
  *
- * Combines:
- * - UnifiedHeader (desktop nav + settings + notifications + user menu)
- * - UnifiedActionBar (mobile-only: bottom nav + integrated FAB + context actions)
- * - Breadcrumb (navigation context)
- *
  * Navigation structure:
- * - Desktop: UnifiedHeader handles all navigation
- * - Mobile: UnifiedHeader (top) + UnifiedActionBar (bottom with integrated FAB)
+ * - Desktop: Sidebar (collapsible, fixed left) — no top header
+ * - Mobile: Compact UnifiedHeader (48px) + UnifiedActionBar (56px bottom)
  *
  * This layout replaces PublicLayout for authenticated routes.
  */
@@ -20,8 +15,10 @@ import { type ReactNode } from 'react';
 
 import { UnifiedActionBar, UnifiedActionBarSpacer } from '@/components/layout/ActionBar';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
+import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
 
@@ -43,8 +40,8 @@ export interface AuthenticatedLayoutProps {
  *
  * Main layout component for authenticated pages.
  * Provides unified navigation experience with:
- * - Desktop: Header with full nav + settings + breadcrumbs
- * - Mobile: Compact header + bottom nav bar with integrated FAB
+ * - Desktop: Collapsible sidebar with nav + user section
+ * - Mobile: Compact header (48px) + bottom ActionBar (56px) with FAB
  */
 export function AuthenticatedLayout({
   children,
@@ -55,6 +52,7 @@ export function AuthenticatedLayout({
 }: AuthenticatedLayoutProps) {
   // Impersonation state (Issue #3349)
   const { isImpersonating, impersonatedUser, isLoading, endImpersonation } = useImpersonationStore();
+  const { isCollapsed, toggle } = useSidebarState();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -66,15 +64,24 @@ export function AuthenticatedLayout({
         isLoading={isLoading}
       />
 
-      {/* Top Header - UnifiedHeader (Desktop nav, Mobile top bar) */}
-      <UnifiedHeader />
+      {/* Desktop Sidebar (fixed, md+ only) */}
+      <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
+
+      {/* Mobile Header (md:hidden) */}
+      <div className="md:hidden">
+        <UnifiedHeader />
+      </div>
 
       {/* Main Content Area */}
       <main
         className={cn(
           'flex-1',
-          'pt-16', // Header height offset
-          isImpersonating && 'pt-24', // Extra padding for impersonation banner
+          // Mobile: offset for compact header (48px)
+          'pt-12 md:pt-0',
+          // Desktop: offset for sidebar width
+          isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]',
+          'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none',
+          isImpersonating && 'pt-20 md:pt-8',
           !fullWidth && 'container mx-auto px-4 sm:px-6 lg:px-8',
           className
         )}

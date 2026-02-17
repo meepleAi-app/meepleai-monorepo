@@ -50,7 +50,7 @@ export function useNavigationItems(): UseNavigationItemsReturn {
         isAuthenticated,
         isAuthLoading,
         userRole: user?.role ?? null,
-      }),
+      }).filter(item => !item.hideFromMainNav),
     [isAuthenticated, isAuthLoading, user?.role]
   );
 

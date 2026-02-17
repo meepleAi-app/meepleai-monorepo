@@ -787,7 +787,8 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         pdf.DomainEvents.Should().HaveCount(6);
         pdf.DomainEvents.Should().AllBeOfType<Api.BoundedContexts.DocumentProcessing.Domain.Events.PdfStateChangedEvent>();
 
-        // Verify final state persists
+        // Verify final state persists (must call UpdateAsync to sync domain changes to EF tracked entity)
+        await _pdfRepository.UpdateAsync(pdf, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         var retrieved = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
         retrieved.Should().NotBeNull();

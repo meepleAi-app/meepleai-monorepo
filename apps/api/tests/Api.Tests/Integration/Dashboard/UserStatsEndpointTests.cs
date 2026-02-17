@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Handlers.UserStats;
 using Api.BoundedContexts.Administration.Application.Queries.UserStats;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.UserLibrary;

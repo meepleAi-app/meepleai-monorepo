@@ -1168,6 +1168,14 @@ internal static class PdfEndpoints
         HttpContext context,
         IMediator mediator,
         [FromQuery] string? status,
+        [FromQuery] string? state,
+        [FromQuery] long? minSizeBytes,
+        [FromQuery] long? maxSizeBytes,
+        [FromQuery] DateTime? uploadedAfter,
+        [FromQuery] DateTime? uploadedBefore,
+        [FromQuery] Guid? gameId,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? sortOrder,
         [FromQuery] int pageSize = 50,
         [FromQuery] int page = 1,
         CancellationToken ct = default)
@@ -1175,7 +1183,19 @@ internal static class PdfEndpoints
         var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var query = new GetAllPdfsQuery(status, pageSize, page);
+        var query = new GetAllPdfsQuery(
+            Status: status,
+            State: state,
+            MinSizeBytes: minSizeBytes,
+            MaxSizeBytes: maxSizeBytes,
+            UploadedAfter: uploadedAfter,
+            UploadedBefore: uploadedBefore,
+            GameId: gameId,
+            SortBy: sortBy,
+            SortOrder: sortOrder,
+            PageSize: pageSize,
+            Page: page
+        );
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }

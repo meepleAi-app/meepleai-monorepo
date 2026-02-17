@@ -23,12 +23,14 @@
  * @see docs/04-frontend/wireframes-playful-boardroom.md
  */
 
-import { AuthRedirect } from '@/components/landing/AuthRedirect';
+import { redirect } from 'next/navigation';
+
 import { CallToActionSection } from '@/components/landing/CallToActionSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { GamesCarouselSection } from '@/components/landing/GamesCarouselSection';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { getServerUser } from '@/lib/auth/server';
 
 import type { Metadata } from 'next';
 
@@ -137,11 +139,15 @@ const structuredData = {
  *
  * Updated: Issue #2230 - Integrated PublicHeader for navigation
  */
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Server-side redirect: authenticated users go straight to dashboard (no flash)
+  const user = await getServerUser();
+  if (user) {
+    redirect('/dashboard');
+  }
+
   return (
     <>
-      {/* Auto-redirect authenticated users to dashboard */}
-      <AuthRedirect />
 
       {/* Structured Data for SEO - Static content only, no user input */}
       <script

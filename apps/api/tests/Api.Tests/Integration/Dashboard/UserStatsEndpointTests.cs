@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -120,13 +121,27 @@ public sealed class UserStatsEndpointTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         });
 
-        // Add games to library
+        // Add games to library (SharedGameId required by CK_UserLibraryEntry_GameSource check constraint)
         for (int i = 0; i < gamesCount; i++)
         {
+            var sharedGameId = Guid.NewGuid();
+            _dbContext.Set<SharedGameEntity>().Add(new SharedGameEntity
+            {
+                Id = sharedGameId,
+                Title = $"Test Game {i}",
+                YearPublished = 2024,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                CreatedBy = userId,
+                CreatedAt = DateTime.UtcNow,
+                Status = 1
+            });
             _dbContext.Set<UserLibraryEntryEntity>().Add(new UserLibraryEntryEntity
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
+                SharedGameId = sharedGameId,
                 AddedAt = DateTime.UtcNow,
                 TimesPlayed = 0
             });

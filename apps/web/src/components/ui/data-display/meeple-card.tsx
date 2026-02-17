@@ -374,8 +374,8 @@ const contentVariants = cva('', {
       grid: 'flex-1 flex flex-col p-4',
       list: 'flex-1 min-w-0 py-1',
       compact: 'flex-1 min-w-0',
-      featured: 'flex-1 flex flex-col p-5',
-      hero: 'relative z-10 mt-auto flex flex-col justify-end p-5 bg-black/80 backdrop-blur-sm',
+      featured: 'flex-1 flex flex-col px-5 py-4',
+      hero: 'relative z-10 mt-auto flex flex-col justify-end p-6',
     },
   },
   defaultVariants: { variant: 'grid' },
@@ -1005,7 +1005,7 @@ export const MeepleCard = React.memo(function MeepleCard({
           className={cn(
             'font-quicksand font-bold leading-tight',
             variant === 'hero'
-              ? 'text-2xl text-white mb-1 drop-shadow-lg'
+              ? 'text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]'
               : variant === 'featured'
                 ? 'text-xl mb-1'
                 : variant === 'list'

@@ -2,9 +2,13 @@ using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Application.Queries.UserStats;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Queries.Sessions;
+using Api.BoundedContexts.UserLibrary.Application.Queries.Games;
 using Api.Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 // Issue #3319: Dashboard insights response DTO
 
@@ -25,7 +29,10 @@ internal static class DashboardEndpoints
 
     public static RouteGroupBuilder MapDashboardEndpoints(this RouteGroupBuilder group)
     {
-        // Issue #3314: Dashboard aggregated endpoint
+        // Epic #4575: Gaming Hub Dashboard endpoints
+        MapGamingHubEndpoints(group);
+
+        // Issue #3314: Dashboard aggregated endpoint (V1 - deprecated)
         group.MapGet("/dashboard", HandleGetDashboard)
             .RequireSession()
             .RequireAuthorization()
@@ -136,6 +143,73 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
         MapDashboardStreamEndpoint(group);
 
         return group;
+    }
+
+    /// <summary>
+    /// Epic #4575: Gaming Hub Dashboard endpoints (Issues #4578, #4579, #4580)
+    /// </summary>
+    private static void MapGamingHubEndpoints(RouteGroupBuilder group)
+    {
+        // Issue #4578: User stats
+        group.MapGet("/users/me/stats", async (
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var stats = await mediator.Send(new GetUserStatsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(stats);
+        })
+        .RequireAuthorization()
+        .WithTags("Dashboard", "Gaming Hub")
+        .WithName("GetUserStats")
+        .WithSummary("Get user dashboard statistics")
+        .Produces<UserStatsDto>()
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        // Issue #4579: Recent sessions
+        group.MapGet("/sessions/recent", async (
+            [FromQuery] int limit,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetRecentSessionsQuery { Limit = limit == 0 ? 3 : limit };
+            var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(sessions);
+        })
+        .RequireAuthorization()
+        .WithTags("Dashboard", "Gaming Hub", "Sessions")
+        .WithName("GetRecentSessions")
+        .WithSummary("Get recent gaming sessions")
+        .Produces<List<SessionSummaryDto>>()
+        .ProducesValidationProblem()
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        // Issue #4580: User games collection
+        group.MapGet("/users/me/games", async (
+            [FromQuery] string? category,
+            [FromQuery] string? sort,
+            [FromQuery] int page,
+            [FromQuery] int pageSize,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetUserGamesQuery
+            {
+                Category = category,
+                Sort = sort ?? "alphabetical",
+                Page = page == 0 ? 1 : page,
+                PageSize = pageSize == 0 ? 20 : pageSize
+            };
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthorization()
+        .WithTags("Dashboard", "Gaming Hub", "User Library")
+        .WithName("GetUserGames")
+        .WithSummary("Get user's game collection")
+        .Produces<PagedResult<UserGameDto>>()
+        .ProducesValidationProblem()
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
     }
 
     /// <summary>

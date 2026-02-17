@@ -305,10 +305,10 @@ const entityColors: Record<MeepleEntityType, { hsl: string; name: string }> = {
 // ============================================================================
 
 const meepleCardVariants = cva(
-  // Base styles for all variants
+  // Base styles for all variants — v2 warm styling (Issue #4604)
   [
     'group relative overflow-hidden cursor-pointer',
-    'transition-all duration-300 ease-out',
+    'transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   ],
   {
@@ -319,13 +319,13 @@ const meepleCardVariants = cva(
           'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
-          'shadow-sm hover:shadow-lg',
-          'hover:-translate-y-1',
+          '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
+          'hover:-translate-y-1.5',
         ],
         list: [
           'flex flex-row items-center gap-4 p-3 rounded-xl',
           'bg-card border border-border/50',
-          'shadow-sm hover:shadow-md',
+          '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)]',
           'hover:translate-x-1',
         ],
         compact: [
@@ -335,14 +335,16 @@ const meepleCardVariants = cva(
         ],
         featured: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card border border-border/50',
-          'shadow-md hover:shadow-xl',
+          'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
+          'dark:bg-card dark:backdrop-blur-none',
+          'border border-border/50',
+          '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
           'hover:-translate-y-2',
         ],
         hero: [
           'relative flex flex-col rounded-3xl overflow-hidden',
           'min-h-[320px]',
-          'shadow-xl hover:shadow-2xl',
+          '[box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)]',
           'hover:scale-[1.01]',
         ],
       },
@@ -420,11 +422,11 @@ function EntityIndicator({
   }
 
   if (variant === 'featured' || variant === 'grid') {
-    // Left border accent only; entity badge is rendered by VerticalTagStack
+    // Left border accent (4px → 6px on hover) — v2 style (Issue #4604)
     return (
       <span
         className={cn(
-          'absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200',
+          'absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250',
           className
         )}
         style={{ backgroundColor: `hsl(${color})` }}
@@ -583,6 +585,18 @@ function CoverImage({
                 : variant === 'featured'
                   ? `linear-gradient(180deg, transparent 40%, hsla(${color}, 0.15) 70%, hsla(${color}, 0.4) 100%)`
                   : `linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%)`,
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Shimmer effect on hover — v2 (Issue #4604) */}
+      {showOverlay && (
+        <div
+          className="absolute inset-0 pointer-events-none opacity-0 group-hover:animate-mc-shimmer"
+          style={{
+            background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)',
+            transform: 'translateX(-100%)',
           }}
           aria-hidden="true"
         />
@@ -834,10 +848,17 @@ export const MeepleCard = React.memo(function MeepleCard({
     <Component
       className={cn(
         meepleCardVariants({ variant }),
+        // Entity glow ring on hover — v2 (Issue #4604)
+        variant !== 'compact' && 'hover:outline hover:outline-2 hover:outline-offset-2',
         selected && 'ring-2 ring-offset-2 bg-accent/10',
         selected && `ring-[hsl(${color})]`,
         className
       )}
+      style={{
+        // Entity glow color for hover outline
+        '--mc-entity-color': `hsl(${color})`,
+        outlineColor: `hsl(${color} / 0.4)`,
+      } as React.CSSProperties}
       onClick={isInteractive ? onClick : undefined}
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}

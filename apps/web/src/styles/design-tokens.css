@@ -132,6 +132,13 @@
     --shadow-modal: var(--shadow-2xl);
     --shadow-dropdown: var(--shadow-lg);
 
+    /* MeepleCard v2 warm shadows (Issue #4604) */
+    --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.06), 0 1px 2px rgba(180,130,80,0.04);
+    --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.08), 0 2px 4px rgba(180,130,80,0.04);
+    --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.12), 0 4px 8px rgba(180,130,80,0.06);
+    --shadow-warm-xl: 0 20px 50px rgba(180,130,80,0.16), 0 8px 16px rgba(180,130,80,0.08);
+    --shadow-warm-2xl: 0 25px 60px rgba(180,130,80,0.2), 0 12px 24px rgba(180,130,80,0.1);
+
     /* Focus ring */
     --ring-width: 2px;
     --ring-offset-width: 2px;
@@ -402,6 +409,13 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
     --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.6);
+
+    /* MeepleCard v2 warm shadows - dark mode (Issue #4604) */
+    --shadow-warm-sm: 0 1px 3px rgb(0 0 0 / 0.2);
+    --shadow-warm-md: 0 4px 12px rgb(0 0 0 / 0.3);
+    --shadow-warm-lg: 0 10px 30px rgb(0 0 0 / 0.4);
+    --shadow-warm-xl: 0 20px 50px rgb(0 0 0 / 0.5);
+    --shadow-warm-2xl: 0 25px 60px rgb(0 0 0 / 0.6);
 
     /* ============================================================================
      * DARK MODE ENHANCEMENTS (Issue #2965 Wave 8)

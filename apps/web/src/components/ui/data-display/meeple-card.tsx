@@ -316,11 +316,11 @@ const meepleCardVariants = cva(
       variant: {
         grid: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
+          'bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%]',
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          'hover:-translate-y-1.5',
+          'hover:-translate-y-2',
         ],
         list: [
           'flex flex-row items-center gap-4 p-3 rounded-xl',
@@ -335,7 +335,7 @@ const meepleCardVariants = cva(
         ],
         featured: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
+          'bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%]',
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
           '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
@@ -593,7 +593,7 @@ function CoverImage({
       {/* Shimmer effect on hover — v2 (Issue #4604) */}
       {showOverlay && (
         <div
-          className="absolute inset-0 pointer-events-none opacity-0 group-hover:animate-mc-shimmer"
+          className="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
           style={{
             background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)',
             transform: 'translateX(-100%)',
@@ -849,7 +849,8 @@ export const MeepleCard = React.memo(function MeepleCard({
       className={cn(
         meepleCardVariants({ variant }),
         // Entity glow ring on hover — v2 (Issue #4604)
-        variant !== 'compact' && 'hover:outline hover:outline-2 hover:outline-offset-2',
+        // Note: hover:outline-2 in Tailwind v4 sets outline-style:solid (not auto), so inline outlineColor works
+        variant !== 'compact' && 'hover:outline-2 hover:outline-offset-2',
         selected && 'ring-2 ring-offset-2 bg-accent/10',
         selected && `ring-[hsl(${color})]`,
         className

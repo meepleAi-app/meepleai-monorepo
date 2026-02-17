@@ -66,7 +66,15 @@ import {
 } from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
+import { AgentModelInfo, type ModelParameters } from './meeple-card-features/AgentModelInfo';
+import { AgentStatsDisplay, type AgentStats } from './meeple-card-features/AgentStatsDisplay';
+import { AgentStatusBadge, type AgentStatus } from './meeple-card-features/AgentStatusBadge';
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
+import { ChatAgentInfo, type ChatAgent } from './meeple-card-features/ChatAgentInfo';
+import { ChatGameContext, type ChatGame } from './meeple-card-features/ChatGameContext';
+import { ChatStatsDisplay, type ChatStats } from './meeple-card-features/ChatStatsDisplay';
+import { ChatStatusBadge, type ChatStatus } from './meeple-card-features/ChatStatusBadge';
+import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
 import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
@@ -79,15 +87,7 @@ import { WishlistButton } from './meeple-card-features/WishlistButton';
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
 // Issue #4361: Agent-specific display components
-import { AgentModelInfo, type ModelParameters } from './meeple-card-features/AgentModelInfo';
-import { AgentStatsDisplay, type AgentStats } from './meeple-card-features/AgentStatsDisplay';
-import { AgentStatusBadge, type AgentStatus } from './meeple-card-features/AgentStatusBadge';
 // Issue #4400: ChatSession-specific display components
-import { ChatAgentInfo, type ChatAgent } from './meeple-card-features/ChatAgentInfo';
-import { ChatGameContext, type ChatGame } from './meeple-card-features/ChatGameContext';
-import { ChatStatsDisplay, type ChatStats } from './meeple-card-features/ChatStatsDisplay';
-import { ChatStatusBadge, type ChatStatus } from './meeple-card-features/ChatStatusBadge';
-import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 
 import type { LucideIcon } from 'lucide-react';
 

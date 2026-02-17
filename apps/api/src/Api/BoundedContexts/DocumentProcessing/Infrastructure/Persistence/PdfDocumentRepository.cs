@@ -168,14 +168,20 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         // Issue #3664: Added PrivateGameId
         // Issue #4216: Added retry tracking fields
 
-        // Parse retry-specific enums
+        // Parse retry-specific enums (ignoreCase for .ToString() output compatibility)
         var errorCategory = string.IsNullOrWhiteSpace(entity.ErrorCategory)
             ? (ErrorCategory?)null
-            : Enum.Parse<ErrorCategory>(entity.ErrorCategory);
+            : Enum.Parse<ErrorCategory>(entity.ErrorCategory, ignoreCase: true);
 
         var failedAtState = string.IsNullOrWhiteSpace(entity.FailedAtState)
             ? (PdfProcessingState?)null
-            : Enum.Parse<PdfProcessingState>(entity.FailedAtState);
+            : Enum.Parse<PdfProcessingState>(entity.FailedAtState, ignoreCase: true);
+
+        // Parse ProcessingState from the stored string (Issue #4215)
+        var processingState = !string.IsNullOrWhiteSpace(entity.ProcessingState)
+            && Enum.TryParse<PdfProcessingState>(entity.ProcessingState, ignoreCase: true, out var parsedState)
+                ? parsedState
+                : (PdfProcessingState?)null;
 
         return PdfDocument.Reconstitute(
             id: entity.Id,
@@ -198,6 +204,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             contributorId: entity.ContributorId,
             sourceDocumentId: entity.SourceDocumentId,
             privateGameId: entity.PrivateGameId,
+            processingState: processingState, // Fix: pass stored enum state to avoid fallback to legacy string
             retryCount: entity.RetryCount,
             errorCategory: errorCategory,
             failedAtState: failedAtState,

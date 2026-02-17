@@ -63,6 +63,22 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         // Register domain event infrastructure
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
+        // Register IProcessingMetricsService (required by PdfStateChangedMetricsEventHandler picked up by MediatR assembly scan)
+        var mockMetricsService = new Moq.Mock<Api.BoundedContexts.DocumentProcessing.Application.Services.IProcessingMetricsService>();
+        services.AddScoped(_ => mockMetricsService.Object);
+
+        // Register UserNotifications dependencies (required by PdfNotificationEventHandler picked up by MediatR assembly scan)
+        var mockNotifPrefsRepo = new Moq.Mock<Api.BoundedContexts.UserNotifications.Domain.Repositories.INotificationPreferencesRepository>();
+        services.AddScoped(_ => mockNotifPrefsRepo.Object);
+        var mockNotifRepo = new Moq.Mock<Api.BoundedContexts.UserNotifications.Domain.Repositories.INotificationRepository>();
+        services.AddScoped(_ => mockNotifRepo.Object);
+        var mockPushService = new Moq.Mock<Api.Services.IPushNotificationService>();
+        services.AddScoped(_ => mockPushService.Object);
+        var mockEmailQueueRepo = new Moq.Mock<Api.BoundedContexts.UserNotifications.Domain.Repositories.IEmailQueueRepository>();
+        services.AddScoped(_ => mockEmailQueueRepo.Object);
+        var mockEmailTemplateService = new Moq.Mock<Api.BoundedContexts.UserNotifications.Application.Services.IEmailTemplateService>();
+        services.AddSingleton(_ => mockEmailTemplateService.Object);
+
         // Register MediatR
         services.AddMediatR(cfg =>
         {
@@ -75,24 +91,8 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await EnsureCreatedWithRetry(_dbContext);
-    }
-
-    private static async Task EnsureCreatedWithRetry(MeepleAiDbContext context)
-    {
-        const int maxAttempts = 3;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                await context.Database.EnsureCreatedAsync(TestCancellationToken);
-                return;
-            }
-            catch (Npgsql.NpgsqlException) when (attempt < maxAttempts)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1), TestCancellationToken);
-            }
-        }
+        // Use MigrateAsync instead of EnsureCreatedAsync to avoid DDL generation issues
+        await _dbContext.Database.MigrateAsync(TestCancellationToken);
     }
 
     public async ValueTask DisposeAsync()
@@ -193,7 +193,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var result = await mediator.Send(command, TestCancellationToken);
 
         // Assert
-        Assert.True(result.Success);
+        Assert.True(result.Success, $"Expected success but got: {result.Message}");
         Assert.Equal(1, result.RetryCount);
         Assert.Equal(PdfProcessingState.Extracting.ToString(), result.CurrentState);
 

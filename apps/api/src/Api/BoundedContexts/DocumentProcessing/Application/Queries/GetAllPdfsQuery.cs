@@ -6,12 +6,18 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// <summary>
 /// Query to get all PDF documents with processing status (admin-only).
 /// Returns: filename, game, status, chunks, errors for monitoring.
+/// PDF Storage Management Hub: Extended with granular state, sorting, and filters.
 /// </summary>
-/// <param name="Status">Filter by processing status (optional)</param>
-/// <param name="PageSize">Page size (default 50)</param>
-/// <param name="Page">Page number (default 1)</param>
 internal record GetAllPdfsQuery(
     string? Status = null,
+    string? State = null,
+    long? MinSizeBytes = null,
+    long? MaxSizeBytes = null,
+    DateTime? UploadedAfter = null,
+    DateTime? UploadedBefore = null,
+    Guid? GameId = null,
+    string? SortBy = null,
+    string? SortOrder = null,
     int PageSize = 50,
     int Page = 1
 ) : IQuery<PdfListResult>;
@@ -27,7 +33,8 @@ internal record PdfListResult(
 );
 
 /// <summary>
-/// Individual PDF item in admin list
+/// Individual PDF item in admin list.
+/// PDF Storage Management Hub: Extended with 7-state processing, file size, progress.
 /// </summary>
 internal record PdfListItemDto(
     Guid Id,
@@ -35,9 +42,14 @@ internal record PdfListItemDto(
     string? GameTitle,
     Guid? GameId,
     string ProcessingStatus,
+    string ProcessingState,
+    int ProgressPercentage,
+    long FileSizeBytes,
     int? PageCount,
     int ChunkCount,
     string? ProcessingError,
+    string? ErrorCategory,
+    int RetryCount,
     DateTime UploadedAt,
     DateTime? ProcessedAt
 );

@@ -95,6 +95,7 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
             const isActive = isSectionActive(section, pathname);
             const badgeCount = getSectionBadgeCount(section);
             const Icon = section.icon;
+            if (!Icon) return null;
 
             return (
               <Link
@@ -127,6 +128,7 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
             const isActive = isSectionActive(section, pathname);
             const badgeCount = getSectionBadgeCount(section);
             const Icon = section.icon;
+            if (!Icon) return null;
 
             return (
               <Link

@@ -4,7 +4,14 @@
  * Types and interfaces for User Collection Dashboard
  */
 
-import type { ActivityEvent } from '@/components/dashboard/ActivityFeed';
+// ActivityEvent type (was from old dashboard/ActivityFeed - now inline)
+export interface ActivityEvent {
+  id: string;
+  type: string;
+  timestamp: string;
+  title: string;
+  description?: string;
+}
 
 // ============================================================================
 // Game Collection Types

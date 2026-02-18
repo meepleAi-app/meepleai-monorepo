@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { adminClient } from '@/lib/api/clients/adminClient';
+import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { HttpClient } from '@/lib/api/core/httpClient';
+
+const httpClient = new HttpClient();
+const adminClient = createAdminClient({ httpClient });
 import type { InfrastructureDetails } from '@/lib/api/schemas/admin.schemas';
 
 /**

@@ -15,8 +15,9 @@
 
 import { useState, useEffect } from 'react';
 
-import { Loader2, Check, RotateCcw, MessageCircle } from 'lucide-react';
+import { Loader2, Check, RotateCcw, MessageCircle, Bot } from 'lucide-react';
 
+import { TypologySelector, StrategySelector } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
 import {
   Dialog,
@@ -39,7 +40,8 @@ import { Label } from '@/components/ui/primitives/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { Slider } from '@/components/ui/primitives/slider';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { useAgentConfig, useUpdateAgentConfig } from '@/hooks/queries';
+import { useAgentConfig, useUpdateAgentConfig, agentConfigKeys } from '@/hooks/queries';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   MODEL_OPTIONS,
   PERSONALITY_OPTIONS,
@@ -62,6 +64,20 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
   // Fetch current configuration
   const { data: currentConfig, isLoading: configLoading } = useAgentConfig(gameId, isOpen);
   const updateMutation = useUpdateAgentConfig();
+  const queryClient = useQueryClient();
+
+  // Create mode state
+  const [mode, setMode] = useState<'create' | 'edit'>('edit');
+  const [typologyId, setTypologyId] = useState<string>();
+  const [strategyName, setStrategyName] = useState('Balanced');
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Determine mode when modal opens / config loads
+  useEffect(() => {
+    if (isOpen && !configLoading) {
+      setMode(currentConfig ? 'edit' : 'create');
+    }
+  }, [isOpen, configLoading, currentConfig]);
 
   // Form state
   const [modelType, setModelType] = useState<AIModel>(DEFAULT_AGENT_CONFIG.modelType);
@@ -133,21 +149,103 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
     onClose();
   };
 
+  const handleCreateAgent = async () => {
+    if (!typologyId) {
+      toast.error('Seleziona un tipo di agente');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const response = await fetch(`/api/v1/library/games/${gameId}/agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          typologyId,
+          strategyName,
+          strategyParameters: null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed' }));
+        throw new Error(error.message || 'Creazione agente fallita');
+      }
+
+      toast.success(`Agente AI per "${gameTitle}" creato con successo!`);
+      // Invalidate agent config cache to refetch
+      queryClient.invalidateQueries({ queryKey: agentConfigKeys.byGame(gameId) });
+      setMode('edit');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Errore sconosciuto';
+      toast.error(`Errore: ${message}`);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const isSaving = updateMutation.isPending;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Configurazione Agente AI</DialogTitle>
+          <DialogTitle>
+            {mode === 'create' ? 'Crea Agente AI' : 'Configurazione Agente AI'}
+          </DialogTitle>
           <DialogDescription>
-            Personalizza l'agente AI per <strong>{gameTitle}</strong>
+            {mode === 'create'
+              ? <>Seleziona tipologia e strategia per creare un agente AI per <strong>{gameTitle}</strong></>
+              : <>Personalizza l'agente AI per <strong>{gameTitle}</strong></>
+            }
           </DialogDescription>
         </DialogHeader>
 
         {configLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : mode === 'create' ? (
+          <div className="space-y-6">
+            <TypologySelector
+              value={typologyId}
+              onChange={setTypologyId}
+              disabled={isCreating}
+            />
+
+            <StrategySelector
+              value={strategyName}
+              onChange={setStrategyName}
+              disabled={isCreating}
+            />
+
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <Bot className="inline h-4 w-4 mr-1" />
+                L'agente verrà creato con la tipologia e strategia selezionate.
+                Potrai personalizzare modello e parametri dopo la creazione.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={handleCancel} disabled={isCreating}>
+                Annulla
+              </Button>
+              <Button onClick={handleCreateAgent} disabled={!typologyId || isCreating}>
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creazione...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="mr-2 h-4 w-4" />
+                    Crea Agente
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
@@ -278,36 +376,38 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
           </div>
         )}
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <div className="flex-1 flex gap-2">
-            <Button variant="outline" onClick={handleResetToDefault} disabled={isSaving}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-            <Button variant="outline" onClick={handleTestAgent} disabled={isSaving}>
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Testa
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-              Annulla
-            </Button>
-            <Button onClick={handleSave} disabled={isSaving || configLoading}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvataggio...
-                </>
-              ) : (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Salva Configurazione
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogFooter>
+        {mode === 'edit' && (
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <div className="flex-1 flex gap-2">
+              <Button variant="outline" onClick={handleResetToDefault} disabled={isSaving}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset
+              </Button>
+              <Button variant="outline" onClick={handleTestAgent} disabled={isSaving}>
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Testa
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+                Annulla
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving || configLoading}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvataggio...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Salva Configurazione
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

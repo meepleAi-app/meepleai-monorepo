@@ -227,37 +227,55 @@ export function InfrastructureClient() {
     });
   };
 
-  // Generate mock chart data (will be replaced with real Prometheus data in #901)
-  const generateMockChartData = (metric: string): DataPoint[] => {
-    const now = Date.now();
-    const points =
-      timeRange === '1h' ? 12 : timeRange === '6h' ? 24 : timeRange === '24h' ? 48 : 168;
-    const interval =
-      timeRange === '1h'
-        ? 300000
-        : timeRange === '6h'
-          ? 900000
-          : timeRange === '24h'
-            ? 1800000
-            : 3600000;
+  // Issue #901: Real Prometheus time-series data
+  const [cpuData, setCpuData] = useState<DataPoint[]>([]);
+  const [memoryData, setMemoryData] = useState<DataPoint[]>([]);
+  const [requestsData, setRequestsData] = useState<DataPoint[]>([]);
+  const [chartsLoading, setChartsLoading] = useState(false);
+  const [chartsError, setChartsError] = useState<string | null>(null);
 
-    return Array.from({ length: points }, (_, i) => {
-      const timestamp = new Date(now - (points - i - 1) * interval);
-      return {
-        time: timestamp.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
-        value:
-          metric === 'cpu'
-            ? Math.random() * 30 + 40
-            : metric === 'memory'
-              ? Math.random() * 500 + 1500
-              : Math.random() * 50 + 100,
-      };
-    });
-  };
+  // Fetch metrics time-series from Prometheus via backend
+  const toDataPoints = useCallback(
+    (series: { timestamp: string; value: number }[]): DataPoint[] =>
+      series.map(p => ({
+        time: new Date(p.timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+        value: Math.round(p.value * 100) / 100,
+      })),
+    [locale]
+  );
 
-  const cpuData = generateMockChartData('cpu');
-  const memoryData = generateMockChartData('memory');
-  const requestsData = generateMockChartData('requests');
+  // Fetch time-series on mount and when timeRange changes (with stale-request guard)
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchTimeSeries = async () => {
+      setChartsLoading(true);
+      setChartsError(null);
+      try {
+        const result = await api.admin.getMetricsTimeSeries(timeRange);
+        if (!cancelled && result) {
+          setCpuData(toDataPoints(result.cpu));
+          setMemoryData(toDataPoints(result.memory));
+          setRequestsData(toDataPoints(result.requests));
+        }
+      } catch {
+        if (!cancelled) {
+          setChartsError(
+            locale === 'it'
+              ? 'Impossibile caricare i dati delle metriche'
+              : 'Unable to load metrics data'
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setChartsLoading(false);
+        }
+      }
+    };
+
+    fetchTimeSeries();
+    return () => { cancelled = true; };
+  }, [timeRange, locale, toDataPoints]);
 
   const cpuSeries: DataSeries[] = [{ key: 'value', name: 'CPU %', color: '#1a73e8' }];
   const memorySeries: DataSeries[] = [{ key: 'value', name: 'Memory (MB)', color: '#34a853' }];
@@ -602,55 +620,89 @@ export function InfrastructureClient() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-8">
-                {/* CPU Usage Chart */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">{i18n.charts.cpuUsageTitle}</h3>
-                  <MetricsChart
-                    type="line"
-                    data={cpuData}
-                    xAxisKey="time"
-                    series={cpuSeries}
-                    height={250}
-                    showGrid
-                    showTooltip
-                    showLegend={false}
-                  />
-                </div>
+                {chartsError && (
+                  <Alert variant="default" data-testid="charts-error">
+                    <AlertCircleIcon className="h-4 w-4" />
+                    <AlertDescription>{chartsError}</AlertDescription>
+                  </Alert>
+                )}
 
-                <Separator />
+                {chartsLoading ? (
+                  <div className="flex items-center justify-center py-12 text-gray-500">
+                    <RefreshCwIcon className="h-5 w-5 animate-spin mr-2" />
+                    {locale === 'it' ? 'Caricamento metriche...' : 'Loading metrics...'}
+                  </div>
+                ) : (
+                  <>
+                    {/* CPU Usage Chart */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">{i18n.charts.cpuUsageTitle}</h3>
+                      {cpuData.length > 0 ? (
+                        <MetricsChart
+                          type="line"
+                          data={cpuData}
+                          xAxisKey="time"
+                          series={cpuSeries}
+                          height={250}
+                          showGrid
+                          showTooltip
+                          showLegend={false}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-[250px] bg-gray-50 rounded-lg text-gray-400">
+                          {locale === 'it' ? 'Nessun dato disponibile' : 'No data available'}
+                        </div>
+                      )}
+                    </div>
 
-                {/* Memory Usage Chart */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">{i18n.charts.memoryUsageTitle}</h3>
-                  <MetricsChart
-                    type="area"
-                    data={memoryData}
-                    xAxisKey="time"
-                    series={memorySeries}
-                    height={250}
-                    showGrid
-                    showTooltip
-                    showLegend={false}
-                    useGradient
-                  />
-                </div>
+                    <Separator />
 
-                <Separator />
+                    {/* Memory Usage Chart */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">{i18n.charts.memoryUsageTitle}</h3>
+                      {memoryData.length > 0 ? (
+                        <MetricsChart
+                          type="area"
+                          data={memoryData}
+                          xAxisKey="time"
+                          series={memorySeries}
+                          height={250}
+                          showGrid
+                          showTooltip
+                          showLegend={false}
+                          useGradient
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-[250px] bg-gray-50 rounded-lg text-gray-400">
+                          {locale === 'it' ? 'Nessun dato disponibile' : 'No data available'}
+                        </div>
+                      )}
+                    </div>
 
-                {/* API Requests Chart */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">{i18n.charts.apiRequestsTitle}</h3>
-                  <MetricsChart
-                    type="bar"
-                    data={requestsData}
-                    xAxisKey="time"
-                    series={requestsSeries}
-                    height={250}
-                    showGrid
-                    showTooltip
-                    showLegend={false}
-                  />
-                </div>
+                    <Separator />
+
+                    {/* API Requests Chart */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">{i18n.charts.apiRequestsTitle}</h3>
+                      {requestsData.length > 0 ? (
+                        <MetricsChart
+                          type="bar"
+                          data={requestsData}
+                          xAxisKey="time"
+                          series={requestsSeries}
+                          height={250}
+                          showGrid
+                          showTooltip
+                          showLegend={false}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-[250px] bg-gray-50 rounded-lg text-gray-400">
+                          {locale === 'it' ? 'Nessun dato disponibile' : 'No data available'}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

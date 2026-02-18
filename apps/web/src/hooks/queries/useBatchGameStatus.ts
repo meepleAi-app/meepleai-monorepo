@@ -6,7 +6,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { apiClient } from '@/lib/api/core/apiClient';
+import { apiClient } from '@/lib/api/client';
 
 export interface GameStatusSimple {
   inLibrary: boolean;
@@ -37,7 +37,7 @@ export function useBatchGameStatus(gameIds: string[], enabled = true) {
         `/api/v1/library/games/batch-status?gameIds=${idsParam}`
       );
 
-      return response.data;
+      return response;
     },
     enabled: enabled && gameIds.length > 0,
     staleTime: 30 * 1000, // Cache for 30 seconds

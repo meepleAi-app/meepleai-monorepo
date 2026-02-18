@@ -103,13 +103,6 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     group: 'core',
     sidebarItems: [
       {
-        href: '/admin/users',
-        label: 'All Users',
-        icon: UsersIcon,
-        badgeKey: 'users',
-        activePattern: /^\/admin\/users$/,
-      },
-      {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
         icon: ShieldIcon,

@@ -53,7 +53,7 @@
  * ```
  */
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { cva, type VariantProps } from 'class-variance-authority';
 import Image from 'next/image';
@@ -897,6 +897,56 @@ export const MeepleCard = React.memo(function MeepleCard({
   const hasQuickActions = quickActions && quickActions.length > 0;
   const showWishlistBtn = showWishlist && !hasQuickActions; // Priority: quickActions > wishlist
 
+  // Mobile touch UX: Bottom sheet for actions (Issue #4604)
+  const [showMobileActions, setShowMobileActions] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const cardRef = useRef<HTMLDivElement | HTMLElement>(null);
+  const hasMobileActions = isMobile && (hasQuickActions || entityQuickActions || showWishlistBtn || showInfoButton);
+
+  // Detect mobile/tablet viewport
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  // Dismiss mobile actions on outside click
+  useEffect(() => {
+    if (!showMobileActions) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
+        setShowMobileActions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMobileActions]);
+
+  // Mobile tap handler: 1st tap = show actions, 2nd tap = navigate
+  const handleMobileClick = () => {
+    if (hasMobileActions && !showMobileActions) {
+      // 1st tap: Show bottom sheet
+      setShowMobileActions(true);
+    } else if (onClick) {
+      // 2nd tap OR no actions: Navigate
+      setShowMobileActions(false);
+      onClick();
+    }
+  };
+
+  // Desktop click handler: Navigate immediately
+  const handleDesktopClick = () => {
+    if (onClick) onClick();
+  };
+
+  // Unified click handler
+  const handleCardClick = isMobile ? handleMobileClick : (isInteractive ? handleDesktopClick : undefined);
+
   if (loading) {
     return <MeepleCardSkeleton variant={variant} />;
   }
@@ -908,6 +958,8 @@ export const MeepleCard = React.memo(function MeepleCard({
   // Card content JSX
   const cardContent = (
     <Component
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ref={cardRef as React.Ref<any>} // Polymorphic component requires any
       className={cn(
         meepleCardVariants({ variant }),
         // v2: Entity glow outline on hover (Issue #4604)
@@ -927,9 +979,9 @@ export const MeepleCard = React.memo(function MeepleCard({
         willChange: 'transform, box-shadow, outline',
         // v2: Transform handled via CSS (globals.css [data-variant]:hover selectors)
       } as React.CSSProperties}
-      onClick={isInteractive ? onClick : undefined}
-      role={isInteractive ? 'button' : undefined}
-      tabIndex={isInteractive ? 0 : undefined}
+      onClick={handleCardClick}
+      role={isInteractive || hasMobileActions ? 'button' : undefined}
+      tabIndex={isInteractive || hasMobileActions ? 0 : undefined}
       onKeyDown={
         isInteractive
           ? e => {
@@ -1024,11 +1076,14 @@ export const MeepleCard = React.memo(function MeepleCard({
       {/* Content area */}
       <div className={contentVariants({ variant })}>
         {/* Feature: Top-right actions row (Issue #4030: QuickActions + InfoButton) */}
+        {/* Desktop only: Show on hover. Mobile: Hidden (bottom sheet instead) */}
         {(entityQuickActions || showInfoButton || showWishlistBtn || hasQuickActions) && (
           <div className={cn(
             "absolute right-2.5 flex items-center gap-1.5 z-15",
             // Push actions below unread badge row for chatSession
             entity === 'chatSession' && unreadCount && unreadCount > 0 ? 'top-10' : 'top-2.5',
+            // Hide on mobile/tablet (use bottom sheet instead)
+            "hidden md:flex",
           )}>
             {/* New entity quick actions (Issue #4030) */}
             {entityQuickActions && entityQuickActions.length > 0 && (
@@ -1228,6 +1283,81 @@ export const MeepleCard = React.memo(function MeepleCard({
       {/* Navigation footer: links to related entities (Epic #4688, Issue #4689) */}
       {navigateTo && navigateTo.length > 0 && (
         <CardNavigationFooter links={navigateTo} />
+      )}
+
+      {/* Mobile Touch UX: Bottom Sheet for Quick Actions (Issue #4604) */}
+      {showMobileActions && hasMobileActions && (
+        <div
+          className={cn(
+            "absolute bottom-0 inset-x-0 z-20",
+            "bg-card/98 backdrop-blur-md border-t border-border",
+            "p-3 rounded-b-2xl",
+            "flex items-center justify-center gap-2 flex-wrap",
+            // Slide up animation
+            "animate-in slide-in-from-bottom-4 duration-200",
+            // Touch-friendly sizing
+            "min-h-[60px]",
+            // Show only on mobile/tablet
+            "md:hidden"
+          )}
+          onClick={(e) => e.stopPropagation()} // Prevent card click when interacting with buttons
+        >
+          {/* Entity Quick Actions */}
+          {entityQuickActions && entityQuickActions.length > 0 && (
+            <>
+              {entityQuickActions.map((action, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    action.onClick();
+                    setShowMobileActions(false);
+                  }}
+                  className={cn(
+                    "px-4 py-2.5 rounded-lg font-medium text-sm",
+                    "min-h-[44px] min-w-[44px]", // Touch target
+                    "transition-all duration-200",
+                    // First action is primary, others secondary
+                    idx === 0
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-muted text-foreground hover:bg-muted/80",
+                    action.disabled && "opacity-50 cursor-not-allowed",
+                    action.hidden && "hidden"
+                  )}
+                  disabled={action.disabled}
+                >
+                  {action.icon && <action.icon className="w-4 h-4 inline-block mr-2" />}
+                  {action.label}
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* Info Button */}
+          {showInfoButton && infoHref && (
+            <a
+              href={infoHref}
+              className="px-4 py-2.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium min-h-[44px] flex items-center gap-2"
+              onClick={() => setShowMobileActions(false)}
+            >
+              <span className="text-lg">ℹ️</span>
+              {infoTooltip || 'Info'}
+            </a>
+          )}
+
+          {/* Wishlist Button */}
+          {showWishlistBtn && onWishlistToggle && id && (
+            <button
+              onClick={() => {
+                onWishlistToggle(id, !!isWishlisted);
+                setShowMobileActions(false);
+              }}
+              className="px-4 py-2.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium min-h-[44px] flex items-center gap-2"
+            >
+              <span className="text-lg">{isWishlisted ? '❤️' : '🤍'}</span>
+              {isWishlisted ? 'Wishlist' : 'Add'}
+            </button>
+          )}
+        </div>
       )}
     </Component>
   );

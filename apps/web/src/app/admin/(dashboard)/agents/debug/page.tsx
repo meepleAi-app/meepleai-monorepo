@@ -241,7 +241,8 @@ export default function DebugConsolePage() {
   // Initial load
   useEffect(() => {
     fetchExecutions(true);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
   // Auto-refresh polling
   useEffect(() => {

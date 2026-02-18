@@ -186,7 +186,7 @@ export function ProfileBar({ compact = false, className }: ProfileBarProps) {
           {isAdmin && (
             <DropdownMenuItem asChild data-testid="admin-menu-item">
               <Link
-                href="/admin"
+                href="/admin/overview"
                 className="flex items-center gap-2 cursor-pointer"
               >
                 <Shield className="h-4 w-4" />

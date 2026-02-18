@@ -807,9 +807,10 @@ function MeepleCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant 
  * Renders a polymorphic card supporting games, players, collections, events,
  * and custom entity types with multiple layout variants.
  *
- * Note: React.memo removed for v2 hover transform to work with internal state
+ * Performance: React.memo wrapper prevents unnecessary re-renders in grid/list views.
+ * Hover transforms handled via CSS (globals.css [data-variant] selectors).
  */
-export function MeepleCard({
+export const MeepleCard = React.memo(function MeepleCard({
   id,
   entity,
   variant = 'grid',
@@ -874,8 +875,6 @@ export function MeepleCard({
   chatPreview,
   unreadCount,
 }: MeepleCardProps) {
-  const [isHovered, setIsHovered] = React.useState(false);
-
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
   const isHeroOrFeatured = variant === 'hero' || variant === 'featured';
@@ -918,15 +917,8 @@ export function MeepleCard({
         '--mc-entity-color': `hsl(${color})`,
         outlineColor: `hsla(${color}, 0.4)`,
         willChange: 'transform, box-shadow, outline',
-        // v2: Inline transform (Tailwind v4 hover issue workaround)
-        transform: isHovered && (variant === 'grid' || variant === 'featured')
-          ? 'translateY(-8px)'
-          : isHovered && variant === 'hero'
-            ? 'scale(1.01)'
-            : 'none',
+        // v2: Transform handled via CSS (globals.css [data-variant]:hover selectors)
       } as React.CSSProperties}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onClick={isInteractive ? onClick : undefined}
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
@@ -1261,7 +1253,7 @@ export function MeepleCard({
   }
 
   return cardContent;
-}
+});
 
 // ============================================================================
 // Exports

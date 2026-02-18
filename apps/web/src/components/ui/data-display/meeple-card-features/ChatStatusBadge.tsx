@@ -36,6 +36,7 @@ export interface ChatStatusBadgeProps {
 // Configuration
 // ============================================================================
 
+// v2: More vibrant colors aligned with entity colors (Issue #4604)
 const statusConfig: Record<
   ChatStatus,
   {
@@ -49,31 +50,33 @@ const statusConfig: Record<
 > = {
   active: {
     label: 'Active',
-    bgClass: 'bg-blue-100 dark:bg-blue-900/30',
-    textClass: 'text-blue-900 dark:text-blue-100',
+    // v2: Brighter blue using --e-chat base color
+    bgClass: 'bg-blue-50 dark:bg-blue-900/20',
+    textClass: 'text-blue-700 dark:text-blue-200',
     dotClass: 'bg-blue-500',
     icon: MessageCircle,
     description: 'Chat session is currently active',
   },
   waiting: {
     label: 'Waiting',
-    bgClass: 'bg-yellow-100 dark:bg-yellow-900/30',
-    textClass: 'text-yellow-900 dark:text-yellow-100',
+    // v2: Brighter yellow
+    bgClass: 'bg-yellow-50 dark:bg-yellow-900/20',
+    textClass: 'text-yellow-700 dark:text-yellow-200',
     dotClass: 'bg-yellow-500',
     icon: Loader2,
     description: 'Waiting for a response',
   },
   archived: {
     label: 'Archived',
-    bgClass: 'bg-gray-100 dark:bg-gray-900/30',
-    textClass: 'text-gray-900 dark:text-gray-100',
+    bgClass: 'bg-gray-50 dark:bg-gray-900/20',
+    textClass: 'text-gray-600 dark:text-gray-300',
     dotClass: 'bg-gray-400',
     icon: Archive,
     description: 'Chat session has been archived',
   },
   closed: {
     label: 'Closed',
-    bgClass: 'bg-slate-100 dark:bg-slate-900/30',
+    bgClass: 'bg-slate-50 dark:bg-slate-900/20',
     textClass: 'text-slate-500 dark:text-slate-400',
     dotClass: 'bg-slate-400',
     icon: XCircle,
@@ -109,13 +112,15 @@ export const ChatStatusBadge = React.memo(function ChatStatusBadge({
             data-testid={`chat-status-${status}`}
             aria-label={`Chat status: ${config.label}`}
           >
-            {/* Pulsating status dot */}
+            {/* Pulsating status dot — v2 live-pulse animation (Issue #4604) */}
             <span className="relative flex items-center justify-center">
               <span
                 className={cn(
                   'w-2 h-2 rounded-full',
                   config.dotClass,
-                  isPulsating && 'animate-pulse'
+                  // v2: Use mc-live-pulse for active status (smoother than animate-pulse)
+                  status === 'active' && 'animate-mc-live-pulse',
+                  status === 'waiting' && 'animate-pulse'
                 )}
                 aria-hidden="true"
               />

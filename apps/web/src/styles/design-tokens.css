@@ -301,6 +301,15 @@
     --color-entity-chat: 220 80% 55%;     /* Blue */
     --color-entity-event: 350 89% 60%;    /* Rose */
 
+    /* Short aliases for v2 mockup compatibility (direct values, not var()) */
+    --e-game: 25 95% 45%;
+    --e-player: 262 83% 58%;
+    --e-session: 240 60% 55%;
+    --e-agent: 38 92% 50%;
+    --e-document: 210 40% 55%;
+    --e-chat: 220 80% 55%;
+    --e-event: 350 89% 60%;
+
     /* ============================================================================
      * SEMANTIC COLORS (Game-specific)
      * Extended palette for game badges and categorization

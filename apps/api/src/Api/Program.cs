@@ -526,6 +526,7 @@ v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
 v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Admin Dashboard
+v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation

@@ -151,6 +151,8 @@ export function useEntityActions({
               onClick: () => gameCollection.add(),
             };
 
+        const hasRag = data?.hasPdfDocuments === true;
+
         return {
           quickActions: [
             collectionAction, // Issue #4259: First action
@@ -158,6 +160,7 @@ export function useEntityActions({
               icon: MessageSquare,
               label: 'Chat con Agent',
               onClick: () => router.push(`/chat/new?game=${id}`),
+              hidden: !hasRag,
             },
             {
               icon: Play,

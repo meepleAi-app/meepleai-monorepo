@@ -473,6 +473,7 @@ export function FlipCard({
             borderColor: `hsla(${entityColor}, 0.15)`,
           }}
           data-testid="meeple-card-back"
+          {...(isCardMode ? { onClick: handleFlip } : {})}
         >
           <BackContent
             flipData={flipData}
@@ -481,6 +482,29 @@ export function FlipCard({
             entityColor={entityColor}
             title={title}
           />
+          {/* Flip-back button on back face (button mode only) */}
+          {!isCardMode && (
+            <button
+              className={cn(
+                'absolute bottom-3 right-3 z-30',
+                'flex h-8 w-8 items-center justify-center',
+                'rounded-full bg-white/70 backdrop-blur-sm',
+                'border border-border/30',
+                'text-muted-foreground hover:text-foreground',
+                'shadow-sm hover:shadow-md',
+                'transition-all duration-200 hover:scale-110',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFlip();
+              }}
+              aria-label="Torna al fronte della carta"
+              data-testid="meeple-card-flip-back-button"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </motion.div>
 

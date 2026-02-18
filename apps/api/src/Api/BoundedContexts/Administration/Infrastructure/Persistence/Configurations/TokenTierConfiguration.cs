@@ -33,6 +33,8 @@ public sealed class TokenTierConfiguration : IEntityTypeConfiguration<TokenTier>
             limits.Property(l => l.MaxCollectionSize).HasColumnName("max_collection_size").IsRequired();
             limits.Property(l => l.MaxPdfUploadsPerMonth).HasColumnName("max_pdf_uploads_per_month").IsRequired();
             limits.Property(l => l.MaxAgentsCreated).HasColumnName("max_agents_created").IsRequired();
+            limits.Property(l => l.DailyCreditsLimit).HasColumnName("daily_credits_limit").HasColumnType("decimal(18,2)").IsRequired();
+            limits.Property(l => l.WeeklyCreditsLimit).HasColumnName("weekly_credits_limit").HasColumnType("decimal(18,2)").IsRequired();
         });
 
         // TierPricing value object (owned)

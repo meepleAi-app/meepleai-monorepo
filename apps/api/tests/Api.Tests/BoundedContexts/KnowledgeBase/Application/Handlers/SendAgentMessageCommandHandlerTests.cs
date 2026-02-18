@@ -1,8 +1,11 @@
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -41,6 +44,11 @@ public sealed class SendAgentMessageCommandHandlerTests
             _mockChatThreadRepository.Object,
             _mockUnitOfWork.Object,
             _mockLlmService.Object,
+            Mock.Of<IQdrantService>(),
+            Mock.Of<IEmbeddingService>(),
+            Mock.Of<MeepleAiDbContext>(),
+            Mock.Of<IUserBudgetService>(),
+            Mock.Of<ILlmModelOverrideService>(),
             _mockLogger.Object
         );
     }

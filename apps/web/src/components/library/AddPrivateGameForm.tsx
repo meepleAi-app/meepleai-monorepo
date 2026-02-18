@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // Form schema with validation
 const AddPrivateGameFormSchema = z.object({
@@ -59,6 +60,7 @@ export function AddPrivateGameForm({
   initialValues,
   submitLabel,
 }: AddPrivateGameFormProps) {
+  const { t } = useTranslation();
   const {
     register,
     handleSubmit,
@@ -91,12 +93,12 @@ export function AddPrivateGameForm({
       {/* Title */}
       <div className="space-y-2">
         <Label htmlFor="title">
-          Title <span className="text-destructive">*</span>
+          {t('privateGameForm.title')} <span className="text-destructive">*</span>
         </Label>
         <Input
           id="title"
           {...register('title')}
-          placeholder="e.g., Catan"
+          placeholder={t('privateGameForm.titlePlaceholder')}
           disabled={isSubmitting}
         />
         {errors.title && (
@@ -108,7 +110,7 @@ export function AddPrivateGameForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="minPlayers">
-            Min Players <span className="text-destructive">*</span>
+            {t('privateGameForm.minPlayers')} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="minPlayers"
@@ -125,7 +127,7 @@ export function AddPrivateGameForm({
 
         <div className="space-y-2">
           <Label htmlFor="maxPlayers">
-            Max Players <span className="text-destructive">*</span>
+            {t('privateGameForm.maxPlayers')} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="maxPlayers"
@@ -144,7 +146,7 @@ export function AddPrivateGameForm({
       {/* Year & Playing Time */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="yearPublished">Year Published</Label>
+          <Label htmlFor="yearPublished">{t('privateGameForm.yearPublished')}</Label>
           <Input
             id="yearPublished"
             type="number"
@@ -159,14 +161,14 @@ export function AddPrivateGameForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="playingTimeMinutes">Playing Time (min)</Label>
+          <Label htmlFor="playingTimeMinutes">{t('privateGameForm.playingTime')}</Label>
           <Input
             id="playingTimeMinutes"
             type="number"
             min="1"
             max="10000"
             {...register('playingTimeMinutes', { valueAsNumber: true })}
-            placeholder="e.g., 60"
+            placeholder={t('privateGameForm.playingTimePlaceholder')}
             disabled={isSubmitting}
           />
           {errors.playingTimeMinutes && (
@@ -178,14 +180,14 @@ export function AddPrivateGameForm({
       {/* Min Age & Complexity */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="minAge">Min Age</Label>
+          <Label htmlFor="minAge">{t('privateGameForm.minAge')}</Label>
           <Input
             id="minAge"
             type="number"
             min="0"
             max="99"
             {...register('minAge', { valueAsNumber: true })}
-            placeholder="e.g., 10"
+            placeholder={t('privateGameForm.minAgePlaceholder')}
             disabled={isSubmitting}
           />
           {errors.minAge && (
@@ -194,7 +196,7 @@ export function AddPrivateGameForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="complexityRating">Complexity (0-5)</Label>
+          <Label htmlFor="complexityRating">{t('privateGameForm.complexity')}</Label>
           <Input
             id="complexityRating"
             type="number"
@@ -202,7 +204,7 @@ export function AddPrivateGameForm({
             max="5"
             step="0.1"
             {...register('complexityRating', { valueAsNumber: true })}
-            placeholder="e.g., 2.5"
+            placeholder={t('privateGameForm.complexityPlaceholder')}
             disabled={isSubmitting}
           />
           {errors.complexityRating && (
@@ -213,11 +215,11 @@ export function AddPrivateGameForm({
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t('privateGameForm.description')}</Label>
         <Textarea
           id="description"
           {...register('description')}
-          placeholder="Game description..."
+          placeholder={t('privateGameForm.descriptionPlaceholder')}
           rows={4}
           disabled={isSubmitting}
         />
@@ -228,12 +230,12 @@ export function AddPrivateGameForm({
 
       {/* Image URL */}
       <div className="space-y-2">
-        <Label htmlFor="imageUrl">Image URL</Label>
+        <Label htmlFor="imageUrl">{t('privateGameForm.imageUrl')}</Label>
         <Input
           id="imageUrl"
           type="url"
           {...register('imageUrl')}
-          placeholder="https://example.com/image.jpg"
+          placeholder={t('privateGameForm.imageUrlPlaceholder')}
           disabled={isSubmitting}
         />
         {errors.imageUrl && (
@@ -244,10 +246,10 @@ export function AddPrivateGameForm({
       {/* Form Actions */}
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Adding...' : (submitLabel ?? 'Add Private Game')}
+          {isSubmitting ? t('privateGameForm.adding') : (submitLabel ?? t('privateGameForm.addPrivateGame'))}
         </Button>
       </div>
     </form>

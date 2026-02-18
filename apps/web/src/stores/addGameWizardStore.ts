@@ -212,13 +212,19 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
           let entryGameId: string;
 
           if (isCustomGame) {
-            // Custom games: Backend endpoint not yet implemented
-            // For now, show informative message - this will work once backend is ready
-            // TODO: Replace with actual API call when backend supports custom games
-            // Expected endpoint: POST /api/v1/library/custom-games
-            toast.info('Custom game support coming soon! For now, search for games in the catalog.');
-            set({ isProcessing: false });
-            return;
+            if (!customGameData || !customGameData.name.trim()) {
+              throw new Error('Custom game requires a name');
+            }
+
+            const result = await api.library.addPrivateGame({
+              source: 'Manual',
+              title: customGameData.name.trim(),
+              minPlayers: customGameData.minPlayers ?? 1,
+              maxPlayers: customGameData.maxPlayers ?? 4,
+              playingTimeMinutes: customGameData.playTime ?? null,
+              complexityRating: customGameData.complexity ?? null,
+            });
+            entryGameId = result.id;
           } else {
             // Shared game: Use existing library API
             if (!selectedGame?.id) {
@@ -261,7 +267,8 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
             }
           }
 
-          toast.success(`"${selectedGame?.title}" added to your collection!`);
+          const gameName = isCustomGame ? customGameData?.name : selectedGame?.title;
+          toast.success(`"${gameName}" aggiunto alla tua collezione!`);
 
           // Reset wizard on success
           get().reset();
@@ -270,7 +277,7 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
           // Note: Components should use useRouter for navigation, but store can't use hooks
           // The page component should handle navigation after successful submission
           if (typeof window !== 'undefined') {
-            window.location.href = '/dashboard/collection';
+            window.location.href = '/library';
           }
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to add game';

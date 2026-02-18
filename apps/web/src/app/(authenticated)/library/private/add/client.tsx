@@ -21,6 +21,7 @@ import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploa
 import { toast } from '@/components/layout';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // Reuse refactored admin wizard steps
 
@@ -37,14 +38,15 @@ interface UserWizardState {
   pdfFileName: string | null;
 }
 
-const STEPS: { id: WizardStep; label: string; icon: string }[] = [
-  { id: 'game', label: '1. Create Game', icon: '🎮' },
-  { id: 'pdf', label: '2. Upload PDF (Optional)', icon: '📄' },
-  { id: 'agent', label: '3. Config Agent (Optional)', icon: '🤖' },
-];
-
 export function UserWizardClient() {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const STEPS: { id: WizardStep; label: string; icon: string }[] = [
+    { id: 'game', label: t('privateGames.steps.createGame'), icon: '🎮' },
+    { id: 'pdf', label: t('privateGames.steps.uploadPdf'), icon: '📄' },
+    { id: 'agent', label: t('privateGames.steps.configAgent'), icon: '🤖' },
+  ];
 
   const [state, setState] = useState<UserWizardState>({
     currentStep: 'game',
@@ -106,17 +108,17 @@ export function UserWizardClient() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              Add Game to Library
+              {t('privateGames.addToLibrary')}
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
-              Add a new game to your private collection
+              {t('privateGames.addToLibrarySubtitle')}
             </p>
           </div>
           <Button
             variant="outline"
             onClick={() => router.push('/library/private')}
           >
-            ← Cancel
+            {t('privateGames.cancelWizard')}
           </Button>
         </div>
 
@@ -203,7 +205,7 @@ export function UserWizardClient() {
         {/* Progress Summary */}
         {state.gameId && (
           <Card className="mt-6 p-4 bg-slate-100 dark:bg-slate-700/50">
-            <h3 className="text-sm font-semibold mb-2">Progress</h3>
+            <h3 className="text-sm font-semibold mb-2">{t('privateGames.progress')}</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               {state.gameName && (
                 <div>

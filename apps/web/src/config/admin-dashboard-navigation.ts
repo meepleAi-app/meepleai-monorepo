@@ -32,6 +32,9 @@ import {
   SettingsIcon,
   ZapIcon,
   HistoryIcon,
+  GitBranchIcon,
+  TerminalIcon,
+  Settings2Icon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -182,6 +185,21 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/agents/chat-history',
         label: 'Chat History',
         icon: MessageSquareIcon,
+      },
+      {
+        href: '/admin/agents/pipeline',
+        label: 'Pipeline Explorer',
+        icon: GitBranchIcon,
+      },
+      {
+        href: '/admin/agents/debug',
+        label: 'Debug Console',
+        icon: TerminalIcon,
+      },
+      {
+        href: '/admin/agents/strategy',
+        label: 'Strategy Config',
+        icon: Settings2Icon,
       },
     ],
   },

@@ -64,7 +64,8 @@ export function Step3BggMatch({ onNext, onBack }: Step3BggMatchProps) {
   // Fetch selected game details
   const { data: selectedGameDetails, isLoading: isFetchingDetails } = useSWR(
     selectedGameId ? ['bgg-details', selectedGameId] : null,
-    () => fetchBggGameById(selectedGameId as string), // selectedGameId guaranteed non-null by key condition
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    () => fetchBggGameById(selectedGameId!), // selectedGameId guaranteed non-null by key condition
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,

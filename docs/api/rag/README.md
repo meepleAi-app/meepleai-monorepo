@@ -14,7 +14,7 @@
 |----------|------------|
 | **Developers** | [Implementation Guide](10-implementation-guide.md) |
 | **Architects** | [Technical Reference](15-technical-reference.md) |
-| **Business** | [Overview](00-overview.md) |
+| **Business** | [HOW-IT-WORKS.md](HOW-IT-WORKS.md) |
 | **Everyone** | [Interactive Dashboard](/rag) |
 
 ---
@@ -213,7 +213,6 @@ Response (Streaming)
 ### Core Docs
 | Doc | Description |
 |-----|-------------|
-| [00-overview.md](00-overview.md) | Executive summary |
 | [HOW-IT-WORKS.md](HOW-IT-WORKS.md) | System walkthrough |
 | [15-technical-reference.md](15-technical-reference.md) | Code-level reference |
 
@@ -241,7 +240,12 @@ Response (Streaming)
 | [appendix/E-model-pricing-2026.md](appendix/E-model-pricing-2026.md) | LLM pricing |
 | [appendix/F-calculation-formulas.md](appendix/F-calculation-formulas.md) | Token/cost formulas |
 | [appendix/G-admin-configuration-system.md](appendix/G-admin-configuration-system.md) | Admin config |
-| [variants/README.md](variants/README.md) | 46+ RAG variants catalog |
+| [variants/README.md](variants/README.md) | 15 RAG variants catalog |
+
+### Future (Roadmap)
+| Doc | Description |
+|-----|-------------|
+| [future/plugins/](future/plugins/) | Plugin system design (not yet implemented) |
 
 ---
 

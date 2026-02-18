@@ -19,12 +19,12 @@ TOMAC-RAG routes queries to one of 6 strategies, each combining multiple variant
 
 ## Priority P0 (Implemented/High Priority)
 
-1. **[Semantic Cache](01-semantic-cache.md)** - 986 tokens | $0.004 | +0% accuracy | 50% token reduction
-2. **[Contextual Embeddings](02-contextual-embeddings.md)** - 1,950 tokens | $0.007 | +5% accuracy | 30% reduction
-3. **[Metadata Filtering](03-metadata-filtering.md)** - 3,100 tokens | $0.012 | +6% accuracy | Multi-game filtering
-4. **[Cross-Encoder Reranking](04-cross-encoder-reranking.md)** - 3,250 tokens | $0.013 | +8% accuracy | BALANCED tier
-5. **[Hybrid Search](05-hybrid-search.md)** - 4,250 tokens | $0.016 | +11% accuracy | Vector + BM25
-6. **[Advanced RAG](06-advanced-rag.md)** - 3,700 tokens | $0.013 | +10% accuracy | Production foundation
+1. **[Semantic Cache](semantic-cache.md)** - 986 tokens | $0.004 | +0% accuracy | 50% token reduction
+2. **[Contextual Embeddings](contextual-embeddings.md)** - 1,950 tokens | $0.007 | +5% accuracy | 30% reduction
+3. **[Metadata Filtering](metadata-filtering.md)** - 3,100 tokens | $0.012 | +6% accuracy | Multi-game filtering
+4. **[Cross-Encoder Reranking](cross-encoder-reranking.md)** - 3,250 tokens | $0.013 | +8% accuracy | BALANCED tier
+5. **[Hybrid Search](hybrid-search.md)** - 4,250 tokens | $0.016 | +11% accuracy | Vector + BM25
+6. **[Advanced RAG](advanced-rag.md)** - 3,700 tokens | $0.013 | +10% accuracy | Production foundation
 
 ## Priority P1 (High Value)
 

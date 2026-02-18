@@ -3,6 +3,7 @@ namespace Api.BoundedContexts.Administration.Application.DTOs;
 /// <summary>
 /// DTO for audit log entries returned by the API.
 /// Issue #3691: Audit Log System.
+/// Extended with user info for Admin Dashboard (Issue #4652).
 /// </summary>
 internal record AuditLogDto(
     Guid Id,
@@ -13,7 +14,9 @@ internal record AuditLogDto(
     string Result,
     string? Details,
     string? IpAddress,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? UserName = null,
+    string? UserEmail = null
 );
 
 /// <summary>

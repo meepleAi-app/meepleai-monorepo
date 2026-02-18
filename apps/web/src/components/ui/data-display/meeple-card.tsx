@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * MeepleCard - Universal Card Component System
  *

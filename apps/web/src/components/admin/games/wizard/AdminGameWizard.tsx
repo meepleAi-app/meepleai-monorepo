@@ -2,7 +2,7 @@
 
 /**
  * Admin Game Wizard - Multi-step shell
- * Wizard flow: BGG Search → Game Details → (future: PDF Upload → Launch Processing)
+ * Wizard flow: BGG Search → Game Details → PDF Upload → Launch Processing
  */
 
 import { useState, useCallback } from 'react';
@@ -18,14 +18,18 @@ import type { CreateGameFromWizardResult } from '@/hooks/queries/useAdminGameWiz
 
 import { BggSearchStep } from './steps/BggSearchStep';
 import { GameDetailsStep } from './steps/GameDetailsStep';
+import { PdfUploadStep } from './steps/PdfUploadStep';
+import { LaunchProcessingStep } from './steps/LaunchProcessingStep';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type WizardStep = 'bgg-search' | 'game-details';
+type WizardStep = 'bgg-search' | 'game-details' | 'pdf-upload' | 'launch-processing';
 
 const STEP_CONFIG: { id: WizardStep; label: string; number: number }[] = [
   { id: 'bgg-search', label: 'Search BGG', number: 1 },
   { id: 'game-details', label: 'Game Details', number: 2 },
+  { id: 'pdf-upload', label: 'Upload PDF', number: 3 },
+  { id: 'launch-processing', label: 'Launch', number: 4 },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -34,6 +38,8 @@ export function AdminGameWizard() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<WizardStep>('bgg-search');
   const [selectedGame, setSelectedGame] = useState<BggSearchResult | null>(null);
+  const [createdGame, setCreatedGame] = useState<CreateGameFromWizardResult | null>(null);
+  const [pdfDocumentId, setPdfDocumentId] = useState<string | null>(null);
 
   const currentStepIndex = STEP_CONFIG.findIndex((s) => s.id === currentStep);
 
@@ -45,12 +51,26 @@ export function AdminGameWizard() {
   const handleBack = useCallback(() => {
     if (currentStep === 'game-details') {
       setCurrentStep('bgg-search');
+    } else if (currentStep === 'pdf-upload') {
+      setCurrentStep('game-details');
+    } else if (currentStep === 'launch-processing') {
+      setCurrentStep('pdf-upload');
     }
   }, [currentStep]);
 
-  const handleGameCreated = useCallback(
-    (result: CreateGameFromWizardResult) => {
-      // Navigate to the shared games list (future: redirect to PDF upload step)
+  const handleGameCreated = useCallback((result: CreateGameFromWizardResult) => {
+    setCreatedGame(result);
+    setCurrentStep('pdf-upload');
+  }, []);
+
+  const handlePdfUploaded = useCallback((documentId: string) => {
+    setPdfDocumentId(documentId);
+    setCurrentStep('launch-processing');
+  }, []);
+
+  const handleProcessingLaunched = useCallback(
+    (gameId: string) => {
+      // Future: redirect to processing monitor page
       router.push(`/admin/shared-games/all`);
     },
     [router]
@@ -70,7 +90,7 @@ export function AdminGameWizard() {
             Add Game
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Import a game from BoardGameGeek into the shared catalog
+            Import a game from BoardGameGeek, upload its rulebook, and launch processing
           </p>
         </div>
       </div>
@@ -137,6 +157,22 @@ export function AdminGameWizard() {
             selectedGame={selectedGame}
             onBack={handleBack}
             onGameCreated={handleGameCreated}
+          />
+        )}
+        {currentStep === 'pdf-upload' && createdGame && (
+          <PdfUploadStep
+            gameId={createdGame.sharedGameId}
+            gameTitle={createdGame.title}
+            onPdfUploaded={handlePdfUploaded}
+          />
+        )}
+        {currentStep === 'launch-processing' && createdGame && pdfDocumentId && (
+          <LaunchProcessingStep
+            gameId={createdGame.sharedGameId}
+            gameTitle={createdGame.title}
+            pdfDocumentId={pdfDocumentId}
+            onBack={handleBack}
+            onProcessingLaunched={handleProcessingLaunched}
           />
         )}
       </div>

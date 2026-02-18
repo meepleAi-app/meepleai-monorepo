@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleAI Admin Dashboard - Mockup Shell</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ─── CSS Reset & Variables ──────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* Light Theme - Warm Cream Base */
+      --bg-primary: hsl(30, 25%, 97%);
+      --bg-secondary: hsl(30, 20%, 94%);
+      --bg-elevated: hsl(0, 0%, 100%);
+      --text-primary: hsl(240, 10%, 10%);
+      --text-secondary: hsl(240, 5%, 40%);
+      --text-tertiary: hsl(240, 5%, 60%);
+      --border-primary: hsl(240, 10%, 85%);
+      --border-secondary: hsl(240, 10%, 90%);
+
+      /* Glassmorphism */
+      --glass-bg: hsla(0, 0%, 100%, 0.7);
+      --glass-border: hsla(0, 0%, 100%, 0.2);
+
+      /* Primary - Amber */
+      --primary: hsl(25, 95%, 45%);
+      --primary-hover: hsl(25, 95%, 40%);
+      --primary-light: hsl(25, 95%, 90%);
+      --primary-dark: hsl(25, 95%, 30%);
+
+      /* Semantic Colors */
+      --success: hsl(142, 76%, 36%);
+      --warning: hsl(38, 92%, 50%);
+      --danger: hsl(0, 84%, 60%);
+      --info: hsl(199, 89%, 48%);
+
+      /* Sidebar */
+      --sidebar-width: 240px;
+      --sidebar-collapsed-width: 60px;
+
+      /* Transitions */
+      --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: hsl(240, 10%, 10%);
+      --bg-secondary: hsl(240, 10%, 15%);
+      --bg-elevated: hsl(240, 10%, 20%);
+      --text-primary: hsl(0, 0%, 95%);
+      --text-secondary: hsl(240, 5%, 70%);
+      --text-tertiary: hsl(240, 5%, 50%);
+      --border-primary: hsl(240, 10%, 25%);
+      --border-secondary: hsl(240, 10%, 20%);
+
+      --glass-bg: hsla(240, 10%, 20%, 0.7);
+      --glass-border: hsla(240, 10%, 30%, 0.2);
+
+      --primary-light: hsl(25, 95%, 20%);
+    }
+
+    /* ─── Base Styles ────────────────────────────────────────────────────────── */
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: inherit;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────────────────────── */
+    .dashboard-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ─── Top Nav ────────────────────────────────────────────────────────────── */
+    .top-nav {
+      height: 64px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-primary);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      gap: 1.5rem;
+      position: relative;
+      z-index: 50;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+    }
+
+    .nav-sections {
+      display: flex;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    .nav-section-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+
+    .nav-section-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .nav-section-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .nav-section-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+
+    .nav-separator {
+      width: 1px;
+      height: 24px;
+      background: var(--border-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .user-menu-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem;
+      border-radius: 8px;
+      transition: all var(--transition-fast);
+    }
+
+    .user-menu-btn:hover {
+      background: var(--bg-secondary);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    /* ─── Main Content ───────────────────────────────────────────────────────── */
+    .main-content {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      height: calc(100vh - 64px);
+      overflow: hidden;
+      transition: grid-template-columns var(--transition-base);
+    }
+
+    .main-content.sidebar-collapsed {
+      grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────────────────────────── */
+    .sidebar {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-primary);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all var(--transition-base);
+    }
+
+    .sidebar-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-height: 64px;
+    }
+
+    .sidebar-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-collapsed .sidebar-title {
+      display: none;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0.5rem;
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-thumb {
+      background: var(--border-primary);
+      border-radius: 3px;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.9375rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      position: relative;
+      white-space: nowrap;
+    }
+
+    .sidebar-item:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .sidebar-item.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .sidebar-item-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-item-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-collapsed .sidebar-item-label {
+      display: none;
+    }
+
+    .sidebar-item-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      border-radius: 9px;
+    }
+
+    .sidebar-collapsed .sidebar-item-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      transform: scale(0.8);
+    }
+
+    .sidebar-footer {
+      padding: 0.75rem;
+      border-top: 1px solid var(--border-secondary);
+    }
+
+    .collapse-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 0.625rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+    }
+
+    .collapse-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .collapse-btn-icon {
+      width: 20px;
+      height: 20px;
+      transition: transform var(--transition-base);
+    }
+
+    .sidebar-collapsed .collapse-btn-icon {
+      transform: rotate(180deg);
+    }
+
+    .collapse-btn-label {
+      flex: 1;
+      text-align: left;
+    }
+
+    .sidebar-collapsed .collapse-btn-label {
+      display: none;
+    }
+
+    /* ─── Content Area ───────────────────────────────────────────────────────── */
+    .content-area {
+      background: var(--bg-primary);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .content-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* ─── Icons (Inline SVG) ─────────────────────────────────────────────────── */
+    .icon {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ─── Tooltips ───────────────────────────────────────────────────────────── */
+    .tooltip {
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-left: 0.5rem;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--border-primary);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-fast);
+      z-index: 1000;
+    }
+
+    .sidebar-collapsed .sidebar-item:hover .tooltip {
+      opacity: 1;
+    }
+
+    /* ─── Loading State ──────────────────────────────────────────────────────── */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity var(--transition-base);
+      pointer-events: none;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-primary);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+      <a href="#" class="logo">
+        <span class="logo-icon">M</span>
+        <span>MeepleAI</span>
+      </a>
+
+      <div class="nav-sections" id="nav-sections">
+        <!-- Dynamically populated -->
+      </div>
+
+      <div class="nav-separator"></div>
+
+      <div class="nav-actions">
+        <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+          <svg class="icon" id="theme-icon">
+            <use href="#icon-moon"></use>
+          </svg>
+        </button>
+
+        <button class="user-menu-btn" aria-label="User menu">
+          <div class="user-avatar">AD</div>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content: Sidebar + Content Area -->
+    <main class="main-content" id="main-content">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <h2 class="sidebar-title" id="sidebar-title">Navigation</h2>
+        </div>
+
+        <nav class="sidebar-nav" id="sidebar-nav">
+          <!-- Dynamically populated -->
+        </nav>
+
+        <div class="sidebar-footer">
+          <button class="collapse-btn" id="collapse-btn">
+            <svg class="collapse-btn-icon icon">
+              <use href="#icon-chevron-left"></use>
+            </svg>
+            <span class="collapse-btn-label">Collapse</span>
+          </button>
+        </div>
+      </aside>
+
+      <div class="content-area">
+        <div class="loading-overlay" id="loading-overlay">
+          <div class="spinner"></div>
+        </div>
+        <iframe
+          id="content-iframe"
+          class="content-iframe"
+          title="Admin Dashboard Content"
+          sandbox="allow-scripts allow-same-origin"
+        ></iframe>
+      </div>
+    </main>
+  </div>
+
+  <!-- Icon Definitions -->
+  <svg style="display: none;">
+    <symbol id="icon-moon" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </symbol>
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </symbol>
+    <symbol id="icon-layout-dashboard" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="9"></rect>
+      <rect x="14" y="3" width="7" height="5"></rect>
+      <rect x="14" y="12" width="7" height="9"></rect>
+      <rect x="3" y="16" width="7" height="5"></rect>
+    </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </symbol>
+    <symbol id="icon-share" viewBox="0 0 24 24">
+      <circle cx="18" cy="5" r="3"></circle>
+      <circle cx="6" cy="12" r="3"></circle>
+      <circle cx="18" cy="19" r="3"></circle>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+    </symbol>
+    <symbol id="icon-bot" viewBox="0 0 24 24">
+      <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+      <circle cx="12" cy="5" r="2"></circle>
+      <path d="M12 7v4"></path>
+      <line x1="8" y1="16" x2="8" y2="16"></line>
+      <line x1="16" y1="16" x2="16" y2="16"></line>
+    </symbol>
+    <symbol id="icon-book-open" viewBox="0 0 24 24">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+    </symbol>
+    <symbol id="icon-activity" viewBox="0 0 24 24">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+    </symbol>
+    <symbol id="icon-server" viewBox="0 0 24 24">
+      <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+      <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+      <line x1="6" y1="6" x2="6.01" y2="6"></line>
+      <line x1="6" y1="18" x2="6.01" y2="18"></line>
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+    </symbol>
+    <symbol id="icon-check-square" viewBox="0 0 24 24">
+      <polyline points="9 11 12 14 22 4"></polyline>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+    </symbol>
+    <symbol id="icon-list" viewBox="0 0 24 24">
+      <line x1="8" y1="6" x2="21" y2="6"></line>
+      <line x1="8" y1="12" x2="21" y2="12"></line>
+      <line x1="8" y1="18" x2="21" y2="18"></line>
+      <line x1="3" y1="6" x2="3.01" y2="6"></line>
+      <line x1="3" y1="12" x2="3.01" y2="12"></line>
+      <line x1="3" y1="18" x2="3.01" y2="18"></line>
+    </symbol>
+    <symbol id="icon-tag" viewBox="0 0 24 24">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+      <line x1="7" y1="7" x2="7.01" y2="7"></line>
+    </symbol>
+    <symbol id="icon-wrench" viewBox="0 0 24 24">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+    </symbol>
+    <symbol id="icon-bar-chart" viewBox="0 0 24 24">
+      <line x1="12" y1="20" x2="12" y2="10"></line>
+      <line x1="18" y1="20" x2="18" y2="4"></line>
+      <line x1="6" y1="20" x2="6" y2="16"></line>
+    </symbol>
+    <symbol id="icon-cpu" viewBox="0 0 24 24">
+      <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+      <rect x="9" y="9" width="6" height="6"></rect>
+      <line x1="9" y1="1" x2="9" y2="4"></line>
+      <line x1="15" y1="1" x2="15" y2="4"></line>
+      <line x1="9" y1="20" x2="9" y2="23"></line>
+      <line x1="15" y1="20" x2="15" y2="23"></line>
+      <line x1="20" y1="9" x2="23" y2="9"></line>
+      <line x1="20" y1="14" x2="23" y2="14"></line>
+      <line x1="1" y1="9" x2="4" y2="9"></line>
+      <line x1="1" y1="14" x2="4" y2="14"></line>
+    </symbol>
+    <symbol id="icon-message-square" viewBox="0 0 24 24">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </symbol>
+    <symbol id="icon-file-text" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="16" y1="13" x2="8" y2="13"></line>
+      <line x1="16" y1="17" x2="8" y2="17"></line>
+      <polyline points="10 9 9 9 8 9"></polyline>
+    </symbol>
+    <symbol id="icon-database" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+    </symbol>
+    <symbol id="icon-upload" viewBox="0 0 24 24">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="17 8 12 3 7 8"></polyline>
+      <line x1="12" y1="3" x2="12" y2="15"></line>
+    </symbol>
+    <symbol id="icon-brain-circuit" viewBox="0 0 24 24">
+      <path d="M9.5 2a5.5 5.5 0 0 1 5 3.3V7"></path>
+      <path d="M14.5 2a5.5 5.5 0 0 0-5 3.3"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19 17a4 4 0 0 1-3 3.5"></path>
+      <path d="M5 17a4 4 0 0 0 3 3.5"></path>
+      <line x1="12" y1="15" x2="12" y2="21"></line>
+    </symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M12 1v6m0 6v6m-6-9h6m6 0h6M6.3 6.3l4.2 4.2m4.2 4.2l4.2 4.2m-12.6 0l4.2-4.2m4.2-4.2l4.2-4.2"></path>
+    </symbol>
+  </svg>
+
+  <script>
+    // ─── Configuration ──────────────────────────────────────────────────────────
+    const STORAGE_KEY = 'admin-dashboard-sidebar-collapsed';
+    const THEME_KEY = 'admin-dashboard-theme';
+
+    const SECTIONS = [
+      {
+        id: 'overview',
+        label: 'Overview',
+        icon: 'layout-dashboard',
+        group: 'core',
+        items: [
+          { href: 'overview-dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
+          { href: 'overview-activity.html', label: 'Activity Feed', icon: 'activity' },
+          { href: 'overview-system.html', label: 'System Health', icon: 'server' },
+        ]
+      },
+      {
+        id: 'users',
+        label: 'Users',
+        icon: 'users',
+        group: 'core',
+        items: [
+          { href: 'users-list.html', label: 'All Users', icon: 'users' },
+          { href: 'users-roles.html', label: 'Roles & Permissions', icon: 'shield' },
+          { href: 'users-activity.html', label: 'Activity Log', icon: 'activity' },
+        ]
+      },
+      {
+        id: 'shared-games',
+        label: 'Shared Games',
+        icon: 'share',
+        group: 'core',
+        badge: 7,
+        items: [
+          { href: 'shared-games-queue.html', label: 'Approval Queue', icon: 'check-square', badge: 7 },
+          { href: 'shared-games-all.html', label: 'All Games', icon: 'list' },
+          { href: 'shared-games-categories.html', label: 'Categories', icon: 'tag' },
+        ]
+      },
+      {
+        id: 'agents',
+        label: 'Agents',
+        icon: 'bot',
+        group: 'ai',
+        items: [
+          { href: 'agents-list.html', label: 'All Agents', icon: 'bot' },
+          { href: 'agents-builder.html', label: 'Agent Builder', icon: 'wrench' },
+          { href: 'agents-analytics.html', label: 'Analytics', icon: 'bar-chart' },
+          { href: 'agents-models.html', label: 'Models & Prompts', icon: 'cpu' },
+          { href: 'agents-chat-history.html', label: 'Chat History', icon: 'message-square' },
+        ]
+      },
+      {
+        id: 'knowledge-base',
+        label: 'Knowledge Base',
+        icon: 'book-open',
+        group: 'ai',
+        items: [
+          { href: 'kb-documents.html', label: 'Documents', icon: 'file-text' },
+          { href: 'kb-vectors.html', label: 'Vector Collections', icon: 'database' },
+          { href: 'kb-upload.html', label: 'Upload & Process', icon: 'upload' },
+          { href: 'kb-pipeline.html', label: 'RAG Pipeline', icon: 'brain-circuit' },
+          { href: 'kb-settings.html', label: 'Settings', icon: 'settings' },
+        ]
+      }
+    ];
+
+    // ─── State Management ───────────────────────────────────────────────────────
+    let currentSection = 'overview';
+    let currentPage = 'overview-dashboard.html';
+    let sidebarCollapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+
+    // ─── DOM Elements ───────────────────────────────────────────────────────────
+    const elements = {
+      navSections: document.getElementById('nav-sections'),
+      sidebarTitle: document.getElementById('sidebar-title'),
+      sidebarNav: document.getElementById('sidebar-nav'),
+      mainContent: document.getElementById('main-content'),
+      collapseBtn: document.getElementById('collapse-btn'),
+      themeToggle: document.getElementById('theme-toggle'),
+      themeIcon: document.getElementById('theme-icon'),
+      contentIframe: document.getElementById('content-iframe'),
+      loadingOverlay: document.getElementById('loading-overlay'),
+    };
+
+    // ─── Helper: Create SVG Icon ────────────────────────────────────────────────
+    function createIcon(iconId) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'icon');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `#icon-${iconId}`);
+      svg.appendChild(use);
+      return svg;
+    }
+
+    // ─── Initialization ─────────────────────────────────────────────────────────
+    function init() {
+      initTheme();
+      initSidebar();
+      renderNavSections();
+      switchSection('overview');
+      setupEventListeners();
+    }
+
+    // ─── Theme Management ───────────────────────────────────────────────────────
+    function initTheme() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+      applyTheme(savedTheme);
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const iconHref = theme === 'dark' ? '#icon-sun' : '#icon-moon';
+      const use = elements.themeIcon.querySelector('use');
+      use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', iconHref);
+      localStorage.setItem(THEME_KEY, theme);
+
+      // Notify iframe of theme change
+      if (elements.contentIframe.contentWindow) {
+        elements.contentIframe.contentWindow.postMessage(
+          { type: 'theme-change', theme },
+          '*'
+        );
+      }
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(newTheme);
+    }
+
+    // ─── Sidebar Management ─────────────────────────────────────────────────────
+    function initSidebar() {
+      if (sidebarCollapsed) {
+        elements.mainContent.classList.add('sidebar-collapsed');
+      }
+    }
+
+    function toggleSidebar() {
+      sidebarCollapsed = !sidebarCollapsed;
+      elements.mainContent.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+      localStorage.setItem(STORAGE_KEY, sidebarCollapsed);
+    }
+
+    // ─── Navigation Rendering ───────────────────────────────────────────────────
+    function renderNavSections() {
+      elements.navSections.textContent = '';
+
+      SECTIONS.forEach((section, index) => {
+        // Add separator before AI sections
+        if (index === 3) {
+          const separator = document.createElement('div');
+          separator.className = 'nav-separator';
+          elements.navSections.appendChild(separator);
+        }
+
+        const btn = document.createElement('button');
+        btn.className = 'nav-section-btn';
+        btn.dataset.section = section.id;
+        if (section.id === currentSection) {
+          btn.classList.add('active');
+        }
+
+        btn.appendChild(createIcon(section.icon));
+
+        const label = document.createElement('span');
+        label.textContent = section.label;
+        btn.appendChild(label);
+
+        if (section.badge) {
+          const badge = document.createElement('span');
+          badge.className = 'nav-section-badge';
+          badge.textContent = section.badge;
+          btn.appendChild(badge);
+        }
+
+        elements.navSections.appendChild(btn);
+      });
+    }
+
+    function renderSidebarItems(sectionId) {
+      const section = SECTIONS.find(s => s.id === sectionId);
+      if (!section) return;
+
+      elements.sidebarTitle.textContent = section.label;
+      elements.sidebarNav.textContent = '';
+
+      section.items.forEach(item => {
+        const link = document.createElement('a');
+        link.href = `#${item.href}`;
+        link.className = 'sidebar-item';
+        link.dataset.page = item.href;
+        if (item.href === currentPage) {
+          link.classList.add('active');
+        }
+
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'sidebar-item-icon';
+        iconContainer.appendChild(createIcon(item.icon));
+        link.appendChild(iconContainer);
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'sidebar-item-label';
+        labelSpan.textContent = item.label;
+        link.appendChild(labelSpan);
+
+        if (item.badge) {
+          const badge = document.createElement('span');
+          badge.className = 'sidebar-item-badge';
+          badge.textContent = item.badge;
+          link.appendChild(badge);
+        }
+
+        const tooltip = document.createElement('span');
+        tooltip.className = 'tooltip';
+        tooltip.textContent = item.label;
+        link.appendChild(tooltip);
+
+        elements.sidebarNav.appendChild(link);
+      });
+    }
+
+    // ─── Section & Page Switching ───────────────────────────────────────────────
+    function switchSection(sectionId) {
+      currentSection = sectionId;
+      const section = SECTIONS.find(s => s.id === sectionId);
+      if (!section) return;
+
+      // Update top nav active state
+      document.querySelectorAll('.nav-section-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.section === sectionId);
+      });
+
+      // Render sidebar for this section
+      renderSidebarItems(sectionId);
+
+      // Load first page of section
+      const firstPage = section.items[0].href;
+      loadPage(firstPage);
+    }
+
+    function loadPage(page) {
+      currentPage = page;
+
+      // Update sidebar active state
+      document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.page === page);
+      });
+
+      // Show loading overlay
+      elements.loadingOverlay.classList.remove('hidden');
+
+      // Load page in iframe
+      elements.contentIframe.src = page;
+      elements.contentIframe.onload = () => {
+        setTimeout(() => {
+          elements.loadingOverlay.classList.add('hidden');
+        }, 200);
+
+        // Send theme to iframe
+        const theme = document.documentElement.getAttribute('data-theme');
+        elements.contentIframe.contentWindow.postMessage(
+          { type: 'theme-change', theme },
+          '*'
+        );
+      };
+    }
+
+    // ─── Event Listeners ────────────────────────────────────────────────────────
+    function setupEventListeners() {
+      // Top nav section buttons
+      elements.navSections.addEventListener('click', (e) => {
+        const btn = e.target.closest('.nav-section-btn');
+        if (btn) {
+          const sectionId = btn.dataset.section;
+          switchSection(sectionId);
+        }
+      });
+
+      // Sidebar items
+      elements.sidebarNav.addEventListener('click', (e) => {
+        e.preventDefault();
+        const item = e.target.closest('.sidebar-item');
+        if (item) {
+          const page = item.dataset.page;
+          loadPage(page);
+        }
+      });
+
+      // Collapse button
+      elements.collapseBtn.addEventListener('click', toggleSidebar);
+
+      // Theme toggle
+      elements.themeToggle.addEventListener('click', toggleTheme);
+
+      // Handle hash navigation
+      window.addEventListener('hashchange', () => {
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+          loadPage(hash);
+        }
+      });
+    }
+
+    // ─── Start Application ──────────────────────────────────────────────────────
+    init();
+  </script>
+</body>
+</html>

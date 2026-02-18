@@ -35,6 +35,7 @@ internal static class UserLibraryEndpoints
         MapRemoveGameFromLibraryEndpoint(group);
         MapUpdateLibraryEntryEndpoint(group);
         MapGetGameInLibraryStatusEndpoint(group);
+        MapBatchCheckGamesInLibraryEndpoint(group); // N+1 optimization
 
         // Agent configuration endpoints
         MapGetGameAgentConfigEndpoint(group);
@@ -336,6 +337,51 @@ internal static class UserLibraryEndpoints
         .WithTags("Library")
         .WithSummary("Check if game is in library with associated data")
         .WithDescription("Returns whether a game is in user's library, favorite status, and detailed counts of associated data (agent config, PDFs, chat sessions, game sessions, checklists, labels). Used by collection quick actions to display Add/Remove buttons and pre-removal warnings.")
+        .WithOpenApi();
+    }
+
+    private static void MapBatchCheckGamesInLibraryEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/batch-status", async (
+            [FromQuery] string gameIds,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Parse comma-separated game IDs
+            List<Guid> parsedGameIds;
+            try
+            {
+                parsedGameIds = gameIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(Guid.Parse)
+                    .ToList();
+            }
+            catch (FormatException)
+            {
+                return Results.BadRequest(new { error = "Invalid game ID format" });
+            }
+
+            var query = new BatchCheckGamesInLibraryQuery(userId, parsedGameIds);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<BatchGameLibraryStatusDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Library")
+        .WithSummary("Batch check library status for multiple games")
+        .WithDescription("Checks library status for multiple games in a single request. Accepts comma-separated game IDs (max 100). Returns dictionary keyed by game ID. Optimized for game grid rendering to eliminate N+1 API calls.")
         .WithOpenApi();
     }
 

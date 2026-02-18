@@ -1,10 +1,11 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 
 import { useState } from 'react';
 
 import { ActivityFeed, type ActivityEvent } from '@/components/admin/ActivityFeed';
+import { adminDashboardClient } from '@/lib/api/clients/adminDashboardClient';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Select,
@@ -25,68 +26,41 @@ import { Input } from '@/components/ui/primitives/input';
  * Issue: #4628
  */
 
-// Mock data - replace with API call
-const mockEvents: ActivityEvent[] = [
-  {
-    id: '1',
-    eventType: 'user_registered',
-    description: 'New user registered: sarah.mitchell@example.com joined the platform',
-    timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    severity: 'Info',
-    userEmail: 'sarah.mitchell@example.com',
-    entityType: 'user',
-  },
-  {
-    id: '2',
-    eventType: 'game_approved',
-    description: 'Game approved: "Wingspan" was added to the catalog',
-    timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-    severity: 'Info',
-    entityType: 'game',
-  },
-  {
-    id: '3',
-    eventType: 'agent_invoked',
-    description: 'AI agent invoked: GameAdvisor agent processed 23 queries',
-    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    severity: 'Info',
-    entityType: 'agent',
-  },
-  {
-    id: '4',
-    eventType: 'document_uploaded',
-    description: 'Document uploaded: "Pandemic Legacy Rules.pdf" processed successfully',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    severity: 'Info',
-    entityType: 'document',
-  },
-  {
-    id: '5',
-    eventType: 'user_role_updated',
-    description: 'User role updated: john.doe@example.com promoted to Editor',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    severity: 'Info',
-    userEmail: 'john.doe@example.com',
-    entityType: 'user',
-  },
-  {
-    id: '6',
-    eventType: 'config_changed',
-    description: 'System configuration changed: RAG strategy updated to HybridRAG',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    severity: 'Warning',
-    entityType: 'system',
-  },
-];
-
 export default function ActivityFeedPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<string>('24h');
+  const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchActivity() {
+      try {
+        const data = await adminDashboardClient.getUserActivityLog();
+        // Transform API data to ActivityEvent format
+        const transformedEvents: ActivityEvent[] = data.activities?.map((a: any) => ({
+          id: a.id,
+          eventType: a.actionType,
+          description: `${a.action}: ${a.target}`,
+          timestamp: a.timestamp,
+          severity: a.status === 'success' ? 'Info' : 'Warning',
+          userEmail: a.userEmail,
+          entityType: a.actionType === 'login' ? 'user' : a.actionType === 'approve' ? 'game' : 'system',
+        })) || [];
+        setEvents(transformedEvents);
+      } catch (error) {
+        console.error('Failed to fetch activity:', error);
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchActivity();
+  }, []);
 
   const filteredEvents =
     typeFilter === 'all'
-      ? mockEvents
-      : mockEvents.filter((e) => e.entityType === typeFilter);
+      ? events
+      : events.filter((e) => e.entityType === typeFilter);
 
   return (
     <div className="space-y-6">

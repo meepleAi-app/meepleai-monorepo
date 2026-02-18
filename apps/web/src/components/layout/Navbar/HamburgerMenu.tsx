@@ -104,7 +104,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_NAV_ITEM: NavItem = {
-  href: '/admin',
+  href: '/admin/overview',
   icon: Shield,
   label: 'Admin',
   ariaLabel: 'Navigate to admin dashboard',

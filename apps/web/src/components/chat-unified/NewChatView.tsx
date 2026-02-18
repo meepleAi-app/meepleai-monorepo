@@ -21,9 +21,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { api } from '@/lib/api';
+import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import { cn } from '@/lib/utils';
 import type { Game } from '@/types';
-import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 // ============================================================================
 // Types

@@ -23,10 +23,10 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import { NotificationItem } from '@/components/notifications/NotificationItem';
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
-import { Button } from '@/components/ui/primitives/button';
+import { NotificationItem } from '@/components/notifications/NotificationItem';
 import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
 import type { NotificationDto, NotificationType } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {

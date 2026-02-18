@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 import type {
   FullConfig,
   FullResult,
@@ -6,8 +9,6 @@ import type {
   TestCase,
   TestResult,
 } from '@playwright/test/reporter';
-import * as fs from 'fs';
-import * as path from 'path';
 
 /**
  * Custom Playwright Reporter - Test Duration Tracking

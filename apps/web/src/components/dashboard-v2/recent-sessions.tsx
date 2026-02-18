@@ -6,8 +6,9 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
-import { SessionRow } from './session-row';
+
 import { EmptyState } from './empty-states';
+import { SessionRow } from './session-row';
 
 interface RecentSessionsProps {
   sessions: SessionSummaryDto[];

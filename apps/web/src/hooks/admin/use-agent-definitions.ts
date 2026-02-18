@@ -46,7 +46,7 @@ export function useAgentDefinitions(params?: {
 export function useAgentDefinition(id: string | null): UseQueryResult<AgentDefinitionResponse, Error> {
   return useQuery({
     queryKey: agentDefinitionsKeys.detail(id || ''),
-    queryFn: () => agentClient.getAgentDefinition(id!),
+    queryFn: () => agentClient.getAgentDefinition(id as string), // id guaranteed non-null by enabled condition
     enabled: !!id, // Only fetch if ID is provided
     staleTime: 5 * 60 * 1000,
   });

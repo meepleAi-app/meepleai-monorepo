@@ -366,7 +366,7 @@ export function RagExecutionHistoryClient() {
                       ${exec.totalCost.toFixed(4)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-xs">
-                      {exec.confidence != null ? `${(exec.confidence * 100).toFixed(0)}%` : '-'}
+                      {exec.confidence !== null && exec.confidence !== undefined ? `${(exec.confidence * 100).toFixed(0)}%` : '-'}
                     </td>
                   </tr>
                 ))
@@ -446,7 +446,7 @@ export function RagExecutionHistoryClient() {
                   <DetailRow label="Total Cost" value={`$${selectedExecution.totalCost.toFixed(6)}`} />
                   <DetailRow
                     label="Confidence"
-                    value={selectedExecution.confidence != null ? `${(selectedExecution.confidence * 100).toFixed(1)}%` : '-'}
+                    value={selectedExecution.confidence !== null && selectedExecution.confidence !== undefined ? `${(selectedExecution.confidence * 100).toFixed(1)}%` : '-'}
                   />
                   <DetailRow label="Cache Hit" value={selectedExecution.cacheHit ? 'Yes' : 'No'} />
                   <DetailRow label="Playground" value={selectedExecution.isPlayground ? 'Yes' : 'No'} />

@@ -13,10 +13,10 @@
 
 import { useState, useCallback } from 'react';
 
-import { useRagExecutionReplay } from '@/lib/hooks/useRagExecutionReplay';
-import { useRagExecutionComparison } from '@/lib/hooks/useRagExecutionComparison';
 import type { ReplayExecutionRequest } from '@/lib/api/schemas/rag-execution.schemas';
 import type { BlockComparison, MetricsDelta, DocumentDiff } from '@/lib/api/schemas/rag-execution.schemas';
+import { useRagExecutionComparison } from '@/lib/hooks/useRagExecutionComparison';
+import { useRagExecutionReplay } from '@/lib/hooks/useRagExecutionReplay';
 
 // =============================================================================
 // Main Component
@@ -72,11 +72,7 @@ function ReplayPanel() {
   const [showOverrides, setShowOverrides] = useState(false);
   const [overrides, setOverrides] = useState<ReplayExecutionRequest>({});
 
-  const replay = useRagExecutionReplay({
-    onComplete: (event) => {
-      console.log('[Replay] Complete:', event.success ? 'success' : 'failed');
-    },
-  });
+  const replay = useRagExecutionReplay();
 
   const handleReplay = useCallback(() => {
     if (!executionId.trim()) return;

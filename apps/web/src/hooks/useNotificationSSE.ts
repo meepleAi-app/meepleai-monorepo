@@ -15,8 +15,8 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 
-import { useNotificationStore } from '@/store/notification/store';
 import type { NotificationDto } from '@/lib/api';
+import { useNotificationStore } from '@/store/notification/store';
 
 // ============================================================================
 // Constants

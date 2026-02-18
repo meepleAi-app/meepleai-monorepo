@@ -126,6 +126,12 @@ import {
   type GetCostScenariosParams,
 } from '../schemas/cost-calculator.schemas';
 import {
+  TierStrategyMatrixSchema,
+  StrategyModelMappingSchema,
+  type TierStrategyMatrixDto,
+  type StrategyModelMappingDto,
+} from '../schemas/tier-strategy.schemas';
+import {
   LedgerEntriesResponseSchema,
   LedgerSummarySchema,
   LedgerEntryDtoSchema,
@@ -1819,6 +1825,49 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return result;
     },
 
+    /**
+     * Get tier-strategy access matrix
+     * GET /api/v1/admin/tier-strategy/matrix
+     */
+    async getTierStrategyMatrix(): Promise<TierStrategyMatrixDto> {
+      const result = await httpClient.get('/api/v1/admin/tier-strategy/matrix');
+      return result as TierStrategyMatrixDto;
+    },
+
+    /**
+     * Get all strategy-model mappings
+     * GET /api/v1/admin/tier-strategy/model-mappings
+     */
+    async getStrategyModelMappings(): Promise<StrategyModelMappingDto[]> {
+      const result = await httpClient.get('/api/v1/admin/tier-strategy/model-mappings');
+      return (result as StrategyModelMappingDto[]) || [];
+    },
+
+    /**
+     * Update tier-strategy access rules
+     * PUT /api/v1/admin/tier-strategy/access
+     */
+    async updateTierStrategyAccess(payload: {
+      tier: string;
+      strategy: string;
+      isEnabled: boolean;
+    }): Promise<void> {
+      await httpClient.put('/api/v1/admin/tier-strategy/access', payload);
+    },
+
+    /**
+     * Update strategy-model mapping
+     * PUT /api/v1/admin/tier-strategy/model-mapping
+     */
+    async updateStrategyModelMapping(payload: {
+      strategy: string;
+      provider: string;
+      primaryModel: string;
+      fallbackModels?: string[];
+    }): Promise<void> {
+      await httpClient.put('/api/v1/admin/tier-strategy/model-mapping', payload);
+    },
+
     // ========== PDF Analytics (Issue #3715) ==========
 
     /**
@@ -1863,6 +1912,9 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// Re-export tier-strategy types for convenience
+export type { TierStrategyMatrixDto, StrategyModelMappingDto } from '../schemas/tier-strategy.schemas';
 
 // ========== Agent Typology Types (Issue #3179) ==========
 

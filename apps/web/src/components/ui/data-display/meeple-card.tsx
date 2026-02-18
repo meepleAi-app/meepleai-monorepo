@@ -317,7 +317,7 @@ const meepleCardVariants = cva(
       variant: {
         grid: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%]',
+          'bg-card/95 backdrop-blur-[4px]',
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
@@ -336,7 +336,7 @@ const meepleCardVariants = cva(
         ],
         featured: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%]',
+          'bg-card/95 backdrop-blur-[4px]',
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
           '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',

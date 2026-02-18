@@ -126,8 +126,6 @@ import {
   type GetCostScenariosParams,
 } from '../schemas/cost-calculator.schemas';
 import {
-  TierStrategyMatrixSchema,
-  StrategyModelMappingSchema,
   type TierStrategyMatrixDto,
   type StrategyModelMappingDto,
 } from '../schemas/tier-strategy.schemas';

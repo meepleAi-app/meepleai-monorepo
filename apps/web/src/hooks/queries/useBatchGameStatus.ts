@@ -6,38 +6,21 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { apiClient } from '@/lib/api/client';
+import { api } from '@/lib/api';
+import type { GameStatusSimple, BatchGameStatusResponse } from '@/lib/api/schemas/library.schemas';
 
-export interface GameStatusSimple {
-  inLibrary: boolean;
-  isFavorite: boolean;
-  isOwned: boolean;
-}
-
-export interface BatchGameStatusResponse {
-  results: Record<string, GameStatusSimple>;
-  totalChecked: number;
-}
+export type { GameStatusSimple, BatchGameStatusResponse };
 
 /**
  * Batch check library status for multiple games
- * @param gameIds Array of game IDs to check
+ * @param gameIds Array of game IDs to check (max 100)
  * @param enabled Whether to execute the query
  */
 export function useBatchGameStatus(gameIds: string[], enabled = true) {
   return useQuery({
     queryKey: ['batch-game-status', ...gameIds.sort()], // Sort for cache consistency
     queryFn: async () => {
-      if (gameIds.length === 0) {
-        return { results: {}, totalChecked: 0 };
-      }
-
-      const idsParam = gameIds.join(',');
-      const response = await apiClient.get<BatchGameStatusResponse>(
-        `/api/v1/library/games/batch-status?gameIds=${idsParam}`
-      );
-
-      return response;
+      return api.library.getBatchGameStatus(gameIds);
     },
     enabled: enabled && gameIds.length > 0,
     staleTime: 30 * 1000, // Cache for 30 seconds

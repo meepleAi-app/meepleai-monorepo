@@ -79,6 +79,22 @@ export const GameInLibraryStatusSchema = z.object({
 
 export type GameInLibraryStatus = z.infer<typeof GameInLibraryStatusSchema>;
 
+// Batch game status schemas (Issue #4581)
+export const GameStatusSimpleSchema = z.object({
+  inLibrary: z.boolean(),
+  isFavorite: z.boolean(),
+  isOwned: z.boolean(),
+});
+
+export type GameStatusSimple = z.infer<typeof GameStatusSimpleSchema>;
+
+export const BatchGameStatusResponseSchema = z.object({
+  results: z.record(z.string().uuid(), GameStatusSimpleSchema),
+  totalChecked: z.number().int().nonnegative(),
+});
+
+export type BatchGameStatusResponse = z.infer<typeof BatchGameStatusResponseSchema>;
+
 // Request schemas for mutations
 export const AddGameToLibraryRequestSchema = z.object({
   notes: z.string().max(500).nullable().optional(),

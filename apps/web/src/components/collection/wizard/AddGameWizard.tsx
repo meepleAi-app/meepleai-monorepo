@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { useAddGameWizard } from '@/hooks/useAddGameWizard';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // Step components
 import { GameDetailsForm } from './steps/GameDetailsForm';
@@ -32,6 +33,7 @@ import { SearchSelectGame } from './steps/SearchSelectGame';
 import { UploadPrivatePDF } from './steps/UploadPrivatePDF';
 
 export function AddGameWizard() {
+  const { t } = useTranslation();
   const {
     step,
     allSteps,
@@ -107,14 +109,14 @@ export function AddGameWizard() {
               className="text-3xl font-bold text-slate-900 dark:text-white mb-2"
               data-testid="wizard-title"
             >
-              Add Game to Collection
+              {t('collection.addGameTitle')}
             </h1>
             <p className="text-slate-600 dark:text-slate-400" data-testid="wizard-subtitle">
-              Search for a game or create a custom entry with optional rulebook PDF
+              {t('collection.addGameSubtitle')}
             </p>
           </div>
           <Button variant="outline" onClick={reset} asChild>
-            <Link href="/dashboard/collection">← Back to Collection</Link>
+            <Link href="/library">{t('collection.backToCollection')}</Link>
           </Button>
         </div>
 

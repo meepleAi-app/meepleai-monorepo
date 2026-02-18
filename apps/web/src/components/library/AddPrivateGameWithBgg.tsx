@@ -15,6 +15,7 @@ import { ArrowLeft, Globe, PenLine, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import type { BggSearchResult, BggGameDetails } from '@/lib/api/schemas/games.schemas';
 
@@ -22,7 +23,7 @@ import { AddPrivateGameForm, type AddPrivateGameFormData } from './AddPrivateGam
 import { BggGameSearch } from './BggGameSearch';
 
 export interface AddPrivateGameWithBggProps {
-  onSubmit: (data: AddPrivateGameFormData, source: 'Manual' | 'Bgg', bggId?: number, thumbnailUrl?: string) => Promise<void>;
+  onSubmit: (data: AddPrivateGameFormData, source: 'Manual' | 'BoardGameGeek', bggId?: number, thumbnailUrl?: string) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
@@ -48,6 +49,7 @@ export function AddPrivateGameWithBgg({
   onCancel,
   isSubmitting = false,
 }: AddPrivateGameWithBggProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('choose');
   const [bggDetails, setBggDetails] = useState<BggGameDetails | null>(null);
   const [formInitialValues, setFormInitialValues] = useState<Partial<AddPrivateGameFormData>>({});
@@ -68,7 +70,7 @@ export function AddPrivateGameWithBgg({
 
   const handleFormSubmit = useCallback(async (data: AddPrivateGameFormData) => {
     if (step === 'form-bgg' && bggDetails) {
-      await onSubmit(data, 'Bgg', bggDetails.bggId, bggDetails.thumbnailUrl ?? undefined);
+      await onSubmit(data, 'BoardGameGeek', bggDetails.bggId, bggDetails.thumbnailUrl ?? undefined);
     } else {
       await onSubmit(data, 'Manual');
     }
@@ -114,7 +116,7 @@ export function AddPrivateGameWithBgg({
 
         <div className="flex justify-end">
           <Button variant="ghost" onClick={onCancel}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       </div>
@@ -167,7 +169,7 @@ export function AddPrivateGameWithBgg({
         onCancel={onCancel}
         isSubmitting={isSubmitting}
         initialValues={isBggMode ? formInitialValues : undefined}
-        submitLabel={isBggMode ? 'Add from BGG' : 'Add Private Game'}
+        submitLabel={isBggMode ? t('privateGameForm.addFromBgg') : t('privateGameForm.addPrivateGame')}
       />
     </div>
   );

@@ -6,12 +6,11 @@
  * Issue #4458: RAG Observability Dashboard
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Settings, Target, Lock, Link as LinkIcon, Zap, RefreshCw } from 'lucide-react';
 
-import { ConfidenceBadge } from '@/components/admin/rag/ConfidenceBadge';
 import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -32,7 +31,6 @@ import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
 import {
   createAdminClient,
-  type TierStrategyMatrixDto,
   type StrategyModelMappingDto,
 } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
@@ -161,7 +159,7 @@ export default function StrategyConfigPage() {
     },
   });
 
-  const updateMappingMutation = useMutation({
+  const _updateMappingMutation = useMutation({
     mutationFn: (payload: {
       strategy: string;
       provider: string;

@@ -132,6 +132,7 @@ function transformLibraryEntryToCarousel(entry: UserLibraryEntry): CarouselGame 
         ]
       : undefined,
     badge: entry.isFavorite ? '❤️ Favorite' : undefined,
+    hasPdfDocuments: entry.hasPdfDocuments,
   };
 }
 

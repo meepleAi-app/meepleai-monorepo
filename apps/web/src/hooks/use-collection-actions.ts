@@ -141,8 +141,10 @@ export function useCollectionActions(
       }
       toast.error('Impossibile aggiungere il gioco alla collezione');
     },
-    onSettled: () => {
+    onSuccess: () => {
       toast.success('Gioco aggiunto alla collezione!');
+    },
+    onSettled: () => {
       // Invalidate all related caches for consistency
       queryClient.invalidateQueries({ queryKey: ['user-library'] });
       queryClient.invalidateQueries({ queryKey: libraryStatusKey });
@@ -195,8 +197,10 @@ export function useCollectionActions(
       }
       toast.error('Impossibile rimuovere il gioco dalla collezione');
     },
-    onSettled: () => {
+    onSuccess: () => {
       toast.success('Gioco rimosso dalla collezione');
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['user-library'] });
       queryClient.invalidateQueries({ queryKey: libraryStatusKey });
       queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });

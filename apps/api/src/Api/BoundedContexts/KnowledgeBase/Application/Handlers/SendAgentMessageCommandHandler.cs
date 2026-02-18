@@ -194,14 +194,37 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         }
 
         // Step 2: Vector search in Qdrant with document filtering
-        var gameId = thread.GameId?.ToString() ?? "default";
-        var documentIdsForSearch = selectedDocumentIds.Select(id => id.ToString()).ToList();
+        // POC FIX #1: Get gameId from VectorDocument (thread.GameId is null for new chats)
+        // POC FIX #2: Get PdfDocumentIds (Qdrant uses pdf_id, not vector_document_id)
+        Guid? gameIdForSearch = thread.GameId;
+        var pdfDocumentIds = new List<string>();
+
+        if (selectedDocumentIds.Count > 0)
+        {
+            var vectorDocs = await _dbContext.VectorDocuments
+                .Where(vd => selectedDocumentIds.Contains(vd.Id))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!gameIdForSearch.HasValue && vectorDocs.Count > 0)
+            {
+                gameIdForSearch = vectorDocs[0].GameId;
+            }
+
+            pdfDocumentIds = vectorDocs.Select(vd => vd.PdfDocumentId.ToString()).ToList();
+        }
+
+        var gameId = gameIdForSearch?.ToString() ?? "default";
+
+        _logger.LogInformation(
+            "Searching for game {GameId} with {DocumentCount} PDF document filters",
+            gameId, pdfDocumentIds.Count);
 
         var searchResult = await _qdrantService.SearchAsync(
             gameId,
             embeddingResult.Embeddings[0],
             limit: 10,
-            documentIds: documentIdsForSearch,
+            documentIds: pdfDocumentIds, // Use PdfDocumentIds, not VectorDocument IDs
             cancellationToken).ConfigureAwait(false);
 
         if (!searchResult.Success)
@@ -245,8 +268,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating response...", thread.Id));
 
-        // Stream LLM response tokens with RAG context
-        var responseBuilder = new StringBuilder();
+        // Prepare prompts for LLM
         var systemPrompt = $"You are {agent.Name}, a specialized board game AI assistant. " +
                           "Answer questions based ONLY on the provided context from the game rules and documentation. " +
                           "If the context doesn't contain the answer, say so clearly. " +
@@ -256,26 +278,33 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             ? $"Question: {command.UserQuestion}\n\nNote: No relevant context found in knowledge base."
             : $"Context from game documents:\n{ragContext}\n\nQuestion: {command.UserQuestion}\n\nProvide a clear answer based on the context above.";
 
-        int tokenCount = 0;
+        // POC: Use explicit model from config (Haiku) instead of routing (DeepSeek unavailable)
+        _logger.LogInformation("POC using configured model: {Model}", agentConfig.LlmModel);
 
-        await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(
+        var llmResult = await _llmService.GenerateCompletionWithModelAsync(
+            agentConfig.LlmModel,
             systemPrompt,
             userPrompt,
-            cancellationToken).ConfigureAwait(false))
-        {
-            if (!string.IsNullOrEmpty(chunk.Content))
-            {
-                responseBuilder.Append(chunk.Content);
-                tokenCount++;
+            cancellationToken).ConfigureAwait(false);
 
-                yield return CreateEvent(
-                    StreamingEventType.Token,
-                    new StreamingToken(chunk.Content));
-            }
+        if (!llmResult.Success)
+        {
+            _logger.LogError("LLM failed: {Error}", llmResult.ErrorMessage);
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError($"LLM failed: {llmResult.ErrorMessage}", "LLM_FAILED"));
+            yield break;
         }
 
+        // Emit response (non-streaming for POC)
+        var fullResponse = llmResult.Response;
+        var tokenCount = llmResult.Usage.TotalTokens;
+
+        yield return CreateEvent(
+            StreamingEventType.Token,
+            new StreamingToken(fullResponse));
+
         // Persist assistant response with metadata
-        var fullResponse = responseBuilder.ToString();
         if (!string.IsNullOrEmpty(fullResponse))
         {
             thread.AddAssistantMessageWithMetadata(

@@ -161,8 +161,8 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((msg, i) => (
-                <ChatMessageBubble key={i} message={msg} />
+              {messages.map((msg) => (
+                <ChatMessageBubble key={`${msg.role}-${msg.timestamp.getTime()}`} message={msg} />
               ))}
               {isPending && (
                 <div className="flex gap-3 justify-start">

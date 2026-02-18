@@ -56,13 +56,10 @@ interface AskAgentParams {
 interface AgentChatResponse {
   answer: string | null;
   retrievedChunks: Array<{
-    filePath: string;
-    startLine: number;
-    endLine: number;
-    codePreview: string;
+    content: string;
     relevanceScore: number;
-    boundedContext: string;
     chunkIndex: number;
+    metadata?: Record<string, unknown>;
   }>;
   latencyMs: number;
   tokenUsage: {

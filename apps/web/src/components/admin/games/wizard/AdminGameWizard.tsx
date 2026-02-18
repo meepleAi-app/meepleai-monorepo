@@ -70,8 +70,8 @@ export function AdminGameWizard() {
 
   const handleProcessingLaunched = useCallback(
     (gameId: string) => {
-      const title = createdGame?.title ? `&title=${encodeURIComponent(createdGame.title)}` : '';
-      router.push(`/admin/games/${gameId}/processing?${title}`);
+      const title = createdGame?.title ? `?title=${encodeURIComponent(createdGame.title)}` : '';
+      router.push(`/admin/games/${gameId}/processing${title}`);
     },
     [router, createdGame]
   );

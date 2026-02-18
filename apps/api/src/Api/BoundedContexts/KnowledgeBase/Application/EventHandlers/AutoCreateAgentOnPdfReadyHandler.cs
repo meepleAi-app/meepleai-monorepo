@@ -26,10 +26,10 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
         IMediator mediator,
         ILogger<AutoCreateAgentOnPdfReadyHandler> logger)
     {
-        _dbContext = dbContext;
-        _typologyRepo = typologyRepo;
-        _mediator = mediator;
-        _logger = logger;
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _typologyRepo = typologyRepo ?? throw new ArgumentNullException(nameof(typologyRepo));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task Handle(PdfStateChangedEvent notification, CancellationToken cancellationToken)

@@ -49,12 +49,17 @@ export function useWizardProgressStream(
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
 
   const isComplete = progress?.isComplete ?? false;
   const isFailed = progress?.pdfState === 'Failed';
 
   const cleanup = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
@@ -100,7 +105,7 @@ export function useWizardProgressStream(
       try {
         const data = JSON.parse(e.data) as WizardProgressEvent;
         setProgress(data);
-        setConnectionState('closed');
+        setConnectionState('error');
         cleanup();
       } catch {
         // Parse error, ignore
@@ -119,7 +124,7 @@ export function useWizardProgressStream(
           INITIAL_BACKOFF_MS * Math.pow(2, reconnectAttemptsRef.current - 1),
           MAX_BACKOFF_MS
         );
-        setTimeout(() => {
+        reconnectTimerRef.current = setTimeout(() => {
           if (isMountedRef.current) connect();
         }, delay);
       } else {

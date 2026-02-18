@@ -11,7 +11,6 @@ import {
   Settings,
   Shield,
   LogOut,
-  UserIcon,
   User,
   FileEdit,
 } from 'lucide-react';
@@ -29,13 +28,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
 

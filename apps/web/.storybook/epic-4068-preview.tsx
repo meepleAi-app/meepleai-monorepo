@@ -3,10 +3,12 @@
  * Adds global decorators, parameters, and theme support for permission/tag/tooltip stories
  */
 
-import type { Preview } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { PermissionProvider } from '../src/contexts/PermissionContext';
+
 import { MOCK_USERS } from '../../examples/epic-4068/data/mock-data';
+import { PermissionProvider } from '../src/contexts/PermissionContext';
+
+import type { Preview } from '@storybook/react';
 
 // Create query client for Storybook
 const queryClient = new QueryClient({

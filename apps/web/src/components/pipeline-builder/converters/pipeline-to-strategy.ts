@@ -109,7 +109,8 @@ function calculateNodeOrder(nodes: PluginNode[], edges: PipelineEdge[]): Map<str
   let idx = 0;
 
   while (queue.length > 0) {
-    const current = queue.shift()!;
+    const current = queue.shift(); // Safe: queue.length > 0 guarantees element exists
+    if (!current) break; // TypeScript safety check
     order.set(current, idx++);
 
     for (const neighbor of adjacency.get(current) ?? []) {

@@ -5,7 +5,7 @@
  * Used by Turbopack resolve alias to avoid module factory errors.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
+ 
 const stub = {
   init(_config: Record<string, unknown>) {},
   setGlobalAttributes(_attrs: Record<string, unknown>) {},

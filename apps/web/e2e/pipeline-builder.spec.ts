@@ -14,7 +14,7 @@
  * @see Issue #3712 - Visual Pipeline Builder
  */
 
-import { test, expect, type Page, type Locator } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // =============================================================================
 // Configuration

@@ -36,8 +36,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui';
-import { Button } from '@/components/ui/primitives/button';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Table,
   TableBody,
@@ -46,12 +44,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 import type {
   AgentCatalogAgentStats,

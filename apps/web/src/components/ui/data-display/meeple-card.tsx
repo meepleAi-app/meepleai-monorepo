@@ -929,8 +929,11 @@ export const MeepleCard = React.memo(function MeepleCard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMobileActions]);
 
-  // Mobile tap handler: 1st tap = show actions, 2nd tap = navigate
+  // Mobile tap handler: 1st tap = show actions, 2nd tap = navigate (unless flippable)
   const handleMobileClick = () => {
+    // If card is flippable, don't handle tap (let FlipCard handle it)
+    if (flippable) return;
+
     if (hasMobileActions && !showMobileActions) {
       // 1st tap: Show bottom sheet
       setShowMobileActions(true);
@@ -941,8 +944,10 @@ export const MeepleCard = React.memo(function MeepleCard({
     }
   };
 
-  // Desktop click handler: Navigate immediately
+  // Desktop click handler: Navigate immediately (unless flippable)
   const handleDesktopClick = () => {
+    // If card is flippable, don't handle tap (let FlipCard handle it)
+    if (flippable) return;
     if (onClick) onClick();
   };
 

@@ -140,8 +140,8 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
   function UnifiedActionBar({ staggerDelay = 50, className, ...props }, ref) {
     const {
       visibleNavItems,
-      overflowItems,
-      hasOverflow,
+      overflowItems: _overflowItems,
+      hasOverflow: _hasOverflow,
       isVisible,
       breakpoint,
       handleItemClick,
@@ -471,10 +471,10 @@ interface UnifiedOverflowMenuProps {
   animationDelay: number;
 }
 
-function UnifiedOverflowMenu({
-  items,
-  onItemClick,
-  animationDelay,
+function _UnifiedOverflowMenu({
+  items: _items,
+  onItemClick: _onItemClick,
+  animationDelay: _animationDelay,
 }: UnifiedOverflowMenuProps) {
   // Separate nav items and action items for menu sections
   const navItems = items.filter(item => item.type === 'nav');

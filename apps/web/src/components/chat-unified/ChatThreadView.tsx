@@ -17,12 +17,12 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 
 import { useRouter } from 'next/navigation';
 
-import { api } from '@/lib/api';
-import { useAgentChatStream } from '@/hooks/useAgentChatStream';
-import type { Citation } from '@/types';
-import { cn } from '@/lib/utils';
-
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
+import { useAgentChatStream } from '@/hooks/useAgentChatStream';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import type { Citation } from '@/types';
+
 import { ChatThreadHeader } from './ChatThreadHeader';
 
 // ============================================================================

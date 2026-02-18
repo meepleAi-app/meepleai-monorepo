@@ -10,14 +10,6 @@ interface StorageHealthCardsProps {
   isLoading: boolean;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-}
-
 const healthColors: Record<string, string> = {
   healthy: 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400',
   warning: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400',

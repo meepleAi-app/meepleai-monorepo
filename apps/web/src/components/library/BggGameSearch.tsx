@@ -22,8 +22,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
-import { cn } from '@/lib/utils';
 import { useBggRateLimit } from '@/lib/hooks/use-bgg-rate-limit';
+import { cn } from '@/lib/utils';
 
 export interface BggGameSearchProps {
   onSelect: (result: BggSearchResult) => void;

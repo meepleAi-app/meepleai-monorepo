@@ -165,7 +165,7 @@ export function PdfAdminClient() {
             <h1 className="text-3xl font-bold">PDF Storage Management</h1>
             <p className="text-muted-foreground">
               Monitor processing, storage health, and manage documents
-              {data?.total != null && ` (${data.total} total)`}
+              {data?.total !== null && data?.total !== undefined && ` (${data.total} total)`}
             </p>
           </div>
           <div className="flex items-center gap-2">

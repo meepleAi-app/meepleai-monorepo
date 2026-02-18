@@ -88,7 +88,7 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
     return searchData.results
       .map(result => ({
         ...result,
-        matchScore: calculateStringSimilarity(result.name, extractedMetadata.title!),
+        matchScore: calculateStringSimilarity(result.name, extractedMetadata.title ?? ''),
       }))
       .sort((a, b) => b.matchScore - a.matchScore); // Sort by score descending
   }, [searchData, extractedMetadata]);

@@ -16,6 +16,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 
+import type { ReplayExecutionRequest } from '@/lib/api/schemas/rag-execution.schemas';
 import type {
   PipelineTestEvent,
   TestStartedEvent,
@@ -29,7 +30,6 @@ import type {
   BlockResult,
 } from '@/lib/hooks/useRagPipelineTest';
 
-import type { ReplayExecutionRequest } from '@/lib/api/schemas/rag-execution.schemas';
 
 // =============================================================================
 // Hook Types

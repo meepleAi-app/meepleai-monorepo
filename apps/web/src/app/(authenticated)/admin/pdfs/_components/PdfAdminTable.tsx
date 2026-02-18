@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 import { PdfProgressBar } from '@/components/pdf/PdfProgressBar';

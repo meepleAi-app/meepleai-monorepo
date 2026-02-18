@@ -205,9 +205,9 @@ export function MeepleLibraryGameCard({
       icon: MessageCircle,
       label: 'Chat con Agent',
       onClick: () => {
-        // Navigate handled by href in useEntityActions
         window.location.href = `/chat/new?game=${game.gameId}`;
       },
+      hidden: !game.hasPdfDocuments,
     },
     {
       icon: Settings,

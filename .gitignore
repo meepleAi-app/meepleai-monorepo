@@ -112,6 +112,7 @@ CUsersUtente*
 docker-compose.override.yml
 
 # Data
+**/pdf_uploads/
 
 # Serena MCP
 .serena/

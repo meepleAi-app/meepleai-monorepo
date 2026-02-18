@@ -29,63 +29,53 @@ import { Input } from '@/components/ui/primitives/input';
 const mockEvents: ActivityEvent[] = [
   {
     id: '1',
-    type: 'user_registered',
-    title: 'New user registered',
-    description: 'sarah.mitchell@example.com joined the platform',
+    eventType: 'user_registered',
+    description: 'New user registered: sarah.mitchell@example.com joined the platform',
     timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    severity: 'info',
-    category: 'users',
-    actor: { name: 'System', avatarUrl: undefined },
+    severity: 'Info',
+    userEmail: 'sarah.mitchell@example.com',
+    entityType: 'user',
   },
   {
     id: '2',
-    type: 'game_approved',
-    title: 'Game approved',
-    description: '"Wingspan" was added to the catalog',
+    eventType: 'game_approved',
+    description: 'Game approved: "Wingspan" was added to the catalog',
     timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-    severity: 'success',
-    category: 'games',
-    actor: { name: 'Admin', avatarUrl: undefined },
+    severity: 'Info',
+    entityType: 'game',
   },
   {
     id: '3',
-    type: 'agent_invoked',
-    title: 'AI agent invoked',
-    description: 'GameAdvisor agent processed 23 queries',
+    eventType: 'agent_invoked',
+    description: 'AI agent invoked: GameAdvisor agent processed 23 queries',
     timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    severity: 'info',
-    category: 'agents',
-    actor: { name: 'System', avatarUrl: undefined },
+    severity: 'Info',
+    entityType: 'agent',
   },
   {
     id: '4',
-    type: 'document_uploaded',
-    title: 'Document uploaded',
-    description: '"Pandemic Legacy Rules.pdf" processed successfully',
+    eventType: 'document_uploaded',
+    description: 'Document uploaded: "Pandemic Legacy Rules.pdf" processed successfully',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    severity: 'success',
-    category: 'documents',
-    actor: { name: 'Admin', avatarUrl: undefined },
+    severity: 'Info',
+    entityType: 'document',
   },
   {
     id: '5',
-    type: 'user_role_updated',
-    title: 'User role updated',
-    description: 'john.doe@example.com promoted to Editor',
+    eventType: 'user_role_updated',
+    description: 'User role updated: john.doe@example.com promoted to Editor',
     timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    severity: 'info',
-    category: 'users',
-    actor: { name: 'Admin', avatarUrl: undefined },
+    severity: 'Info',
+    userEmail: 'john.doe@example.com',
+    entityType: 'user',
   },
   {
     id: '6',
-    type: 'config_changed',
-    title: 'System configuration changed',
-    description: 'RAG strategy updated to HybridRAG',
+    eventType: 'config_changed',
+    description: 'System configuration changed: RAG strategy updated to HybridRAG',
     timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    severity: 'warning',
-    category: 'system',
-    actor: { name: 'Admin', avatarUrl: undefined },
+    severity: 'Warning',
+    entityType: 'system',
   },
 ];
 
@@ -96,7 +86,7 @@ export default function ActivityFeedPage() {
   const filteredEvents =
     typeFilter === 'all'
       ? mockEvents
-      : mockEvents.filter((e) => e.category === typeFilter);
+      : mockEvents.filter((e) => e.entityType === typeFilter);
 
   return (
     <div className="space-y-6">
@@ -155,7 +145,7 @@ export default function ActivityFeedPage() {
           </div>
         }
       >
-        <ActivityFeed events={filteredEvents} maxItems={12} />
+        <ActivityFeed events={filteredEvents} />
       </Suspense>
     </div>
   );

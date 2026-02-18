@@ -17,6 +17,12 @@ public sealed class UserTokenUsage
     public decimal Cost { get; private set; }
     public DateTime LastReset { get; private set; }
 
+    // Credit tracking (1 credit = $0.00001 USD)
+    public decimal DailyCreditsUsed { get; private set; }
+    public decimal WeeklyCreditsUsed { get; private set; }
+    public DateTime LastDailyReset { get; private set; }
+    public DateTime LastWeeklyReset { get; private set; }
+
     // Status flags
     public bool IsBlocked { get; private set; }
     public bool IsNearLimit { get; private set; }
@@ -44,6 +50,10 @@ public sealed class UserTokenUsage
         MessagesCount = 0;
         Cost = 0m;
         LastReset = DateTime.UtcNow;
+        DailyCreditsUsed = 0m;
+        WeeklyCreditsUsed = 0m;
+        LastDailyReset = DateTime.UtcNow;
+        LastWeeklyReset = DateTime.UtcNow;
         IsBlocked = false;
         IsNearLimit = false;
         Warnings = new List<DateTime>();
@@ -152,5 +162,69 @@ public sealed class UserTokenUsage
 
         TierId = newTierId;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Record credit usage and auto-reset if needed (Issue #3672 pattern: TimeProvider for testability)
+    /// </summary>
+    /// <param name="credits">Credits to deduct (1 credit = $0.00001 USD)</param>
+    /// <param name="timeProvider">Time provider for testing (defaults to System)</param>
+    public void RecordCreditUsage(decimal credits, TimeProvider? timeProvider = null)
+    {
+        if (credits < 0) throw new ArgumentException("Credits cannot be negative", nameof(credits));
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+
+        // Auto-reset daily if needed (00:00 UTC)
+        if (now.Date > LastDailyReset.Date)
+        {
+            DailyCreditsUsed = 0;
+            LastDailyReset = now;
+        }
+
+        // Auto-reset weekly if needed (Monday 00:00 UTC)
+        var currentWeekStart = GetWeekStart(now);
+        var lastWeekStart = GetWeekStart(LastWeeklyReset);
+        if (currentWeekStart > lastWeekStart)
+        {
+            WeeklyCreditsUsed = 0;
+            LastWeeklyReset = now;
+        }
+
+        // Deduct credits
+        DailyCreditsUsed += credits;
+        WeeklyCreditsUsed += credits;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Check if user has sufficient credits against tier limits
+    /// </summary>
+    /// <param name="limits">Tier limits to check against</param>
+    /// <param name="requiredCredits">Credits needed for operation</param>
+    /// <returns>True if user has budget, false otherwise</returns>
+    public bool HasBudgetForCredits(TierLimits limits, decimal requiredCredits)
+    {
+        ArgumentNullException.ThrowIfNull(limits);
+
+        // Admin tier is unlimited
+        if (limits.DailyCreditsLimit == decimal.MaxValue) return true;
+
+        // Check daily budget
+        var dailyRemaining = limits.DailyCreditsLimit - DailyCreditsUsed;
+        if (dailyRemaining < requiredCredits) return false;
+
+        // Check weekly budget
+        var weeklyRemaining = limits.WeeklyCreditsLimit - WeeklyCreditsUsed;
+        return weeklyRemaining >= requiredCredits;
+    }
+
+    /// <summary>
+    /// Get Monday 00:00 UTC for a given date (start of ISO week)
+    /// </summary>
+    private static DateTime GetWeekStart(DateTime date)
+    {
+        var daysSinceMonday = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return date.Date.AddDays(-daysSinceMonday);
     }
 }

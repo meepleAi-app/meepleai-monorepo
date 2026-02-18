@@ -1,6 +1,8 @@
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
@@ -29,6 +31,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IUserBudgetService _userBudgetService;
+    private readonly ILlmModelOverrideService _modelOverrideService;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     public SendAgentMessageCommandHandler(
@@ -39,6 +43,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         MeepleAiDbContext dbContext,
+        IUserBudgetService userBudgetService,
+        ILlmModelOverrideService modelOverrideService,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -48,6 +54,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
+        _modelOverrideService = modelOverrideService ?? throw new ArgumentNullException(nameof(modelOverrideService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -278,11 +286,46 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             ? $"Question: {command.UserQuestion}\n\nNote: No relevant context found in knowledge base."
             : $"Context from game documents:\n{ragContext}\n\nQuestion: {command.UserQuestion}\n\nProvide a clear answer based on the context above.";
 
-        // POC: Use explicit model from config (Haiku) instead of routing (DeepSeek unavailable)
-        _logger.LogInformation("POC using configured model: {Model}", agentConfig.LlmModel);
+        // Budget Display System: Check user budget and fallback to free model if exhausted
+        var requestedModel = agentConfig.LlmModel;
+        var modelToUse = requestedModel;
+
+        // Estimate query cost (rough: 500 input + 200 output = 700 total tokens)
+        var estimatedTokens = (systemPrompt.Length + userPrompt.Length) / 4 + 200;
+
+        // Budget check (fail-open on error)
+        var hasBudget = true;
+        try
+        {
+            hasBudget = await _userBudgetService
+                .HasBudgetForQueryAsync(command.UserId, estimatedTokens, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Fail-open: budget check failed, assume budget available
+            _logger.LogWarning(ex,
+                "Budget check failed for user {UserId}, assuming budget available",
+                command.UserId);
+        }
+
+        if (!hasBudget)
+        {
+            modelToUse = _modelOverrideService.GetModelForBudgetConstraint(requestedModel, budgetExhausted: true);
+            _logger.LogWarning(
+                "User {UserId} budget exhausted, using fallback model: {Requested} → {Fallback}",
+                command.UserId, requestedModel, modelToUse);
+
+            // Send status update about free model usage
+            yield return CreateEvent(
+                StreamingEventType.StateUpdate,
+                new { status = $"Budget low - using free model ({modelToUse})" });
+        }
+
+        _logger.LogInformation("Using model: {Model} (requested: {Requested})", modelToUse, requestedModel);
 
         var llmResult = await _llmService.GenerateCompletionWithModelAsync(
-            agentConfig.LlmModel,
+            modelToUse,
             systemPrompt,
             userPrompt,
             cancellationToken).ConfigureAwait(false);

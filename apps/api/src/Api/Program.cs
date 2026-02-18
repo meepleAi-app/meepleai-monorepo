@@ -539,6 +539,7 @@ v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
+v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
 v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)

@@ -115,7 +115,7 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
         await repository.AddAsync(tier);
         await dbContext.SaveChangesAsync();
 
-        var newLimits = TierLimits.Create(15000, 750, 50, 30, 10, 2);
+        var newLimits = TierLimits.Create(15000, 750, 50, 30, 10, 2, dailyCreditsLimit: 100m, weeklyCreditsLimit: 500m);
         tier.UpdateLimits(newLimits);
 
         // Act

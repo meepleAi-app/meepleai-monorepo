@@ -53,6 +53,11 @@ internal static class AdministrationServiceExtensions
             .AddPolicyHandler(GetRetryPolicy())
             .AddPolicyHandler(GetCircuitBreakerPolicy());
 
+        // Budget Display System: Credit-based budget services
+        services.AddScoped<ICreditConversionService, CreditConversionService>();
+        services.AddScoped<IUserBudgetService, UserBudgetService>();
+        services.AddScoped<IAdminBudgetService, AdminBudgetService>();
+
         // Issue #3693: Batch Job System repositories
         services.AddScoped<IBatchJobRepository, BatchJobRepository>();
 

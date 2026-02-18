@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -53,6 +54,7 @@ internal class HybridLlmService : ILlmService
     private readonly List<ILlmClient> _clients;
     private readonly ILlmRoutingStrategy _routingStrategy;
     private readonly ILlmCostLogRepository _costLogRepository;
+    private readonly IUserBudgetService? _userBudgetService;
     private readonly ILogger<HybridLlmService> _logger;
     private readonly IProviderHealthCheckService? _healthCheckService;
     private readonly IOptions<AiProviderSettings> _aiSettings;
@@ -84,7 +86,8 @@ internal class HybridLlmService : ILlmService
         IOptions<AiProviderSettings> aiSettings,
         IAiModelConfigurationRepository modelConfigRepository,
         IPublisher publisher,
-        IProviderHealthCheckService? healthCheckService = null)
+        IProviderHealthCheckService? healthCheckService = null,
+        IUserBudgetService? userBudgetService = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -94,6 +97,7 @@ internal class HybridLlmService : ILlmService
         _modelConfigRepository = modelConfigRepository ?? throw new ArgumentNullException(nameof(modelConfigRepository));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
+        _userBudgetService = userBudgetService; // Optional - for credit tracking
 
         if (_clients.Count == 0)
         {
@@ -540,6 +544,17 @@ internal class HybridLlmService : ILlmService
 
             // Issue #2520: Update model usage statistics
             await UpdateModelUsageStatsAsync(result, cancellationToken).ConfigureAwait(false);
+
+            // Budget Display System: Record credit usage (if service available and user authenticated)
+            if (_userBudgetService != null && user?.Id != null)
+            {
+                var requestCost = result.Cost.TotalCost;
+                var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
+
+                await _userBudgetService
+                    .RecordUsageAsync(user.Id, requestCost, requestTokens, cancellationToken)
+                    .ConfigureAwait(false);
+            }
 
             // Issue #3721: Publish event for automatic financial ledger tracking
             var totalCost = result.Cost.InputCost + result.Cost.OutputCost;

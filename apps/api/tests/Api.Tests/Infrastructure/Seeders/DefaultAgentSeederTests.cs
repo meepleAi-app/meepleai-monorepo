@@ -5,6 +5,7 @@ using Api.Infrastructure.Seeders;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Infrastructure.Seeders;
@@ -26,7 +27,12 @@ public sealed class DefaultAgentSeederTests : IAsyncLifetime
             .UseInMemoryDatabase($"DefaultAgentSeeder_Test_{Guid.NewGuid()}")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<MediatR.IMediator>();
+        var mockEventCollector = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
+        mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         _logger = new LoggerFactory().CreateLogger<DefaultAgentSeederTests>();
 
         // Create admin user for CreatedBy reference
@@ -150,10 +156,10 @@ public sealed class DefaultAgentSeederTests : IAsyncLifetime
         config.LlmModel.Should().Contain("haiku");
 
         // Low temperature for deterministic, efficient responses
-        config.Temperature.Should().BeLessOrEqualTo(0.5m);
+        config.Temperature.Should().BeLessThanOrEqualTo(0.5m);
 
         // Reasonable token limit (not excessive)
-        config.MaxTokens.Should().BeLessOrEqualTo(4096);
+        config.MaxTokens.Should().BeLessThanOrEqualTo(4096);
     }
 
     [Fact]

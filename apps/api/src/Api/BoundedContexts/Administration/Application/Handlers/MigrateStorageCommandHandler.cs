@@ -120,7 +120,9 @@ internal sealed class MigrateStorageCommandHandler : IRequestHandler<MigrateStor
                             Key = s3Key,
                             InputStream = fileStream,
                             ContentType = "application/pdf",
-                            AutoCloseStream = false
+                            AutoCloseStream = false,
+                            // R2 doesn't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
+                            DisablePayloadSigning = true
                         };
 
                         if (s3Service.Options.EnableEncryption)

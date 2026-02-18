@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260218165434_AddProcessingPriorityColumn")]
+    partial class AddProcessingPriorityColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -356,10 +359,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<decimal>("DailyCreditsUsed")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("daily_credits_used");
-
                     b.Property<string>("History")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -373,17 +372,9 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_near_limit");
 
-                    b.Property<DateTime>("LastDailyReset")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_daily_reset");
-
                     b.Property<DateTime>("LastReset")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_reset");
-
-                    b.Property<DateTime>("LastWeeklyReset")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_weekly_reset");
 
                     b.Property<int>("MessagesCount")
                         .HasColumnType("integer")
@@ -409,10 +400,6 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("warnings");
-
-                    b.Property<decimal>("WeeklyCreditsUsed")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("weekly_credits_used");
 
                     b.HasKey("Id");
 
@@ -8056,10 +8043,6 @@ namespace Api.Infrastructure.Migrations
                             b1.Property<Guid>("TokenTierId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<decimal>("DailyCreditsLimit")
-                                .HasColumnType("decimal(18,2)")
-                                .HasColumnName("daily_credits_limit");
-
                             b1.Property<int>("MaxAgentsCreated")
                                 .HasColumnType("integer")
                                 .HasColumnName("max_agents_created");
@@ -8083,10 +8066,6 @@ namespace Api.Infrastructure.Migrations
                             b1.Property<int>("TokensPerMonth")
                                 .HasColumnType("integer")
                                 .HasColumnName("tokens_per_month");
-
-                            b1.Property<decimal>("WeeklyCreditsLimit")
-                                .HasColumnType("decimal(18,2)")
-                                .HasColumnName("weekly_credits_limit");
 
                             b1.HasKey("TokenTierId");
 

@@ -11,7 +11,7 @@ internal static class AdminStorageMigrationEndpoints
 {
     public static void MapAdminStorageMigrationEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/storage")
+        var group = app.MapGroup("/admin/storage")
             .WithTags("Admin - Storage Migration")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

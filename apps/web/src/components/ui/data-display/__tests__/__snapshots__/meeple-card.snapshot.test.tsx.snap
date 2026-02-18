@@ -8,7 +8,7 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
   data-testid="complete-game-card"
   data-variant="grid"
   role="button"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
   tabindex="0"
 >
   <span
@@ -188,7 +188,7 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
   data-entity="event"
   data-testid="meeple-card"
   data-variant="hero"
-  style="--mc-entity-color: hsl(350 89% 60%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(350 89% 60%); will-change: transform, box-shadow, outline;"
 >
   <span
     class="absolute top-4 right-[-2rem] z-20 py-1 px-10 text-xs font-bold uppercase tracking-wider text-white shadow-md rotate-45"
@@ -363,7 +363,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
   data-entity="custom"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(220 70% 50%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(220 70% 50%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -451,7 +451,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
   data-entity="custom"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(142 76% 36%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(142 76% 36%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -530,7 +530,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
   data-entity="event"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(350 89% 60%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(350 89% 60%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -668,7 +668,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -810,7 +810,7 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
   data-entity="player"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(262 83% 58%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(262 83% 58%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -930,7 +930,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for co
   data-entity="game"
   data-testid="meeple-card"
   data-variant="compact"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -961,7 +961,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
   data-entity="game"
   data-testid="meeple-card"
   data-variant="featured"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -1143,7 +1143,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -1316,7 +1316,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
   data-entity="game"
   data-testid="meeple-card"
   data-variant="hero"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     class="absolute top-4 right-[-2rem] z-20 py-1 px-10 text-xs font-bold uppercase tracking-wider text-white shadow-md rotate-45"
@@ -1487,7 +1487,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for li
   data-entity="game"
   data-testid="meeple-card"
   data-variant="list"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -1819,7 +1819,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -1890,7 +1890,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
   data-entity="game"
   data-testid="meeple-card"
   data-variant="featured"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -2156,7 +2156,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"
@@ -2403,7 +2403,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
   data-testid="meeple-card"
   data-variant="grid"
   role="button"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
   tabindex="0"
 >
   <span
@@ -2655,7 +2655,7 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot without
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
-  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline;"
 >
   <span
     aria-hidden="true"

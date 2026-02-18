@@ -471,10 +471,11 @@ interface UnifiedOverflowMenuProps {
   animationDelay: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function _UnifiedOverflowMenu({
-  items: _items,
-  onItemClick: _onItemClick,
-  animationDelay: _animationDelay,
+  items,
+  onItemClick,
+  animationDelay,
 }: UnifiedOverflowMenuProps) {
   // Separate nav items and action items for menu sections
   const navItems = items.filter(item => item.type === 'nav');

@@ -788,7 +788,7 @@ export const GameCarousel = React.memo(function GameCarousel({
                 >
                   <MeepleCard
                     entity="game"
-                    variant={isCenter ? 'featured' : 'grid'}
+                    variant="grid"
                     title={game.title}
                     subtitle={game.subtitle}
                     imageUrl={game.imageUrl}

@@ -31,6 +31,7 @@ import {
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
+  MetricsTimeSeriesResponseSchema,
   GetUserActivityResultSchema,
   type CreateUserRequest,
   type UpdateUserRequest,
@@ -639,6 +640,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async getInfrastructureDetails() {
       return httpClient.get('/api/v1/admin/infrastructure/details', InfrastructureDetailsSchema);
+    },
+
+    /**
+     * Get time-series metrics for infrastructure charts
+     * GET /api/v1/admin/infrastructure/metrics/timeseries?range=1h
+     *
+     * Issue #901: Returns CPU, memory, and request rate data from Prometheus.
+     */
+    async getMetricsTimeSeries(range: '1h' | '6h' | '24h' | '7d' = '1h') {
+      return httpClient.get(
+        `/api/v1/admin/infrastructure/metrics/timeseries?range=${range}`,
+        MetricsTimeSeriesResponseSchema
+      );
     },
 
     // ========== API Key Management (Issue #908) ==========

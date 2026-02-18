@@ -14,5 +14,7 @@ internal record AgentDto(
     DateTime? LastInvokedAt,
     int InvocationCount,
     bool IsRecentlyUsed,
-    bool IsIdle
+    bool IsIdle,
+    Guid? GameId = null,
+    Guid? CreatedByUserId = null
 );

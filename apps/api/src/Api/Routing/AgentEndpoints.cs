@@ -40,6 +40,11 @@ internal static class AgentEndpoints
         MapUnifiedAgentQueryEndpoint(group); // Issue #4338: Unified API Gateway
         MapRoutingMetricsEndpoint(group); // Issue #4338: Routing metrics observability
 
+        // Issue #4683: User-facing agent CRUD
+        MapCreateUserAgentEndpoint(group);
+        MapUpdateUserAgentEndpoint(group);
+        MapDeleteUserAgentEndpoint(group);
+
         return group;
     }
 
@@ -589,6 +594,139 @@ internal static class AgentEndpoints
         .Produces<AgentRoutingMetricsResponse>(200)
         .Produces(401);
     }
+
+    /// <summary>
+    /// Create a user-owned agent with tier-aware configuration.
+    /// Issue #4683: User Agent CRUD Endpoints.
+    /// </summary>
+    private static void MapCreateUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/user", async (
+            CreateUserAgentRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new CreateUserAgentCommand(
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role,
+                GameId: req.GameId,
+                AgentType: req.AgentType,
+                Name: req.Name,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} created agent {AgentId} for game {GameId}",
+                session.User.Id, result.Id, req.GameId);
+
+            return Results.Created($"/api/v1/agents/{result.Id}", result);
+        })
+        .RequireSession()
+        .RequireRateLimiting("AgentCreation")
+        .WithName("CreateUserAgent")
+        .WithTags("Agents", "User")
+        .WithSummary("Create a user-owned agent (tier-aware)")
+        .WithDescription(
+            "Creates an agent associated to a game. Configuration depth depends on user tier: " +
+            "Free=type only, Normal=type+strategy, Premium/Admin=full config.")
+        .Produces<KbAgentDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(409)
+        .Produces(429);
+    }
+
+    /// <summary>
+    /// Update a user-owned agent configuration.
+    /// Issue #4683: User Agent CRUD Endpoints.
+    /// </summary>
+    private static void MapUpdateUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/agents/{id:guid}/user", async (
+            Guid id,
+            UpdateUserAgentRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new UpdateUserAgentCommand(
+                AgentId: id,
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role,
+                Name: req.Name,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} updated agent {AgentId}",
+                session.User.Id, id);
+
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("UpdateUserAgent")
+        .WithTags("Agents", "User")
+        .WithSummary("Update a user-owned agent (owner/admin only)")
+        .Produces<KbAgentDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
+
+    /// <summary>
+    /// Delete a user-owned agent.
+    /// Issue #4683: User Agent CRUD Endpoints.
+    /// </summary>
+    private static void MapDeleteUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/agents/{id:guid}", async (
+            Guid id,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new DeleteUserAgentCommand(
+                AgentId: id,
+                UserId: session.User!.Id,
+                UserRole: session.User.Role
+            );
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} deleted agent {AgentId}",
+                session.User.Id, id);
+
+            return Results.NoContent();
+        })
+        .RequireSession()
+        .WithName("DeleteUserAgent")
+        .WithTags("Agents", "User")
+        .WithSummary("Delete a user-owned agent (owner/admin only)")
+        .Produces(204)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
 }
 
 /// <summary>
@@ -676,4 +814,26 @@ internal record ConfidenceThresholdInfo(
     double HighConfidence,
     double MediumConfidence,
     double MinimumForRouting
+);
+
+/// <summary>
+/// Request for user-facing agent creation.
+/// Issue #4683: User Agent CRUD Endpoints.
+/// </summary>
+internal record CreateUserAgentRequest(
+    Guid GameId,
+    string AgentType,
+    string? Name = null,
+    string? StrategyName = null,
+    IDictionary<string, object>? StrategyParameters = null
+);
+
+/// <summary>
+/// Request for user-facing agent update.
+/// Issue #4683: User Agent CRUD Endpoints.
+/// </summary>
+internal record UpdateUserAgentRequest(
+    string? Name = null,
+    string? StrategyName = null,
+    IDictionary<string, object>? StrategyParameters = null
 );

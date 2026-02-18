@@ -69,5 +69,12 @@ internal interface IAgentRepository
     /// Issue #4682: User ownership.
     /// </summary>
     Task<List<Agent>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks if a user already has an agent with the given name.
+    /// Scoped per-user to prevent cross-user name collisions.
+    /// Issue #4683: User Agent CRUD.
+    /// </summary>
+    Task<bool> ExistsByNameForUserAsync(Guid userId, string name, CancellationToken cancellationToken = default);
 }
 

@@ -141,11 +141,17 @@ internal class AgentRepository : RepositoryBase, IAgentRepository
     {
         var entities = await DbContext.Set<AgentEntity>()
             .AsNoTracking()
-            .Where(a => a.CreatedByUserId == userId)
+            .Where(a => a.CreatedByUserId == userId && a.IsActive)
             .OrderBy(a => a.Name)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
+    }
+
+    public async Task<bool> ExistsByNameForUserAsync(Guid userId, string name, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<AgentEntity>()
+            .AnyAsync(a => a.CreatedByUserId == userId && a.Name == name && a.IsActive, cancellationToken).ConfigureAwait(false);
     }
 }
 

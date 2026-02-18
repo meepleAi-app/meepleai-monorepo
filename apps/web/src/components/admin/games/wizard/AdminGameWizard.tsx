@@ -70,10 +70,10 @@ export function AdminGameWizard() {
 
   const handleProcessingLaunched = useCallback(
     (gameId: string) => {
-      // Future: redirect to processing monitor page
-      router.push(`/admin/shared-games/all`);
+      const title = createdGame?.title ? `&title=${encodeURIComponent(createdGame.title)}` : '';
+      router.push(`/admin/games/${gameId}/processing?${title}`);
     },
-    [router]
+    [router, createdGame]
   );
 
   return (

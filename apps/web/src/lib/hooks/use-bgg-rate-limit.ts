@@ -109,10 +109,12 @@ export function useBggRateLimit(): UseBggRateLimitResult {
     }
 
     const timer = setInterval(() => {
+      if (!quota.resetAt) return; // Skip if no reset time
+
       const now = new Date();
       const newCountdown = Math.max(
         0,
-        Math.ceil((quota.resetAt!.getTime() - now.getTime()) / 1000)
+        Math.ceil((quota.resetAt.getTime() - now.getTime()) / 1000)
       );
 
       if (newCountdown === 0) {

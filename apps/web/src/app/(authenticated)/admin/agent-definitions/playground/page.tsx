@@ -12,7 +12,7 @@ import { DebugPanel } from '@/components/playground/DebugPanel';
 import { RagContextViewer } from '@/components/playground/RagContextViewer';
 import { ScenarioManager } from '@/components/playground/ScenarioManager';
 import {
-  Button, Input, Label, RadioGroup, RadioGroupItem, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Button, Label, RadioGroup, RadioGroupItem, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Tabs, TabsContent, TabsList, TabsTrigger, Textarea,
 } from '@/components/ui';
 import { parsePlaygroundSSEChunk } from '@/lib/agent/playground-sse-parser';

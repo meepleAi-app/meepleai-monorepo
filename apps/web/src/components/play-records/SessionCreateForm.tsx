@@ -18,6 +18,7 @@ import { Calendar, Users, Trophy, ArrowLeft, ArrowRight, Check } from 'lucide-re
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
+import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
 import {
   Form,
   FormControl,
@@ -27,6 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/forms/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import {
   Select,
   SelectContent,
@@ -42,8 +44,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-gro
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { SessionCreateFormSchema, type SessionCreateForm as SessionCreateFormData } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
-import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
 
 import { GameCombobox } from './GameCombobox';
 

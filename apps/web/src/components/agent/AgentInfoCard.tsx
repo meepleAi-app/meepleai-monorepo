@@ -16,8 +16,8 @@ import { useState, useEffect } from 'react';
 
 import { MessageSquare, History, Book, FileText, Loader2, AlertCircle, Settings, Maximize2, Minimize2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { ChatThreadView } from '@/components/chat-unified/ChatThreadView';
+import { Button } from '@/components/ui/primitives/button';
 import { useAgentStatus } from '@/hooks/useAgentStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';

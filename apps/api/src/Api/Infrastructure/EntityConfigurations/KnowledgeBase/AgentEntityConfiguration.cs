@@ -40,10 +40,32 @@ internal class AgentEntityConfiguration : IEntityTypeConfiguration<AgentEntity>
             .IsRequired()
             .HasDefaultValue(0);
 
+        // Issue #4682: Agent-Game association + User ownership
+        builder.Property(e => e.GameId)
+            .IsRequired(false);
+
+        builder.Property(e => e.CreatedByUserId)
+            .IsRequired(false);
+
+        builder.HasOne(e => e.Game)
+            .WithMany(g => g.Agents)
+            .HasForeignKey(e => e.GameId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(e => e.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(e => e.CreatedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Indexes for common queries
         builder.HasIndex(e => e.Name).IsUnique();
         builder.HasIndex(e => e.Type);
         builder.HasIndex(e => e.IsActive);
         builder.HasIndex(e => e.LastInvokedAt);
+
+        // Issue #4682: Indexes for agent-game queries
+        builder.HasIndex(e => e.CreatedByUserId);
+        builder.HasIndex(e => new { e.GameId, e.CreatedByUserId });
+        builder.HasIndex(e => new { e.GameId, e.Type });
     }
 }

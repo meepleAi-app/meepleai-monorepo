@@ -3,16 +3,17 @@
 exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for fully loaded game card 1`] = `
 <div
   aria-label="Game: Twilight Imperium"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="complete-game-card"
   data-variant="grid"
   role="button"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
   tabindex="0"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -34,14 +35,13 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="Twilight Imperium"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/ti4.jpg"
     />
@@ -49,6 +49,11 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -179,10 +184,11 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
 exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for tournament hero 1`] = `
 <article
   aria-label="Event: MeepleAI Tournament"
-  class="group cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] shadow-xl hover:shadow-2xl hover:scale-[1.01]"
+  class="group cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] [box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)] hover:scale-[1.01] hover:outline-2 hover:outline-offset-2"
   data-entity="event"
   data-testid="meeple-card"
   data-variant="hero"
+  style="--mc-entity-color: hsl(350 89% 60%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     class="absolute top-4 right-[-2rem] z-20 py-1 px-10 text-xs font-bold uppercase tracking-wider text-white shadow-md rotate-45"
@@ -198,7 +204,6 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="100vw"
       src="https://example.com/tournament.jpg"
     />
@@ -206,12 +211,17 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
     />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
+    />
   </div>
   <div
-    class="relative z-10 mt-auto flex flex-col justify-end p-5 bg-black/80 backdrop-blur-sm"
+    class="relative z-10 mt-auto flex flex-col justify-end p-6"
   >
     <h3
-      class="font-quicksand font-bold text-2xl text-white mb-1 drop-shadow-lg"
+      class="font-quicksand font-bold text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]"
     >
       MeepleAI Tournament
     </h3>
@@ -349,14 +359,15 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for collection entity 1`] = `
 <article
   aria-label="Custom: Euro Games Essentials"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="custom"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(220 70% 50%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(38, 98, 217);"
   />
   <div
@@ -372,14 +383,13 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="Euro Games Essentials"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/collection.jpg"
     />
@@ -387,6 +397,11 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -432,14 +447,15 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custom entity 1`] = `
 <article
   aria-label="Custom: Custom Entity"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="custom"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(142 76% 36%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(22, 162, 73);"
   />
   <div
@@ -455,14 +471,13 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="Custom Entity"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/custom.jpg"
     />
@@ -470,6 +485,11 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -506,14 +526,15 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event entity 1`] = `
 <article
   aria-label="Event: Saturday Game Night"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="event"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(350 89% 60%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(244, 62, 92);"
   />
   <div
@@ -529,14 +550,13 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="Saturday Game Night"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/event.jpg"
     />
@@ -544,6 +564,11 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -639,14 +664,15 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game entity 1`] = `
 <article
   aria-label="Game: Azul"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -662,14 +688,13 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="Azul"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/azul.jpg"
     />
@@ -677,6 +702,11 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -776,14 +806,15 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
 exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for player entity 1`] = `
 <article
   aria-label="Player: Marco Rossi"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="player"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(262 83% 58%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(124, 59, 237);"
   />
   <div
@@ -799,14 +830,13 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="Marco Rossi"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/avatar.jpg"
     />
@@ -814,6 +844,11 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -891,10 +926,11 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for compact variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-2 p-2 rounded-lg bg-card/80 border border-border/30 hover:bg-card"
+  class="group relative overflow-hidden cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-2 p-2 rounded-lg bg-card/80 border border-border/30 hover:bg-card"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="compact"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
@@ -921,14 +957,15 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for co
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for featured variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card border border-border/50 shadow-md hover:shadow-xl hover:-translate-y-2"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="featured"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -951,7 +988,6 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 768px) 100vw, 50vw"
       src="https://example.com/game.jpg"
     />
@@ -959,9 +995,14 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
     />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
+    />
   </div>
   <div
-    class="flex-1 flex flex-col p-5"
+    class="flex-1 flex flex-col px-5 py-4"
   >
     <h3
       class="font-quicksand font-bold text-xl mb-1 text-card-foreground"
@@ -1098,14 +1139,15 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for grid variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -1121,14 +1163,13 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="Twilight Imperium"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/game.jpg"
     />
@@ -1136,6 +1177,11 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -1266,10 +1312,11 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for hero variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] shadow-xl hover:shadow-2xl hover:scale-[1.01]"
+  class="group cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] [box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)] hover:scale-[1.01] hover:outline-2 hover:outline-offset-2"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="hero"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     class="absolute top-4 right-[-2rem] z-20 py-1 px-10 text-xs font-bold uppercase tracking-wider text-white shadow-md rotate-45"
@@ -1285,7 +1332,6 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="100vw"
       src="https://example.com/game.jpg"
     />
@@ -1293,12 +1339,17 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
     />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
+    />
   </div>
   <div
-    class="relative z-10 mt-auto flex flex-col justify-end p-5 bg-black/80 backdrop-blur-sm"
+    class="relative z-10 mt-auto flex flex-col justify-end p-6"
   >
     <h3
-      class="font-quicksand font-bold text-2xl text-white mb-1 drop-shadow-lg"
+      class="font-quicksand font-bold text-2xl text-white mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.3)]"
     >
       Twilight Imperium
     </h3>
@@ -1432,10 +1483,11 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
 exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for list variant 1`] = `
 <article
   aria-label="Game: Twilight Imperium"
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-4 p-3 rounded-xl bg-card border border-border/50 shadow-sm hover:shadow-md hover:translate-x-1"
+  class="group relative overflow-hidden cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-4 p-3 rounded-xl bg-card border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)] hover:translate-x-1 hover:outline-2 hover:outline-offset-2"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="list"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
@@ -1450,7 +1502,6 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for li
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="64px"
       src="https://example.com/game.jpg"
     />
@@ -1577,7 +1628,7 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for li
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for compact skeleton 1`] = `
 <div
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-2 p-2 rounded-lg bg-card/80 border border-border/30 hover:bg-card animate-pulse pointer-events-none"
+  class="group relative overflow-hidden cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-2 p-2 rounded-lg bg-card/80 border border-border/30 hover:bg-card animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
@@ -1608,14 +1659,14 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for comp
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for featured skeleton 1`] = `
 <div
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card border border-border/50 shadow-md hover:shadow-xl hover:-translate-y-2 animate-pulse pointer-events-none"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)] animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
-    class="relative overflow-hidden aspect-[16/9] bg-muted"
+    class="relative overflow-hidden bg-muted"
   />
   <div
-    class="flex-1 flex flex-col p-5"
+    class="flex-1 flex flex-col px-5 py-4"
   >
     <div
       class="h-5 bg-muted rounded w-3/4 mb-2"
@@ -1639,11 +1690,11 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for feat
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for grid skeleton 1`] = `
 <div
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1 animate-pulse pointer-events-none"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl bg-muted"
+    class="relative overflow-hidden rounded-t-2xl bg-muted"
   />
   <div
     class="flex-1 flex flex-col p-4"
@@ -1670,14 +1721,14 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for grid
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for hero skeleton 1`] = `
 <div
-  class="group cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] shadow-xl hover:shadow-2xl hover:scale-[1.01] animate-pulse pointer-events-none"
+  class="group cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col rounded-3xl overflow-hidden min-h-[320px] [box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)] hover:scale-[1.01] animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
     class="overflow-hidden absolute inset-0 bg-muted"
   />
   <div
-    class="relative z-10 mt-auto flex flex-col justify-end p-5 bg-black/80 backdrop-blur-sm"
+    class="relative z-10 mt-auto flex flex-col justify-end p-6"
   >
     <div
       class="h-5 bg-muted rounded w-3/4 mb-2"
@@ -1701,7 +1752,7 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for hero
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for list skeleton 1`] = `
 <div
-  class="group relative overflow-hidden cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-4 p-3 rounded-xl bg-card border border-border/50 shadow-sm hover:shadow-md hover:translate-x-1 animate-pulse pointer-events-none"
+  class="group relative overflow-hidden cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-row items-center gap-4 p-3 rounded-xl bg-card border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)] hover:translate-x-1 animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
@@ -1732,11 +1783,11 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for list
 
 exports[`MeepleCard - Snapshots > Loading State > should match snapshot for loading prop 1`] = `
 <div
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1 animate-pulse pointer-events-none"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] animate-pulse pointer-events-none"
   data-testid="meeple-card-skeleton"
 >
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl bg-muted"
+    class="relative overflow-hidden rounded-t-2xl bg-muted"
   />
   <div
     class="flex-1 flex flex-col p-4"
@@ -1764,14 +1815,15 @@ exports[`MeepleCard - Snapshots > Loading State > should match snapshot for load
 exports[`MeepleCard - Snapshots > Special States > should match snapshot with badge 1`] = `
 <article
   aria-label="Game: New Release"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -1793,14 +1845,13 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
     <img
       alt="New Release"
       class="object-cover transition-transform duration-500 group-hover:scale-105"
       data-fill="true"
       data-loading="lazy"
-      data-placeholder="blur"
       data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       src="https://example.com/game.jpg"
     />
@@ -1808,6 +1859,11 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -1830,14 +1886,15 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
 exports[`MeepleCard - Snapshots > Special States > should match snapshot with disabled action 1`] = `
 <article
   aria-label="Game: Featured Game"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card border border-border/50 shadow-md hover:shadow-xl hover:-translate-y-2"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="featured"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -1855,22 +1912,212 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
   <div
     class="relative overflow-hidden aspect-[16/9]"
   >
-    <img
-      alt="Featured Game"
-      class="object-cover transition-transform duration-500 group-hover:scale-105"
-      data-fill="true"
-      data-loading="lazy"
-      data-placeholder="blur"
-      data-sizes="(max-width: 768px) 100vw, 50vw"
-      src="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E"
-    />
+    <div
+      class="absolute inset-0 flex items-center justify-center"
+      style="background: linear-gradient(135deg, rgb(240, 217, 194), rgb(236, 176, 147));"
+    >
+      <svg
+        aria-hidden="true"
+        class="transition-transform duration-500 ease-out group-hover:rotate-12 opacity-60"
+        fill="none"
+        height="120"
+        role="presentation"
+        viewBox="0 0 100 100"
+        width="120"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <lineargradient
+            id="dice-top"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 65%, 75%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-left"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-right"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(320, 50%, 50%)"
+            />
+          </lineargradient>
+          <filter
+            id="dot-shadow"
+          >
+            <fedropshadow
+              dx="0"
+              dy="1"
+              flood-opacity="0.3"
+              stdDeviation="1"
+            />
+          </filter>
+        </defs>
+        <path
+          d="M 50 15 L 80 30 L 50 45 L 20 30 Z"
+          fill="url(#dice-top)"
+          stroke="rgba(255,255,255,0.2)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 20 30 L 50 45 L 50 85 L 20 70 Z"
+          fill="url(#dice-left)"
+          stroke="rgba(0,0,0,0.1)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 50 45 L 80 30 L 80 70 L 50 85 Z"
+          fill="url(#dice-right)"
+          stroke="rgba(0,0,0,0.15)"
+          stroke-width="0.5"
+        />
+        <circle
+          cx="35"
+          cy="28"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="50"
+          cy="30"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="65"
+          cy="32"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="38"
+          cy="36"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="62"
+          cy="39"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="30"
+          cy="52"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="40"
+          cy="63"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="50"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="55"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="65"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="70"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <path
+          d="M 50 15 L 80 30"
+          stroke="rgba(255,255,255,0.3)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+        <path
+          d="M 50 15 L 20 30"
+          stroke="rgba(255,255,255,0.25)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+      </svg>
+    </div>
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
     />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
+    />
   </div>
   <div
-    class="flex-1 flex flex-col p-5"
+    class="flex-1 flex flex-col px-5 py-4"
   >
     <h3
       class="font-quicksand font-bold text-xl mb-1 text-card-foreground"
@@ -1905,14 +2152,15 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
 exports[`MeepleCard - Snapshots > Special States > should match snapshot with minimal props 1`] = `
 <article
   aria-label="Game: Minimal Card"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -1928,21 +2176,211 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
-    <img
-      alt="Minimal Card"
-      class="object-cover transition-transform duration-500 group-hover:scale-105"
-      data-fill="true"
-      data-loading="lazy"
-      data-placeholder="blur"
-      data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-      src="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E"
-    />
+    <div
+      class="absolute inset-0 flex items-center justify-center"
+      style="background: linear-gradient(135deg, rgb(240, 217, 194), rgb(236, 176, 147));"
+    >
+      <svg
+        aria-hidden="true"
+        class="transition-transform duration-500 ease-out group-hover:rotate-12 opacity-60"
+        fill="none"
+        height="80"
+        role="presentation"
+        viewBox="0 0 100 100"
+        width="80"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <lineargradient
+            id="dice-top"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 65%, 75%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-left"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-right"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(320, 50%, 50%)"
+            />
+          </lineargradient>
+          <filter
+            id="dot-shadow"
+          >
+            <fedropshadow
+              dx="0"
+              dy="1"
+              flood-opacity="0.3"
+              stdDeviation="1"
+            />
+          </filter>
+        </defs>
+        <path
+          d="M 50 15 L 80 30 L 50 45 L 20 30 Z"
+          fill="url(#dice-top)"
+          stroke="rgba(255,255,255,0.2)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 20 30 L 50 45 L 50 85 L 20 70 Z"
+          fill="url(#dice-left)"
+          stroke="rgba(0,0,0,0.1)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 50 45 L 80 30 L 80 70 L 50 85 Z"
+          fill="url(#dice-right)"
+          stroke="rgba(0,0,0,0.15)"
+          stroke-width="0.5"
+        />
+        <circle
+          cx="35"
+          cy="28"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="50"
+          cy="30"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="65"
+          cy="32"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="38"
+          cy="36"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="62"
+          cy="39"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="30"
+          cy="52"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="40"
+          cy="63"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="50"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="55"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="65"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="70"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <path
+          d="M 50 15 L 80 30"
+          stroke="rgba(255,255,255,0.3)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+        <path
+          d="M 50 15 L 20 30"
+          stroke="rgba(255,255,255,0.25)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+      </svg>
+    </div>
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -1960,16 +2398,17 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
 exports[`MeepleCard - Snapshots > Special States > should match snapshot with onClick (interactive) 1`] = `
 <div
   aria-label="Game: Clickable Card"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
   role="button"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
   tabindex="0"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -1985,21 +2424,211 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
-    <img
-      alt="Clickable Card"
-      class="object-cover transition-transform duration-500 group-hover:scale-105"
-      data-fill="true"
-      data-loading="lazy"
-      data-placeholder="blur"
-      data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-      src="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E"
-    />
+    <div
+      class="absolute inset-0 flex items-center justify-center"
+      style="background: linear-gradient(135deg, rgb(240, 217, 194), rgb(236, 176, 147));"
+    >
+      <svg
+        aria-hidden="true"
+        class="transition-transform duration-500 ease-out group-hover:rotate-12 opacity-60"
+        fill="none"
+        height="80"
+        role="presentation"
+        viewBox="0 0 100 100"
+        width="80"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <lineargradient
+            id="dice-top"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 65%, 75%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-left"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-right"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(320, 50%, 50%)"
+            />
+          </lineargradient>
+          <filter
+            id="dot-shadow"
+          >
+            <fedropshadow
+              dx="0"
+              dy="1"
+              flood-opacity="0.3"
+              stdDeviation="1"
+            />
+          </filter>
+        </defs>
+        <path
+          d="M 50 15 L 80 30 L 50 45 L 20 30 Z"
+          fill="url(#dice-top)"
+          stroke="rgba(255,255,255,0.2)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 20 30 L 50 45 L 50 85 L 20 70 Z"
+          fill="url(#dice-left)"
+          stroke="rgba(0,0,0,0.1)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 50 45 L 80 30 L 80 70 L 50 85 Z"
+          fill="url(#dice-right)"
+          stroke="rgba(0,0,0,0.15)"
+          stroke-width="0.5"
+        />
+        <circle
+          cx="35"
+          cy="28"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="50"
+          cy="30"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="65"
+          cy="32"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="38"
+          cy="36"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="62"
+          cy="39"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="30"
+          cy="52"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="40"
+          cy="63"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="50"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="55"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="65"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="70"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <path
+          d="M 50 15 L 80 30"
+          stroke="rgba(255,255,255,0.3)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+        <path
+          d="M 50 15 L 20 30"
+          stroke="rgba(255,255,255,0.25)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+      </svg>
+    </div>
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div
@@ -2022,14 +2651,15 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
 exports[`MeepleCard - Snapshots > Special States > should match snapshot without image 1`] = `
 <article
   aria-label="Game: No Image Game"
-  class="group relative cursor-pointer transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 shadow-sm hover:shadow-lg hover:-translate-y-1"
+  class="group relative cursor-pointer transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col rounded-2xl overflow-hidden bg-card/80 backdrop-blur-[12px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none border border-border/50 [box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)] hover:outline-2 hover:outline-offset-2 [&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]"
   data-entity="game"
   data-testid="meeple-card"
   data-variant="grid"
+  style="--mc-entity-color: hsl(25 95% 45%); will-change: transform, box-shadow, outline; transform: none;"
 >
   <span
     aria-hidden="true"
-    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
+    class="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250"
     style="background-color: rgb(224, 97, 6);"
   />
   <div
@@ -2045,21 +2675,211 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot without
     </span>
   </div>
   <div
-    class="relative overflow-hidden aspect-[7/10] rounded-t-2xl"
+    class="relative overflow-hidden rounded-t-2xl aspect-[7/10]"
   >
-    <img
-      alt="No Image Game"
-      class="object-cover transition-transform duration-500 group-hover:scale-105"
-      data-fill="true"
-      data-loading="lazy"
-      data-placeholder="blur"
-      data-sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-      src="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E"
-    />
+    <div
+      class="absolute inset-0 flex items-center justify-center"
+      style="background: linear-gradient(135deg, rgb(240, 217, 194), rgb(236, 176, 147));"
+    >
+      <svg
+        aria-hidden="true"
+        class="transition-transform duration-500 ease-out group-hover:rotate-12 opacity-60"
+        fill="none"
+        height="80"
+        role="presentation"
+        viewBox="0 0 100 100"
+        width="80"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <lineargradient
+            id="dice-top"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 65%, 75%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-left"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(280, 60%, 65%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+          </lineargradient>
+          <lineargradient
+            id="dice-right"
+            x1="0%"
+            x2="100%"
+            y1="0%"
+            y2="100%"
+          >
+            <stop
+              offset="0%"
+              stop-color="hsl(300, 55%, 55%)"
+            />
+            <stop
+              offset="100%"
+              stop-color="hsl(320, 50%, 50%)"
+            />
+          </lineargradient>
+          <filter
+            id="dot-shadow"
+          >
+            <fedropshadow
+              dx="0"
+              dy="1"
+              flood-opacity="0.3"
+              stdDeviation="1"
+            />
+          </filter>
+        </defs>
+        <path
+          d="M 50 15 L 80 30 L 50 45 L 20 30 Z"
+          fill="url(#dice-top)"
+          stroke="rgba(255,255,255,0.2)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 20 30 L 50 45 L 50 85 L 20 70 Z"
+          fill="url(#dice-left)"
+          stroke="rgba(0,0,0,0.1)"
+          stroke-width="0.5"
+        />
+        <path
+          d="M 50 45 L 80 30 L 80 70 L 50 85 Z"
+          fill="url(#dice-right)"
+          stroke="rgba(0,0,0,0.15)"
+          stroke-width="0.5"
+        />
+        <circle
+          cx="35"
+          cy="28"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="50"
+          cy="30"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="65"
+          cy="32"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="38"
+          cy="36"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="62"
+          cy="39"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.9"
+          r="2"
+        />
+        <circle
+          cx="30"
+          cy="52"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="40"
+          cy="63"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.85"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="50"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="55"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="60"
+          cy="65"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <circle
+          cx="70"
+          cy="70"
+          fill="white"
+          filter="url(#dot-shadow)"
+          opacity="0.8"
+          r="2.5"
+        />
+        <path
+          d="M 50 15 L 80 30"
+          stroke="rgba(255,255,255,0.3)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+        <path
+          d="M 50 15 L 20 30"
+          stroke="rgba(255,255,255,0.25)"
+          stroke-linecap="round"
+          stroke-width="1"
+        />
+      </svg>
+    </div>
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
       style="background: linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%);"
+    />
+    <div
+      aria-hidden="true"
+      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
+      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
   </div>
   <div

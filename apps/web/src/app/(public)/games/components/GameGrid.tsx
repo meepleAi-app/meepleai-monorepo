@@ -22,7 +22,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -33,6 +33,7 @@ import {
   GameCarouselSkeleton,
 } from '@/components/ui/data-display/game-carousel';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
 import { SharedGame } from '@/lib/api';
 
 export interface GameGridProps {
@@ -73,6 +74,10 @@ function mapToCarouselGame(game: SharedGame): CarouselGame {
 
 export function GameGrid({ games, variant, loading = false }: GameGridProps) {
   const router = useRouter();
+
+  // Batch API: Fetch library status for all games in a single call (Issue #4581)
+  const gameIds = useMemo(() => games.map(g => g.id), [games]);
+  const { data: batchStatus } = useBatchGameStatus(gameIds, !loading && gameIds.length > 0);
 
   const handleGameClick = (gameId: string) => {
     // Navigate to public game detail page (Issue #3522)
@@ -137,6 +142,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
             variant="grid"
             flippable
             onClick={() => handleGameClick(game.id)}
+            libraryStatus={batchStatus?.results[game.id]}
           />
         ))}
       </div>
@@ -152,6 +158,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
           game={game}
           variant="list"
           onClick={() => handleGameClick(game.id)}
+          libraryStatus={batchStatus?.results[game.id]}
         />
       ))}
     </div>

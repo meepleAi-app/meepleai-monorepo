@@ -30,6 +30,7 @@ import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
+import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
@@ -48,6 +49,12 @@ export interface MeepleGameCatalogCardProps {
   flippable?: boolean;
   /** Additional CSS classes */
   className?: string;
+  /**
+   * Optional library status from batch API.
+   * If provided, skips individual useGameInLibraryStatus hook call.
+   * Enables N+1 prevention when rendering multiple cards.
+   */
+  libraryStatus?: GameStatusSimple;
 }
 
 // ============================================================================
@@ -100,11 +107,18 @@ export function MeepleGameCatalogCard({
   onClick,
   flippable,
   className,
+  libraryStatus,
 }: MeepleGameCatalogCardProps) {
   const [isAdding, setIsAdding] = useState(false);
 
   // Check if game is already in user's library
-  const { data: status, isLoading: statusLoading } = useGameInLibraryStatus(game.id);
+  // Use provided batch status if available, otherwise fetch individually
+  const { data: individualStatus, isLoading: statusLoading } = useGameInLibraryStatus(
+    game.id,
+    !libraryStatus // Only fetch if libraryStatus not provided
+  );
+
+  const status = libraryStatus || individualStatus;
   const inLibrary = status?.inLibrary || false;
 
   // Mutation for adding game to library
@@ -156,7 +170,9 @@ export function MeepleGameCatalogCard({
 
   // Build actions for featured variant
   const showActions = variant === 'featured' || variant === 'hero';
-  const actions = showActions && !statusLoading
+  // Loading state: only show loading if fetching individually (no batch status provided)
+  const isLoadingStatus = !libraryStatus && statusLoading;
+  const actions = showActions && !isLoadingStatus
     ? [
         {
           label: inLibrary ? 'Nella Libreria' : isAdding ? 'Aggiunta...' : 'Aggiungi',
@@ -168,7 +184,7 @@ export function MeepleGameCatalogCard({
     : undefined;
 
   // Build badge
-  const badge = inLibrary && !statusLoading ? 'In Libreria' : undefined;
+  const badge = inLibrary && !isLoadingStatus ? 'In Libreria' : undefined;
 
   // Build flip data from game fields
   const flipData: MeepleCardFlipData | undefined = flippable
@@ -197,7 +213,7 @@ export function MeepleGameCatalogCard({
       metadata={metadata}
       badge={badge}
       actions={actions}
-      loading={statusLoading}
+      loading={isLoadingStatus}
       onClick={onClick ? () => onClick(game.id) : undefined}
       flippable={flippable && !!game.description}
       flipData={flipData}

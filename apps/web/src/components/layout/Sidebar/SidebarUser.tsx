@@ -153,7 +153,7 @@ export function SidebarUser({ isCollapsed }: SidebarUserProps) {
           {isAdmin && (
             <>
               <DropdownMenuItem asChild data-testid="sidebar-admin-item">
-                <Link href="/admin" className="flex items-center gap-2 cursor-pointer">
+                <Link href="/admin/overview" className="flex items-center gap-2 cursor-pointer">
                   <Shield className="h-4 w-4" />
                   <span>Admin Panel</span>
                 </Link>

@@ -282,6 +282,13 @@ export function ProcessingMonitor({ gameId, gameTitle }: ProcessingMonitorProps)
             <p className="text-sm text-green-600 dark:text-green-400/80">
               The PDF has been fully processed and indexed. The AI agent can now answer questions about this game.
             </p>
+            <Link
+              href={`/admin/games/${gameId}/agent/test?title=${encodeURIComponent(gameTitle ?? '')}`}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 transition-colors"
+            >
+              <RocketIcon className="h-4 w-4" />
+              Test Agent
+            </Link>
           </CardContent>
         </Card>
       )}

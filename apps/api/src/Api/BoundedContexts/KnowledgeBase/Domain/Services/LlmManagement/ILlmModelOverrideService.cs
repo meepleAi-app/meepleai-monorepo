@@ -41,4 +41,12 @@ internal interface ILlmModelOverrideService
     /// </summary>
     /// <returns>Status string with reason and timestamp</returns>
     string GetBudgetModeStatus();
+
+    /// <summary>
+    /// Get appropriate model when user budget is exhausted (per-user budget constraint)
+    /// </summary>
+    /// <param name="requestedModel">Originally requested model</param>
+    /// <param name="budgetExhausted">True if user budget is exhausted</param>
+    /// <returns>Free model alternative if budget exhausted, otherwise original model</returns>
+    string GetModelForBudgetConstraint(string requestedModel, bool budgetExhausted);
 }

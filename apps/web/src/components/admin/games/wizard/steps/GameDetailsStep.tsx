@@ -16,6 +16,8 @@ import {
   CheckCircle2Icon,
 } from 'lucide-react';
 
+import Image from 'next/image';
+
 import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 
@@ -57,9 +59,12 @@ export function GameDetailsStep({
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-lg">
             {selectedGame.thumbnailUrl ? (
-              <img
+              <Image
                 src={selectedGame.thumbnailUrl}
                 alt={selectedGame.name}
+                width={80}
+                height={80}
+                unoptimized
                 className="h-20 w-20 rounded-lg object-cover shrink-0 bg-slate-100 dark:bg-zinc-700"
               />
             ) : (

@@ -15,6 +15,8 @@ import {
   AlertTriangleIcon,
 } from 'lucide-react';
 
+import Image from 'next/image';
+
 import { Input } from '@/components/ui/primitives/input';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 
@@ -137,9 +139,12 @@ function BggGameCard({
       <CardContent className="flex items-center gap-3 p-3">
         {/* Thumbnail */}
         {game.thumbnailUrl ? (
-          <img
+          <Image
             src={game.thumbnailUrl}
             alt={game.name}
+            width={64}
+            height={64}
+            unoptimized
             className="h-16 w-16 rounded-lg object-cover shrink-0 bg-slate-100 dark:bg-zinc-700"
           />
         ) : (

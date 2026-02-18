@@ -4,6 +4,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.GameWizard;
@@ -12,7 +14,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands.GameWizard;
 /// Runs 8 standard board game questions against the RAG agent for a game,
 /// evaluates responses, and produces a quality report with grading.
 /// </summary>
-internal sealed class RunAgentAutoTestCommandHandler : IRequestHandler<RunAgentAutoTestCommand, AgentAutoTestResult>
+internal sealed class RunAgentAutoTestCommandHandler : ICommandHandler<RunAgentAutoTestCommand, AgentAutoTestResult>
 {
     private readonly IMediator _mediator;
     private readonly ISharedGameRepository _gameRepo;
@@ -39,9 +41,9 @@ internal sealed class RunAgentAutoTestCommandHandler : IRequestHandler<RunAgentA
         ISharedGameRepository gameRepo,
         ILogger<RunAgentAutoTestCommandHandler> logger)
     {
-        _mediator = mediator;
-        _gameRepo = gameRepo;
-        _logger = logger;
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _gameRepo = gameRepo ?? throw new ArgumentNullException(nameof(gameRepo));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<AgentAutoTestResult> Handle(RunAgentAutoTestCommand request, CancellationToken cancellationToken)
@@ -49,7 +51,7 @@ internal sealed class RunAgentAutoTestCommandHandler : IRequestHandler<RunAgentA
         var game = await _gameRepo.GetByIdAsync(request.GameId, cancellationToken).ConfigureAwait(false);
         if (game == null)
         {
-            throw new InvalidOperationException($"Game {request.GameId} not found");
+            throw new NotFoundException("Game", request.GameId.ToString());
         }
 
         _logger.LogInformation(

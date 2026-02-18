@@ -2,7 +2,6 @@ using Api.BoundedContexts.Administration.Application.Commands.GameWizard;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.Extensions;
 using MediatR;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing;
 
@@ -32,7 +31,7 @@ internal static class AdminAgentTestEndpoints
     private static async Task<IResult> HandleRunAutoTest(
         Guid gameId,
         HttpContext context,
-        [FromServices] IMediator mediator,
+        IMediator mediator,
         ILogger<Program> logger,
         CancellationToken ct)
     {
@@ -42,24 +41,12 @@ internal static class AdminAgentTestEndpoints
             GameId: gameId,
             RequestedByUserId: userId);
 
-        try
-        {
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation(
-                "AutoTest: Completed for game {GameId}. Grade={Grade}, Pass={Passed}/{Total}",
-                gameId, result.Report.OverallGrade, result.Report.Passed, result.Report.TotalTests);
+        logger.LogInformation(
+            "AutoTest: Completed for game {GameId}. Grade={Grade}, Pass={Passed}/{Total}",
+            gameId, result.Report.OverallGrade, result.Report.Passed, result.Report.TotalTests);
 
-            return Results.Ok(result);
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-        {
-            return Results.NotFound(new ProblemDetails
-            {
-                Title = "Game Not Found",
-                Detail = ex.Message,
-                Status = StatusCodes.Status404NotFound
-            });
-        }
+        return Results.Ok(result);
     }
 }

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.ProcessPendingPdfs;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -38,15 +39,16 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
             "Admin wizard: Launching processing for PDF {PdfId} (Game {GameId}) by user {UserId}",
             command.PdfDocumentId, command.GameId, command.LaunchedByUserId);
 
-        // Find the PDF document
+        // Find the PDF document (also verify it belongs to the specified game)
         var pdfEntity = await _dbContext.PdfDocuments
-            .FirstOrDefaultAsync(p => p.Id == command.PdfDocumentId, cancellationToken)
+            .FirstOrDefaultAsync(
+                p => p.Id == command.PdfDocumentId && p.GameId == command.GameId,
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (pdfEntity is null)
         {
-            throw new InvalidOperationException(
-                $"PDF document {command.PdfDocumentId} not found");
+            throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
         }
 
         // Set admin priority

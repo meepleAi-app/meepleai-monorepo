@@ -125,5 +125,27 @@ internal class AgentRepository : RepositoryBase, IAgentRepository
         return await DbContext.Set<AgentEntity>()
             .AnyAsync(a => a.Name == name, cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<List<Agent>> GetByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.Set<AgentEntity>()
+            .AsNoTracking()
+            .Where(a => a.GameId == gameId)
+            .OrderBy(a => a.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
+    }
+
+    public async Task<List<Agent>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.Set<AgentEntity>()
+            .AsNoTracking()
+            .Where(a => a.CreatedByUserId == userId)
+            .OrderBy(a => a.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(KnowledgeBaseMappers.ToDomain).ToList();
+    }
 }
 

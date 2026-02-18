@@ -19,6 +19,7 @@ import {
   CheckSquareIcon,
   ListIcon,
   TagIcon,
+  PlusCircleIcon,
   BrainCircuitIcon,
   BarChartIcon,
   CpuIcon,
@@ -133,6 +134,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/shared-games/all',
         label: 'All Games',
         icon: ListIcon,
+      },
+      {
+        href: '/admin/games/new',
+        label: 'Add Game',
+        icon: PlusCircleIcon,
       },
       {
         href: '/admin/shared-games/categories',

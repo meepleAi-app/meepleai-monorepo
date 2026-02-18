@@ -39,16 +39,18 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IMediator m) =>
 app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService svc) => ...);
 ```
 
-### DDD Bounded Contexts (11)
+### DDD Bounded Contexts (13)
 
 | Context | Responsibility |
 |---------|---------------|
 | Administration | Users, roles, audit, analytics |
 | Authentication | Auth flows, sessions, OAuth, 2FA |
+| BusinessSimulations | Ledger entries, cost scenarios, resource forecasts |
 | DocumentProcessing | PDF upload, extraction, chunking |
+| Gamification | Achievements, badges, leaderboards |
 | GameManagement | Catalog, sessions, FAQs, specs |
 | KnowledgeBase | RAG, AI agents, chat, vector search |
-| SessionTracking | User sessions, activity tracking |
+| SessionTracking | Session notes, scoring, activity tracking |
 | SharedGameCatalog | Community DB w/ soft-delete |
 | SystemConfiguration | Runtime config, flags |
 | UserLibrary | Collections, wishlist, history |
@@ -183,7 +185,7 @@ dotnet ef database update
 - **Value Object**: Immutable record + validation (`Email.Create()`)
 - **Exception**: Domain-specific (`GameNotFoundException`)
 
-*Full examples: `docs/02-development/coding-standards.md`*
+*Full examples: [docs/development/README.md](./docs/development/README.md)*
 
 ### TypeScript Frontend
 
@@ -193,7 +195,7 @@ dotnet ef database update
 - **Component**: Typed props + explicit JSX.Element return
 - **Store**: Zustand with TypeScript interface
 
-*Full examples: `docs/02-development/coding-standards.md`*
+*Full examples: [docs/development/README.md](./docs/development/README.md)*
 
 ## Testing
 
@@ -209,7 +211,7 @@ dotnet test --filter "BoundedContext=GameManagement"  # By context
 dotnet test /p:CollectCoverage=true                 # With coverage
 ```
 
-**Test Patterns**: `docs/05-testing/backend/backend-testing-patterns.md`
+**Test Patterns**: [docs/testing/backend/backend-testing-patterns.md](./docs/testing/backend/backend-testing-patterns.md)
 
 ### Frontend (Target: 85%+)
 
@@ -237,12 +239,10 @@ docker compose logs -f api                  # View logs
 docker compose down -v                      # Reset (⚠️ data loss!)
 ```
 
-**Docker Quick Reference**: See [docs/02-development/docker/](./docs/02-development/docker/)
-- **Quick Start** (5min): [quick-start.md](./docs/02-development/docker/quick-start.md)
-- **All Endpoints**: [service-endpoints.md](./docs/02-development/docker/service-endpoints.md)
-- **Clean Builds**: [clean-builds.md](./docs/02-development/docker/clean-builds.md)
-- **Commands**: [common-commands.md](./docs/02-development/docker/common-commands.md)
-- **Troubleshooting**: [troubleshooting.md](./docs/02-development/docker/troubleshooting.md)
+**Docker Quick Reference**: See [docs/deployment/](./docs/deployment/)
+- **Quick Start**: [docker-quickstart.md](./docs/deployment/docker-quickstart.md)
+- **Services**: [docker-services.md](./docs/deployment/docker-services.md)
+- **Cheatsheet**: [deployment-cheatsheet.md](./docs/deployment/deployment-cheatsheet.md)
 
 ## Project Structure
 
@@ -263,9 +263,9 @@ tests/Api.Tests/          # Backend test suite
 ## Documentation
 
 - **API**: http://localhost:8080/scalar/v1
-- **Docker Guides**: `docs/02-development/docker/` (Quick start, endpoints, troubleshooting)
-- **Dev Guides**: `docs/02-development/`, `docs/03-api/`, `docs/05-testing/`
-- **ADRs**: `docs/01-architecture/adr/`
+- **Dev Guides**: `docs/development/`, `docs/api/`, `docs/testing/`
+- **ADRs**: `docs/architecture/adr/`
+- **Deployment**: `docs/deployment/`
 
 ## Troubleshooting
 
@@ -326,7 +326,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 />
 ```
 
-**Docs**: `docs/frontend/components/meeple-card.md` | `docs/design-system/cards.md`
+**Docs**: [docs/frontend/meeple-card-v2-design-tokens.md](./docs/frontend/meeple-card-v2-design-tokens.md)
 
 ### Recent Learnings (Issues)
 
@@ -341,5 +341,5 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 ---
 
-**Last Updated**: 2026-02-04
+**Last Updated**: 2026-02-18
 **License**: Proprietary

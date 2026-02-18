@@ -1,6 +1,6 @@
 # Bounded Contexts Documentation
 
-**Quick Navigation** - Guida ai 10 Bounded Contexts DDD di MeepleAI
+**Quick Navigation** - Guida ai 13 Bounded Contexts DDD di MeepleAI
 
 ---
 
@@ -17,20 +17,23 @@ Un **Bounded Context** è un confine esplicito all'interno del quale un particol
 
 ## 📂 Bounded Contexts Overview
 
-MeepleAI ha **10 Bounded Contexts** organizzati per area funzionale:
+MeepleAI ha **13 Bounded Contexts** organizzati per area funzionale:
 
 | # | Context | Responsabilità | File | Status |
 |---|---------|----------------|------|--------|
-| 1 | **Authentication** | Autenticazione, sessioni, OAuth, 2FA, API keys | `authentication.md` | ✅ Production |
-| 2 | **GameManagement** | Catalogo giochi, sessioni di gioco, FAQ | `game-management.md` | ✅ Production |
-| 3 | **KnowledgeBase** | RAG system, AI agents, chat threads, vector search | `knowledge-base.md` | ✅ Production |
+| 1 | **Administration** | Gestione utenti, ruoli, audit logs, analytics | `administration.md` | ✅ Production |
+| 2 | **Authentication** | Autenticazione, sessioni, OAuth, 2FA, API keys | `authentication.md` | ✅ Production |
+| 3 | **BusinessSimulations** | Ledger entries, cost scenarios, resource forecasts | `business-simulations.md` | ✅ Production |
 | 4 | **DocumentProcessing** | PDF upload, extraction, chunking, validation | `document-processing.md` | ✅ Production |
-| 5 | **SharedGameCatalog** | Database community giochi con soft-delete | `shared-game-catalog.md` | ✅ Production |
-| 6 | **UserLibrary** | Collezioni giochi utente, wishlist, played history | `user-library.md` | ✅ Production |
-| 7 | **UserNotifications** | Notifiche in-app, email, push notifications | `user-notifications.md` | ✅ Production |
-| 8 | **Administration** | Gestione utenti, ruoli, audit logs, analytics | `administration.md` | ✅ Production |
-| 9 | **SystemConfiguration** | Config runtime, feature flags, environment settings | `system-configuration.md` | ✅ Production |
-| 10 | **WorkflowIntegration** | n8n workflows, webhooks, error logging | `workflow-integration.md` | 🚧 Beta |
+| 5 | **Gamification** | Achievements, badges, leaderboards | `gamification.md` | ✅ Production |
+| 6 | **GameManagement** | Catalogo giochi, sessioni di gioco, FAQ | `game-management.md` | ✅ Production |
+| 7 | **KnowledgeBase** | RAG system, AI agents, chat threads, vector search | `knowledge-base.md` | ✅ Production |
+| 8 | **SessionTracking** | Session notes, scoring, deck tracking, activity | `session-tracking.md` | ✅ Production |
+| 9 | **SharedGameCatalog** | Database community giochi con soft-delete | `shared-game-catalog.md` | ✅ Production |
+| 10 | **SystemConfiguration** | Config runtime, feature flags, environment settings | `system-configuration.md` | ✅ Production |
+| 11 | **UserLibrary** | Collezioni giochi utente, wishlist, played history | `user-library.md` | ✅ Production |
+| 12 | **UserNotifications** | Notifiche in-app, email, push notifications | `user-notifications.md` | ✅ Production |
+| 13 | **WorkflowIntegration** | n8n workflows, webhooks, error logging | `workflow-integration.md` | 🚧 Beta |
 
 ---
 
@@ -48,6 +51,9 @@ Gestire notifiche utente | UserNotifications | `user-notifications.md`
 Gestire utenti admin | Administration | `administration.md`
 Configurare feature flags | SystemConfiguration | `system-configuration.md`
 Integrare webhook esterno | WorkflowIntegration | `workflow-integration.md`
+Tracciare costi e budget | BusinessSimulations | `business-simulations.md`
+Gestire achievements/badges | Gamification | `gamification.md`
+Gestire sessioni di gioco live | SessionTracking | `session-tracking.md`
 
 ---
 
@@ -266,43 +272,49 @@ var game = await _httpClient.GetFromJsonAsync<GameDto>(
 ### Code Location
 ```
 apps/api/src/Api/BoundedContexts/
+├── Administration/
 ├── Authentication/
+├── BusinessSimulations/
+├── DocumentProcessing/
+├── Gamification/
 ├── GameManagement/
 ├── KnowledgeBase/
-├── DocumentProcessing/
+├── SessionTracking/
 ├── SharedGameCatalog/
+├── SystemConfiguration/
 ├── UserLibrary/
 ├── UserNotifications/
-├── Administration/
-├── SystemConfiguration/
 └── WorkflowIntegration/
 ```
 
 ### Documentation Location
 ```
-docs/07-bounded-contexts/
+docs/bounded-contexts/
+├── administration.md           # Admin context details
 ├── authentication.md           # Auth context details
+├── business-simulations.md     # Budget & cost tracking details
+├── document-processing.md      # PDF context details
+├── gamification.md             # Achievements & badges details
 ├── game-management.md          # Games context details
 ├── knowledge-base.md           # RAG context details
-├── document-processing.md      # PDF context details
+├── session-tracking.md         # Session tracking details
 ├── shared-game-catalog.md      # Shared catalog details
+├── system-configuration.md     # Config context details
 ├── user-library.md             # User library details
 ├── user-notifications.md       # User notifications details
-├── administration.md           # Admin context details
-├── system-configuration.md     # Config context details
 ├── workflow-integration.md     # Workflow context details
 └── README.md                   # This file
 ```
 
 ### Related Documentation
-- [DDD Quick Reference](../01-architecture/ddd/quick-reference.md) - DDD patterns
-- [CQRS Flow Diagram](../01-architecture/diagrams/cqrs-mediatr-flow.md) - Request flow
-- [Bounded Contexts Diagram](../01-architecture/diagrams/bounded-contexts-interactions.md) - Context map
-- [Development Guide](../02-development/README.md) - Adding features workflow
+- [DDD Quick Reference](../architecture/ddd/quick-reference.md) - DDD patterns
+- [CQRS Flow Diagram](../architecture/diagrams/cqrs-mediatr-flow.md) - Request flow
+- [Bounded Contexts Diagram](../architecture/diagrams/bounded-contexts-interactions.md) - Context map
+- [Development Guide](../development/README.md) - Adding features workflow
 
 ---
 
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-02-18
 **Maintainers**: Architecture Team
-**Total Contexts**: 10
+**Total Contexts**: 13
 **Pattern**: DDD + CQRS + Event-Driven

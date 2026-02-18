@@ -93,6 +93,15 @@ if (!builder.Environment.IsEnvironment("Testing") && !builder.Environment.IsEnvi
     var secretLoader = new Api.Infrastructure.Configuration.SecretLoader(builder.Configuration, tempLogger);
     var secretValidationResult = secretLoader.LoadAndValidate();
 
+    // Add loaded secret values to IConfiguration so they're available via config["KEY"]
+    // Environment.SetEnvironmentVariable() alone is not enough - the EnvironmentVariables
+    // configuration provider already captured its snapshot at CreateBuilder() time
+    var loadedSecrets = secretLoader.GetLoadedValues();
+    if (loadedSecrets.Count > 0)
+    {
+        builder.Configuration.AddInMemoryCollection(loadedSecrets.Select(kv => new KeyValuePair<string, string?>(kv.Key, kv.Value)));
+    }
+
     if (!secretValidationResult.IsValid)
     {
         Log.Fatal(
@@ -507,6 +516,7 @@ v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admi
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
+v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)

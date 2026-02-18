@@ -58,6 +58,16 @@ internal interface IBlobStorageService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>True if file exists</returns>
     Task<bool> ExistsAsync(string fileId, string gameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates a pre-signed URL for secure, temporary file downloads.
+    /// Returns null for local storage (use API download endpoint instead).
+    /// </summary>
+    /// <param name="fileId">File ID to generate URL for</param>
+    /// <param name="gameId">Game ID for organization</param>
+    /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value)</param>
+    /// <returns>Pre-signed download URL, or null if not supported or file not found</returns>
+    Task<string?> GetPresignedDownloadUrlAsync(string fileId, string gameId, int? expirySeconds = null);
 }
 
 /// <summary>

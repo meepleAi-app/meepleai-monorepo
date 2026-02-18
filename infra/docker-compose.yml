@@ -93,6 +93,56 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  # S3-compatible object storage for development and testing
+  # Use STORAGE_PROVIDER=s3 in storage.secret to activate
+  minio:
+    image: minio/minio:latest
+    container_name: meepleai-minio
+    restart: unless-stopped
+    profiles: [dev, full]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "127.0.0.1:9000:9000"   # S3 API
+      - "127.0.0.1:9001:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # MinIO bucket initialization (runs once, creates meepleai-uploads bucket)
+  minio-init:
+    image: minio/mc:latest
+    container_name: meepleai-minio-init
+    profiles: [dev, full]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin123;
+      mc mb myminio/meepleai-uploads --ignore-existing;
+      echo 'Bucket meepleai-uploads ready';
+      "
+    networks:
+      - meepleai
+
   # ISSUE-922: Email testing service for development (Mailpit - modern Mailhog alternative)
   mailpit:
     image: axllent/mailpit:v1.22
@@ -661,6 +711,7 @@ services:
       - ./secrets/bgg.secret
       - ./secrets/email.secret
       - ./secrets/embedding-service.secret
+      - ./secrets/storage.secret
       - ./env/api.env.dev
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -787,6 +838,7 @@ volumes:
 
   # Application Data
   pdf_uploads:         # Persistent storage for uploaded PDFs
+  minio_data:          # MinIO S3-compatible object storage
 
   # Observability & Monitoring
   prometheus_data:

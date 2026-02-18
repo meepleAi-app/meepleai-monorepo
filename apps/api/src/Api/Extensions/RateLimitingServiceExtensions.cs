@@ -85,6 +85,10 @@ internal static class RateLimitingServiceExtensions
                 // Issue #4338: Agent query rate limiting policy
                 options.AddPolicy("AgentQuery", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #4683: Agent creation rate limiting policy
+                options.AddPolicy("AgentCreation", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
             return services;
@@ -308,6 +312,23 @@ internal static class RateLimitingServiceExtensions
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 30, // 30 queries/min per user (AI queries are expensive)
                         SegmentsPerWindow = 6, // 10-second segments
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Issue #4683: Agent creation rate limiting (10 creations/min per user)
+            options.AddPolicy("AgentCreation", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"agent-creation-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });

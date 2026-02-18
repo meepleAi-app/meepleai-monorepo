@@ -58,7 +58,7 @@ internal class AgentEntityConfiguration : IEntityTypeConfiguration<AgentEntity>
             .OnDelete(DeleteBehavior.SetNull);
 
         // Indexes for common queries
-        builder.HasIndex(e => e.Name).IsUnique();
+        builder.HasIndex(e => e.Name);
         builder.HasIndex(e => e.Type);
         builder.HasIndex(e => e.IsActive);
         builder.HasIndex(e => e.LastInvokedAt);
@@ -67,5 +67,10 @@ internal class AgentEntityConfiguration : IEntityTypeConfiguration<AgentEntity>
         builder.HasIndex(e => e.CreatedByUserId);
         builder.HasIndex(e => new { e.GameId, e.CreatedByUserId });
         builder.HasIndex(e => new { e.GameId, e.Type });
+
+        // Issue #4683: Per-user name uniqueness (only for user-created agents)
+        builder.HasIndex(e => new { e.CreatedByUserId, e.Name })
+            .IsUnique()
+            .HasFilter("\"CreatedByUserId\" IS NOT NULL");
     }
 }

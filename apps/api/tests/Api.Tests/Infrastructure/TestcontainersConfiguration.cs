@@ -271,6 +271,40 @@ public static class TestcontainersConfiguration
 
     #endregion
 
+    #region MinIO (S3) Configuration
+
+    /// <summary>
+    /// MinIO container image for S3-compatible storage integration testing.
+    /// </summary>
+    public const string MinioImage = "minio/minio:latest";
+
+    /// <summary>
+    /// MinIO S3 API port.
+    /// </summary>
+    public const int MinioApiPort = 9000;
+
+    /// <summary>
+    /// MinIO console port.
+    /// </summary>
+    public const int MinioConsolePort = 9001;
+
+    /// <summary>
+    /// MinIO root user for test environment.
+    /// </summary>
+    public const string MinioRootUser = "minioadmin";
+
+    /// <summary>
+    /// MinIO root password for test environment.
+    /// </summary>
+    public const string MinioRootPassword = "minioadmin123";
+
+    /// <summary>
+    /// Default test bucket name.
+    /// </summary>
+    public const string MinioTestBucket = "meepleai-uploads";
+
+    #endregion
+
     #region Environment Variables
 
     /// <summary>

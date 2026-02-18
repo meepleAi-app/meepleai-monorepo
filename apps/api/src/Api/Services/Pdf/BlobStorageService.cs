@@ -205,6 +205,15 @@ internal class BlobStorageService : IBlobStorageService
         }
     }
 
+    /// <summary>
+    /// Local storage does not support pre-signed URLs.
+    /// Consumers should fall back to the API download endpoint when this returns null.
+    /// </summary>
+    public Task<string?> GetPresignedDownloadUrlAsync(string fileId, string gameId, int? expirySeconds = null)
+    {
+        return Task.FromResult<string?>(null);
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

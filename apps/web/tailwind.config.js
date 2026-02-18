@@ -27,6 +27,14 @@ module.exports = {
         shake: 'shake 0.4s ease-in-out',
         'bounce-slow': 'bounce 1s infinite',
         'heart-beat': 'heartBeat 0.6s ease-in-out',
+        // MeepleCard v2 animations (Issue #4604)
+        'mc-shimmer': 'mc-shimmer 0.8s ease-out forwards',
+        'mc-float-up': 'mc-float-up 0.35s ease-out both',
+        'mc-badge-pulse': 'mc-badge-pulse 2s ease-in-out infinite',
+        'mc-pulse-glow': 'mc-pulse-glow 2s ease-in-out infinite',
+        'mc-unread-bounce': 'mc-unread-bounce 0.5s ease-out',
+        'mc-live-pulse': 'mc-live-pulse 2s ease-in-out infinite',
+        'mc-spin-slow': 'mc-spin-slow 8s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -58,6 +66,36 @@ module.exports = {
           '0%, 100%': { transform: 'scale(1)' },
           '15%': { transform: 'scale(1.15)' },
           '30%': { transform: 'scale(1)' },
+        },
+        // MeepleCard v2 keyframes (Issue #4604)
+        'mc-shimmer': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'mc-float-up': {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'mc-badge-pulse': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.08)' },
+        },
+        'mc-pulse-glow': {
+          '0%, 100%': { boxShadow: '0 0 0 0 currentColor' },
+          '50%': { boxShadow: '0 0 12px 4px currentColor' },
+        },
+        'mc-unread-bounce': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '30%': { transform: 'scale(1.2)' },
+          '60%': { transform: 'scale(0.95)' },
+        },
+        'mc-live-pulse': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.4' },
+        },
+        'mc-spin-slow': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
         },
       },
     },

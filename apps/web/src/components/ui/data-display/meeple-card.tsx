@@ -58,6 +58,7 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import Image from 'next/image';
 
+import { DiceIcon3D } from '@/components/ui/icons/dice-icon-3d';
 import {
   Tooltip,
   TooltipContent,
@@ -327,7 +328,7 @@ const meepleCardVariants = cva(
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          'hover:-translate-y-2',
+          // Transform applied via inline style (Tailwind v4 issue)
         ],
         list: [
           'flex flex-row items-center gap-4 p-3 rounded-xl',
@@ -346,7 +347,7 @@ const meepleCardVariants = cva(
           'dark:bg-card dark:backdrop-blur-none',
           'border border-border/50',
           '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          'hover:-translate-y-2',
+          // Transform applied via inline style (Tailwind v4 issue)
         ],
         hero: [
           'relative flex flex-col rounded-3xl overflow-hidden',
@@ -365,10 +366,10 @@ const meepleCardVariants = cva(
 const coverVariants = cva('relative overflow-hidden', {
   variants: {
     variant: {
-      grid: 'aspect-[7/10] rounded-t-2xl', // Issue #4030: Board game card proportions
+      grid: 'rounded-t-2xl', // aspect-ratio applied conditionally per entity type
       list: 'w-16 h-16 rounded-lg flex-shrink-0',
       compact: 'w-10 h-10 rounded-md flex-shrink-0',
-      featured: 'aspect-[16/9]',
+      featured: '', // aspect-ratio applied conditionally per entity type
       hero: 'absolute inset-0',
     },
   },
@@ -526,7 +527,7 @@ function VerticalTagStack({
 }
 
 /**
- * Cover image with optional gradient overlay
+ * Cover image with optional gradient overlay and entity-specific placeholders
  */
 function CoverImage({
   src,
@@ -543,45 +544,95 @@ function CoverImage({
 }) {
   // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
-  const placeholder =
-    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E';
 
   // Treat placehold.co URLs as "no image" - they return SVGs that Next.js Image can't optimize
   const isPlaceholder = src?.includes('placehold.co');
-  const imageSrc = (src && !isPlaceholder) ? src : placeholder;
+  const hasImage = src && !isPlaceholder;
+
+  // v2: Entity-specific aspect ratios (Issue #4604)
+  // chatSession uses shorter 4:3 ratio (like playing card), others use tall 7:10
+  const aspectRatioClass =
+    variant === 'grid'
+      ? entity === 'chatSession'
+        ? 'aspect-[4/3]'
+        : 'aspect-[7/10]'
+      : variant === 'featured'
+        ? entity === 'chatSession'
+          ? 'aspect-[3/1]'
+          : 'aspect-[16/9]'
+        : '';
 
   const showOverlay = variant === 'hero' || variant === 'featured' || variant === 'grid';
+
+  // v2: Entity-specific gradient backgrounds for placeholders
+  const entityGradients: Record<MeepleEntityType, string> = {
+    game: 'linear-gradient(135deg, hsl(30,60%,85%), hsl(20,70%,75%))',
+    chatSession: 'linear-gradient(135deg, hsl(220,30%,88%), hsl(220,50%,75%))',
+    agent: 'linear-gradient(135deg, hsl(38,40%,85%), hsl(38,60%,70%))',
+    player: 'linear-gradient(135deg, hsl(262,30%,85%), hsl(262,50%,75%))',
+    session: 'linear-gradient(135deg, hsl(240,30%,85%), hsl(240,40%,70%))',
+    event: 'linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%))',
+    document: 'linear-gradient(135deg, hsl(210,30%,85%), hsl(210,40%,70%))',
+    custom: 'linear-gradient(135deg, hsl(220,30%,85%), hsl(220,40%,70%))',
+  };
+
+  // Entity emoji fallbacks (when no image)
+  const entityEmoji: Record<MeepleEntityType, string> = {
+    game: '', // Uses DiceIcon3D component instead
+    chatSession: '💬',
+    agent: '🤖',
+    player: '👤',
+    session: '🎲',
+    event: '🏆',
+    document: '📄',
+    custom: '🎲',
+  };
 
   return (
     <div className={cn(
       coverVariants({ variant }),
-      // ChatSession: shorter image to keep total card height like a playing card
-      entity === 'chatSession' && variant === 'grid' && 'aspect-[4/3]',
-      entity === 'chatSession' && variant === 'featured' && 'aspect-[3/1]',
+      aspectRatioClass,
     )}>
-      <Image
-        src={imageSrc}
-        alt={alt}
-        fill
-        sizes={
-          variant === 'hero'
-            ? '100vw'
-            : variant === 'featured'
-              ? '(max-width: 768px) 100vw, 50vw'
-              : variant === 'grid'
-                ? '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
-                : '64px'
-        }
-        className={cn(
-          'object-cover transition-transform duration-500',
-          'group-hover:scale-105'
-        )}
-        loading="lazy"
-        placeholder="blur"
-        blurDataURL={placeholder}
-      />
+      {hasImage ? (
+        /* Real image (game cover, agent icon, avatar, etc.) */
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes={
+            variant === 'hero'
+              ? '100vw'
+              : variant === 'featured'
+                ? '(max-width: 768px) 100vw, 50vw'
+                : variant === 'grid'
+                  ? '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+                  : '64px'
+          }
+          className={cn(
+            'object-cover transition-transform duration-500',
+            'group-hover:scale-105' // v2: scale-105 = 1.05 (bracket notation issue in v4)
+          )}
+          loading="lazy"
+        />
+      ) : (
+        /* v2 Placeholder: gradient background + entity icon */
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            // eslint-disable-next-line security/detect-object-injection
+            background: entityGradients[entity],
+          }}
+        >
+          {entity === 'game' ? (
+            <DiceIcon3D size={variant === 'grid' ? 'md' : variant === 'featured' ? 'lg' : 'sm'} className="opacity-60" />
+          ) : (
+            // eslint-disable-next-line security/detect-object-injection
+            <span className="text-6xl opacity-50" aria-hidden="true">{entityEmoji[entity]}</span>
+          )}
+        </div>
+      )}
 
-      {/* Canvas-style gradient overlay (Direction C influence) */}
+      {/* v2: Entity-colored gradient overlay (stronger than before) */}
       {showOverlay && (
         <div
           className="absolute inset-0 pointer-events-none"
@@ -762,8 +813,10 @@ function MeepleCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant 
  *
  * Renders a polymorphic card supporting games, players, collections, events,
  * and custom entity types with multiple layout variants.
+ *
+ * Note: React.memo removed for v2 hover transform to work with internal state
  */
-export const MeepleCard = React.memo(function MeepleCard({
+export function MeepleCard({
   id,
   entity,
   variant = 'grid',
@@ -829,6 +882,8 @@ export const MeepleCard = React.memo(function MeepleCard({
   unreadCount,
   navigateTo,
 }: MeepleCardProps) {
+  const [isHovered, setIsHovered] = React.useState(false);
+
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
   const isHeroOrFeatured = variant === 'hero' || variant === 'featured';
@@ -856,18 +911,30 @@ export const MeepleCard = React.memo(function MeepleCard({
     <Component
       className={cn(
         meepleCardVariants({ variant }),
-        // Entity glow ring on hover — v2 (Issue #4604)
-        // Note: hover:outline-2 in Tailwind v4 sets outline-style:solid (not auto), so inline outlineColor works
+        // v2: Entity glow outline on hover (Issue #4604)
+        // outline-2 with entity color at 40% opacity creates subtle colored halo
         variant !== 'compact' && 'hover:outline-2 hover:outline-offset-2',
+        // v2: Hover lift effect (using @media to ensure it works)
+        variant === 'grid' && '[&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]',
+        variant === 'featured' && '[&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]',
         selected && 'ring-2 ring-offset-2 bg-accent/10',
         selected && `ring-[hsl(${color})]`,
         className
       )}
       style={{
-        // Entity glow color for hover outline
+        // v2: Entity-colored outline for hover glow effect + hover transform
         '--mc-entity-color': `hsl(${color})`,
-        outlineColor: `hsl(${color} / 0.4)`,
+        outlineColor: `hsla(${color}, 0.4)`,
+        willChange: 'transform, box-shadow, outline',
+        // v2: Inline transform (Tailwind v4 hover issue workaround)
+        transform: isHovered && (variant === 'grid' || variant === 'featured')
+          ? 'translateY(-8px)'
+          : isHovered && variant === 'hero'
+            ? 'scale(1.01)'
+            : 'none',
       } as React.CSSProperties}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onClick={isInteractive ? onClick : undefined}
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
@@ -1208,7 +1275,7 @@ export const MeepleCard = React.memo(function MeepleCard({
   }
 
   return cardContent;
-});
+}
 
 // ============================================================================
 // Exports

@@ -17,7 +17,7 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -36,11 +36,22 @@ import {
   Package,
   Star,
   LayoutGrid,
+  GalleryHorizontalEnd,
+  BookOpen,
+  Gamepad2,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/navigation/dropdown-menu';
+import { GameCarousel, type CarouselGame } from '@/components/ui/data-display/game-carousel';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
@@ -58,6 +69,7 @@ import {
   useLibraryQuota,
 } from '@/hooks/queries/useLibrary';
 import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
+import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
 
@@ -65,7 +77,7 @@ import { cn } from '@/lib/utils';
 // Types
 // ============================================================================
 
-export type ViewMode = 'grid' | 'list';
+export type ViewMode = 'grid' | 'list' | 'carousel';
 export type SortOption = 'addedAt' | 'title' | 'favorite' | 'playCount';
 
 export interface CollectionDashboardProps {
@@ -257,15 +269,17 @@ function CollectionToolbar({
     owned: number;
   };
 }) {
+  const { t } = useTranslation();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce search input (300ms)
   const handleSearchInput = useCallback((value: string) => {
     setLocalSearch(value);
-    const timer = setTimeout(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
       onSearchChange(value);
     }, 300);
-    return () => clearTimeout(timer);
   }, [onSearchChange]);
 
   const handleSortChange = (value: string) => {
@@ -386,15 +400,42 @@ function CollectionToolbar({
             >
               <List className="h-4 w-4" />
             </Button>
+            <Button
+              variant={viewMode === 'carousel' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onViewModeChange('carousel')}
+              aria-label="Carousel view"
+              data-testid="view-mode-carousel"
+            >
+              <GalleryHorizontalEnd className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Add Game Button */}
-          <Button asChild className="gap-2">
-            <Link href="/games/add">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Aggiungi</span>
-            </Link>
-          </Button>
+          {/* Add Game Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Aggiungi</span>
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/games/add" className="flex items-center gap-2 cursor-pointer">
+                  <BookOpen className="h-4 w-4" />
+                  {t('collection.addFromCatalog')}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/library/private/add" className="flex items-center gap-2 cursor-pointer">
+                  <Gamepad2 className="h-4 w-4" />
+                  {t('collection.addPrivateGame')}
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -508,6 +549,7 @@ function GameGridSkeleton({ count = 8 }: { count?: number }) {
 // ============================================================================
 
 export function CollectionDashboard({ className }: CollectionDashboardProps) {
+  const { t } = useTranslation();
   // Local state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -524,7 +566,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
     pageSize,
     search: searchQuery || undefined,
     favoritesOnly: favoritesOnly || undefined,
-    states: stateFilter.length > 0 ? stateFilter : undefined,
+    stateFilter: stateFilter.length > 0 ? stateFilter : undefined,
     sortBy: sortBy === 'playCount' ? 'addedAt' : sortBy, // API doesn't support playCount yet
     sortDescending,
   }), [page, pageSize, searchQuery, favoritesOnly, stateFilter, sortBy, sortDescending]);
@@ -642,6 +684,18 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
     });
   }, [libraryData]);
 
+  // Transform games to CarouselGame format for carousel view
+  const carouselGames: CarouselGame[] = useMemo(() => {
+    if (!libraryData?.items) return [];
+    return libraryData.items.map(entry => ({
+      id: entry.gameId,
+      title: entry.gameTitle,
+      subtitle: entry.gamePublisher ?? undefined,
+      imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
+      hasPdfDocuments: entry.hasPdfDocuments,
+    }));
+  }, [libraryData]);
+
   return (
     <div className={cn('space-y-6', className)} data-testid="collection-dashboard">
       {/* Hero Stats Section */}
@@ -701,38 +755,47 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
               </p>
             </div>
 
-            {/* Game Grid */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${viewMode}-${page}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className={cn(
-                  viewMode === 'grid'
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                    : 'flex flex-col gap-3'
-                )}
-                data-testid="collection-grid"
-              >
-                {games.map(game => (
-                  <MeepleCard
-                    key={game.id}
-                    id={game.id}
-                    entity="game"
-                    title={game.title}
-                    imageUrl={game.imageUrl}
-                    variant={viewMode === 'list' ? 'list' : 'grid'}
-                    status={game.status}
-                    metadata={[
-                      { label: 'Year', value: game.yearPublished?.toString() },
-                      { label: 'Plays', value: game.playCount.toString() },
-                    ].filter(m => m.value) as Array<{ label: string; value: string }>}
-                  />
-                ))}
-              </motion.div>
-            </AnimatePresence>
+            {/* Game Grid / Carousel */}
+            {viewMode === 'carousel' ? (
+              <GameCarousel
+                games={carouselGames}
+                flippable={false}
+                showDots
+                data-testid="collection-carousel"
+              />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${viewMode}-${page}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={cn(
+                    viewMode === 'grid'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+                      : 'flex flex-col gap-3'
+                  )}
+                  data-testid="collection-grid"
+                >
+                  {games.map(game => (
+                    <MeepleCard
+                      key={game.id}
+                      id={game.id}
+                      entity="game"
+                      title={game.title}
+                      imageUrl={game.imageUrl}
+                      variant={viewMode === 'list' ? 'list' : 'grid'}
+                      status={game.status}
+                      metadata={[
+                        { label: t('collection.year'), value: game.yearPublished?.toString() },
+                        { label: t('collection.plays'), value: game.playCount.toString() },
+                      ].filter(m => m.value) as Array<{ label: string; value: string }>}
+                    />
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+            )}
 
             {/* Pagination */}
             {libraryData && libraryData.totalPages > 1 && (

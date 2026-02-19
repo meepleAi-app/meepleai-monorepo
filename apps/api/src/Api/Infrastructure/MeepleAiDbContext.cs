@@ -164,6 +164,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<Api.Infrastructure.Entities.SessionTracking.CardEntity> Cards => Set<Api.Infrastructure.Entities.SessionTracking.CardEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity> SessionNotes => Set<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity>();
 
+    // Issue #4754: ToolState for live game sessions
+    public DbSet<ToolStateEntity> ToolStates => Set<ToolStateEntity>();
+
     // Issue #4220: Notification preferences
     public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity> NotificationPreferences => Set<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity>();
 
@@ -233,6 +236,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(); // ISSUE-4753
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(); // ISSUE-4754
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916

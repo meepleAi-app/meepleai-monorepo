@@ -279,6 +279,120 @@ export interface CollectionDetailData {
 }
 
 // ============================================================================
+// Interactive Card Deck Types (Issue #4763)
+// ============================================================================
+
+/** Card zone in the deck system */
+export type CardZone = 'deck' | 'hand' | 'discard' | 'play';
+
+/** Single card in the deck */
+export interface CardEntry {
+  id: string;
+  name: string;
+  zone: CardZone;
+  faceUp: boolean;
+  order: number;
+}
+
+/** Card deck runtime state */
+export interface CardDeckState {
+  toolName: string;
+  deckType: string;
+  cards: CardEntry[];
+  deckCount: number;
+  handCount: number;
+  discardCount: number;
+  shuffleable: boolean;
+  allowDraw: boolean;
+  allowDiscard: boolean;
+  allowPeek: boolean;
+  allowReturnToDeck: boolean;
+}
+
+/** Card deck action handlers */
+export interface CardDeckActions {
+  onDraw?: () => void;
+  onDiscard?: (cardId: string) => void;
+  onShuffle?: () => void;
+  onPeek?: () => void;
+  onReturnToDeck?: (cardId: string) => void;
+}
+
+// ============================================================================
+// Interactive Timer Types (Issue #4763)
+// ============================================================================
+
+/** Timer running state */
+export type TimerStatus = 'idle' | 'running' | 'paused' | 'warning' | 'expired';
+
+/** Single timer runtime state */
+export interface TimerState {
+  toolName: string;
+  timerType: string;
+  totalSeconds: number;
+  remainingSeconds: number;
+  status: TimerStatus;
+  color?: string;
+  isPerPlayer: boolean;
+  warningThresholdSeconds?: number;
+  /** Per-player remaining seconds (keyed by playerId) */
+  playerTimers?: Record<string, { remainingSeconds: number; status: TimerStatus }>;
+  activePlayerId?: string;
+}
+
+/** Timer action handlers */
+export interface TimerActions {
+  onStart?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onReset?: () => void;
+}
+
+// ============================================================================
+// Events Timeline Types (Issue #4763)
+// ============================================================================
+
+/** Extended event types for timeline filtering */
+export type SessionEventType = 'system' | 'turn' | 'score' | 'action' | 'media' | 'phase' | 'snapshot' | 'chat';
+
+/** Enhanced timeline event with expanded details */
+export interface EnhancedTimelineEvent {
+  id: string;
+  timestamp: string;
+  type: SessionEventType;
+  label: string;
+  description?: string;
+  playerId?: string;
+  playerName?: string;
+  turnNumber?: number;
+  snapshotId?: string;
+}
+
+/** Events timeline data */
+export interface EventsTimelineData {
+  events: EnhancedTimelineEvent[];
+  totalEvents: number;
+}
+
+/** Events timeline action handlers */
+export interface EventsTimelineActions {
+  onEventClick?: (event: EnhancedTimelineEvent) => void;
+  onNavigateToSnapshot?: (snapshotId: string) => void;
+}
+
+// ============================================================================
+// Turn Phase Indicator Types (Issue #4763)
+// ============================================================================
+
+/** Turn phase state */
+export interface TurnPhaseState {
+  phases: string[];
+  currentPhaseIndex: number;
+  currentTurnNumber: number;
+  totalTurns?: number;
+}
+
+// ============================================================================
 // Component Props
 // ============================================================================
 

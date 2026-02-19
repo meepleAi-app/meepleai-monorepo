@@ -2,6 +2,7 @@
  * ExtraMeepleCard - Barrel exports
  * Issue #4757 - ExtraMeepleCard Component Base + Session Tabs
  * Issue #4762 - Media Tab + AI Tab + Other Entity Types
+ * Issue #4763 - Interactive Cards + Timer + Events Timeline UI
  */
 
 export { ExtraMeepleCard } from './ExtraMeepleCard';
@@ -12,6 +13,10 @@ export {
 } from './EntityExtraMeepleCard';
 export { MediaTab } from './tabs/MediaTab';
 export { AITab } from './tabs/AITab';
+export { InteractiveCardDeck } from './tabs/InteractiveCardDeck';
+export { InteractiveTimer } from './tabs/InteractiveTimer';
+export { EventsTimeline } from './tabs/EventsTimeline';
+export { TurnPhaseIndicator } from './tabs/TurnPhaseIndicator';
 export type {
   ExtraMeepleCardProps,
   ExtraMeepleCardTab,
@@ -37,4 +42,16 @@ export type {
   GameDetailData,
   PlayerDetailData,
   CollectionDetailData,
+  CardZone,
+  CardEntry,
+  CardDeckState,
+  CardDeckActions,
+  TimerStatus,
+  TimerState,
+  TimerActions,
+  SessionEventType,
+  EnhancedTimelineEvent,
+  EventsTimelineData,
+  EventsTimelineActions,
+  TurnPhaseState,
 } from './types';

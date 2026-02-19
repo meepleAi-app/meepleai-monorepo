@@ -41,6 +41,7 @@ internal static class DocumentProcessingServiceExtensions
 
         // Domain Layer
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>(); // Issue #4731: Queue commands
         services.AddScoped<IChunkedUploadSessionRepository, ChunkedUploadSessionRepository>();
         services.AddScoped<IDocumentCollectionRepository, DocumentCollectionRepository>(); // ISSUE-2051: Document collections
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

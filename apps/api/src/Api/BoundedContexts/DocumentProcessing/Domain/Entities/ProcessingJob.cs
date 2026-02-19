@@ -251,6 +251,43 @@ public sealed class ProcessingJob : AggregateRoot<Guid>
     /// </summary>
     public bool CanRetry => Status == JobStatus.Failed && RetryCount < MaxRetries;
 
+    /// <summary>
+    /// Reconstitute a ProcessingJob from persistence data.
+    /// Issue #4731: Repository mapping support.
+    /// </summary>
+    internal static ProcessingJob Reconstitute(
+        Guid id,
+        Guid pdfDocumentId,
+        Guid userId,
+        JobStatus status,
+        int priority,
+        ProcessingStepType? currentStep,
+        DateTimeOffset createdAt,
+        DateTimeOffset? startedAt,
+        DateTimeOffset? completedAt,
+        string? errorMessage,
+        int retryCount,
+        int maxRetries,
+        List<ProcessingStep> steps)
+    {
+        var job = new ProcessingJob() { };
+        // Set base Id
+        typeof(ProcessingJob).BaseType!.BaseType!.GetProperty("Id")!.SetValue(job, id);
+        job.PdfDocumentId = pdfDocumentId;
+        job.UserId = userId;
+        job.Status = status;
+        job.Priority = priority;
+        job.CurrentStep = currentStep;
+        job.CreatedAt = createdAt;
+        job.StartedAt = startedAt;
+        job.CompletedAt = completedAt;
+        job.ErrorMessage = errorMessage;
+        job.RetryCount = retryCount;
+        job.MaxRetries = maxRetries;
+        job._steps.AddRange(steps);
+        return job;
+    }
+
     private ProcessingStep GetStep(ProcessingStepType stepType)
     {
         return _steps.FirstOrDefault(s => s.StepName == stepType)

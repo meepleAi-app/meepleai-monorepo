@@ -516,6 +516,7 @@ v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admi
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
+v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)

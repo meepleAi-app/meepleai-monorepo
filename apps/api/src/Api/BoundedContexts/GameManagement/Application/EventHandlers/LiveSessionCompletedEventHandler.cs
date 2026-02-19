@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
@@ -11,19 +12,23 @@ namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 /// Event handler for LiveSessionCompletedEvent.
 /// Issue #4748: Generates a PlayRecord from a completed live game session.
 /// Uses snapshot data carried by the domain event to avoid querying back.
+/// Persists via IPlayRecordRepository (domain→persistence entity mapping).
 /// </summary>
 internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<LiveSessionCompletedEvent>
 {
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IPlayRecordRepository _playRecordRepository;
     private readonly TimeProvider _timeProvider;
 
     public LiveSessionCompletedEventHandler(
         MeepleAiDbContext dbContext,
         ILogger<LiveSessionCompletedEventHandler> logger,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IPlayRecordRepository playRecordRepository)
         : base(dbContext, logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _playRecordRepository = playRecordRepository ?? throw new ArgumentNullException(nameof(playRecordRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
@@ -69,7 +74,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 playRecord.UpdateDetails(notes: domainEvent.Notes, timeProvider: _timeProvider);
             }
 
-            _dbContext.Add(playRecord);
+            // Persist via repository (maps domain PlayRecord → PlayRecordEntity for EF Core)
+            await _playRecordRepository.AddAsync(playRecord, cancellationToken).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             Logger.LogInformation(

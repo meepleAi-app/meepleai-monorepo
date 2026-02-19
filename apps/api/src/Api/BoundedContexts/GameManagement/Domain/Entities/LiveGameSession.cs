@@ -386,7 +386,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         AddDomainEvent(new LiveSessionCompletedEvent(
             Id, now, CurrentTurnIndex,
             GameId, GameName, CreatedByUserId, Visibility, GroupId,
-            CreatedAt, StartedAt, Notes,
+            StartedAt ?? CreatedAt, StartedAt, Notes,
             playerSnapshots, scoreSnapshots));
     }
 

@@ -92,6 +92,7 @@ import { CardNavigationFooter } from './meeple-card-features/CardNavigationFoote
 import { CardAgentAction } from './meeple-card-features/CardAgentAction';
 // Issue #4751: Session-specific display components
 import { SessionActionButtons } from './meeple-card-features/SessionActionButtons';
+import { SessionBackContent } from './meeple-card-features/SessionBackContent';
 import { SessionScoreTable } from './meeple-card-features/SessionScoreTable';
 import { SessionStatusBadge } from './meeple-card-features/SessionStatusBadge';
 import { SessionTurnSequence } from './meeple-card-features/SessionTurnSequence';
@@ -329,6 +330,11 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   /** Navigate to previous/next turn callbacks */
   onPrevTurn?: () => void;
   onNextTurn?: () => void;
+
+  // ========== SESSION BACK CONTENT (Issue #4752) ==========
+
+  /** Session back content data (statistics, ranking, timeline) */
+  sessionBackData?: import('./meeple-card-features/session-types').SessionBackData;
 }
 
 // ============================================================================
@@ -930,6 +936,7 @@ export const MeepleCard = React.memo(function MeepleCard({
   isSessionHost,
   onPrevTurn,
   onNextTurn,
+  sessionBackData,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1469,10 +1476,26 @@ export const MeepleCard = React.memo(function MeepleCard({
   );
 
   // Feature: Wrap with FlipCard if enabled (takes priority over HoverPreview)
-  if (flippable && flipData) {
+  // Session entities can flip with sessionBackData even without flipData
+  if (flippable && (flipData || sessionBackData)) {
+    // Session entities use custom back content (Issue #4752)
+    const sessionBack = entity === 'session' && sessionStatus && sessionPlayers && sessionBackData
+      ? (
+        <SessionBackContent
+          status={sessionStatus}
+          players={sessionPlayers}
+          backData={sessionBackData}
+          entityColor={color}
+          title={title}
+          detailHref={detailHref}
+        />
+      )
+      : undefined;
+
     return (
       <FlipCard
         flipData={flipData}
+        customBackContent={sessionBack}
         variant={variant}
         isFlipped={isFlipped}
         onFlip={onFlip}
@@ -1526,6 +1549,9 @@ export type {
   SessionScoringConfig,
   SessionTurnInfo,
   SessionActionHandlers,
+  SessionBackData,
+  SessionTimelineEvent,
+  SessionMediaCounts,
   PlayerColor,
   PlayerRole,
 } from './meeple-card-features/session-types';

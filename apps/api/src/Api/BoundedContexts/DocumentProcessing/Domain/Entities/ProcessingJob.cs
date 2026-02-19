@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
@@ -187,10 +188,10 @@ public sealed class ProcessingJob : AggregateRoot<Guid>
     /// </summary>
     public void Retry(TimeProvider? timeProvider = null)
     {
-        if (Status != JobStatus.Failed)
-            throw new InvalidOperationException($"Cannot retry job with status '{Status}'.");
+        if (Status != JobStatus.Failed && Status != JobStatus.Cancelled)
+            throw new ConflictException($"Cannot retry job with status '{Status}'. Only Failed or Cancelled jobs can be retried.");
         if (RetryCount >= MaxRetries)
-            throw new InvalidOperationException($"Job has exceeded maximum retries ({MaxRetries}).");
+            throw new ConflictException($"Job has exceeded maximum retries ({MaxRetries}).");
 
         RetryCount++;
         Status = JobStatus.Queued;

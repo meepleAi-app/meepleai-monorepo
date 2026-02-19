@@ -13,7 +13,7 @@ internal static class AdminAgentMetricsEndpoints
 {
     public static void MapAdminAgentMetricsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/agents/metrics")
+        var group = app.MapGroup("/admin/agents/metrics")
             .WithTags("Admin - Agent Metrics")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

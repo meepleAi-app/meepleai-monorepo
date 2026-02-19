@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Models;
+using ProcessingStep = Api.Models.ProcessingStep;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;

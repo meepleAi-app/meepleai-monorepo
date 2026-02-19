@@ -479,6 +479,7 @@ v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
+v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration

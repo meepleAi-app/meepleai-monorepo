@@ -22,6 +22,7 @@ import { motion } from 'framer-motion';
 import { ExternalLink, RotateCcw, Tag, Cog, User, Paintbrush } from 'lucide-react';
 import Link from 'next/link';
 
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
 import type { MeepleCardVariant } from '../meeple-card';
@@ -386,7 +387,12 @@ export function FlipCard({
 
   // Hero variant: use aspect-ratio based container
   const isHero = variant === 'hero';
-  const isCardMode = flipTrigger === 'card';
+
+  // Issue #4841: Responsive flip trigger
+  // Touch devices: always show flip button (no card-level click)
+  // Desktop: click anywhere on card to flip (no button)
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const isCardMode = isTouchDevice ? false : (flipTrigger === 'card');
 
   return (
     <div
@@ -437,7 +443,8 @@ export function FlipCard({
             <button
               className={cn(
                 'absolute bottom-3 right-3 z-30',
-                'flex h-8 w-8 items-center justify-center',
+                // Mobile: WCAG 44px touch target; Desktop: compact 32px
+                'flex h-11 w-11 md:h-8 md:w-8 items-center justify-center',
                 'rounded-full bg-white/70 backdrop-blur-sm',
                 'border border-border/30',
                 'text-muted-foreground hover:text-foreground',
@@ -473,6 +480,7 @@ export function FlipCard({
             borderColor: `hsla(${entityColor}, 0.15)`,
           }}
           data-testid="meeple-card-back"
+          {...(isCardMode ? { onClick: handleFlip } : {})}
         >
           <BackContent
             flipData={flipData}
@@ -481,6 +489,30 @@ export function FlipCard({
             entityColor={entityColor}
             title={title}
           />
+          {/* Flip-back button on back face (touch/button mode only) */}
+          {!isCardMode && (
+            <button
+              className={cn(
+                'absolute bottom-3 right-3 z-30',
+                // Mobile: WCAG 44px touch target; Desktop: compact 32px
+                'flex h-11 w-11 md:h-8 md:w-8 items-center justify-center',
+                'rounded-full bg-white/70 backdrop-blur-sm',
+                'border border-border/30',
+                'text-muted-foreground hover:text-foreground',
+                'shadow-sm hover:shadow-md',
+                'transition-all duration-200 hover:scale-110',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              )}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFlip();
+              }}
+              aria-label="Torna al fronte della carta"
+              data-testid="meeple-card-flip-back-button"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </motion.div>
 

@@ -326,11 +326,9 @@ const meepleCardVariants = cva(
       variant: {
         grid: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card/95 backdrop-blur-[4px]',
-          'dark:bg-card dark:backdrop-blur-none',
-          'border border-border/50',
+          'bg-card border border-border/50',
           '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Transform applied via inline style (Tailwind v4 issue)
+          // Glassmorphism via ::before pseudo in globals.css
         ],
         list: [
           'flex flex-row items-center gap-4 p-3 rounded-xl',
@@ -345,11 +343,9 @@ const meepleCardVariants = cva(
         ],
         featured: [
           'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card/95 backdrop-blur-[4px]',
-          'dark:bg-card dark:backdrop-blur-none',
-          'border border-border/50',
+          'bg-card border border-border/50',
           '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Transform applied via inline style (Tailwind v4 issue)
+          // Glassmorphism via ::before pseudo in globals.css
         ],
         hero: [
           'relative flex flex-col rounded-3xl overflow-hidden',
@@ -381,7 +377,7 @@ const coverVariants = cva('relative overflow-hidden', {
 const contentVariants = cva('', {
   variants: {
     variant: {
-      grid: 'flex-1 flex flex-col p-4',
+      grid: 'flex-1 flex flex-col px-3.5 py-3',
       list: 'flex-1 min-w-0 py-1',
       compact: 'flex-1 min-w-0',
       featured: 'flex-1 flex flex-col px-5 py-4',
@@ -481,14 +477,14 @@ function VerticalTagStack({
   return (
     <TooltipProvider delayDuration={300}>
       <div
-        className="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+        className="absolute top-2 left-2.5 z-10 flex flex-col gap-1.5"
         data-testid="meeple-card-tag-stack"
       >
         {/* Entity type badge (highest priority) */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span
-              className="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+              className="max-w-[80px] truncate px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[6px] shadow-sm cursor-default"
               style={{ backgroundColor: `hsl(${color})` }}
             >
               {name}
@@ -612,7 +608,7 @@ function CoverImage({
           }
           className={cn(
             'object-cover transition-transform duration-500',
-            'group-hover:scale-105' // v2: scale-105 = 1.05 (bracket notation issue in v4)
+            'group-hover:scale-[1.06]'
           )}
           loading="lazy"
         />
@@ -644,7 +640,7 @@ function CoverImage({
                 ? `linear-gradient(180deg, transparent 0%, hsla(${color}, 0.1) 30%, hsla(${color}, 0.6) 70%, hsla(${color}, 0.9) 100%)`
                 : variant === 'featured'
                   ? `linear-gradient(180deg, transparent 40%, hsla(${color}, 0.15) 70%, hsla(${color}, 0.4) 100%)`
-                  : `linear-gradient(180deg, transparent 50%, hsl(var(--card)) 100%)`,
+                  : `linear-gradient(to top, hsla(${color}, 0.15), transparent 60%)`,
           }}
           aria-hidden="true"
         />
@@ -760,12 +756,12 @@ function RatingDisplay({
   const hasHalfStar = normalized % 1 >= 0.5;
 
   return (
-    <div className={cn('flex items-center gap-1', className)} aria-label={`Rating: ${rating} out of ${max}`}>
+    <div className={cn('flex items-center gap-0.5', className)} aria-label={`Rating: ${rating} out of ${max}`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <span
           key={i}
           className={cn(
-            'text-sm',
+            'text-[0.78rem]',
             i < fullStars
               ? 'text-amber-400'
               : i === fullStars && hasHalfStar
@@ -776,7 +772,7 @@ function RatingDisplay({
           {'\u2605'}
         </span>
       ))}
-      <span className="text-xs text-muted-foreground ml-1">{rating.toFixed(1)}</span>
+      <span className="text-[0.7rem] font-semibold text-muted-foreground ml-1">{rating.toFixed(1)}</span>
     </div>
   );
 }
@@ -973,8 +969,8 @@ export const MeepleCard = React.memo(function MeepleCard({
         // outline-2 with entity color at 40% opacity creates subtle colored halo
         variant !== 'compact' && 'hover:outline-2 hover:outline-offset-2',
         // v2: Hover lift effect (using @media to ensure it works)
-        variant === 'grid' && '[&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]',
-        variant === 'featured' && '[&:hover]:[-webkit-transform:translateY(-8px)] [&:hover]:[transform:translateY(-8px)]',
+        variant === 'grid' && '[&:hover]:[-webkit-transform:translateY(-6px)] [&:hover]:[transform:translateY(-6px)]',
+        variant === 'featured' && '[&:hover]:[-webkit-transform:translateY(-6px)] [&:hover]:[transform:translateY(-6px)]',
         selected && 'ring-2 ring-offset-2 bg-accent/10',
         selected && `ring-[hsl(${color})]`,
         className
@@ -1142,9 +1138,10 @@ export const MeepleCard = React.memo(function MeepleCard({
                   ? 'text-base'
                   : variant === 'compact'
                     ? 'text-sm'
-                    : 'text-lg mb-0.5',
+                    : 'text-[0.95rem] mb-0.5',
             variant !== 'hero' && 'text-card-foreground',
-            (variant === 'grid' || variant === 'list') && 'line-clamp-2'
+            variant === 'grid' && 'truncate',
+            variant === 'list' && 'line-clamp-2'
           )}
         >
           {title}
@@ -1156,7 +1153,9 @@ export const MeepleCard = React.memo(function MeepleCard({
             className={cn(
               variant === 'hero'
                 ? 'text-white/85 text-sm mb-2'
-                : 'text-muted-foreground text-sm mb-2',
+                : variant === 'grid'
+                  ? 'text-muted-foreground text-[0.78rem] mt-px mb-1 truncate'
+                  : 'text-muted-foreground text-sm mb-2',
               variant === 'compact' && 'text-xs mb-0'
             )}
           >
@@ -1267,8 +1266,8 @@ export const MeepleCard = React.memo(function MeepleCard({
         <div
           className={cn(
             'flex items-center justify-evenly gap-2',
-            'px-4 py-3',
-            'border-t border-border/50',
+            'px-3 py-2',
+            'border-t border-border',
             'bg-muted/60 dark:bg-muted/40',
             // Only round bottom when there's no nav footer below
             !(navigateTo && navigateTo.length > 0) && 'rounded-b-2xl',
@@ -1278,10 +1277,10 @@ export const MeepleCard = React.memo(function MeepleCard({
           {metadata.map((item, index) => (
             <span
               key={index}
-              className="flex items-center gap-1.5 text-xs text-foreground/70 dark:text-foreground/60"
+              className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
             >
               {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
-              <span className="font-nunito font-semibold">{item.label || item.value}</span>
+              <span className="font-nunito">{item.label || item.value}</span>
             </span>
           ))}
         </div>

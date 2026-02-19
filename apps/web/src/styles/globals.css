@@ -267,11 +267,36 @@
   /* MeepleCard v2 hover lift effect (Issue #4604) - Tailwind v4 bracket issue workaround */
   [data-variant="grid"]:hover,
   [data-variant="featured"]:hover {
-    transform: translateY(-8px) !important;
+    transform: translateY(-6px) !important;
   }
 
   [data-variant="hero"]:hover {
     transform: scale(1.01) !important;
+  }
+
+  /* MeepleCard glassmorphism via ::before pseudo (matches mockup) */
+  [data-variant="grid"],
+  [data-variant="featured"] {
+    position: relative;
+  }
+  [data-variant="grid"]::before,
+  [data-variant="featured"]::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px) saturate(180%);
+    z-index: 0;
+    border-radius: inherit;
+  }
+  [data-variant="grid"] > *,
+  [data-variant="featured"] > * {
+    position: relative;
+    z-index: 1;
+  }
+  .dark [data-variant="grid"]::before,
+  .dark [data-variant="featured"]::before {
+    background: rgba(30, 25, 20, 0.7);
   }
 }
 

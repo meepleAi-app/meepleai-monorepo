@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
@@ -47,6 +48,9 @@ internal static class ApplicationServiceExtensions
 
         // DDD-PHASE2: GameManagement bounded context (repositories for CQRS handlers)
         services.AddGameManagementContext();
+
+        // Issue #4753: GameToolkit bounded context (toolkit configs, tools, templates)
+        services.AddGameToolkitContext();
 
         // DDD-PHASE3: KnowledgeBase bounded context
         services.AddKnowledgeBaseServices();
@@ -297,6 +301,10 @@ internal static class ApplicationServiceExtensions
 
         // GST-003: Register validators from SessionTracking bounded context
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.SessionTracking.Application.Commands.CreateSessionCommandValidator>(
+            includeInternalTypes: true);
+
+        // Issue #4753: Register validators from GameToolkit bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.GameToolkit.Application.Validators.CreateToolkitCommandValidator>(
             includeInternalTypes: true);
 
         return services;

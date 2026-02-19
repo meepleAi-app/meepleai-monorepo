@@ -1,0 +1,286 @@
+using Api.BoundedContexts.GameToolkit.Application.Commands;
+using Api.BoundedContexts.GameToolkit.Application.DTOs;
+using Api.BoundedContexts.GameToolkit.Domain.Entities;
+using Api.BoundedContexts.GameToolkit.Domain.Repositories;
+using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
+
+namespace Api.BoundedContexts.GameToolkit.Application.Handlers;
+
+internal class CreateToolkitCommandHandler : ICommandHandler<CreateToolkitCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public CreateToolkitCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(CreateToolkitCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = new Domain.Entities.GameToolkit(
+            id: Guid.NewGuid(),
+            gameId: command.GameId,
+            name: command.Name,
+            createdByUserId: command.CreatedByUserId
+        );
+
+        await _repository.AddAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class UpdateToolkitCommandHandler : ICommandHandler<UpdateToolkitCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public UpdateToolkitCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(UpdateToolkitCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        toolkit.UpdateDetails(command.Name);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class PublishToolkitCommandHandler : ICommandHandler<PublishToolkitCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public PublishToolkitCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(PublishToolkitCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        toolkit.Publish();
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class AddDiceToolCommandHandler : ICommandHandler<AddDiceToolCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public AddDiceToolCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(AddDiceToolCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        var config = new DiceToolConfig(
+            name: command.Name,
+            diceType: command.DiceType,
+            quantity: command.Quantity,
+            customFaces: command.CustomFaces,
+            isInteractive: command.IsInteractive,
+            color: command.Color
+        );
+
+        toolkit.AddDiceTool(config);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class AddCounterToolCommandHandler : ICommandHandler<AddCounterToolCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public AddCounterToolCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(AddCounterToolCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        var config = new CounterToolConfig(
+            name: command.Name,
+            minValue: command.MinValue,
+            maxValue: command.MaxValue,
+            defaultValue: command.DefaultValue,
+            isPerPlayer: command.IsPerPlayer,
+            icon: command.Icon,
+            color: command.Color
+        );
+
+        toolkit.AddCounterTool(config);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class RemoveDiceToolCommandHandler : ICommandHandler<RemoveDiceToolCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public RemoveDiceToolCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(RemoveDiceToolCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        if (!toolkit.RemoveDiceTool(command.ToolName))
+            throw new NotFoundException("DiceTool", command.ToolName);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class RemoveCounterToolCommandHandler : ICommandHandler<RemoveCounterToolCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public RemoveCounterToolCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(RemoveCounterToolCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        if (!toolkit.RemoveCounterTool(command.ToolName))
+            throw new NotFoundException("CounterTool", command.ToolName);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class SetScoringTemplateCommandHandler : ICommandHandler<SetScoringTemplateCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public SetScoringTemplateCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(SetScoringTemplateCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        var template = new ScoringTemplateConfig(
+            dimensions: command.Dimensions,
+            defaultUnit: command.DefaultUnit,
+            scoreType: command.ScoreType
+        );
+
+        toolkit.SetScoringTemplate(template);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class SetTurnTemplateCommandHandler : ICommandHandler<SetTurnTemplateCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public SetTurnTemplateCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(SetTurnTemplateCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        var template = new TurnTemplateConfig(
+            turnOrderType: command.TurnOrderType,
+            phases: command.Phases
+        );
+
+        toolkit.SetTurnTemplate(template);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}

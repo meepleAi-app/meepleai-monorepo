@@ -3,6 +3,7 @@ using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.Entities.GameToolkit;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.SystemConfiguration;
@@ -49,6 +50,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RuleConflictFAQEntity> RuleConflictFAQs => Set<RuleConflictFAQEntity>(); // ISSUE-3761: Conflict resolution FAQ
     public DbSet<RecordScoreEntity> RecordScores => Set<RecordScoreEntity>(); // ISSUE-3888: Play record scores
     public DbSet<LiveGameSessionEntity> LiveGameSessions => Set<LiveGameSessionEntity>(); // ISSUE-4750: Live game sessions
+    public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
     public DbSet<SessionPlayerEntity> SessionPlayers => Set<SessionPlayerEntity>(); // ISSUE-4750: Live session players
     public DbSet<SessionTeamEntity> SessionTeams => Set<SessionTeamEntity>(); // ISSUE-4750: Live session teams
     public DbSet<LiveRoundScoreEntity> LiveRoundScores => Set<LiveRoundScoreEntity>(); // ISSUE-4750: Live session round scores
@@ -230,6 +232,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747
+        modelBuilder.Ignore<BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(); // ISSUE-4753
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916

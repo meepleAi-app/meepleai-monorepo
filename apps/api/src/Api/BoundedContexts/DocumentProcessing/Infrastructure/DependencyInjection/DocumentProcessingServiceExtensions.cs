@@ -122,6 +122,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #4212: Register Quartz job for metrics maintenance (hourly)
         RegisterMetricsMaintenanceJob(services);
 
+        // Issue #4730: Register Quartz job for PDF processing queue (every 10 seconds)
+        RegisterPdfProcessingQueueJob(services);
+
         return services;
     }
 
@@ -169,6 +172,31 @@ internal static class DocumentProcessingServiceExtensions
                 .WithIdentity("MetricsMaintenanceTrigger", "DocumentProcessing")
                 .WithCronSchedule("0 0 * * * ?") // Hourly (at the top of every hour)
                 .WithDescription("Cleans up old metrics and maintains historical data for ETA calculation")
+            );
+        });
+    }
+
+    /// <summary>
+    /// Issue #4730: Register PdfProcessingQuartzJob with Quartz scheduler.
+    /// Runs every 10 seconds to pick up and process queued PDFs.
+    /// Max 3 concurrent executions controlled via Quartz thread pool (configured globally).
+    /// </summary>
+    private static void RegisterPdfProcessingQueueJob(IServiceCollection services)
+    {
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("PdfProcessingQuartzJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.PdfProcessingQuartzJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("PdfProcessingQueueTrigger", "DocumentProcessing")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInSeconds(10)
+                    .RepeatForever())
+                .WithDescription("Picks up and processes the next queued PDF every 10 seconds")
             );
         });
     }

@@ -56,6 +56,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
     public DbSet<ProcessingMetricEntity> ProcessingMetrics => Set<ProcessingMetricEntity>(); // ISSUE-4212: Historical metrics storage
+    public DbSet<ProcessingJobEntity> ProcessingJobs => Set<ProcessingJobEntity>(); // ISSUE-4730: Processing queue management
+    public DbSet<ProcessingStepEntity> ProcessingSteps => Set<ProcessingStepEntity>(); // ISSUE-4730: Processing queue steps
+    public DbSet<StepLogEntryEntity> StepLogEntries => Set<StepLogEntryEntity>(); // ISSUE-4730: Processing step log entries
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
@@ -250,6 +253,11 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.PlayerNote>(); // ISSUE-3160
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.DiceRoll>(); // ISSUE-3160
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.CardDraw>(); // ISSUE-3160
+
+        // ISSUE-4730: Processing queue domain entities
+        modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob>();
+        modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingStep>();
+        modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.StepLogEntry>();
     }
 
     /// <summary>

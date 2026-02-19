@@ -20,10 +20,14 @@ internal static class ToolkitMapper
                 d.Name, d.DiceType, d.Quantity, d.CustomFaces, d.IsInteractive, d.Color
             )).ToList(),
             CardTools: toolkit.CardTools.Select(c => new CardToolDto(
-                c.Name, c.DeckType, c.CardCount, c.Shuffleable
+                c.Name, c.DeckType, c.CardCount, c.Shuffleable,
+                c.DefaultZone, c.DefaultOrientation,
+                c.CardEntries.Select(e => new CardEntryDto(e.Name, e.Suit, e.Rank, e.CustomData)).ToList(),
+                c.AllowDraw, c.AllowDiscard, c.AllowPeek, c.AllowReturnToDeck
             )).ToList(),
             TimerTools: toolkit.TimerTools.Select(t => new TimerToolDto(
-                t.Name, t.DurationSeconds, t.IsCountdown, t.AutoStart, t.Color
+                t.Name, t.DurationSeconds, t.TimerType, t.AutoStart, t.Color,
+                t.IsPerPlayer, t.WarningThresholdSeconds
             )).ToList(),
             CounterTools: toolkit.CounterTools.Select(c => new CounterToolDto(
                 c.Name, c.MinValue, c.MaxValue, c.DefaultValue, c.IsPerPlayer, c.Icon, c.Color
@@ -39,7 +43,13 @@ internal static class ToolkitMapper
                     toolkit.TurnTemplate.TurnOrderType,
                     toolkit.TurnTemplate.Phases)
                 : null,
-            StateTemplate: toolkit.StateTemplate,
+            StateTemplate: toolkit.StateTemplate != null
+                ? new StateTemplateDto(
+                    toolkit.StateTemplate.Name,
+                    toolkit.StateTemplate.Description,
+                    toolkit.StateTemplate.Category,
+                    toolkit.StateTemplate.SchemaJson)
+                : null,
             AgentConfig: toolkit.AgentConfig
         );
     }

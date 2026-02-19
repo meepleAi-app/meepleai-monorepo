@@ -141,8 +141,10 @@ internal class InitializeToolStatesCommandHandler
         var state = new
         {
             durationSeconds = timer.DurationSeconds,
-            isCountdown = timer.IsCountdown,
+            timerType = timer.TimerType,
             autoStart = timer.AutoStart,
+            isPerPlayer = timer.IsPerPlayer,
+            warningThresholdSeconds = timer.WarningThresholdSeconds,
             remainingSeconds = timer.DurationSeconds,
             isRunning = false,
             startedAt = (DateTime?)null

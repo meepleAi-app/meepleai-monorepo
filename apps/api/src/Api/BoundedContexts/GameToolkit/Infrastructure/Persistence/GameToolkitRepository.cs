@@ -123,7 +123,6 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         SetPrivateProperty(toolkit, "IsPublished", entity.IsPublished);
         SetPrivateProperty(toolkit, "CreatedAt", entity.CreatedAt);
         SetPrivateProperty(toolkit, "UpdatedAt", entity.UpdatedAt);
-        SetPrivateProperty(toolkit, "StateTemplate", entity.StateTemplate);
         SetPrivateProperty(toolkit, "AgentConfig", entity.AgentConfig);
 
         // Initialize backing fields for collections (GetUninitializedObject leaves them null)
@@ -143,6 +142,36 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
                 var diceList = GetPrivateField<List<DiceToolConfig>>(toolkit, "_diceTools");
                 foreach (var d in diceConfigs)
                     diceList.Add(new DiceToolConfig(d.Name, d.DiceType, d.Quantity, d.CustomFaces, d.IsInteractive, d.Color));
+            }
+        }
+
+        if (!string.IsNullOrEmpty(entity.CardToolsJson))
+        {
+            var cardConfigs = JsonSerializer.Deserialize<List<CardToolJsonModel>>(entity.CardToolsJson, JsonOptions);
+            if (cardConfigs != null)
+            {
+                var cardList = GetPrivateField<List<CardToolConfig>>(toolkit, "_cardTools");
+                foreach (var c in cardConfigs)
+                {
+                    var entries = c.CardEntries?.Select(e => new CardEntry(e.Name, e.Suit, e.Rank, e.CustomData)).ToList();
+                    cardList.Add(new CardToolConfig(
+                        c.Name, c.DeckType, c.CardCount, c.Shuffleable,
+                        c.DefaultZone, c.DefaultOrientation, entries,
+                        c.AllowDraw, c.AllowDiscard, c.AllowPeek, c.AllowReturnToDeck));
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(entity.TimerToolsJson))
+        {
+            var timerConfigs = JsonSerializer.Deserialize<List<TimerToolJsonModel>>(entity.TimerToolsJson, JsonOptions);
+            if (timerConfigs != null)
+            {
+                var timerList = GetPrivateField<List<TimerToolConfig>>(toolkit, "_timerTools");
+                foreach (var t in timerConfigs)
+                    timerList.Add(new TimerToolConfig(
+                        t.Name, t.DurationSeconds, t.TimerType, t.AutoStart, t.Color,
+                        t.IsPerPlayer, t.WarningThresholdSeconds));
             }
         }
 
@@ -171,6 +200,14 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
                 SetPrivateProperty(toolkit, "TurnTemplate", new TurnTemplateConfig(turn.TurnOrderType, turn.Phases));
         }
 
+        if (!string.IsNullOrEmpty(entity.StateTemplate))
+        {
+            var stateTemplate = JsonSerializer.Deserialize<StateTemplateJsonModel>(entity.StateTemplate, JsonOptions);
+            if (stateTemplate != null)
+                SetPrivateProperty(toolkit, "StateTemplate", new StateTemplateDefinition(
+                    stateTemplate.Name, stateTemplate.Category, stateTemplate.SchemaJson, stateTemplate.Description));
+        }
+
         return toolkit;
     }
 
@@ -186,7 +223,6 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             IsPublished = toolkit.IsPublished,
             CreatedAt = toolkit.CreatedAt,
             UpdatedAt = toolkit.UpdatedAt,
-            StateTemplate = toolkit.StateTemplate,
             AgentConfig = toolkit.AgentConfig,
             DiceToolsJson = toolkit.DiceTools.Count > 0
                 ? JsonSerializer.Serialize(toolkit.DiceTools.Select(d => new DiceToolJsonModel
@@ -196,10 +232,25 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
                 }).ToList(), JsonOptions)
                 : null,
             CardToolsJson = toolkit.CardTools.Count > 0
-                ? JsonSerializer.Serialize(toolkit.CardTools.Select(c => new { c.Name, c.DeckType, c.CardCount, c.Shuffleable }).ToList(), JsonOptions)
+                ? JsonSerializer.Serialize(toolkit.CardTools.Select(c => new CardToolJsonModel
+                {
+                    Name = c.Name, DeckType = c.DeckType, CardCount = c.CardCount, Shuffleable = c.Shuffleable,
+                    DefaultZone = c.DefaultZone, DefaultOrientation = c.DefaultOrientation,
+                    CardEntries = c.CardEntries.Select(e => new CardEntryJsonModel
+                    {
+                        Name = e.Name, Suit = e.Suit, Rank = e.Rank, CustomData = e.CustomData
+                    }).ToList(),
+                    AllowDraw = c.AllowDraw, AllowDiscard = c.AllowDiscard,
+                    AllowPeek = c.AllowPeek, AllowReturnToDeck = c.AllowReturnToDeck
+                }).ToList(), JsonOptions)
                 : null,
             TimerToolsJson = toolkit.TimerTools.Count > 0
-                ? JsonSerializer.Serialize(toolkit.TimerTools.Select(t => new { t.Name, t.DurationSeconds, t.IsCountdown, t.AutoStart, t.Color }).ToList(), JsonOptions)
+                ? JsonSerializer.Serialize(toolkit.TimerTools.Select(t => new TimerToolJsonModel
+                {
+                    Name = t.Name, DurationSeconds = t.DurationSeconds, TimerType = t.TimerType,
+                    AutoStart = t.AutoStart, Color = t.Color, IsPerPlayer = t.IsPerPlayer,
+                    WarningThresholdSeconds = t.WarningThresholdSeconds
+                }).ToList(), JsonOptions)
                 : null,
             CounterToolsJson = toolkit.CounterTools.Count > 0
                 ? JsonSerializer.Serialize(toolkit.CounterTools.Select(c => new CounterToolJsonModel
@@ -221,6 +272,15 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
                 {
                     TurnOrderType = toolkit.TurnTemplate.TurnOrderType,
                     Phases = toolkit.TurnTemplate.Phases
+                }, JsonOptions)
+                : null,
+            StateTemplate = toolkit.StateTemplate != null
+                ? JsonSerializer.Serialize(new StateTemplateJsonModel
+                {
+                    Name = toolkit.StateTemplate.Name,
+                    Description = toolkit.StateTemplate.Description,
+                    Category = toolkit.StateTemplate.Category,
+                    SchemaJson = toolkit.StateTemplate.SchemaJson
                 }, JsonOptions)
                 : null,
         };
@@ -275,6 +335,40 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         public string? Color { get; set; }
     }
 
+    private sealed class CardToolJsonModel
+    {
+        public string Name { get; set; } = default!;
+        public string DeckType { get; set; } = default!;
+        public int CardCount { get; set; }
+        public bool Shuffleable { get; set; }
+        public CardZone DefaultZone { get; set; }
+        public CardOrientation DefaultOrientation { get; set; }
+        public List<CardEntryJsonModel>? CardEntries { get; set; }
+        public bool AllowDraw { get; set; }
+        public bool AllowDiscard { get; set; }
+        public bool AllowPeek { get; set; }
+        public bool AllowReturnToDeck { get; set; }
+    }
+
+    private sealed class CardEntryJsonModel
+    {
+        public string Name { get; set; } = default!;
+        public string? Suit { get; set; }
+        public string? Rank { get; set; }
+        public string? CustomData { get; set; }
+    }
+
+    private sealed class TimerToolJsonModel
+    {
+        public string Name { get; set; } = default!;
+        public int DurationSeconds { get; set; }
+        public TimerType TimerType { get; set; }
+        public bool AutoStart { get; set; }
+        public string? Color { get; set; }
+        public bool IsPerPlayer { get; set; }
+        public int? WarningThresholdSeconds { get; set; }
+    }
+
     private sealed class CounterToolJsonModel
     {
         public string Name { get; set; } = default!;
@@ -297,5 +391,13 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
     {
         public TurnOrderType TurnOrderType { get; set; }
         public string[] Phases { get; set; } = default!;
+    }
+
+    private sealed class StateTemplateJsonModel
+    {
+        public string Name { get; set; } = default!;
+        public string? Description { get; set; }
+        public TemplateCategory Category { get; set; }
+        public string SchemaJson { get; set; } = default!;
     }
 }

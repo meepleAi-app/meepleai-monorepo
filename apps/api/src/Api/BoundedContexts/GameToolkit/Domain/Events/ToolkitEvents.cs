@@ -39,3 +39,15 @@ internal sealed class ToolkitPublishedEvent : DomainEventBase
         Version = version;
     }
 }
+
+internal sealed class TimerExpiredEvent : DomainEventBase
+{
+    public Guid ToolkitId { get; }
+    public string TimerName { get; }
+
+    public TimerExpiredEvent(Guid toolkitId, string timerName)
+    {
+        ToolkitId = toolkitId;
+        TimerName = timerName;
+    }
+}

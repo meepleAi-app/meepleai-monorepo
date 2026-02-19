@@ -242,6 +242,167 @@ public class GameToolkitDomainTests
     }
 
     // ========================================================================
+    // Card Tools
+    // ========================================================================
+
+    [Fact]
+    public void AddCardTool_WithValidConfig_AddsTool()
+    {
+        var toolkit = CreateToolkit();
+        var config = new CardToolConfig("Main Deck", "standard");
+
+        toolkit.AddCardTool(config);
+
+        Assert.Single(toolkit.CardTools);
+        Assert.Equal("Main Deck", toolkit.CardTools[0].Name);
+        Assert.Equal("standard", toolkit.CardTools[0].DeckType);
+    }
+
+    [Fact]
+    public void AddCardTool_WithFullConfig_AddsTool()
+    {
+        var toolkit = CreateToolkit();
+        var entries = new List<CardEntry>
+        {
+            new("Ace of Spades", "Spades", "A"),
+            new("King of Hearts", "Hearts", "K"),
+        };
+        var config = new CardToolConfig(
+            "Custom Deck", "custom", 52, false,
+            CardZone.TableArea, CardOrientation.FaceUp, entries,
+            true, false, true, true);
+
+        toolkit.AddCardTool(config);
+
+        Assert.Single(toolkit.CardTools);
+        Assert.Equal(2, toolkit.CardTools[0].CardCount); // Derived from entries
+        Assert.Equal(2, toolkit.CardTools[0].CardEntries.Count);
+        Assert.False(toolkit.CardTools[0].Shuffleable);
+        Assert.Equal(CardZone.TableArea, toolkit.CardTools[0].DefaultZone);
+        Assert.Equal(CardOrientation.FaceUp, toolkit.CardTools[0].DefaultOrientation);
+        Assert.True(toolkit.CardTools[0].AllowPeek);
+        Assert.True(toolkit.CardTools[0].AllowReturnToDeck);
+    }
+
+    [Fact]
+    public void AddCardTool_WhenNull_ThrowsArgumentNullException()
+    {
+        var toolkit = CreateToolkit();
+
+        Assert.Throws<ArgumentNullException>(() => toolkit.AddCardTool(null!));
+    }
+
+    [Fact]
+    public void AddCardTool_WhenLimitReached_ThrowsInvalidOperationException()
+    {
+        var toolkit = CreateToolkit();
+        for (int i = 0; i < 20; i++)
+            toolkit.AddCardTool(new CardToolConfig($"Deck_{i}", "standard"));
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            toolkit.AddCardTool(new CardToolConfig("TooMany", "standard")));
+
+        Assert.Contains("20", ex.Message);
+    }
+
+    [Fact]
+    public void RemoveCardTool_ExistingTool_ReturnsTrue()
+    {
+        var toolkit = CreateToolkit();
+        toolkit.AddCardTool(new CardToolConfig("Main Deck", "standard"));
+
+        var removed = toolkit.RemoveCardTool("Main Deck");
+
+        Assert.True(removed);
+        Assert.Empty(toolkit.CardTools);
+    }
+
+    [Fact]
+    public void RemoveCardTool_NonExistingTool_ReturnsFalse()
+    {
+        var toolkit = CreateToolkit();
+
+        var removed = toolkit.RemoveCardTool("NonExistent");
+
+        Assert.False(removed);
+    }
+
+    // ========================================================================
+    // Timer Tools
+    // ========================================================================
+
+    [Fact]
+    public void AddTimerTool_WithValidConfig_AddsTool()
+    {
+        var toolkit = CreateToolkit();
+        var config = new TimerToolConfig("Round Timer", 60);
+
+        toolkit.AddTimerTool(config);
+
+        Assert.Single(toolkit.TimerTools);
+        Assert.Equal("Round Timer", toolkit.TimerTools[0].Name);
+        Assert.Equal(60, toolkit.TimerTools[0].DurationSeconds);
+        Assert.Equal(TimerType.CountDown, toolkit.TimerTools[0].TimerType);
+    }
+
+    [Fact]
+    public void AddTimerTool_ChessTimer_AddsTool()
+    {
+        var toolkit = CreateToolkit();
+        var config = new TimerToolConfig("Chess Clock", 300, TimerType.Chess, true, "#FF0000", true, 30);
+
+        toolkit.AddTimerTool(config);
+
+        Assert.Single(toolkit.TimerTools);
+        Assert.Equal(TimerType.Chess, toolkit.TimerTools[0].TimerType);
+        Assert.True(toolkit.TimerTools[0].IsPerPlayer);
+        Assert.Equal(30, toolkit.TimerTools[0].WarningThresholdSeconds);
+    }
+
+    [Fact]
+    public void AddTimerTool_WhenNull_ThrowsArgumentNullException()
+    {
+        var toolkit = CreateToolkit();
+
+        Assert.Throws<ArgumentNullException>(() => toolkit.AddTimerTool(null!));
+    }
+
+    [Fact]
+    public void AddTimerTool_WhenLimitReached_ThrowsInvalidOperationException()
+    {
+        var toolkit = CreateToolkit();
+        for (int i = 0; i < 20; i++)
+            toolkit.AddTimerTool(new TimerToolConfig($"Timer_{i}", 60));
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            toolkit.AddTimerTool(new TimerToolConfig("TooMany", 60)));
+
+        Assert.Contains("20", ex.Message);
+    }
+
+    [Fact]
+    public void RemoveTimerTool_ExistingTool_ReturnsTrue()
+    {
+        var toolkit = CreateToolkit();
+        toolkit.AddTimerTool(new TimerToolConfig("Round Timer", 60));
+
+        var removed = toolkit.RemoveTimerTool("Round Timer");
+
+        Assert.True(removed);
+        Assert.Empty(toolkit.TimerTools);
+    }
+
+    [Fact]
+    public void RemoveTimerTool_NonExistingTool_ReturnsFalse()
+    {
+        var toolkit = CreateToolkit();
+
+        var removed = toolkit.RemoveTimerTool("NonExistent");
+
+        Assert.False(removed);
+    }
+
+    // ========================================================================
     // Templates
     // ========================================================================
 
@@ -286,6 +447,44 @@ public class GameToolkitDomainTests
         var toolkit = CreateToolkit();
 
         Assert.Throws<ArgumentNullException>(() => toolkit.SetTurnTemplate(null!));
+    }
+
+    [Fact]
+    public void SetStateTemplate_WithValidDefinition_SetsTemplate()
+    {
+        var toolkit = CreateToolkit();
+        var definition = new StateTemplateDefinition("Chess Setup", TemplateCategory.Strategy, "{\"tools\":[]}");
+
+        toolkit.SetStateTemplate(definition);
+
+        Assert.NotNull(toolkit.StateTemplate);
+        Assert.Equal("Chess Setup", toolkit.StateTemplate.Name);
+        Assert.Equal(TemplateCategory.Strategy, toolkit.StateTemplate.Category);
+        Assert.Equal("{\"tools\":[]}", toolkit.StateTemplate.SchemaJson);
+    }
+
+    [Fact]
+    public void SetStateTemplate_WithDescription_SetsFullTemplate()
+    {
+        var toolkit = CreateToolkit();
+        var definition = new StateTemplateDefinition(
+            "Party Game", TemplateCategory.Party, "{}", "A fun party game template");
+
+        toolkit.SetStateTemplate(definition);
+
+        Assert.NotNull(toolkit.StateTemplate);
+        Assert.Equal("A fun party game template", toolkit.StateTemplate.Description);
+    }
+
+    [Fact]
+    public void SetStateTemplate_WithNull_ClearsTemplate()
+    {
+        var toolkit = CreateToolkit();
+        toolkit.SetStateTemplate(new StateTemplateDefinition("Test", TemplateCategory.Strategy, "{}"));
+
+        toolkit.SetStateTemplate(null);
+
+        Assert.Null(toolkit.StateTemplate);
     }
 
     // ========================================================================

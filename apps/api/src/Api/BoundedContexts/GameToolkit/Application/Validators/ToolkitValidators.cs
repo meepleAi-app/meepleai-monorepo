@@ -47,6 +47,43 @@ internal class AddDiceToolCommandValidator : AbstractValidator<AddDiceToolComman
     }
 }
 
+internal class AddCardToolCommandValidator : AbstractValidator<AddCardToolCommand>
+{
+    public AddCardToolCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(100).WithMessage("Name is required (max 100 chars)");
+        RuleFor(x => x.DeckType).NotEmpty().MaximumLength(100).WithMessage("DeckType is required (max 100 chars)");
+        RuleFor(x => x.CardCount).InclusiveBetween(1, 1000).WithMessage("CardCount must be between 1 and 1000");
+        RuleFor(x => x.CardEntries)
+            .Must(entries => entries == null || entries.Count <= 1000)
+            .WithMessage("CardEntries count cannot exceed 1000");
+        RuleFor(x => x.DefaultZone).IsInEnum().WithMessage("Invalid CardZone");
+        RuleFor(x => x.DefaultOrientation).IsInEnum().WithMessage("Invalid CardOrientation");
+    }
+}
+
+internal class AddTimerToolCommandValidator : AbstractValidator<AddTimerToolCommand>
+{
+    public AddTimerToolCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(100).WithMessage("Name is required (max 100 chars)");
+        RuleFor(x => x.DurationSeconds).InclusiveBetween(1, 86400)
+            .WithMessage("Duration must be between 1 second and 24 hours");
+        RuleFor(x => x.TimerType).IsInEnum().WithMessage("Invalid TimerType");
+        RuleFor(x => x.WarningThresholdSeconds)
+            .GreaterThan(0).When(x => x.WarningThresholdSeconds.HasValue)
+            .WithMessage("Warning threshold must be positive");
+        RuleFor(x => x.WarningThresholdSeconds)
+            .LessThan(x => x.DurationSeconds).When(x => x.WarningThresholdSeconds.HasValue)
+            .WithMessage("Warning threshold must be less than duration");
+        RuleFor(x => x.IsPerPlayer).Equal(true)
+            .When(x => x.TimerType == TimerType.Chess)
+            .WithMessage("Chess timer must be per-player");
+    }
+}
+
 internal class AddCounterToolCommandValidator : AbstractValidator<AddCounterToolCommand>
 {
     public AddCounterToolCommandValidator()
@@ -65,6 +102,24 @@ internal class AddCounterToolCommandValidator : AbstractValidator<AddCounterTool
 internal class RemoveDiceToolCommandValidator : AbstractValidator<RemoveDiceToolCommand>
 {
     public RemoveDiceToolCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.ToolName).NotEmpty().WithMessage("ToolName is required");
+    }
+}
+
+internal class RemoveCardToolCommandValidator : AbstractValidator<RemoveCardToolCommand>
+{
+    public RemoveCardToolCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.ToolName).NotEmpty().WithMessage("ToolName is required");
+    }
+}
+
+internal class RemoveTimerToolCommandValidator : AbstractValidator<RemoveTimerToolCommand>
+{
+    public RemoveTimerToolCommandValidator()
     {
         RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
         RuleFor(x => x.ToolName).NotEmpty().WithMessage("ToolName is required");
@@ -97,5 +152,24 @@ internal class SetTurnTemplateCommandValidator : AbstractValidator<SetTurnTempla
     {
         RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
         RuleFor(x => x.TurnOrderType).IsInEnum().WithMessage("Invalid TurnOrderType");
+    }
+}
+
+internal class SetStateTemplateCommandValidator : AbstractValidator<SetStateTemplateCommand>
+{
+    public SetStateTemplateCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200).WithMessage("Template name is required (max 200 chars)");
+        RuleFor(x => x.Category).IsInEnum().WithMessage("Invalid TemplateCategory");
+        RuleFor(x => x.SchemaJson).NotEmpty().WithMessage("Schema JSON is required");
+    }
+}
+
+internal class ClearStateTemplateCommandValidator : AbstractValidator<ClearStateTemplateCommand>
+{
+    public ClearStateTemplateCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
     }
 }

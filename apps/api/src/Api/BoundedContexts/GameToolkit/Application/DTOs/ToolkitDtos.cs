@@ -18,7 +18,7 @@ internal record GameToolkitDto(
     IReadOnlyList<CounterToolDto> CounterTools,
     ScoringTemplateDto? ScoringTemplate,
     TurnTemplateDto? TurnTemplate,
-    string? StateTemplate,
+    StateTemplateDto? StateTemplate,
     string? AgentConfig
 );
 
@@ -35,15 +35,31 @@ internal record CardToolDto(
     string Name,
     string DeckType,
     int CardCount,
-    bool Shuffleable
+    bool Shuffleable,
+    CardZone DefaultZone,
+    CardOrientation DefaultOrientation,
+    IReadOnlyList<CardEntryDto> CardEntries,
+    bool AllowDraw,
+    bool AllowDiscard,
+    bool AllowPeek,
+    bool AllowReturnToDeck
+);
+
+internal record CardEntryDto(
+    string Name,
+    string? Suit,
+    string? Rank,
+    string? CustomData
 );
 
 internal record TimerToolDto(
     string Name,
     int DurationSeconds,
-    bool IsCountdown,
+    TimerType TimerType,
     bool AutoStart,
-    string? Color
+    string? Color,
+    bool IsPerPlayer,
+    int? WarningThresholdSeconds
 );
 
 internal record CounterToolDto(
@@ -67,6 +83,13 @@ internal record TurnTemplateDto(
     string[] Phases
 );
 
+internal record StateTemplateDto(
+    string Name,
+    string? Description,
+    TemplateCategory Category,
+    string SchemaJson
+);
+
 // Request DTOs
 internal record CreateToolkitRequest(
     Guid GameId,
@@ -84,6 +107,30 @@ internal record AddDiceToolRequest(
     string[]? CustomFaces = null,
     bool IsInteractive = true,
     string? Color = null
+);
+
+internal record AddCardToolRequest(
+    string Name,
+    string DeckType = "standard",
+    int CardCount = 52,
+    bool Shuffleable = true,
+    CardZone DefaultZone = CardZone.DrawPile,
+    CardOrientation DefaultOrientation = CardOrientation.FaceDown,
+    IReadOnlyList<CardEntryDto>? CardEntries = null,
+    bool AllowDraw = true,
+    bool AllowDiscard = true,
+    bool AllowPeek = false,
+    bool AllowReturnToDeck = false
+);
+
+internal record AddTimerToolRequest(
+    string Name,
+    int DurationSeconds,
+    TimerType TimerType = TimerType.CountDown,
+    bool AutoStart = false,
+    string? Color = null,
+    bool IsPerPlayer = false,
+    int? WarningThresholdSeconds = null
 );
 
 internal record AddCounterToolRequest(
@@ -105,4 +152,11 @@ internal record SetScoringTemplateRequest(
 internal record SetTurnTemplateRequest(
     TurnOrderType TurnOrderType = TurnOrderType.RoundRobin,
     string[]? Phases = null
+);
+
+internal record SetStateTemplateRequest(
+    string Name,
+    TemplateCategory Category,
+    string SchemaJson,
+    string? Description = null
 );

@@ -48,6 +48,7 @@ export function useJobSSE(jobId: string | null) {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(false);
+  const isTerminatedRef = useRef(false);
   const pendingInvalidateRef = useRef(false);
   const connectRef = useRef<() => void>(() => {});
 
@@ -87,7 +88,7 @@ export function useJobSSE(jobId: string | null) {
       if (!debounceTimerRef.current) {
         debounceTimerRef.current = setTimeout(() => {
           debounceTimerRef.current = null;
-          if (pendingInvalidateRef.current && isMountedRef.current) {
+          if (pendingInvalidateRef.current && isMountedRef.current && !isTerminatedRef.current) {
             pendingInvalidateRef.current = false;
             queryClient.invalidateQueries({ queryKey: ['admin', 'queue', 'detail', jobId] });
             queryClient.invalidateQueries({ queryKey: ['admin', 'queue'] });
@@ -105,6 +106,7 @@ export function useJobSSE(jobId: string | null) {
 
       if (TERMINAL_EVENTS.has(eventName)) {
         // Terminal event: invalidate immediately and close
+        isTerminatedRef.current = true;
         invalidateJobDetail(true);
         cleanup();
         setConnectionState('closed');
@@ -121,6 +123,7 @@ export function useJobSSE(jobId: string | null) {
     if (!jobId || !isMountedRef.current) return;
 
     cleanup();
+    isTerminatedRef.current = false;
     setConnectionState('connecting');
 
     const url = `${getApiBase()}/api/v1/admin/queue/${jobId}/stream`;
@@ -177,7 +180,7 @@ export function useJobSSE(jobId: string | null) {
     isMountedRef.current = true;
 
     if (jobId) {
-      connect();
+      connectRef.current();
     } else {
       cleanup();
       setConnectionState('closed');
@@ -187,7 +190,8 @@ export function useJobSSE(jobId: string | null) {
       isMountedRef.current = false;
       cleanup();
     };
-  }, [jobId, connect, cleanup]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- connect called via stable ref to avoid infinite loop
+  }, [jobId, cleanup]);
 
   return { connectionState };
 }

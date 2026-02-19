@@ -1453,6 +1453,28 @@ public class LiveGameSessionTests
         Assert.Equal(groupId, evt.GroupId);
         Assert.Equal("Game notes", evt.Notes);
         Assert.NotNull(evt.StartedAt);
+        // SessionDate should reflect when game was played (StartedAt), not entity creation
+        Assert.Equal(session.StartedAt, evt.SessionDate);
+    }
+
+    [Fact]
+    public void Complete_SessionDate_UsesStartedAtNotCreatedAt()
+    {
+        // Arrange - advance time between creation and start to differentiate them
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+
+        _timeProvider.Advance(TimeSpan.FromDays(2)); // Create on day 0, start on day 2
+        session.Start(_timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Complete(_timeProvider);
+
+        // Assert
+        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        Assert.NotEqual(session.CreatedAt, evt.SessionDate);
+        Assert.Equal(session.StartedAt, evt.SessionDate);
     }
 
     [Fact]

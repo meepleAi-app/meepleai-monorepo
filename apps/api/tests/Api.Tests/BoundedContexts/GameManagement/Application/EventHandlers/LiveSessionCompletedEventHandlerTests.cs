@@ -1,6 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.EventHandlers;
+using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
@@ -20,11 +22,23 @@ public sealed class LiveSessionCompletedEventHandlerTests
 {
     private readonly FakeTimeProvider _timeProvider;
     private readonly DateTime _now;
+    private readonly Mock<IPlayRecordRepository> _playRecordRepository;
 
     public LiveSessionCompletedEventHandlerTests()
     {
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 2, 19, 14, 0, 0, TimeSpan.Zero));
         _now = _timeProvider.GetUtcNow().UtcDateTime;
+        _playRecordRepository = new Mock<IPlayRecordRepository>();
+    }
+
+    private LiveSessionCompletedEventHandler CreateHandler(
+        Api.Infrastructure.MeepleAiDbContext? dbContext = null,
+        Mock<ILogger<LiveSessionCompletedEventHandler>>? logger = null)
+    {
+        dbContext ??= TestDbContextFactory.CreateInMemoryDbContext();
+        logger ??= new Mock<ILogger<LiveSessionCompletedEventHandler>>();
+        return new LiveSessionCompletedEventHandler(
+            dbContext, logger.Object, _timeProvider, _playRecordRepository.Object);
     }
 
     private LiveSessionCompletedEvent CreateCompletedEvent(
@@ -69,8 +83,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
     {
         // Arrange
         var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
+        var handler = CreateHandler(dbContext);
 
         var gameId = Guid.NewGuid();
         var @event = CreateCompletedEvent(gameId: gameId);
@@ -90,8 +103,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
     {
         // Arrange
         var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
+        var handler = CreateHandler(dbContext);
 
         var @event = CreateCompletedEvent(gameId: null); // No game linked
 
@@ -108,9 +120,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
     public async Task Handle_DoesNotThrow_EvenWhenInternalErrorOccurs()
     {
         // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
+        var handler = CreateHandler();
 
         // Create event with empty players to test error-resilient processing
         var @event = CreateCompletedEvent(
@@ -130,8 +140,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
     {
         // Arrange
         var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
+        var handler = CreateHandler(dbContext);
 
         var sessionId = Guid.NewGuid();
         var players = new List<CompletedPlayerSnapshot>
@@ -158,10 +167,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
     public async Task Handle_WithNotes_ProcessesWithoutError()
     {
         // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
-
+        var handler = CreateHandler();
         var @event = CreateCompletedEvent(notes: "Great game session!");
 
         // Act
@@ -176,9 +182,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
     public async Task Handle_WithGroupVisibility_ProcessesWithoutError()
     {
         // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
+        var handler = CreateHandler();
 
         var groupId = Guid.NewGuid();
         var @event = CreateCompletedEvent(
@@ -197,10 +201,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
     public async Task Handle_WithNoStartedAt_ProcessesWithoutError()
     {
         // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
-
+        var handler = CreateHandler();
         var @event = CreateCompletedEvent(startedAt: null);
 
         // Act - null StartedAt means no duration is calculated
@@ -215,9 +216,8 @@ public sealed class LiveSessionCompletedEventHandlerTests
     public async Task Handle_LogsInformationOnProcessing()
     {
         // Arrange
-        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
-        var handler = new LiveSessionCompletedEventHandler(dbContext, logger.Object, _timeProvider);
+        var handler = CreateHandler(logger: logger);
 
         var @event = CreateCompletedEvent();
 
@@ -236,6 +236,23 @@ public sealed class LiveSessionCompletedEventHandlerTests
     }
 
     [Fact]
+    public async Task Handle_PersistsPlayRecordViaRepository()
+    {
+        // Arrange
+        var handler = CreateHandler();
+        var gameId = Guid.NewGuid();
+        var @event = CreateCompletedEvent(gameId: gameId);
+
+        // Act
+        await handler.Handle(@event, CancellationToken.None);
+
+        // Assert - repository AddAsync was called with a PlayRecord
+        _playRecordRepository.Verify(
+            r => r.AddAsync(It.IsAny<PlayRecord>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public void Constructor_NullDbContext_ThrowsArgumentNullException()
     {
         // Arrange
@@ -243,7 +260,8 @@ public sealed class LiveSessionCompletedEventHandlerTests
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new LiveSessionCompletedEventHandler(null!, logger.Object, _timeProvider));
+            new LiveSessionCompletedEventHandler(
+                null!, logger.Object, _timeProvider, _playRecordRepository.Object));
     }
 
     [Fact]
@@ -255,6 +273,20 @@ public sealed class LiveSessionCompletedEventHandlerTests
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new LiveSessionCompletedEventHandler(dbContext, logger.Object, null!));
+            new LiveSessionCompletedEventHandler(
+                dbContext, logger.Object, null!, _playRecordRepository.Object));
+    }
+
+    [Fact]
+    public void Constructor_NullPlayRecordRepository_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new LiveSessionCompletedEventHandler(
+                dbContext, logger.Object, _timeProvider, null!));
     }
 }

@@ -160,13 +160,13 @@ function CatalogContent() {
               <h2 className="font-heading text-xl font-semibold">Top 5 per Valutazione BGG</h2>
             </div>
             {topRatedLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <MeepleGameCatalogCardSkeleton key={i} />
                 ))}
               </div>
             ) : topRatedGames.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {topRatedGames.map((game) => (
                   <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                 ))}
@@ -183,13 +183,13 @@ function CatalogContent() {
               <h2 className="font-heading text-xl font-semibold">Ultimi 5 Aggiunti</h2>
             </div>
             {latestAddedLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <MeepleGameCatalogCardSkeleton key={i} />
                 ))}
               </div>
             ) : latestAddedGames.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {latestAddedGames.map((game) => (
                   <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                 ))}

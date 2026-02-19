@@ -116,6 +116,24 @@ import {
   type ModelPerformanceDto,
 } from '../schemas';
 import {
+  BulkDeleteResultSchema,
+  ReindexResponseSchema,
+  MaintenanceResultSchema,
+  PdfStatusDistributionSchema,
+  PdfStorageHealthSchema,
+  ProcessingMetricsSchema,
+  VectorCollectionsResponseSchema,
+  ProcessingQueueResponseSchema,
+  type BulkDeleteResult,
+  type ReindexResponse,
+  type MaintenanceResult,
+  type PdfStatusDistribution,
+  type PdfStorageHealth,
+  type ProcessingMetrics,
+  type VectorCollectionsResponse,
+  type ProcessingQueueResponse,
+} from '../schemas/admin-knowledge-base.schemas';
+import {
   AgentCostEstimationResultSchema,
   CostScenariosResponseSchema,
   SaveScenarioResponseSchema,
@@ -1919,6 +1937,136 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         `/api/v1/admin/model-performance?days=${days}`,
         ModelPerformanceDtoSchema
       );
+    },
+
+    // ========== Admin PDF Management (Issue #4784) ==========
+
+    /**
+     * Bulk delete PDF documents
+     * POST /api/v1/admin/pdfs/bulk/delete
+     */
+    async bulkDeletePdfs(ids: string[]): Promise<BulkDeleteResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/bulk/delete',
+        { pdfIds: ids },
+        BulkDeleteResultSchema
+      );
+    },
+
+    /**
+     * Reindex a PDF document (delete chunks, reset to Pending)
+     * POST /api/v1/admin/pdfs/{pdfId}/reindex
+     */
+    async reindexPdf(pdfId: string): Promise<ReindexResponse> {
+      return httpClient.post(
+        `/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}/reindex`,
+        {},
+        ReindexResponseSchema
+      );
+    },
+
+    /**
+     * Mark documents stuck in processing (>24h) as failed
+     * POST /api/v1/admin/pdfs/maintenance/purge-stale
+     */
+    async purgeStaleDocuments(): Promise<MaintenanceResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/maintenance/purge-stale',
+        {},
+        MaintenanceResultSchema
+      );
+    },
+
+    /**
+     * Delete orphaned text chunks referencing non-existent PDFs
+     * POST /api/v1/admin/pdfs/maintenance/cleanup-orphans
+     */
+    async cleanupOrphans(): Promise<MaintenanceResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/maintenance/cleanup-orphans',
+        {},
+        MaintenanceResultSchema
+      );
+    },
+
+    /**
+     * Get PDF status distribution for analytics
+     * GET /api/v1/admin/pdfs/analytics/distribution
+     */
+    async getPdfStatusDistribution(): Promise<PdfStatusDistribution> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/analytics/distribution',
+        PdfStatusDistributionSchema
+      );
+      return result ?? { countByState: {}, totalDocuments: 0, topBySize: [] };
+    },
+
+    /**
+     * Get PDF storage health across PG, Qdrant, and file storage
+     * GET /api/v1/admin/pdfs/storage/health
+     */
+    async getPdfStorageHealth(): Promise<PdfStorageHealth> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/storage/health',
+        PdfStorageHealthSchema
+      );
+      if (!result) throw new Error('Failed to fetch PDF storage health');
+      return result;
+    },
+
+    /**
+     * Get aggregated PDF processing metrics
+     * GET /api/v1/admin/pdfs/metrics/processing
+     */
+    async getPdfMetrics(): Promise<ProcessingMetrics> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/metrics/processing',
+        ProcessingMetricsSchema
+      );
+      if (!result) throw new Error('Failed to fetch PDF processing metrics');
+      return result;
+    },
+
+    // ========== Admin Knowledge Base (Issue #4784) ==========
+
+    /**
+     * Get vector collections from Qdrant
+     * GET /api/v1/admin/kb/vector-collections
+     */
+    async getVectorCollections(): Promise<VectorCollectionsResponse> {
+      const result = await httpClient.get(
+        '/api/v1/admin/kb/vector-collections',
+        VectorCollectionsResponseSchema
+      );
+      return result ?? { collections: [] };
+    },
+
+    /**
+     * Get admin processing queue with pagination
+     * GET /api/v1/admin/kb/processing-queue
+     */
+    async getProcessingQueueAdmin(params?: {
+      statusFilter?: string;
+      searchText?: string;
+      fromDate?: string;
+      toDate?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<ProcessingQueueResponse> {
+      const queryParams = new URLSearchParams();
+      if (params?.statusFilter) queryParams.set('statusFilter', params.statusFilter);
+      if (params?.searchText) queryParams.set('searchText', params.searchText);
+      if (params?.fromDate) queryParams.set('fromDate', params.fromDate);
+      if (params?.toDate) queryParams.set('toDate', params.toDate);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/kb/processing-queue${query ? `?${query}` : ''}`,
+        ProcessingQueueResponseSchema
+      );
+      return result ?? { jobs: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     },
   };
 }

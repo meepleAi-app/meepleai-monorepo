@@ -51,7 +51,10 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public DateTime UpdatedAt { get; private set; }
     public DateTime? LastSavedAt { get; private set; }
     public int CurrentTurnIndex { get; private set; }
-    public int? CurrentPhaseIndex { get; }
+    public int CurrentPhaseIndex { get; private set; }
+    public string[] PhaseNames { get; private set; } = Array.Empty<string>();
+    public SnapshotTriggerConfig? SnapshotTriggerConfig { get; private set; }
+    public DateTime? LastSnapshotTimestamp { get; private set; }
     public SessionScoringConfig ScoringConfig { get; private set; }
     public JsonDocument? GameState { get; private set; }
     public string? Notes { get; private set; }
@@ -475,15 +478,111 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         }
 
         CurrentTurnIndex++;
+        CurrentPhaseIndex = 0; // Reset phase to start of new turn
         var nextPlayerId = GetCurrentTurnPlayerId();
 
-        // Start new turn record
-        _turnRecords.Add(new TurnRecord(CurrentTurnIndex, nextPlayerId, now));
+        // Start new turn record with phase 0
+        var phaseName = PhaseNames.Length > 0 ? PhaseNames[0] : null;
+        _turnRecords.Add(new TurnRecord(CurrentTurnIndex, nextPlayerId, now, 0, phaseName));
 
         UpdatedAt = now;
 
         AddDomainEvent(new LiveSessionTurnAdvancedEvent(Id, CurrentTurnIndex, nextPlayerId));
     }
+
+    /// <summary>
+    /// Advances to the next phase within the current turn.
+    /// If at the last phase, wraps to phase 0 (start of next turn cycle).
+    /// </summary>
+    public void AdvancePhase(TimeProvider? timeProvider = null)
+    {
+        if (Status != LiveSessionStatus.InProgress)
+            throw new ConflictException($"Cannot advance phase in {Status} status. Must be InProgress.");
+
+        if (PhaseNames.Length == 0)
+            throw new DomainException("No phases configured for this session. Link a toolkit with turn phases first.");
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+
+        if (CurrentPhaseIndex >= PhaseNames.Length - 1)
+        {
+            // Last phase reached - wrap to 0
+            CurrentPhaseIndex = 0;
+        }
+        else
+        {
+            CurrentPhaseIndex++;
+        }
+
+        // Update the current turn record with phase info
+        var currentTurnRecord = _turnRecords.LastOrDefault();
+        if (currentTurnRecord != null && !currentTurnRecord.IsCompleted)
+        {
+            var updatedRecord = new TurnRecord(
+                currentTurnRecord.TurnIndex,
+                currentTurnRecord.PlayerId,
+                currentTurnRecord.StartedAt,
+                CurrentPhaseIndex,
+                PhaseNames.Length > CurrentPhaseIndex ? PhaseNames[CurrentPhaseIndex] : null);
+
+            _turnRecords.Remove(currentTurnRecord);
+            _turnRecords.Add(updatedRecord);
+        }
+
+        UpdatedAt = now;
+
+        AddDomainEvent(new LiveSessionPhaseAdvancedEvent(
+            Id, CurrentTurnIndex, CurrentPhaseIndex,
+            PhaseNames.Length > CurrentPhaseIndex ? PhaseNames[CurrentPhaseIndex] : null,
+            PhaseNames.Length));
+    }
+
+    /// <summary>
+    /// Configures phase names from a toolkit's turn template.
+    /// </summary>
+    public void ConfigurePhases(string[] phaseNames, TimeProvider? timeProvider = null)
+    {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot configure phases on a completed session");
+
+        ArgumentNullException.ThrowIfNull(phaseNames);
+
+        PhaseNames = phaseNames.Select(p => p.Trim()).Where(p => p.Length > 0).ToArray();
+        CurrentPhaseIndex = 0;
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Sets the snapshot trigger configuration for automatic snapshots.
+    /// </summary>
+    public void SetSnapshotTriggerConfig(SnapshotTriggerConfig config, TimeProvider? timeProvider = null)
+    {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot change snapshot config on a completed session");
+
+        ArgumentNullException.ThrowIfNull(config);
+
+        SnapshotTriggerConfig = config;
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Records the timestamp of the last snapshot for debounce purposes.
+    /// </summary>
+    public void RecordSnapshotTimestamp(DateTime timestamp)
+    {
+        LastSnapshotTimestamp = timestamp;
+    }
+
+    /// <summary>
+    /// Gets the visible tool names for the current phase.
+    /// Returns null if no phase-specific visibility is configured.
+    /// </summary>
+    public string? GetCurrentPhaseName() =>
+        PhaseNames.Length > CurrentPhaseIndex ? PhaseNames[CurrentPhaseIndex] : null;
 
     // === State & Notes ===
 

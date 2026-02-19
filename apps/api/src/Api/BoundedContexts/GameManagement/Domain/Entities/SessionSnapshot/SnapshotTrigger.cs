@@ -15,5 +15,11 @@ internal enum SnapshotTrigger
     ManualSave = 2,
 
     /// <summary>Triggered by a specific game event (Phase 3).</summary>
-    EventTriggered = 3
+    EventTriggered = 3,
+
+    /// <summary>Automatic snapshot when a score changes.</summary>
+    ScoreChanged = 4,
+
+    /// <summary>Automatic snapshot when a timer expires.</summary>
+    TimerExpired = 5
 }

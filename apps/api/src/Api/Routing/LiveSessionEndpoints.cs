@@ -1,6 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
+using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
 using MediatR;
@@ -132,6 +134,35 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Advance to the next turn");
 
+        group.MapPost("/live-sessions/{sessionId}/advance-phase", HandleAdvancePhase)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Advance to the next turn phase")
+            .WithDescription("Advances the current turn phase. If at the last phase, wraps to phase 0. Issue #4761.");
+
+        group.MapPut("/live-sessions/{sessionId}/phases", HandleConfigurePhases)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Configure turn phases")
+            .WithDescription("Sets the phase names for the session's turn structure. Issue #4761.");
+
+        group.MapPost("/live-sessions/{sessionId}/trigger-snapshot", HandleTriggerSnapshot)
+            .RequireAuthenticatedUser()
+            .Produces<SessionSnapshotDto>(201)
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Trigger an event-based snapshot")
+            .WithDescription("Triggers a snapshot with debounce protection. Returns 204 if debounced. Issue #4761.");
+
         group.MapPut("/live-sessions/{sessionId}/notes", HandleUpdateNotes)
             .RequireAuthenticatedUser()
             .Produces(204)
@@ -178,6 +209,14 @@ internal static class LiveSessionEndpoints
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Get players in a session");
+
+        group.MapGet("/live-sessions/{sessionId}/phases", HandleGetTurnPhases)
+            .RequireAuthenticatedUser()
+            .Produces<TurnPhasesDto>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get current turn phases")
+            .WithDescription("Returns the current phase configuration and state. Issue #4761.");
 
         return group;
     }
@@ -344,6 +383,40 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleAdvancePhase(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new AdvanceLiveSessionPhaseCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleConfigurePhases(
+        Guid sessionId,
+        [FromBody] ConfigurePhasesRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new ConfigureLiveSessionPhasesCommand(sessionId, request.PhaseNames), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleTriggerSnapshot(
+        Guid sessionId,
+        [FromBody] TriggerSnapshotRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new TriggerEventSnapshotCommand(
+            sessionId, request.TriggerType, request.Description, request.CreatedByPlayerId),
+            cancellationToken).ConfigureAwait(false);
+
+        return result != null
+            ? Results.Created($"/api/v1/live-sessions/{sessionId}/snapshots/{result.Id}", result)
+            : Results.NoContent();
+    }
+
     private static async Task<IResult> HandleUpdateNotes(
         Guid sessionId,
         [FromBody] UpdateNotesRequest request,
@@ -404,6 +477,15 @@ internal static class LiveSessionEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleGetTurnPhases(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetTurnPhasesQuery(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     #endregion
 
     #region Request Models
@@ -436,6 +518,13 @@ internal static class LiveSessionEndpoints
         string? Unit = null);
 
     private sealed record UpdateNotesRequest(string? Notes);
+
+    private sealed record ConfigurePhasesRequest(string[] PhaseNames);
+
+    private sealed record TriggerSnapshotRequest(
+        SnapshotTrigger TriggerType,
+        string? Description = null,
+        Guid? CreatedByPlayerId = null);
 
     #endregion
 }

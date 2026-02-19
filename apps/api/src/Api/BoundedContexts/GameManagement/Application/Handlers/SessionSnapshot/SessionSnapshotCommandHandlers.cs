@@ -77,7 +77,7 @@ internal class CreateSnapshotCommandHandler
             deltaDataJson,
             isCheckpoint,
             session.CurrentTurnIndex,
-            null, // PhaseIndex - will be used in Phase 3
+            session.CurrentPhaseIndex,
             command.CreatedByPlayerId);
 
         await _snapshotRepository.AddAsync(snapshot, cancellationToken).ConfigureAwait(false);

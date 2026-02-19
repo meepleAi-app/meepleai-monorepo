@@ -30,6 +30,32 @@ internal record AddDiceToolCommand(
     string? Color = null
 ) : ICommand<GameToolkitDto>;
 
+internal record AddCardToolCommand(
+    Guid ToolkitId,
+    string Name,
+    string DeckType = "standard",
+    int CardCount = 52,
+    bool Shuffleable = true,
+    CardZone DefaultZone = CardZone.DrawPile,
+    CardOrientation DefaultOrientation = CardOrientation.FaceDown,
+    IReadOnlyList<CardEntryDto>? CardEntries = null,
+    bool AllowDraw = true,
+    bool AllowDiscard = true,
+    bool AllowPeek = false,
+    bool AllowReturnToDeck = false
+) : ICommand<GameToolkitDto>;
+
+internal record AddTimerToolCommand(
+    Guid ToolkitId,
+    string Name,
+    int DurationSeconds,
+    TimerType TimerType = TimerType.CountDown,
+    bool AutoStart = false,
+    string? Color = null,
+    bool IsPerPlayer = false,
+    int? WarningThresholdSeconds = null
+) : ICommand<GameToolkitDto>;
+
 internal record AddCounterToolCommand(
     Guid ToolkitId,
     string Name,
@@ -42,6 +68,16 @@ internal record AddCounterToolCommand(
 ) : ICommand<GameToolkitDto>;
 
 internal record RemoveDiceToolCommand(
+    Guid ToolkitId,
+    string ToolName
+) : ICommand<GameToolkitDto>;
+
+internal record RemoveCardToolCommand(
+    Guid ToolkitId,
+    string ToolName
+) : ICommand<GameToolkitDto>;
+
+internal record RemoveTimerToolCommand(
     Guid ToolkitId,
     string ToolName
 ) : ICommand<GameToolkitDto>;
@@ -62,4 +98,16 @@ internal record SetTurnTemplateCommand(
     Guid ToolkitId,
     TurnOrderType TurnOrderType = TurnOrderType.RoundRobin,
     string[]? Phases = null
+) : ICommand<GameToolkitDto>;
+
+internal record SetStateTemplateCommand(
+    Guid ToolkitId,
+    string Name,
+    TemplateCategory Category,
+    string SchemaJson,
+    string? Description = null
+) : ICommand<GameToolkitDto>;
+
+internal record ClearStateTemplateCommand(
+    Guid ToolkitId
 ) : ICommand<GameToolkitDto>;

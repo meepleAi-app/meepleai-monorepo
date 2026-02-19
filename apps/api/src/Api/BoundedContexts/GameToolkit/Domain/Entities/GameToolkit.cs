@@ -29,10 +29,10 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     public IReadOnlyList<TimerToolConfig> TimerTools => _timerTools.AsReadOnly();
     public IReadOnlyList<CounterToolConfig> CounterTools => _counterTools.AsReadOnly();
 
-    // Template configurations (stored as JSON)
+    // Template configurations
     public ScoringTemplateConfig? ScoringTemplate { get; private set; }
     public TurnTemplateConfig? TurnTemplate { get; private set; }
-    public string? StateTemplate { get; private set; }
+    public StateTemplateDefinition? StateTemplate { get; private set; }
     public string? AgentConfig { get; private set; }
 
     // Private constructor for EF Core
@@ -123,6 +123,54 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     }
 
     // ========================================================================
+    // Card tools
+    // ========================================================================
+
+    public void AddCardTool(CardToolConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        if (_cardTools.Count >= 20)
+            throw new InvalidOperationException("Cannot add more than 20 card tools");
+
+        _cardTools.Add(config);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool RemoveCardTool(string name)
+    {
+        var tool = _cardTools.Find(c => string.Equals(c.Name, name, StringComparison.Ordinal));
+        if (tool == null) return false;
+
+        _cardTools.Remove(tool);
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    // ========================================================================
+    // Timer tools
+    // ========================================================================
+
+    public void AddTimerTool(TimerToolConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        if (_timerTools.Count >= 20)
+            throw new InvalidOperationException("Cannot add more than 20 timer tools");
+
+        _timerTools.Add(config);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool RemoveTimerTool(string name)
+    {
+        var tool = _timerTools.Find(t => string.Equals(t.Name, name, StringComparison.Ordinal));
+        if (tool == null) return false;
+
+        _timerTools.Remove(tool);
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    // ========================================================================
     // Counter tools
     // ========================================================================
 
@@ -164,7 +212,7 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void SetStateTemplate(string? stateTemplate)
+    public void SetStateTemplate(StateTemplateDefinition? stateTemplate)
     {
         StateTemplate = stateTemplate;
         UpdatedAt = DateTime.UtcNow;
@@ -215,15 +263,36 @@ internal sealed class DiceToolConfig
     }
 }
 
-/// <summary>Card tool configuration (placeholder for future card-based tools).</summary>
+/// <summary>
+/// Card tool configuration with deck management.
+/// Defines deck structure, available card entries, zones, and allowed operations.
+/// </summary>
 internal sealed class CardToolConfig
 {
     public string Name { get; }
     public string DeckType { get; }
     public int CardCount { get; }
     public bool Shuffleable { get; }
+    public CardZone DefaultZone { get; }
+    public CardOrientation DefaultOrientation { get; }
+    public IReadOnlyList<CardEntry> CardEntries { get; }
+    public bool AllowDraw { get; }
+    public bool AllowDiscard { get; }
+    public bool AllowPeek { get; }
+    public bool AllowReturnToDeck { get; }
 
-    public CardToolConfig(string name, string deckType, int cardCount = 52, bool shuffleable = true)
+    public CardToolConfig(
+        string name,
+        string deckType,
+        int cardCount = 52,
+        bool shuffleable = true,
+        CardZone defaultZone = CardZone.DrawPile,
+        CardOrientation defaultOrientation = CardOrientation.FaceDown,
+        IReadOnlyList<CardEntry>? cardEntries = null,
+        bool allowDraw = true,
+        bool allowDiscard = true,
+        bool allowPeek = false,
+        bool allowReturnToDeck = false)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Card tool name cannot be empty", nameof(name));
@@ -232,37 +301,78 @@ internal sealed class CardToolConfig
 
         Name = name.Trim();
         DeckType = deckType ?? "standard";
-        CardCount = cardCount;
+        CardCount = cardEntries is { Count: > 0 } ? cardEntries.Count : cardCount;
         Shuffleable = shuffleable;
+        DefaultZone = defaultZone;
+        DefaultOrientation = defaultOrientation;
+        CardEntries = cardEntries ?? Array.Empty<CardEntry>();
+        AllowDraw = allowDraw;
+        AllowDiscard = allowDiscard;
+        AllowPeek = allowPeek;
+        AllowReturnToDeck = allowReturnToDeck;
     }
 }
 
-/// <summary>Timer tool configuration.</summary>
+/// <summary>
+/// A single card definition within a deck.
+/// </summary>
+internal sealed class CardEntry
+{
+    public string Name { get; }
+    public string? Suit { get; }
+    public string? Rank { get; }
+    public string? CustomData { get; }
+
+    public CardEntry(string name, string? suit = null, string? rank = null, string? customData = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Card entry name cannot be empty", nameof(name));
+
+        Name = name.Trim();
+        Suit = suit?.Trim();
+        Rank = rank?.Trim();
+        CustomData = customData;
+    }
+}
+
+/// <summary>
+/// Timer tool configuration with support for countdown, count-up, and chess-style timers.
+/// </summary>
 internal sealed class TimerToolConfig
 {
     public string Name { get; }
     public int DurationSeconds { get; }
-    public bool IsCountdown { get; }
+    public TimerType TimerType { get; }
     public bool AutoStart { get; }
     public string? Color { get; }
+    public bool IsPerPlayer { get; }
+    public int? WarningThresholdSeconds { get; }
 
     public TimerToolConfig(
         string name,
         int durationSeconds,
-        bool isCountdown = true,
+        TimerType timerType = TimerType.CountDown,
         bool autoStart = false,
-        string? color = null)
+        string? color = null,
+        bool isPerPlayer = false,
+        int? warningThresholdSeconds = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Timer tool name cannot be empty", nameof(name));
         if (durationSeconds < 1 || durationSeconds > 86400)
             throw new ArgumentException("Timer duration must be between 1 second and 24 hours", nameof(durationSeconds));
+        if (warningThresholdSeconds.HasValue && (warningThresholdSeconds.Value < 1 || warningThresholdSeconds.Value >= durationSeconds))
+            throw new ArgumentException("Warning threshold must be between 1 and less than duration", nameof(warningThresholdSeconds));
+        if (timerType == TimerType.Chess && !isPerPlayer)
+            throw new ArgumentException("Chess timer must be per-player", nameof(isPerPlayer));
 
         Name = name.Trim();
         DurationSeconds = durationSeconds;
-        IsCountdown = isCountdown;
+        TimerType = timerType;
         AutoStart = autoStart;
         Color = color;
+        IsPerPlayer = isPerPlayer;
+        WarningThresholdSeconds = warningThresholdSeconds;
     }
 }
 
@@ -335,5 +445,45 @@ internal sealed class TurnTemplateConfig
     {
         TurnOrderType = turnOrderType;
         Phases = phases ?? Array.Empty<string>();
+    }
+}
+
+/// <summary>
+/// State template definition - a pre-built toolkit configuration for popular games.
+/// Contains a JSON schema defining tools and initial state that can bootstrap a full GameToolkit.
+/// </summary>
+internal sealed class StateTemplateDefinition
+{
+    public string Name { get; }
+    public string? Description { get; }
+    public TemplateCategory Category { get; }
+    public string SchemaJson { get; }
+
+    public StateTemplateDefinition(
+        string name,
+        TemplateCategory category,
+        string schemaJson,
+        string? description = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Template name cannot be empty", nameof(name));
+        if (name.Length > 200)
+            throw new ArgumentException("Template name cannot exceed 200 characters", nameof(name));
+        if (string.IsNullOrWhiteSpace(schemaJson))
+            throw new ArgumentException("Schema JSON cannot be empty", nameof(schemaJson));
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(schemaJson);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            throw new ArgumentException("Schema JSON must be valid JSON", nameof(schemaJson));
+        }
+
+        Name = name.Trim();
+        Description = description?.Trim();
+        Category = category;
+        SchemaJson = schemaJson;
     }
 }

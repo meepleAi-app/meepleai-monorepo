@@ -7,7 +7,7 @@ using MediatR;
 namespace Api.Routing;
 
 /// <summary>
-/// GameToolkit API routes (Issue #4753).
+/// GameToolkit API routes (Issue #4753, #4759).
 /// Handles game toolkit CRUD, tool management, and template configuration.
 /// </summary>
 internal static class GameToolkitRoutes
@@ -105,6 +105,53 @@ internal static class GameToolkitRoutes
         .WithSummary("Remove a dice tool from the toolkit")
         .Produces<GameToolkitDto>(200);
 
+        // ---- Card Tools ----
+
+        toolkits.MapPost("/{id:guid}/card-tools", async (Guid id, AddCardToolRequest request, IMediator m) =>
+        {
+            var command = new AddCardToolCommand(
+                id, request.Name, request.DeckType, request.CardCount, request.Shuffleable,
+                request.DefaultZone, request.DefaultOrientation, request.CardEntries,
+                request.AllowDraw, request.AllowDiscard, request.AllowPeek, request.AllowReturnToDeck);
+            var result = await m.Send(command).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AddCardTool")
+        .WithSummary("Add a card tool to the toolkit")
+        .Produces<GameToolkitDto>(200);
+
+        toolkits.MapDelete("/{id:guid}/card-tools/{toolName}", async (Guid id, string toolName, IMediator m) =>
+        {
+            var result = await m.Send(new RemoveCardToolCommand(id, toolName)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("RemoveCardTool")
+        .WithSummary("Remove a card tool from the toolkit")
+        .Produces<GameToolkitDto>(200);
+
+        // ---- Timer Tools ----
+
+        toolkits.MapPost("/{id:guid}/timer-tools", async (Guid id, AddTimerToolRequest request, IMediator m) =>
+        {
+            var command = new AddTimerToolCommand(
+                id, request.Name, request.DurationSeconds, request.TimerType,
+                request.AutoStart, request.Color, request.IsPerPlayer, request.WarningThresholdSeconds);
+            var result = await m.Send(command).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AddTimerTool")
+        .WithSummary("Add a timer tool to the toolkit")
+        .Produces<GameToolkitDto>(200);
+
+        toolkits.MapDelete("/{id:guid}/timer-tools/{toolName}", async (Guid id, string toolName, IMediator m) =>
+        {
+            var result = await m.Send(new RemoveTimerToolCommand(id, toolName)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("RemoveTimerTool")
+        .WithSummary("Remove a timer tool from the toolkit")
+        .Produces<GameToolkitDto>(200);
+
         // ---- Counter Tools ----
 
         toolkits.MapPost("/{id:guid}/counter-tools", async (Guid id, AddCounterToolRequest request, IMediator m) =>
@@ -148,6 +195,25 @@ internal static class GameToolkitRoutes
         })
         .WithName("SetTurnTemplate")
         .WithSummary("Set or update the turn template")
+        .Produces<GameToolkitDto>(200);
+
+        toolkits.MapPut("/{id:guid}/state-template", async (Guid id, SetStateTemplateRequest request, IMediator m) =>
+        {
+            var command = new SetStateTemplateCommand(id, request.Name, request.Category, request.SchemaJson, request.Description);
+            var result = await m.Send(command).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("SetStateTemplate")
+        .WithSummary("Set or update the state template")
+        .Produces<GameToolkitDto>(200);
+
+        toolkits.MapDelete("/{id:guid}/state-template", async (Guid id, IMediator m) =>
+        {
+            var result = await m.Send(new ClearStateTemplateCommand(id)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("ClearStateTemplate")
+        .WithSummary("Clear the state template")
         .Produces<GameToolkitDto>(200);
 
         return toolkits;

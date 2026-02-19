@@ -52,7 +52,8 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 Key = s3Key,
                 InputStream = stream,
                 ContentType = "application/pdf",
-                AutoCloseStream = false // Caller owns the stream
+                AutoCloseStream = false, // Caller owns the stream
+                DisablePayloadSigning = true // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
             };
 
             // Server-side encryption if enabled

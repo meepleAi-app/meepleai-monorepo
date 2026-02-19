@@ -24,47 +24,9 @@ namespace Api.Infrastructure.Migrations
                 table: "agents",
                 newName: "GameId");
 
-            migrationBuilder.AddColumn<decimal>(
-                name: "daily_credits_used",
-                table: "user_token_usage",
-                type: "numeric(18,2)",
-                nullable: false,
-                defaultValue: 0m);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "last_daily_reset",
-                table: "user_token_usage",
-                type: "timestamp with time zone",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "last_weekly_reset",
-                table: "user_token_usage",
-                type: "timestamp with time zone",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
-
-            migrationBuilder.AddColumn<decimal>(
-                name: "weekly_credits_used",
-                table: "user_token_usage",
-                type: "numeric(18,2)",
-                nullable: false,
-                defaultValue: 0m);
-
-            migrationBuilder.AddColumn<decimal>(
-                name: "daily_credits_limit",
-                table: "token_tiers",
-                type: "numeric(18,2)",
-                nullable: false,
-                defaultValue: 0m);
-
-            migrationBuilder.AddColumn<decimal>(
-                name: "weekly_credits_limit",
-                table: "token_tiers",
-                type: "numeric(18,2)",
-                nullable: false,
-                defaultValue: 0m);
+            // Note: credit budget columns (daily_credits_used, last_daily_reset, last_weekly_reset,
+            // weekly_credits_used, daily_credits_limit, weekly_credits_limit) already added by
+            // migration 20260218123027_AddCreditBudgetTracking - removed duplicates
 
             migrationBuilder.AddColumn<Guid>(
                 name: "CreatedByUserId",
@@ -127,29 +89,8 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_agents_GameId_Type",
                 table: "agents");
 
-            migrationBuilder.DropColumn(
-                name: "daily_credits_used",
-                table: "user_token_usage");
-
-            migrationBuilder.DropColumn(
-                name: "last_daily_reset",
-                table: "user_token_usage");
-
-            migrationBuilder.DropColumn(
-                name: "last_weekly_reset",
-                table: "user_token_usage");
-
-            migrationBuilder.DropColumn(
-                name: "weekly_credits_used",
-                table: "user_token_usage");
-
-            migrationBuilder.DropColumn(
-                name: "daily_credits_limit",
-                table: "token_tiers");
-
-            migrationBuilder.DropColumn(
-                name: "weekly_credits_limit",
-                table: "token_tiers");
+            // Note: credit budget columns NOT dropped here - they belong to
+            // migration 20260218123027_AddCreditBudgetTracking
 
             migrationBuilder.DropColumn(
                 name: "CreatedByUserId",

@@ -510,7 +510,10 @@ describe('MeepleCard Flip Integration', () => {
       <MeepleCard {...defaultProps} flippable flipData={flipData} />,
     );
 
-    expect(screen.getByText('Test Game')).toBeInTheDocument();
+    // Title appears on both front face (card content) and back face (BackContent header)
+    const titles = screen.getAllByText('Test Game');
+    expect(titles.length).toBeGreaterThanOrEqual(1);
+    expect(titles[0]).toBeInTheDocument();
   });
 
   it('should show flip back content', () => {

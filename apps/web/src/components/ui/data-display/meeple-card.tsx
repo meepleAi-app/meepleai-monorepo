@@ -88,6 +88,8 @@ import { TagStrip } from './meeple-card-features/TagStrip';
 import { WishlistButton } from './meeple-card-features/WishlistButton';
 // Issue #4689: Navigation footer
 import { CardNavigationFooter } from './meeple-card-features/CardNavigationFooter';
+// Issue #4777: Agent action footer
+import { CardAgentAction } from './meeple-card-features/CardAgentAction';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
@@ -293,6 +295,15 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   /** Navigation links to related entities (rendered as icon footer) */
   navigateTo?: import('@/config/entity-navigation').ResolvedNavigationLink[];
+
+  // ========== AGENT ACTION FOOTER (Issue #4777) ==========
+
+  /** Whether this game entity already has an agent */
+  hasAgent?: boolean;
+  /** Agent ID for chat navigation (when hasAgent is true) */
+  agentId?: string;
+  /** Callback to open agent creation wizard */
+  onCreateAgent?: () => void;
 }
 
 // ============================================================================
@@ -880,6 +891,10 @@ export const MeepleCard = React.memo(function MeepleCard({
   chatPreview,
   unreadCount,
   navigateTo,
+  // Issue #4777: Agent action footer
+  hasAgent,
+  agentId,
+  onCreateAgent,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1269,8 +1284,10 @@ export const MeepleCard = React.memo(function MeepleCard({
             'px-3 py-2',
             'border-t border-border',
             'bg-muted/60 dark:bg-muted/40',
-            // Only round bottom when there's no nav footer below
-            !(navigateTo && navigateTo.length > 0) && 'rounded-b-2xl',
+            // Only round bottom when there's no footer section below
+            !(navigateTo && navigateTo.length > 0) &&
+              !(entity === 'game' && hasAgent !== undefined) &&
+              'rounded-b-2xl',
           )}
           data-testid="meeple-card-footer"
         >
@@ -1284,6 +1301,18 @@ export const MeepleCard = React.memo(function MeepleCard({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Issue #4777: Agent action footer (Crea Agente / Chat) */}
+      {entity === 'game' && hasAgent !== undefined && id && (
+        <CardAgentAction
+          hasAgent={hasAgent}
+          agentId={agentId}
+          gameId={id}
+          onCreateAgent={onCreateAgent}
+          variant={variant}
+          hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
+        />
       )}
 
       {/* Navigation footer: links to related entities (Epic #4688, Issue #4689) */}

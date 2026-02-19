@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
@@ -28,6 +29,30 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAgents } from '@/hooks/queries/useAgents';
+
+/** Agent card wrapper to use entity actions hook per-card */
+function AgentCard({ agent, onClick }: { agent: { id: string; name: string; type: string; invocationCount: number; strategyName: string }; onClick: () => void }) {
+  const entityActions = useEntityActions({ entity: 'agent', id: agent.id });
+
+  return (
+    <MeepleCard
+      entity="agent"
+      variant="grid"
+      title={agent.name}
+      subtitle={`${agent.type} agent`}
+      metadata={[
+        { value: `${agent.invocationCount} uses`, label: 'Usage' },
+        { value: agent.strategyName, label: 'Strategy' },
+      ]}
+      navigateTo={getNavigationLinks('agent', { id: agent.id })}
+      entityQuickActions={entityActions.quickActions}
+      showInfoButton
+      infoHref={`/agents/${agent.id}`}
+      infoTooltip="Dettagli agent"
+      onClick={onClick}
+    />
+  );
+}
 
 export default function AgentsPage() {
   const router = useRouter();
@@ -129,22 +154,10 @@ export default function AgentsPage() {
       {/* Agent Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredAgents.map(agent => (
-          <MeepleCard
+          <AgentCard
             key={agent.id}
-            entity="agent"
-            variant="grid"
-            title={agent.name}
-            subtitle={`${agent.type} agent`}
-            metadata={[
-              { value: `${agent.invocationCount} uses`, label: 'Usage' },
-              { value: agent.strategyName, label: 'Strategy' },
-            ]}
-            // Epic #4688: Navigation footer
-            navigateTo={getNavigationLinks('agent', { id: agent.id })}
-            onClick={() => {
-              // Navigate to agent chat or detail
-              router.push(`/agents/${agent.id}`);
-            }}
+            agent={agent}
+            onClick={() => router.push(`/agents/${agent.id}`)}
           />
         ))}
       </div>

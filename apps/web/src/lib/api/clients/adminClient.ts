@@ -124,6 +124,7 @@ import {
   ProcessingMetricsSchema,
   VectorCollectionsResponseSchema,
   ProcessingQueueResponseSchema,
+  PdfListResultSchema,
   type BulkDeleteResult,
   type ReindexResponse,
   type MaintenanceResult,
@@ -132,6 +133,7 @@ import {
   type ProcessingMetrics,
   type VectorCollectionsResponse,
   type ProcessingQueueResponse,
+  type PdfListResult,
 } from '../schemas/admin-knowledge-base.schemas';
 import {
   AgentCostEstimationResultSchema,
@@ -2025,6 +2027,44 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
       if (!result) throw new Error('Failed to fetch PDF processing metrics');
       return result;
+    },
+
+    /**
+     * Get all PDF documents with filtering and pagination (admin only)
+     * GET /api/v1/pdfs/admin/pdfs
+     */
+    async getAllPdfs(params?: {
+      status?: string;
+      state?: string;
+      minSizeBytes?: number;
+      maxSizeBytes?: number;
+      uploadedAfter?: string;
+      uploadedBefore?: string;
+      gameId?: string;
+      sortBy?: string;
+      sortOrder?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<PdfListResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.set('status', params.status);
+      if (params?.state) queryParams.set('state', params.state);
+      if (params?.minSizeBytes) queryParams.set('minSizeBytes', params.minSizeBytes.toString());
+      if (params?.maxSizeBytes) queryParams.set('maxSizeBytes', params.maxSizeBytes.toString());
+      if (params?.uploadedAfter) queryParams.set('uploadedAfter', params.uploadedAfter);
+      if (params?.uploadedBefore) queryParams.set('uploadedBefore', params.uploadedBefore);
+      if (params?.gameId) queryParams.set('gameId', params.gameId);
+      if (params?.sortBy) queryParams.set('sortBy', params.sortBy);
+      if (params?.sortOrder) queryParams.set('sortOrder', params.sortOrder);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/pdfs/admin/pdfs${query ? `?${query}` : ''}`,
+        PdfListResultSchema
+      );
+      return result ?? { items: [], total: 0, page: 1, pageSize: 50 };
     },
 
     // ========== Admin Knowledge Base (Issue #4784) ==========

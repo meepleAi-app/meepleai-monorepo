@@ -340,7 +340,7 @@ export default function DocumentsLibraryPage() {
             <Input
               placeholder="Search documents..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="pl-9 w-64 bg-white/70 dark:bg-zinc-800/70"
             />
           </div>

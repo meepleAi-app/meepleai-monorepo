@@ -142,6 +142,25 @@ internal static class AdminGameWizardEndpoints
         httpContext.Response.Headers.Append("Connection", "keep-alive");
         httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
 
+        // Resolve gameId: the wizard passes SharedGameId, but PdfDocuments reference games.Id
+        var resolvedGameId = gameId;
+        var gameExistsDirectly = await dbContext.Games
+            .AnyAsync(g => g.Id == gameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!gameExistsDirectly)
+        {
+            var game = await dbContext.Games
+                .FirstOrDefaultAsync(g => g.SharedGameId == gameId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (game is not null)
+            {
+                resolvedGameId = game.Id;
+                logger.LogInformation("SSE: Resolved SharedGameId {SharedGameId} to GameId {GameId}", gameId, resolvedGameId);
+            }
+        }
+
         var consecutiveIdlePolls = 0;
         const int maxIdlePolls = 5;
 
@@ -151,7 +170,7 @@ internal static class AdminGameWizardEndpoints
             {
                 // Query the latest PDF for this game
                 var pdfInfo = await dbContext.PdfDocuments
-                    .Where(p => p.GameId == gameId)
+                    .Where(p => p.GameId == resolvedGameId)
                     .OrderByDescending(p => p.UploadedAt)
                     .Select(p => new
                     {

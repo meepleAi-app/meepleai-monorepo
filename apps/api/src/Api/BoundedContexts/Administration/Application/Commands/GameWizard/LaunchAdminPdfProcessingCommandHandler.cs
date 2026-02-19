@@ -39,10 +39,32 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
             "Admin wizard: Launching processing for PDF {PdfId} (Game {GameId}) by user {UserId}",
             command.PdfDocumentId, command.GameId, command.LaunchedByUserId);
 
-        // Find the PDF document (also verify it belongs to the specified game)
+        // Resolve GameId: the wizard passes SharedGameId, but PdfDocuments reference games.Id
+        var resolvedGameId = command.GameId;
+        var gameExistsDirectly = await _dbContext.Games
+            .AnyAsync(g => g.Id == command.GameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!gameExistsDirectly)
+        {
+            // The wizard uses SharedGameId in the URL - resolve to the actual Game.Id
+            var game = await _dbContext.Games
+                .FirstOrDefaultAsync(g => g.SharedGameId == command.GameId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (game is not null)
+            {
+                resolvedGameId = game.Id;
+                _logger.LogInformation(
+                    "Admin wizard: Resolved SharedGameId {SharedGameId} to GameId {GameId}",
+                    command.GameId, resolvedGameId);
+            }
+        }
+
+        // Find the PDF document (verify it belongs to the resolved game)
         var pdfEntity = await _dbContext.PdfDocuments
             .FirstOrDefaultAsync(
-                p => p.Id == command.PdfDocumentId && p.GameId == command.GameId,
+                p => p.Id == command.PdfDocumentId && p.GameId == resolvedGameId,
                 cancellationToken)
             .ConfigureAwait(false);
 

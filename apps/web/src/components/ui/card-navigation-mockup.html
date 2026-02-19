@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleCard Navigation System — Design Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: hsl(30 25% 97%); --fg: hsl(30 15% 15%);
+      --card: hsl(0 0% 100%); --card-fg: hsl(30 15% 15%);
+      --muted: hsl(30 20% 90%); --muted-fg: hsl(30 12% 45%);
+      --border: hsl(30 15% 85%);
+      --primary: hsl(25 95% 42%); --primary-light: hsl(25 95% 55%);
+      --e-game: 25, 95%, 45%; --e-player: 262, 83%, 58%;
+      --e-session: 240, 60%, 55%; --e-agent: 38, 92%, 50%;
+      --e-document: 210, 40%, 55%; --e-chat: 220, 80%, 55%;
+      --e-event: 350, 89%, 60%;
+      --radius: 16px; --radius-sm: 12px; --radius-xs: 8px;
+      --font-display: 'Quicksand', sans-serif; --font-body: 'Nunito', sans-serif;
+      --shadow-sm: 0 1px 3px rgba(180,130,80,0.06); --shadow-md: 0 4px 12px rgba(180,130,80,0.08);
+      --shadow-lg: 0 10px 30px rgba(180,130,80,0.12); --shadow-xl: 0 20px 50px rgba(180,130,80,0.16);
+    }
+    .dark {
+      --bg: hsl(20 10% 8%); --fg: hsl(30 20% 90%);
+      --card: hsl(20 8% 14%); --card-fg: hsl(30 20% 90%);
+      --muted: hsl(20 6% 20%); --muted-fg: hsl(30 10% 60%);
+      --border: hsl(20 6% 24%);
+      --primary: hsl(25 95% 58%); --primary-light: hsl(25 95% 65%);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.2); --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.4); --shadow-xl: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:var(--font-body); background:var(--bg); color:var(--fg); line-height:1.6; min-height:100vh; transition:background .4s,color .4s; overflow-x:hidden; }
+    body::before { content:''; position:fixed; inset:0; background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(180,120,60,.012) 2px,rgba(180,120,60,.012) 4px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(140,90,50,.015) 3px,rgba(140,90,50,.015) 5px); pointer-events:none; z-index:0; }
+    .dark body::before { opacity:.15; }
+
+    @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+    @keyframes float-up { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
+    @keyframes card-highlight { 0%{outline-offset:8px;outline-color:transparent} 30%{outline-offset:2px} 100%{outline-offset:8px;outline-color:transparent} }
+    @keyframes node-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+    .page-wrap { position:relative; z-index:1; max-width:1440px; margin:0 auto; padding:2rem 1.5rem 6rem; }
+    .page-header { text-align:center; margin-bottom:2rem; padding:2rem 0 1rem; }
+    .page-header h1 { font-family:var(--font-display); font-size:clamp(2rem,5vw,2.8rem); font-weight:700; color:var(--primary); letter-spacing:-.02em; }
+    .page-header p { color:var(--muted-fg); font-size:1.05rem; margin-top:.25rem; }
+    .page-header .badge { display:inline-block; margin-top:.75rem; padding:.25rem 1rem; border-radius:999px; font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; background:linear-gradient(135deg,hsl(var(--e-game)),hsl(var(--e-agent))); color:#fff; }
+
+    .theme-toggle { position:fixed; top:1.5rem; right:1.5rem; z-index:999; width:48px; height:48px; border-radius:50%; border:2px solid var(--border); background:var(--card); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:var(--shadow-md); transition:all .3s; }
+    .theme-toggle:hover { transform:scale(1.1); box-shadow:var(--shadow-lg); }
+
+    .section { margin-bottom:4rem; scroll-margin-top:2rem; }
+    .section-title { font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--fg); margin-bottom:.35rem; position:relative; display:inline-block; }
+    .section-title::after { content:''; position:absolute; left:0; bottom:-4px; width:50%; height:3px; border-radius:2px; background:var(--primary); }
+    .section-desc { color:var(--muted-fg); font-size:.92rem; margin-bottom:2rem; }
+
+    /* FLOW DIAGRAM */
+    .flow-container { position:relative; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:2.5rem 2rem 2rem; box-shadow:var(--shadow-md); overflow-x:auto; }
+    .flow-container::before { content:''; position:absolute; inset:0; background:rgba(255,255,255,.5); backdrop-filter:blur(12px) saturate(150%); border-radius:inherit; z-index:0; }
+    .dark .flow-container::before { background:rgba(30,25,20,.6); }
+    .flow-container>* { position:relative; z-index:1; }
+    .flow-label { position:absolute; top:10px; left:14px; font-size:8px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-fg); opacity:.5; }
+    .flow-graph { display:flex; flex-direction:column; align-items:center; gap:16px; min-width:860px; }
+    .flow-row { display:flex; align-items:center; justify-content:center; gap:12px; }
+    .flow-node { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:var(--radius-xs); border:2px solid; background:var(--card); cursor:pointer; transition:all .3s; font-family:var(--font-display); font-size:.78rem; font-weight:700; white-space:nowrap; user-select:none; }
+    .flow-node:hover { transform:translateY(-3px) scale(1.04); box-shadow:var(--shadow-lg); }
+    .flow-node.is-list { border-style:dashed; font-size:.74rem; }
+    .flow-node.highlight { animation:node-pulse .6s ease-in-out 3; }
+    .flow-node[data-e="game"] { border-color:hsl(var(--e-game)); color:hsl(var(--e-game)); }
+    .flow-node[data-e="agent"] { border-color:hsl(var(--e-agent)); color:hsl(var(--e-agent)); }
+    .flow-node[data-e="document"] { border-color:hsl(var(--e-document)); color:hsl(var(--e-document)); }
+    .flow-node[data-e="session"] { border-color:hsl(var(--e-session)); color:hsl(var(--e-session)); }
+    .flow-node[data-e="player"] { border-color:hsl(var(--e-player)); color:hsl(var(--e-player)); }
+    .flow-node[data-e="chat"] { border-color:hsl(var(--e-chat)); color:hsl(var(--e-chat)); }
+    .flow-node:hover[data-e="game"] { background:hsl(var(--e-game)/.07); }
+    .flow-node:hover[data-e="agent"] { background:hsl(var(--e-agent)/.07); }
+    .flow-node:hover[data-e="document"] { background:hsl(var(--e-document)/.07); }
+    .flow-node:hover[data-e="session"] { background:hsl(var(--e-session)/.07); }
+    .flow-node:hover[data-e="player"] { background:hsl(var(--e-player)/.07); }
+    .flow-node:hover[data-e="chat"] { background:hsl(var(--e-chat)/.07); }
+    .flow-arrow { color:var(--muted-fg); font-size:.9rem; opacity:.4; user-select:none; }
+    .flow-vline { width:2px; height:20px; background:var(--border); margin:0 auto; position:relative; }
+    .flow-vline::after { content:''; position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid var(--border); }
+
+    /* CARD BASE */
+    .mc { position:relative; overflow:hidden; border-radius:var(--radius); background:var(--card); border:1px solid var(--border); cursor:pointer; transition:all .35s cubic-bezier(.4,0,.2,1); }
+    .mc::before { content:''; position:absolute; inset:0; background:rgba(255,255,255,.6); backdrop-filter:blur(12px) saturate(180%); z-index:0; border-radius:inherit; }
+    .dark .mc::before { background:rgba(30,25,20,.7); }
+    .mc>* { position:relative; z-index:1; }
+    .mc .ea { position:absolute; left:0; top:0; bottom:0; width:4px; z-index:2; transition:width .25s; }
+    .mc:hover .ea { width:6px; }
+    .mc:hover { transform:translateY(-6px); box-shadow:var(--shadow-xl); }
+    .mc.highlighted { outline:3px solid var(--primary); outline-offset:3px; animation:card-highlight 1.5s ease-out forwards; }
+    .mc-cover { position:relative; overflow:hidden; height:150px; }
+    .mc-cover img { width:100%; height:100%; object-fit:cover; transition:transform .5s cubic-bezier(.4,0,.2,1); }
+    .mc:hover .mc-cover img { transform:scale(1.06); }
+    .mc-cover .grad { position:absolute; inset:0; pointer-events:none; }
+    .mc-cover .shimmer { position:absolute; inset:0; background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.25) 50%,transparent 60%); transform:translateX(-100%); pointer-events:none; }
+    .mc:hover .shimmer { animation:shimmer .8s ease-out forwards; }
+    .tag-stack { position:absolute; top:8px; left:10px; z-index:10; display:flex; flex-direction:column; gap:3px; }
+    .tag-pill { display:inline-flex; padding:2px 8px; border-radius:6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#fff; white-space:nowrap; }
+    .qa { position:absolute; top:8px; right:8px; z-index:10; display:flex; gap:5px; opacity:0; transition:opacity .3s; }
+    .mc:hover .qa { opacity:1; }
+    .qa-btn { width:30px; height:30px; border-radius:50%; border:1px solid rgba(255,255,255,.6); background:rgba(255,255,255,.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .3s; }
+    .qa-btn:hover { background:#fff; transform:scale(1.15); box-shadow:0 2px 12px rgba(0,0,0,.15); }
+    .qa-btn svg { width:14px; height:14px; color:hsl(30,12%,40%); }
+    .dark .qa-btn { background:rgba(40,35,30,.85); border-color:rgba(255,255,255,.15); }
+    .dark .qa-btn svg { color:hsl(30,20%,75%); }
+    .mc-content { padding:.75rem .9rem; }
+    .mc-title { font-family:var(--font-display); font-weight:700; font-size:.95rem; line-height:1.3; color:var(--card-fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mc-sub { font-size:.78rem; color:var(--muted-fg); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mc-rating { display:flex; align-items:center; gap:3px; margin-top:4px; }
+    .mc-rating .s { font-size:.78rem; }
+    .mc-rating .f { color:hsl(42,95%,50%); }
+    .mc-rating .e { color:var(--muted); }
+    .mc-rating .v { font-size:.7rem; color:var(--muted-fg); margin-left:4px; font-weight:600; }
+    .mc-footer { display:flex; align-items:center; justify-content:space-evenly; padding:.5rem .7rem; border-top:1px solid var(--border); background:color-mix(in srgb,var(--muted) 60%,transparent); }
+    .mc-footer .mi { font-size:.7rem; font-weight:600; color:color-mix(in srgb,var(--fg) 65%,transparent); }
+
+    /* ★ NAVIGATION FOOTER ★ */
+    .mc-nav { padding:7px 10px 9px; border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent); background:color-mix(in srgb,var(--muted) 28%,transparent); border-radius:0 0 var(--radius) var(--radius); }
+    .mc-nav .nh { text-align:center; font-size:7px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:color-mix(in srgb,var(--muted-fg) 50%,transparent); margin-bottom:5px; display:flex; align-items:center; justify-content:center; gap:6px; }
+    .mc-nav .nh::before, .mc-nav .nh::after { content:''; flex:1; height:1px; background:color-mix(in srgb,var(--border) 40%,transparent); max-width:35px; }
+    .mc-nav .nl { display:flex; justify-content:center; gap:12px; }
+    .nav-link { display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; text-decoration:none; color:inherit; transition:transform .2s; }
+    .nav-link:hover { transform:translateY(-2px); }
+    .nav-link .nb { width:28px; height:28px; border-radius:50%; border:1px solid color-mix(in srgb,var(--border) 75%,transparent); background:rgba(255,255,255,.65); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; transition:all .3s cubic-bezier(.4,0,.2,1); position:relative; }
+    .dark .nav-link .nb { background:rgba(40,35,30,.65); border-color:rgba(255,255,255,.08); }
+    .nav-link .nb svg { width:13px; height:13px; color:var(--muted-fg); transition:color .3s; }
+    .nav-link .nlbl { font-size:8px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted-fg); transition:color .3s; }
+    /* Tooltip */
+    .nav-link .nb::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%) scale(.9); padding:2px 7px; border-radius:5px; font-family:var(--font-body); font-size:9px; font-weight:600; white-space:nowrap; background:var(--fg); color:var(--bg); opacity:0; pointer-events:none; transition:all .2s; z-index:50; }
+    .nav-link:hover .nb::after { opacity:1; transform:translateX(-50%) scale(1); }
+    /* Entity hover colors */
+    .nav-link[data-t="game"]:hover .nb { background:hsl(var(--e-game)/.13); border-color:hsl(var(--e-game)/.45); box-shadow:0 0 12px hsl(var(--e-game)/.25); }
+    .nav-link[data-t="game"]:hover .nb svg { color:hsl(var(--e-game)); }
+    .nav-link[data-t="game"]:hover .nlbl { color:hsl(var(--e-game)); }
+    .nav-link[data-t="agent"]:hover .nb { background:hsl(var(--e-agent)/.13); border-color:hsl(var(--e-agent)/.45); box-shadow:0 0 12px hsl(var(--e-agent)/.25); }
+    .nav-link[data-t="agent"]:hover .nb svg { color:hsl(var(--e-agent)); }
+    .nav-link[data-t="agent"]:hover .nlbl { color:hsl(var(--e-agent)); }
+    .nav-link[data-t="document"]:hover .nb { background:hsl(var(--e-document)/.13); border-color:hsl(var(--e-document)/.45); box-shadow:0 0 12px hsl(var(--e-document)/.25); }
+    .nav-link[data-t="document"]:hover .nb svg { color:hsl(var(--e-document)); }
+    .nav-link[data-t="document"]:hover .nlbl { color:hsl(var(--e-document)); }
+    .nav-link[data-t="session"]:hover .nb { background:hsl(var(--e-session)/.13); border-color:hsl(var(--e-session)/.45); box-shadow:0 0 12px hsl(var(--e-session)/.25); }
+    .nav-link[data-t="session"]:hover .nb svg { color:hsl(var(--e-session)); }
+    .nav-link[data-t="session"]:hover .nlbl { color:hsl(var(--e-session)); }
+    .nav-link[data-t="player"]:hover .nb { background:hsl(var(--e-player)/.13); border-color:hsl(var(--e-player)/.45); box-shadow:0 0 12px hsl(var(--e-player)/.25); }
+    .nav-link[data-t="player"]:hover .nb svg { color:hsl(var(--e-player)); }
+    .nav-link[data-t="player"]:hover .nlbl { color:hsl(var(--e-player)); }
+    .nav-link[data-t="chat"]:hover .nb { background:hsl(var(--e-chat)/.13); border-color:hsl(var(--e-chat)/.45); box-shadow:0 0 12px hsl(var(--e-chat)/.25); }
+    .nav-link[data-t="chat"]:hover .nb svg { color:hsl(var(--e-chat)); }
+    .nav-link[data-t="chat"]:hover .nlbl { color:hsl(var(--e-chat)); }
+
+    /* GRIDS & LAYOUTS */
+    .cg3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
+    @media(max-width:900px) { .cg3 { grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:600px) { .cg3 { grid-template-columns:1fr; } }
+    .cg-auto { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1.5rem; }
+    .esec { margin-bottom:3rem; scroll-margin-top:2rem; }
+    .esec-h { display:flex; align-items:center; gap:8px; margin-bottom:1rem; }
+    .esec-h .dot { width:10px; height:10px; border-radius:50%; }
+    .esec-h h3 { font-family:var(--font-display); font-size:1.1rem; font-weight:700; }
+
+    /* VIEW TABS */
+    .vtabs { display:flex; gap:4px; padding:4px; background:var(--muted); border-radius:var(--radius-sm); width:fit-content; margin-bottom:2rem; }
+    .vtab { padding:8px 18px; border:none; background:transparent; border-radius:var(--radius-xs); cursor:pointer; font-family:var(--font-display); font-size:.82rem; font-weight:600; color:var(--muted-fg); transition:all .25s; }
+    .vtab.active { background:var(--card); color:var(--fg); box-shadow:var(--shadow-sm); }
+    .vtab:hover:not(.active) { color:var(--fg); }
+    .vpanel { display:none; } .vpanel.active { display:block; animation:float-up .4s ease-out; }
+
+    /* LIST VIEW */
+    .list-layout { display:grid; grid-template-columns:250px 1fr; gap:1.5rem; }
+    @media(max-width:800px) { .list-layout { grid-template-columns:1fr; } }
+    .sidebar { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:1.15rem; position:sticky; top:1rem; height:fit-content; box-shadow:var(--shadow-sm); }
+    .sidebar::before { content:''; position:absolute; inset:0; background:rgba(255,255,255,.5); backdrop-filter:blur(10px); border-radius:inherit; z-index:0; }
+    .dark .sidebar::before { background:rgba(30,25,20,.5); }
+    .sidebar>* { position:relative; z-index:1; }
+    .sf-title { font-family:var(--font-display); font-size:.82rem; font-weight:700; margin-bottom:.7rem; }
+    .sf-group { margin-bottom:1rem; }
+    .sf-group label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted-fg); display:block; margin-bottom:.4rem; }
+    .sf-input { width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-xs); background:var(--bg); color:var(--fg); font-family:var(--font-body); font-size:.8rem; outline:none; }
+    .sf-input:focus { border-color:var(--primary); }
+    .sf-cb { display:flex; align-items:center; gap:7px; margin-bottom:5px; font-size:.8rem; cursor:pointer; }
+    .sf-cb input { width:15px; height:15px; border-radius:3px; accent-color:var(--primary); cursor:pointer; }
+    .sf-cb .cd { width:7px; height:7px; border-radius:50%; }
+
+    .mc-list { display:flex; border-radius:var(--radius-sm); margin-bottom:1rem; }
+    .mc-list .mc-cover { width:90px; height:auto; min-height:110px; flex-shrink:0; border-radius:var(--radius-sm) 0 0 var(--radius-sm); }
+    .mc-list .mc-body { flex:1; display:flex; flex-direction:column; }
+    .mc-list .mc-content { flex:1; }
+    .mc-list .mc-nav { border-radius:0 0 var(--radius-sm) 0; }
+    .mc-list:hover { transform:translateY(-3px) translateX(3px); }
+
+    /* CAROUSEL */
+    .carousel { overflow-x:auto; scroll-snap-type:x mandatory; display:flex; gap:1.5rem; padding:1rem .5rem 2rem; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+    .carousel::-webkit-scrollbar { height:6px; }
+    .carousel::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+    .carousel .mc { min-width:230px; max-width:230px; scroll-snap-align:start; flex-shrink:0; }
+
+    /* TABLE */
+    .tw { overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border); background:var(--card); box-shadow:var(--shadow-sm); }
+    .dt { width:100%; border-collapse:collapse; font-size:.83rem; }
+    .dt thead th { padding:10px 14px; text-align:left; font-family:var(--font-display); font-weight:700; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted-fg); background:color-mix(in srgb,var(--muted) 60%,transparent); border-bottom:2px solid var(--border); white-space:nowrap; }
+    .dt tbody tr { border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent); transition:background .2s; }
+    .dt tbody tr:hover { background:color-mix(in srgb,var(--muted) 30%,transparent); }
+    .dt tbody td { padding:9px 14px; vertical-align:middle; }
+    .dt .ec { display:flex; align-items:center; gap:7px; }
+    .dt .ec .d { width:8px; height:8px; border-radius:50%; }
+    .dt .ec .n { font-weight:700; font-family:var(--font-display); }
+    .dt .eb { display:inline-flex; padding:2px 8px; border-radius:5px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#fff; }
+    .tnl { display:flex; gap:5px; }
+    .tnb { width:24px; height:24px; border-radius:50%; border:1px solid var(--border); background:var(--bg); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .25s; }
+    .tnb svg { width:11px; height:11px; color:var(--muted-fg); transition:color .2s; }
+    .tnb:hover { transform:scale(1.15); }
+    .tnb[data-t="game"]:hover { background:hsl(var(--e-game)/.1); border-color:hsl(var(--e-game)/.4); }
+    .tnb[data-t="game"]:hover svg { color:hsl(var(--e-game)); }
+    .tnb[data-t="agent"]:hover { background:hsl(var(--e-agent)/.1); border-color:hsl(var(--e-agent)/.4); }
+    .tnb[data-t="agent"]:hover svg { color:hsl(var(--e-agent)); }
+    .tnb[data-t="document"]:hover { background:hsl(var(--e-document)/.1); border-color:hsl(var(--e-document)/.4); }
+    .tnb[data-t="document"]:hover svg { color:hsl(var(--e-document)); }
+    .tnb[data-t="session"]:hover { background:hsl(var(--e-session)/.1); border-color:hsl(var(--e-session)/.4); }
+    .tnb[data-t="session"]:hover svg { color:hsl(var(--e-session)); }
+    .tnb[data-t="player"]:hover { background:hsl(var(--e-player)/.1); border-color:hsl(var(--e-player)/.4); }
+    .tnb[data-t="player"]:hover svg { color:hsl(var(--e-player)); }
+    .tnb[data-t="chat"]:hover { background:hsl(var(--e-chat)/.1); border-color:hsl(var(--e-chat)/.4); }
+    .tnb[data-t="chat"]:hover svg { color:hsl(var(--e-chat)); }
+
+    /* BREADCRUMB */
+    .bc { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:9px 14px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-xs); margin-bottom:1.5rem; font-size:.8rem; box-shadow:var(--shadow-sm); min-height:38px; position:relative; }
+    .bc::before { content:''; position:absolute; inset:0; background:rgba(255,255,255,.5); backdrop-filter:blur(8px); border-radius:inherit; z-index:0; }
+    .dark .bc::before { background:rgba(30,25,20,.5); }
+    .bc>* { position:relative; z-index:1; }
+    .bc-item { display:inline-flex; align-items:center; gap:4px; font-weight:600; }
+    .bc-item .bcd { width:6px; height:6px; border-radius:50%; }
+    .bc-sep { color:var(--muted-fg); opacity:.5; }
+    .bc-hint { color:var(--muted-fg); opacity:.5; font-style:italic; }
+
+    .conn-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:2rem; align-items:start; }
+    @media(max-width:900px) { .conn-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<!-- SVG ICON SYMBOLS -->
+<svg style="display:none">
+  <symbol id="i-game" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5.5" cy="5.5" r="1" fill="currentColor"/><circle cx="10.5" cy="5.5" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="5.5" cy="10.5" r="1" fill="currentColor"/><circle cx="10.5" cy="10.5" r="1" fill="currentColor"/></symbol>
+  <symbol id="i-agent" viewBox="0 0 16 16"><rect x="3" y="5" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="6.2" cy="9" r="1.1" fill="currentColor"/><circle cx="9.8" cy="9" r="1.1" fill="currentColor"/><line x1="8" y1="2.5" x2="8" y2="5" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="1.8" r="1" fill="currentColor"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 16 16"><path d="M2.5 3.5c0-.6.4-1 1-1h4l2 2h3c.6 0 1 .4 1 1v6.5c0 .6-.4 1-1 1h-9c-.6 0-1-.4-1-1z" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="8" x2="10.5" y2="8" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="10.5" x2="8.5" y2="10.5" stroke="currentColor" stroke-width="1.2"/></symbol>
+  <symbol id="i-sess" viewBox="0 0 16 16"><path d="M2 6.5A2 2 0 014 4.5h8a2 2 0 012 2v3a4 4 0 01-4 4H6a4 4 0 01-4-4z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5.5" cy="8" r="1" fill="currentColor"/><circle cx="10.5" cy="8" r="1" fill="currentColor"/><line x1="7" y1="4.5" x2="7" y2="2" stroke="currentColor" stroke-width="1.4"/><line x1="9" y1="4.5" x2="9" y2="2" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-player" viewBox="0 0 16 16"><circle cx="8" cy="5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 14c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 16 16"><path d="M2 3.5A1 1 0 013 2.5h10a1 1 0 011 1v7a1 1 0 01-1 1H5.5L2 14.5z" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="5.5" y1="6.5" x2="10.5" y2="6.5" stroke="currentColor" stroke-width="1.2"/><line x1="5.5" y1="9" x2="8.5" y2="9" stroke="currentColor" stroke-width="1.2"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 16 16"><path d="M8 13.5s-5.5-3.5-5.5-7A3 3 0 018 4.5a3 3 0 015.5 2c0 3.5-5.5 7-5.5 7z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="8" y1="7" x2="8" y2="11" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="5.2" r=".6" fill="currentColor"/></symbol>
+</svg>
+
+<button class="theme-toggle" onclick="document.documentElement.classList.toggle('dark');this.textContent=document.documentElement.classList.contains('dark')?'☀️':'🌙'" title="Toggle dark mode">🌙</button>
+
+<div class="page-wrap">
+
+<!-- PAGE HEADER -->
+<header class="page-header">
+  <h1>Card Navigation System</h1>
+  <p>Bidirectional entity navigation for MeepleCard</p>
+  <span class="badge">Design Mockup — Feb 2026</span>
+</header>
+
+<!-- ======== SECTION 1: FLOW DIAGRAM ======== -->
+<section class="section" id="sec-flow">
+  <h2 class="section-title">Navigation Flow</h2>
+  <p class="section-desc">Click any node to jump to its card section below.</p>
+  <div class="flow-container">
+    <span class="flow-label">Entity Graph</span>
+    <div class="flow-graph">
+      <div class="flow-row" style="justify-content:flex-end;padding-right:80px">
+        <div class="flow-node" data-e="player" onclick="navScroll('sec-player')">👤 Player</div>
+      </div>
+      <div class="flow-vline" style="margin-right:-200px"></div>
+      <div class="flow-row">
+        <div class="flow-node is-list" data-e="game" onclick="navScroll('sec-game')">🎲 Game Cards</div>
+        <span class="flow-arrow">↔</span>
+        <div class="flow-node" data-e="game" onclick="navScroll('sec-game')">🎲 Game Card</div>
+        <span class="flow-arrow">↔</span>
+        <div class="flow-node is-list" data-e="document" onclick="navScroll('sec-kb')">📚 KB Cards</div>
+        <span class="flow-arrow">↔</span>
+        <div class="flow-node" data-e="document" onclick="navScroll('sec-kb')">📚 KB Card</div>
+        <span style="width:30px"></span>
+        <div class="flow-node is-list" data-e="player" onclick="navScroll('sec-player')">👤 Player Cards</div>
+      </div>
+      <div style="display:flex;gap:180px"><div class="flow-vline"></div><div class="flow-vline"></div><div class="flow-vline"></div></div>
+      <div class="flow-row">
+        <span style="width:100px"></span>
+        <div class="flow-node is-list" data-e="agent" onclick="navScroll('sec-agent')">🤖 Agent Cards</div>
+        <span class="flow-arrow">↔</span>
+        <div class="flow-node" data-e="agent" onclick="navScroll('sec-agent')">🤖 Agent Card</div>
+        <span class="flow-arrow">↔</span>
+        <div class="flow-node" data-e="session" onclick="navScroll('sec-session')">🎮 Session Card</div>
+      </div>
+      <div class="flow-vline"></div>
+      <div class="flow-row">
+        <span style="width:160px"></span>
+        <div class="flow-node is-list" data-e="chat" onclick="navScroll('sec-chat')">💬 Chat Cards</div>
+        <span class="flow-arrow">↔</span>
+        <div class="flow-node" data-e="chat" onclick="navScroll('sec-chat')">💬 Chat Card</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== SECTION 2: ENTITY CARDS ======== -->
+<section class="section" id="sec-entities">
+  <h2 class="section-title">Entity Cards + Navigation</h2>
+  <p class="section-desc">Each entity type with the new navigation footer. Hover nav icons to see entity-colored glow.</p>
+
+  <!-- GAME -->
+  <div class="esec" id="sec-game">
+    <div class="esec-h"><div class="dot" style="background:hsl(var(--e-game))"></div><h3>Game Cards</h3></div>
+    <div class="cg3">
+      <!-- Catan -->
+      <div class="mc" id="card-g1">
+        <div class="ea" style="background:hsl(var(--e-game))"></div>
+        <div class="mc-cover">
+          <img src="https://picsum.photos/seed/catan42/300/400" alt="Catan" loading="lazy">
+          <div class="grad" style="background:linear-gradient(to top,hsl(var(--e-game)/.15),transparent 60%)"></div>
+          <div class="shimmer"></div>
+          <div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-game))">🎲 Game</span><span class="tag-pill" style="background:hsl(var(--e-game)/.75)">Classic</span></div>
+          <div class="qa"><button class="qa-btn"><svg><use href="#i-heart"/></svg></button><button class="qa-btn"><svg><use href="#i-info"/></svg></button></div>
+        </div>
+        <div class="mc-content">
+          <div class="mc-title">Catan</div>
+          <div class="mc-sub">Kosmos · 1995</div>
+          <div class="mc-rating"><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s e">★</span><span class="v">4.2</span></div>
+        </div>
+        <div class="mc-footer"><span class="mi">2-4 👥</span><span class="mi">60min ⏱</span><span class="mi">Medium</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="document" onclick="navTo('document','game')"><span class="nb" data-tip="Knowledge Base"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','game')"><span class="nb" data-tip="Agents"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="chat" onclick="navTo('chat','game')"><span class="nb" data-tip="Chat Sessions"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+          <a class="nav-link" data-t="session" onclick="navTo('session','game')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+        </div></div>
+      </div>
+      <!-- Terraforming Mars -->
+      <div class="mc" id="card-g2">
+        <div class="ea" style="background:hsl(var(--e-game))"></div>
+        <div class="mc-cover">
+          <img src="https://picsum.photos/seed/mars77/300/400" alt="Terraforming Mars" loading="lazy">
+          <div class="grad" style="background:linear-gradient(to top,hsl(var(--e-game)/.15),transparent 60%)"></div><div class="shimmer"></div>
+          <div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-game))">🎲 Game</span><span class="tag-pill" style="background:hsl(var(--e-game)/.75)">Top Rated</span></div>
+          <div class="qa"><button class="qa-btn"><svg><use href="#i-heart"/></svg></button><button class="qa-btn"><svg><use href="#i-info"/></svg></button></div>
+        </div>
+        <div class="mc-content"><div class="mc-title">Terraforming Mars</div><div class="mc-sub">Stronghold Games · 2016</div>
+          <div class="mc-rating"><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="v">4.6</span></div></div>
+        <div class="mc-footer"><span class="mi">1-5 👥</span><span class="mi">120min ⏱</span><span class="mi">Heavy</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="document" onclick="navTo('document','game')"><span class="nb" data-tip="Knowledge Base"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','game')"><span class="nb" data-tip="Agents"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="chat" onclick="navTo('chat','game')"><span class="nb" data-tip="Chat Sessions"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+          <a class="nav-link" data-t="session" onclick="navTo('session','game')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+        </div></div>
+      </div>
+      <!-- Wingspan -->
+      <div class="mc" id="card-g3">
+        <div class="ea" style="background:hsl(var(--e-game))"></div>
+        <div class="mc-cover">
+          <img src="https://picsum.photos/seed/wing88/300/400" alt="Wingspan" loading="lazy">
+          <div class="grad" style="background:linear-gradient(to top,hsl(var(--e-game)/.15),transparent 60%)"></div><div class="shimmer"></div>
+          <div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-game))">🎲 Game</span></div>
+          <div class="qa"><button class="qa-btn"><svg><use href="#i-heart"/></svg></button><button class="qa-btn"><svg><use href="#i-info"/></svg></button></div>
+        </div>
+        <div class="mc-content"><div class="mc-title">Wingspan</div><div class="mc-sub">Stonemaier Games · 2019</div>
+          <div class="mc-rating"><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s e">★</span><span class="v">4.4</span></div></div>
+        <div class="mc-footer"><span class="mi">1-5 👥</span><span class="mi">70min ⏱</span><span class="mi">Medium</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="document" onclick="navTo('document','game')"><span class="nb" data-tip="Knowledge Base"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','game')"><span class="nb" data-tip="Agents"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="chat" onclick="navTo('chat','game')"><span class="nb" data-tip="Chat Sessions"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+          <a class="nav-link" data-t="session" onclick="navTo('session','game')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT -->
+  <div class="esec" id="sec-agent">
+    <div class="esec-h"><div class="dot" style="background:hsl(var(--e-agent))"></div><h3>Agent Cards</h3></div>
+    <div class="cg3">
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-agent))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/bot11/300/400" alt="RulesMaster" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-agent)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-agent))">🤖 Agent</span><span class="tag-pill" style="background:hsl(120,60%,40%)">Active</span></div><div class="qa"><button class="qa-btn"><svg><use href="#i-info"/></svg></button></div></div>
+        <div class="mc-content"><div class="mc-title">RulesMaster</div><div class="mc-sub">RAG Agent · Active</div></div>
+        <div class="mc-footer"><span class="mi">RAG 🧠</span><span class="mi">1.2k calls</span><span class="mi">99.2% ↑</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','agent')"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="document" onclick="navTo('document','agent')"><span class="nb" data-tip="Knowledge Base"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a>
+          <a class="nav-link" data-t="chat" onclick="navTo('chat','agent')"><span class="nb" data-tip="Chat Sessions"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+          <a class="nav-link" data-t="session" onclick="navTo('session','agent')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+        </div></div>
+      </div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-agent))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/bot22/300/400" alt="StrategyBot" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-agent)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-agent))">🤖 Agent</span></div></div>
+        <div class="mc-content"><div class="mc-title">StrategyBot</div><div class="mc-sub">Strategy Agent · Active</div></div>
+        <div class="mc-footer"><span class="mi">Strategy 🎯</span><span class="mi">890 calls</span><span class="mi">97.5% ↑</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','agent')"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="document" onclick="navTo('document','agent')"><span class="nb" data-tip="Knowledge Base"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a>
+          <a class="nav-link" data-t="chat" onclick="navTo('chat','agent')"><span class="nb" data-tip="Chat Sessions"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+          <a class="nav-link" data-t="session" onclick="navTo('session','agent')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KB -->
+  <div class="esec" id="sec-kb">
+    <div class="esec-h"><div class="dot" style="background:hsl(var(--e-document))"></div><h3>Knowledge Base Cards</h3></div>
+    <div class="cg3">
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-document))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/doc11/300/400" alt="Catan Rules" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-document)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-document))">📚 KB</span><span class="tag-pill" style="background:hsl(var(--e-document)/.75)">Indexed</span></div></div>
+        <div class="mc-content"><div class="mc-title">Catan Rules v5</div><div class="mc-sub">PDF · 24 pages</div></div>
+        <div class="mc-footer"><span class="mi">24 pages</span><span class="mi">12 chunks</span><span class="mi">3 FAQs</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','document')"><span class="nb" data-tip="Parent Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','document')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+        </div></div>
+      </div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-document))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/doc22/300/400" alt="TM FAQ" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-document)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-document))">📚 KB</span></div></div>
+        <div class="mc-content"><div class="mc-title">TM FAQ Collection</div><div class="mc-sub">PDF · 18 pages</div></div>
+        <div class="mc-footer"><span class="mi">18 pages</span><span class="mi">9 chunks</span><span class="mi">7 FAQs</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','document')"><span class="nb" data-tip="Parent Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','document')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSION -->
+  <div class="esec" id="sec-session">
+    <div class="esec-h"><div class="dot" style="background:hsl(var(--e-session))"></div><h3>Session Cards</h3></div>
+    <div class="cg3">
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-session))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/sess11/300/400" alt="Friday Night" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-session)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-session))">🎮 Session</span><span class="tag-pill" style="background:hsl(120,60%,40%)">Completed</span></div></div>
+        <div class="mc-content"><div class="mc-title">Friday Game Night</div><div class="mc-sub">Catan · 4 players</div></div>
+        <div class="mc-footer"><span class="mi">4 👥</span><span class="mi">75min</span><span class="mi">Completed</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','session')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="player" onclick="navTo('player','session')"><span class="nb" data-tip="Players"><svg><use href="#i-player"/></svg></span><span class="nlbl">Player</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','session')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="chat" onclick="navTo('chat','session')"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+        </div></div>
+      </div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-session))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/sess22/300/400" alt="Tournament" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-session)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-session))">🎮 Session</span></div></div>
+        <div class="mc-content"><div class="mc-title">Tournament Round 1</div><div class="mc-sub">TM · 3 players</div></div>
+        <div class="mc-footer"><span class="mi">3 👥</span><span class="mi">110min</span><span class="mi">Active</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','session')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="player" onclick="navTo('player','session')"><span class="nb" data-tip="Players"><svg><use href="#i-player"/></svg></span><span class="nlbl">Player</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','session')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="chat" onclick="navTo('chat','session')"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYER -->
+  <div class="esec" id="sec-player">
+    <div class="esec-h"><div class="dot" style="background:hsl(var(--e-player))"></div><h3>Player Cards</h3></div>
+    <div class="cg3">
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-player))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/face11/300/400" alt="Marco" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-player)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-player))">👤 Player</span></div></div>
+        <div class="mc-content"><div class="mc-title">Marco</div><div class="mc-sub">42 games played</div></div>
+        <div class="mc-footer"><span class="mi">42 🎮</span><span class="mi">15 wins</span><span class="mi">Strategist</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="session" onclick="navTo('session','player')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+          <a class="nav-link" data-t="game" onclick="navTo('game','player')"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+        </div></div>
+      </div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-player))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/face22/300/400" alt="Giulia" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-player)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-player))">👤 Player</span><span class="tag-pill" style="background:hsl(42,95%,50%)">Top Player</span></div></div>
+        <div class="mc-content"><div class="mc-title">Giulia</div><div class="mc-sub">38 games played</div></div>
+        <div class="mc-footer"><span class="mi">38 🎮</span><span class="mi">20 wins</span><span class="mi">Champion</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="session" onclick="navTo('session','player')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+          <a class="nav-link" data-t="game" onclick="navTo('game','player')"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="esec" id="sec-chat">
+    <div class="esec-h"><div class="dot" style="background:hsl(var(--e-chat))"></div><h3>Chat Session Cards</h3></div>
+    <div class="cg3">
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-chat))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/chat11/300/400" alt="Rules Q" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-chat)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-chat))">💬 Chat</span><span class="tag-pill" style="background:hsl(120,60%,40%)">Resolved</span></div></div>
+        <div class="mc-content"><div class="mc-title">Rules Q: Catan</div><div class="mc-sub">RulesMaster · 12 msgs</div></div>
+        <div class="mc-footer"><span class="mi">12 msgs</span><span class="mi">5 min</span><span class="mi">Resolved</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','chat')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','chat')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="session" onclick="navTo('session','chat')"><span class="nb" data-tip="Session"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+        </div></div>
+      </div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-chat))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/chat22/300/400" alt="Strategy" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-chat)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-chat))">💬 Chat</span></div></div>
+        <div class="mc-content"><div class="mc-title">Strategy: TM</div><div class="mc-sub">StrategyBot · 8 msgs</div></div>
+        <div class="mc-footer"><span class="mi">8 msgs</span><span class="mi">3 min</span><span class="mi">Active</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="navTo('game','chat')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="agent" onclick="navTo('agent','chat')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="session" onclick="navTo('session','chat')"><span class="nb" data-tip="Session"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== SECTION 3: VIEW MODES ======== -->
+<section class="section" id="sec-views">
+  <h2 class="section-title">View Modes</h2>
+  <p class="section-desc">Four ways to browse. Navigation footer adapts to each layout.</p>
+  <div class="vtabs">
+    <button class="vtab active" data-view="grid" onclick="switchView('grid')">Grid</button>
+    <button class="vtab" data-view="list" onclick="switchView('list')">List</button>
+    <button class="vtab" data-view="carousel" onclick="switchView('carousel')">Carousel</button>
+    <button class="vtab" data-view="table" onclick="switchView('table')">Table</button>
+  </div>
+
+  <!-- GRID -->
+  <div class="vpanel active" id="view-grid">
+    <div class="cg-auto">
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-game))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/gloom55/300/400" alt="Gloomhaven" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-game)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-game))">🎲 Game</span></div></div><div class="mc-content"><div class="mc-title">Gloomhaven</div><div class="mc-sub">Cephalofair · 2017</div><div class="mc-rating"><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="v">4.8</span></div></div><div class="mc-footer"><span class="mi">1-4 👥</span><span class="mi">120min ⏱</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="document" onclick="navTo('document','game')"><span class="nb" data-tip="KB"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a><a class="nav-link" data-t="agent" onclick="navTo('agent','game')"><span class="nb" data-tip="Agents"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a><a class="nav-link" data-t="chat" onclick="navTo('chat','game')"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a><a class="nav-link" data-t="session" onclick="navTo('session','game')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-agent))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/bot33/300/400" alt="TutorialAI" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-agent)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-agent))">🤖 Agent</span></div></div><div class="mc-content"><div class="mc-title">TutorialAI</div><div class="mc-sub">Tutorial Agent · Idle</div></div><div class="mc-footer"><span class="mi">Tutorial 📖</span><span class="mi">340 calls</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game" onclick="navTo('game','agent')"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="document" onclick="navTo('document','agent')"><span class="nb" data-tip="KB"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a><a class="nav-link" data-t="chat" onclick="navTo('chat','agent')"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a><a class="nav-link" data-t="session" onclick="navTo('session','agent')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-document))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/doc33/300/400" alt="Automa" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-document)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-document))">📚 KB</span></div></div><div class="mc-content"><div class="mc-title">Wingspan Automa</div><div class="mc-sub">PDF · 8 pages</div></div><div class="mc-footer"><span class="mi">8 pages</span><span class="mi">5 chunks</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game" onclick="navTo('game','document')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="agent" onclick="navTo('agent','document')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-session))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/sess33/300/400" alt="Teaching" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-session)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-session))">🎮 Session</span></div></div><div class="mc-content"><div class="mc-title">Teaching Session</div><div class="mc-sub">Wingspan · 2 players</div></div><div class="mc-footer"><span class="mi">2 👥</span><span class="mi">45min</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game" onclick="navTo('game','session')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="player" onclick="navTo('player','session')"><span class="nb" data-tip="Players"><svg><use href="#i-player"/></svg></span><span class="nlbl">Player</span></a><a class="nav-link" data-t="agent" onclick="navTo('agent','session')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a><a class="nav-link" data-t="chat" onclick="navTo('chat','session')"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-player))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/face33/300/400" alt="Alessandro" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-player)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-player))">👤 Player</span></div></div><div class="mc-content"><div class="mc-title">Alessandro</div><div class="mc-sub">25 games played</div></div><div class="mc-footer"><span class="mi">25 🎮</span><span class="mi">8 wins</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="session" onclick="navTo('session','player')"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a><a class="nav-link" data-t="game" onclick="navTo('game','player')"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-chat))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/chat33/300/400" alt="Setup" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-chat)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-chat))">💬 Chat</span></div></div><div class="mc-content"><div class="mc-title">Setup Guide</div><div class="mc-sub">TutorialAI · 15 msgs</div></div><div class="mc-footer"><span class="mi">15 msgs</span><span class="mi">8 min</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game" onclick="navTo('game','chat')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="agent" onclick="navTo('agent','chat')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a><a class="nav-link" data-t="session" onclick="navTo('session','chat')"><span class="nb" data-tip="Session"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a></div></div></div>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div class="vpanel" id="view-list">
+    <div class="list-layout">
+      <aside class="sidebar">
+        <h4 class="sf-title">Filters</h4>
+        <div class="sf-group"><label>Search</label><input type="text" class="sf-input" placeholder="Search cards..."></div>
+        <div class="sf-group"><label>Entity Type</label>
+          <div class="sf-cb"><input type="checkbox" checked><span class="cd" style="background:hsl(var(--e-game))"></span> Games</div>
+          <div class="sf-cb"><input type="checkbox" checked><span class="cd" style="background:hsl(var(--e-agent))"></span> Agents</div>
+          <div class="sf-cb"><input type="checkbox" checked><span class="cd" style="background:hsl(var(--e-document))"></span> Knowledge Base</div>
+          <div class="sf-cb"><input type="checkbox" checked><span class="cd" style="background:hsl(var(--e-session))"></span> Sessions</div>
+          <div class="sf-cb"><input type="checkbox" checked><span class="cd" style="background:hsl(var(--e-player))"></span> Players</div>
+          <div class="sf-cb"><input type="checkbox" checked><span class="cd" style="background:hsl(var(--e-chat))"></span> Chats</div>
+        </div>
+        <div class="sf-group"><label>Sort By</label><select class="sf-input"><option>Recently Updated</option><option>Name (A-Z)</option><option>Rating (High-Low)</option></select></div>
+        <div class="sf-group"><label>Status</label>
+          <div class="sf-cb"><input type="checkbox" checked> Active</div>
+          <div class="sf-cb"><input type="checkbox" checked> Archived</div>
+          <div class="sf-cb"><input type="checkbox"> Draft</div>
+        </div>
+      </aside>
+      <div>
+        <div class="mc mc-list"><div class="ea" style="background:hsl(var(--e-game))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/azul99/300/400" alt="Azul" loading="lazy"><div class="grad" style="background:linear-gradient(to right,hsl(var(--e-game)/.12),transparent)"></div></div><div class="mc-body"><div class="mc-content"><div class="mc-title">Azul</div><div class="mc-sub">Plan B Games · 2017</div><div class="mc-rating"><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s e">★</span><span class="v">4.3</span></div></div><div class="mc-footer"><span class="mi">2-4 👥</span><span class="mi">45min ⏱</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="document"><span class="nb" data-tip="KB"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a><a class="nav-link" data-t="agent"><span class="nb" data-tip="Agents"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a><a class="nav-link" data-t="chat"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a><a class="nav-link" data-t="session"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a></div></div></div></div>
+        <div class="mc mc-list"><div class="ea" style="background:hsl(var(--e-agent))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/bot44/300/400" alt="CompanionAI" loading="lazy"><div class="grad" style="background:linear-gradient(to right,hsl(var(--e-agent)/.12),transparent)"></div></div><div class="mc-body"><div class="mc-content"><div class="mc-title">CompanionAI</div><div class="mc-sub">Companion Agent · Active</div></div><div class="mc-footer"><span class="mi">Companion 🤝</span><span class="mi">560 calls</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="document"><span class="nb" data-tip="KB"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a><a class="nav-link" data-t="chat"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a><a class="nav-link" data-t="session"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a></div></div></div></div>
+        <div class="mc mc-list"><div class="ea" style="background:hsl(var(--e-player))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/face44/300/400" alt="Sofia" loading="lazy"><div class="grad" style="background:linear-gradient(to right,hsl(var(--e-player)/.12),transparent)"></div></div><div class="mc-body"><div class="mc-content"><div class="mc-title">Sofia</div><div class="mc-sub">18 games played</div></div><div class="mc-footer"><span class="mi">18 🎮</span><span class="mi">6 wins</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="session"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a><a class="nav-link" data-t="game"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a></div></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAROUSEL -->
+  <div class="vpanel" id="view-carousel">
+    <div class="carousel">
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-game))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/ticket66/300/400" alt="Ticket to Ride" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-game)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-game))">🎲 Game</span></div></div><div class="mc-content"><div class="mc-title">Ticket to Ride</div><div class="mc-sub">Days of Wonder · 2004</div><div class="mc-rating"><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s f">★</span><span class="s e">★</span><span class="v">4.1</span></div></div><div class="mc-footer"><span class="mi">2-5 👥</span><span class="mi">60min</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="document"><span class="nb" data-tip="KB"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a><a class="nav-link" data-t="agent"><span class="nb" data-tip="Agents"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a><a class="nav-link" data-t="chat"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-agent))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/bot11/300/400" alt="RulesMaster" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-agent)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-agent))">🤖 Agent</span></div></div><div class="mc-content"><div class="mc-title">RulesMaster</div><div class="mc-sub">RAG Agent</div></div><div class="mc-footer"><span class="mi">RAG 🧠</span><span class="mi">1.2k</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="document"><span class="nb" data-tip="KB"><svg><use href="#i-doc"/></svg></span><span class="nlbl">KB</span></a><a class="nav-link" data-t="chat"><span class="nb" data-tip="Chats"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-document))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/doc11/300/400" alt="Catan Rules" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-document)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-document))">📚 KB</span></div></div><div class="mc-content"><div class="mc-title">Catan Rules v5</div><div class="mc-sub">PDF · 24 pages</div></div><div class="mc-footer"><span class="mi">24 pages</span><span class="mi">12 chunks</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="agent"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-session))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/sess11/300/400" alt="Friday Night" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-session)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-session))">🎮 Session</span></div></div><div class="mc-content"><div class="mc-title">Friday Night</div><div class="mc-sub">Catan · 4 players</div></div><div class="mc-footer"><span class="mi">4 👥</span><span class="mi">75min</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="player"><span class="nb" data-tip="Players"><svg><use href="#i-player"/></svg></span><span class="nlbl">Player</span></a><a class="nav-link" data-t="agent"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-player))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/face11/300/400" alt="Marco" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-player)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-player))">👤 Player</span></div></div><div class="mc-content"><div class="mc-title">Marco</div><div class="mc-sub">42 games</div></div><div class="mc-footer"><span class="mi">42 🎮</span><span class="mi">15 wins</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="session"><span class="nb" data-tip="Sessions"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a><a class="nav-link" data-t="game"><span class="nb" data-tip="Games"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a></div></div></div>
+      <div class="mc"><div class="ea" style="background:hsl(var(--e-chat))"></div><div class="mc-cover"><img src="https://picsum.photos/seed/chat11/300/400" alt="Rules Q" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-chat)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-chat))">💬 Chat</span></div></div><div class="mc-content"><div class="mc-title">Rules Q: Catan</div><div class="mc-sub">RulesMaster · 12 msgs</div></div><div class="mc-footer"><span class="mi">12 msgs</span><span class="mi">5 min</span></div><div class="mc-nav"><div class="nh">Navigate to</div><div class="nl"><a class="nav-link" data-t="game"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a><a class="nav-link" data-t="agent"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a><a class="nav-link" data-t="session"><span class="nb" data-tip="Session"><svg><use href="#i-sess"/></svg></span><span class="nlbl">Session</span></a></div></div></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="vpanel" id="view-table">
+    <div class="tw">
+      <table class="dt">
+        <thead><tr><th>Entity</th><th>Type</th><th>Rating</th><th>Updated</th><th>Navigate To</th></tr></thead>
+        <tbody>
+          <tr><td><div class="ec"><span class="d" style="background:hsl(var(--e-game))"></span><span class="n">Catan</span></div></td><td><span class="eb" style="background:hsl(var(--e-game))">Game</span></td><td>4.2 ★</td><td style="color:var(--muted-fg);font-size:.78rem">2h ago</td><td><div class="tnl"><button class="tnb" data-t="document" title="KB"><svg><use href="#i-doc"/></svg></button><button class="tnb" data-t="agent" title="Agent"><svg><use href="#i-agent"/></svg></button><button class="tnb" data-t="chat" title="Chat"><svg><use href="#i-chat"/></svg></button><button class="tnb" data-t="session" title="Session"><svg><use href="#i-sess"/></svg></button></div></td></tr>
+          <tr><td><div class="ec"><span class="d" style="background:hsl(var(--e-game))"></span><span class="n">Terraforming Mars</span></div></td><td><span class="eb" style="background:hsl(var(--e-game))">Game</span></td><td>4.6 ★</td><td style="color:var(--muted-fg);font-size:.78rem">5h ago</td><td><div class="tnl"><button class="tnb" data-t="document" title="KB"><svg><use href="#i-doc"/></svg></button><button class="tnb" data-t="agent" title="Agent"><svg><use href="#i-agent"/></svg></button><button class="tnb" data-t="chat" title="Chat"><svg><use href="#i-chat"/></svg></button><button class="tnb" data-t="session" title="Session"><svg><use href="#i-sess"/></svg></button></div></td></tr>
+          <tr><td><div class="ec"><span class="d" style="background:hsl(var(--e-agent))"></span><span class="n">RulesMaster</span></div></td><td><span class="eb" style="background:hsl(var(--e-agent))">Agent</span></td><td>—</td><td style="color:var(--muted-fg);font-size:.78rem">1h ago</td><td><div class="tnl"><button class="tnb" data-t="game" title="Games"><svg><use href="#i-game"/></svg></button><button class="tnb" data-t="document" title="KB"><svg><use href="#i-doc"/></svg></button><button class="tnb" data-t="chat" title="Chats"><svg><use href="#i-chat"/></svg></button></div></td></tr>
+          <tr><td><div class="ec"><span class="d" style="background:hsl(var(--e-document))"></span><span class="n">Catan Rules v5</span></div></td><td><span class="eb" style="background:hsl(var(--e-document))">KB</span></td><td>—</td><td style="color:var(--muted-fg);font-size:.78rem">1d ago</td><td><div class="tnl"><button class="tnb" data-t="game" title="Game"><svg><use href="#i-game"/></svg></button><button class="tnb" data-t="agent" title="Agent"><svg><use href="#i-agent"/></svg></button></div></td></tr>
+          <tr><td><div class="ec"><span class="d" style="background:hsl(var(--e-session))"></span><span class="n">Friday Game Night</span></div></td><td><span class="eb" style="background:hsl(var(--e-session))">Session</span></td><td>—</td><td style="color:var(--muted-fg);font-size:.78rem">3h ago</td><td><div class="tnl"><button class="tnb" data-t="game" title="Game"><svg><use href="#i-game"/></svg></button><button class="tnb" data-t="player" title="Players"><svg><use href="#i-player"/></svg></button><button class="tnb" data-t="agent" title="Agent"><svg><use href="#i-agent"/></svg></button><button class="tnb" data-t="chat" title="Chat"><svg><use href="#i-chat"/></svg></button></div></td></tr>
+          <tr><td><div class="ec"><span class="d" style="background:hsl(var(--e-player))"></span><span class="n">Marco</span></div></td><td><span class="eb" style="background:hsl(var(--e-player))">Player</span></td><td>—</td><td style="color:var(--muted-fg);font-size:.78rem">6h ago</td><td><div class="tnl"><button class="tnb" data-t="session" title="Sessions"><svg><use href="#i-sess"/></svg></button><button class="tnb" data-t="game" title="Games"><svg><use href="#i-game"/></svg></button></div></td></tr>
+          <tr><td><div class="ec"><span class="d" style="background:hsl(var(--e-chat))"></span><span class="n">Rules Q: Catan</span></div></td><td><span class="eb" style="background:hsl(var(--e-chat))">Chat</span></td><td>—</td><td style="color:var(--muted-fg);font-size:.78rem">30m ago</td><td><div class="tnl"><button class="tnb" data-t="game" title="Game"><svg><use href="#i-game"/></svg></button><button class="tnb" data-t="agent" title="Agent"><svg><use href="#i-agent"/></svg></button><button class="tnb" data-t="session" title="Session"><svg><use href="#i-sess"/></svg></button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ======== SECTION 4: CONNECTED NAVIGATION ======== -->
+<section class="section" id="sec-connected">
+  <h2 class="section-title">Connected Navigation</h2>
+  <p class="section-desc">Click any nav icon to see the trail + target highlight. Cards scroll and glow.</p>
+  <div class="bc" id="nav-bc"><span class="bc-hint">Click a navigation icon on any card below to start...</span></div>
+  <div class="conn-grid">
+    <!-- Game: Catan -->
+    <div id="conn-game">
+      <div class="mc" id="cn-game">
+        <div class="ea" style="background:hsl(var(--e-game))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/catan42/300/400" alt="Catan" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-game)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-game))">🎲 Game</span></div></div>
+        <div class="mc-content"><div class="mc-title">Catan</div><div class="mc-sub">Kosmos · 1995</div></div>
+        <div class="mc-footer"><span class="mi">2-4 👥</span><span class="mi">60min</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="agent" onclick="connNav('agent','game')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+          <a class="nav-link" data-t="chat" onclick="connNav('chat','game')"><span class="nb" data-tip="Chat"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+        </div></div>
+      </div>
+    </div>
+    <!-- Agent: RulesMaster -->
+    <div id="conn-agent">
+      <div class="mc" id="cn-agent">
+        <div class="ea" style="background:hsl(var(--e-agent))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/bot11/300/400" alt="RulesMaster" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-agent)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-agent))">🤖 Agent</span></div></div>
+        <div class="mc-content"><div class="mc-title">RulesMaster</div><div class="mc-sub">RAG Agent</div></div>
+        <div class="mc-footer"><span class="mi">RAG 🧠</span><span class="mi">1.2k calls</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="connNav('game','agent')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="chat" onclick="connNav('chat','agent')"><span class="nb" data-tip="Chat"><svg><use href="#i-chat"/></svg></span><span class="nlbl">Chat</span></a>
+        </div></div>
+      </div>
+    </div>
+    <!-- Chat: Rules Q -->
+    <div id="conn-chat">
+      <div class="mc" id="cn-chat">
+        <div class="ea" style="background:hsl(var(--e-chat))"></div>
+        <div class="mc-cover"><img src="https://picsum.photos/seed/chat11/300/400" alt="Rules Q" loading="lazy"><div class="grad" style="background:linear-gradient(to top,hsl(var(--e-chat)/.15),transparent 60%)"></div><div class="shimmer"></div><div class="tag-stack"><span class="tag-pill" style="background:hsl(var(--e-chat))">💬 Chat</span></div></div>
+        <div class="mc-content"><div class="mc-title">Rules Q: Catan</div><div class="mc-sub">RulesMaster · 12 msgs</div></div>
+        <div class="mc-footer"><span class="mi">12 msgs</span><span class="mi">5 min</span></div>
+        <div class="mc-nav"><div class="nh">Navigate to</div><div class="nl">
+          <a class="nav-link" data-t="game" onclick="connNav('game','chat')"><span class="nb" data-tip="Game"><svg><use href="#i-game"/></svg></span><span class="nlbl">Game</span></a>
+          <a class="nav-link" data-t="agent" onclick="connNav('agent','chat')"><span class="nb" data-tip="Agent"><svg><use href="#i-agent"/></svg></span><span class="nlbl">Agent</span></a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- page-wrap -->
+
+<script>
+  // Entity config for labels/colors
+  var E = {
+    game:{l:'Game',e:'🎲',c:'--e-game'},
+    agent:{l:'Agent',e:'🤖',c:'--e-agent'},
+    document:{l:'KB',e:'📚',c:'--e-document'},
+    session:{l:'Session',e:'🎮',c:'--e-session'},
+    player:{l:'Player',e:'👤',c:'--e-player'},
+    chat:{l:'Chat',e:'💬',c:'--e-chat'}
+  };
+
+  // Scroll to section (flow diagram clicks)
+  function navScroll(id) {
+    var el = document.getElementById(id);
+    if (el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  // Navigation from entity cards - scroll to target section + highlight
+  function navTo(target, from) {
+    var map = {game:'sec-game',agent:'sec-agent',document:'sec-kb',session:'sec-session',player:'sec-player',chat:'sec-chat'};
+    var sec = document.getElementById(map[target]);
+    if (sec) {
+      sec.scrollIntoView({behavior:'smooth',block:'start'});
+      setTimeout(function(){
+        var card = sec.querySelector('.mc');
+        if (card) {
+          card.classList.add('highlighted');
+          card.style.outlineColor = 'hsl(var(' + E[target].c + '))';
+          setTimeout(function(){ card.classList.remove('highlighted'); }, 1500);
+        }
+      }, 400);
+    }
+  }
+
+  // View tab switching
+  function switchView(name) {
+    document.querySelectorAll('.vtab').forEach(function(t){ t.classList.toggle('active', t.dataset.view === name); });
+    document.querySelectorAll('.vpanel').forEach(function(p){ p.classList.toggle('active', p.id === 'view-' + name); });
+  }
+
+  // Connected nav demo - breadcrumb + highlight
+  var trail = [];
+  function connNav(target, from) {
+    if (trail.length === 0 && from) trail.push(from);
+    trail.push(target);
+    if (trail.length > 5) trail = trail.slice(-5);
+
+    // Build breadcrumb using DOM API (no innerHTML)
+    var bc = document.getElementById('nav-bc');
+    while (bc.firstChild) bc.removeChild(bc.firstChild);
+    trail.forEach(function(t, i) {
+      var item = document.createElement('span');
+      item.className = 'bc-item';
+      item.style.position = 'relative';
+      item.style.zIndex = '1';
+      var dot = document.createElement('span');
+      dot.className = 'bcd';
+      dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:hsl(var(' + E[t].c + '));display:inline-block;';
+      item.appendChild(dot);
+      var txt = document.createTextNode(' ' + E[t].e + ' ' + E[t].l);
+      item.appendChild(txt);
+      bc.appendChild(item);
+      if (i < trail.length - 1) {
+        var sep = document.createElement('span');
+        sep.className = 'bc-sep';
+        sep.style.position = 'relative';
+        sep.style.zIndex = '1';
+        sep.textContent = ' → ';
+        bc.appendChild(sep);
+      }
+    });
+
+    // Highlight target card
+    var card = document.getElementById('cn-' + target);
+    if (card) {
+      card.scrollIntoView({behavior:'smooth',block:'nearest'});
+      card.classList.add('highlighted');
+      card.style.outlineColor = 'hsl(var(' + E[target].c + '))';
+      setTimeout(function(){ card.classList.remove('highlighted'); }, 1500);
+    }
+  }
+</script>
+</body>
+</html>

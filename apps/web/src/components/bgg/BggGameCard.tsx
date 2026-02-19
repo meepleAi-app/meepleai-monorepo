@@ -1,10 +1,12 @@
 /**
  * BggGameCard - Issue #4141
+ * Issue #4859: Migrated to MeepleCard design system
+ *
+ * Compact selectable card for BGG search results.
+ * Uses MeepleCard with selectable state and entity="game" orange styling.
  */
 
-import { Check } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { BggSearchResult } from '@/types/bgg';
 
 interface BggGameCardProps {
@@ -15,49 +17,17 @@ interface BggGameCardProps {
 
 export function BggGameCard({ game, selected = false, onSelect }: BggGameCardProps) {
   return (
-    <button
-      type="button"
+    <MeepleCard
+      entity="game"
+      variant="compact"
+      title={game.name}
+      subtitle={`${game.yearPublished}`}
+      imageUrl={game.thumbnail || undefined}
+      selectable
+      selected={selected}
+      onSelect={() => onSelect(game.id)}
       onClick={() => onSelect(game.id)}
-      className={cn(
-        'relative w-full p-4 rounded-lg border-2 transition-all',
-        'bg-white/70 backdrop-blur-md hover:bg-white/90',
-        'focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2',
-        selected
-          ? 'border-amber-500 bg-amber-50/70'
-          : 'border-gray-200 hover:border-amber-300'
-      )}
-      aria-pressed={selected}
-      aria-label={`Select ${game.name} (${game.yearPublished})`}
-    >
-      {selected && (
-        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center">
-          <Check className="w-4 h-4" aria-hidden="true" />
-        </div>
-      )}
-
-      <div className="flex items-start gap-3">
-        {game.thumbnail ? (
-          <img
-            src={game.thumbnail}
-            alt={game.name}
-            className="w-16 h-16 rounded object-cover flex-shrink-0"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-16 h-16 rounded bg-gray-200 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs text-gray-500">No image</span>
-          </div>
-        )}
-
-        <div className="flex-1 text-left min-w-0">
-          <h3 className="font-quicksand font-bold text-base text-gray-900 truncate">
-            {game.name}
-          </h3>
-          <p className="font-nunito text-sm text-gray-600 mt-1">
-            Published: {game.yearPublished}
-          </p>
-        </div>
-      </div>
-    </button>
+      data-testid={`bgg-game-card-${game.id}`}
+    />
   );
 }

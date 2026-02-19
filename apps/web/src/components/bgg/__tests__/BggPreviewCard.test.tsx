@@ -1,12 +1,22 @@
 /**
  * BggPreviewCard Tests - Issue #4141
+ * Issue #4859: Updated for MeepleCard migration
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import type { BggGameDetailsDto } from '@/types/bgg';
 
 import { BggPreviewCard } from '../BggPreviewCard';
-import type { BggGameDetailsDto } from '@/types/bgg';
+
+const mockMeepleCard = vi.fn(() => null);
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: (props: Record<string, unknown>) => {
+    mockMeepleCard(props);
+    return <div data-testid={props['data-testid'] as string}>MeepleCard</div>;
+  },
+}));
 
 const mockGame: BggGameDetailsDto = {
   id: 13,
@@ -36,135 +46,140 @@ const mockGameMinimal: BggGameDetailsDto = {
 };
 
 describe('BggPreviewCard', () => {
-  it('should render game name and year', () => {
-    render(<BggPreviewCard game={mockGame} />);
-
-    expect(screen.getByText('Catan')).toBeInTheDocument();
-    expect(screen.getByText('Published: 1995')).toBeInTheDocument();
+  beforeEach(() => {
+    mockMeepleCard.mockClear();
   });
 
-  it('should render thumbnail when available', () => {
+  it('renders with entity="game" and variant="featured"', () => {
     render(<BggPreviewCard game={mockGame} />);
 
-    const img = screen.getByAltText('Catan');
-    expect(img).toHaveAttribute('src', 'https://example.com/catan.jpg');
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity: 'game',
+        variant: 'featured',
+      })
+    );
   });
 
-  it('should show placeholder when thumbnail is null', () => {
+  it('passes game name as title', () => {
+    render(<BggPreviewCard game={mockGame} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Catan' })
+    );
+  });
+
+  it('passes year and minAge as subtitle', () => {
+    render(<BggPreviewCard game={mockGame} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ subtitle: '1995 \u00b7 Age 10+' })
+    );
+  });
+
+  it('passes thumbnail as imageUrl', () => {
+    render(<BggPreviewCard game={mockGame} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: 'https://example.com/catan.jpg' })
+    );
+  });
+
+  it('passes undefined imageUrl when thumbnail is null', () => {
     render(<BggPreviewCard game={mockGameMinimal} />);
 
-    expect(screen.getByText('No image')).toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: undefined })
+    );
   });
 
-  it('should display player count range', () => {
+  it('passes rating and ratingMax', () => {
     render(<BggPreviewCard game={mockGame} />);
 
-    expect(screen.getByText('3-4 players')).toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ rating: 7.2, ratingMax: 10 })
+    );
   });
 
-  it('should display single player count when min equals max', () => {
-    const gameWithSamePlayers: BggGameDetailsDto = {
+  it('passes BGG ID as badge', () => {
+    render(<BggPreviewCard game={mockGame} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ badge: 'BGG #13' })
+    );
+  });
+
+  it('passes metadata with player count, playing time, and rating', () => {
+    render(<BggPreviewCard game={mockGame} />);
+
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const metadata = call?.metadata as Array<{ label: string }>;
+
+    expect(metadata).toHaveLength(3);
+    expect(metadata[0].label).toBe('3-4 players');
+    expect(metadata[1].label).toBe('90 min');
+    expect(metadata[2].label).toBe('7.2 / 10');
+  });
+
+  it('displays single player count when min equals max', () => {
+    const samePlayersGame: BggGameDetailsDto = {
       ...mockGame,
       minPlayers: 4,
       maxPlayers: 4,
     };
 
-    render(<BggPreviewCard game={gameWithSamePlayers} />);
+    render(<BggPreviewCard game={samePlayersGame} />);
 
-    expect(screen.getByText('4 players')).toBeInTheDocument();
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const metadata = call?.metadata as Array<{ label: string }>;
+
+    expect(metadata[0].label).toBe('4 players');
   });
 
-  it('should display playing time', () => {
-    render(<BggPreviewCard game={mockGame} />);
-
-    expect(screen.getByText('90 min')).toBeInTheDocument();
-  });
-
-  it('should display minimum age', () => {
-    render(<BggPreviewCard game={mockGame} />);
-
-    expect(screen.getByText('Age 10+')).toBeInTheDocument();
-  });
-
-  it('should display rating with one decimal', () => {
-    render(<BggPreviewCard game={mockGame} />);
-
-    expect(screen.getByText('7.2 / 10')).toBeInTheDocument();
-  });
-
-  it('should display rating with proper formatting for whole numbers', () => {
-    const gameWithWholeRating: BggGameDetailsDto = {
+  it('formats rating with one decimal for whole numbers', () => {
+    const wholeRatingGame: BggGameDetailsDto = {
       ...mockGame,
       rating: 8.0,
     };
 
-    render(<BggPreviewCard game={gameWithWholeRating} />);
+    render(<BggPreviewCard game={wholeRatingGame} />);
 
-    expect(screen.getByText('8.0 / 10')).toBeInTheDocument();
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const metadata = call?.metadata as Array<{ label: string }>;
+
+    expect(metadata[2].label).toBe('8.0 / 10');
   });
 
-  it('should display description when provided', () => {
+  it('enables preview when description exists', () => {
     render(<BggPreviewCard game={mockGame} />);
 
-    expect(
-      screen.getByText('Trade, build, and settle the island of Catan')
-    ).toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        showPreview: true,
+        previewData: {
+          description: 'Trade, build, and settle the island of Catan',
+          categories: ['Economic', 'Negotiation'],
+          mechanics: ['Trading', 'Dice Rolling'],
+        },
+      })
+    );
   });
 
-  it('should not display description section when not provided', () => {
+  it('disables preview when description is missing', () => {
     render(<BggPreviewCard game={mockGameMinimal} />);
 
-    expect(
-      screen.queryByText(/Trade, build/)
-    ).not.toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ showPreview: false })
+    );
   });
 
-  it('should display categories when provided', () => {
+  it('sets correct data-testid', () => {
     render(<BggPreviewCard game={mockGame} />);
 
-    expect(screen.getByText('Categories')).toBeInTheDocument();
-    expect(screen.getByText('Economic')).toBeInTheDocument();
-    expect(screen.getByText('Negotiation')).toBeInTheDocument();
+    expect(screen.getByTestId('bgg-preview-card-13')).toBeInTheDocument();
   });
 
-  it('should display mechanics when provided', () => {
-    render(<BggPreviewCard game={mockGame} />);
-
-    expect(screen.getByText('Mechanics')).toBeInTheDocument();
-    expect(screen.getByText('Trading')).toBeInTheDocument();
-    expect(screen.getByText('Dice Rolling')).toBeInTheDocument();
-  });
-
-  it('should display BGG ID', () => {
-    render(<BggPreviewCard game={mockGame} />);
-
-    expect(screen.getByText('BoardGameGeek ID: 13')).toBeInTheDocument();
-  });
-
-  it('should apply glassmorphism styling', () => {
-    const { container } = render(<BggPreviewCard game={mockGame} />);
-
-    const card = container.querySelector('.bg-white\\/70');
-    expect(card).toBeInTheDocument();
-    expect(card).toHaveClass('backdrop-blur-md');
-  });
-
-  it('should apply amber border styling', () => {
-    const { container } = render(<BggPreviewCard game={mockGame} />);
-
-    const card = container.querySelector('.border-amber-200');
-    expect(card).toBeInTheDocument();
-  });
-
-  it('should render all icons', () => {
-    const { container } = render(<BggPreviewCard game={mockGame} />);
-
-    // Check for Users, Clock, Star icons (lucide-react)
-    const icons = container.querySelectorAll('svg');
-    expect(icons.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('should handle missing optional fields gracefully', () => {
+  it('handles missing optional fields gracefully', () => {
     const gameWithoutOptionals: BggGameDetailsDto = {
       ...mockGameMinimal,
       description: undefined,
@@ -174,7 +189,15 @@ describe('BggPreviewCard', () => {
 
     render(<BggPreviewCard game={gameWithoutOptionals} />);
 
-    expect(screen.queryByText('Categories')).not.toBeInTheDocument();
-    expect(screen.queryByText('Mechanics')).not.toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        showPreview: false,
+        previewData: {
+          description: undefined,
+          categories: undefined,
+          mechanics: undefined,
+        },
+      })
+    );
   });
 });

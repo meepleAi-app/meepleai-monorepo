@@ -22,10 +22,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import { Users, Clock, BarChart2 } from 'lucide-react';
 
+import { AgentCreationSheet } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
@@ -111,6 +112,9 @@ export function MeepleGameCatalogCard({
   libraryStatus,
 }: MeepleGameCatalogCardProps) {
   const [isAdding, setIsAdding] = useState(false);
+  // Issue #4777: Agent creation sheet state
+  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
+  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
   // Check if game is already in user's library
   // Use provided batch status if available, otherwise fetch individually
@@ -203,32 +207,46 @@ export function MeepleGameCatalogCard({
     : undefined;
 
   return (
-    <MeepleCard
-      entity="game"
-      variant={variant}
-      title={game.title}
-      subtitle={subtitle}
-      imageUrl={game.imageUrl || undefined}
-      rating={game.averageRating || undefined}
-      ratingMax={10}
-      metadata={metadata}
-      badge={badge}
-      actions={actions}
-      loading={isLoadingStatus}
-      onClick={onClick ? () => onClick(game.id) : undefined}
-      flippable={flippable && !!game.description}
-      flipData={flipData}
-      flipTrigger="button"
-      className={className}
-      // Epic #4688: Navigation footer
-      navigateTo={getNavigationLinks('game', { id: game.id })}
-      data-testid={`catalog-game-card-${game.id}`}
-      // Issue #4040: New action system
-      entityQuickActions={entityActions.quickActions}
-      showInfoButton
-      infoHref={`/games/${game.id}`}
-      infoTooltip="Vai al dettaglio"
-    />
+    <>
+      <MeepleCard
+        id={game.id}
+        entity="game"
+        variant={variant}
+        title={game.title}
+        subtitle={subtitle}
+        imageUrl={game.imageUrl || undefined}
+        rating={game.averageRating || undefined}
+        ratingMax={10}
+        metadata={metadata}
+        badge={badge}
+        actions={actions}
+        loading={isLoadingStatus}
+        onClick={onClick ? () => onClick(game.id) : undefined}
+        flippable={flippable && !!game.description}
+        flipData={flipData}
+        flipTrigger="button"
+        className={className}
+        // Epic #4688: Navigation footer
+        navigateTo={getNavigationLinks('game', { id: game.id })}
+        // Issue #4777: Agent action footer
+        hasAgent={false}
+        onCreateAgent={handleCreateAgent}
+        data-testid={`catalog-game-card-${game.id}`}
+        // Issue #4040: New action system
+        entityQuickActions={entityActions.quickActions}
+        showInfoButton
+        infoHref={`/games/${game.id}`}
+        infoTooltip="Vai al dettaglio"
+      />
+
+      {/* Issue #4777: Agent creation wizard */}
+      <AgentCreationSheet
+        isOpen={agentSheetOpen}
+        onClose={() => setAgentSheetOpen(false)}
+        initialGameId={game.id}
+        initialGameTitle={game.title}
+      />
+    </>
   );
 }
 

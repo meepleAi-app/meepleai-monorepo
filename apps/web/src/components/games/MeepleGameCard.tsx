@@ -109,6 +109,7 @@ export function MeepleGameCard({
   return (
     <>
       <MeepleCard
+        id={game.id}
         entity="game"
         variant={variant}
         title={game.title}
@@ -126,6 +127,9 @@ export function MeepleGameCard({
         infoTooltip="Vai al dettaglio"
         // Epic #4688: Navigation footer
         navigateTo={getNavigationLinks('game', { id: game.id })}
+        // Issue #4777: Agent action footer
+        hasAgent={false}
+        onCreateAgent={handleCreateAgent}
         data-testid={`game-card-${game.id}`}
       />
 

@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bookmark,
+  Bot,
   CheckCircle,
   Download,
   FileDown,
@@ -68,6 +69,8 @@ export interface UseEntityActionsProps {
   };
   /** Callback to show removal warning modal (Issue #4259) */
   onShowRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void;
+  /** Callback to open agent creation wizard (Issue #4777) */
+  onCreateAgent?: () => void;
 }
 
 export interface EntityActions {
@@ -96,6 +99,7 @@ export function useEntityActions({
   userRole = 'user',
   data,
   onShowRemovalWarning,
+  onCreateAgent,
 }: UseEntityActionsProps): EntityActions {
   const router = useRouter();
 
@@ -152,10 +156,17 @@ export function useEntityActions({
             };
 
         const hasRag = data?.hasPdfDocuments === true;
+        const hasAgent = data?.hasAgent === true;
 
         return {
           quickActions: [
             collectionAction, // Issue #4259: First action
+            {
+              icon: Bot,
+              label: 'Crea Agente',
+              onClick: () => onCreateAgent?.(),
+              hidden: hasAgent || !onCreateAgent,
+            },
             {
               icon: MessageSquare,
               label: 'Chat con Agent',
@@ -410,5 +421,6 @@ export function useEntityActions({
     genericStatus,
     addToGenericCollection,
     removeFromGenericCollection,
+    onCreateAgent,
   ]);
 }

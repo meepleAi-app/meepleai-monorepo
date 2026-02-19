@@ -236,6 +236,41 @@ public class Session
     }
 
     /// <summary>
+    /// Changes a participant's role. Only a Host can change roles.
+    /// Cannot demote the last Host.
+    /// </summary>
+    /// <param name="participantId">Participant whose role is changing.</param>
+    /// <param name="newRole">The new role to assign.</param>
+    /// <param name="requestedBy">User ID of the requester (must be Host).</param>
+    public void AssignParticipantRole(Guid participantId, ParticipantRole newRole, Guid requestedBy)
+    {
+        if (Status == SessionStatus.Finalized)
+            throw new ConflictException("Cannot change roles in a finalized session.");
+
+        var requester = _participants.FirstOrDefault(p => p.UserId == requestedBy)
+            ?? throw new NotFoundException($"Requester {requestedBy} is not a participant.");
+
+        if (requester.Role != ParticipantRole.Host)
+            throw new ForbiddenException("Only hosts can assign roles.");
+
+        var participant = _participants.FirstOrDefault(p => p.Id == participantId)
+            ?? throw new NotFoundException($"Participant {participantId} not found in session.");
+
+        // Cannot demote the last Host
+        if (participant.Role == ParticipantRole.Host && newRole != ParticipantRole.Host)
+        {
+            var hostCount = _participants.Count(p => p.Role == ParticipantRole.Host);
+            if (hostCount <= 1)
+                throw new ConflictException("Cannot demote the last host. Promote another participant first.");
+        }
+
+        participant.Role = newRole;
+        // Sync IsOwner flag with Host role
+        participant.IsOwner = newRole == ParticipantRole.Host;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Pauses an active session.
     /// </summary>
     public void Pause()

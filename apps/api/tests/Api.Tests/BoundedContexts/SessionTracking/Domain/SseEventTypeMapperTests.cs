@@ -48,6 +48,7 @@ public class SseEventTypeMapperTests
     [InlineData(typeof(ParticipantAddedEvent))]
     [InlineData(typeof(ParticipantKickedEvent))]
     [InlineData(typeof(PlayerReadyEvent))]
+    [InlineData(typeof(ParticipantRoleChangedEvent))]
     public void GetEventType_PlayerEvents_ReturnsSessionPlayer(Type eventType)
     {
         // Act
@@ -164,6 +165,7 @@ public class SseEventTypeMapperTests
             typeof(SessionResumedEvent), typeof(SessionFinalizedEvent),
             typeof(ScoreUpdatedEvent), typeof(ParticipantAddedEvent),
             typeof(ParticipantKickedEvent), typeof(PlayerReadyEvent),
+            typeof(ParticipantRoleChangedEvent),
             typeof(ConflictDetectedEvent),
             typeof(DiceRolledEvent), typeof(CardsDrawnEvent),
             typeof(CardsDiscardedEvent), typeof(CardsRevealedEvent),

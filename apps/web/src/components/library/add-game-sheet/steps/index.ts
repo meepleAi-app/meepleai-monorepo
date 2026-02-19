@@ -1,6 +1,6 @@
 /**
  * Wizard Step Components
- * Issues #4819, #4820: AddGameSheet Steps 1 & 2
+ * Issues #4819, #4820, #4821: AddGameSheet Steps 1-3
  * Epic #4817: User Collection Wizard
  */
 export { GameSourceStep } from './GameSourceStep';
@@ -9,3 +9,5 @@ export { CustomGameForm, type CustomGameValues } from './CustomGameForm';
 export { KnowledgeBaseStep } from './KnowledgeBaseStep';
 export { PdfList, type PdfListProps } from './PdfList';
 export { PdfUploadZone, type PdfUploadZoneProps } from './PdfUploadZone';
+export { GameInfoStep } from './GameInfoStep';
+export { SuccessState } from './SuccessState';

@@ -18,7 +18,7 @@ import {
   type WizardEntryPoint,
   type SelectedGameData,
 } from '@/lib/stores/add-game-wizard-store';
-import { GameSourceStep, KnowledgeBaseStep } from './steps';
+import { GameSourceStep, KnowledgeBaseStep, GameInfoStep } from './steps';
 
 /**
  * Props for the AddGameSheet wizard drawer.
@@ -67,9 +67,11 @@ export function AddGameSheet({
 }: AddGameSheetProps) {
   // Select only primitive/stable values from the store
   const currentStep = useAddGameWizardStore((s) => s.currentStep);
+  const selectedGame = useAddGameWizardStore((s) => s.selectedGame);
   const isDirty = useAddGameWizardStore((s) => s.isDirty);
   const initialize = useAddGameWizardStore((s) => s.initialize);
-  const isNextAllowed = useAddGameWizardStore((s) => s.canGoNext());
+  // Derive canGoNext inline so Zustand tracks the actual dependencies
+  const isNextAllowed = currentStep === 1 ? selectedGame !== null : currentStep === 2;
 
   const [direction, setDirection] = useState(0);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -112,6 +114,17 @@ export function AddGameSheet({
     setDirection(-1);
     useAddGameWizardStore.getState().goBack();
   }, []);
+
+  const handleAddAnother = useCallback(() => {
+    initialize(entryPoint, gameData);
+    setDirection(0);
+    setShowCloseConfirm(false);
+  }, [initialize, entryPoint, gameData]);
+
+  const handleSuccessClose = useCallback(() => {
+    useAddGameWizardStore.getState().reset();
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   const isFirstStep = entryPoint.type === 'fromGameCard' || entryPoint.type === 'fromSearch'
     ? currentStep === 2
@@ -158,10 +171,10 @@ export function AddGameSheet({
               {currentStep === 1 && <GameSourceStep />}
               {currentStep === 2 && <KnowledgeBaseStep />}
               {currentStep === 3 && (
-                <StepPlaceholder
-                  step={3}
-                  title="Informazioni & Salva"
-                  description="Rivedi le info del gioco e salva nella collezione"
+                <GameInfoStep
+                  onSuccess={onSuccess}
+                  onAddAnother={handleAddAnother}
+                  onClose={handleSuccessClose}
                 />
               )}
             </motion.div>
@@ -227,26 +240,3 @@ export function AddGameSheet({
   );
 }
 
-/**
- * Temporary placeholder for wizard steps.
- * Will be replaced by actual step components in issues #4819, #4820, #4821.
- */
-function StepPlaceholder({
-  step,
-  title,
-  description,
-}: {
-  step: number;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-800 text-2xl font-bold text-teal-400 mb-4">
-        {step}
-      </div>
-      <h3 className="text-lg font-semibold text-slate-200 mb-1">{title}</h3>
-      <p className="text-sm text-slate-500 max-w-xs">{description}</p>
-    </div>
-  );
-}

@@ -18,6 +18,19 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
 }));
 
+// Mock API for KnowledgeBaseStep
+vi.mock('@/lib/api', () => ({
+  api: {
+    documents: { getDocumentsByGame: vi.fn().mockResolvedValue([]) },
+    pdf: { uploadPdf: vi.fn() },
+  },
+}));
+
+// Mock RagReadyIndicator
+vi.mock('@/components/pdf/RagReadyIndicator', () => ({
+  RagReadyIndicator: () => <div data-testid="rag-ready-indicator" />,
+}));
+
 describe('AddGameSheet', () => {
   const defaultProps = {
     open: true,
@@ -59,7 +72,7 @@ describe('AddGameSheet', () => {
         }}
       />
     );
-    expect(screen.getByText('Knowledge Base & PDF')).toBeInTheDocument();
+    expect(screen.getByTestId('knowledge-base-step')).toBeInTheDocument();
   });
 
   it('should show Avanti button for non-last steps', () => {

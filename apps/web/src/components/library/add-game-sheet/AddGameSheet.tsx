@@ -18,7 +18,7 @@ import {
   type WizardEntryPoint,
   type SelectedGameData,
 } from '@/lib/stores/add-game-wizard-store';
-import { GameSourceStep } from './steps';
+import { GameSourceStep, KnowledgeBaseStep } from './steps';
 
 /**
  * Props for the AddGameSheet wizard drawer.
@@ -69,7 +69,7 @@ export function AddGameSheet({
   const currentStep = useAddGameWizardStore((s) => s.currentStep);
   const isDirty = useAddGameWizardStore((s) => s.isDirty);
   const initialize = useAddGameWizardStore((s) => s.initialize);
-  const canGoNext = useAddGameWizardStore((s) => s.canGoNext);
+  const isNextAllowed = useAddGameWizardStore((s) => s.canGoNext());
 
   const [direction, setDirection] = useState(0);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
@@ -156,13 +156,7 @@ export function AddGameSheet({
               transition={{ duration: 0.2, ease: 'easeInOut' }}
             >
               {currentStep === 1 && <GameSourceStep />}
-              {currentStep === 2 && (
-                <StepPlaceholder
-                  step={2}
-                  title="Knowledge Base & PDF"
-                  description="Visualizza e gestisci i PDF del regolamento"
-                />
-              )}
+              {currentStep === 2 && <KnowledgeBaseStep />}
               {currentStep === 3 && (
                 <StepPlaceholder
                   step={3}
@@ -190,7 +184,7 @@ export function AddGameSheet({
           {!isLastStep && (
             <Button
               onClick={handleNext}
-              disabled={!canGoNext()}
+              disabled={!isNextAllowed}
               className="gap-1.5"
             >
               Avanti

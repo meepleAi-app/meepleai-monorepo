@@ -24,4 +24,23 @@ public sealed class StepLogEntry
         Message = message ?? throw new ArgumentNullException(nameof(message));
         Timestamp = timestamp;
     }
+
+    /// <summary>
+    /// Reconstitute a StepLogEntry from persistence data.
+    /// Issue #4731: Repository mapping support.
+    /// </summary>
+    internal static StepLogEntry Reconstitute(
+        Guid id,
+        StepLogLevel level,
+        string message,
+        DateTimeOffset timestamp)
+    {
+        return new StepLogEntry
+        {
+            Id = id,
+            Level = level,
+            Message = message,
+            Timestamp = timestamp
+        };
+    }
 }

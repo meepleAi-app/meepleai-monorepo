@@ -73,4 +73,32 @@ public sealed class ProcessingStep
     {
         _logEntries.Add(new StepLogEntry(level, message, timestamp));
     }
+
+    /// <summary>
+    /// Reconstitute a ProcessingStep from persistence data.
+    /// Issue #4731: Repository mapping support.
+    /// </summary>
+    internal static ProcessingStep Reconstitute(
+        Guid id,
+        ProcessingStepType stepName,
+        StepStatus status,
+        DateTimeOffset? startedAt,
+        DateTimeOffset? completedAt,
+        TimeSpan? duration,
+        string? metadataJson,
+        List<StepLogEntry> logEntries)
+    {
+        var step = new ProcessingStep
+        {
+            Id = id,
+            StepName = stepName,
+            Status = status,
+            StartedAt = startedAt,
+            CompletedAt = completedAt,
+            Duration = duration,
+            MetadataJson = metadataJson
+        };
+        step._logEntries.AddRange(logEntries);
+        return step;
+    }
 }

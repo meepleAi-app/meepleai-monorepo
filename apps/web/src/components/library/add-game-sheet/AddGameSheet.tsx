@@ -18,6 +18,7 @@ import {
   type WizardEntryPoint,
   type SelectedGameData,
 } from '@/lib/stores/add-game-wizard-store';
+import { GameSourceStep } from './steps';
 
 /**
  * Props for the AddGameSheet wizard drawer.
@@ -154,13 +155,7 @@ export function AddGameSheet({
               exit="exit"
               transition={{ duration: 0.2, ease: 'easeInOut' }}
             >
-              {currentStep === 1 && (
-                <StepPlaceholder
-                  step={1}
-                  title="Scegli Sorgente Gioco"
-                  description="Cerca nel catalogo, importa da BGG, o crea manualmente"
-                />
-              )}
+              {currentStep === 1 && <GameSourceStep />}
               {currentStep === 2 && (
                 <StepPlaceholder
                   step={2}

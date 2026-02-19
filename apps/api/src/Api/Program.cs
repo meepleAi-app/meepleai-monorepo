@@ -535,6 +535,7 @@ v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
+v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
 v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)

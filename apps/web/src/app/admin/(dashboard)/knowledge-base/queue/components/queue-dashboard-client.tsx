@@ -9,10 +9,13 @@ import { Button } from '@/components/ui/primitives/button';
 
 import { useQueueList, useJobDetail } from '../lib/queue-api';
 import type { QueueFilters } from '../lib/queue-api';
+import { useQueueSSE } from '../hooks/use-queue-sse';
+import { useJobSSE } from '../hooks/use-job-sse';
 import { QueueStatsBar } from './queue-stats-bar';
 import { QueueFiltersBar } from './queue-filters';
 import { QueueList } from './queue-list';
 import { JobDetailPanel } from './job-detail-panel';
+import { SSEConnectionIndicator } from './sse-connection-indicator';
 
 export function QueueDashboardClient() {
   const queryClient = useQueryClient();
@@ -22,8 +25,16 @@ export function QueueDashboardClient() {
   });
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
-  const { data: queueData, isLoading: isQueueLoading } = useQueueList(filters);
-  const { data: jobDetail, isLoading: isDetailLoading } = useJobDetail(selectedJobId);
+  // SSE connections
+  const { connectionState: queueSSEState, reconnect: reconnectQueueSSE } = useQueueSSE(true);
+  const { connectionState: jobSSEState } = useJobSSE(selectedJobId);
+
+  const sseConnected = queueSSEState === 'connected';
+  const jobSseConnected = jobSSEState === 'connected';
+
+  // Reduce polling when SSE is active
+  const { data: queueData, isLoading: isQueueLoading } = useQueueList(filters, sseConnected);
+  const { data: jobDetail, isLoading: isDetailLoading } = useJobDetail(selectedJobId, jobSseConnected);
 
   const handleSelectJob = useCallback((jobId: string) => {
     setSelectedJobId(jobId);
@@ -53,6 +64,10 @@ export function QueueDashboardClient() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <SSEConnectionIndicator
+            state={queueSSEState}
+            onReconnect={reconnectQueueSSE}
+          />
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCwIcon className="h-4 w-4 mr-1" />
             Refresh
@@ -67,7 +82,7 @@ export function QueueDashboardClient() {
       </div>
 
       {/* Stats Bar */}
-      <QueueStatsBar data={queueData} isLoading={isQueueLoading} />
+      <QueueStatsBar />
 
       {/* Filters */}
       <QueueFiltersBar filters={filters} onFiltersChange={setFilters} />

@@ -129,6 +129,36 @@ export const VectorCollectionsResponseSchema = z.object({
 export type VectorCollection = z.infer<typeof VectorCollectionSchema>;
 export type VectorCollectionsResponse = z.infer<typeof VectorCollectionsResponseSchema>;
 
+// ========== PDF List (Admin) ==========
+
+export const PdfListItemSchema = z.object({
+  id: z.string(),
+  fileName: z.string(),
+  gameTitle: z.string().nullable(),
+  gameId: z.string().nullable(),
+  processingStatus: z.string(),
+  processingState: z.string(),
+  progressPercentage: z.number(),
+  fileSizeBytes: z.number(),
+  pageCount: z.number().nullable(),
+  chunkCount: z.number(),
+  processingError: z.string().nullable(),
+  errorCategory: z.string().nullable(),
+  retryCount: z.number(),
+  uploadedAt: z.string(),
+  processedAt: z.string().nullable(),
+});
+
+export const PdfListResultSchema = z.object({
+  items: z.array(PdfListItemSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+});
+
+export type PdfListItem = z.infer<typeof PdfListItemSchema>;
+export type PdfListResult = z.infer<typeof PdfListResultSchema>;
+
 // ========== Processing Queue (Admin) ==========
 
 export const ProcessingJobDtoSchema = z.object({

@@ -48,6 +48,9 @@ internal static class AgentEndpoints
         // Issue #4771: Agent slots quota
         MapGetUserAgentSlotsEndpoint(group);
 
+        // Issue #4772: Orchestrated agent creation
+        MapCreateAgentWithSetupEndpoint(group);
+
         return group;
     }
 
@@ -763,6 +766,57 @@ internal static class AgentEndpoints
         .Produces<UserAgentSlotsDto>(200)
         .Produces(401);
     }
+
+    /// <summary>
+    /// Orchestrated agent creation: validates slots, optionally adds game to library,
+    /// creates agent, creates initial chat thread.
+    /// Issue #4772: Agent Creation Orchestration Flow.
+    /// </summary>
+    private static void MapCreateAgentWithSetupEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/create-with-setup", async (
+            CreateAgentWithSetupRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new CreateAgentWithSetupCommand(
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role,
+                GameId: req.GameId,
+                AddToCollection: req.AddToCollection,
+                AgentType: req.AgentType,
+                AgentName: req.AgentName,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} created agent {AgentId} with setup for game {GameId}",
+                session.User.Id, result.AgentId, req.GameId);
+
+            return Results.Created($"/api/v1/agents/{result.AgentId}", result);
+        })
+        .RequireSession()
+        .RequireRateLimiting("AgentCreation")
+        .WithName("CreateAgentWithSetup")
+        .WithTags("Agents", "User")
+        .WithSummary("Orchestrated agent creation with auto-setup")
+        .WithDescription(
+            "Creates an agent with full setup: validates slot availability, " +
+            "optionally adds game to library, creates the agent, and creates an initial chat thread.")
+        .Produces<AgentCreationResultDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(409)
+        .Produces(429);
+    }
 }
 
 /// <summary>
@@ -870,6 +924,19 @@ internal record CreateUserAgentRequest(
 /// </summary>
 internal record UpdateUserAgentRequest(
     string? Name = null,
+    string? StrategyName = null,
+    IDictionary<string, object>? StrategyParameters = null
+);
+
+/// <summary>
+/// Request for orchestrated agent creation with setup.
+/// Issue #4772: Agent Creation Orchestration Flow.
+/// </summary>
+internal record CreateAgentWithSetupRequest(
+    Guid GameId,
+    bool AddToCollection,
+    string AgentType,
+    string? AgentName = null,
     string? StrategyName = null,
     IDictionary<string, object>? StrategyParameters = null
 );

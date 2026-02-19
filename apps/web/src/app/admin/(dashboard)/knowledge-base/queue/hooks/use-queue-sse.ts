@@ -155,7 +155,7 @@ export function useQueueSSE(enabled: boolean = true) {
     isMountedRef.current = true;
 
     if (enabled) {
-      connect();
+      connectRef.current();
     } else {
       cleanup();
       setConnectionState('closed');
@@ -165,7 +165,8 @@ export function useQueueSSE(enabled: boolean = true) {
       isMountedRef.current = false;
       cleanup();
     };
-  }, [enabled, connect, cleanup]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- connect called via stable ref to avoid infinite loop
+  }, [enabled, cleanup]);
 
   return {
     connectionState,

@@ -1085,8 +1085,8 @@ export const MeepleCard = React.memo(function MeepleCard({
             "absolute right-2.5 flex items-center gap-1.5 z-15",
             // Push actions below unread badge row for chatSession
             entity === 'chatSession' && unreadCount && unreadCount > 0 ? 'top-10' : 'top-2.5',
-            // Hide on mobile/tablet (use bottom sheet instead)
-            "hidden md:flex",
+            // Hide on mobile (bottom sheet instead); desktop: opacity reveal on hover
+            "hidden md:flex md:opacity-0 md:group-hover:opacity-100 md:transition-opacity md:duration-300",
           )}>
             {/* New entity quick actions (Issue #4030) */}
             {entityQuickActions && entityQuickActions.length > 0 && (

@@ -277,7 +277,7 @@
   /* MeepleCard glassmorphism via ::before pseudo (matches mockup) */
   [data-variant="grid"],
   [data-variant="featured"] {
-    position: relative;
+    isolation: isolate; /* Contain ::before z-index:-1 within card */
   }
   [data-variant="grid"]::before,
   [data-variant="featured"]::before {
@@ -286,13 +286,9 @@
     inset: 0;
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(12px) saturate(180%);
-    z-index: 0;
+    z-index: -1;
     border-radius: inherit;
-  }
-  [data-variant="grid"] > *,
-  [data-variant="featured"] > * {
-    position: relative;
-    z-index: 1;
+    pointer-events: none;
   }
   .dark [data-variant="grid"]::before,
   .dark [data-variant="featured"]::before {

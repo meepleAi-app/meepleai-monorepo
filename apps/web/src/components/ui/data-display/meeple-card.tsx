@@ -342,7 +342,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   // ========== SNAPSHOT HISTORY + TIME TRAVEL (Issue #4758) ==========
 
   /** Session snapshots for history slider */
-  sessionSnapshots?: import('../extra-meeple-card/types').SnapshotInfo[];
+  sessionSnapshots?: import('./extra-meeple-card/types').SnapshotInfo[];
   /** Currently selected snapshot index (0-based) */
   currentSnapshotIndex?: number;
   /** Callback when a snapshot is selected */

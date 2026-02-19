@@ -194,13 +194,15 @@ describe('ExtraMeepleCard', () => {
 
   // --- Tab system ---
 
-  it('renders all 4 tab triggers', () => {
+  it('renders all 6 tab triggers', () => {
     render(<ExtraMeepleCard {...defaultProps} />);
 
     expect(screen.getByRole('tab', { name: /overview/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /toolkit/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /scoreboard/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /history/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /media/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /ai/i })).toBeInTheDocument();
   });
 
   it('starts on overview tab by default', () => {

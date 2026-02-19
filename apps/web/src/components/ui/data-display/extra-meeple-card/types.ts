@@ -35,7 +35,7 @@ export type {
 // ============================================================================
 
 /** Available tabs in the ExtraMeepleCard */
-export type ExtraMeepleCardTab = 'overview' | 'toolkit' | 'scoreboard' | 'history';
+export type ExtraMeepleCardTab = 'overview' | 'toolkit' | 'scoreboard' | 'history' | 'media' | 'ai';
 
 /** Tab configuration */
 export interface TabConfig {
@@ -169,6 +169,116 @@ export interface HistoryTabData {
 }
 
 // ============================================================================
+// Media Tab Types (Issue #4762)
+// ============================================================================
+
+/** Media item (photo or note) */
+export interface MediaItem {
+  id: string;
+  type: 'photo' | 'note';
+  url?: string;
+  thumbnailUrl?: string;
+  title?: string;
+  content?: string;
+  turnNumber?: number;
+  createdAt: string;
+  createdBy?: string;
+}
+
+/** Media tab data */
+export interface MediaTabData {
+  items: MediaItem[];
+  totalPhotos: number;
+  totalNotes: number;
+}
+
+// ============================================================================
+// AI Tab Types (Issue #4762)
+// ============================================================================
+
+/** Chat message in the AI tab */
+export interface AIChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  sources?: AISource[];
+}
+
+/** Source citation from RAG agent */
+export interface AISource {
+  title: string;
+  snippet: string;
+  documentId?: string;
+}
+
+/** Quick action for the AI tab */
+export interface AIQuickAction {
+  label: string;
+  prompt: string;
+  icon?: LucideIcon;
+}
+
+/** AI tab data */
+export interface AITabData {
+  messages: AIChatMessage[];
+  sessionContext?: string;
+  quickActions: AIQuickAction[];
+  isLoading?: boolean;
+  agentName?: string;
+  agentModel?: string;
+}
+
+// ============================================================================
+// Entity Variant Types (Issue #4762)
+// ============================================================================
+
+/** Entity types supported by ExtraMeepleCard variants */
+export type ExtraMeepleCardEntity = 'session' | 'game' | 'player' | 'collection';
+
+/** Game entity detail data */
+export interface GameDetailData {
+  id: string;
+  title: string;
+  imageUrl?: string;
+  publisher?: string;
+  yearPublished?: number;
+  minPlayers?: number;
+  maxPlayers?: number;
+  playTimeMinutes?: number;
+  description?: string;
+  averageRating?: number;
+  totalPlays?: number;
+  faqCount?: number;
+  rulesDocumentCount?: number;
+}
+
+/** Player entity detail data */
+export interface PlayerDetailData {
+  id: string;
+  displayName: string;
+  avatarUrl?: string;
+  gamesPlayed: number;
+  winRate: number;
+  totalSessions: number;
+  favoriteGame?: string;
+  achievements: { id: string; name: string; icon: string }[];
+  recentGames: { name: string; date: string; result: 'win' | 'loss' | 'draw' }[];
+}
+
+/** Collection entity detail data */
+export interface CollectionDetailData {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  gameCount: number;
+  ownerName: string;
+  isShared: boolean;
+  games: { id: string; title: string; imageUrl?: string }[];
+}
+
+// ============================================================================
 // Component Props
 // ============================================================================
 
@@ -203,6 +313,12 @@ export interface ExtraMeepleCardProps {
   scoreboardData?: ScoreboardTabData;
   /** History data */
   historyData?: HistoryTabData;
+  /** Media tab data (Issue #4762) */
+  mediaData?: MediaTabData;
+  /** AI tab data (Issue #4762) */
+  aiData?: AITabData;
+  /** Callback when user sends an AI message */
+  onAISendMessage?: (message: string) => void;
 
   /** Loading state */
   loading?: boolean;

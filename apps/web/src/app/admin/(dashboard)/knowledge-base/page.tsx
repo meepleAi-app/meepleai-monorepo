@@ -7,6 +7,7 @@ import {
   UploadIcon,
   BrainCircuitIcon,
   SettingsIcon,
+  ListOrderedIcon,
   ArrowRightIcon,
 } from 'lucide-react';
 
@@ -33,6 +34,14 @@ const sections = [
     href: '/admin/knowledge-base/vectors',
     color: 'from-blue-500 to-indigo-600',
     stats: 'Manage vectors',
+  },
+  {
+    title: 'Processing Queue',
+    description: 'Monitor PDF processing jobs, view step timelines, logs, and manage the queue with filters',
+    icon: ListOrderedIcon,
+    href: '/admin/knowledge-base/queue',
+    color: 'from-cyan-500 to-teal-600',
+    stats: 'View queue',
   },
   {
     title: 'Upload & Process',

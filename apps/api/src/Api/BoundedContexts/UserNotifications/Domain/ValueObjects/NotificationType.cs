@@ -48,6 +48,10 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType GameProposalInReview = new("game_proposal_in_review");
     public static readonly NotificationType GameProposalKbMerged = new("game_proposal_kb_merged");
 
+    // ISSUE-4736: Processing job notification types
+    public static readonly NotificationType ProcessingJobCompleted = new("processing_job_completed");
+    public static readonly NotificationType ProcessingJobFailed = new("processing_job_failed");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -94,6 +98,8 @@ internal sealed class NotificationType : ValueObject
             "session_terminated" => SessionTerminated,
             "game_proposal_in_review" => GameProposalInReview,
             "game_proposal_kb_merged" => GameProposalKbMerged,
+            "processing_job_completed" => ProcessingJobCompleted,
+            "processing_job_failed" => ProcessingJobFailed,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

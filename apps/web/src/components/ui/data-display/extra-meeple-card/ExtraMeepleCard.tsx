@@ -12,6 +12,8 @@
 import React, { useState } from 'react';
 
 import {
+  Bot,
+  Camera,
   Clock,
   Gamepad2,
   History,
@@ -35,6 +37,8 @@ import { OverviewTab } from './tabs/OverviewTab';
 import { ToolkitTab } from './tabs/ToolkitTab';
 import { ScoreboardTab } from './tabs/ScoreboardTab';
 import { HistoryTab } from './tabs/HistoryTab';
+import { MediaTab } from './tabs/MediaTab';
+import { AITab } from './tabs/AITab';
 
 // ============================================================================
 // Constants
@@ -57,6 +61,8 @@ const TABS: TabConfig[] = [
   { id: 'toolkit', label: 'Toolkit', icon: Wrench },
   { id: 'scoreboard', label: 'Scoreboard', icon: Trophy },
   { id: 'history', label: 'History', icon: History },
+  { id: 'media', label: 'Media', icon: Camera },
+  { id: 'ai', label: 'AI', icon: Bot },
 ];
 
 // ============================================================================
@@ -115,6 +121,9 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
   toolkitData,
   scoreboardData,
   historyData,
+  mediaData,
+  aiData,
+  onAISendMessage,
   loading,
   error,
   className,
@@ -311,6 +320,14 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
 
           <TabsContent value="history" className="mt-0">
             <HistoryTab data={historyData} />
+          </TabsContent>
+
+          <TabsContent value="media" className="mt-0">
+            <MediaTab data={mediaData} />
+          </TabsContent>
+
+          <TabsContent value="ai" className="mt-0">
+            <AITab data={aiData} onSendMessage={onAISendMessage} />
           </TabsContent>
         </div>
       </Tabs>

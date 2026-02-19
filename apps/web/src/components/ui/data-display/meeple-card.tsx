@@ -662,7 +662,7 @@ function ActionButtons({
   const color = customColor || entityColors[entity].hsl;
 
   return (
-    <div className={cn('flex gap-2 mt-3', className)}>
+    <div className={cn('flex gap-2 mt-3 min-w-0', className)}>
       {actions.map((action, index) => (
         <button
           key={index}
@@ -671,8 +671,10 @@ function ActionButtons({
             action.onClick?.();
           }}
           disabled={action.disabled}
+          title={action.label}
           className={cn(
-            'flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm',
+            'flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold',
+            'text-xs md:text-sm truncate',
             'transition-all duration-200 hover:-translate-y-0.5',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0',

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
@@ -25,6 +26,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
         services.AddScoped<IRuleConflictFaqRepository, RuleConflictFaqRepository>(); // ISSUE-3761: Conflict FAQ
         services.AddSingleton<ILiveSessionRepository, LiveSessionRepository>(); // Issue #4749: Live session in-memory store
+        services.AddScoped<IToolStateRepository, ToolStateRepository>(); // Issue #4754: ToolState persistence
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

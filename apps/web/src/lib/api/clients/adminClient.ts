@@ -2031,7 +2031,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 
     /**
      * Get all PDF documents with filtering and pagination (admin only)
-     * GET /api/v1/pdfs/admin/pdfs
+     * GET /api/v1/admin/pdfs
      */
     async getAllPdfs(params?: {
       status?: string;
@@ -2061,7 +2061,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 
       const query = queryParams.toString();
       const result = await httpClient.get(
-        `/api/v1/pdfs/admin/pdfs${query ? `?${query}` : ''}`,
+        `/api/v1/admin/pdfs${query ? `?${query}` : ''}`,
         PdfListResultSchema
       );
       return result ?? { items: [], total: 0, page: 1, pageSize: 50 };

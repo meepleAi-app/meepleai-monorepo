@@ -13,7 +13,7 @@ internal static class AdminPdfManagementEndpoints
 {
     public static void MapAdminPdfManagementEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/pdfs")
+        var group = app.MapGroup("/admin/pdfs")
             .WithTags("Admin - PDF Management")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

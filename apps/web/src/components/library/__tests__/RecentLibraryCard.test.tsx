@@ -1,21 +1,32 @@
 /**
  * RecentLibraryCard Component Tests (Issue #2612)
+ * Issue #4858: Updated for MeepleCard migration
  *
- * Test Coverage:
- * - Rendering with complete/minimal data
- * - Cover image display and fallback
- * - Favorite star badge visibility
- * - Relative time formatting
- * - Manage CTA link
- * - Edge cases (missing data, long titles)
- *
- * Target: ≥90% coverage
+ * Verifies MeepleCard props mapping: entity, variant, title,
+ * subtitle (relative date), imageUrl, badge (favorite), info button.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { RecentLibraryCard } from '../RecentLibraryCard';
+
 import type { UserLibraryEntry } from '@/lib/api';
+
+import { RecentLibraryCard } from '../RecentLibraryCard';
+
+// Mock MeepleCard to inspect props
+const mockMeepleCard = vi.fn(() => null);
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: (props: Record<string, unknown>) => {
+    mockMeepleCard(props);
+    return (
+      <div data-testid="meeple-card">
+        <span>{props.title as string}</span>
+        <span>{props.subtitle as string}</span>
+        {props.badge && <span data-testid="badge">{props.badge as string}</span>}
+      </div>
+    );
+  },
+}));
 
 // ============================================================================
 // Mock Data
@@ -30,7 +41,7 @@ const mockGameComplete: UserLibraryEntry = {
   gameYearPublished: 2017,
   gameIconUrl: null,
   gameImageUrl: 'https://example.com/azul.png',
-  addedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+  addedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   notes: 'Great family game',
   isFavorite: true,
 };
@@ -44,7 +55,7 @@ const mockGameMinimal: UserLibraryEntry = {
   gameYearPublished: null,
   gameIconUrl: null,
   gameImageUrl: null,
-  addedAt: new Date().toISOString(), // Just now
+  addedAt: new Date().toISOString(),
   notes: null,
   isFavorite: false,
 };
@@ -56,173 +67,126 @@ const mockGameLongTitle: UserLibraryEntry = {
   isFavorite: false,
 };
 
-// ============================================================================
-// Rendering Tests
-// ============================================================================
-
-describe('RecentLibraryCard - Rendering', () => {
-  it('renders with complete data', () => {
-    render(<RecentLibraryCard game={mockGameComplete} />);
-
-    expect(screen.getByText('Azul')).toBeInTheDocument();
-    expect(screen.getByText(/Aggiunto/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Gestisci/i })).toBeInTheDocument();
+describe('RecentLibraryCard', () => {
+  beforeEach(() => {
+    mockMeepleCard.mockClear();
   });
 
-  it('displays cover image when available', () => {
-    render(<RecentLibraryCard game={mockGameComplete} />);
+  describe('MeepleCard Props', () => {
+    it('renders with entity="game" and variant="compact"', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
 
-    const image = screen.getByAltText('Azul');
-    expect(image).toBeInTheDocument();
-  });
+      expect(mockMeepleCard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entity: 'game',
+          variant: 'compact',
+        })
+      );
+    });
 
-  it('displays fallback icon when no image', () => {
-    const { container } = render(<RecentLibraryCard game={mockGameMinimal} />);
+    it('passes game title', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
 
-    // Check for Library icon (fallback)
-    const icon = container.querySelector('svg.lucide-library');
-    expect(icon).toBeInTheDocument();
-  });
+      expect(mockMeepleCard).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Azul' })
+      );
+    });
 
-  it('renders minimal data without errors', () => {
-    expect(() => {
+    it('passes imageUrl when available', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
+
+      expect(mockMeepleCard).toHaveBeenCalledWith(
+        expect.objectContaining({ imageUrl: 'https://example.com/azul.png' })
+      );
+    });
+
+    it('passes undefined imageUrl when null', () => {
       render(<RecentLibraryCard game={mockGameMinimal} />);
-    }).not.toThrow();
 
-    expect(screen.getByText('Mystery Game')).toBeInTheDocument();
+      expect(mockMeepleCard).toHaveBeenCalledWith(
+        expect.objectContaining({ imageUrl: undefined })
+      );
+    });
+
+    it('passes info button props for library navigation', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
+
+      expect(mockMeepleCard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          showInfoButton: true,
+          infoHref: '/library',
+          infoTooltip: 'Gestisci',
+        })
+      );
+    });
   });
 
-  it('truncates long titles with line-clamp-2', () => {
-    render(<RecentLibraryCard game={mockGameLongTitle} />);
+  describe('Favorite Badge', () => {
+    it('shows "Preferito" badge when isFavorite is true', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
 
-    const titleElement = screen.getByText(/Twilight Imperium/i);
-    expect(titleElement).toHaveClass('line-clamp-2');
+      expect(mockMeepleCard).toHaveBeenCalledWith(
+        expect.objectContaining({ badge: 'Preferito' })
+      );
+    });
+
+    it('does not show badge when isFavorite is false', () => {
+      render(<RecentLibraryCard game={mockGameMinimal} />);
+
+      expect(mockMeepleCard).toHaveBeenCalledWith(
+        expect.objectContaining({ badge: undefined })
+      );
+    });
   });
 
-  it('provides title attribute for accessibility on long titles', () => {
-    render(<RecentLibraryCard game={mockGameLongTitle} />);
+  describe('Relative Time', () => {
+    it('includes "Aggiunto" in subtitle for relative time', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
 
-    const titleElement = screen.getByTitle(/Twilight Imperium/i);
-    expect(titleElement).toBeInTheDocument();
-  });
-});
+      const calledProps = mockMeepleCard.mock.calls[0][0];
+      expect(calledProps.subtitle).toMatch(/^Aggiunto/);
+    });
 
-// ============================================================================
-// Favorite Badge Tests
-// ============================================================================
+    it('includes Italian relative time suffix', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
 
-describe('RecentLibraryCard - Favorite Badge', () => {
-  it('displays favorite star when isFavorite is true', () => {
-    const { container } = render(<RecentLibraryCard game={mockGameComplete} />);
-
-    const starIcon = container.querySelector('svg.lucide-star');
-    expect(starIcon).toBeInTheDocument();
-    expect(starIcon).toHaveClass('fill-yellow-400');
+      const calledProps = mockMeepleCard.mock.calls[0][0];
+      expect(calledProps.subtitle).toMatch(/fa$/);
+    });
   });
 
-  it('does not display star when isFavorite is false', () => {
-    const { container } = render(<RecentLibraryCard game={mockGameMinimal} />);
+  describe('Test ID and Structure', () => {
+    it('has data-testid="recent-library-card" wrapper', () => {
+      render(<RecentLibraryCard game={mockGameComplete} />);
 
-    const starIcon = container.querySelector('svg.lucide-star');
-    expect(starIcon).not.toBeInTheDocument();
-  });
-});
+      expect(screen.getByTestId('recent-library-card')).toBeInTheDocument();
+    });
 
-// ============================================================================
-// Time Formatting Tests
-// ============================================================================
-
-describe('RecentLibraryCard - Time Formatting', () => {
-  it('displays relative time for recently added games', () => {
-    const recentGame: UserLibraryEntry = {
-      ...mockGameMinimal,
-      addedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
-    };
-    render(<RecentLibraryCard game={recentGame} />);
-
-    expect(screen.getByText(/Aggiunto.*fa/i)).toBeInTheDocument();
+    it('renders long titles without error', () => {
+      expect(() => {
+        render(<RecentLibraryCard game={mockGameLongTitle} />);
+      }).not.toThrow();
+    });
   });
 
-  it('displays relative time for older games', () => {
-    const oldGame: UserLibraryEntry = {
-      ...mockGameComplete,
-      addedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-    };
-    render(<RecentLibraryCard game={oldGame} />);
+  describe('Edge Cases', () => {
+    it('handles future dates gracefully', () => {
+      const futureGame: UserLibraryEntry = {
+        ...mockGameComplete,
+        addedAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      };
 
-    expect(screen.getByText(/Aggiunto.*fa/i)).toBeInTheDocument();
-  });
-});
+      expect(() => {
+        render(<RecentLibraryCard game={futureGame} />);
+      }).not.toThrow();
+    });
 
-// ============================================================================
-// Navigation Tests
-// ============================================================================
+    it('renders minimal data without errors', () => {
+      expect(() => {
+        render(<RecentLibraryCard game={mockGameMinimal} />);
+      }).not.toThrow();
 
-describe('RecentLibraryCard - Navigation', () => {
-  it('has "Gestisci" link pointing to /library', () => {
-    render(<RecentLibraryCard game={mockGameComplete} />);
-
-    const link = screen.getByRole('link', { name: /Gestisci/i });
-    expect(link).toHaveAttribute('href', '/library');
-  });
-
-  it('renders as a link with correct styling', () => {
-    render(<RecentLibraryCard game={mockGameComplete} />);
-
-    const button = screen.getByRole('link', { name: /Gestisci/i });
-    expect(button).toBeInTheDocument();
-  });
-});
-
-// ============================================================================
-// Styling Tests
-// ============================================================================
-
-describe('RecentLibraryCard - Styling', () => {
-  it('applies hover shadow transition', () => {
-    render(<RecentLibraryCard game={mockGameComplete} />);
-
-    const card = screen.getByTestId('recent-library-card');
-    expect(card).toHaveClass('hover:shadow-md');
-    expect(card).toHaveClass('transition-shadow');
-  });
-
-  it('has correct image container height', () => {
-    render(<RecentLibraryCard game={mockGameComplete} />);
-
-    const imageContainer = screen.getByAltText('Azul').closest('div');
-    expect(imageContainer).toHaveClass('h-32');
-  });
-});
-
-// ============================================================================
-// Edge Cases
-// ============================================================================
-
-describe('RecentLibraryCard - Edge Cases', () => {
-  it('handles null notes gracefully', () => {
-    render(<RecentLibraryCard game={mockGameMinimal} />);
-
-    // Should not display notes section
-    expect(screen.queryByText('Great family game')).not.toBeInTheDocument();
-  });
-
-  it('handles null publisher gracefully', () => {
-    render(<RecentLibraryCard game={mockGameMinimal} />);
-
-    // Component should render without publisher
-    expect(screen.queryByText('Plan B Games')).not.toBeInTheDocument();
-    expect(screen.getByText('Mystery Game')).toBeInTheDocument();
-  });
-
-  it('handles future dates gracefully', () => {
-    const futureGame: UserLibraryEntry = {
-      ...mockGameComplete,
-      addedAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-    };
-
-    expect(() => {
-      render(<RecentLibraryCard game={futureGame} />);
-    }).not.toThrow();
+      expect(screen.getByText('Mystery Game')).toBeInTheDocument();
+    });
   });
 });

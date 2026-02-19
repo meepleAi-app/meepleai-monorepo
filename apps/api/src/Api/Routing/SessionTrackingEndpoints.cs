@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Extensions;
 using MediatR;
 
@@ -61,6 +62,8 @@ internal static class SessionTrackingEndpoints
 
         // GST-003: Real-time SSE stream
         MapSessionStreamEndpoint(group);
+        // Issue #4764: Enhanced SSE stream with reconnection, typed events, selective broadcasting
+        MapEnhancedSessionStreamEndpoint(group);
 
         // Session export and sharing endpoints (Issue #3347)
         MapExportSessionPdfEndpoint(group);
@@ -487,6 +490,113 @@ internal static class SessionTrackingEndpoints
         .Produces(401)
         .Produces(403)
         .Produces(404);
+    }
+
+    // ========== Enhanced SSE Endpoint (Issue #4764) ==========
+
+    /// <summary>
+    /// Enhanced SSE endpoint with Last-Event-ID reconnection, typed events,
+    /// connection pool limits, and selective broadcasting support.
+    /// </summary>
+    private static void MapEnhancedSessionStreamEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/stream/v2", async (
+            Guid sessionId,
+            HttpContext context,
+            ISessionBroadcastService broadcastService,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            // Extract user ID from claims
+            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Verify session access via CQRS query
+            try
+            {
+                var query = new GetSessionStreamQuery(sessionId, userId);
+                await mediator.Send(query, ct).ConfigureAwait(false);
+            }
+            catch (Api.Middleware.Exceptions.NotFoundException)
+            {
+                return Results.NotFound(new { error = "Session not found" });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Results.StatusCode(403);
+            }
+
+            // Check connection pool limit
+            if (broadcastService.GetConnectionCount(sessionId) >= 20) // MaxConnectionsPerSession
+            {
+                return Results.StatusCode(429); // Too Many Requests
+            }
+
+            // Get Last-Event-ID for reconnection
+            var lastEventId = context.Request.Headers["Last-Event-ID"].FirstOrDefault();
+
+            // Set SSE response headers
+            context.Response.Headers.Append("Content-Type", "text/event-stream");
+            context.Response.Headers.Append("Cache-Control", "no-cache");
+            context.Response.Headers.Append("Connection", "keep-alive");
+            context.Response.Headers.Append("X-Accel-Buffering", "no");
+
+            // Create heartbeat task
+            using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var heartbeatTask = Task.Run(async () =>
+            {
+                while (!heartbeatCts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
+                        await context.Response.WriteAsync(
+                            $"event: heartbeat\ndata: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n",
+                            heartbeatCts.Token).ConfigureAwait(false);
+                        await context.Response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+            }, heartbeatCts.Token);
+
+            try
+            {
+                // Stream events to client using enhanced broadcast service
+                await foreach (var envelope in broadcastService.SubscribeAsync(sessionId, userId, lastEventId, ct).ConfigureAwait(false))
+                {
+                    var json = JsonSerializer.Serialize(envelope.Data, JsonOptions);
+
+                    // Write SSE format with event ID for reconnection
+                    await context.Response.WriteAsync($"id: {envelope.Id}\n", ct).ConfigureAwait(false);
+                    await context.Response.WriteAsync($"event: {envelope.EventType}\n", ct).ConfigureAwait(false);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                await heartbeatCts.CancelAsync().ConfigureAwait(false);
+                await heartbeatTask.ConfigureAwait(false);
+            }
+
+            return Results.Empty;
+        })
+        .RequireAuthenticatedUser()
+        .WithName("StreamSessionEventsV2")
+        .WithTags("SessionTracking", "Real-Time")
+        .WithSummary("Enhanced SSE stream with reconnection, typed events, and selective broadcasting")
+        .WithDescription("Server-Sent Events v2 with Last-Event-ID reconnection, typed event names (session:score, session:turn, etc.), connection pool limits, and per-player event filtering.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(429);
     }
 
     // ========== Card Deck Endpoints (Issue #3343) ==========

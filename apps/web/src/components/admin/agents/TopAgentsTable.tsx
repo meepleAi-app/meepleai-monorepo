@@ -1,29 +1,26 @@
-'use client';
-
 /**
  * TopAgentsTable Component
  * Issue #3382: Agent Metrics Dashboard
+ * Issue #4862: Migrated to EntityTableView design system
  *
- * Displays top agents in a table format with key metrics.
+ * Displays top agents using EntityTableView entity="agent" with amber accents,
+ * sortable columns, and formatted metrics (cost, confidence, latency).
  */
+
+'use client';
+
+import React from 'react';
 
 import type { TopAgent } from '@/app/(authenticated)/admin/agents/metrics/client';
 import { Badge } from '@/components/ui/data-display/badge';
+import { EntityTableView } from '@/components/ui/data-display/entity-list-view';
+import type { TableColumnConfig } from '@/components/ui/data-display/entity-list-view/entity-list-view.types';
 import { cn } from '@/lib/utils';
-
-
-// ============================================================================
-// Types
-// ============================================================================
 
 interface TopAgentsTableProps {
   agents: TopAgent[];
   className?: string;
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function formatCost(cost: number): string {
   if (cost >= 1) return `$${cost.toFixed(2)}`;
@@ -36,78 +33,85 @@ function formatLatency(ms: number): string {
   return `${Math.round(ms)}ms`;
 }
 
-function getConfidenceColor(confidence: number): string {
-  if (confidence >= 0.9) return 'bg-emerald-500';
-  if (confidence >= 0.7) return 'bg-blue-500';
-  if (confidence >= 0.5) return 'bg-amber-500';
+function getConfidenceColor(pct: string): string {
+  const val = parseInt(pct, 10);
+  if (val >= 90) return 'bg-emerald-500';
+  if (val >= 70) return 'bg-blue-500';
+  if (val >= 50) return 'bg-amber-500';
   return 'bg-red-500';
 }
 
-// ============================================================================
-// Component
-// ============================================================================
+const tableColumns: TableColumnConfig[] = [
+  {
+    id: 'title',
+    header: 'Agent',
+    accessorKey: 'title',
+  },
+  {
+    id: 'invocations',
+    header: 'Invocations',
+    accessorKey: 'meta_0',
+    cell: (value) => (
+      <span className="font-mono text-sm">{String(value ?? '—')}</span>
+    ),
+  },
+  {
+    id: 'cost',
+    header: 'Cost',
+    accessorKey: 'meta_1',
+    cell: (value) => (
+      <span className="font-mono text-sm">{String(value ?? '—')}</span>
+    ),
+  },
+  {
+    id: 'confidence',
+    header: 'Confidence',
+    accessorKey: 'meta_2',
+    cell: (value) => {
+      const pct = String(value ?? '0%');
+      return (
+        <Badge
+          variant="secondary"
+          className={cn('text-white text-xs', getConfidenceColor(pct))}
+        >
+          {pct}
+        </Badge>
+      );
+    },
+  },
+  {
+    id: 'latency',
+    header: 'Latency',
+    accessorKey: 'meta_3',
+    cell: (value) => (
+      <span className="font-mono text-sm text-muted-foreground">
+        {String(value ?? '—')}
+      </span>
+    ),
+  },
+];
 
 export function TopAgentsTable({ agents, className }: TopAgentsTableProps) {
-  if (agents.length === 0) {
-    return (
-      <div className="flex h-32 items-center justify-center text-muted-foreground">
-        No agents found
-      </div>
-    );
-  }
-
   return (
-    <div className={cn('overflow-x-auto', className)}>
-      <table className="w-full">
-        <thead>
-          <tr className="border-b text-left text-xs text-muted-foreground">
-            <th className="pb-2 font-medium">Agent</th>
-            <th className="pb-2 text-right font-medium">Invocations</th>
-            <th className="pb-2 text-right font-medium">Cost</th>
-            <th className="pb-2 text-right font-medium">Confidence</th>
-            <th className="pb-2 text-right font-medium">Latency</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {agents.map((agent, idx) => (
-            <tr
-              key={agent.typologyId}
-              className="hover:bg-muted/50 transition-colors"
-            >
-              <td className="py-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                    {idx + 1}
-                  </span>
-                  <span className="font-medium truncate max-w-[200px]" title={agent.typologyName}>
-                    {agent.typologyName}
-                  </span>
-                </div>
-              </td>
-              <td className="py-3 text-right font-mono text-sm">
-                {agent.invocations.toLocaleString()}
-              </td>
-              <td className="py-3 text-right font-mono text-sm">
-                {formatCost(agent.cost)}
-              </td>
-              <td className="py-3 text-right">
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    'text-white text-xs',
-                    getConfidenceColor(agent.avgConfidence)
-                  )}
-                >
-                  {(agent.avgConfidence * 100).toFixed(0)}%
-                </Badge>
-              </td>
-              <td className="py-3 text-right font-mono text-sm text-muted-foreground">
-                {formatLatency(agent.avgLatencyMs)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className={className}>
+      <EntityTableView
+        displayItems={agents}
+        items={agents}
+        entity="agent"
+        renderItem={(agent) => ({
+          title: agent.typologyName,
+          id: agent.typologyId,
+          metadata: [
+            { value: agent.invocations.toLocaleString() },
+            { value: formatCost(agent.cost) },
+            { value: `${(agent.avgConfidence * 100).toFixed(0)}%` },
+            { value: formatLatency(agent.avgLatencyMs) },
+          ],
+        })}
+        tableColumns={tableColumns}
+        emptyMessage="No agents found"
+        data-testid="top-agents-table"
+      />
     </div>
   );
 }

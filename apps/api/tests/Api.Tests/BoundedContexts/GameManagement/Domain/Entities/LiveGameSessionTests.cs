@@ -1064,6 +1064,417 @@ public class LiveGameSessionTests
 
     #endregion
 
+    #region Save Method
+
+    [Fact]
+    public void Save_FromSetup_SetsLastSavedAtAndRaisesEvent()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.MoveToSetup(_timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Save(_timeProvider);
+
+        // Assert
+        Assert.Equal(_now, session.LastSavedAt);
+        Assert.Equal(_now, session.UpdatedAt);
+        Assert.Single(session.DomainEvents);
+        var evt = Assert.IsType<LiveSessionSavedEvent>(session.DomainEvents.First());
+        Assert.Equal(session.Id, evt.SessionId);
+        Assert.Equal(_now, evt.SavedAt);
+    }
+
+    [Fact]
+    public void Save_FromInProgress_Succeeds()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Save(_timeProvider);
+
+        // Assert
+        Assert.Equal(_now, session.LastSavedAt);
+        Assert.Single(session.DomainEvents);
+        Assert.IsType<LiveSessionSavedEvent>(session.DomainEvents.First());
+    }
+
+    [Fact]
+    public void Save_FromPaused_Succeeds()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Pause(_timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Save(_timeProvider);
+
+        // Assert
+        Assert.Equal(_now, session.LastSavedAt);
+        Assert.Single(session.DomainEvents);
+        Assert.IsType<LiveSessionSavedEvent>(session.DomainEvents.First());
+    }
+
+    [Fact]
+    public void Save_FromCreated_ThrowsConflictException()
+    {
+        // Arrange (Created is not IsActive)
+        var session = CreateDefaultSession();
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() => session.Save(_timeProvider));
+    }
+
+    [Fact]
+    public void Save_FromCompleted_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() => session.Save(_timeProvider));
+    }
+
+    [Fact]
+    public void Save_MultipleTimes_UpdatesLastSavedAt()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.MoveToSetup(_timeProvider);
+        session.Save(_timeProvider);
+        var firstSaveTime = session.LastSavedAt;
+
+        _timeProvider.Advance(TimeSpan.FromMinutes(5));
+        session.ClearDomainEvents();
+
+        // Act
+        session.Save(_timeProvider);
+
+        // Assert
+        Assert.NotEqual(firstSaveTime, session.LastSavedAt);
+        Assert.Equal(_timeProvider.GetUtcNow().UtcDateTime, session.LastSavedAt);
+    }
+
+    #endregion
+
+    #region Completed Session Immutability
+
+    [Fact]
+    public void RemovePlayer_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        var player = AddDefaultPlayer(session, "Solo", PlayerColor.Red);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.RemovePlayer(player.Id, _timeProvider));
+    }
+
+    [Fact]
+    public void SetTurnOrder_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        var player = AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.SetTurnOrder(new List<Guid> { player.Id }, _timeProvider));
+    }
+
+    [Fact]
+    public void CreateTeam_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.CreateTeam("Alpha", "#FF0000", _timeProvider));
+    }
+
+    [Fact]
+    public void AssignPlayerToTeam_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        var player = AddDefaultPlayer(session);
+        var team = session.CreateTeam("Alpha", "#FF0000", _timeProvider);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.AssignPlayerToTeam(player.Id, team.Id, _timeProvider));
+    }
+
+    [Fact]
+    public void UpdateNotes_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.UpdateNotes("New notes", _timeProvider));
+    }
+
+    [Fact]
+    public void UpdateGameState_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.UpdateGameState(null, _timeProvider));
+    }
+
+    [Fact]
+    public void LinkToolkit_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.LinkToolkit(Guid.NewGuid(), _timeProvider));
+    }
+
+    [Fact]
+    public void SetAgentMode_CompletedSession_ThrowsConflictException()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.Complete(_timeProvider);
+
+        // Act & Assert
+        Assert.Throws<ConflictException>(() =>
+            session.SetAgentMode(AgentSessionMode.Assistant, Guid.NewGuid(), _timeProvider));
+    }
+
+    #endregion
+
+    #region Domain Event Emissions
+
+    [Fact]
+    public void CreateTeam_RaisesTeamCreatedEvent()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        session.ClearDomainEvents();
+
+        // Act
+        var team = session.CreateTeam("Alpha", "#FF0000", _timeProvider);
+
+        // Assert
+        Assert.Single(session.DomainEvents);
+        var evt = Assert.IsType<LiveSessionTeamCreatedEvent>(session.DomainEvents.First());
+        Assert.Equal(session.Id, evt.SessionId);
+        Assert.Equal(team.Id, evt.TeamId);
+        Assert.Equal("Alpha", evt.TeamName);
+    }
+
+    [Fact]
+    public void AssignPlayerToTeam_RaisesPlayerAssignedToTeamEvent()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        var player = AddDefaultPlayer(session);
+        var team = session.CreateTeam("Alpha", "#FF0000", _timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.AssignPlayerToTeam(player.Id, team.Id, _timeProvider);
+
+        // Assert
+        Assert.Single(session.DomainEvents);
+        var evt = Assert.IsType<LiveSessionPlayerAssignedToTeamEvent>(session.DomainEvents.First());
+        Assert.Equal(session.Id, evt.SessionId);
+        Assert.Equal(player.Id, evt.PlayerId);
+        Assert.Equal(team.Id, evt.TeamId);
+    }
+
+    [Fact]
+    public void SetTurnOrder_RaisesTurnOrderChangedEvent()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        var p1 = AddDefaultPlayer(session, "P1", PlayerColor.Red);
+        var p2 = AddDefaultPlayer(session, "P2", PlayerColor.Blue);
+        session.ClearDomainEvents();
+
+        // Act
+        session.SetTurnOrder(new List<Guid> { p2.Id, p1.Id }, _timeProvider);
+
+        // Assert
+        Assert.Single(session.DomainEvents);
+        var evt = Assert.IsType<LiveSessionTurnOrderChangedEvent>(session.DomainEvents.First());
+        Assert.Equal(session.Id, evt.SessionId);
+        Assert.Equal(2, evt.NewTurnOrder.Count);
+        Assert.Equal(p2.Id, evt.NewTurnOrder[0]);
+        Assert.Equal(p1.Id, evt.NewTurnOrder[1]);
+    }
+
+    #endregion
+
+    #region Completed Event Snapshot Data
+
+    [Fact]
+    public void Complete_IncludesPlayerSnapshotsInEvent()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        var userId = Guid.NewGuid();
+        var p1 = AddDefaultPlayer(session, "Alice", PlayerColor.Red, userId);
+        var p2 = AddDefaultPlayer(session, "Bob", PlayerColor.Blue);
+        session.Start(_timeProvider);
+        session.RecordScore(p1.Id, 1, "points", 10, _timeProvider);
+        session.RecordScore(p2.Id, 1, "points", 5, _timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Complete(_timeProvider);
+
+        // Assert
+        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        Assert.Equal(2, evt.Players.Count);
+
+        var aliceSnapshot = evt.Players.First(p => p.DisplayName == "Alice");
+        Assert.Equal(p1.Id, aliceSnapshot.PlayerId);
+        Assert.Equal(userId, aliceSnapshot.UserId);
+        Assert.Equal(10, aliceSnapshot.TotalScore);
+        Assert.Equal(1, aliceSnapshot.CurrentRank);
+
+        var bobSnapshot = evt.Players.First(p => p.DisplayName == "Bob");
+        Assert.Equal(5, bobSnapshot.TotalScore);
+        Assert.Equal(2, bobSnapshot.CurrentRank);
+    }
+
+    [Fact]
+    public void Complete_ExcludesSpectatorsFromPlayerSnapshots()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session, "Player", PlayerColor.Red);
+        AddDefaultPlayer(session, "Spectator", PlayerColor.Blue, role: PlayerRole.Spectator);
+        session.Start(_timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Complete(_timeProvider);
+
+        // Assert
+        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        Assert.Single(evt.Players);
+        Assert.Equal("Player", evt.Players[0].DisplayName);
+    }
+
+    [Fact]
+    public void Complete_IncludesScoreSnapshotsInEvent()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        var player = AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.RecordScore(player.Id, 1, "points", 10, _timeProvider, "pts");
+        session.RecordScore(player.Id, 2, "points", 20, _timeProvider, "pts");
+        session.ClearDomainEvents();
+
+        // Act
+        session.Complete(_timeProvider);
+
+        // Assert
+        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        Assert.Equal(2, evt.Scores.Count);
+        Assert.All(evt.Scores, s =>
+        {
+            Assert.Equal(player.Id, s.PlayerId);
+            Assert.Equal("points", s.Dimension);
+            Assert.Equal("pts", s.Unit);
+        });
+        Assert.Equal(10, evt.Scores[0].Value);
+        Assert.Equal(20, evt.Scores[1].Value);
+    }
+
+    [Fact]
+    public void Complete_IncludesSessionMetadataInEvent()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var session = LiveGameSession.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", _timeProvider,
+            gameId: gameId, visibility: PlayRecordVisibility.Group, groupId: groupId);
+        AddDefaultPlayer(session);
+        session.UpdateNotes("Game notes", _timeProvider);
+        session.Start(_timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Complete(_timeProvider);
+
+        // Assert
+        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        Assert.Equal(gameId, evt.GameId);
+        Assert.Equal("Catan", evt.GameName);
+        Assert.Equal(session.CreatedByUserId, evt.CreatedByUserId);
+        Assert.Equal(PlayRecordVisibility.Group, evt.Visibility);
+        Assert.Equal(groupId, evt.GroupId);
+        Assert.Equal("Game notes", evt.Notes);
+        Assert.NotNull(evt.StartedAt);
+    }
+
+    [Fact]
+    public void Complete_WithNoScores_IncludesEmptyScoreSnapshots()
+    {
+        // Arrange
+        var session = CreateDefaultSession();
+        AddDefaultPlayer(session);
+        session.Start(_timeProvider);
+        session.ClearDomainEvents();
+
+        // Act
+        session.Complete(_timeProvider);
+
+        // Assert
+        var evt = Assert.IsType<LiveSessionCompletedEvent>(session.DomainEvents.First());
+        Assert.Empty(evt.Scores);
+        Assert.Single(evt.Players);
+    }
+
+    #endregion
+
     #region Query Methods
 
     [Fact]

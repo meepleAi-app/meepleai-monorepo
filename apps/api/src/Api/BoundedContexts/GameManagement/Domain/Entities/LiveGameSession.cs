@@ -49,8 +49,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public DateTime? PausedAt { get; private set; }
     public DateTime? CompletedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public DateTime? LastSavedAt { get; private set; }
     public int CurrentTurnIndex { get; private set; }
-    public int? CurrentPhaseIndex { get; internal set; }
+    public int? CurrentPhaseIndex { get; }
     public SessionScoringConfig ScoringConfig { get; private set; }
     public JsonDocument? GameState { get; private set; }
     public string? Notes { get; private set; }
@@ -187,6 +188,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public void RemovePlayer(Guid playerId, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot remove players from a completed session");
+
         var player = _players.FirstOrDefault(p => p.Id == playerId && p.IsActive)
             ?? throw new DomainException($"Active player {playerId} not found in this session");
 
@@ -207,6 +211,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public void SetTurnOrder(List<Guid> playerIds, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot change turn order in a completed session");
+
         ArgumentNullException.ThrowIfNull(playerIds);
 
         var activePlayerIds = _players.Where(p => p.IsActive && p.Role != PlayerRole.Spectator)
@@ -224,6 +231,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
+
+        AddDomainEvent(new LiveSessionTurnOrderChangedEvent(Id, _turnOrder.AsReadOnly()));
     }
 
     // === Team Management ===
@@ -233,6 +242,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public LiveSessionTeam CreateTeam(string name, string color, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot create teams in a completed session");
+
         if (_teams.Count >= MaxTeams)
             throw new DomainException($"Cannot create more than {MaxTeams} teams in a session");
 
@@ -240,11 +252,14 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         if (_teams.Any(t => string.Equals(t.Name.Trim().ToLowerInvariant(), normalizedName, StringComparison.Ordinal)))
             throw new DomainException($"Team with name '{name}' already exists in this session");
 
-        var team = new LiveSessionTeam(Guid.NewGuid(), Id, name, color);
+        var teamId = Guid.NewGuid();
+        var team = new LiveSessionTeam(teamId, Id, name, color);
         _teams.Add(team);
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
+
+        AddDomainEvent(new LiveSessionTeamCreatedEvent(Id, teamId, name.Trim()));
 
         return team;
     }
@@ -254,6 +269,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public void AssignPlayerToTeam(Guid playerId, Guid teamId, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot assign players to teams in a completed session");
+
         var player = _players.FirstOrDefault(p => p.Id == playerId && p.IsActive)
             ?? throw new DomainException($"Active player {playerId} not found in this session");
 
@@ -272,6 +290,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
+
+        AddDomainEvent(new LiveSessionPlayerAssignedToTeamEvent(Id, playerId, teamId));
     }
 
     // === Lifecycle Management ===
@@ -354,7 +374,35 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         CompletedAt = now;
         UpdatedAt = now;
 
-        AddDomainEvent(new LiveSessionCompletedEvent(Id, now, CurrentTurnIndex));
+        var playerSnapshots = _players
+            .Where(p => p.IsActive && p.Role != PlayerRole.Spectator)
+            .Select(p => new CompletedPlayerSnapshot(p.Id, p.UserId, p.DisplayName, p.TotalScore, p.CurrentRank))
+            .ToList();
+
+        var scoreSnapshots = _roundScores
+            .Select(s => new CompletedScoreSnapshot(s.PlayerId, s.Dimension, s.Value, s.Unit))
+            .ToList();
+
+        AddDomainEvent(new LiveSessionCompletedEvent(
+            Id, now, CurrentTurnIndex,
+            GameId, GameName, CreatedByUserId, Visibility, GroupId,
+            CreatedAt, StartedAt, Notes,
+            playerSnapshots, scoreSnapshots));
+    }
+
+    /// <summary>
+    /// Saves the session state. Updates LastSavedAt timestamp.
+    /// </summary>
+    public void Save(TimeProvider? timeProvider = null)
+    {
+        if (!IsActive)
+            throw new ConflictException($"Cannot save session in {Status} status. Must be Setup, InProgress, or Paused.");
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        LastSavedAt = now;
+        UpdatedAt = now;
+
+        AddDomainEvent(new LiveSessionSavedEvent(Id, now));
     }
 
     // === Scoring ===
@@ -444,6 +492,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public void UpdateNotes(string? notes, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot update notes on a completed session");
+
         if (notes != null)
         {
             var trimmed = notes.Trim();
@@ -462,6 +513,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public void UpdateGameState(JsonDocument? gameState, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot update game state on a completed session");
+
         GameState = gameState;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
@@ -472,6 +526,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public void LinkToolkit(Guid toolkitId, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot link toolkit to a completed session");
+
         if (toolkitId == Guid.Empty)
             throw new ValidationException("Toolkit ID cannot be empty");
 
@@ -485,6 +542,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     /// </summary>
     public void SetAgentMode(AgentSessionMode mode, Guid? chatSessionId = null, TimeProvider? timeProvider = null)
     {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot change agent mode on a completed session");
+
         if (mode != AgentSessionMode.None && chatSessionId == null)
             throw new ValidationException("Chat session ID is required when enabling an AI agent");
 

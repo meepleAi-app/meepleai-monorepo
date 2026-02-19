@@ -44,23 +44,23 @@ export function useCreateAgentFlow(options?: {
         queryClient.invalidateQueries({ queryKey: ['user-library'] });
       }
 
-      toast.success(`Agent "${result.agentName}" created successfully`);
+      toast.success(`Agente "${result.agentName}" creato! Avvio chat...`);
       options?.onSuccess?.(result);
     },
 
     onError: (error) => {
-      const message = error.message || 'Failed to create agent';
+      const message = error.message || 'Errore nella creazione dell\'agente';
 
       if (message.includes('Agent limit reached')) {
-        toast.error('No agent slots available', {
-          description: 'Upgrade your tier for more agent slots.',
+        toast.error('Nessuno slot disponibile', {
+          description: 'Effettua l\'upgrade per avere più slot agente.',
         });
       } else if (message.includes('unique name')) {
-        toast.error('Agent name conflict', {
-          description: 'Please choose a different name.',
+        toast.error('Nome agente già in uso', {
+          description: 'Scegli un nome diverso.',
         });
       } else {
-        toast.error('Agent creation failed', {
+        toast.error('Creazione agente fallita', {
           description: message,
         });
       }

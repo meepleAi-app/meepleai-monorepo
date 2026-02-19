@@ -18,7 +18,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
-import { useAgentChatStream } from '@/hooks/useAgentChatStream';
+import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
+import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { Citation } from '@/types';
@@ -43,6 +44,7 @@ interface ThreadData {
   title: string;
   gameId?: string | null;
   agentId?: string | null;
+  agentTypology?: string | null;
   status: string;
   messages: ChatMessage[];
 }
@@ -133,18 +135,22 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           timestamp: m.timestamp,
         }));
 
+        const threadRecord = threadData as Record<string, unknown>;
+        const agentId = (threadRecord.agentId as string | null) ?? null;
+        const agentTypology = (threadRecord.agentTypology as string | null) ?? null;
+
         setThread({
           id: threadData.id,
           title: threadData.title ?? 'Chat',
           gameId: threadData.gameId,
-          agentId: (threadData as Record<string, unknown>).agentId as string | null ?? null,
+          agentId,
+          agentTypology,
           status: 'Active',
           messages: mappedMessages,
         });
 
-        setMessages(mappedMessages);
-
         // Load game info if available
+        let gameName: string | null = null;
         if (threadData.gameId) {
           try {
             const games = await api.games.getAll();
@@ -152,6 +158,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               (g: { id: string }) => g.id === threadData.gameId
             );
             if (found) {
+              gameName = found.title;
               setGame({
                 id: found.id,
                 title: found.title,
@@ -160,6 +167,22 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           } catch {
             // Non-critical: game info not found
           }
+        }
+
+        // Issue #4780: Inject welcome message when thread is new (empty) and has an agent
+        if (mappedMessages.length === 0 && agentId && gameName) {
+          const welcomeContent = buildWelcomeMessage(agentTypology, gameName);
+          const followUps = getWelcomeFollowUpQuestions(agentTypology, gameName);
+          const welcomeMessage: ChatMessage = {
+            id: 'welcome-message',
+            role: 'assistant',
+            content: welcomeContent,
+            timestamp: new Date().toISOString(),
+            followUpQuestions: followUps,
+          };
+          setMessages([welcomeMessage]);
+        } else {
+          setMessages(mappedMessages);
         }
       } catch {
         setError('Errore nel caricamento della conversazione');
@@ -192,7 +215,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
       // SSE path: stream via agent endpoint when agentId is available
       if (thread?.agentId) {
-        sendViaSSE(thread.agentId, messageContent, threadId);
+        // Issue #4780: Build proxy game context for OpenRouter proxy (if enabled)
+        const proxyCtx: ProxyGameContext | undefined =
+          game && thread.agentTypology
+            ? { gameName: game.title, agentTypology: thread.agentTypology }
+            : undefined;
+        sendViaSSE(thread.agentId, messageContent, threadId, proxyCtx);
         return; // onComplete/onError callbacks handle the rest
       }
 
@@ -221,7 +249,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         setIsSending(false);
       }
     },
-    [inputValue, isSending, threadId, thread?.agentId, sendViaSSE]
+    [inputValue, isSending, threadId, thread?.agentId, thread?.agentTypology, game, sendViaSSE]
   );
 
   // Title change

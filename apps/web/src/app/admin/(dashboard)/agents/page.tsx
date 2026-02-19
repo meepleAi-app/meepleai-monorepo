@@ -163,14 +163,14 @@ export default function AgentsPage() {
             Agent Builder
           </Button>
         </Link>
-        <Link href="/admin/agent-definitions">
+        <Link href="/admin/agents/pipeline">
           <Button variant="outline" size="sm" className="gap-2">
-            Definitions
+            Pipeline Explorer
           </Button>
         </Link>
-        <Link href="/admin/agents/test">
+        <Link href="/admin/agents/debug">
           <Button variant="outline" size="sm" className="gap-2">
-            Testing
+            Debug Console
           </Button>
         </Link>
       </div>

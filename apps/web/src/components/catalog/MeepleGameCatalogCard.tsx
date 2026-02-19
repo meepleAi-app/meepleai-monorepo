@@ -27,10 +27,10 @@ import { useState, useCallback } from 'react';
 import { Users, Clock, BarChart2 } from 'lucide-react';
 
 import { AgentCreationSheet } from '@/components/agent/config';
-import { toast } from '@/components/layout/Toast';
+import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
+import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import { getNavigationLinks } from '@/config/entity-navigation';
@@ -111,10 +111,31 @@ export function MeepleGameCatalogCard({
   className,
   libraryStatus,
 }: MeepleGameCatalogCardProps) {
-  const [isAdding, setIsAdding] = useState(false);
   // Issue #4777: Agent creation sheet state
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
   const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
+
+  // Issue #4822: Open wizard instead of direct add
+  const { openWizard } = useAddGameWizard();
+  const handleAddToCollection = useCallback(() => {
+    openWizard(
+      { type: 'fromGameCard', sharedGameId: game.id },
+      {
+        gameId: game.id,
+        title: game.title,
+        imageUrl: game.imageUrl || undefined,
+        thumbnailUrl: game.thumbnailUrl || undefined,
+        minPlayers: game.minPlayers ?? undefined,
+        maxPlayers: game.maxPlayers ?? undefined,
+        playingTimeMinutes: game.playingTimeMinutes ?? undefined,
+        complexityRating: game.complexityRating ?? undefined,
+        averageRating: game.averageRating ?? undefined,
+        yearPublished: game.yearPublished ?? undefined,
+        description: game.description || undefined,
+        source: 'catalog',
+      },
+    );
+  }, [openWizard, game]);
 
   // Check if game is already in user's library
   // Use provided batch status if available, otherwise fetch individually
@@ -126,28 +147,12 @@ export function MeepleGameCatalogCard({
   const status = libraryStatus || individualStatus;
   const inLibrary = status?.inLibrary || false;
 
-  // Mutation for adding game to library
-  const addMutation = useAddGameToLibrary();
-
   // Issue #4040: Entity-specific quick actions
   const entityActions = useEntityActions({
     entity: 'game',
     id: game.id,
+    onAddToCollection: handleAddToCollection,
   });
-
-  const handleAddToLibrary = async () => {
-    setIsAdding(true);
-    try {
-      await addMutation.mutateAsync({ gameId: game.id });
-      toast.success(`${game.title} aggiunto alla libreria!`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Errore durante l\'aggiunta alla libreria'
-      );
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
   // Build metadata array
   const metadata = [
@@ -180,10 +185,10 @@ export function MeepleGameCatalogCard({
   const actions = showActions && !isLoadingStatus
     ? [
         {
-          label: inLibrary ? 'Nella Libreria' : isAdding ? 'Aggiunta...' : 'Aggiungi',
+          label: inLibrary ? 'Nella Libreria' : 'Aggiungi',
           primary: !inLibrary,
-          disabled: inLibrary || isAdding,
-          onClick: inLibrary ? undefined : handleAddToLibrary,
+          disabled: inLibrary,
+          onClick: inLibrary ? undefined : handleAddToCollection,
         },
       ]
     : undefined;

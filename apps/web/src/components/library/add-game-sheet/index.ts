@@ -6,3 +6,5 @@
 export { AddGameSheet } from './AddGameSheet';
 export type { AddGameSheetProps } from './AddGameSheet';
 export { StepIndicator } from './StepIndicator';
+export { AddGameWizardProvider, useAddGameWizard } from './AddGameWizardProvider';
+export type { AddGameWizardContextValue } from './AddGameWizardProvider';

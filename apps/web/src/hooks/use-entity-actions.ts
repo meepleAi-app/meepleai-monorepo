@@ -71,6 +71,8 @@ export interface UseEntityActionsProps {
   onShowRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void;
   /** Callback to open agent creation wizard (Issue #4777) */
   onCreateAgent?: () => void;
+  /** Callback to open collection wizard instead of direct add (Issue #4822) */
+  onAddToCollection?: () => void;
 }
 
 export interface EntityActions {
@@ -100,6 +102,7 @@ export function useEntityActions({
   data,
   onShowRemovalWarning,
   onCreateAgent,
+  onAddToCollection,
 }: UseEntityActionsProps): EntityActions {
   const router = useRouter();
 
@@ -152,7 +155,7 @@ export function useEntityActions({
           : {
               icon: Plus,
               label: 'Aggiungi a Collezione',
-              onClick: () => gameCollection.add(),
+              onClick: () => (onAddToCollection ? onAddToCollection() : gameCollection.add()),
             };
 
         const hasRag = data?.hasPdfDocuments === true;
@@ -422,5 +425,6 @@ export function useEntityActions({
     addToGenericCollection,
     removeFromGenericCollection,
     onCreateAgent,
+    onAddToCollection,
   ]);
 }

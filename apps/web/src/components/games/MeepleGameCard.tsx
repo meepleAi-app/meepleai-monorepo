@@ -22,6 +22,7 @@ import { useState, useCallback } from 'react';
 import { Users, Clock } from 'lucide-react';
 
 import { AgentCreationSheet } from '@/components/agent/config';
+import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import { getNavigationLinks } from '@/config/entity-navigation';
@@ -80,11 +81,30 @@ export function MeepleGameCard({
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
   const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
+  // Issue #4822: Open wizard instead of direct add
+  const { openWizard } = useAddGameWizard();
+  const handleAddToCollection = useCallback(() => {
+    openWizard(
+      { type: 'fromGameCard', sharedGameId: game.id },
+      {
+        gameId: game.id,
+        title: game.title,
+        imageUrl: game.imageUrl || undefined,
+        minPlayers: game.minPlayers ?? undefined,
+        maxPlayers: game.maxPlayers ?? undefined,
+        playingTimeMinutes: game.minPlayTimeMinutes ?? undefined,
+        yearPublished: game.yearPublished ?? undefined,
+        source: 'catalog',
+      },
+    );
+  }, [openWizard, game]);
+
   // Issue #4041: Entity-specific quick actions
   const entityActions = useEntityActions({
     entity: 'game',
     id: game.id,
     onCreateAgent: handleCreateAgent,
+    onAddToCollection: handleAddToCollection,
   });
 
   // Build metadata

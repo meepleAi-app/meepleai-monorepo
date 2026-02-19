@@ -18,11 +18,12 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
 }));
 
-// Mock API for KnowledgeBaseStep
+// Mock API for KnowledgeBaseStep and GameInfoStep
 vi.mock('@/lib/api', () => ({
   api: {
     documents: { getDocumentsByGame: vi.fn().mockResolvedValue([]) },
     pdf: { uploadPdf: vi.fn() },
+    library: { addGame: vi.fn(), updatePrivateGame: vi.fn() },
   },
 }));
 

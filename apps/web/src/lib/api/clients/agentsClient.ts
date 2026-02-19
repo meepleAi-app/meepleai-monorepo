@@ -352,6 +352,77 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
+    // ========== Agent Slots & Creation Flow (Issue #4771, #4772) ==========
+
+    /**
+     * Get user's agent slot allocation and usage
+     * Issue #4771: Agent Slots Endpoint + Quota System
+     */
+    async getSlots(): Promise<{
+      total: number;
+      used: number;
+      available: number;
+      slots: Array<{
+        slotIndex: number;
+        agentId: string | null;
+        agentName: string | null;
+        gameId: string | null;
+        status: 'active' | 'available' | 'locked';
+      }>;
+    }> {
+      const response = await httpClient.get<{
+        total: number;
+        used: number;
+        available: number;
+        slots: Array<{
+          slotIndex: number;
+          agentId: string | null;
+          agentName: string | null;
+          gameId: string | null;
+          status: 'active' | 'available' | 'locked';
+        }>;
+      }>('/api/v1/user/agent-slots');
+
+      if (!response) {
+        throw new Error('Failed to get agent slots: no response from server');
+      }
+
+      return response;
+    },
+
+    /**
+     * Orchestrated agent creation with auto-setup
+     * Issue #4772: Agent Creation Orchestration Flow
+     */
+    async createWithSetup(request: {
+      gameId: string;
+      addToCollection: boolean;
+      agentType: string;
+      agentName?: string;
+      strategyName?: string;
+      strategyParameters?: Record<string, unknown>;
+    }): Promise<{
+      agentId: string;
+      agentName: string;
+      threadId: string;
+      slotUsed: number;
+      gameAddedToCollection: boolean;
+    }> {
+      const response = await httpClient.post<{
+        agentId: string;
+        agentName: string;
+        threadId: string;
+        slotUsed: number;
+        gameAddedToCollection: boolean;
+      }>('/api/v1/agents/create-with-setup', request);
+
+      if (!response) {
+        throw new Error('Failed to create agent: no response from server');
+      }
+
+      return response;
+    },
+
     // ========== Agent Chat SSE (Issue #4126) ==========
 
     /**

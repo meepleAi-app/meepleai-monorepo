@@ -419,7 +419,7 @@ c.line(edge_l, R1_BOT+2, AP_X+5, R1_BOT+2)
 c.restoreState()
 lbl(edge_l+3, (R2_BOT+R2_BOT+R2H)/2, "scrape /metrics", OB, "l")
 
-# ── Internal AI zone: Orchestration → Embedding/Reranker (subtle) ──
+# ── Internal AI zone: Orchestration → Embedding/Reranker (health check) ──
 c.saveState()
 c.setStrokeColor(Color(CY.red,CY.green,CY.blue,0.12))
 c.setLineWidth(0.4); c.setDash(2, 2)
@@ -427,6 +427,91 @@ orch_l = AZ_X + 8 + 2*(ai_nw+5)
 c.line(orch_l, R2_BOT+R2H-32, AZ_X+8+ai_nw, R2_BOT+R2H-32)
 c.line(orch_l, R2_BOT+R2H-37, AZ_X+8+ai_nw+5+ai_nw, R2_BOT+R2H-37)
 c.restoreState()
+
+# ═══════════════════════════════════════════════════════════════
+# CROSS-ZONE CONNECTIONS (Row 2 ↔ Row 2, Row 2 → Row 1, Row 2 ↔ Row 3)
+# These are direct connections NOT mediated by the .NET API
+# ═══════════════════════════════════════════════════════════════
+
+# ── Orchestration → Persistence (direct, horizontal within Row 2) ──
+# These connections go LEFT from the AI zone to the Persistence zone
+
+def horiz_conn(x1, y, x2, col, w=0.8, dash=True, label=None, label_y_off=5):
+    """Horizontal connection within a row."""
+    c.saveState()
+    a = 0.25 if dash else 0.35
+    cc = Color(col.red, col.green, col.blue, a)
+    c.setStrokeColor(cc); c.setLineWidth(w)
+    if dash: c.setDash(3, 3)
+    c.line(x1, y, x2, y)
+    # arrowhead
+    c.setFillColor(cc); p = c.beginPath()
+    if x2 < x1:  # pointing left
+        p.moveTo(x2, y); p.lineTo(x2+5, y-3); p.lineTo(x2+5, y+3)
+    else:  # pointing right
+        p.moveTo(x2, y); p.lineTo(x2-5, y-3); p.lineTo(x2-5, y+3)
+    p.close(); c.drawPath(p, fill=1, stroke=0)
+    if label:
+        c.setFillColor(Color(col.red, col.green, col.blue, 0.45))
+        c.setFont("JB", 5)
+        c.drawCentredString((x1+x2)/2, y+label_y_off, label)
+    c.restoreState()
+
+# Orchestration → PostgreSQL (conversation memory, asyncpg direct)
+orch_node_left = AZ_X + 8 + 2*(ai_nw+5)
+pg_node_right = PZ_X + 8 + pn_w
+orch_mid_y = R2_BOT + R2H/2 + 12
+horiz_conn(orch_node_left, orch_mid_y, pg_node_right, CY, w=0.7,
+           label="asyncpg (conversation state)")
+
+# Orchestration → Redis (intent cache + rule cache, direct)
+rd_right = PZ_X + 8 + pn_w
+horiz_conn(orch_node_left, orch_mid_y - 12, rd_right, CY, w=0.6,
+           label="redis.asyncio (intent + rule cache)")
+
+# Orchestration → OpenRouter (direct LLM calls, goes UP to External APIs)
+# Vertical from Orchestration up, then horizontal to OpenRouter
+c.saveState()
+cc = Color(EX.red, EX.green, EX.blue, 0.18)
+c.setStrokeColor(cc); c.setLineWidth(0.5); c.setDash(3, 3)
+# From Orchestration top, go right to near-edge, up to External zone
+orch_top = R2_BOT + R2H
+or_right = AZ_X + 8 + 2*(ai_nw+5) + ai_nw  # right edge of Orchestration node
+ext_mid_y = R1_BOT + R1H - 31  # same Y as API→OpenRouter
+# Path: right of orch → up along a channel → into OpenRouter
+route_x = or_right + 8
+c.line(or_right, orch_top - 16, route_x, orch_top - 16)  # short horizontal right
+c.line(route_x, orch_top - 16, route_x, ext_mid_y - 15)  # vertical up
+c.line(route_x, ext_mid_y - 15, EX_X, ext_mid_y - 15)    # horizontal to External
+c.restoreState()
+lbl(route_x - 3, (orch_top + ext_mid_y) / 2, "LLM (direct)", EX, "r")
+
+# Orchestration → .NET API (bidirectional — calls back for hybrid search)
+c.saveState()
+cc = Color(BE.red, BE.green, BE.blue, 0.15)
+c.setStrokeColor(cc); c.setLineWidth(0.5); c.setDash(2, 3)
+# Small upward arrow from Orchestration to API zone
+c.line(or_cx, orch_top, or_cx - 15, CH_BOT + 5)
+# arrowhead pointing up
+c.setFillColor(cc); p = c.beginPath()
+p.moveTo(or_cx - 15, CH_BOT + 5)
+p.lineTo(or_cx - 18.5, CH_BOT + 10.5)
+p.lineTo(or_cx - 11.5, CH_BOT + 10.5)
+p.close(); c.drawPath(p, fill=1, stroke=0)
+c.restoreState()
+lbl(or_cx + 10, CH_BOT + 10, "callback: /api/v1/kb/search", BE, "l")
+
+# ── n8n → PostgreSQL (own DB for workflow state) ──
+# n8n is in Row 3, PostgreSQL in Row 2 — subtle connection
+c.saveState()
+cc = Color(OB.red, OB.green, OB.blue, 0.10)
+c.setStrokeColor(cc); c.setLineWidth(0.4); c.setDash(2, 3)
+n8n_cx = OZ_X + 8 + ob_nw/2  # n8n center X
+c.line(n8n_cx, R3_BOT + R3H, n8n_cx, R3_BOT + R3H + 4)  # tiny up from n8n
+c.line(n8n_cx, R3_BOT + R3H + 4, pg_cx + 30, R3_BOT + R3H + 4)  # horizontal left
+c.line(pg_cx + 30, R3_BOT + R3H + 4, pg_cx + 30, R2_BOT)  # up to persistence zone bottom
+c.restoreState()
+lbl(OZ_X - 50, R2_BOT - 8, "n8n \u2192 PG (workflow state)", OB, "l")
 
 
 # ═══════════════════════════════════════════════════════════════

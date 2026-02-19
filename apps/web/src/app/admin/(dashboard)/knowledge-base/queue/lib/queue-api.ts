@@ -71,8 +71,8 @@ async function fetchQueue(filters: QueueFilters): Promise<PaginatedQueueResponse
   if (filters.search) query.set('search', filters.search);
   if (filters.fromDate) query.set('fromDate', filters.fromDate);
   if (filters.toDate) query.set('toDate', filters.toDate);
-  if (filters.page) query.set('page', filters.page.toString());
-  if (filters.pageSize) query.set('pageSize', filters.pageSize.toString());
+  if (filters.page !== undefined) query.set('page', filters.page.toString());
+  if (filters.pageSize !== undefined) query.set('pageSize', filters.pageSize.toString());
 
   const qs = query.toString();
   const url = `/api/v1/admin/queue${qs ? `?${qs}` : ''}`;
@@ -109,27 +109,29 @@ export async function enqueuePdf(pdfDocumentId: string, priority: number = 0): P
 
 // ── React Query Hooks ──────────────────────────────────────────────────
 
-export function useQueueList(filters: QueueFilters) {
+export function useQueueList(filters: QueueFilters, sseConnected: boolean = false) {
   return useQuery({
     queryKey: ['admin', 'queue', filters],
     queryFn: () => fetchQueue(filters),
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: sseConnected ? 30_000 : 10_000,
+    // When SSE is connected, rely on SSE-triggered invalidation; poll less frequently as fallback
+    refetchInterval: sseConnected ? 60_000 : 15_000,
   });
 }
 
 const TERMINAL_STATUSES: JobStatus[] = ['Completed', 'Failed', 'Cancelled'];
 
-export function useJobDetail(jobId: string | null) {
+export function useJobDetail(jobId: string | null, sseConnected: boolean = false) {
   return useQuery({
     queryKey: ['admin', 'queue', 'detail', jobId],
     queryFn: () => fetchJobDetail(jobId!),
     enabled: !!jobId,
-    staleTime: 5_000,
+    staleTime: sseConnected ? 30_000 : 5_000,
     refetchInterval: (query) => {
       const data = query.state.data as ProcessingJobDetailDto | null | undefined;
       if (data && TERMINAL_STATUSES.includes(data.status)) return false;
-      return 10_000;
+      // When SSE is connected, use longer fallback interval
+      return sseConnected ? 60_000 : 10_000;
     },
   });
 }

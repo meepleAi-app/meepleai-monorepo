@@ -36,6 +36,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useEntityNavigation } from '@/hooks/useEntityNavigation';
 import { api, type SharedGameDetail } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
@@ -69,6 +70,9 @@ export default function GameDetailPage() {
   // User-specific state (authenticated users only)
   const [notes, setNotes] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Entity navigation links (KB, Agents, Chats, Sessions)
+  const navigationLinks = useEntityNavigation('game', { id: gameId });
 
   // Load game data from shared-games API
   useEffect(() => {
@@ -228,6 +232,7 @@ export default function GameDetailPage() {
             rating={gameDetail.averageRating ?? undefined}
             ratingMax={10}
             metadata={metadata}
+            navigateTo={navigationLinks}
             flippable
             flipData={{
               description: gameDetail.description || undefined,

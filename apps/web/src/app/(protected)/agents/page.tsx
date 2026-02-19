@@ -18,6 +18,7 @@ import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
@@ -138,6 +139,8 @@ export default function AgentsPage() {
               { value: `${agent.invocationCount} uses`, label: 'Usage' },
               { value: agent.strategyName, label: 'Strategy' },
             ]}
+            // Epic #4688: Navigation footer
+            navigateTo={getNavigationLinks('agent', { id: agent.id })}
             onClick={() => {
               // Navigate to agent chat or detail
               router.push(`/agents/${agent.id}`);

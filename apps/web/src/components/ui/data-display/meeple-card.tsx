@@ -83,6 +83,8 @@ import { StatusBadge } from './meeple-card-features/StatusBadge';
 import { type TagConfig, type TagPresetKey } from './meeple-card-features/tag-presets';
 import { TagStrip } from './meeple-card-features/TagStrip';
 import { WishlistButton } from './meeple-card-features/WishlistButton';
+// Issue #4689: Navigation footer
+import { CardNavigationFooter } from './meeple-card-features/CardNavigationFooter';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
@@ -283,6 +285,11 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   chatPreview?: { lastMessage: string; sender: 'user' | 'agent' };
   /** Unread message count */
   unreadCount?: number;
+
+  // ========== NAVIGATION FOOTER (Epic #4688, Issue #4689) ==========
+
+  /** Navigation links to related entities (rendered as icon footer) */
+  navigateTo?: import('@/config/entity-navigation').ResolvedNavigationLink[];
 }
 
 // ============================================================================
@@ -820,6 +827,7 @@ export const MeepleCard = React.memo(function MeepleCard({
   chatStats,
   chatPreview,
   unreadCount,
+  navigateTo,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1140,7 +1148,8 @@ export const MeepleCard = React.memo(function MeepleCard({
             'px-4 py-3',
             'border-t border-border/50',
             'bg-muted/60 dark:bg-muted/40',
-            'rounded-b-2xl',
+            // Only round bottom when there's no nav footer below
+            !(navigateTo && navigateTo.length > 0) && 'rounded-b-2xl',
           )}
           data-testid="meeple-card-footer"
         >
@@ -1154,6 +1163,11 @@ export const MeepleCard = React.memo(function MeepleCard({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Navigation footer: links to related entities (Epic #4688, Issue #4689) */}
+      {navigateTo && navigateTo.length > 0 && (
+        <CardNavigationFooter links={navigateTo} />
       )}
     </Component>
   );

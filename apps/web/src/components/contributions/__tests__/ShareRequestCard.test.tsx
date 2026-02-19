@@ -1,35 +1,29 @@
 /**
  * ShareRequestCard Component Tests
- *
  * Issue #2744: Frontend - Dashboard Contributi Utente
- *
- * Tests:
- * - Card rendering (thumbnail, title, status)
- * - Metadata display (dates, document count)
- * - Admin feedback display
- * - Action buttons visibility
- * - Link navigation
+ * Issue #4860: Updated for MeepleCard migration
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { ShareRequestCard } from '../ShareRequestCard';
 import type { UserShareRequestDto } from '@/lib/api/schemas/share-requests.schemas';
 
-// Mock next/image
-vi.mock('next/image', () => ({
-  default: ({ src, alt, ...props }: { src: string; alt: string }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} {...props} />
-  ),
+// Mock MeepleCard
+const mockMeepleCard = vi.fn(() => null);
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: (props: Record<string, unknown>) => {
+    mockMeepleCard(props);
+    return <div data-testid={props['data-testid'] as string}>MeepleCard</div>;
+  },
 }));
 
-// Mock next/link
-vi.mock('next/link', () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href}>{children}</a>
-  ),
+// Mock next/navigation
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
 }));
 
 // Mock date-fns
@@ -37,7 +31,6 @@ vi.mock('date-fns', () => ({
   formatDistanceToNow: vi.fn(() => '2 days ago'),
 }));
 
-// Test data
 const mockRequestPending: UserShareRequestDto = {
   id: 'req-1',
   sourceGameId: 'game-1',
@@ -69,81 +62,188 @@ const mockRequestApproved: UserShareRequestDto = {
 };
 
 describe('ShareRequestCard', () => {
-  it('renders game title and thumbnail', () => {
+  beforeEach(() => {
+    mockMeepleCard.mockClear();
+    mockPush.mockClear();
+  });
+
+  it('renders with entity="game" and variant="list"', () => {
     render(<ShareRequestCard request={mockRequestPending} />);
 
-    expect(screen.getByText('Catan')).toBeInTheDocument();
-    expect(screen.getByAltText('Catan')).toBeInTheDocument();
-  });
-
-  it('displays contribution status badge', () => {
-    render(<ShareRequestCard request={mockRequestPending} />);
-
-    expect(screen.getByText('Pending')).toBeInTheDocument();
-  });
-
-  it('displays contribution type badge', () => {
-    render(<ShareRequestCard request={mockRequestPending} />);
-
-    expect(screen.getByText('New Game')).toBeInTheDocument();
-  });
-
-  it('displays document count', () => {
-    render(<ShareRequestCard request={mockRequestPending} />);
-
-    expect(screen.getByText(/2 documents/i)).toBeInTheDocument();
-  });
-
-  it('displays user notes when present', () => {
-    render(<ShareRequestCard request={mockRequestPending} />);
-
-    expect(screen.getByText('Great game for families')).toBeInTheDocument();
-  });
-
-  it('displays admin feedback when present', () => {
-    render(<ShareRequestCard request={mockRequestChangesRequested} />);
-
-    expect(screen.getByText('Please add more detailed rules')).toBeInTheDocument();
-  });
-
-  it('shows Update button for ChangesRequested status', () => {
-    render(<ShareRequestCard request={mockRequestChangesRequested} />);
-
-    const updateButton = screen.getByText('Update');
-    expect(updateButton).toBeInTheDocument();
-    expect(updateButton.closest('a')).toHaveAttribute(
-      'href',
-      '/contributions/requests/req-2/edit'
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity: 'game',
+        variant: 'list',
+      })
     );
   });
 
-  it('shows View Game button for Approved status', () => {
-    render(<ShareRequestCard request={mockRequestApproved} />);
-
-    const viewButton = screen.getByText('View Game');
-    expect(viewButton).toBeInTheDocument();
-    expect(viewButton.closest('a')).toHaveAttribute('href', '/games/catalog/shared-1');
-  });
-
-  it('always shows Details button', () => {
+  it('passes game title', () => {
     render(<ShareRequestCard request={mockRequestPending} />);
 
-    const detailsButton = screen.getByText('Details');
-    expect(detailsButton).toBeInTheDocument();
-    expect(detailsButton.closest('a')).toHaveAttribute('href', '/contributions/requests/req-1');
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Catan' })
+    );
   });
 
-  it('renders fallback icon when no thumbnail', () => {
-    const requestNoThumb = { ...mockRequestPending, gameThumbnailUrl: null };
-    const { container } = render(<ShareRequestCard request={requestNoThumb} />);
+  it('passes contribution type and date in subtitle', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
 
-    const icon = container.querySelector('svg');
-    expect(icon).toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subtitle: expect.stringContaining('New Game'),
+      })
+    );
   });
 
-  it('displays resolved date for resolved requests', () => {
+  it('passes AdditionalContent type in subtitle', () => {
+    const additionalContentReq = { ...mockRequestPending, contributionType: 'AdditionalContent' as const };
+    render(<ShareRequestCard request={additionalContentReq} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subtitle: expect.stringContaining('Additional Content'),
+      })
+    );
+  });
+
+  it('passes thumbnail as imageUrl', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: 'https://example.com/catan.jpg' })
+    );
+  });
+
+  it('passes undefined imageUrl when thumbnail is null', () => {
+    const noThumbReq = { ...mockRequestPending, gameThumbnailUrl: null };
+    render(<ShareRequestCard request={noThumbReq} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: undefined })
+    );
+  });
+
+  it('passes status as badge', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ badge: 'In attesa' })
+    );
+  });
+
+  it('passes Approved status badge', () => {
     render(<ShareRequestCard request={mockRequestApproved} />);
 
-    expect(screen.getByText(/Resolved/i)).toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ badge: 'Approvato' })
+    );
+  });
+
+  it('passes document count in metadata', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
+
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const metadata = call?.metadata as Array<{ label: string }>;
+
+    expect(metadata).toHaveLength(1);
+    expect(metadata[0].label).toBe('2 docs');
+  });
+
+  it('omits metadata when no documents', () => {
+    const noDocsReq = { ...mockRequestPending, attachedDocumentCount: 0 };
+    render(<ShareRequestCard request={noDocsReq} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: undefined })
+    );
+  });
+
+  it('includes Details action for all requests', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
+
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const actions = call?.quickActions as Array<{ label: string; onClick: () => void }>;
+
+    const detailsAction = actions.find((a) => a.label === 'Details');
+    expect(detailsAction).toBeDefined();
+
+    detailsAction?.onClick();
+    expect(mockPush).toHaveBeenCalledWith('/contributions/requests/req-1');
+  });
+
+  it('includes Update action for ChangesRequested status', () => {
+    render(<ShareRequestCard request={mockRequestChangesRequested} />);
+
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const actions = call?.quickActions as Array<{ label: string; onClick: () => void }>;
+
+    const updateAction = actions.find((a) => a.label === 'Update');
+    expect(updateAction).toBeDefined();
+
+    updateAction?.onClick();
+    expect(mockPush).toHaveBeenCalledWith('/contributions/requests/req-2/edit');
+  });
+
+  it('includes View Game action for Approved status with result', () => {
+    render(<ShareRequestCard request={mockRequestApproved} />);
+
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const actions = call?.quickActions as Array<{ label: string; onClick: () => void }>;
+
+    const viewGameAction = actions.find((a) => a.label === 'View Game');
+    expect(viewGameAction).toBeDefined();
+
+    viewGameAction?.onClick();
+    expect(mockPush).toHaveBeenCalledWith('/games/catalog/shared-1');
+  });
+
+  it('does not include Update action for Pending status', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
+
+    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const actions = call?.quickActions as Array<{ label: string }>;
+
+    expect(actions.find((a) => a.label === 'Update')).toBeUndefined();
+  });
+
+  it('enables preview when user notes exist', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        showPreview: true,
+        previewData: expect.objectContaining({
+          description: expect.stringContaining('Great game for families'),
+        }),
+      })
+    );
+  });
+
+  it('includes admin feedback in preview', () => {
+    render(<ShareRequestCard request={mockRequestChangesRequested} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previewData: expect.objectContaining({
+          description: expect.stringContaining('Please add more detailed rules'),
+        }),
+      })
+    );
+  });
+
+  it('disables preview when no notes or feedback', () => {
+    const noNotesReq = { ...mockRequestPending, userNotes: null };
+    render(<ShareRequestCard request={noNotesReq} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ showPreview: false })
+    );
+  });
+
+  it('sets correct data-testid', () => {
+    render(<ShareRequestCard request={mockRequestPending} />);
+
+    expect(screen.getByTestId('share-request-card-req-1')).toBeInTheDocument();
   });
 });

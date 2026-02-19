@@ -56,7 +56,11 @@ export const MeepleCardInfoButton = React.memo(function MeepleCardInfoButton({
   // eslint-disable-next-line security/detect-object-injection
   const entityColor = customColor || entityColors[entityType].hsl;
 
-  const buttonSize = size === 'sm' ? 'w-[30px] h-[30px]' : 'w-[36px] h-[36px]';
+  // Mobile: WCAG-compliant 44px touch targets
+  // Desktop: compact 30/36px
+  const buttonSize = size === 'sm'
+    ? 'w-11 h-11 md:w-[30px] md:h-[30px]'
+    : 'w-11 h-11 md:w-[36px] md:h-[36px]';
   const iconSize = size === 'sm' ? 'w-[14px] h-[14px]' : 'w-[16px] h-[16px]';
 
   return (

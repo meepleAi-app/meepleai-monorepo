@@ -29,7 +29,7 @@
 
 import React from 'react';
 
-import { Grid3x3, List as ListIcon, GalleryHorizontal } from 'lucide-react';
+import { Grid3x3, List as ListIcon, GalleryHorizontal, Table2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -76,6 +76,11 @@ const MODE_CONFIG: Record<ViewMode, { icon: typeof Grid3x3; label: string; ariaL
       label: 'Carousel',
       ariaLabel: 'Carousel view',
     },
+    table: {
+      icon: Table2,
+      label: 'Table',
+      ariaLabel: 'Table view',
+    },
   };
 
 // ============================================================================
@@ -88,7 +93,7 @@ const MODE_CONFIG: Record<ViewMode, { icon: typeof Grid3x3; label: string; ariaL
 export const ViewModeSwitcher = React.memo(function ViewModeSwitcher({
   value,
   onChange,
-  availableModes = ['grid', 'list', 'carousel'],
+  availableModes = ['grid', 'list', 'carousel', 'table'],
   className,
   'data-testid': testId,
 }: ViewModeSwitcherProps) {

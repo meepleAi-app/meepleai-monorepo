@@ -1,9 +1,12 @@
-// Barrel exports for navigation components
-export * from './tabs';
-export * from './dropdown-menu';
-export * from './sheet';
-export * from './separator';
-export * from './ThemeToggle';
+/**
+ * Navigation components for the MeepleCard Navigation System
+ *
+ * @see Epic #4688
+ * @see Issue #4704
+ */
 
-// Issue #2925: Component Library - Reusable components extracted from Admin Dashboard
-export * from './action-grid';
+export { BreadcrumbTrail } from './breadcrumb-trail';
+export {
+  NavigationTrailProvider,
+  useNavigationTrailContext,
+} from './navigation-trail-provider';

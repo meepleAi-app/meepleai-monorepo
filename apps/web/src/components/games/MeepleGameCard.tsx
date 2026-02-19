@@ -21,6 +21,7 @@ import { Users, Clock } from 'lucide-react';
 
 import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { useEntityActions } from '@/hooks/use-entity-actions';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import type { Game } from '@/lib/api';
 
 // ============================================================================
@@ -111,6 +112,8 @@ export function MeepleGameCard({
       showInfoButton
       infoHref={`/games/${game.id}`}
       infoTooltip="Vai al dettaglio"
+      // Epic #4688: Navigation footer
+      navigateTo={getNavigationLinks('game', { id: game.id })}
       data-testid={`game-card-${game.id}`}
     />
   );

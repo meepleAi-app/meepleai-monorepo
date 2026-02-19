@@ -51,6 +51,7 @@ import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
 
 // ============================================================================
@@ -308,6 +309,8 @@ export function MeepleLibraryGameCard({
       flipData={flipData}
       flipTrigger="button"
       className={className}
+      // Epic #4688: Navigation footer
+      navigateTo={getNavigationLinks('game', { id: game.gameId })}
       data-testid={`library-game-card-${game.gameId}`}
       // Issue #4045: Quick actions + Info button
       entityQuickActions={entityQuickActions}

@@ -31,6 +31,7 @@ import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
 import { useEntityActions } from '@/hooks/use-entity-actions';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================
@@ -203,6 +204,8 @@ export function MeepleGameCatalogCard({
       flipData={flipData}
       flipTrigger="button"
       className={className}
+      // Epic #4688: Navigation footer
+      navigateTo={getNavigationLinks('game', { id: game.id })}
       data-testid={`catalog-game-card-${game.id}`}
       // Issue #4040: New action system
       entityQuickActions={entityActions.quickActions}

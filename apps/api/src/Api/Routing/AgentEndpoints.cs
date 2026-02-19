@@ -45,6 +45,9 @@ internal static class AgentEndpoints
         MapUpdateUserAgentEndpoint(group);
         MapDeleteUserAgentEndpoint(group);
 
+        // Issue #4771: Agent slots quota
+        MapGetUserAgentSlotsEndpoint(group);
+
         return group;
     }
 
@@ -726,6 +729,39 @@ internal static class AgentEndpoints
         .Produces(401)
         .Produces(403)
         .Produces(404);
+    }
+
+    /// <summary>
+    /// Get user's agent slot allocation and usage.
+    /// Issue #4771: Agent Slots Endpoint + Quota System.
+    /// </summary>
+    private static void MapGetUserAgentSlotsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/user/agent-slots", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new GetUserAgentSlotsQuery(
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("GetUserAgentSlots")
+        .WithTags("Agents", "User")
+        .WithSummary("Get agent slot allocation for the current user")
+        .WithDescription(
+            "Returns total, used, and available agent slots based on the user's tier. " +
+            "Each slot shows the associated agent details or availability status.")
+        .Produces<UserAgentSlotsDto>(200)
+        .Produces(401);
     }
 }
 

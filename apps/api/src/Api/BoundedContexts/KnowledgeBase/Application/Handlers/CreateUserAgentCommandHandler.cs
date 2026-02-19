@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -17,16 +18,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUserAgentCommand, AgentDto>
 {
     private const int MaxAutoSuffixAttempts = 5;
-
-    // Max agents per user per tier
-    private static readonly Dictionary<string, int> MaxAgentsPerTier = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["free"] = 3,
-        ["normal"] = 10,
-        ["premium"] = 50,
-        ["pro"] = 50,
-        ["enterprise"] = 200
-    };
 
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<CreateUserAgentCommandHandler> _logger;
@@ -146,12 +137,5 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
     }
 
     private static int GetMaxAgents(string tier, string role)
-    {
-        // Admin/Editor: unrestricted
-        if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(role, "Editor", StringComparison.OrdinalIgnoreCase))
-            return int.MaxValue;
-
-        return MaxAgentsPerTier.GetValueOrDefault(tier?.ToLowerInvariant() ?? "free", 3);
-    }
+        => AgentTierLimits.GetMaxAgents(tier, role);
 }

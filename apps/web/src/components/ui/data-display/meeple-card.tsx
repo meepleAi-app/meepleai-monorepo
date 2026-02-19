@@ -96,6 +96,9 @@ import { SessionBackContent } from './meeple-card-features/SessionBackContent';
 import { SessionScoreTable } from './meeple-card-features/SessionScoreTable';
 import { SessionStatusBadge } from './meeple-card-features/SessionStatusBadge';
 import { SessionTurnSequence } from './meeple-card-features/SessionTurnSequence';
+// Issue #4758: Snapshot History Slider + Time Travel
+import { SnapshotHistorySlider } from './meeple-card-features/SnapshotHistorySlider';
+import { TimeTravelOverlay } from './meeple-card-features/TimeTravelOverlay';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
@@ -335,6 +338,19 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   /** Session back content data (statistics, ranking, timeline) */
   sessionBackData?: import('./meeple-card-features/session-types').SessionBackData;
+
+  // ========== SNAPSHOT HISTORY + TIME TRAVEL (Issue #4758) ==========
+
+  /** Session snapshots for history slider */
+  sessionSnapshots?: import('../extra-meeple-card/types').SnapshotInfo[];
+  /** Currently selected snapshot index (0-based) */
+  currentSnapshotIndex?: number;
+  /** Callback when a snapshot is selected */
+  onSnapshotSelect?: (index: number) => void;
+  /** Whether time travel mode is active */
+  isTimeTravelMode?: boolean;
+  /** Toggle time travel mode */
+  onTimeTravelToggle?: (enabled: boolean) => void;
 }
 
 // ============================================================================
@@ -937,6 +953,11 @@ export const MeepleCard = React.memo(function MeepleCard({
   onPrevTurn,
   onNextTurn,
   sessionBackData,
+  sessionSnapshots,
+  currentSnapshotIndex,
+  onSnapshotSelect,
+  isTimeTravelMode,
+  onTimeTravelToggle,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1066,6 +1087,16 @@ export const MeepleCard = React.memo(function MeepleCard({
           onSelect={onSelect || (() => {})}
           id={testId || 'card'}
           entityColor={color}
+        />
+      )}
+
+      {/* Time Travel Overlay (Issue #4758) */}
+      {entity === 'session' && isTimeTravelMode && sessionSnapshots && currentSnapshotIndex != null && sessionSnapshots[currentSnapshotIndex] && (
+        <TimeTravelOverlay
+          snapshot={sessionSnapshots[currentSnapshotIndex]}
+          totalSnapshots={sessionSnapshots.length}
+          isActive={isTimeTravelMode}
+          onExit={() => onTimeTravelToggle?.(false)}
         />
       )}
 
@@ -1326,6 +1357,17 @@ export const MeepleCard = React.memo(function MeepleCard({
               />
             )}
           </div>
+        )}
+
+        {/* Snapshot History Slider (Issue #4758) */}
+        {entity === 'session' && sessionSnapshots && sessionSnapshots.length > 0 && variant !== 'compact' && (
+          <SnapshotHistorySlider
+            snapshots={sessionSnapshots}
+            currentIndex={currentSnapshotIndex}
+            onSelect={onSnapshotSelect}
+            isTimeTravelMode={isTimeTravelMode}
+            onTimeTravelToggle={onTimeTravelToggle}
+          />
         )}
 
         {/* Metadata (non-grid variants render inline; grid uses footer below) */}

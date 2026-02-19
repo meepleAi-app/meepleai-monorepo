@@ -24,3 +24,7 @@ export { ChatAgentInfo, type ChatAgentInfoProps, type ChatAgent } from './ChatAg
 export { ChatStatsDisplay, type ChatStatsDisplayProps, type ChatStats, formatDuration } from './ChatStatsDisplay';
 export { ChatGameContext, type ChatGameContextProps, type ChatGame } from './ChatGameContext';
 export { ChatUnreadBadge, type ChatUnreadBadgeProps } from './ChatUnreadBadge';
+
+// Issue #4758: Snapshot History Slider + Time Travel
+export { SnapshotHistorySlider, type SnapshotHistorySliderProps } from './SnapshotHistorySlider';
+export { TimeTravelOverlay, type TimeTravelOverlayProps } from './TimeTravelOverlay';

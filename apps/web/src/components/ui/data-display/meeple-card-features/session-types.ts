@@ -78,6 +78,38 @@ export interface SessionActionHandlers {
   onEditScore?: () => void;
 }
 
+/** Timeline event for session back */
+export interface SessionTimelineEvent {
+  id: string;
+  timestamp: string;
+  type: 'turn' | 'score' | 'action' | 'media' | 'system';
+  playerId?: string;
+  label: string;
+}
+
+/** Media counts for session back */
+export interface SessionMediaCounts {
+  photos: number;
+  videos: number;
+  audio: number;
+}
+
+/** Session back content data */
+export interface SessionBackData {
+  durationMinutes?: number;
+  totalTurns?: number;
+  totalRounds?: number;
+  averageScore?: number;
+  winnerId?: string;
+  sessionCode?: string;
+  scoringType?: string;
+  turnType?: string;
+  timeline?: SessionTimelineEvent[];
+  mediaCounts?: SessionMediaCounts;
+  agentChatHref?: string;
+  playRecordHref?: string;
+}
+
 // ============================================================================
 // Color Mapping
 // ============================================================================

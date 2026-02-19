@@ -87,6 +87,10 @@ internal static class SessionTrackingEndpoints
         MapAskSessionAgentEndpoint(group);
         MapDeleteChatMessageEndpoint(group);
 
+        // Player action endpoints (Issue #4765)
+        MapMarkPlayerReadyEndpoint(group);
+        MapKickParticipantEndpoint(group);
+
         return group;
     }
 
@@ -1483,6 +1487,73 @@ internal static class SessionTrackingEndpoints
         .Produces(401)
         .Produces(403)
         .Produces(404);
+    }
+    // ========================================================================
+    // Player Action Endpoints (Issue #4765)
+    // ========================================================================
+
+    private static void MapMarkPlayerReadyEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/players/{participantId:guid}/ready", async (
+            Guid sessionId,
+            Guid participantId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new MarkPlayerReadyCommand(sessionId, participantId, userId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("MarkPlayerReady")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Mark a player as ready")
+        .WithDescription("Marks the specified participant as ready for the next phase/turn. Requires Player role.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+    }
+
+    private static void MapKickParticipantEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/game-sessions/{sessionId:guid}/players/{participantId:guid}/kick", async (
+            Guid sessionId,
+            Guid participantId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new KickParticipantCommand(sessionId, participantId, userId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("KickParticipant")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Kick a participant from the session")
+        .WithDescription("Removes a participant from the session. Host-only action. Cannot kick the host.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
     }
 }
 

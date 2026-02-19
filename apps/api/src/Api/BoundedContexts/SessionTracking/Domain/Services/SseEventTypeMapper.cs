@@ -20,8 +20,13 @@ public static class SseEventTypeMapper
         // Score changes → session:score
         [typeof(ScoreUpdatedEvent)] = "session:score",
 
-        // Player join/leave → session:player
+        // Player join/leave/kick/ready → session:player
         [typeof(ParticipantAddedEvent)] = "session:player",
+        [typeof(ParticipantKickedEvent)] = "session:player",
+        [typeof(PlayerReadyEvent)] = "session:player",
+
+        // Conflict notifications → session:conflict
+        [typeof(ConflictDetectedEvent)] = "session:conflict",
 
         // Toolkit: dice → session:toolkit
         [typeof(DiceRolledEvent)] = "session:toolkit",

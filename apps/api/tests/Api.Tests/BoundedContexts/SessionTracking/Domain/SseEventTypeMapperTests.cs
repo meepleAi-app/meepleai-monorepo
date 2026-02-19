@@ -44,14 +44,31 @@ public class SseEventTypeMapperTests
 
     #region Player Events → session:player
 
-    [Fact]
-    public void GetEventType_ParticipantAddedEvent_ReturnsSessionPlayer()
+    [Theory]
+    [InlineData(typeof(ParticipantAddedEvent))]
+    [InlineData(typeof(ParticipantKickedEvent))]
+    [InlineData(typeof(PlayerReadyEvent))]
+    public void GetEventType_PlayerEvents_ReturnsSessionPlayer(Type eventType)
     {
         // Act
-        var result = SseEventTypeMapper.GetEventType<ParticipantAddedEvent>();
+        var result = SseEventTypeMapper.GetEventType(eventType);
 
         // Assert
         result.Should().Be("session:player");
+    }
+
+    #endregion
+
+    #region Conflict Events → session:conflict
+
+    [Fact]
+    public void GetEventType_ConflictDetectedEvent_ReturnsSessionConflict()
+    {
+        // Act
+        var result = SseEventTypeMapper.GetEventType<ConflictDetectedEvent>();
+
+        // Assert
+        result.Should().Be("session:conflict");
     }
 
     #endregion
@@ -146,6 +163,8 @@ public class SseEventTypeMapperTests
             typeof(SessionCreatedEvent), typeof(SessionPausedEvent),
             typeof(SessionResumedEvent), typeof(SessionFinalizedEvent),
             typeof(ScoreUpdatedEvent), typeof(ParticipantAddedEvent),
+            typeof(ParticipantKickedEvent), typeof(PlayerReadyEvent),
+            typeof(ConflictDetectedEvent),
             typeof(DiceRolledEvent), typeof(CardsDrawnEvent),
             typeof(CardsDiscardedEvent), typeof(CardsRevealedEvent),
             typeof(DeckShuffledEvent), typeof(DeckCreatedEvent),

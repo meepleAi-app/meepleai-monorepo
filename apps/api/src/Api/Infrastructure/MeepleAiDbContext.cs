@@ -167,6 +167,8 @@ public class MeepleAiDbContext : DbContext
     // Issue #4754: ToolState for live game sessions
     public DbSet<ToolStateEntity> ToolStates => Set<ToolStateEntity>();
     public DbSet<SessionSnapshotEntity> SessionSnapshots => Set<SessionSnapshotEntity>(); // ISSUE-4755
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity> SessionMedia => Set<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>(); // ISSUE-4760
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
     // Issue #4220: Notification preferences
     public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity> NotificationPreferences => Set<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity>();
@@ -270,6 +272,8 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.PlayerNote>(); // ISSUE-3160
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.DiceRoll>(); // ISSUE-3160
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.CardDraw>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.SessionMedia>(); // ISSUE-4760
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.SessionChatMessage>(); // ISSUE-4760
 
         // ISSUE-4730: Processing queue domain entities
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob>();

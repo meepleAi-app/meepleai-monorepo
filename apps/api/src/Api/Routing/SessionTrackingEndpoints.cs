@@ -72,6 +72,18 @@ internal static class SessionTrackingEndpoints
         MapGetSessionByInviteEndpoint(group);
         MapJoinSessionByInviteEndpoint(group);
 
+        // Session media endpoints (Issue #4760)
+        MapUploadSessionMediaEndpoint(group);
+        MapGetSessionMediaEndpoint(group);
+        MapUpdateMediaCaptionEndpoint(group);
+        MapDeleteSessionMediaEndpoint(group);
+
+        // Session chat endpoints (Issue #4760)
+        MapGetSessionChatEndpoint(group);
+        MapSendSessionChatMessageEndpoint(group);
+        MapAskSessionAgentEndpoint(group);
+        MapDeleteChatMessageEndpoint(group);
+
         return group;
     }
 
@@ -1155,6 +1167,212 @@ internal static class SessionTrackingEndpoints
         .Produces(401)
         .Produces(404)
         .Produces(409);
+    }
+
+    // ========================================================================
+    // Session Media Endpoints (Issue #4760)
+    // ========================================================================
+
+    private static void MapUploadSessionMediaEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/media", async (
+            Guid sessionId,
+            UploadSessionMediaCommand command,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            if (sessionId != command.SessionId)
+            {
+                return Results.BadRequest(new { error = "Session ID mismatch" });
+            }
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/game-sessions/{sessionId}/media/{result.MediaId}", result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("UploadSessionMedia")
+        .WithTags("SessionTracking", "Media")
+        .WithSummary("Upload media to a session")
+        .WithDescription("Attaches a media file (photo, screenshot, document) to the session. File must be pre-uploaded to blob storage.")
+        .Produces(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapGetSessionMediaEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/media", async (
+            Guid sessionId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetSessionMediaQuery(sessionId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetSessionMedia")
+        .WithTags("SessionTracking", "Media")
+        .WithSummary("Get all media for a session")
+        .Produces(200)
+        .Produces(401);
+    }
+
+    private static void MapUpdateMediaCaptionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/game-sessions/{sessionId:guid}/media/{mediaId:guid}/caption", async (
+            Guid sessionId,
+            Guid mediaId,
+            UpdateMediaCaptionCommand command,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            if (mediaId != command.MediaId)
+            {
+                return Results.BadRequest(new { error = "Media ID mismatch" });
+            }
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .RequireAuthenticatedUser()
+        .WithName("UpdateMediaCaption")
+        .WithTags("SessionTracking", "Media")
+        .WithSummary("Update media caption")
+        .Produces(204)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
+
+    private static void MapDeleteSessionMediaEndpoint(RouteGroupBuilder group)
+    {
+        // Note: participantId comes from query string. Future auth refactor should extract from HttpContext.User.
+        group.MapDelete("/game-sessions/{sessionId:guid}/media/{mediaId:guid}", async (
+            Guid sessionId,
+            Guid mediaId,
+            Guid participantId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var command = new DeleteSessionMediaCommand(mediaId, participantId);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .RequireAuthenticatedUser()
+        .WithName("DeleteSessionMedia")
+        .WithTags("SessionTracking", "Media")
+        .WithSummary("Delete session media")
+        .WithDescription("Soft-deletes a media file. Only the owner can delete.")
+        .Produces(204)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
+
+    // ========================================================================
+    // Session Chat Endpoints (Issue #4760)
+    // ========================================================================
+
+    private static void MapGetSessionChatEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/chat", async (
+            Guid sessionId,
+            IMediator mediator,
+            int? limit = null,
+            int? offset = null,
+            CancellationToken ct = default) =>
+        {
+            var query = new GetSessionChatQuery(sessionId, limit, offset);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetSessionChat")
+        .WithTags("SessionTracking", "Chat")
+        .WithSummary("Get chat messages for a session (paginated)")
+        .Produces(200)
+        .Produces(401);
+    }
+
+    private static void MapSendSessionChatMessageEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/chat", async (
+            Guid sessionId,
+            SendSessionChatMessageCommand command,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            if (sessionId != command.SessionId)
+            {
+                return Results.BadRequest(new { error = "Session ID mismatch" });
+            }
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/game-sessions/{sessionId}/chat/{result.MessageId}", result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("SendSessionChatMessage")
+        .WithTags("SessionTracking", "Chat")
+        .WithSummary("Send a chat message in the session")
+        .Produces(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapAskSessionAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/chat/ask-agent", async (
+            Guid sessionId,
+            AskSessionAgentCommand command,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            if (sessionId != command.SessionId)
+            {
+                return Results.BadRequest(new { error = "Session ID mismatch" });
+            }
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("AskSessionAgent")
+        .WithTags("SessionTracking", "Chat", "AI")
+        .WithSummary("Ask the RAG agent a question in session context [STUB]")
+        .WithDescription("Sends a question to the AI agent which answers using the game's knowledge base and session context. Currently returns a stub response pending RAG pipeline integration.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapDeleteChatMessageEndpoint(RouteGroupBuilder group)
+    {
+        // Note: requesterId comes from query string. Future auth refactor should extract from HttpContext.User.
+        group.MapDelete("/game-sessions/{sessionId:guid}/chat/{messageId:guid}", async (
+            Guid sessionId,
+            Guid messageId,
+            Guid requesterId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var command = new DeleteChatMessageCommand(messageId, requesterId);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .RequireAuthenticatedUser()
+        .WithName("DeleteChatMessage")
+        .WithTags("SessionTracking", "Chat")
+        .WithSummary("Delete a chat message")
+        .WithDescription("Soft-deletes a text message. Only the sender can delete.")
+        .Produces(204)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
     }
 }
 

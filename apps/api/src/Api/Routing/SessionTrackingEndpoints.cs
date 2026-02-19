@@ -1365,7 +1365,7 @@ internal static class SessionTrackingEndpoints
             return Results.NoContent();
         })
         .RequireAuthenticatedUser()
-        .WithName("DeleteChatMessage")
+        .WithName("DeleteSessionChatMessage")
         .WithTags("SessionTracking", "Chat")
         .WithSummary("Delete a chat message")
         .WithDescription("Soft-deletes a text message. Only the sender can delete.")

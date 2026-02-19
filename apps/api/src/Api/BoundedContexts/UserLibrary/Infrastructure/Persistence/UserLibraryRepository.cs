@@ -265,6 +265,21 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         await DbContext.UserLibraryEntries.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task AddForPrivateGameAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        CollectDomainEvents(entry);
+
+        var entity = MapToPersistence(entry);
+
+        // Fix FK mapping: domain GameId routes to SharedGameId via backward-compat setter,
+        // but for private games we need PrivateGameId set instead.
+        entity.PrivateGameId = entity.SharedGameId;
+        entity.SharedGameId = null;
+
+        await DbContext.UserLibraryEntries.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
     public Task UpdateAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);

@@ -199,10 +199,11 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         // Note: May return Unauthorized in test environment due to auth middleware mocking
+        var responseBody = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.Created ||
             response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected Created or Unauthorized, got {response.StatusCode}");
+            $"Expected Created or Unauthorized, got {response.StatusCode}. Body: {responseBody}");
 
         if (response.StatusCode == HttpStatusCode.Created)
         {
@@ -295,10 +296,12 @@ public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.SendAsync(httpRequest);
 
         // Assert
+        // FluentValidation returns 422 UnprocessableEntity (Issue #1449)
         Assert.True(
             response.StatusCode == HttpStatusCode.BadRequest ||
+            response.StatusCode == HttpStatusCode.UnprocessableEntity ||
             response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected BadRequest or Unauthorized, got {response.StatusCode}");
+            $"Expected BadRequest/UnprocessableEntity or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion

@@ -91,6 +91,10 @@ internal static class SessionTrackingEndpoints
         MapMarkPlayerReadyEndpoint(group);
         MapKickParticipantEndpoint(group);
 
+        // Session join + role management endpoints (Issue #4766)
+        MapJoinSessionByCodeEndpoint(group);
+        MapAssignParticipantRoleEndpoint(group);
+
         return group;
     }
 
@@ -1555,9 +1559,87 @@ internal static class SessionTrackingEndpoints
         .Produces(404)
         .Produces(409);
     }
+
+    // ========================================================================
+    // Session Join + Role Management Endpoints (Issue #4766)
+    // ========================================================================
+
+    private static void MapJoinSessionByCodeEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/code/{code}/join", async (
+            string code,
+            JoinSessionByCodeRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new JoinSessionByCodeCommand(code, userId, request.DisplayName);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("JoinSessionByCode")
+        .WithTags("SessionTracking", "SessionJoin")
+        .WithSummary("Join a session using session code")
+        .WithDescription("Joins the session identified by the 6-character code. Creates participant with Player role.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409);
+    }
+
+    private static void MapAssignParticipantRoleEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/game-sessions/{sessionId:guid}/participants/{participantId:guid}/role", async (
+            Guid sessionId,
+            Guid participantId,
+            AssignParticipantRoleRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new AssignParticipantRoleCommand(sessionId, participantId, request.NewRole, userId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("AssignParticipantRole")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Assign role to participant")
+        .WithDescription("Changes a participant's role. Host-only action. Cannot demote the last host.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+    }
 }
 
 /// <summary>
 /// Request body for joining a session by invite token.
 /// </summary>
 public sealed record JoinSessionByInviteRequest(string DisplayName);
+
+/// <summary>
+/// Request body for joining a session by code.
+/// </summary>
+public sealed record JoinSessionByCodeRequest(string DisplayName);
+
+/// <summary>
+/// Request body for assigning a participant role.
+/// </summary>
+public sealed record AssignParticipantRoleRequest(Api.BoundedContexts.SessionTracking.Domain.Enums.ParticipantRole NewRole);

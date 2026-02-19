@@ -25,6 +25,9 @@ public static class SseEventTypeMapper
         [typeof(ParticipantKickedEvent)] = "session:player",
         [typeof(PlayerReadyEvent)] = "session:player",
 
+        // Role changes → session:player
+        [typeof(ParticipantRoleChangedEvent)] = "session:player",
+
         // Conflict notifications → session:conflict
         [typeof(ConflictDetectedEvent)] = "session:conflict",
 

@@ -59,7 +59,6 @@ export interface QueueFilters {
   search?: string;
   fromDate?: string;
   toDate?: string;
-  dateRange?: string;
   page?: number;
   pageSize?: number;
 }
@@ -95,6 +94,10 @@ export async function retryJob(jobId: string): Promise<void> {
 
 export async function removeJob(jobId: string): Promise<void> {
   await apiClient.delete(`/api/v1/admin/queue/${jobId}`);
+}
+
+export async function reorderQueue(orderedJobIds: string[]): Promise<void> {
+  await apiClient.put('/api/v1/admin/queue/reorder', { orderedJobIds });
 }
 
 export async function enqueuePdf(pdfDocumentId: string, priority: number = 0): Promise<{ jobId: string }> {

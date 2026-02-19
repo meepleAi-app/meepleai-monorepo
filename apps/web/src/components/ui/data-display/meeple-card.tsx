@@ -90,6 +90,11 @@ import { WishlistButton } from './meeple-card-features/WishlistButton';
 import { CardNavigationFooter } from './meeple-card-features/CardNavigationFooter';
 // Issue #4777: Agent action footer
 import { CardAgentAction } from './meeple-card-features/CardAgentAction';
+// Issue #4751: Session-specific display components
+import { SessionActionButtons } from './meeple-card-features/SessionActionButtons';
+import { SessionScoreTable } from './meeple-card-features/SessionScoreTable';
+import { SessionStatusBadge } from './meeple-card-features/SessionStatusBadge';
+import { SessionTurnSequence } from './meeple-card-features/SessionTurnSequence';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
@@ -304,6 +309,26 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   agentId?: string;
   /** Callback to open agent creation wizard */
   onCreateAgent?: () => void;
+
+  // ========== SESSION ENTITY FEATURES (Issue #4751) ==========
+
+  /** Session lifecycle status */
+  sessionStatus?: import('./meeple-card-features/session-types').SessionStatus;
+  /** Players in the session */
+  sessionPlayers?: import('./meeple-card-features/session-types').SessionPlayerInfo[];
+  /** Round score entries */
+  sessionRoundScores?: import('./meeple-card-features/session-types').SessionRoundScore[];
+  /** Scoring configuration (dimensions, units) */
+  sessionScoringConfig?: import('./meeple-card-features/session-types').SessionScoringConfig;
+  /** Current turn info */
+  sessionTurn?: import('./meeple-card-features/session-types').SessionTurnInfo;
+  /** Context-sensitive action handlers */
+  sessionActions?: import('./meeple-card-features/session-types').SessionActionHandlers;
+  /** Is current user the session host */
+  isSessionHost?: boolean;
+  /** Navigate to previous/next turn callbacks */
+  onPrevTurn?: () => void;
+  onNextTurn?: () => void;
 }
 
 // ============================================================================
@@ -895,6 +920,16 @@ export const MeepleCard = React.memo(function MeepleCard({
   hasAgent,
   agentId,
   onCreateAgent,
+  // Issue #4751: Session entity features
+  sessionStatus,
+  sessionPlayers,
+  sessionRoundScores,
+  sessionScoringConfig,
+  sessionTurn,
+  sessionActions,
+  isSessionHost,
+  onPrevTurn,
+  onNextTurn,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1250,6 +1285,42 @@ export const MeepleCard = React.memo(function MeepleCard({
           <ChatUnreadBadge count={unreadCount} />
         )}
 
+        {/* Session-specific info (Issue #4751) */}
+        {entity === 'session' && variant !== 'compact' && (sessionStatus || sessionPlayers || sessionTurn) && (
+          <div className="flex flex-col gap-1.5 mb-2" data-testid="session-info-section">
+            {/* Row 1: Session status badge */}
+            {sessionStatus && (
+              <SessionStatusBadge status={sessionStatus} size="sm" />
+            )}
+            {/* Row 2: Score table (grid/featured/hero only) */}
+            {sessionPlayers && sessionPlayers.length > 0 && variant !== 'list' && (
+              <SessionScoreTable
+                players={sessionPlayers}
+                roundScores={sessionRoundScores ?? []}
+                onEditScore={sessionActions?.onEditScore}
+                maxVisibleRounds={variant === 'grid' ? 3 : 5}
+              />
+            )}
+            {/* Row 3: Turn sequence */}
+            {sessionTurn && sessionPlayers && sessionPlayers.length > 0 && sessionStatus !== 'completed' && (
+              <SessionTurnSequence
+                players={sessionPlayers}
+                turn={sessionTurn}
+                isHost={isSessionHost}
+                onPrevTurn={onPrevTurn}
+                onNextTurn={onNextTurn}
+              />
+            )}
+            {/* Row 4: Action buttons */}
+            {sessionStatus && sessionActions && (
+              <SessionActionButtons
+                status={sessionStatus}
+                actions={sessionActions}
+              />
+            )}
+          </div>
+        )}
+
         {/* Metadata (non-grid variants render inline; grid uses footer below) */}
         {metadata.length > 0 && variant !== 'compact' && variant !== 'grid' && (
           <MetadataChips
@@ -1448,3 +1519,13 @@ export type { ChatStatus } from './meeple-card-features/ChatStatusBadge';
 export type { ChatAgent } from './meeple-card-features/ChatAgentInfo';
 export type { ChatStats } from './meeple-card-features/ChatStatsDisplay';
 export type { ChatGame } from './meeple-card-features/ChatGameContext';
+export type {
+  SessionStatus,
+  SessionPlayerInfo,
+  SessionRoundScore,
+  SessionScoringConfig,
+  SessionTurnInfo,
+  SessionActionHandlers,
+  PlayerColor,
+  PlayerRole,
+} from './meeple-card-features/session-types';

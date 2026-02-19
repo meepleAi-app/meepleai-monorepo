@@ -55,7 +55,7 @@ const sections = [
     title: 'RAG Pipeline',
     description: 'Monitor the RAG retrieval pipeline, view execution logs, and tune retrieval parameters',
     icon: BrainCircuitIcon,
-    href: '/rag',
+    href: '/admin/knowledge-base/pipeline',
     color: 'from-purple-500 to-violet-600',
     stats: 'View dashboard',
   },
@@ -63,7 +63,7 @@ const sections = [
     title: 'Settings',
     description: 'Configure tier strategies, embedding models, chunking parameters, and reranking options',
     icon: SettingsIcon,
-    href: '/admin/rag/tier-strategy-config',
+    href: '/admin/knowledge-base/settings',
     color: 'from-slate-500 to-zinc-600',
     stats: 'Configure',
   },
@@ -121,28 +121,28 @@ export default function KnowledgeBasePage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Link
-            href="/admin/rag-executions"
+            href="/admin/agents/analytics"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
           >
             RAG Executions Log
           </Link>
           <Link
-            href="/admin/ai-models"
+            href="/admin/agents/models"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
           >
             AI Models
           </Link>
           <Link
-            href="/admin/prompts"
+            href="/admin/agents/strategy"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
           >
-            Prompts Library
+            Strategy Config
           </Link>
           <Link
-            href="/admin/configuration"
+            href="/admin/knowledge-base/settings"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
           >
-            General Configuration
+            KB Settings
           </Link>
         </div>
       </div>

@@ -17,7 +17,7 @@ internal static class AdminQueueEndpoints
 {
     public static void MapAdminQueueEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/queue")
+        var group = app.MapGroup("/admin/queue")
             .WithTags("Admin - Processing Queue")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

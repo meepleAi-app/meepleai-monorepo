@@ -9,7 +9,7 @@ internal static class AdminStrategyEndpoints
 {
     public static void MapAdminStrategyEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/strategies");
+        var group = app.MapGroup("/admin/strategies");
 
         // Placeholder endpoints - will implement full CQRS after #3850 merges
 

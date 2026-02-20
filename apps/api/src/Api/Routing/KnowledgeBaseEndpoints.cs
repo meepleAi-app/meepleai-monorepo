@@ -24,6 +24,7 @@ internal static class KnowledgeBaseEndpoints
 {
     public static RouteGroupBuilder MapKnowledgeBaseEndpoints(this RouteGroupBuilder group)
     {
+        MapStatusEndpoint(group); // Issue #4065: RAG readiness polling
         MapSearchEndpoint(group);
         MapAskEndpoint(group);
         MapChatLookupEndpoints(group);
@@ -36,6 +37,36 @@ internal static class KnowledgeBaseEndpoints
         MapContextEngineeringEndpoints(group);
 
         return group;
+    }
+
+    /// <summary>
+    /// Issue #4065: RAG readiness polling endpoint.
+    /// Returns the embedding status for a game's knowledge base by inspecting the most recent PDF document.
+    /// Polled by the frontend every 2 seconds after PDF upload to display processing progress.
+    /// </summary>
+    private static void MapStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/knowledge-base/{gameId:guid}/status", HandleGetKnowledgeBaseStatus)
+            .WithName("GetKnowledgeBaseStatus")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get knowledge base embedding status for a game")
+            .WithDescription("Returns the current embedding pipeline status (Pending/Extracting/Chunking/Embedding/Completed/Failed) and progress for a game's knowledge base. Derived from the most recent PDF document for the game.");
+    }
+
+    private static async Task<IResult> HandleGetKnowledgeBaseStatus(
+        Guid gameId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetKnowledgeBaseStatusQuery(gameId), ct).ConfigureAwait(false);
+
+        if (result is null)
+        {
+            return Results.Problem("Failed to retrieve knowledge base status");
+        }
+
+        return Results.Ok(result);
     }
 
     private static void MapSearchEndpoint(RouteGroupBuilder group)

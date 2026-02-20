@@ -423,3 +423,50 @@ export const GetSimilarGamesResultSchema = z.object({
 });
 
 export type GetSimilarGamesResult = z.infer<typeof GetSimilarGamesResultSchema>;
+
+// ========== Game Strategies (Issue #4903) ==========
+
+export const GameStrategyDtoSchema = z.object({
+  id: z.string().uuid(),
+  gameId: z.string().uuid(),
+  title: z.string(),
+  content: z.string(),
+  author: z.string(),
+  upvotes: z.number().int().nonnegative(),
+  tags: z.array(z.string()),
+  createdAt: z.string().datetime(),
+});
+
+export type GameStrategyDto = z.infer<typeof GameStrategyDtoSchema>;
+
+export const PagedStrategiesResultSchema = z.object({
+  items: z.array(GameStrategyDtoSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+});
+
+export type PagedStrategiesResult = z.infer<typeof PagedStrategiesResultSchema>;
+
+// ========== Game Reviews (Issue #4904) ==========
+
+export const GameReviewDtoSchema = z.object({
+  id: z.string().uuid(),
+  gameId: z.string().uuid(),
+  authorName: z.string(),
+  rating: z.number().int().min(1).max(10),
+  content: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime().nullable(),
+});
+
+export type GameReviewDto = z.infer<typeof GameReviewDtoSchema>;
+
+export const PagedReviewsResultSchema = z.object({
+  items: z.array(GameReviewDtoSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+});
+
+export type PagedReviewsResult = z.infer<typeof PagedReviewsResultSchema>;

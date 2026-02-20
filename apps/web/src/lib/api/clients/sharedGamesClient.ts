@@ -8,7 +8,12 @@
 import { z } from 'zod';
 
 import { type HttpClient } from '../core/httpClient';
-import { type AgentDefinitionDto } from '../schemas/agent-definitions.schemas';
+import {
+  agentDefinitionDtoSchema,
+  kbCardDtoSchema,
+  type AgentDefinitionDto,
+  type KbCardDto,
+} from '../schemas/agent-definitions.schemas';
 import {
   SharedGameDetailSchema,
   PagedSharedGamesSchema,
@@ -700,51 +705,118 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       });
     },
 
-    // ========== AI Agent Linking (Issue #4230 - Mock API) ==========
-    // TODO: Replace with real API when Issue #2 (Backend linking API) is complete
+    // ========== AI Agent Linking (Issue #4924 + #4926) ==========
 
     /**
      * Get linked AI agent for a shared game (ADMIN/EDITOR)
-     *
-     * **Mock implementation** - returns null until backend API is ready.
-     * When backend is complete, this will call: `GET /api/v1/admin/shared-games/{gameId}/linked-agent`
+     * GET /api/v1/admin/shared-games/{gameId}/linked-agent
+     * Returns null (204 NoContent) if no agent is linked.
      *
      * @param gameId - Game UUID
      * @returns Linked agent or null if no agent linked
      */
     async getLinkedAgent(gameId: string): Promise<AgentDefinitionDto | null> {
-      // Mock: Always return null until backend API is implemented
-      console.warn('[Mock API] getLinkedAgent called for gameId:', gameId);
-      return Promise.resolve(null);
+      return httpClient.get(
+        `/api/v1/admin/shared-games/${gameId}/linked-agent`,
+        agentDefinitionDtoSchema
+      );
     },
 
     /**
      * Link an AI agent to a shared game (ADMIN/EDITOR)
-     *
-     * **Mock implementation** - simulates successful linking until backend API is ready.
-     * When backend is complete, this will call: `POST /api/v1/admin/shared-games/{gameId}/link-agent/{agentId}`
+     * POST /api/v1/admin/shared-games/{gameId}/link-agent/{agentId}
      *
      * @param gameId - Game UUID
      * @param agentId - Agent UUID
      */
     async linkAgent(gameId: string, agentId: string): Promise<void> {
-      // Mock: Simulate successful linking
-      console.warn('[Mock API] linkAgent called:', { gameId, agentId });
-      return Promise.resolve();
+      await httpClient.post(`/api/v1/admin/shared-games/${gameId}/link-agent/${agentId}`, {});
     },
 
     /**
      * Unlink AI agent from a shared game (ADMIN/EDITOR)
-     *
-     * **Mock implementation** - simulates successful unlinking until backend API is ready.
-     * When backend is complete, this will call: `DELETE /api/v1/admin/shared-games/{gameId}/unlink-agent`
+     * DELETE /api/v1/admin/shared-games/{gameId}/unlink-agent
      *
      * @param gameId - Game UUID
      */
     async unlinkAgent(gameId: string): Promise<void> {
-      // Mock: Simulate successful unlinking
-      console.warn('[Mock API] unlinkAgent called for gameId:', gameId);
-      return Promise.resolve();
+      await httpClient.delete(`/api/v1/admin/shared-games/${gameId}/unlink-agent`);
+    },
+
+    // ========== KB Cards (Issue #4925 + #4926) ==========
+
+    /**
+     * Get KB cards (indexed vector documents) for a shared game (ADMIN/EDITOR)
+     * GET /api/v1/admin/shared-games/{gameId}/kb-cards?status=completed
+     *
+     * @param gameId - Game UUID
+     * @param status - Optional filter: pending|processing|completed|failed
+     * @returns Array of KB card DTOs
+     */
+    async getKbCards(gameId: string, status?: string): Promise<KbCardDto[]> {
+      const path = status
+        ? `/api/v1/admin/shared-games/${gameId}/kb-cards?status=${encodeURIComponent(status)}`
+        : `/api/v1/admin/shared-games/${gameId}/kb-cards`;
+      const result = await httpClient.get(path, kbCardDtoSchema.array());
+      return result ?? [];
+    },
+
+    // ========== Admin PDF Upload (Issue #4922 + #4926) ==========
+
+    /**
+     * Upload a PDF for a shared game as admin (ADMIN/EDITOR)
+     * POST /api/v1/admin/shared-games/{gameId}/documents/upload (multipart/form-data)
+     *
+     * @param gameId - Game UUID
+     * @param formData - FormData with fields: file, documentType, version, setAsActive, tags
+     * @param onProgress - Optional XHR progress callback (0-100)
+     * @returns Upload result with pdfDocumentId and processingStatus
+     */
+    async uploadDocument(
+      gameId: string,
+      formData: FormData,
+      onProgress?: (percent: number) => void
+    ): Promise<{ pdfDocumentId: string; sharedGameDocumentId: string; processingStatus: string }> {
+      const UploadResultSchema = z.object({
+        pdfDocumentId: z.string().uuid(),
+        sharedGameDocumentId: z.string().uuid(),
+        processingStatus: z.string(),
+      });
+
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        if (onProgress) {
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+          });
+        }
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const parsed = UploadResultSchema.parse(JSON.parse(xhr.responseText));
+              resolve(parsed);
+            } catch {
+              reject(new Error('Invalid response format'));
+            }
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText) as { error?: string };
+              reject(new Error(err.error ?? `Upload failed: ${xhr.status}`));
+            } catch {
+              reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        // Use relative URL so requests route through the Next.js API proxy
+        xhr.open('POST', `/api/v1/admin/shared-games/${gameId}/documents/upload`);
+        xhr.send(formData);
+      });
     },
   };
 }

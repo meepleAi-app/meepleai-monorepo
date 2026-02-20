@@ -54,7 +54,7 @@ describe('LibraryNavTabs', () => {
       const { container } = render(<LibraryNavTabs />);
 
       const icons = container.querySelectorAll('svg');
-      expect(icons.length).toBe(3);
+      expect(icons.length).toBe(4); // collection, private, proposals, wishlist
       icons.forEach(icon => {
         expect(icon).toHaveAttribute('aria-hidden', 'true');
       });
@@ -133,7 +133,7 @@ describe('LibraryNavTabs', () => {
       render(<LibraryNavTabs />);
 
       const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(3);
+      expect(tabs).toHaveLength(4); // collection, private, proposals, wishlist
     });
 
     it('should set tabIndex 0 for active tab and -1 for inactive', () => {

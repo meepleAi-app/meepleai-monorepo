@@ -60,6 +60,8 @@ export interface DashboardSection {
   icon: LucideIcon;
   /** Base route prefix for matching */
   baseRoute: string;
+  /** Additional route prefixes that belong to this section (outside baseRoute) */
+  additionalRoutes?: string[];
   /** Short description */
   description: string;
   /** Sidebar items for this section */
@@ -216,18 +218,19 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Knowledge Base',
     icon: BookOpenIcon,
     baseRoute: '/admin/knowledge-base',
+    additionalRoutes: ['/admin/pdfs'],
     description: 'Documents, vectors, and RAG pipeline',
     group: 'ai',
     sidebarItems: [
       {
         href: '/admin/knowledge-base',
-        label: 'Documents',
+        label: 'Overview',
         icon: FileTextIcon,
         activePattern: /^\/admin\/knowledge-base$/,
       },
       {
-        href: '/admin/knowledge-base/documents',
-        label: 'Document Library',
+        href: '/admin/pdfs',
+        label: 'Documents',
         icon: ListOrderedIcon,
       },
       {
@@ -277,11 +280,21 @@ export function getActiveSection(pathname: string): DashboardSection | undefined
   const exact = DASHBOARD_SECTIONS.find((s) => pathname === s.baseRoute);
   if (exact) return exact;
 
-  // Then try prefix match (longest match wins)
+  // Check additionalRoutes (exact or prefix match)
+  const byAdditional = DASHBOARD_SECTIONS.find((s) =>
+    s.additionalRoutes?.some(
+      (r) => pathname === r || pathname.startsWith(r + '/')
+    )
+  );
+  if (byAdditional) return byAdditional;
+
+  // Then try prefix match on baseRoute (longest match wins)
   const sorted = [...DASHBOARD_SECTIONS].sort(
     (a, b) => b.baseRoute.length - a.baseRoute.length
   );
-  return sorted.find((s) => pathname.startsWith(s.baseRoute));
+  return sorted.find(
+    (s) => pathname === s.baseRoute || pathname.startsWith(s.baseRoute + '/')
+  );
 }
 
 /** Get sidebar items for a section */
@@ -305,7 +318,12 @@ export function isSectionActive(
   section: DashboardSection,
   pathname: string
 ): boolean {
-  return pathname === section.baseRoute || pathname.startsWith(section.baseRoute + '/');
+  if (pathname === section.baseRoute || pathname.startsWith(section.baseRoute + '/')) {
+    return true;
+  }
+  return section.additionalRoutes?.some(
+    (r) => pathname === r || pathname.startsWith(r + '/')
+  ) ?? false;
 }
 
 /** Storage key for sidebar collapsed state */

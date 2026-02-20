@@ -1,12 +1,13 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
-using Api.Infrastructure.Entities;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using FluentAssertions;
 using MediatR;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using SystemConfigurationEntity = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.Handlers;
 
@@ -226,21 +227,12 @@ public class UpdateChatHistoryLimitsCommandHandlerTests
 
     private static SystemConfigurationEntity CreateConfigEntity(string value)
     {
-        return new SystemConfigurationEntity
-        {
-            Id = Guid.NewGuid(),
-            Key = "ChatHistory:FreeTierLimit",
-            Value = value,
-            ValueType = "int",
-            Category = "ChatHistory",
-            Environment = "All",
-            IsActive = true,
-            RequiresRestart = false,
-            Version = 1,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            CreatedByUserId = Guid.NewGuid(),
-            UpdatedByUserId = Guid.NewGuid()
-        };
+        return new SystemConfigurationEntity(
+            id: Guid.NewGuid(),
+            key: new ConfigKey("ChatHistory:FreeTierLimit"),
+            value: value,
+            valueType: "int",
+            createdByUserId: Guid.NewGuid(),
+            category: "ChatHistory");
     }
 }

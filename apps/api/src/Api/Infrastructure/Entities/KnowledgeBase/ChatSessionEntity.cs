@@ -11,6 +11,9 @@ public class ChatSessionEntity
     public Guid GameId { get; set; }
     public Guid? UserLibraryEntryId { get; set; }
     public Guid? AgentSessionId { get; set; }
+    public Guid? AgentId { get; set; }           // Custom agent (user-owned AgentDefinition)
+    public string? AgentType { get; set; }       // System agent type: auto|tutor|arbitro|decisore
+    public string? AgentName { get; set; }       // Display name for grouping (copied on create)
     public string? Title { get; set; }
     public string AgentConfigJson { get; set; } = "{}";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

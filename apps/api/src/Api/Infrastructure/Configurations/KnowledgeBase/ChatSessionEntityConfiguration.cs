@@ -34,6 +34,17 @@ internal sealed class ChatSessionEntityConfiguration : IEntityTypeConfiguration<
         builder.Property(s => s.AgentSessionId)
             .HasColumnName("agent_session_id");
 
+        builder.Property(s => s.AgentId)
+            .HasColumnName("agent_id");
+
+        builder.Property(s => s.AgentType)
+            .HasColumnName("agent_type")
+            .HasMaxLength(50);
+
+        builder.Property(s => s.AgentName)
+            .HasColumnName("agent_name")
+            .HasMaxLength(200);
+
         builder.Property(s => s.Title)
             .HasColumnName("title")
             .HasMaxLength(200);
@@ -78,6 +89,15 @@ internal sealed class ChatSessionEntityConfiguration : IEntityTypeConfiguration<
 
         builder.HasIndex(s => s.AgentSessionId)
             .HasDatabaseName("ix_chat_sessions_agent_session_id");
+
+        // Partial indexes: agent_id is nullable so filter to non-NULL rows only
+        builder.HasIndex(s => s.AgentId)
+            .HasDatabaseName("ix_chat_sessions_agent_id")
+            .HasFilter("agent_id IS NOT NULL");
+
+        builder.HasIndex(s => new { s.UserId, s.AgentId })
+            .HasDatabaseName("ix_chat_sessions_user_agent_id")
+            .HasFilter("agent_id IS NOT NULL");
 
         // Foreign key to User
         builder.HasOne(s => s.User)

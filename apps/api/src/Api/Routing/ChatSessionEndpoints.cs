@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.Extensions;
 using Api.Middleware;
 using MediatR;
@@ -21,6 +22,7 @@ internal static class ChatSessionEndpoints
         MapGetSessionEndpoint(group);
         MapGetUserGameSessionsEndpoint(group);
         MapGetRecentSessionsEndpoint(group);
+        MapGetSessionLimitEndpoint(group);
         MapDeleteSessionEndpoint(group);
 
         return group;
@@ -71,6 +73,15 @@ internal static class ChatSessionEndpoints
             .WithDescription("Get recent chat sessions for a user");
     }
 
+    private static void MapGetSessionLimitEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/users/{userId:guid}/chat-sessions/limit", HandleGetSessionLimit)
+            .WithName("GetChatSessionLimit")
+            .RequireSession()
+            .WithTags("ChatSessions")
+            .WithDescription("Get the user's chat session tier limit, usage, and tier name");
+    }
+
     private static void MapDeleteSessionEndpoint(RouteGroupBuilder group)
     {
         group.MapDelete("/chat/sessions/{sessionId:guid}", HandleDeleteSession)
@@ -88,13 +99,23 @@ internal static class ChatSessionEndpoints
     {
         var userId = httpContext.User.GetUserId();
 
+        // Determine tier limit for auto-archive sliding window
+        var (authenticated, session, _) = httpContext.TryGetActiveSession();
+        var tierLimit = 0;
+        if (authenticated && session?.User != null)
+            tierLimit = ChatSessionTierLimits.GetLimit(session.User.Tier, session.User.Role);
+
         var command = new CreateChatSessionCommand(
             UserId: userId,
             GameId: request.GameId,
             Title: request.Title,
             UserLibraryEntryId: request.UserLibraryEntryId,
             AgentSessionId: request.AgentSessionId,
-            AgentConfigJson: request.AgentConfigJson
+            AgentConfigJson: request.AgentConfigJson,
+            AgentId: request.AgentId,
+            AgentType: request.AgentType,
+            AgentName: request.AgentName,
+            TierLimit: tierLimit
         );
 
         var sessionId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -179,6 +200,41 @@ internal static class ChatSessionEndpoints
         return Results.Ok(sessions);
     }
 
+    private static async Task<IResult> HandleGetSessionLimit(
+        [FromRoute] Guid userId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        // Ownership check: caller can only query their own limit
+        var callerId = httpContext.User.GetUserId();
+        if (callerId != userId)
+            return Results.Forbid();
+
+        var (authenticated, session, _) = httpContext.TryGetActiveSession();
+
+        string tierName;
+        int limit;
+
+        if (authenticated && session?.User != null)
+        {
+            tierName = session.User.Tier ?? "user";
+            limit = ChatSessionTierLimits.GetLimit(session.User.Tier, session.User.Role);
+        }
+        else
+        {
+            tierName = "anonymous";
+            limit = ChatSessionTierLimits.GetLimit(null, null);
+        }
+
+        var used = await mediator.Send(new GetChatSessionCountQuery(callerId), cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(new ChatSessionTierLimitDto(
+            Limit: limit,
+            Used: used,
+            Tier: tierName));
+    }
+
     private static async Task<IResult> HandleDeleteSession(
         [FromRoute] Guid sessionId,
         [FromServices] IMediator mediator,
@@ -198,7 +254,10 @@ internal record CreateChatSessionRequest(
     string? Title = null,
     Guid? UserLibraryEntryId = null,
     Guid? AgentSessionId = null,
-    string? AgentConfigJson = null);
+    string? AgentConfigJson = null,
+    Guid? AgentId = null,
+    string? AgentType = null,
+    string? AgentName = null);
 
 internal record CreateChatSessionResponse(Guid SessionId);
 

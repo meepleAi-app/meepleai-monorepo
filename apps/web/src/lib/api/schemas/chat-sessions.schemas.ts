@@ -43,6 +43,9 @@ export const ChatSessionSummaryDtoSchema = z.object({
   userId: z.string().uuid(),
   gameId: z.string().uuid(),
   gameTitle: z.string().nullable().optional(),
+  agentId: z.string().uuid().nullable().optional(),
+  agentType: z.string().nullable().optional(),
+  agentName: z.string().nullable().optional(),
   title: z.string().nullable(),
   messageCount: z.number().int().nonnegative(),
   lastMessagePreview: z.string().nullable().optional(),
@@ -61,6 +64,16 @@ export const ChatSessionListResponseSchema = z.object({
 });
 
 export type ChatSessionListResponse = z.infer<typeof ChatSessionListResponseSchema>;
+
+// ========== Tier Limit ==========
+
+export const ChatSessionTierLimitSchema = z.object({
+  limit: z.number().int().nonnegative(),
+  used: z.number().int().nonnegative(),
+  tier: z.string(),
+});
+
+export type ChatSessionTierLimit = z.infer<typeof ChatSessionTierLimitSchema>;
 
 // ========== Request Types ==========
 

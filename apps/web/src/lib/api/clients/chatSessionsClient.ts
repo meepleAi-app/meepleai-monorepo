@@ -8,9 +8,11 @@
 import {
   ChatSessionDtoSchema,
   ChatSessionListResponseSchema,
+  ChatSessionTierLimitSchema,
   type AddChatSessionMessageRequest,
   type ChatSessionDto,
   type ChatSessionSummaryDto,
+  type ChatSessionTierLimit,
   type CreateChatSessionRequest,
 } from '../schemas/chat-sessions.schemas';
 
@@ -52,6 +54,12 @@ export interface ChatSessionsClient {
    * Add a message to a chat session
    */
   addMessage(sessionId: string, request: Omit<AddChatSessionMessageRequest, 'sessionId'>): Promise<ChatSessionDto>;
+
+  /**
+   * Get the user's chat session tier limit and current usage
+   * Issue #4913
+   */
+  getLimit(userId: string): Promise<ChatSessionTierLimit | null>;
 
   /**
    * Delete a chat session
@@ -115,6 +123,13 @@ export function createChatSessionsClient({
         `/api/v1/chat-sessions/${encodeURIComponent(sessionId)}/messages`,
         request,
         ChatSessionDtoSchema
+      );
+    },
+
+    async getLimit(userId: string): Promise<ChatSessionTierLimit | null> {
+      return httpClient.get(
+        `/api/v1/users/${encodeURIComponent(userId)}/chat-sessions/limit`,
+        ChatSessionTierLimitSchema
       );
     },
 

@@ -21,7 +21,7 @@ export interface VectorCollectionDto {
   name: string;
   vectorCount: number;
   dimensions: number;
-  sizeBytes: number;
+  storage: string;
   status: VectorCollectionStatus;
 }
 
@@ -30,14 +30,6 @@ interface VectorCollectionCardProps {
   onOptimize?: (name: string) => void;
   onReindex?: (name: string) => void;
   onDelete?: (name: string) => void;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 const healthLabels: Record<string, string> = {
@@ -55,7 +47,7 @@ export function VectorCollectionCard({
   const metadata: MeepleCardMetadata[] = [
     { icon: Database, label: `${collection.vectorCount.toLocaleString()} vectors` },
     { icon: Layers, label: `${collection.dimensions}D` },
-    { icon: HardDrive, label: formatBytes(collection.sizeBytes) },
+    { icon: HardDrive, label: collection.storage },
   ];
 
   const quickActions = [

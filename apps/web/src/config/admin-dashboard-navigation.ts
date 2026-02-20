@@ -204,6 +204,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Strategy Config',
         icon: Settings2Icon,
       },
+      {
+        href: '/admin/agents/chat-limits',
+        label: 'Chat Limits',
+        icon: SettingsIcon,
+      },
     ],
   },
   {

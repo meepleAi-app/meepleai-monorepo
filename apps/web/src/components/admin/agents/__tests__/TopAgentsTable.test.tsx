@@ -1,19 +1,28 @@
 /**
  * TopAgentsTable Tests
  * Issue #3382: Agent Metrics Dashboard
+ * Issue #4862: Updated for EntityTableView migration
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { TopAgentsTable } from '../TopAgentsTable';
+
+const mockEntityTableView = vi.fn(() => null);
+vi.mock('@/components/ui/data-display/entity-list-view', () => ({
+  EntityTableView: (props: Record<string, unknown>) => {
+    mockEntityTableView(props);
+    return <div data-testid={props['data-testid'] as string}>EntityTableView</div>;
+  },
+}));
 
 const mockAgents = [
   {
     typologyId: 'agent-1',
     typologyName: 'Rules Expert',
     invocations: 5000,
-    cost: 25.50,
+    cost: 25.5,
     avgConfidence: 0.92,
     avgLatencyMs: 750,
   },
@@ -29,88 +38,129 @@ const mockAgents = [
     typologyId: 'agent-3',
     typologyName: 'FAQ Assistant',
     invocations: 2000,
-    cost: 8.25,
-    avgConfidence: 0.65,
-    avgLatencyMs: 450,
+    cost: 0.005,
+    avgConfidence: 0.45,
+    avgLatencyMs: 1500,
   },
 ];
 
 describe('TopAgentsTable', () => {
-  it('renders agent names', () => {
-    render(<TopAgentsTable agents={mockAgents} />);
-
-    expect(screen.getByText('Rules Expert')).toBeInTheDocument();
-    expect(screen.getByText('Strategy Advisor')).toBeInTheDocument();
-    expect(screen.getByText('FAQ Assistant')).toBeInTheDocument();
+  beforeEach(() => {
+    mockEntityTableView.mockClear();
   });
 
-  it('renders invocation counts', () => {
+  it('renders with entity="agent"', () => {
     render(<TopAgentsTable agents={mockAgents} />);
 
-    // toLocaleString() formatting varies by environment
-    expect(screen.getByText(/5[,.]?000/)).toBeInTheDocument();
-    expect(screen.getByText(/3[,.]?500/)).toBeInTheDocument();
-    expect(screen.getByText(/2[,.]?000/)).toBeInTheDocument();
+    expect(mockEntityTableView).toHaveBeenCalledWith(
+      expect.objectContaining({ entity: 'agent' })
+    );
   });
 
-  it('renders cost values', () => {
+  it('passes agents as displayItems and items', () => {
     render(<TopAgentsTable agents={mockAgents} />);
 
-    expect(screen.getByText('$25.50')).toBeInTheDocument();
-    expect(screen.getByText('$18.75')).toBeInTheDocument();
-    expect(screen.getByText('$8.25')).toBeInTheDocument();
+    expect(mockEntityTableView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displayItems: mockAgents,
+        items: mockAgents,
+      })
+    );
   });
 
-  it('renders confidence badges', () => {
+  it('provides 5 tableColumns with correct IDs', () => {
     render(<TopAgentsTable agents={mockAgents} />);
 
-    expect(screen.getByText('92%')).toBeInTheDocument();
-    expect(screen.getByText('85%')).toBeInTheDocument();
-    expect(screen.getByText('65%')).toBeInTheDocument();
+    const call = mockEntityTableView.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const columns = call?.tableColumns as Array<{ id: string; header: string }>;
+
+    expect(columns).toHaveLength(5);
+    expect(columns.map((c) => c.header)).toEqual([
+      'Agent',
+      'Invocations',
+      'Cost',
+      'Confidence',
+      'Latency',
+    ]);
   });
 
-  it('renders latency values', () => {
+  it('renderItem maps agent title and id', () => {
     render(<TopAgentsTable agents={mockAgents} />);
 
-    expect(screen.getByText('750ms')).toBeInTheDocument();
-    expect(screen.getByText('850ms')).toBeInTheDocument();
-    expect(screen.getByText('450ms')).toBeInTheDocument();
+    const call = mockEntityTableView.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const renderItem = call?.renderItem as (a: (typeof mockAgents)[0]) => Record<string, unknown>;
+    const result = renderItem(mockAgents[0]);
+
+    expect(result.title).toBe('Rules Expert');
+    expect(result.id).toBe('agent-1');
   });
 
-  it('renders table headers', () => {
+  it('renderItem formats invocations as locale string', () => {
     render(<TopAgentsTable agents={mockAgents} />);
 
-    expect(screen.getByText('Agent')).toBeInTheDocument();
-    expect(screen.getByText('Invocations')).toBeInTheDocument();
-    expect(screen.getByText('Cost')).toBeInTheDocument();
-    expect(screen.getByText('Confidence')).toBeInTheDocument();
-    expect(screen.getByText('Latency')).toBeInTheDocument();
+    const call = mockEntityTableView.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const renderItem = call?.renderItem as (a: (typeof mockAgents)[0]) => Record<string, unknown>;
+    const result = renderItem(mockAgents[0]);
+    const metadata = result.metadata as Array<{ value: string }>;
+
+    expect(metadata[0].value).toBe((5000).toLocaleString());
   });
 
-  it('renders ranking numbers', () => {
+  it('renderItem formats cost as dollar amount', () => {
     render(<TopAgentsTable agents={mockAgents} />);
 
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    const call = mockEntityTableView.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const renderItem = call?.renderItem as (a: (typeof mockAgents)[0]) => Record<string, unknown>;
+
+    const highCost = renderItem(mockAgents[0]);
+    expect((highCost.metadata as Array<{ value: string }>)[1].value).toBe('$25.50');
+
+    const lowCost = renderItem(mockAgents[2]);
+    expect((lowCost.metadata as Array<{ value: string }>)[1].value).toBe('$0.0050');
   });
 
-  it('renders empty state for no agents', () => {
+  it('renderItem formats confidence as percentage', () => {
+    render(<TopAgentsTable agents={mockAgents} />);
+
+    const call = mockEntityTableView.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const renderItem = call?.renderItem as (a: (typeof mockAgents)[0]) => Record<string, unknown>;
+
+    const result = renderItem(mockAgents[0]);
+    expect((result.metadata as Array<{ value: string }>)[2].value).toBe('92%');
+  });
+
+  it('renderItem formats latency as ms or seconds', () => {
+    render(<TopAgentsTable agents={mockAgents} />);
+
+    const call = mockEntityTableView.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const renderItem = call?.renderItem as (a: (typeof mockAgents)[0]) => Record<string, unknown>;
+
+    const fastAgent = renderItem(mockAgents[0]);
+    expect((fastAgent.metadata as Array<{ value: string }>)[3].value).toBe('750ms');
+
+    const slowAgent = renderItem(mockAgents[2]);
+    expect((slowAgent.metadata as Array<{ value: string }>)[3].value).toBe('1.5s');
+  });
+
+  it('passes empty message', () => {
+    render(<TopAgentsTable agents={mockAgents} />);
+
+    expect(mockEntityTableView).toHaveBeenCalledWith(
+      expect.objectContaining({ emptyMessage: 'No agents found' })
+    );
+  });
+
+  it('sets correct data-testid', () => {
+    render(<TopAgentsTable agents={mockAgents} />);
+
+    expect(screen.getByTestId('top-agents-table')).toBeInTheDocument();
+  });
+
+  it('handles empty agents array', () => {
     render(<TopAgentsTable agents={[]} />);
 
-    expect(screen.getByText('No agents found')).toBeInTheDocument();
-  });
-
-  it('formats latency over 1 second correctly', () => {
-    const agentWithLongLatency = [
-      {
-        ...mockAgents[0],
-        avgLatencyMs: 1500,
-      },
-    ];
-
-    render(<TopAgentsTable agents={agentWithLongLatency} />);
-
-    expect(screen.getByText('1.5s')).toBeInTheDocument();
+    expect(mockEntityTableView).toHaveBeenCalledWith(
+      expect.objectContaining({ displayItems: [] })
+    );
   });
 });

@@ -1,41 +1,42 @@
 /* eslint-disable security/detect-object-injection -- Safe session data object access */
 /**
  * SPRINT-4: Active Sessions Dashboard (Issue #1134)
+ * Issue #4863: Migrated to EntityListView with grid/list/table views
  *
- * Displays all active game sessions with real-time status updates.
+ * Displays all active game sessions with MeepleCard entity="session"
+ * and EntityListView view mode switching.
+ *
  * Features:
- * - List of active sessions with game info
- * - Status indicators (InProgress, Paused)
- * - Action buttons: Pause/Resume, End Session
- * - Filter by game
+ * - EntityListView with grid/list/table toggle
+ * - MeepleCard entity="session" (indigo accents)
+ * - Status filter (All, InProgress, Paused, Setup)
+ * - Search by game name
+ * - Quick actions: Pause/Resume/End Session
+ * - Session quota bar (Issue #3075)
  * - Pagination (20 per page)
- * - Empty state handling
- * - Loading and error states
  * - WCAG 2.1 AA accessibility compliance
  */
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
-import { Dice6 } from 'lucide-react';
+import { Calendar, Clock, Dice6, Pause, Play, Square, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { ErrorDisplay } from '@/components/errors';
-import { LoadingButton } from '@/components/loading/LoadingButton';
 import { SessionQuotaBar } from '@/components/sessions/SessionQuotaBar';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/data-display/table';
+  EntityListView,
+  type TableColumnConfig,
+  type FilterConfig,
+  type SortOption,
+} from '@/components/ui/data-display/entity-list-view';
+import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Tooltip,
@@ -50,96 +51,149 @@ import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
 
-/**
- * Session status badge component
- */
-function SessionStatusBadge({ status }: { status: string }) {
-  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    InProgress: 'default',
-    Paused: 'secondary',
-    Setup: 'outline',
-  };
+// ============================================================================
+// Types
+// ============================================================================
 
-  return (
-    <Badge variant={variants[status] || 'outline'} aria-label={`Session status: ${status}`}>
-      {status}
-    </Badge>
-  );
+interface SessionWithGame extends GameSessionDto {
+  gameTitle: string;
+  gameImageUrl?: string;
 }
 
-/**
- * Session action buttons component
- */
-function SessionActions({
-  session,
-  onPause,
-  onResume,
-  onEnd,
-  isLoading,
-}: {
-  session: GameSessionDto;
-  onPause: (id: string) => void;
-  onResume: (id: string) => void;
-  onEnd: (id: string) => void;
-  isLoading: boolean;
-}) {
-  const canPause = session.status === 'InProgress';
-  const canResume = session.status === 'Paused';
-  const canEnd = session.status === 'InProgress' || session.status === 'Paused';
+// ============================================================================
+// Helpers
+// ============================================================================
 
-  return (
-    <div className="flex gap-2" role="group" aria-label="Session actions">
-      {canPause && (
-        <LoadingButton
-          size="sm"
-          variant="outline"
-          onClick={() => onPause(session.id)}
-          isLoading={isLoading}
-          loadingText="Pausing..."
-          aria-label={`Pause session for ${session.players?.[0]?.playerName || 'game'}`}
-        >
-          Pause
-        </LoadingButton>
-      )}
-      {canResume && (
-        <LoadingButton
-          size="sm"
-          variant="outline"
-          onClick={() => onResume(session.id)}
-          isLoading={isLoading}
-          loadingText="Resuming..."
-          aria-label={`Resume session for ${session.players?.[0]?.playerName || 'game'}`}
-        >
-          Resume
-        </LoadingButton>
-      )}
-      {canEnd && (
-        <LoadingButton
-          size="sm"
-          variant="destructive"
-          onClick={() => onEnd(session.id)}
-          isLoading={isLoading}
-          loadingText="Ending..."
-          aria-label={`End session for ${session.players?.[0]?.playerName || 'game'}`}
-        >
-          End Session
-        </LoadingButton>
-      )}
-    </div>
-  );
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins}m`;
 }
 
-/**
- * Active Sessions Dashboard Page
- */
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+// ============================================================================
+// Table columns for table view
+// ============================================================================
+
+const tableColumns: TableColumnConfig[] = [
+  {
+    id: 'title',
+    header: 'Game',
+    accessorKey: 'title',
+  },
+  {
+    id: 'status',
+    header: 'Status',
+    accessorKey: 'badge',
+    cell: (value) => {
+      const status = String(value ?? '');
+      const variants: Record<string, 'default' | 'secondary' | 'outline'> = {
+        InProgress: 'default',
+        Paused: 'secondary',
+        Setup: 'outline',
+      };
+      return (
+        <Badge variant={variants[status] || 'outline'}>
+          {status}
+        </Badge>
+      );
+    },
+  },
+  {
+    id: 'players',
+    header: 'Players',
+    accessorKey: 'meta_0',
+    cell: (value) => (
+      <span className="text-sm">{String(value ?? '—')}</span>
+    ),
+  },
+  {
+    id: 'started',
+    header: 'Started',
+    accessorKey: 'meta_1',
+    cell: (value) => (
+      <span className="text-sm text-muted-foreground">{String(value ?? '—')}</span>
+    ),
+  },
+  {
+    id: 'duration',
+    header: 'Duration',
+    accessorKey: 'meta_2',
+    cell: (value) => (
+      <span className="font-mono text-sm">{String(value ?? '—')}</span>
+    ),
+  },
+];
+
+// ============================================================================
+// Sort options
+// ============================================================================
+
+const sortOptions: SortOption<SessionWithGame>[] = [
+  {
+    value: 'newest',
+    label: 'Newest',
+    icon: Calendar,
+    compareFn: (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+  },
+  {
+    value: 'oldest',
+    label: 'Oldest',
+    icon: Calendar,
+    compareFn: (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+  },
+  {
+    value: 'duration',
+    label: 'Duration',
+    icon: Clock,
+    compareFn: (a, b) => b.durationMinutes - a.durationMinutes,
+  },
+  {
+    value: 'players',
+    label: 'Players',
+    icon: Users,
+    compareFn: (a, b) => b.playerCount - a.playerCount,
+  },
+];
+
+// ============================================================================
+// Filter config
+// ============================================================================
+
+const statusFilter: FilterConfig<SessionWithGame> = {
+  type: 'select' as const,
+  id: 'status',
+  label: 'Status',
+  field: 'status',
+  options: [
+    { label: 'All', value: '' },
+    { label: 'In Progress', value: 'InProgress' },
+    { label: 'Paused', value: 'Paused' },
+    { label: 'Setup', value: 'Setup' },
+  ],
+};
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
 export default function ActiveSessionsPage() {
   const router = useRouter();
   const [sessions, setSessions] = useState<GameSessionDto[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedGame, setSelectedGame] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 20;
@@ -152,7 +206,6 @@ export default function ActiveSessionsPage() {
 
   /**
    * Show quota warning toast when approaching limit (Issue #3075 - AC #3)
-   * Trigger at 80%+ quota usage (warning or critical level)
    */
   useEffect(() => {
     if (!quota || quotaLoading) return;
@@ -170,7 +223,6 @@ export default function ActiveSessionsPage() {
       quotaToastShownRef.current = true;
     }
 
-    // Reset toast shown flag when quota improves
     if (quota.warningLevel === 'none' && quotaToastShownRef.current) {
       quotaToastShownRef.current = false;
     }
@@ -179,7 +231,7 @@ export default function ActiveSessionsPage() {
   /**
    * Fetch active sessions from API
    */
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -194,12 +246,12 @@ export default function ActiveSessionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage]);
 
   /**
-   * Fetch games for filter dropdown
+   * Fetch games for enrichment
    */
-  const fetchGames = async () => {
+  const fetchGames = useCallback(async () => {
     try {
       const response = await api.games.getAll();
       setGames(response.games || []);
@@ -210,105 +262,121 @@ export default function ActiveSessionsPage() {
         createErrorContext('ActiveSessionsPage', 'fetchGames', { operation: 'fetch_games' })
       );
     }
-  };
+  }, []);
 
-  /**
-   * Initialize component - intentionally only re-runs on currentPage change
-   * Note: fetchSessions and fetchGames are recreated on each render but are
-   * excluded from dependencies to prevent refetching on unrelated state changes.
-   * Functions access stable state via closure and don't require memoization.
-   */
-  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchSessions();
     fetchGames();
-  }, [currentPage]);
-  /* eslint-enable react-hooks/exhaustive-deps */
+  }, [fetchSessions, fetchGames]);
 
-  /**
-   * Handle pause session action
-   */
+  // Enrich sessions with game titles
+  const enrichedSessions = useMemo<SessionWithGame[]>(() => {
+    return sessions.map(s => {
+      const game = games.find(g => g.id === s.gameId);
+      return {
+        ...s,
+        gameTitle: game?.title || 'Unknown Game',
+        gameImageUrl: game?.imageUrl || undefined,
+      };
+    });
+  }, [sessions, games]);
+
+  // Session actions
   const handlePause = async (sessionId: string) => {
     try {
-      setActionLoading(true);
+      setActionLoading(sessionId);
       await api.sessions.pause(sessionId);
-      await fetchSessions(); // Refresh list
+      await fetchSessions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to pause session');
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
-  /**
-   * Handle resume session action
-   */
   const handleResume = async (sessionId: string) => {
     try {
-      setActionLoading(true);
+      setActionLoading(sessionId);
       await api.sessions.resume(sessionId);
-      await fetchSessions(); // Refresh list
+      await fetchSessions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resume session');
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
-  /**
-   * Handle end session action
-   */
   const handleEnd = async (sessionId: string) => {
     if (!confirm('Are you sure you want to end this session? This action cannot be undone.')) {
       return;
     }
 
     try {
-      setActionLoading(true);
+      setActionLoading(sessionId);
       await api.sessions.end(sessionId);
-      await fetchSessions(); // Refresh list
+      await fetchSessions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to end session');
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
   /**
-   * Navigate to session details
+   * renderItem: transforms SessionWithGame to MeepleCard props
    */
-  const viewSession = (sessionId: string) => {
-    router.push(`/sessions/${sessionId}`);
-  };
+  const renderItem = useCallback(
+    (session: SessionWithGame) => {
+      const playerLabel = `${session.playerCount} player${session.playerCount !== 1 ? 's' : ''}`;
 
-  /**
-   * Filter sessions by selected game
-   */
-  const filteredSessions =
-    selectedGame === 'all' ? sessions : sessions.filter(s => s.gameId === selectedGame);
+      const metadata: MeepleCardMetadata[] = [
+        { icon: Users, label: playerLabel },
+        { icon: Calendar, label: formatDate(session.startedAt) },
+        { icon: Clock, label: formatDuration(session.durationMinutes) },
+      ];
 
-  /**
-   * Format duration for display
-   */
-  const formatDuration = (minutes: number): string => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
+      const quickActions: Array<{
+        icon: typeof Pause;
+        label: string;
+        onClick: () => void;
+        destructive?: boolean;
+      }> = [];
 
-  /**
-   * Format date for display
-   */
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  };
+      if (session.status === 'InProgress') {
+        quickActions.push({
+          icon: Pause,
+          label: 'Pause',
+          onClick: () => handlePause(session.id),
+        });
+      }
+      if (session.status === 'Paused') {
+        quickActions.push({
+          icon: Play,
+          label: 'Resume',
+          onClick: () => handleResume(session.id),
+        });
+      }
+      if (session.status === 'InProgress' || session.status === 'Paused') {
+        quickActions.push({
+          icon: Square,
+          label: 'End Session',
+          onClick: () => handleEnd(session.id),
+          destructive: true,
+        });
+      }
+
+      return {
+        id: session.id,
+        title: session.gameTitle,
+        subtitle: `${playerLabel} · ${formatDuration(session.durationMinutes)}`,
+        imageUrl: session.gameImageUrl,
+        badge: session.status,
+        metadata,
+        quickActions: quickActions.length > 0 ? quickActions : undefined,
+      };
+    },
+    [actionLoading]
+  );
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -342,27 +410,6 @@ export default function ActiveSessionsPage() {
             </div>
           )}
 
-          {/* Filters */}
-          <div className="mb-6 flex gap-4 items-center">
-            <label htmlFor="game-filter" className="text-sm font-medium">
-              Filter by Game:
-            </label>
-            <select
-              id="game-filter"
-              value={selectedGame}
-              onChange={e => setSelectedGame(e.target.value)}
-              className="border rounded px-3 py-2"
-              aria-label="Filter sessions by game"
-            >
-              <option value="all">All Games</option>
-              {games.map(game => (
-                <option key={game.id} value={game.id}>
-                  {game.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Error Display */}
           {error && (
             <ErrorDisplay
@@ -387,7 +434,7 @@ export default function ActiveSessionsPage() {
           )}
 
           {/* Empty State */}
-          {!loading && filteredSessions.length === 0 && (
+          {!loading && enrichedSessions.length === 0 && (
             <div className="text-center py-12" role="status">
               <p className="text-muted-foreground text-lg mb-4">No active sessions found</p>
               <TooltipProvider>
@@ -417,60 +464,27 @@ export default function ActiveSessionsPage() {
             </div>
           )}
 
-          {/* Sessions Table */}
-          {!loading && filteredSessions.length > 0 && (
+          {/* Sessions EntityListView */}
+          {!loading && enrichedSessions.length > 0 && (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Game</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Players</TableHead>
-                    <TableHead>Started</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSessions.map(session => (
-                    <TableRow
-                      key={session.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => viewSession(session.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          viewSession(session.id);
-                        }
-                      }}
-                      aria-label={`View session details for ${session.players?.[0]?.playerName || 'game'}`}
-                    >
-                      <TableCell className="font-medium">
-                        {games.find(g => g.id === session.gameId)?.title || 'Unknown Game'}
-                      </TableCell>
-                      <TableCell>
-                        <SessionStatusBadge status={session.status} />
-                      </TableCell>
-                      <TableCell>
-                        {session.playerCount} player{session.playerCount !== 1 ? 's' : ''}
-                      </TableCell>
-                      <TableCell>{formatDate(session.startedAt)}</TableCell>
-                      <TableCell>{formatDuration(session.durationMinutes)}</TableCell>
-                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                        <SessionActions
-                          session={session}
-                          onPause={handlePause}
-                          onResume={handleResume}
-                          onEnd={handleEnd}
-                          isLoading={actionLoading}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <EntityListView
+                items={enrichedSessions}
+                entity="session"
+                persistenceKey="active-sessions"
+                renderItem={renderItem}
+                availableModes={['grid', 'list', 'table']}
+                defaultViewMode="table"
+                tableColumns={tableColumns}
+                searchable
+                searchPlaceholder="Search by game name..."
+                searchFields={['gameTitle']}
+                sortOptions={sortOptions}
+                defaultSort="newest"
+                filters={[statusFilter]}
+                onItemClick={(session) => router.push(`/sessions/${session.id}`)}
+                emptyMessage="No sessions match your filters"
+                data-testid="sessions-list-view"
+              />
 
               {/* Pagination */}
               {totalPages > 1 && (

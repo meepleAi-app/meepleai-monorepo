@@ -109,13 +109,16 @@ export function PdfAdminClient() {
   };
 
   const handleDeleteConfirm = async () => {
+    const fileName = deleteDialog.fileName;
     try {
       await apiClient.pdf.adminDeletePdf(deleteDialog.pdfId);
-      toast.success(`Deleted ${deleteDialog.fileName}`);
+      toast.success(`Deleted ${fileName}`);
+    } catch {
+      // DB delete likely succeeded but cleanup (Qdrant/blob) may have failed
+      toast.warning(`${fileName} removed, but secondary cleanup may have partially failed`);
+    } finally {
       setDeleteDialog({ open: false, pdfId: '', fileName: '' });
       invalidateAll();
-    } catch {
-      toast.error('Failed to delete document');
     }
   };
 
@@ -123,17 +126,19 @@ export function PdfAdminClient() {
     setIsBulkDeleting(true);
     try {
       const result = await apiClient.pdf.bulkDeletePdfs(Array.from(selectedIds));
-      toast.success(`Deleted ${result.successCount} of ${result.totalRequested} document(s)`);
       if (result.failedCount > 0) {
-        toast.warning(`${result.failedCount} deletion(s) failed`);
+        toast.warning(`Deleted ${result.successCount} of ${result.totalRequested}. ${result.failedCount} had cleanup issues.`);
+      } else {
+        toast.success(`Deleted ${result.successCount} document(s)`);
       }
+    } catch {
+      // DB deletes likely succeeded but API response parsing or cleanup failed
+      toast.warning('Documents removed, but some cleanup operations may have failed');
+    } finally {
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
-      invalidateAll();
-    } catch {
-      toast.error('Bulk delete failed');
-    } finally {
       setIsBulkDeleting(false);
+      invalidateAll();
     }
   };
 

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs.AgentDefinition;
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RecordGameEvent;
@@ -416,6 +417,33 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
+
+        // Admin PDF Upload for Shared Game (Issue #4922)
+        group.MapPost("/admin/shared-games/{id:guid}/documents/upload", HandleUploadSharedGamePdf)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UploadSharedGamePdf")
+            .WithSummary("Upload PDF document for shared game (Admin/Editor)")
+            .WithDescription("Uploads a PDF document directly for a shared game, bypassing user library. Starts background processing for vector indexing.")
+            .DisableAntiforgery()
+            .Produces<UploadSharedGamePdfResult>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // GET linked agent for shared game (Issue #4924)
+        group.MapGet("/admin/shared-games/{id:guid}/linked-agent", HandleGetLinkedAgent)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetLinkedAgentForSharedGame")
+            .WithSummary("Get linked AI agent for shared game (Admin/Editor)")
+            .Produces<AgentDefinitionDto>()
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // GET KB cards for shared game (Issue #4925)
+        group.MapGet("/admin/shared-games/{id:guid}/kb-cards", HandleGetSharedGameKbCards)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetSharedGameKbCards")
+            .WithSummary("Get vector KB cards for shared game (Admin/Editor)")
+            .Produces<IReadOnlyList<KbCardDto>>();
 
         // Game State Template Management (Issue #2400)
         group.MapGet("/admin/shared-games/{id:guid}/state-template", HandleGetActiveStateTemplate)
@@ -1525,6 +1553,85 @@ internal static class SharedGameCatalogEndpoints
             return Results.Conflict(new { error = ex.Message });
         }
     }
+
+    // ========================================
+    // ADMIN PDF UPLOAD HANDLER (Issue #4922)
+    // ========================================
+
+    private static async Task<IResult> HandleUploadSharedGamePdf(
+        Guid id,
+        [FromForm] IFormFile file,
+        [FromForm] string documentType,
+        [FromForm] string version,
+        [FromForm] bool setAsActive,
+        [FromForm] string? tags,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        if (!Enum.TryParse<SharedGameDocumentType>(documentType, ignoreCase: true, out var docType))
+            return Results.BadRequest(new { error = $"Invalid documentType: '{documentType}'. Valid values: Rulebook, Errata, Homerule" });
+
+        var tagList = string.IsNullOrWhiteSpace(tags)
+            ? null
+            : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+        var command = new UploadSharedGamePdfCommand(
+            id, file, docType, version ?? "1.0", setAsActive, tagList, session!.User!.Id);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/admin/shared-games/{id}/documents/{result.SharedGameDocumentId}", result);
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // ========================================
+    // GET LINKED AGENT HANDLER (Issue #4924)
+    // ========================================
+
+    private static async Task<IResult> HandleGetLinkedAgent(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var result = await mediator.Send(new GetLinkedAgentQuery(id), ct).ConfigureAwait(false);
+        return result is null ? Results.NoContent() : Results.Ok(result);
+    }
+
+    // ========================================
+    // GET KB CARDS HANDLER (Issue #4925)
+    // ========================================
+
+    private static async Task<IResult> HandleGetSharedGameKbCards(
+        Guid id,
+        [FromQuery] string? status,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var result = await mediator.Send(new GetSharedGameKbCardsQuery(id, status), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
 #pragma warning restore S1172
 
     // ========================================

@@ -16,6 +16,7 @@ public sealed record AgentDefinitionDto
     public required Dictionary<string, object> StrategyParameters { get; init; }
     public required List<PromptTemplateDto> Prompts { get; init; }
     public required List<ToolConfigDto> Tools { get; init; }
+    public required List<Guid> KbCardIds { get; init; }
     public required bool IsActive { get; init; }
     public required DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }

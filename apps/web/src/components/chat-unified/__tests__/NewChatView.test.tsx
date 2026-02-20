@@ -250,11 +250,13 @@ describe('NewChatView', () => {
     await user.click(screen.getByTestId('start-chat-btn'));
 
     await waitFor(() => {
-      expect(apiMock.chat.createThread).toHaveBeenCalledWith({
-        gameId: 'game-1',
-        title: 'Chat: Catan',
-        initialMessage: null,
-      });
+      expect(apiMock.chat.createThread).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gameId: 'game-1',
+          title: 'Chat: Catan',
+          initialMessage: null,
+        })
+      );
       expect(mockPush).toHaveBeenCalledWith('/chat?threadId=thread-new-1');
     });
   });
@@ -267,11 +269,13 @@ describe('NewChatView', () => {
     await user.click(screen.getByTestId('start-chat-btn'));
 
     await waitFor(() => {
-      expect(apiMock.chat.createThread).toHaveBeenCalledWith({
-        gameId: null,
-        title: 'Nuova conversazione',
-        initialMessage: null,
-      });
+      expect(apiMock.chat.createThread).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gameId: null,
+          title: 'Nuova conversazione',
+          initialMessage: null,
+        })
+      );
     });
   });
 

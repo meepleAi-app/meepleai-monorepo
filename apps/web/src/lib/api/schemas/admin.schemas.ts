@@ -505,6 +505,31 @@ export const InfrastructureDetailsSchema = z.object({
 
 export type InfrastructureDetails = z.infer<typeof InfrastructureDetailsSchema>;
 
+// ========== Metrics Time Series (Issue #901) ==========
+
+/**
+ * Time-series data point from Prometheus range query.
+ * Issue #901: Replaces mock chart data with real metrics.
+ */
+export const MetricsTimeSeriesDataPointSchema = z.object({
+  timestamp: z.string().datetime(),
+  value: z.number(),
+});
+
+export type MetricsTimeSeriesDataPoint = z.infer<typeof MetricsTimeSeriesDataPointSchema>;
+
+/**
+ * Response from /api/v1/admin/infrastructure/metrics/timeseries
+ * Contains CPU, memory, and request rate time-series data.
+ */
+export const MetricsTimeSeriesResponseSchema = z.object({
+  cpu: z.array(MetricsTimeSeriesDataPointSchema),
+  memory: z.array(MetricsTimeSeriesDataPointSchema),
+  requests: z.array(MetricsTimeSeriesDataPointSchema),
+});
+
+export type MetricsTimeSeriesResponse = z.infer<typeof MetricsTimeSeriesResponseSchema>;
+
 // ========== API Key Management (Issue #908) ==========
 
 // Re-export ApiKeyDto from auth.schemas to avoid duplication

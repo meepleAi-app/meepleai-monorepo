@@ -247,9 +247,10 @@ describe('ChatThreadView', () => {
   // Empty & Error States
   // --------------------------------------------------------------------------
 
-  it('shows empty state for thread with no messages', async () => {
+  it('shows empty state for thread with no messages and no agent', async () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
+      agentId: null,
       messages: [],
     });
 
@@ -311,7 +312,8 @@ describe('ChatThreadView', () => {
     await user.click(screen.getByTestId('send-btn'));
 
     await waitFor(() => {
-      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'SSE message', 'thread-1');
+      // 4th arg is proxyGameContext (undefined when agentTypology not set)
+      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'SSE message', 'thread-1', undefined);
     });
 
     expect(apiMock.chat.addMessage).not.toHaveBeenCalled();
@@ -406,6 +408,127 @@ describe('ChatThreadView', () => {
     await waitFor(() => {
       expect(screen.getByTestId('message-input')).toBeDisabled();
       expect(screen.getByTestId('send-btn')).toBeDisabled();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Welcome Message (Issue #4780)
+  // --------------------------------------------------------------------------
+
+  it('shows welcome message for new thread with agent (Tutor)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Tutor',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ho studiato il regolamento di Catan/)).toBeInTheDocument();
+    });
+    // Should show capabilities
+    expect(screen.getByText(/Cosa posso fare/)).toBeInTheDocument();
+  });
+
+  it('shows welcome message for new thread with agent (Arbitro)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Arbitro',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sono il tuo arbitro per Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows welcome message for new thread with agent (Stratega)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Stratega',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/analizzare le tue mosse a Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows welcome message for new thread with agent (Narratore)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Narratore',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Benvenuto nel mondo di Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows default welcome message for unknown typology', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'unknown',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sono il tuo assistente per Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('does not show welcome message when thread has existing messages', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      agentTypology: 'Tutor',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('Hello!')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Ho studiato il regolamento/)).not.toBeInTheDocument();
+  });
+
+  // --------------------------------------------------------------------------
+  // Proxy Game Context (Issue #4780)
+  // --------------------------------------------------------------------------
+
+  it('passes proxy game context when agentTypology is set', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      agentTypology: 'Tutor',
+    });
+
+    const user = userEvent.setup();
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-input')).toBeInTheDocument();
+    });
+
+    const input = screen.getByTestId('message-input');
+    await user.type(input, 'Help with rules');
+    await user.click(screen.getByTestId('send-btn'));
+
+    await waitFor(() => {
+      expect(mockSendViaSSE).toHaveBeenCalledWith(
+        'agent-1',
+        'Help with rules',
+        'thread-1',
+        { gameName: 'Catan', agentTypology: 'Tutor' }
+      );
     });
   });
 });

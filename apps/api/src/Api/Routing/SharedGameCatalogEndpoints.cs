@@ -2536,7 +2536,7 @@ internal static class SharedGameCatalogEndpoints
         group.MapPost("/admin/shared-games/wizard/create", HandleWizardCreateGame)
             .RequireAuthorization("AdminOrEditorPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
-            .WithName("WizardCreateGame")
+            .WithName("SharedGameWizardCreateGame")
             .WithSummary("Create game from PDF wizard (Admin/Editor)")
             .WithDescription("Creates SharedGame from extracted metadata with optional BGG enrichment. Admin users publish immediately, Editor users create draft requiring approval.")
             .Produces<CreateGameFromPdfResult>(StatusCodes.Status201Created)

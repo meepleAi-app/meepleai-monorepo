@@ -21,6 +21,7 @@ import {
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
   GameInLibraryStatusSchema,
+  BatchGameStatusResponseSchema,
   LibraryQuotaResponseSchema,
   LibraryShareLinkSchema,
   SharedLibrarySchema,
@@ -30,6 +31,7 @@ import {
   type UserLibraryStats,
   type UserLibraryEntry,
   type GameInLibraryStatus,
+  type BatchGameStatusResponse,
   type LibraryQuotaResponse,
   type GetUserLibraryParams,
   type AddGameToLibraryRequest,
@@ -75,6 +77,8 @@ export interface LibraryClient {
   removeGame(gameId: string): Promise<void>;
   updateEntry(gameId: string, request: UpdateLibraryEntryRequest): Promise<UserLibraryEntry>;
   getGameStatus(gameId: string): Promise<GameInLibraryStatus>;
+  // Batch Game Status (Issue #4581)
+  getBatchGameStatus(gameIds: string[]): Promise<BatchGameStatusResponse>;
   // Game Detail (Issue #3513)
   getGameDetail(gameId: string): Promise<GameDetailDto>;
   // Game State Management (Issue #2868)
@@ -254,6 +258,24 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         GameInLibraryStatusSchema
       );
       return data ?? { inLibrary: false, isFavorite: false };
+    },
+
+    /**
+     * Batch check library status for multiple games (Issue #4581)
+     * Eliminates N+1 problem when rendering game grids
+     * @param gameIds - Array of game UUIDs to check (max 100)
+     * @returns Dictionary of game statuses indexed by gameId
+     */
+    async getBatchGameStatus(gameIds: string[]): Promise<BatchGameStatusResponse> {
+      if (gameIds.length === 0) {
+        return { results: {}, totalChecked: 0 };
+      }
+      const idsParam = gameIds.join(',');
+      const data = await httpClient.get<BatchGameStatusResponse>(
+        `/api/v1/library/games/batch-status?gameIds=${idsParam}`,
+        BatchGameStatusResponseSchema
+      );
+      return data ?? { results: {}, totalChecked: 0 };
     },
 
     /**

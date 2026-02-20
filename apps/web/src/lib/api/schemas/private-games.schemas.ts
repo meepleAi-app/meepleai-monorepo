@@ -8,7 +8,7 @@
 import { z } from 'zod';
 
 // Private game source enum
-export const PrivateGameSourceSchema = z.enum(['Manual', 'Bgg']);
+export const PrivateGameSourceSchema = z.enum(['Manual', 'BoardGameGeek']);
 export type PrivateGameSource = z.infer<typeof PrivateGameSourceSchema>;
 
 // Private game DTO from backend

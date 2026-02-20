@@ -24,7 +24,7 @@ internal sealed class PurgeStaleDocumentsCommandHandler
     public async Task<PurgeStaleResult> Handle(
         PurgeStaleDocumentsCommand command, CancellationToken cancellationToken)
     {
-        var threshold = _timeProvider.GetUtcNow().DateTime.AddHours(-24);
+        var threshold = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-24);
 
         // Active states (non-terminal, excluding Pending)
         var activeStates = new[] { "Uploading", "Extracting", "Chunking", "Embedding", "Indexing" };
@@ -43,7 +43,7 @@ internal sealed class PurgeStaleDocumentsCommandHandler
             doc.ProcessingError = "Processing timed out (stale) - purged by admin";
             doc.ErrorCategory = "Service";
             doc.FailedAtState = originalState;
-            doc.ProcessedAt = _timeProvider.GetUtcNow().DateTime;
+            doc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         if (staleDocs.Count > 0)

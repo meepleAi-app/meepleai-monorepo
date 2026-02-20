@@ -63,16 +63,25 @@ internal class GetAuditLogsQueryHandler : IQueryHandler<GetAuditLogsQuery, Audit
             .OrderByDescending(a => a.CreatedAt)
             .Skip(request.Offset)
             .Take(request.Limit)
-            .Select(a => new AuditLogDto(
-                a.Id,
-                a.UserId,
-                a.Action,
-                a.Resource,
-                a.ResourceId,
-                a.Result,
-                a.Details,
-                a.IpAddress,
-                a.CreatedAt))
+            .GroupJoin(
+                _db.Users,
+                audit => audit.UserId,
+                user => user.Id,
+                (audit, users) => new { audit, users })
+            .SelectMany(
+                g => g.users.DefaultIfEmpty(),
+                (g, user) => new AuditLogDto(
+                    g.audit.Id,
+                    g.audit.UserId,
+                    g.audit.Action,
+                    g.audit.Resource,
+                    g.audit.ResourceId,
+                    g.audit.Result,
+                    g.audit.Details,
+                    g.audit.IpAddress,
+                    g.audit.CreatedAt,
+                    user != null ? user.DisplayName : null,
+                    user != null ? user.Email : null))
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return new AuditLogListResult(entries, totalCount, request.Limit, request.Offset);

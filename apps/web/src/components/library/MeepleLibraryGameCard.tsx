@@ -33,7 +33,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import {
   MessageCircle,
@@ -47,6 +47,7 @@ import {
   Trophy,
 } from 'lucide-react';
 
+import { AgentCreationSheet } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
@@ -148,6 +149,9 @@ export function MeepleLibraryGameCard({
   className,
 }: MeepleLibraryGameCardProps) {
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  // Issue #4777: Agent creation sheet state
+  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
+  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
@@ -206,9 +210,9 @@ export function MeepleLibraryGameCard({
       icon: MessageCircle,
       label: 'Chat con Agent',
       onClick: () => {
-        // Navigate handled by href in useEntityActions
         window.location.href = `/chat/new?game=${game.gameId}`;
       },
+      hidden: !game.hasPdfDocuments,
     },
     {
       icon: Settings,
@@ -293,35 +297,49 @@ export function MeepleLibraryGameCard({
   // ============================================================================
 
   return (
-    <MeepleCard
-      entity="game"
-      variant={variant}
-      title={game.gameTitle}
-      subtitle={subtitle}
-      imageUrl={game.gameImageUrl || undefined}
-      rating={undefined} // UserLibraryEntry doesn't have gameRating field
-      ratingMax={10}
-      metadata={metadata}
-      badge={badge}
-      status={mappedStatus}
-      onClick={selectionMode && onSelect ? undefined : () => window.location.href = `/library/games/${game.gameId}`}
-      flippable={flippable && !!game.notes}
-      flipData={flipData}
-      flipTrigger="button"
-      className={className}
-      // Epic #4688: Navigation footer
-      navigateTo={getNavigationLinks('game', { id: game.gameId })}
-      data-testid={`library-game-card-${game.gameId}`}
-      // Issue #4045: Quick actions + Info button
-      entityQuickActions={entityQuickActions}
-      showInfoButton
-      infoHref={`/library/games/${game.gameId}`}
-      infoTooltip="Vai al dettaglio"
-      // Bulk selection
-      selectable={selectionMode}
-      selected={isSelected}
-      onSelect={handleSelect}
-    />
+    <>
+      <MeepleCard
+        id={game.gameId}
+        entity="game"
+        variant={variant}
+        title={game.gameTitle}
+        subtitle={subtitle}
+        imageUrl={game.gameImageUrl || undefined}
+        rating={undefined} // UserLibraryEntry doesn't have gameRating field
+        ratingMax={10}
+        metadata={metadata}
+        badge={badge}
+        status={mappedStatus}
+        onClick={selectionMode && onSelect ? undefined : () => window.location.href = `/library/games/${game.gameId}`}
+        flippable={flippable && !!game.notes}
+        flipData={flipData}
+        flipTrigger="button"
+        className={className}
+        // Epic #4688: Navigation footer
+        navigateTo={getNavigationLinks('game', { id: game.gameId })}
+        // Issue #4777: Agent action footer
+        hasAgent={agentConfigured}
+        onCreateAgent={handleCreateAgent}
+        data-testid={`library-game-card-${game.gameId}`}
+        // Issue #4045: Quick actions + Info button
+        entityQuickActions={entityQuickActions}
+        showInfoButton
+        infoHref={`/library/games/${game.gameId}`}
+        infoTooltip="Vai al dettaglio"
+        // Bulk selection
+        selectable={selectionMode}
+        selected={isSelected}
+        onSelect={handleSelect}
+      />
+
+      {/* Issue #4777: Agent creation wizard */}
+      <AgentCreationSheet
+        isOpen={agentSheetOpen}
+        onClose={() => setAgentSheetOpen(false)}
+        initialGameId={game.gameId}
+        initialGameTitle={game.gameTitle}
+      />
+    </>
   );
 }
 

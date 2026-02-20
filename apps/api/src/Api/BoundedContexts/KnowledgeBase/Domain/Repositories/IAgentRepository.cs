@@ -57,5 +57,24 @@ internal interface IAgentRepository
     /// Checks if an agent with the given name exists.
     /// </summary>
     Task<bool> ExistsAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all agents for a specific game.
+    /// Issue #4682: Agent-Game association.
+    /// </summary>
+    Task<List<Agent>> GetByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all agents created by a specific user.
+    /// Issue #4682: User ownership.
+    /// </summary>
+    Task<List<Agent>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks if a user already has an agent with the given name.
+    /// Scoped per-user to prevent cross-user name collisions.
+    /// Issue #4683: User Agent CRUD.
+    /// </summary>
+    Task<bool> ExistsByNameForUserAsync(Guid userId, string name, CancellationToken cancellationToken = default);
 }
 

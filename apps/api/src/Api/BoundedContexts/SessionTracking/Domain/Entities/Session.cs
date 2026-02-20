@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 
@@ -181,11 +182,92 @@ public class Session
             UserId = userId,
             DisplayName = participantInfo.DisplayName,
             IsOwner = participantInfo.IsOwner,
+            Role = participantInfo.IsOwner ? ParticipantRole.Host : ParticipantRole.Player,
             JoinOrder = _participants.Count + 1,
             CreatedAt = DateTime.UtcNow
         };
 
         _participants.Add(participant);
+    }
+
+    /// <summary>
+    /// Removes a participant from the session (kick).
+    /// Only works on active/paused sessions. Cannot remove the host.
+    /// </summary>
+    /// <param name="participantId">Participant to remove.</param>
+    public void RemoveParticipant(Guid participantId)
+    {
+        if (Status == SessionStatus.Finalized)
+            throw new ConflictException("Cannot remove participants from finalized session.");
+
+        var participant = _participants.FirstOrDefault(p => p.Id == participantId)
+            ?? throw new NotFoundException($"Participant {participantId} not found in session.");
+
+        if (participant.IsOwner)
+            throw new ConflictException("Cannot remove the session host.");
+
+        _participants.Remove(participant);
+    }
+
+    /// <summary>
+    /// Marks a participant as ready for the next phase/turn.
+    /// </summary>
+    /// <param name="participantId">Participant to mark ready.</param>
+    public void MarkParticipantReady(Guid participantId)
+    {
+        if (Status != SessionStatus.Active)
+            throw new ConflictException($"Cannot mark ready in session with status {Status}.");
+
+        var participant = _participants.FirstOrDefault(p => p.Id == participantId)
+            ?? throw new NotFoundException($"Participant {participantId} not found in session.");
+
+        participant.IsReady = true;
+    }
+
+    /// <summary>
+    /// Resets all participants' ready state (e.g., after advancing a phase).
+    /// </summary>
+    public void ResetAllReady()
+    {
+        foreach (var participant in _participants)
+        {
+            participant.IsReady = false;
+        }
+    }
+
+    /// <summary>
+    /// Changes a participant's role. Only a Host can change roles.
+    /// Cannot demote the last Host.
+    /// </summary>
+    /// <param name="participantId">Participant whose role is changing.</param>
+    /// <param name="newRole">The new role to assign.</param>
+    /// <param name="requestedBy">User ID of the requester (must be Host).</param>
+    public void AssignParticipantRole(Guid participantId, ParticipantRole newRole, Guid requestedBy)
+    {
+        if (Status == SessionStatus.Finalized)
+            throw new ConflictException("Cannot change roles in a finalized session.");
+
+        var requester = _participants.FirstOrDefault(p => p.UserId == requestedBy)
+            ?? throw new NotFoundException($"Requester {requestedBy} is not a participant.");
+
+        if (requester.Role != ParticipantRole.Host)
+            throw new ForbiddenException("Only hosts can assign roles.");
+
+        var participant = _participants.FirstOrDefault(p => p.Id == participantId)
+            ?? throw new NotFoundException($"Participant {participantId} not found in session.");
+
+        // Cannot demote the last Host
+        if (participant.Role == ParticipantRole.Host && newRole != ParticipantRole.Host)
+        {
+            var hostCount = _participants.Count(p => p.Role == ParticipantRole.Host);
+            if (hostCount <= 1)
+                throw new ConflictException("Cannot demote the last host. Promote another participant first.");
+        }
+
+        participant.Role = newRole;
+        // Sync IsOwner flag with Host role
+        participant.IsOwner = newRole == ParticipantRole.Host;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -406,6 +488,17 @@ public class Participant
     /// Indicates if participant is the session owner.
     /// </summary>
     public bool IsOwner { get; set; }
+
+    /// <summary>
+    /// Participant role in the session (Host, Player, Spectator).
+    /// Determines which actions the participant can perform.
+    /// </summary>
+    public ParticipantRole Role { get; set; } = ParticipantRole.Player;
+
+    /// <summary>
+    /// Whether this participant is ready for the next phase/turn.
+    /// </summary>
+    public bool IsReady { get; set; }
 
     /// <summary>
     /// Order in which participant joined (1-based).

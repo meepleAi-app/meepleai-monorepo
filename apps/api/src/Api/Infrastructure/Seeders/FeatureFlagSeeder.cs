@@ -28,6 +28,8 @@ internal static class FeatureFlagSeeder
         new("game_recommendations", "AI-powered game recommendations", true, false, true, true),
         new("bulk_import", "Bulk game library import", true, false, false, true),
         new("api_access", "REST API access via API keys", true, false, false, true),
+        new("Features.PdfUpload", "Enable/disable PDF upload feature (standard + chunked)", true, true, true, true),
+        new("Features.StreamingResponses", "Enable/disable SSE streaming AI responses", true, true, true, true),
     ];
 
     /// <summary>

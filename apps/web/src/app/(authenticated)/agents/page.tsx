@@ -14,11 +14,13 @@
 
 import React, { useState, useMemo } from 'react';
 
-import { Search } from 'lucide-react';
+import { Bot, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { AgentCreationSheet } from '@/components/agent/config';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { getNavigationLinks } from '@/config/entity-navigation';
+import { Button } from '@/components/ui/primitives/button';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import { Input } from '@/components/ui/primitives/input';
 import {
@@ -29,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAgents } from '@/hooks/queries/useAgents';
+import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 
 /** Agent card wrapper to use entity actions hook per-card */
 function AgentCard({ agent, onClick }: { agent: { id: string; name: string; type: string; invocationCount: number; strategyName: string }; onClick: () => void }) {
@@ -59,12 +62,16 @@ export default function AgentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'usage' | 'rating'>('usage');
+  const [creationSheetOpen, setCreationSheetOpen] = useState(false);
 
   // Use real API (Issue #4126)
   const { data: agents = [], isLoading: _isLoading } = useAgents({
     activeOnly: true,
     type: typeFilter === 'all' ? undefined : typeFilter,
   });
+
+  // Issue #4778: Slot availability
+  const { data: slotsData } = useAgentSlots();
 
   // Client-side filtering and sorting
   const filteredAgents = useMemo(() => {
@@ -98,11 +105,35 @@ export default function AgentsPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold font-quicksand mb-2">AI Agents</h1>
-        <p className="text-muted-foreground">
-          Choose an AI agent to help you learn, play, and master board games
-        </p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold font-quicksand mb-2">AI Agents</h1>
+          <p className="text-muted-foreground">
+            Choose an AI agent to help you learn, play, and master board games
+          </p>
+          {/* Issue #4778: Slot indicator */}
+          {slotsData && (
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex-1 max-w-[200px] h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 rounded-full transition-all"
+                  style={{ width: `${slotsData.total > 0 ? (slotsData.used / slotsData.total) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {slotsData.used} / {slotsData.total} slot usati
+              </span>
+            </div>
+          )}
+        </div>
+        <Button
+          onClick={() => setCreationSheetOpen(true)}
+          disabled={slotsData?.available === 0}
+          className="shrink-0"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Crea Agente
+        </Button>
       </div>
 
       {/* Filters */}
@@ -165,17 +196,35 @@ export default function AgentsPage() {
       {/* Empty state */}
       {filteredAgents.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No agents found</p>
-          {searchQuery && (
+          <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+          <p className="text-muted-foreground mb-4">
+            {searchQuery ? 'No agents found' : 'No agents yet. Create your first AI agent!'}
+          </p>
+          {searchQuery ? (
             <button
               onClick={() => setSearchQuery('')}
               className="text-primary hover:underline"
             >
               Clear search
             </button>
+          ) : (
+            <Button
+              onClick={() => setCreationSheetOpen(true)}
+              disabled={slotsData?.available === 0}
+              variant="outline"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Crea il tuo primo agente
+            </Button>
           )}
         </div>
       )}
+
+      {/* Issue #4778: Agent creation wizard */}
+      <AgentCreationSheet
+        isOpen={creationSheetOpen}
+        onClose={() => setCreationSheetOpen(false)}
+      />
     </div>
   );
 }

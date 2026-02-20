@@ -2,10 +2,11 @@ import { useState, useCallback } from 'react';
 
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import type { RuleSpecComment } from './types';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
+
+import type { RuleSpecComment } from './types';
 
 
 interface CommentItemProps {

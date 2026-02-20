@@ -13,7 +13,7 @@ internal static class AdminEmailEndpoints
 {
     public static void MapAdminEmailEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/emails")
+        var group = app.MapGroup("/admin/emails")
             .WithTags("Admin - Email Queue")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

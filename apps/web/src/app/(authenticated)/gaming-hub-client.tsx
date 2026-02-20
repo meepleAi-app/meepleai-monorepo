@@ -8,10 +8,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Layout } from '@/components/layout';
-import { Card } from '@/components/ui/card';
-import { useDashboardStore } from '@/lib/stores/dashboard-store';
-import { useAuthUser } from '@/hooks/useAuthUser';
+
 import {
   QuickStats,
   RecentSessions,
@@ -19,6 +16,10 @@ import {
   FilterBar,
   EmptyState,
 } from '@/components/dashboard-v2';
+import { Layout } from '@/components/layout';
+import { Card } from '@/components/ui/card';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { useDashboardStore } from '@/lib/stores/dashboard-store';
 
 export function GamingHubClient() {
   const { user } = useAuthUser();

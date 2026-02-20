@@ -25,6 +25,16 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Exposes the S3 client for health check connectivity verification.
+    /// </summary>
+    internal IAmazonS3 S3Client => _s3Client;
+
+    /// <summary>
+    /// Exposes the storage options for health check reporting.
+    /// </summary>
+    internal S3StorageOptions Options => _options;
+
     public async Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, string gameId, CancellationToken ct = default)
     {
         try
@@ -42,7 +52,8 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 Key = s3Key,
                 InputStream = stream,
                 ContentType = "application/pdf",
-                AutoCloseStream = false // Caller owns the stream
+                AutoCloseStream = false, // Caller owns the stream
+                DisablePayloadSigning = true // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
             };
 
             // Server-side encryption if enabled

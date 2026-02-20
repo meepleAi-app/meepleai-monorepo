@@ -44,7 +44,9 @@ internal sealed class GetRecentAgentsQueryHandler : IQueryHandler<GetRecentAgent
                 a.LastInvokedAt,
                 a.InvocationCount,
                 a.IsRecentlyUsed,
-                a.IsIdle
+                a.IsIdle,
+                a.GameId,
+                a.CreatedByUserId
             ))
             .ToList();
 

@@ -114,13 +114,15 @@ export const AgentStatusBadge = React.memo(function AgentStatusBadge({
             data-testid={`agent-status-${status}`}
             aria-label={`Agent status: ${config.label}`}
           >
-            {/* Pulsating status dot */}
+            {/* Pulsating status dot — v2 live-pulse animation (Issue #4604) */}
             <span className="relative flex items-center justify-center">
               <span
                 className={cn(
                   'w-2 h-2 rounded-full',
                   config.dotClass,
-                  isPulsating && 'animate-pulse'
+                  // v2: Use mc-live-pulse for active status (smoother than animate-pulse)
+                  status === 'active' && 'animate-mc-live-pulse',
+                  status === 'training' && 'animate-pulse'
                 )}
                 aria-hidden="true"
               />

@@ -9,9 +9,14 @@
 **New to MeepleAI?** Start here:
 
 1. **[CLAUDE.md](../CLAUDE.md)** - Complete development guide (setup, standards, workflows)
-2. **[Development Roadmap](./DEVELOPMENT-ROADMAP.html)** - Visual timeline with dual-terminal execution strategy
-3. **[Architecture Overview](./01-architecture/README.md)** - System design and ADRs
-4. **[Development Guide](./02-development/README.md)** - Local setup and development workflow
+2. **[Architecture Overview](./architecture/README.md)** - System design and ADRs
+3. **[Development Guide](./development/README.md)** - Local setup and development workflow
+4. **[Bounded Contexts](./bounded-contexts/README.md)** - DDD context guides
+
+| Resource | URL |
+|----------|-----|
+| **API Docs (Scalar UI)** | http://localhost:8080/scalar/v1 |
+| **OpenAPI Spec** | http://localhost:8080/openapi/v1.json |
 
 ---
 
@@ -19,22 +24,21 @@
 
 ```
 docs/
-├── 01-architecture/          # Architecture, ADRs, DDD, diagrams
-├── 02-development/           # Developer guides, troubleshooting
-├── 03-api/                   # API reference and integration
-├── 04-deployment/            # Deployment, infrastructure, secrets
-├── 05-testing/               # Testing strategy and guides
-│   ├── backend/              # Backend testing (xUnit, Testcontainers)
-│   ├── frontend/             # Frontend testing (Vitest)
-│   └── e2e/                  # E2E testing (Playwright)
-├── 06-security/              # Security documentation
-├── 07-frontend/              # Frontend architecture and guides
-├── 08-infrastructure/        # Infrastructure configuration
-├── 09-bounded-contexts/      # DDD Bounded Contexts guides
-├── 10-user-guides/           # Admin and user guides
-├── 11-user-flows/            # User flow documentation
-├── quality/                  # Quality validation & metrics
-└── roadmap/                  # Project roadmap & epics
+├── architecture/             # ADRs, DDD, diagrams, system overview
+├── development/              # Developer guides, git workflow, secrets
+├── api/                      # API reference, RAG system docs
+├── deployment/               # Deployment, infrastructure, secrets, monitoring
+├── testing/                  # Testing strategy (backend, frontend, e2e, perf)
+├── security/                 # Security documentation, OWASP, vulnerabilities
+├── frontend/                 # Frontend architecture, components, dashboard
+├── bounded-contexts/         # DDD Bounded Contexts guides
+├── user-guides/              # Admin guides, user flows, gap analysis
+├── migrations/               # Migration guides (dashboard v1→v2)
+├── archive/                  # Historical docs (completed epics, sessions)
+├── pdca/                     # Active PDCA cycles
+├── roadmap/                  # Project roadmap & execution plans
+├── evaluation-reports/       # Quality baselines & metrics
+└── templates/                # Documentation templates
 ```
 
 ---
@@ -44,65 +48,66 @@ docs/
 ### By Role
 
 **Developer**
-- [Development Roadmap](./DEVELOPMENT-ROADMAP.html) - Current sprint tasks & parallel execution
-- [Roadmap Guide](./ROADMAP-GUIDE.md) - How to use dual-terminal strategy
-- [Development Guide](./02-development/README.md) - Local setup, coding standards
-- [Bounded Contexts](./09-bounded-contexts/README.md) - DDD context guides
-- [Testing Guide](./05-testing/README.md) - Testing strategy
-- [API Reference](./03-api/README.md) - REST API documentation
-- [Frontend Guide](./07-frontend/README.md) - Frontend architecture
+- [Development Guide](./development/README.md) - Local setup, coding standards
+- [Quick Start Guide](./development/quick-start-guide.md) - Fast onboarding
+- [Bounded Contexts](./bounded-contexts/README.md) - DDD context guides
+- [Testing Guide](./testing/README.md) - Testing strategy
+- [API Reference](./api/README.md) - REST API documentation
+- [Frontend Guide](./frontend/README.md) - Frontend architecture
+- [Git Workflow](./development/git-workflow.md) - Branching & commit strategy
 
 **Architect**
-- [Architecture](./01-architecture/README.md) - System design
-- [ADRs](./01-architecture/adr/README.md) - Architecture decisions
-- [DDD Guide](./01-architecture/ddd/quick-reference.md) - DDD patterns
-- [Diagrams](./01-architecture/diagrams/) - Mermaid architecture diagrams
+- [Architecture](./architecture/README.md) - System design
+- [ADRs](./architecture/adr/README.md) - Architecture decisions
+- [DDD Guide](./architecture/ddd/quick-reference.md) - DDD patterns
+- [Diagrams](./architecture/diagrams/README.md) - Mermaid architecture diagrams
 
 **DevOps**
-- [Deployment Guide](./04-deployment/README.md) - Infrastructure deployment
-- [Infrastructure](./08-infrastructure/README.md) - Infrastructure configuration
-- [Monitoring Setup](./04-deployment/monitoring-setup-guide.md) - Grafana + Prometheus
-- [Secrets Management](./04-deployment/secrets-management.md) - Secret system
+- [Deployment Guide](./deployment/README.md) - Infrastructure deployment
+- [Secrets Management](./deployment/secrets-management.md) - Secret system
+- [Monitoring Quickstart](./deployment/monitoring-quickstart.md) - Grafana + Prometheus
+- [Docker Services](./deployment/docker-services.md) - Docker Compose setup
 
 **QA/Tester**
-- [Testing Guide](./05-testing/README.md) - Testing philosophy and pyramid
-- [Backend Testing](./05-testing/backend/) - xUnit, Testcontainers
-- [Frontend Testing](./05-testing/frontend/) - Vitest, Testing Library
-- [E2E Testing](./05-testing/e2e/) - Playwright guides
+- [Testing Guide](./testing/README.md) - Testing philosophy and pyramid
+- [Backend Testing](./testing/backend/) - xUnit, Testcontainers
+- [Frontend Testing](./testing/frontend/) - Vitest, Testing Library
+- [E2E Testing](./testing/e2e/) - Playwright guides
 
 **Security**
-- [Security Guide](./06-security/README.md) - Security documentation
-- [Secrets Management](./04-deployment/secrets-management.md) - Secret system
-- [OAuth Testing](./05-testing/backend/oauth-testing.md) - OAuth security
+- [Security Guide](./security/README.md) - Security documentation
+- [OWASP Compliance](./security/owasp-top-10-compliance.md) - OWASP Top 10
+- [Secrets Management](./deployment/secrets-management.md) - Secret system
+- [OAuth Testing](./testing/backend/oauth-testing.md) - OAuth security
 
 ---
 
 ### By Topic
 
 **RAG System**
-- [ADR-001: Hybrid RAG](./01-architecture/adr/adr-001-hybrid-rag.md)
-- [KnowledgeBase Context](./09-bounded-contexts/knowledge-base.md)
-- [RAG Diagram](./01-architecture/diagrams/rag-system-detailed.md)
+- [RAG Overview](./api/rag/README.md) - RAG architecture and documentation
+- [KnowledgeBase Context](./bounded-contexts/knowledge-base.md) - Bounded context
+- [RAG Diagram](./architecture/diagrams/rag-system-detailed.md) - Architecture diagram
 
 **PDF Processing**
-- [ADR-003b: Unstructured PDF](./01-architecture/adr/adr-003b-unstructured-pdf.md)
-- [DocumentProcessing Context](./09-bounded-contexts/document-processing.md)
-- [PDF Pipeline Diagram](./01-architecture/diagrams/pdf-pipeline-detailed.md)
+- [ADR-003b: Unstructured PDF](./architecture/adr/adr-003b-unstructured-pdf.md) - PDF processing pipeline
+- [DocumentProcessing Context](./bounded-contexts/document-processing.md) - Bounded context
+- [PDF Pipeline Diagram](./architecture/diagrams/pdf-pipeline-detailed.md) - Architecture diagram
 
 **Authentication**
-- [Authentication Context](./09-bounded-contexts/authentication.md)
-- [OAuth Testing](./05-testing/backend/oauth-testing.md)
-- [Secrets Management](./04-deployment/secrets-management.md)
+- [Authentication Context](./bounded-contexts/authentication.md) - Bounded context
+- [OAuth Testing](./testing/backend/oauth-testing.md) - OAuth security
+- [Secrets Management](./deployment/secrets-management.md) - Secret management
 
 **Deployment**
-- [Infrastructure Checklist](./04-deployment/infrastructure-deployment-checklist.md)
-- [Domain Setup](./04-deployment/domain-setup-guide.md)
-- [Cost Summary](./04-deployment/infrastructure-cost-summary.md)
+- [Infrastructure Checklist](./deployment/infrastructure-deployment-checklist.md) - Step-by-step
+- [Domain Setup](./deployment/domain-setup-guide.md) - DNS & domain config
+- [Cost Summary](./deployment/infrastructure-cost-summary.md) - Budget planning
 
 **Testing**
-- [Testing Philosophy](./05-testing/README.md#testing-philosophy)
-- [Testcontainers Best Practices](./05-testing/backend/testcontainers-best-practices.md)
-- [E2E Guide](./05-testing/e2e/e2-e-test-guide.md)
+- [Testing Philosophy](./testing/README.md) - Strategy and pyramid
+- [Testcontainers Best Practices](./testing/backend/testcontainers-best-practices.md) - Integration testing
+- [E2E Guide](./testing/e2e/e2-e-test-guide.md) - Playwright E2E
 
 ---
 
@@ -110,22 +115,22 @@ docs/
 
 ### Must Read for All Developers
 1. **[CLAUDE.md](../CLAUDE.md)** - Complete development guide
-2. **[Architecture README](./01-architecture/README.md)** - System architecture
-3. **[Development README](./02-development/README.md)** - Development workflow
-4. **[Bounded Contexts Overview](./09-bounded-contexts/README.md)** - DDD contexts
+2. **[Architecture README](./architecture/README.md)** - System architecture
+3. **[Development README](./development/README.md)** - Development workflow
+4. **[Bounded Contexts Overview](./bounded-contexts/README.md)** - DDD contexts
 
 ### Essential ADRs
-1. **[ADR-001: Hybrid RAG](./01-architecture/adr/adr-001-hybrid-rag.md)** - RAG architecture
-2. **[ADR-003b: Unstructured PDF](./01-architecture/adr/adr-003b-unstructured-pdf.md)** - PDF processing
-3. **[ADR-007: Hybrid LLM](./01-architecture/adr/adr-007-hybrid-llm.md)** - Multi-model consensus
-4. **[ADR-008: Streaming CQRS](./01-architecture/adr/adr-008-streaming-cqrs-migration.md)** - CQRS pattern
-5. **[ADR-009: Error Handling](./01-architecture/adr/adr-009-centralized-error-handling.md)** - Error handling
+1. **[ADR-003b: Unstructured PDF](./architecture/adr/adr-003b-unstructured-pdf.md)** - PDF processing
+2. **[ADR-006: Multi-Layer Validation](./architecture/adr/adr-006-multi-layer-validation.md)** - 5-layer validation
+3. **[ADR-007: Hybrid LLM](./architecture/adr/adr-007-hybrid-llm.md)** - Multi-model consensus
+4. **[ADR-009: Error Handling](./architecture/adr/adr-009-centralized-error-handling.md)** - Centralized errors
+5. **[ADR-012: FluentValidation CQRS](./architecture/adr/adr-012-fluentvalidation-cqrs.md)** - Validation pattern
 
 ### Production Deployment
-1. **[Deployment Guide](./04-deployment/README.md)** - Complete deployment index
-2. **[Infrastructure Checklist](./04-deployment/infrastructure-deployment-checklist.md)** - Step-by-step deployment
-3. **[Cost Summary](./04-deployment/infrastructure-cost-summary.md)** - Budget planning
-4. **[Monitoring Setup](./04-deployment/monitoring-setup-guide.md)** - Observability
+1. **[Deployment Guide](./deployment/README.md)** - Complete deployment index
+2. **[Infrastructure Checklist](./deployment/infrastructure-deployment-checklist.md)** - Step-by-step
+3. **[Cost Summary](./deployment/infrastructure-cost-summary.md)** - Budget planning
+4. **[Monitoring Quickstart](./deployment/monitoring-quickstart.md)** - Observability
 
 ---
 
@@ -133,74 +138,76 @@ docs/
 
 ### Alpha (Local Development)
 - [CLAUDE.md](../CLAUDE.md) - Complete setup guide
-- [Development Guide](./02-development/README.md)
-- [Testing Guide](./05-testing/README.md)
+- [Development Guide](./development/README.md) - Local dev workflow
+- [Testing Guide](./testing/README.md) - Testing strategy
 
 ### Beta (Staging Deployment)
-- [Infrastructure Checklist](./04-deployment/infrastructure-deployment-checklist.md)
-- [Domain Setup](./04-deployment/domain-setup-guide.md)
-- [Monitoring Setup](./04-deployment/monitoring-setup-guide.md)
+- [Infrastructure Checklist](./deployment/infrastructure-deployment-checklist.md) - Deployment steps
+- [Domain Setup](./deployment/domain-setup-guide.md) - DNS configuration
+- [Monitoring Quickstart](./deployment/monitoring-quickstart.md) - Observability setup
 
 ### Release (Production)
-- [Cost Summary](./04-deployment/infrastructure-cost-summary.md)
-- [Email & TOTP Services](./04-deployment/email-totp-services.md)
-- [Security Guide](./06-security/README.md)
+- [Cost Summary](./deployment/infrastructure-cost-summary.md) - Budget planning
+- [Email & TOTP Services](./deployment/email-totp-services.md) - External services
+- [Security Guide](./security/README.md) - Security hardening
 
 ---
 
-## Documentation Statistics
+## Living Documentation (Auto-Generated)
 
-**After Consolidation (2026-01-31)**:
+### Backend - Bounded Contexts
 
-| Section | Description |
-|---------|-------------|
-| **01-architecture** | ADRs, diagrams, DDD docs |
-| **02-development** | Development guides |
-| **03-api** | API reference |
-| **04-deployment** | Deployment guides |
-| **05-testing** | Testing documentation |
-| **06-security** | Security docs |
-| **07-frontend** | Frontend architecture |
-| **08-infrastructure** | Infrastructure configuration |
-| **09-bounded-contexts** | DDD context guides |
-| **10-user-guides** | Admin and user guides |
-| **11-user-flows** | User flow documentation |
-| **quality** | Quality validation & metrics |
-| **roadmap** | Project roadmap & epics |
+Each context has auto-generated README: `apps/api/src/Api/BoundedContexts/{Context}/README.md`
+
+**Template**: [bounded-context-template.md](./templates/bounded-context-template.md)
+
+### API Documentation (Auto-Generated)
+
+- **XML Docs**: `apps/api/src/Api/bin/Debug/net9.0/Api.xml` (generated on build)
+- **OpenAPI Spec**: http://localhost:8080/openapi/v1.json
+- **Interactive UI**: http://localhost:8080/scalar/v1 (Scalar API Explorer)
+
+### Frontend Documentation
+
+- **JSDoc Comments**: Block comments `/** */` on all exported functions/components
+- **TypeDoc Generation**: `npx typedoc --out docs-generated src/lib`
 
 ---
 
-## Maintenance
+## Documentation Guidelines
 
-### Regular Updates
+### Backend (C#) - XML Comments
 
-**Weekly**:
-- Update test coverage stats in [Testing Guide](./05-testing/README.md)
-- Check for broken links (use `markdown-link-check`)
+**Required for all public APIs**:
+```csharp
+/// <summary>
+/// Executes RAG query with hybrid retrieval (vector + keyword)
+/// </summary>
+/// <param name="request">Query request with question and game context</param>
+/// <returns>Answer DTO with confidence score and sources</returns>
+public async Task<AnswerDto> HandleAsync(AskQuestionCommand request)
+```
 
-**Monthly**:
-- Review ADRs for outdated decisions
-- Update deployment guides with lessons learned
+### Frontend (TypeScript) - JSDoc Comments
 
-**Quarterly**:
-- Full documentation audit
-- Update architecture diagrams
-- Review and consolidate duplicate content
+**Required for all exported functions/components**:
+```typescript
+/**
+ * Executes RAG query with streaming response
+ * @param question - User question about game rules
+ * @param gameId - Game identifier
+ * @returns Promise with streaming answer and sources
+ */
+export async function askQuestion(question: string, gameId: string): Promise<AnswerDto>
+```
 
-### Documentation Health Checks
+### Living Documentation Principles
 
-**Indicators of Good Health**:
-- All README files present and updated
-- No duplicate content across sections
-- Links between documents work correctly
-- Code examples tested and functional
-- Bounded context docs match codebase
-
-**Warning Signs**:
-- Multiple files covering same topic
-- Outdated examples or screenshots
-- Broken cross-references
-- Historical implementation reports accumulating
+1. **Code is Truth**: Code auto-generates documentation via XML/JSDoc
+2. **Manual for Context**: ADRs, system overviews, workflows require manual docs
+3. **Keep Minimal**: Remove outdated docs, maintain high signal-to-noise ratio
+4. **Single Source**: Avoid duplication, link to canonical sources
+5. **Version Control**: All docs in Git, reviewed in PRs
 
 ---
 
@@ -208,16 +215,7 @@ docs/
 
 ### Documentation Standards
 
-**File Naming**:
-```bash
-# Correct
-authentication-guide.md
-oauth-testing.md
-
-# Incorrect
-AuthenticationGuide.md
-oauth_testing.md
-```
+**File Naming**: `kebab-case.md` (e.g., `authentication-guide.md`, `oauth-testing.md`)
 
 **Structure**:
 - Use headers (##, ###) for hierarchy
@@ -236,55 +234,20 @@ oauth_testing.md
 
 - **API Explorer**: http://localhost:8080/scalar/v1 (interactive API docs)
 - **Grafana**: http://localhost:3001 (monitoring dashboards)
-- **Traefik**: http://localhost:8090 (reverse proxy dashboard)
 
 ---
 
-## Consolidation History
+## Maintenance
 
-### 2026-01-31: Quality & Roadmap Organization
+### Regular Updates
 
-**Actions Taken**:
-- Created `docs/quality/` for validation metrics (#3192 RAG quality)
-- Created `docs/roadmap/` for epic documentation (#3167 Game Session Toolkit)
-- Removed obsolete `TODOS.md` (outdated notes)
-- Cleaned archive/legacy references in ADRs (bgai-016, wiki paths)
-- Moved active quality docs from claudedocs/ to docs/quality/
-- Moved epic planning from claudedocs/ to docs/roadmap/
-- Removed session HTML mockups from claudedocs/
+**Weekly**: Update test coverage stats in [Testing Guide](./testing/README.md)
 
-**Results**:
-- Quality validation properly documented (#3192, #3231 blocker)
-- Epic roadmap centralized in docs/roadmap/
-- claudedocs/ cleaned (only active agent validation)
-- No obsolete references in ADRs
+**Monthly**: Review ADRs for outdated decisions
 
-### 2026-01-26: Documentation Cleanup
-
-**Actions Taken**:
-- Deleted obsolete folders: claudedocs/, issues/, pdca/, token-budget/, design-proposals/, screenshots/
-- Deleted orphan root files (session checkpoints, implementation reports)
-- Merged api/ into 03-api/
-- Merged 07-deployment/ into 04-deployment/
-- Renamed folders to sequential numbering (07-frontend, 08-infrastructure, 09-bounded-contexts, 10-user-guides, 11-user-flows)
-- Consolidated admin-guides/ + user-guides/ into 10-user-guides/
-
-**Results**:
-- Clean, sequential folder numbering
-- No duplicate or obsolete content
-- Logical organization by domain
-
-### 2026-01-18: Major Documentation Consolidation
-
-**Actions Taken**:
-- Removed obsolete files from claudedocs/ (issue reports, session logs)
-- Consolidated testing docs into 05-testing/
-- Consolidated deployment docs into 04-deployment/
-- Created bounded contexts documentation
-- Added READMEs to all documentation sections
+**Quarterly**: Full documentation audit, update architecture diagrams
 
 ---
 
-**Last Updated**: 2026-01-31
+**Last Updated**: 2026-02-18
 **Maintainer**: Documentation Team
-**Status**: Clean and Organized

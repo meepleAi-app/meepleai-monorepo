@@ -22,14 +22,16 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import { Users, Clock, BarChart2 } from 'lucide-react';
 
-import { toast } from '@/components/layout/Toast';
+import { AgentCreationSheet } from '@/components/agent/config';
+import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
+import { useGameInLibraryStatus } from '@/hooks/queries';
+import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
@@ -49,6 +51,12 @@ export interface MeepleGameCatalogCardProps {
   flippable?: boolean;
   /** Additional CSS classes */
   className?: string;
+  /**
+   * Optional library status from batch API.
+   * If provided, skips individual useGameInLibraryStatus hook call.
+   * Enables N+1 prevention when rendering multiple cards.
+   */
+  libraryStatus?: GameStatusSimple;
 }
 
 // ============================================================================
@@ -101,35 +109,50 @@ export function MeepleGameCatalogCard({
   onClick,
   flippable,
   className,
+  libraryStatus,
 }: MeepleGameCatalogCardProps) {
-  const [isAdding, setIsAdding] = useState(false);
+  // Issue #4777: Agent creation sheet state
+  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
+  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
+
+  // Issue #4822: Open wizard instead of direct add
+  const { openWizard } = useAddGameWizard();
+  const handleAddToCollection = useCallback(() => {
+    openWizard(
+      { type: 'fromGameCard', sharedGameId: game.id },
+      {
+        gameId: game.id,
+        title: game.title,
+        imageUrl: game.imageUrl || undefined,
+        thumbnailUrl: game.thumbnailUrl || undefined,
+        minPlayers: game.minPlayers ?? undefined,
+        maxPlayers: game.maxPlayers ?? undefined,
+        playingTimeMinutes: game.playingTimeMinutes ?? undefined,
+        complexityRating: game.complexityRating ?? undefined,
+        averageRating: game.averageRating ?? undefined,
+        yearPublished: game.yearPublished ?? undefined,
+        description: game.description || undefined,
+        source: 'catalog',
+      },
+    );
+  }, [openWizard, game]);
 
   // Check if game is already in user's library
-  const { data: status, isLoading: statusLoading } = useGameInLibraryStatus(game.id);
-  const inLibrary = status?.inLibrary || false;
+  // Use provided batch status if available, otherwise fetch individually
+  const { data: individualStatus, isLoading: statusLoading } = useGameInLibraryStatus(
+    game.id,
+    !libraryStatus // Only fetch if libraryStatus not provided
+  );
 
-  // Mutation for adding game to library
-  const addMutation = useAddGameToLibrary();
+  const status = libraryStatus || individualStatus;
+  const inLibrary = status?.inLibrary || false;
 
   // Issue #4040: Entity-specific quick actions
   const entityActions = useEntityActions({
     entity: 'game',
     id: game.id,
+    onAddToCollection: handleAddToCollection,
   });
-
-  const handleAddToLibrary = async () => {
-    setIsAdding(true);
-    try {
-      await addMutation.mutateAsync({ gameId: game.id });
-      toast.success(`${game.title} aggiunto alla libreria!`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Errore durante l\'aggiunta alla libreria'
-      );
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
   // Build metadata array
   const metadata = [
@@ -157,19 +180,21 @@ export function MeepleGameCatalogCard({
 
   // Build actions for featured variant
   const showActions = variant === 'featured' || variant === 'hero';
-  const actions = showActions && !statusLoading
+  // Loading state: only show loading if fetching individually (no batch status provided)
+  const isLoadingStatus = !libraryStatus && statusLoading;
+  const actions = showActions && !isLoadingStatus
     ? [
         {
-          label: inLibrary ? 'Nella Libreria' : isAdding ? 'Aggiunta...' : 'Aggiungi',
+          label: inLibrary ? 'Nella Libreria' : 'Aggiungi',
           primary: !inLibrary,
-          disabled: inLibrary || isAdding,
-          onClick: inLibrary ? undefined : handleAddToLibrary,
+          disabled: inLibrary,
+          onClick: inLibrary ? undefined : handleAddToCollection,
         },
       ]
     : undefined;
 
   // Build badge
-  const badge = inLibrary && !statusLoading ? 'In Libreria' : undefined;
+  const badge = inLibrary && !isLoadingStatus ? 'In Libreria' : undefined;
 
   // Build flip data from game fields
   const flipData: MeepleCardFlipData | undefined = flippable
@@ -187,32 +212,46 @@ export function MeepleGameCatalogCard({
     : undefined;
 
   return (
-    <MeepleCard
-      entity="game"
-      variant={variant}
-      title={game.title}
-      subtitle={subtitle}
-      imageUrl={game.imageUrl || undefined}
-      rating={game.averageRating || undefined}
-      ratingMax={10}
-      metadata={metadata}
-      badge={badge}
-      actions={actions}
-      loading={statusLoading}
-      onClick={onClick ? () => onClick(game.id) : undefined}
-      flippable={flippable && !!game.description}
-      flipData={flipData}
-      flipTrigger="button"
-      className={className}
-      // Epic #4688: Navigation footer
-      navigateTo={getNavigationLinks('game', { id: game.id })}
-      data-testid={`catalog-game-card-${game.id}`}
-      // Issue #4040: New action system
-      entityQuickActions={entityActions.quickActions}
-      showInfoButton
-      infoHref={`/games/${game.id}`}
-      infoTooltip="Vai al dettaglio"
-    />
+    <>
+      <MeepleCard
+        id={game.id}
+        entity="game"
+        variant={variant}
+        title={game.title}
+        subtitle={subtitle}
+        imageUrl={game.imageUrl || undefined}
+        rating={game.averageRating || undefined}
+        ratingMax={10}
+        metadata={metadata}
+        badge={badge}
+        actions={actions}
+        loading={isLoadingStatus}
+        onClick={onClick ? () => onClick(game.id) : undefined}
+        flippable={flippable && !!game.description}
+        flipData={flipData}
+        flipTrigger="button"
+        className={className}
+        // Epic #4688: Navigation footer
+        navigateTo={getNavigationLinks('game', { id: game.id })}
+        // Issue #4777: Agent action footer
+        hasAgent={false}
+        onCreateAgent={handleCreateAgent}
+        data-testid={`catalog-game-card-${game.id}`}
+        // Issue #4040: New action system
+        entityQuickActions={entityActions.quickActions}
+        showInfoButton
+        infoHref={`/games/${game.id}`}
+        infoTooltip="Vai al dettaglio"
+      />
+
+      {/* Issue #4777: Agent creation wizard */}
+      <AgentCreationSheet
+        isOpen={agentSheetOpen}
+        onClose={() => setAgentSheetOpen(false)}
+        initialGameId={game.id}
+        initialGameTitle={game.title}
+      />
+    </>
   );
 }
 

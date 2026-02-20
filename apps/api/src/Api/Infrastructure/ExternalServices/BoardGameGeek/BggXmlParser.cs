@@ -19,7 +19,8 @@ public static class BggXmlParser
                     BggId = int.Parse(i.Attribute("id")!.Value, CultureInfo.InvariantCulture),
                     Name = i.Element("name")?.Attribute("value")?.Value ?? "Unknown",
                     YearPublished = int.TryParse(i.Element("yearpublished")?.Attribute("value")?.Value,
-                        NumberStyles.Integer, CultureInfo.InvariantCulture, out var y) ? y : null
+                        NumberStyles.Integer, CultureInfo.InvariantCulture, out var y) ? y : null,
+                    Type = i.Attribute("type")?.Value ?? "boardgame"
                 })
                 .ToList();
         }

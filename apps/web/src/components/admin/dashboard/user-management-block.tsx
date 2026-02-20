@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, Grid3x3, List, Shield, Award, Mail, ArrowUpDown, UserX, Eye } from 'lucide-react';
+import { Search, Filter, Grid3x3, List, Shield, Award, Mail, ArrowUpDown, UserX, Eye, Table2, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
@@ -12,11 +12,11 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
 import { adminClient } from '@/lib/api/admin-client';
 
-type ViewMode = 'grid' | 'list';
+type ViewMode = 'grid' | 'list' | 'table';
 
 interface UserDetailPanelProps {
   userId: string;
@@ -68,11 +68,18 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
         description: user?.isActive ? 'Account has been suspended' : 'Account has been reactivated',
       });
     },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to update user status', variant: 'destructive' });
+    },
   });
 
   const impersonateMutation = useMutation({
     mutationFn: () => adminClient.impersonateUser(userId),
     onSuccess: (result) => {
+      if (!result?.sessionToken) {
+        toast({ title: 'Error', description: 'Impersonation failed: no session returned', variant: 'destructive' });
+        return;
+      }
       toast({ title: 'Impersonation started', description: `Session token: ${result.sessionToken.slice(0, 8)}...` });
     },
     onError: () => {
@@ -279,9 +286,25 @@ export function UserManagementBlock() {
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const debouncedSearch = useDebounce(searchQuery, 300);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (!data?.items) return;
+    if (selectedIds.length === data.items.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(data.items.map((u) => u.id));
+    }
+  };
 
   const queryKey = ['admin-users', roleFilter, tierFilter, debouncedSearch];
 
@@ -354,6 +377,48 @@ export function UserManagementBlock() {
     },
   });
 
+  const bulkSuspendMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => adminClient.suspendUser(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setSelectedIds([]);
+      toast({ title: 'Users suspended', description: `${selectedIds.length} accounts suspended` });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to suspend some users', variant: 'destructive' });
+    },
+  });
+
+  const bulkUnsuspendMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => adminClient.unsuspendUser(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setSelectedIds([]);
+      toast({ title: 'Users unsuspended', description: `${selectedIds.length} accounts reactivated` });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to unsuspend some users', variant: 'destructive' });
+    },
+  });
+
+  const bulkChangeTierMutation = useMutation({
+    mutationFn: async ({ ids, tier }: { ids: string[]; tier: string }) => {
+      await Promise.all(ids.map((id) => adminClient.updateUserTier(id, tier)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setSelectedIds([]);
+      toast({ title: 'Tier updated', description: `Tier changed for ${selectedIds.length} users` });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to change tier for some users', variant: 'destructive' });
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Block Header */}
@@ -416,12 +481,13 @@ export function UserManagementBlock() {
           </Select>
 
           {/* View Toggle */}
-          <div className="flex gap-1 bg-white/80 border border-amber-200/60 rounded-lg p-1">
+          <div className="flex gap-1 bg-white/80 dark:bg-zinc-800/80 border border-amber-200/60 dark:border-zinc-700/60 rounded-lg p-1">
             <Button
               size="sm"
               variant={viewMode === 'grid' ? 'default' : 'ghost'}
               onClick={() => setViewMode('grid')}
               className="h-8 w-8 p-0"
+              title="Grid view"
             >
               <Grid3x3 className="w-4 h-4" />
             </Button>
@@ -430,28 +496,195 @@ export function UserManagementBlock() {
               variant={viewMode === 'list' ? 'default' : 'ghost'}
               onClick={() => setViewMode('list')}
               className="h-8 w-8 p-0"
+              title="List view"
             >
               <List className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              onClick={() => setViewMode('table')}
+              className="h-8 w-8 p-0"
+              title="Table view"
+            >
+              <Table2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Users Display - Using MeepleCard */}
+      {/* Bulk Actions Bar (table mode) */}
+      {viewMode === 'table' && selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-primary/5 border border-primary/20 rounded-lg">
+          <span className="text-sm font-medium text-primary">
+            {selectedIds.length} selected
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-xs"
+            onClick={() => bulkSuspendMutation.mutate(selectedIds)}
+            disabled={bulkSuspendMutation.isPending}
+          >
+            <UserX className="w-3.5 h-3.5" />
+            Suspend
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-xs"
+            onClick={() => bulkUnsuspendMutation.mutate(selectedIds)}
+            disabled={bulkUnsuspendMutation.isPending}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Unsuspend
+          </Button>
+          <Select
+            onValueChange={(tier) => bulkChangeTierMutation.mutate({ ids: selectedIds, tier })}
+          >
+            <SelectTrigger className="w-[130px] h-8 text-xs">
+              <ArrowUpDown className="w-3 h-3 mr-1" />
+              <SelectValue placeholder="Change Tier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="free">Free</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="premium">Premium</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Users Display */}
       {isLoading ? (
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+        <div className={viewMode === 'table' ? 'space-y-0' : viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="h-[240px] bg-white/40 backdrop-blur-sm rounded-xl border border-slate-200/60 animate-pulse"
+              className={viewMode === 'table' ? 'h-12 bg-white/40 dark:bg-zinc-800/40 animate-pulse border-b' : 'h-[240px] bg-white/40 backdrop-blur-sm rounded-xl border border-slate-200/60 animate-pulse'}
             />
           ))}
         </div>
       ) : !data || !data.items || data.items.length === 0 ? (
-        <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-xl border border-amber-200/60">
-          <p className="font-nunito text-slate-500">No users found</p>
+        <div className="text-center py-12 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm rounded-xl border border-amber-200/60 dark:border-zinc-700/60">
+          <p className="font-nunito text-slate-500 dark:text-zinc-400">No users found</p>
+        </div>
+      ) : viewMode === 'table' ? (
+        /* Table View */
+        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
+                  <th className="text-left p-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={data.items.length > 0 && selectedIds.length === data.items.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-slate-300 dark:border-zinc-600"
+                    />
+                  </th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Role</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Tier</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30 cursor-pointer"
+                    onClick={() => setSelectedUserId(user.id)}
+                  >
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(user.id)}
+                        onChange={() => toggleSelect(user.id)}
+                        className="rounded border-slate-300 dark:border-zinc-600"
+                      />
+                    </td>
+                    <td className="p-3">
+                      <span className="font-medium">{user.displayName}</span>
+                    </td>
+                    <td className="p-3 text-muted-foreground">{user.email}</td>
+                    <td className="p-3">
+                      <Badge variant="outline" className="font-nunito text-xs">
+                        <Shield className="w-3 h-3 mr-1" />
+                        {user.role}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      <Badge
+                        variant="outline"
+                        className={`font-nunito text-xs ${
+                          user.tier === 'premium'
+                            ? 'border-amber-500 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300'
+                            : user.tier === 'normal'
+                            ? 'border-blue-500 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300'
+                            : 'border-slate-400 text-slate-600 dark:text-zinc-400'
+                        }`}
+                      >
+                        {user.tier}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      <Badge
+                        variant={user.isActive ? 'default' : 'secondary'}
+                        className={user.isActive
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                        }
+                      >
+                        {user.isActive ? 'Active' : 'Suspended'}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs gap-1"
+                          onClick={() =>
+                            user.isActive
+                              ? suspendMutation.mutate(user.id)
+                              : unsuspendMutation.mutate(user.id)
+                          }
+                        >
+                          <UserX className="w-3 h-3" />
+                          {user.isActive ? 'Suspend' : 'Unsuspend'}
+                        </Button>
+                        <Select
+                          value={user.tier}
+                          onValueChange={(tier) =>
+                            adminClient.updateUserTier(user.id, tier).then(() => {
+                              queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+                              toast({ title: 'Tier updated' });
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-7 w-[90px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="free">Free</SelectItem>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="premium">Premium</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
+        /* Grid / List View (existing) */
         <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
           {data?.items.map((user) => (
             <MeepleCard

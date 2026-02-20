@@ -31,6 +31,7 @@ import {
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
+  MetricsTimeSeriesResponseSchema,
   GetUserActivityResultSchema,
   type CreateUserRequest,
   type UpdateUserRequest,
@@ -115,6 +116,26 @@ import {
   type ModelPerformanceDto,
 } from '../schemas';
 import {
+  BulkDeleteResultSchema,
+  ReindexResponseSchema,
+  MaintenanceResultSchema,
+  PdfStatusDistributionSchema,
+  PdfStorageHealthSchema,
+  ProcessingMetricsSchema,
+  VectorCollectionsResponseSchema,
+  ProcessingQueueResponseSchema,
+  PdfListResultSchema,
+  type BulkDeleteResult,
+  type ReindexResponse,
+  type MaintenanceResult,
+  type PdfStatusDistribution,
+  type PdfStorageHealth,
+  type ProcessingMetrics,
+  type VectorCollectionsResponse,
+  type ProcessingQueueResponse,
+  type PdfListResult,
+} from '../schemas/admin-knowledge-base.schemas';
+import {
   AgentCostEstimationResultSchema,
   CostScenariosResponseSchema,
   SaveScenarioResponseSchema,
@@ -125,6 +146,10 @@ import {
   type SaveCostScenarioRequest,
   type GetCostScenariosParams,
 } from '../schemas/cost-calculator.schemas';
+import {
+  type TierStrategyMatrixDto,
+  type StrategyModelMappingDto,
+} from '../schemas/tier-strategy.schemas';
 import {
   LedgerEntriesResponseSchema,
   LedgerSummarySchema,
@@ -635,6 +660,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async getInfrastructureDetails() {
       return httpClient.get('/api/v1/admin/infrastructure/details', InfrastructureDetailsSchema);
+    },
+
+    /**
+     * Get time-series metrics for infrastructure charts
+     * GET /api/v1/admin/infrastructure/metrics/timeseries?range=1h
+     *
+     * Issue #901: Returns CPU, memory, and request rate data from Prometheus.
+     */
+    async getMetricsTimeSeries(range: '1h' | '6h' | '24h' | '7d' = '1h') {
+      return httpClient.get(
+        `/api/v1/admin/infrastructure/metrics/timeseries?range=${range}`,
+        MetricsTimeSeriesResponseSchema
+      );
     },
 
     // ========== API Key Management (Issue #908) ==========
@@ -1819,6 +1857,49 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return result;
     },
 
+    /**
+     * Get tier-strategy access matrix
+     * GET /api/v1/admin/tier-strategy/matrix
+     */
+    async getTierStrategyMatrix(): Promise<TierStrategyMatrixDto> {
+      const result = await httpClient.get('/api/v1/admin/tier-strategy/matrix');
+      return result as TierStrategyMatrixDto;
+    },
+
+    /**
+     * Get all strategy-model mappings
+     * GET /api/v1/admin/tier-strategy/model-mappings
+     */
+    async getStrategyModelMappings(): Promise<StrategyModelMappingDto[]> {
+      const result = await httpClient.get('/api/v1/admin/tier-strategy/model-mappings');
+      return (result as StrategyModelMappingDto[]) || [];
+    },
+
+    /**
+     * Update tier-strategy access rules
+     * PUT /api/v1/admin/tier-strategy/access
+     */
+    async updateTierStrategyAccess(payload: {
+      tier: string;
+      strategy: string;
+      isEnabled: boolean;
+    }): Promise<void> {
+      await httpClient.put('/api/v1/admin/tier-strategy/access', payload);
+    },
+
+    /**
+     * Update strategy-model mapping
+     * PUT /api/v1/admin/tier-strategy/model-mapping
+     */
+    async updateStrategyModelMapping(payload: {
+      strategy: string;
+      provider: string;
+      primaryModel: string;
+      fallbackModels?: string[];
+    }): Promise<void> {
+      await httpClient.put('/api/v1/admin/tier-strategy/model-mapping', payload);
+    },
+
     // ========== PDF Analytics (Issue #3715) ==========
 
     /**
@@ -1859,10 +1940,181 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         ModelPerformanceDtoSchema
       );
     },
+
+    // ========== Admin PDF Management (Issue #4784) ==========
+
+    /**
+     * Bulk delete PDF documents
+     * POST /api/v1/admin/pdfs/bulk/delete
+     */
+    async bulkDeletePdfs(ids: string[]): Promise<BulkDeleteResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/bulk/delete',
+        { pdfIds: ids },
+        BulkDeleteResultSchema
+      );
+    },
+
+    /**
+     * Reindex a PDF document (delete chunks, reset to Pending)
+     * POST /api/v1/admin/pdfs/{pdfId}/reindex
+     */
+    async reindexPdf(pdfId: string): Promise<ReindexResponse> {
+      return httpClient.post(
+        `/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}/reindex`,
+        {},
+        ReindexResponseSchema
+      );
+    },
+
+    /**
+     * Mark documents stuck in processing (>24h) as failed
+     * POST /api/v1/admin/pdfs/maintenance/purge-stale
+     */
+    async purgeStaleDocuments(): Promise<MaintenanceResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/maintenance/purge-stale',
+        {},
+        MaintenanceResultSchema
+      );
+    },
+
+    /**
+     * Delete orphaned text chunks referencing non-existent PDFs
+     * POST /api/v1/admin/pdfs/maintenance/cleanup-orphans
+     */
+    async cleanupOrphans(): Promise<MaintenanceResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/maintenance/cleanup-orphans',
+        {},
+        MaintenanceResultSchema
+      );
+    },
+
+    /**
+     * Get PDF status distribution for analytics
+     * GET /api/v1/admin/pdfs/analytics/distribution
+     */
+    async getPdfStatusDistribution(): Promise<PdfStatusDistribution> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/analytics/distribution',
+        PdfStatusDistributionSchema
+      );
+      return result ?? { countByState: {}, totalDocuments: 0, topBySize: [] };
+    },
+
+    /**
+     * Get PDF storage health across PG, Qdrant, and file storage
+     * GET /api/v1/admin/pdfs/storage/health
+     */
+    async getPdfStorageHealth(): Promise<PdfStorageHealth> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/storage/health',
+        PdfStorageHealthSchema
+      );
+      if (!result) throw new Error('Failed to fetch PDF storage health');
+      return result;
+    },
+
+    /**
+     * Get aggregated PDF processing metrics
+     * GET /api/v1/admin/pdfs/metrics/processing
+     */
+    async getPdfMetrics(): Promise<ProcessingMetrics> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/metrics/processing',
+        ProcessingMetricsSchema
+      );
+      if (!result) throw new Error('Failed to fetch PDF processing metrics');
+      return result;
+    },
+
+    /**
+     * Get all PDF documents with filtering and pagination (admin only)
+     * GET /api/v1/admin/pdfs
+     */
+    async getAllPdfs(params?: {
+      status?: string;
+      state?: string;
+      minSizeBytes?: number;
+      maxSizeBytes?: number;
+      uploadedAfter?: string;
+      uploadedBefore?: string;
+      gameId?: string;
+      sortBy?: string;
+      sortOrder?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<PdfListResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.set('status', params.status);
+      if (params?.state) queryParams.set('state', params.state);
+      if (params?.minSizeBytes) queryParams.set('minSizeBytes', params.minSizeBytes.toString());
+      if (params?.maxSizeBytes) queryParams.set('maxSizeBytes', params.maxSizeBytes.toString());
+      if (params?.uploadedAfter) queryParams.set('uploadedAfter', params.uploadedAfter);
+      if (params?.uploadedBefore) queryParams.set('uploadedBefore', params.uploadedBefore);
+      if (params?.gameId) queryParams.set('gameId', params.gameId);
+      if (params?.sortBy) queryParams.set('sortBy', params.sortBy);
+      if (params?.sortOrder) queryParams.set('sortOrder', params.sortOrder);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/pdfs${query ? `?${query}` : ''}`,
+        PdfListResultSchema
+      );
+      return result ?? { items: [], total: 0, page: 1, pageSize: 50 };
+    },
+
+    // ========== Admin Knowledge Base (Issue #4784) ==========
+
+    /**
+     * Get vector collections from Qdrant
+     * GET /api/v1/admin/kb/vector-collections
+     */
+    async getVectorCollections(): Promise<VectorCollectionsResponse> {
+      const result = await httpClient.get(
+        '/api/v1/admin/kb/vector-collections',
+        VectorCollectionsResponseSchema
+      );
+      return result ?? { collections: [] };
+    },
+
+    /**
+     * Get admin processing queue with pagination
+     * GET /api/v1/admin/kb/processing-queue
+     */
+    async getProcessingQueueAdmin(params?: {
+      statusFilter?: string;
+      searchText?: string;
+      fromDate?: string;
+      toDate?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<ProcessingQueueResponse> {
+      const queryParams = new URLSearchParams();
+      if (params?.statusFilter) queryParams.set('statusFilter', params.statusFilter);
+      if (params?.searchText) queryParams.set('searchText', params.searchText);
+      if (params?.fromDate) queryParams.set('fromDate', params.fromDate);
+      if (params?.toDate) queryParams.set('toDate', params.toDate);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/kb/processing-queue${query ? `?${query}` : ''}`,
+        ProcessingQueueResponseSchema
+      );
+      return result ?? { jobs: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// Re-export tier-strategy types for convenience
+export type { TierStrategyMatrixDto, StrategyModelMappingDto } from '../schemas/tier-strategy.schemas';
 
 // ========== Agent Typology Types (Issue #3179) ==========
 

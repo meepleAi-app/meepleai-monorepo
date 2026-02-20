@@ -295,6 +295,67 @@ public class AgentTests
         Assert.False(isIdle);
     }
 
+    // ── Issue #4682: Agent-Game Association + User Ownership ──
+
+    [Fact]
+    public void Constructor_WithGameIdAndUserId_SetsProperties()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        // Act
+        var agent = new Agent(
+            id: id,
+            name: "Game Agent",
+            type: AgentType.RagAgent,
+            strategy: AgentStrategy.HybridSearch(),
+            gameId: gameId,
+            createdByUserId: userId
+        );
+
+        // Assert
+        Assert.Equal(gameId, agent.GameId);
+        Assert.Equal(userId, agent.CreatedByUserId);
+    }
+
+    [Fact]
+    public void Constructor_WithoutGameIdAndUserId_SetsNullDefaults()
+    {
+        // Arrange & Act
+        var agent = new Agent(
+            id: Guid.NewGuid(),
+            name: "System Agent",
+            type: AgentType.RagAgent,
+            strategy: AgentStrategy.HybridSearch()
+        );
+
+        // Assert
+        Assert.Null(agent.GameId);
+        Assert.Null(agent.CreatedByUserId);
+    }
+
+    [Fact]
+    public void Constructor_WithGameIdOnly_SetsGameIdAndNullUser()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+
+        // Act
+        var agent = new Agent(
+            id: Guid.NewGuid(),
+            name: "Game-Only Agent",
+            type: AgentType.RagAgent,
+            strategy: AgentStrategy.HybridSearch(),
+            gameId: gameId
+        );
+
+        // Assert
+        Assert.Equal(gameId, agent.GameId);
+        Assert.Null(agent.CreatedByUserId);
+    }
+
     // Helper method
     private static Agent CreateTestAgent(
         string name = "Test Agent",

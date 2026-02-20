@@ -116,6 +116,14 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
     Task<int> GetPrivatePdfCountAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Adds a library entry referencing a PrivateGame (sets PrivateGameId instead of SharedGameId).
+    /// Issue #3662: Required because domain entity GameId maps to SharedGameId by default.
+    /// </summary>
+    /// <param name="entry">The library entry (GameId will be used as PrivateGameId)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task AddForPrivateGameAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets recently played games for a user, ordered by last played date descending.
     /// Issue #3916: Required for AI insights recommendations.
     /// </summary>

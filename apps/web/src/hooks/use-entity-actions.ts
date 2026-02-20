@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bookmark,
+  Bot,
   CheckCircle,
   Download,
   FileDown,
@@ -68,6 +69,10 @@ export interface UseEntityActionsProps {
   };
   /** Callback to show removal warning modal (Issue #4259) */
   onShowRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void;
+  /** Callback to open agent creation wizard (Issue #4777) */
+  onCreateAgent?: () => void;
+  /** Callback to open collection wizard instead of direct add (Issue #4822) */
+  onAddToCollection?: () => void;
 }
 
 export interface EntityActions {
@@ -96,6 +101,8 @@ export function useEntityActions({
   userRole = 'user',
   data,
   onShowRemovalWarning,
+  onCreateAgent,
+  onAddToCollection,
 }: UseEntityActionsProps): EntityActions {
   const router = useRouter();
 
@@ -148,16 +155,26 @@ export function useEntityActions({
           : {
               icon: Plus,
               label: 'Aggiungi a Collezione',
-              onClick: () => gameCollection.add(),
+              onClick: () => (onAddToCollection ? onAddToCollection() : gameCollection.add()),
             };
+
+        const hasRag = data?.hasPdfDocuments === true;
+        const hasAgent = data?.hasAgent === true;
 
         return {
           quickActions: [
             collectionAction, // Issue #4259: First action
             {
+              icon: Bot,
+              label: 'Crea Agente',
+              onClick: () => onCreateAgent?.(),
+              hidden: hasAgent || !onCreateAgent,
+            },
+            {
               icon: MessageSquare,
               label: 'Chat con Agent',
               onClick: () => router.push(`/chat/new?game=${id}`),
+              hidden: !hasRag,
             },
             {
               icon: Play,
@@ -407,5 +424,7 @@ export function useEntityActions({
     genericStatus,
     addToGenericCollection,
     removeFromGenericCollection,
+    onCreateAgent,
+    onAddToCollection,
   ]);
 }

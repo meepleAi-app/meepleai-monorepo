@@ -30,6 +30,12 @@ public sealed class UserTokenUsageConfiguration : IEntityTypeConfiguration<UserT
         builder.Property(u => u.Cost).HasColumnName("cost").HasColumnType("decimal(10,2)").IsRequired();
         builder.Property(u => u.LastReset).HasColumnName("last_reset").IsRequired();
 
+        // Credit tracking (1 credit = $0.00001 USD)
+        builder.Property(u => u.DailyCreditsUsed).HasColumnName("daily_credits_used").HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(u => u.WeeklyCreditsUsed).HasColumnName("weekly_credits_used").HasColumnType("decimal(18,2)").IsRequired();
+        builder.Property(u => u.LastDailyReset).HasColumnName("last_daily_reset").IsRequired();
+        builder.Property(u => u.LastWeeklyReset).HasColumnName("last_weekly_reset").IsRequired();
+
         // Status flags
         builder.Property(u => u.IsBlocked).HasColumnName("is_blocked").IsRequired();
         builder.Property(u => u.IsNearLimit).HasColumnName("is_near_limit").IsRequired();

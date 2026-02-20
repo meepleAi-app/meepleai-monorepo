@@ -39,7 +39,7 @@ const navigationItems: NavItem[] = [
 ];
 
 const adminNavItems: NavItem[] = [
-  { label: 'Admin', href: '/admin', icon: '👑', color: 'var(--color-red)' },
+  { label: 'Admin', href: '/admin/overview', icon: '👑', color: 'var(--color-red)' },
   { label: 'Analytics', href: '/admin/analytics', icon: '📊' },
   { label: 'Users', href: '/admin/users', icon: '👥' },
 ];

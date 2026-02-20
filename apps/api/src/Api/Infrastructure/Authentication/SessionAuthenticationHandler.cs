@@ -83,7 +83,7 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
             {
                 new(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
                 new(ClaimTypes.Email, result.User.Email),
-                new(ClaimTypes.Role, result.User.Role)
+                new(ClaimTypes.Role, NormalizeRoleClaim(result.User.Role))
             };
 
             if (!string.IsNullOrWhiteSpace(result.User.DisplayName))
@@ -141,7 +141,7 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
         {
             new(ClaimTypes.NameIdentifier, sessionStatus.User.Id.ToString()),
             new(ClaimTypes.Email, sessionStatus.User.Email),
-            new(ClaimTypes.Role, sessionStatus.User.Role)
+            new(ClaimTypes.Role, NormalizeRoleClaim(sessionStatus.User.Role))
         };
 
         if (!string.IsNullOrWhiteSpace(sessionStatus.User.DisplayName))
@@ -153,4 +153,20 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
         var principal = new ClaimsPrincipal(identity);
         return new AuthenticationTicket(principal, schemeName);
     }
+
+    /// <summary>
+    /// Normalizes role values from the domain (lowercase) to PascalCase format
+    /// expected by ASP.NET Core's RequireRole() authorization checks.
+    /// Domain Role value object stores lowercase ("admin", "superadmin"),
+    /// but RequireRole("Admin", "SuperAdmin") is case-sensitive.
+    /// </summary>
+    private static string NormalizeRoleClaim(string role) => role?.ToLowerInvariant() switch
+    {
+        "superadmin" => "SuperAdmin",
+        "admin" => "Admin",
+        "editor" => "Editor",
+        "creator" => "Creator",
+        "user" => "User",
+        _ => role ?? "User"
+    };
 }

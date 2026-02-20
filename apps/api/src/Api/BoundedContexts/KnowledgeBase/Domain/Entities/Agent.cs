@@ -24,6 +24,18 @@ internal sealed class Agent : AggregateRoot<Guid>
     public int InvocationCount { get; private set; }
 
     /// <summary>
+    /// The game this agent is associated with. Nullable for legacy/system agents.
+    /// Issue #4682: Agent-Game association.
+    /// </summary>
+    public Guid? GameId { get; private set; }
+
+    /// <summary>
+    /// The user who created this agent. Nullable for system/admin-seeded agents.
+    /// Issue #4682: User ownership.
+    /// </summary>
+    public Guid? CreatedByUserId { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -40,7 +52,9 @@ internal sealed class Agent : AggregateRoot<Guid>
         string name,
         AgentType type,
         AgentStrategy strategy,
-        bool isActive = true) : base(id)
+        bool isActive = true,
+        Guid? gameId = null,
+        Guid? createdByUserId = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Agent name cannot be empty", nameof(name));
@@ -54,6 +68,8 @@ internal sealed class Agent : AggregateRoot<Guid>
         IsActive = isActive;
         CreatedAt = DateTime.UtcNow;
         InvocationCount = 0;
+        GameId = gameId;
+        CreatedByUserId = createdByUserId;
 
         AddDomainEvent(new AgentCreatedEvent(id, type.Value, name));
     }

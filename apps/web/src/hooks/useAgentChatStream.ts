@@ -39,6 +39,13 @@ export interface AgentChatStreamState {
   totalTokens: number;
 }
 
+/** Game context for OpenRouter proxy requests */
+export interface ProxyGameContext {
+  gameName: string;
+  agentTypology: string;
+  ragContext?: string;
+}
+
 export interface AgentChatStreamCallbacks {
   onComplete?: (answer: string, metadata: {
     totalTokens: number;
@@ -79,7 +86,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
   }, [stopStreaming]);
 
   const sendMessage = useCallback(
-    (agentId: string, message: string, chatThreadId?: string) => {
+    (agentId: string, message: string, chatThreadId?: string, proxyGameContext?: ProxyGameContext) => {
       stopStreaming();
 
       // Track request ID to ignore stale completions after agent switch
@@ -95,19 +102,34 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-      const url = `${baseUrl}/api/v1/agents/${agentId}/chat`;
+      // Issue #4780: Use OpenRouter proxy when gameContext is provided and env var is set
+      const useProxy = !!proxyGameContext && process.env.NEXT_PUBLIC_USE_OPENROUTER_PROXY === 'true';
 
-      const body: Record<string, unknown> = { message };
-      if (chatThreadId) {
-        body.chatThreadId = chatThreadId;
+      let url: string;
+      let body: Record<string, unknown>;
+
+      if (useProxy) {
+        url = '/api/chat-proxy';
+        body = {
+          message,
+          agentId,
+          threadId: chatThreadId,
+          gameContext: proxyGameContext,
+        };
+      } else {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+        url = `${baseUrl}/api/v1/agents/${agentId}/chat`;
+        body = { message };
+        if (chatThreadId) {
+          body.chatThreadId = chatThreadId;
+        }
       }
 
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-        credentials: 'include',
+        credentials: useProxy ? 'same-origin' : 'include',
         signal: abortController.signal,
       })
         .then(async response => {

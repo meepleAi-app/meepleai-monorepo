@@ -93,6 +93,15 @@ if (!builder.Environment.IsEnvironment("Testing") && !builder.Environment.IsEnvi
     var secretLoader = new Api.Infrastructure.Configuration.SecretLoader(builder.Configuration, tempLogger);
     var secretValidationResult = secretLoader.LoadAndValidate();
 
+    // Add loaded secret values to IConfiguration so they're available via config["KEY"]
+    // Environment.SetEnvironmentVariable() alone is not enough - the EnvironmentVariables
+    // configuration provider already captured its snapshot at CreateBuilder() time
+    var loadedSecrets = secretLoader.GetLoadedValues();
+    if (loadedSecrets.Count > 0)
+    {
+        builder.Configuration.AddInMemoryCollection(loadedSecrets.Select(kv => new KeyValuePair<string, string?>(kv.Key, kv.Value)));
+    }
+
     if (!secretValidationResult.IsValid)
     {
         Log.Fatal(
@@ -260,6 +269,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.AddOpenBehavior(typeof(Api.SharedKernel.Application.Behaviors.ValidationBehavior<,>));
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
 });
 
 // Application services (Domain, AI, Admin)
@@ -470,11 +480,17 @@ v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
+v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
+v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
+v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
+v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
+v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
+v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
@@ -505,6 +521,8 @@ v1Api.MapArbitroAdminEndpoints();      // Issue #4328: Arbitro beta testing admi
 v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
+v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
+v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
 v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
@@ -518,6 +536,7 @@ v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
+v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
 v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
@@ -525,6 +544,9 @@ v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
+v1Api.MapUserActivityEndpoints();      // Issue #4652: User activity log for Admin Dashboard
+v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Admin Dashboard
+v1Api.MapAdminKnowledgeBaseEndpoints();  // Issues #4654, #4655: KB and SharedGames for Admin Dashboard
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
@@ -536,6 +558,7 @@ v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
+v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
 v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)

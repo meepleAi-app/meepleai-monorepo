@@ -66,7 +66,7 @@ async function createTestSharedGame(page: Page): Promise<string> {
 
   // Extract game ID from URL
   const url = page.url();
-  const gameId = url.split('/').pop()!;
+  const gameId = url.split('/').pop() ?? ''; // Test context: URL guaranteed to have game ID
 
   return gameId;
 }

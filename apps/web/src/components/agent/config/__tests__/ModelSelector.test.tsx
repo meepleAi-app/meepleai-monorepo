@@ -1,134 +1,260 @@
 /**
  * ModelSelector Component Tests
- * Issue #3239: [FRONT-003] AI model selection with tier filtering
+ * Issue #4775: ModelSelector API Integration
+ *
+ * Tests the ModelSelector connected to real API via React Query.
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { Mock } from 'vitest';
 
-// Mock stores
-vi.mock('@/stores/agentStore', () => ({
-  useAgentStore: vi.fn(() => ({
-    selectedModelId: null,
-    setSelectedModel: vi.fn(),
-  })),
+import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
+
+// Mock API module
+vi.mock('@/lib/api', () => ({
+  api: {
+    admin: {
+      getAiModels: vi.fn(),
+    },
+  },
 }));
 
-// Import after mocks
 import { ModelSelector } from '../ModelSelector';
-import { useAgentStore } from '@/stores/agentStore';
+import { api } from '@/lib/api';
+
+const mockModelsResponse = {
+  items: [
+    {
+      id: 'model-1',
+      name: 'gpt-4o-mini',
+      displayName: 'GPT-4o Mini',
+      provider: 'openai',
+      modelIdentifier: 'openai/gpt-4o-mini',
+      isPrimary: true,
+      status: 'active',
+      cost: { inputCostPer1kTokens: 0.00015, outputCostPer1kTokens: 0.0006, currency: 'USD' },
+      temperature: 0.7,
+      maxTokens: 4096,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: null,
+    },
+    {
+      id: 'model-2',
+      name: 'claude-3-haiku',
+      displayName: 'Claude 3 Haiku',
+      provider: 'anthropic',
+      modelIdentifier: 'anthropic/claude-3-haiku',
+      isPrimary: false,
+      status: 'active',
+      cost: { inputCostPer1kTokens: 0.00025, outputCostPer1kTokens: 0.00125, currency: 'USD' },
+      temperature: 0.7,
+      maxTokens: 4096,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: null,
+    },
+    {
+      id: 'model-3',
+      name: 'llama-3.3-70b',
+      displayName: 'Llama 3.3 70B',
+      provider: 'meta',
+      modelIdentifier: 'meta-llama/llama-3.3-70b',
+      isPrimary: false,
+      status: 'active',
+      cost: { inputCostPer1kTokens: 0.0, outputCostPer1kTokens: 0.0, currency: 'USD' },
+      temperature: 0.7,
+      maxTokens: 4096,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: null,
+    },
+  ],
+  total: 3,
+  page: 1,
+  pageSize: 50,
+};
 
 describe('ModelSelector', () => {
-  const mockSetSelectedModel = vi.fn();
+  let queryClient: QueryClient;
+  const mockOnChange = vi.fn();
 
   beforeEach(() => {
+    queryClient = createTestQueryClient();
     vi.clearAllMocks();
-
-    vi.mocked(useAgentStore).mockReturnValue({
-      selectedModelId: null,
-      setSelectedModel: mockSetSelectedModel,
-    } as unknown as ReturnType<typeof useAgentStore>);
   });
 
-  describe('Rendering', () => {
-    it('renders AI Model label', () => {
-      render(<ModelSelector />);
-      expect(screen.getByText('AI Model')).toBeInTheDocument();
-    });
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 
-    it('renders required asterisk', () => {
-      render(<ModelSelector />);
-      expect(screen.getByText('*')).toBeInTheDocument();
-    });
+  describe('Loading State', () => {
+    it('shows loading state while fetching', () => {
+      (api.admin.getAiModels as Mock).mockImplementation(() => new Promise(() => {}));
 
-    it('renders placeholder text', () => {
-      render(<ModelSelector />);
-      expect(screen.getByText('Choose AI model...')).toBeInTheDocument();
-    });
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
 
-    it('renders help text about model selection', () => {
-      render(<ModelSelector />);
-      expect(
-        screen.getByText(/Model determines response quality and cost/)
-      ).toBeInTheDocument();
+      expect(screen.getByText('Loading models...')).toBeInTheDocument();
     });
   });
 
-  describe('Select Dropdown', () => {
-    it('opens dropdown when trigger clicked', () => {
-      render(<ModelSelector />);
+  describe('Loaded State', () => {
+    beforeEach(() => {
+      (api.admin.getAiModels as Mock).mockResolvedValue(mockModelsResponse);
+    });
+
+    it('renders AI Model label', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText('AI Model')).toBeInTheDocument();
+      });
+    });
+
+    it('renders required asterisk', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText('*')).toBeInTheDocument();
+      });
+    });
+
+    it('renders placeholder text when no value', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose AI model...')).toBeInTheDocument();
+      });
+    });
+
+    it('opens dropdown with models when clicked', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
 
       expect(screen.getByText('GPT-4o Mini')).toBeInTheDocument();
-      expect(screen.getByText('Llama 3.3')).toBeInTheDocument();
-      expect(screen.getByText('GPT-4')).toBeInTheDocument();
-      expect(screen.getByText('Claude 3 Opus')).toBeInTheDocument();
+      expect(screen.getByText('Claude 3 Haiku')).toBeInTheDocument();
+      expect(screen.getByText('Llama 3.3 70B')).toBeInTheDocument();
     });
 
-    it('shows cost per query for each model', () => {
-      render(<ModelSelector />);
+    it('shows provider names', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
 
-      expect(screen.getByText('$0.0005/query')).toBeInTheDocument();
-      expect(screen.getByText('$0.0003/query')).toBeInTheDocument();
-      expect(screen.getByText('$0.003/query')).toBeInTheDocument();
-      expect(screen.getByText('$0.015/query')).toBeInTheDocument();
+      expect(screen.getByText('OpenAI')).toBeInTheDocument();
+      expect(screen.getByText('Anthropic')).toBeInTheDocument();
+      expect(screen.getByText('Meta')).toBeInTheDocument();
     });
 
-    it('shows Premium badge for premium models', () => {
-      render(<ModelSelector />);
+    it('shows Default badge for primary model', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
 
-      const premiumBadges = screen.getAllByText('Premium');
-      expect(premiumBadges).toHaveLength(2); // GPT-4 and Claude 3 Opus
+      expect(screen.getByText('Default')).toBeInTheDocument();
     });
 
-    it('calls setSelectedModel when model is selected', () => {
-      render(<ModelSelector />);
+    it('shows Free for zero-cost models', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
 
-      fireEvent.click(screen.getByRole('combobox'));
-      fireEvent.click(screen.getByText('GPT-4o Mini'));
-
-      expect(mockSetSelectedModel).toHaveBeenCalledWith('gpt-4o-mini');
-    });
-  });
-
-  describe('Model List', () => {
-    it('renders all available models', () => {
-      render(<ModelSelector />);
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
 
-      expect(screen.getByRole('listbox')).toBeInTheDocument();
-      expect(screen.getAllByRole('option')).toHaveLength(4);
+      // Llama is free - shown as "Free/1K" in the cost column
+      expect(screen.getAllByText('Free/1K').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders free tier models without Premium badge', () => {
-      render(<ModelSelector />);
+    it('calls onChange with modelId and model object when selected', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
+      fireEvent.click(screen.getByText('Claude 3 Haiku'));
 
-      // Free models don't have the Premium badge
-      // GPT-4o Mini and Llama 3.3 are free
+      expect(mockOnChange).toHaveBeenCalledWith('model-2', expect.objectContaining({
+        id: 'model-2',
+        displayName: 'Claude 3 Haiku',
+      }));
+    });
+
+    it('shows selected model in trigger when value provided', async () => {
+      render(<ModelSelector value="model-1" onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
+
       expect(screen.getByText('GPT-4o Mini')).toBeInTheDocument();
-      expect(screen.getByText('Llama 3.3')).toBeInTheDocument();
-    });
-  });
-
-  describe('Selected State', () => {
-    it('hides placeholder when model is selected', () => {
-      vi.mocked(useAgentStore).mockReturnValue({
-        selectedModelId: 'gpt-4o-mini',
-        setSelectedModel: mockSetSelectedModel,
-      } as unknown as ReturnType<typeof useAgentStore>);
-
-      render(<ModelSelector />);
-
       expect(screen.queryByText('Choose AI model...')).not.toBeInTheDocument();
+    });
+
+    it('shows cost details when model selected', async () => {
+      render(<ModelSelector value="model-2" onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
+
+      // Cost summary below the selector
+      expect(screen.getByText(/Input:/)).toBeInTheDocument();
+      expect(screen.getByText(/Output:/)).toBeInTheDocument();
+    });
+
+    it('shows help text when no model selected', async () => {
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Model determines response quality and cost/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Error State', () => {
+    it('shows error message when API fails', async () => {
+      // Use 401 error to bypass useAiModels custom retry logic
+      (api.admin.getAiModels as Mock).mockRejectedValue(new Error('401 Unauthorized'));
+
+      render(<ModelSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load models. Please try again.')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Disabled State', () => {
+    it('disables the select when disabled prop is true', async () => {
+      (api.admin.getAiModels as Mock).mockResolvedValue(mockModelsResponse);
+
+      render(<ModelSelector onChange={mockOnChange} disabled />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading models...')).not.toBeInTheDocument();
+      });
+
+      const trigger = screen.getByRole('combobox');
+      expect(trigger).toBeDisabled();
     });
   });
 });

@@ -26,6 +26,10 @@ internal class VectorDocumentEntityConfiguration : IEntityTypeConfiguration<Vect
             .WithMany()
             .HasForeignKey(e => e.PdfDocumentId)
             .OnDelete(DeleteBehavior.Cascade);
+        // Issue #4921: SharedGameId for admin KB cards (nullable cross-BC reference)
+        builder.Property(e => e.SharedGameId).HasColumnName("shared_game_id");
+        builder.HasIndex(e => e.SharedGameId);
+
         builder.HasIndex(e => e.GameId);
         builder.HasIndex(e => e.PdfDocumentId).IsUnique();
     }

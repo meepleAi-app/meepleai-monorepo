@@ -26,6 +26,9 @@ public class VectorDocumentEntity
     // Domain metadata (JSON string for flexible metadata storage)
     public string? Metadata { get; set; }
 
+    // Cross-BC reference to SharedGameCatalog (Issue #4921: admin KB cards)
+    public Guid? SharedGameId { get; set; }
+
     // Navigation properties
     public GameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;

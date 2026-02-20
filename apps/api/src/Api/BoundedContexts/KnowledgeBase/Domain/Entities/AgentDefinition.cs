@@ -28,6 +28,7 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     private bool _isActive;
     private DateTime _createdAt;
     private DateTime? _updatedAt;
+    private string _kbCardIdsJson = "[]";
 
     /// <summary>
     /// Gets the agent name.
@@ -99,6 +100,20 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
 
             return JsonSerializer.Deserialize<List<AgentToolConfig>>(_toolsJson)
                 ?? new List<AgentToolConfig>();
+        }
+    }
+
+    /// <summary>
+    /// Gets the list of KB card document IDs linked to this agent (Issue #4932).
+    /// </summary>
+    public IReadOnlyList<Guid> KbCardIds
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_kbCardIdsJson))
+                return Array.Empty<Guid>();
+
+            return JsonSerializer.Deserialize<List<Guid>>(_kbCardIdsJson) ?? [];
         }
     }
 
@@ -288,6 +303,19 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"Prompts updated ({prompts.Count} prompts)"));
+    }
+
+    /// <summary>
+    /// Updates the list of KB card document IDs linked to this agent (Issue #4932).
+    /// </summary>
+    public void UpdateKbCardIds(IEnumerable<Guid> ids)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        _kbCardIdsJson = JsonSerializer.Serialize(ids);
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "KbCardIds updated"));
     }
 
     /// <summary>

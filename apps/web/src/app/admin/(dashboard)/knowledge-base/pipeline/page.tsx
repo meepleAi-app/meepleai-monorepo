@@ -1,5 +1,6 @@
 import { type Metadata } from 'next';
 
+import { ProcessingMetrics } from '@/components/admin/knowledge-base/processing-metrics';
 import { RAGPipelineFlow } from '@/components/admin/knowledge-base/rag-pipeline-flow';
 
 export const metadata: Metadata = {
@@ -20,8 +21,11 @@ export default function PipelineOverviewPage() {
         </p>
       </div>
 
-      {/* Pipeline Flow + Distribution + Recent Activity (all inside component with live polling) */}
+      {/* Pipeline Flow + Distribution + Recent Activity */}
       <RAGPipelineFlow />
+
+      {/* Processing Step Metrics */}
+      <ProcessingMetrics />
     </div>
   );
 }

@@ -13,7 +13,7 @@ internal class InfrastructureHealthService : IInfrastructureHealthService
     private readonly ILogger<InfrastructureHealthService> _logger;
 
     // Issue #892: Monitored services including n8n and HyperDX
-    private static readonly string[] MonitoredServices = { "postgres", "redis", "qdrant", "qdrant-collection", "n8n", "hyperdx" };
+    private static readonly string[] MonitoredServices = { "postgres", "redis", "qdrant", "qdrant-collection", "embedding", "n8n", "hyperdx" };
 
     public InfrastructureHealthService(
         HealthCheckService healthCheckService,

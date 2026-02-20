@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure;
@@ -104,5 +105,26 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
     {
         return await DbContext.VectorDocuments
             .SumAsync(vd => vd.ChunkCount, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<VectorDocumentIndexingInfo?> GetIndexingInfoByGameIdAsync(
+        Guid gameId,
+        CancellationToken cancellationToken = default)
+    {
+        var info = await DbContext.VectorDocuments
+            .AsNoTracking()
+            .Where(vd => vd.GameId == gameId)
+            // Null IndexedAt (pending/processing) sorts to top so in-progress trumps older completed docs.
+            .OrderByDescending(vd => vd.IndexedAt ?? DateTime.MaxValue)
+            .Select(vd => new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (info is null)
+            return null;
+
+        // Parse the raw persistence string to the typed enum (case-insensitive for robustness).
+        var status = Enum.Parse<VectorDocumentIndexingStatus>(info.IndexingStatus, ignoreCase: true);
+        return new VectorDocumentIndexingInfo(status, info.ChunkCount, info.IndexingError);
     }
 }

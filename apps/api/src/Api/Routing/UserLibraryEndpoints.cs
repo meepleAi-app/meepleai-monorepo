@@ -3,6 +3,8 @@ using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands.Labels;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
@@ -48,6 +50,7 @@ internal static class UserLibraryEndpoints
         MapUploadCustomGamePdfEndpoint(group);
         MapResetGamePdfEndpoint(group);
         MapGetGamePdfsEndpoint(group); // Issue #3152
+        MapGetGamePdfIndexingStatusEndpoint(group); // Issue #4943
         MapPrivatePdfProgressStreamEndpoint(group); // Issue #3653
         MapRemovePrivatePdfEndpoint(group); // Issue #3651
 
@@ -603,6 +606,42 @@ internal static class UserLibraryEndpoints
         .WithTags("Library", "PDF")
         .WithSummary("Get game PDFs")
         .WithDescription("Returns all PDFs associated with a game in user's library (custom uploads + shared catalog). Issue #3152.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Issue #4943: Returns the PDF indexing/processing status for a game owned by the authenticated user.
+    /// Enables frontend polling every 3s until status = indexed | failed.
+    /// </summary>
+    private static void MapGetGamePdfIndexingStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}/pdf-status", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<PdfIndexingStatusDto>(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Library", "PDF")
+        .WithSummary("Get PDF indexing status")
+        .WithDescription("Returns the PDF processing/indexing status for a game. Poll every 3s until status=indexed|failed. Issue #4943.")
         .WithOpenApi();
     }
 

@@ -1,6 +1,19 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+
+/// <summary>
+/// Lightweight projection of a VectorDocument's indexing lifecycle state.
+/// Returned by IVectorDocumentRepository.GetIndexingInfoByGameIdAsync.
+/// </summary>
+/// <param name="Status">Typed lifecycle status (compile-time safe).</param>
+/// <param name="ChunkCount">Number of indexed chunks.</param>
+/// <param name="IndexingError">Error message if status = Failed, otherwise null.</param>
+internal record VectorDocumentIndexingInfo(
+    VectorDocumentIndexingStatus Status,
+    int ChunkCount,
+    string? IndexingError);
 
 /// <summary>
 /// Repository interface for VectorDocument aggregate root.
@@ -60,4 +73,13 @@ internal interface IVectorDocumentRepository
     /// Gets the total count of embeddings across all documents.
     /// </summary>
     Task<int> GetTotalEmbeddingsCountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns lightweight indexing info for a game's VectorDocument (status, chunk count, error).
+    /// Returns null if no VectorDocument exists for the game.
+    /// Issue #4943: PDF indexing status polling.
+    /// </summary>
+    Task<VectorDocumentIndexingInfo?> GetIndexingInfoByGameIdAsync(
+        Guid gameId,
+        CancellationToken cancellationToken = default);
 }

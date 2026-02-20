@@ -1494,7 +1494,9 @@ internal static class UserLibraryEndpoints
                 TypologyId: request.TypologyId,
                 StrategyName: request.StrategyName,
                 StrategyParameters: request.StrategyParameters,
-                UserId: userId
+                UserId: userId,
+                UserTier: session?.User?.Tier ?? "Free",
+                UserRole: session?.User?.Role ?? "User"
             );
 
             try

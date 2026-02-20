@@ -32,6 +32,7 @@ import {
   GitBranchIcon,
   TerminalIcon,
   Settings2Icon,
+  MessageSquareCodeIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -190,6 +191,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/agents/debug',
         label: 'Debug Console',
         icon: TerminalIcon,
+      },
+      {
+        href: '/admin/agents/debug-chat',
+        label: 'Debug Chat',
+        icon: MessageSquareCodeIcon,
       },
       {
         href: '/admin/agents/strategy',

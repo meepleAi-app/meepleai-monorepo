@@ -8,7 +8,7 @@
 
 import type { Mock } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useCreateAgentFlow, type CreateAgentFlowResult, AGENT_FLOW_MESSAGES } from '../useCreateAgentFlow';
+import { useCreateAgentFlow, type CreateAgentFlowResult } from '../useCreateAgentFlow';
 import { agentSlotsKeys } from '../useAgentSlots';
 import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 import { api } from '@/lib/api';
@@ -85,7 +85,7 @@ describe('useCreateAgentFlow hook', () => {
         await result.current.mutateAsync(mockInput);
       });
 
-      expect(toast.success).toHaveBeenCalledWith(AGENT_FLOW_MESSAGES.success('MyAgent'));
+      expect(toast.success).toHaveBeenCalledWith('Agent "MyAgent" created successfully');
     });
 
     it('invalidates agent slots cache', async () => {
@@ -172,8 +172,8 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith(AGENT_FLOW_MESSAGES.slotLimit.title, {
-        description: AGENT_FLOW_MESSAGES.slotLimit.description,
+      expect(toast.error).toHaveBeenCalledWith('No agent slots available', {
+        description: 'Upgrade your tier for more agent slots.',
       });
     });
 
@@ -191,8 +191,8 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith(AGENT_FLOW_MESSAGES.nameConflict.title, {
-        description: AGENT_FLOW_MESSAGES.nameConflict.description,
+      expect(toast.error).toHaveBeenCalledWith('Agent name conflict', {
+        description: 'Please choose a different name.',
       });
     });
 
@@ -210,8 +210,8 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith(AGENT_FLOW_MESSAGES.genericError('Something unexpected happened').title, {
-        description: AGENT_FLOW_MESSAGES.genericError('Something unexpected happened').description,
+      expect(toast.error).toHaveBeenCalledWith('Agent creation failed', {
+        description: 'Something unexpected happened',
       });
     });
 
@@ -229,8 +229,8 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith(AGENT_FLOW_MESSAGES.genericError(AGENT_FLOW_MESSAGES.fallbackErrorDesc).title, {
-        description: AGENT_FLOW_MESSAGES.genericError(AGENT_FLOW_MESSAGES.fallbackErrorDesc).description,
+      expect(toast.error).toHaveBeenCalledWith('Agent creation failed', {
+        description: 'Failed to create agent',
       });
     });
 

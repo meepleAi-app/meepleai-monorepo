@@ -73,10 +73,6 @@ internal sealed class UpdateAgentDefinitionCommandHandler
             agentDefinition.UpdateTools(tools);
         }
 
-        // Update KB card IDs if provided (Issue #4923)
-        if (request.KbCardIds != null)
-            agentDefinition.SetKbCards(request.KbCardIds);
-
         // Persist
         await _repository.UpdateAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
 
@@ -113,7 +109,6 @@ internal sealed class UpdateAgentDefinitionCommandHandler
                 Name = t.Name,
                 Settings = t.GetSettings() as Dictionary<string, object> ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             }).ToList(),
-            KbCardIds = agent.KbCardIds.ToList(),
             IsActive = agent.IsActive,
             CreatedAt = agent.CreatedAt,
             UpdatedAt = agent.UpdatedAt

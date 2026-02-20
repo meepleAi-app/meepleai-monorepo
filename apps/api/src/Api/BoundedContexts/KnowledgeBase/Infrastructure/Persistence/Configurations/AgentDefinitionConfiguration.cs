@@ -70,14 +70,6 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasColumnType("jsonb")
             .IsRequired();
 
-        // KbCardIds (Issue #4923) - stored as JSONB uuid array, computed property ignored
-        builder.Ignore(a => a.KbCardIds);
-        builder.Property<string>("_kbCardIdsJson")
-            .HasColumnName("kb_card_ids")
-            .HasColumnType("jsonb")
-            .IsRequired()
-            .HasDefaultValueSql("'[]'::jsonb");
-
         builder.Property(a => a.IsActive).HasColumnName("is_active").IsRequired();
         builder.Property(a => a.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(a => a.UpdatedAt).HasColumnName("updated_at");

@@ -58,7 +58,6 @@ internal sealed class GetAllAgentDefinitionsQueryHandler
                 Name = t.Name,
                 Settings = t.GetSettings() as Dictionary<string, object> ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             }).ToList(),
-            KbCardIds = agent.KbCardIds.ToList(),
             IsActive = agent.IsActive,
             CreatedAt = agent.CreatedAt,
             UpdatedAt = agent.UpdatedAt

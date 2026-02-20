@@ -355,8 +355,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      // Component renders "Età: {minAge}+" (not "Età minima:")
-      expect(screen.getByText(/Età:.*12\+/)).toBeInTheDocument();
+      expect(screen.getByText(/Età minima: 12\+/)).toBeInTheDocument();
     });
 
     it('should not show min age for grid variant', () => {

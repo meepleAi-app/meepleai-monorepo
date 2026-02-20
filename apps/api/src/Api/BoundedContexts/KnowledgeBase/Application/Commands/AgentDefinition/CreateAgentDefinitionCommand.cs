@@ -18,6 +18,5 @@ public sealed record CreateAgentDefinitionCommand(
     string? StrategyName = null,
     Dictionary<string, object>? StrategyParameters = null,
     List<PromptTemplateDto>? Prompts = null,
-    List<ToolConfigDto>? Tools = null,
-    List<Guid>? KbCardIds = null
+    List<ToolConfigDto>? Tools = null
 ) : IRequest<AgentDefinitionDto>;

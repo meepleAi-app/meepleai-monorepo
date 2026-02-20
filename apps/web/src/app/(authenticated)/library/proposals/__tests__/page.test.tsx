@@ -28,8 +28,7 @@ vi.mock('@/actions/auth', () => ({
 }));
 
 // Mock LibraryNavTabs to isolate page-level testing (Issue #4055)
-// Must use direct file path since page.tsx imports from @/components/library/LibraryNavTabs directly
-vi.mock('@/components/library/LibraryNavTabs', () => ({
+vi.mock('@/components/library', () => ({
   LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 

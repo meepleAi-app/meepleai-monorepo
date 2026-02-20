@@ -29,13 +29,6 @@ internal interface IVectorDocumentRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all vector documents for a specific shared game (admin-owned content, Issue #4921).
-    /// </summary>
-    Task<List<VectorDocument>> GetBySharedGameIdAsync(
-        Guid sharedGameId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Adds a new vector document to the repository.
     /// </summary>
     Task AddAsync(VectorDocument document, CancellationToken cancellationToken = default);

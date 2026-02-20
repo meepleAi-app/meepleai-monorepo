@@ -25,7 +25,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     private string _strategyJson = "{}";
     private string _promptsJson = "[]";
     private string _toolsJson = "[]";
-    private string _kbCardIdsJson = "[]";
     private bool _isActive;
     private DateTime _createdAt;
     private DateTime? _updatedAt;
@@ -104,23 +103,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Gets the list of selected KB card (VectorDocument) IDs for this agent.
-    /// When empty, the agent falls back to all documents for the linked shared game.
-    /// Issue #4923
-    /// </summary>
-    public IReadOnlyList<Guid> KbCardIds
-    {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(_kbCardIdsJson))
-                return Array.Empty<Guid>();
-
-            return JsonSerializer.Deserialize<List<Guid>>(_kbCardIdsJson)
-                ?? new List<Guid>();
-        }
-    }
-
-    /// <summary>
     /// Gets whether the agent is active.
     /// </summary>
     public bool IsActive => _isActive;
@@ -159,8 +141,7 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         string toolsJson,
         bool isActive,
         DateTime createdAt,
-        DateTime? updatedAt,
-        string? kbCardIdsJson = null) : base(id)
+        DateTime? updatedAt) : base(id)
     {
         _name = name;
         _description = description;
@@ -170,7 +151,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _strategyJson = strategyJson;
         _promptsJson = promptsJson;
         _toolsJson = toolsJson;
-        _kbCardIdsJson = kbCardIdsJson ?? "[]";
         _isActive = isActive;
         _createdAt = createdAt;
         _updatedAt = updatedAt;
@@ -324,21 +304,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"Tools updated ({tools.Count} tools)"));
-    }
-
-    /// <summary>
-    /// Sets the KB card (VectorDocument) IDs for this agent.
-    /// Pass empty list to fall back to all documents for the linked shared game (Issue #4923).
-    /// </summary>
-    public void SetKbCards(IEnumerable<Guid> vectorDocumentIds)
-    {
-        ArgumentNullException.ThrowIfNull(vectorDocumentIds);
-
-        var ids = vectorDocumentIds.Distinct().ToList();
-        _kbCardIdsJson = JsonSerializer.Serialize(ids);
-        _updatedAt = DateTime.UtcNow;
-
-        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"KbCards updated ({ids.Count} cards)"));
     }
 
     /// <summary>

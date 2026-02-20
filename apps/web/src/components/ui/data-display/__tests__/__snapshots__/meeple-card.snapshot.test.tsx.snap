@@ -337,18 +337,16 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
       </span>
     </div>
     <div
-      class="flex gap-2 mt-3 min-w-0"
+      class="flex gap-2 mt-3"
     >
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
         style="background-color: rgb(244, 62, 92);"
-        title="Register Now"
       >
         Register Now
       </button>
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
-        title="Learn More"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
       >
         Learn More
       </button>
@@ -1114,18 +1112,16 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
       </span>
     </div>
     <div
-      class="flex gap-2 mt-3 min-w-0"
+      class="flex gap-2 mt-3"
     >
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
         style="background-color: rgb(224, 97, 6);"
-        title="Browse"
       >
         Browse
       </button>
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
-        title="Clone"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
       >
         Clone
       </button>
@@ -1459,18 +1455,16 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
       </span>
     </div>
     <div
-      class="flex gap-2 mt-3 min-w-0"
+      class="flex gap-2 mt-3"
     >
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
         style="background-color: rgb(224, 97, 6);"
-        title="Register Now"
       >
         Register Now
       </button>
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
-        title="Learn More"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
       >
         Learn More
       </button>
@@ -2128,19 +2122,17 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with di
       Publisher
     </p>
     <div
-      class="flex gap-2 mt-3 min-w-0"
+      class="flex gap-2 mt-3"
     >
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-white shadow-md hover:shadow-lg"
         style="background-color: rgb(224, 97, 6);"
-        title="Available"
       >
         Available
       </button>
       <button
-        class="flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold text-xs md:text-sm truncate transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
+        class="flex-1 py-2 px-4 rounded-lg font-quicksand font-semibold text-sm transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 bg-muted text-foreground hover:bg-muted/80"
         disabled=""
-        title="Sold Out"
       >
         Sold Out
       </button>

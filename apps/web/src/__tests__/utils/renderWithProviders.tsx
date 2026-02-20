@@ -24,23 +24,6 @@ import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
-import { IntlProvider } from 'react-intl';
-
-// Flatten nested JSON into dot-notation keys for react-intl
-function flattenMessages(obj: Record<string, unknown>, prefix = ''): Record<string, string> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const full = prefix ? `${prefix}.${key}` : key;
-    if (typeof obj[key] === 'object' && obj[key] !== null) {
-      Object.assign(acc, flattenMessages(obj[key] as Record<string, unknown>, full));
-    } else {
-      acc[full] = String(obj[key]);
-    }
-    return acc;
-  }, {} as Record<string, string>);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const enMessages = flattenMessages(require('../../locales/en.json'));
 
 /**
  * Create a fresh QueryClient for testing
@@ -99,7 +82,7 @@ interface RenderWithProvidersResult extends RenderResult {
 /**
  * All Providers Wrapper
  *
- * Wraps children with: QueryClient → IntlProvider → ChatStore → (Custom)
+ * Wraps children with: QueryClient → ChatStore → (Custom)
  */
 const createAllProvidersWrapper = ({
   queryClient,
@@ -123,14 +106,8 @@ const createAllProvidersWrapper = ({
       content = <ChatStoreProvider>{content}</ChatStoreProvider>;
     }
 
-    // Always wrap with QueryClientProvider and IntlProvider
-    return (
-      <QueryClientProvider client={queryClient}>
-        <IntlProvider locale="en" messages={enMessages}>
-          {content}
-        </IntlProvider>
-      </QueryClientProvider>
-    );
+    // Always wrap with QueryClientProvider
+    return <QueryClientProvider client={queryClient}>{content}</QueryClientProvider>;
   };
 
   Wrapper.displayName = 'TestProvidersWrapper';
@@ -143,7 +120,6 @@ const createAllProvidersWrapper = ({
  * This is the primary render utility for integration tests.
  * It sets up:
  * - QueryClientProvider with fresh client
- * - IntlProvider with English messages
  * - ChatStoreProvider (optional)
  * - userEvent for realistic interactions
  *
@@ -219,13 +195,7 @@ export function createHookWrapper(options: Omit<RenderWithProvidersOptions, 'cus
       content = <ChatStoreProvider>{content}</ChatStoreProvider>;
     }
 
-    return (
-      <QueryClientProvider client={queryClient}>
-        <IntlProvider locale="en" messages={enMessages}>
-          {content}
-        </IntlProvider>
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{content}</QueryClientProvider>;
   };
 }
 

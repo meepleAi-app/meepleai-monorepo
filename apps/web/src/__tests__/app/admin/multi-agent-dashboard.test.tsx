@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import MultiAgentDashboardPage from '@/app/(protected)/admin/ai-lab/multi-agent/page';
+import MultiAgentDashboardPage from '@/app/(authenticated)/admin/ai-lab/multi-agent/page';
 
 describe('Multi-Agent Dashboard', () => {
   it('renders dashboard title', () => {

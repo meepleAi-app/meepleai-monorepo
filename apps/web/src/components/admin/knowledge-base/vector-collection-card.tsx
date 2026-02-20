@@ -13,6 +13,14 @@ import { Database, Layers, RefreshCw, Trash2 } from 'lucide-react';
 
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 
+export interface VectorCollectionDto {
+  name: string;
+  vectorCount: number;
+  dimensions: number;
+  storage: string;
+  health: number;
+}
+
 export interface VectorCollectionCardProps {
   name: string;
   vectorCount: number;

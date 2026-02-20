@@ -28,7 +28,7 @@
 import dynamic from 'next/dynamic';
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { LibraryNavTabs } from '@/components/library';
+import { LibraryNavTabs } from '@/components/library/LibraryNavTabs';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 // Dynamically import the client component with SSR disabled

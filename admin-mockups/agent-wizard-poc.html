@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeepleCard Agent POC - Mockup Interattivo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            quicksand: ['Quicksand', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          },
+          colors: {
+            meeple: {
+              game: { DEFAULT: 'hsl(25, 95%, 45%)', light: 'hsl(25, 95%, 95%)', mid: 'hsl(25, 95%, 85%)' },
+              agent: { DEFAULT: 'hsl(38, 92%, 50%)', light: 'hsl(38, 92%, 95%)', mid: 'hsl(38, 92%, 85%)' },
+              chat: { DEFAULT: 'hsl(220, 80%, 55%)', light: 'hsl(220, 80%, 95%)', mid: 'hsl(220, 80%, 85%)' },
+            }
+          },
+          keyframes: {
+            'slide-in-right': { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(0)' } },
+            'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            'typing-1': { '0%, 60%, 100%': { opacity: '0.3', transform: 'translateY(0)' }, '30%': { opacity: '1', transform: 'translateY(-4px)' } },
+            'typing-2': { '0%, 70%, 100%': { opacity: '0.3', transform: 'translateY(0)' }, '40%': { opacity: '1', transform: 'translateY(-4px)' } },
+            'typing-3': { '0%, 80%, 100%': { opacity: '0.3', transform: 'translateY(0)' }, '50%': { opacity: '1', transform: 'translateY(-4px)' } }
+          },
+          animation: {
+            'slide-in-right': 'slide-in-right 0.3s ease-out',
+            'fade-in': 'fade-in 0.2s ease-out',
+            'typing-1': 'typing-1 1.4s infinite',
+            'typing-2': 'typing-2 1.4s infinite 0.2s',
+            'typing-3': 'typing-3 1.4s infinite 0.4s',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Nunito', sans-serif; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Quicksand', sans-serif; }
+    .glass { background: rgba(255,255,255,0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+    .drop-zone { border: 2px dashed rgba(0,0,0,0.2); transition: all 0.2s; }
+    .drop-zone:hover { border-color: hsl(38, 92%, 50%); background: hsla(38, 92%, 50%, 0.05); }
+    .card-hover { transition: all 0.2s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .chat-bubble-user { border-radius: 18px 18px 4px 18px; }
+    .chat-bubble-agent { border-radius: 18px 18px 18px 4px; }
+    .progress-bar { transition: width 0.5s ease; }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%23666'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen" id="app"></body>
+
+<script>
+// ===== SAFE DOM HELPERS =====
+function el(tag, attrs, children) {
+  const e = document.createElement(tag);
+  if (attrs) {
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (k === 'className') e.className = v;
+      else if (k === 'textContent') e.textContent = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+      else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+      else if (k === 'disabled') { if (v) e.disabled = true; }
+      else if (k === 'placeholder') e.placeholder = v;
+      else if (k === 'type') e.type = v;
+      else if (k === 'rows') e.rows = v;
+      else if (k === 'value') e.value = v;
+      else if (k === 'id') e.id = v;
+      else if (k === 'title') e.title = v;
+      else if (k === 'htmlFor') e.htmlFor = v;
+      else e.setAttribute(k, v);
+    });
+  }
+  if (children) {
+    (Array.isArray(children) ? children : [children]).forEach(c => {
+      if (typeof c === 'string') e.appendChild(document.createTextNode(c));
+      else if (c) e.appendChild(c);
+    });
+  }
+  return e;
+}
+
+function svgIcon(path, cls) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', cls || 'w-5 h-5');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('stroke-linecap', 'round');
+  p.setAttribute('stroke-linejoin', 'round');
+  p.setAttribute('stroke-width', '2');
+  p.setAttribute('d', path);
+  svg.appendChild(p);
+  return svg;
+}
+
+// Simple markdown-like rendering using DOM (safe)
+function renderMarkdownSafe(text, container) {
+  const lines = text.split('\n');
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) { container.appendChild(el('br')); return; }
+
+    const p = el('p', { className: 'text-sm text-gray-800 mb-1' });
+
+    // Parse inline formatting
+    let remaining = trimmed;
+    // Handle list items
+    if (remaining.startsWith('- ')) {
+      remaining = remaining.slice(2);
+      p.className = 'text-sm text-gray-800 mb-0.5 ml-4 before:content-["•"] before:mr-2 before:text-amber-500';
+    } else if (/^\d+\.\s/.test(remaining)) {
+      const num = remaining.match(/^(\d+)\.\s/)[1];
+      remaining = remaining.replace(/^\d+\.\s/, '');
+      p.className = 'text-sm text-gray-800 mb-0.5 ml-4';
+      p.appendChild(el('span', { className: 'font-bold text-amber-600 mr-1.5', textContent: num + '.' }));
+    }
+
+    // Parse bold and normal text
+    const parts = remaining.split(/(\*\*[^*]+\*\*)/g);
+    parts.forEach(part => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        p.appendChild(el('strong', { textContent: part.slice(2, -2) }));
+      } else {
+        p.appendChild(document.createTextNode(part));
+      }
+    });
+
+    container.appendChild(p);
+  });
+}
+
+// ===== DATA =====
+const games = {
+  catan: { name: 'Catan', icon: '\u{1F3DD}\uFE0F', players: '3-4', time: '60-120 min', category: 'Strategia', inCollection: true, hasAgent: false, color: 'from-orange-300 to-orange-500' },
+  descent: { name: 'Descent', icon: '\u2694\uFE0F', players: '2-5', time: '120-180 min', category: 'Dungeon Crawler', inCollection: true, hasAgent: true, agentName: 'Overlord AI', color: 'from-red-400 to-red-600' },
+  ttr: { name: 'Ticket to Ride', icon: '\u{1F682}', players: '2-5', time: '30-60 min', category: 'Famiglia', inCollection: true, hasAgent: false, color: 'from-blue-400 to-blue-600' },
+  pandemic: { name: 'Pandemic', icon: '\u{1F9A0}', players: '2-4', time: '45-60 min', category: 'Cooperativo', inCollection: false, hasAgent: false, color: 'from-green-400 to-green-600' },
+};
+
+const chatResponses = {
+  catan: {
+    welcome: "Ciao! Sono il tuo **Esperto di Catan** \u{1F3DD}\uFE0F\n\nHo studiato il regolamento completo e posso aiutarti con:\n- \u{1F4DC} Regole e setup del gioco\n- \u{1F3AF} Strategie per vincere\n- \u2696\uFE0F Risoluzione dispute tra giocatori\n- \u{1F4A1} Consigli tattici in tempo reale\n\nChiedimi qualsiasi cosa!",
+    responses: [
+      { q: /commerc|scamb|trade/i, a: "**Commercio in Catan** \u{1F504}\n\nCi sono due tipi di scambio:\n\n1. **Con la banca**: 4:1 di default (o 3:1/2:1 se hai un porto)\n2. **Con altri giocatori**: Qualsiasi rapporto concordato, ma **solo durante il tuo turno**\n\n\u26A0\uFE0F **Regola importante**: Non puoi fare scambi durante il turno di un altro giocatore!\n\n\u{1F4C4} Fonte: Regolamento p.8 - Fase di Commercio" },
+      { q: /cavalier|knight|largest army/i, a: "**Il Cavaliere** \u2694\uFE0F\n\nQuando giochi una carta Cavaliere:\n1. Sposti il **Brigante** su un qualsiasi esagono\n2. Rubi **1 risorsa casuale** da un giocatore adiacente\n3. L'esagono col Brigante **non produce** risorse\n\n\u{1F3C6} **Armata Piu' Grande**: Il primo a giocare 3 Cavalieri ottiene 2 punti bonus.\n\n\u{1F4C4} Fonte: Regolamento p.11 - Carte Sviluppo" },
+      { q: /setup|inizio|posizion|piazza/i, a: "**Setup Iniziale** \u{1F3B2}\n\n1. Ogni giocatore piazza **2 insediamenti + 2 strade** (in ordine: 1\u21922\u21923\u21924\u21924\u21923\u21922\u21921)\n2. Il **secondo insediamento** ti da le risorse degli esagoni adiacenti\n3. Regola d'oro: Ogni insediamento deve avere **almeno 2 strade di distanza** da qualsiasi altro\n\n\u{1F4A1} **Consiglio**: Punta su esagoni con numeri 6 e 8!\n\n\u{1F4C4} Fonte: Regolamento p.4-5 - Preparazione" },
+      { q: /7|sette|brigant|robber/i, a: "**Quando esce il 7** \u{1F3AF}\n\n1. **Nessuno** riceve risorse\n2. Chi ha **piu di 7 carte** deve scartarne la meta\n3. Chi ha tirato il dado **sposta il Brigante** su un esagono a scelta\n4. **Ruba 1 carta** casuale da un giocatore su quell'esagono\n\n\u{1F4C4} Fonte: Regolamento p.7 - Il Brigante" },
+    ],
+    fallback: "Ottima domanda! \u{1F914}\n\nLasciami cercare nel regolamento...\n\nPurtroppo non ho trovato una risposta specifica. Posso provare a:\n1. Cercare in modo diverso - riformula la domanda\n2. Darti una risposta basata sulle regole generali\n\nCosa preferisci?"
+  },
+  descent: { welcome: "Benvenuto, eroe! Sono il tuo **Esperto di Descent** \u2694\uFE0F\n\nConosco ogni segreto del dungeon!", responses: [], fallback: "Cerco nel regolamento di Descent..." },
+  ttr: { welcome: "Tutti a bordo! \u{1F682} Sono il tuo **Esperto di Ticket to Ride**!", responses: [], fallback: "Controllo le regole di Ticket to Ride..." },
+  pandemic: { welcome: "Il mondo ha bisogno di noi! \u{1F9A0} Sono il tuo **Esperto di Pandemic**!", responses: [], fallback: "Analizzo il protocollo..." }
+};
+
+let currentGame = 'catan';
+let currentView = 'games';
+let uploadedFiles = [];
+let chatHistory = [];
+
+// ===== NAVIGATION =====
+function showView(view) {
+  ['games', 'agents', 'chat-list', 'chat'].forEach(v => {
+    const viewEl = document.getElementById('view-' + v);
+    if (viewEl) viewEl.classList.toggle('hidden', v !== view);
+  });
+  ['games', 'agents', 'chats'].forEach(n => {
+    const navEl = document.getElementById('nav-' + n);
+    if (navEl) { navEl.classList.remove('text-amber-600', 'font-semibold'); }
+  });
+  const navMap = { 'games': 'games', 'agents': 'agents', 'chat-list': 'chats', 'chat': 'chats' };
+  const navBtn = document.getElementById('nav-' + navMap[view]);
+  if (navBtn) navBtn.classList.add('text-amber-600', 'font-semibold');
+  currentView = view;
+}
+
+// ===== TOAST =====
+function showToast(title, desc) {
+  const toast = document.getElementById('toast');
+  toast.querySelector('.toast-title').textContent = title;
+  toast.querySelector('.toast-desc').textContent = desc;
+  toast.style.transform = 'translateX(0)';
+  setTimeout(() => { toast.style.transform = 'translateX(120%)'; }, 3000);
+}
+
+// ===== BUILD NAVBAR =====
+function buildNavbar() {
+  const nav = el('nav', { className: 'sticky top-0 z-40 glass border-b border-gray-200/50' }, [
+    el('div', { className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8' }, [
+      el('div', { className: 'flex items-center justify-between h-14' }, [
+        el('div', { className: 'flex items-center gap-3' }, [
+          el('div', { className: 'w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center' }, [
+            el('span', { className: 'text-white text-sm font-bold', textContent: 'M' })
+          ]),
+          el('span', { className: 'font-quicksand font-bold text-lg text-gray-800', textContent: 'MeepleAI' })
+        ]),
+        el('div', { className: 'flex items-center gap-2' }, [
+          el('button', { id: 'nav-games', className: 'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors hover:bg-gray-100', textContent: 'I miei giochi', onClick: () => showView('games') }),
+          el('button', { id: 'nav-agents', className: 'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors hover:bg-gray-100', textContent: 'Agenti', onClick: () => showView('agents') }),
+          el('button', { id: 'nav-chats', className: 'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors hover:bg-gray-100', textContent: 'Chat', onClick: () => showView('chat-list') }),
+        ])
+      ])
+    ])
+  ]);
+  return nav;
+}
+
+// ===== BUILD TOAST =====
+function buildToast() {
+  const toast = el('div', { id: 'toast', className: 'fixed top-20 right-4 z-[100] transition-transform duration-300', style: { transform: 'translateX(120%)' } }, [
+    el('div', { className: 'glass rounded-xl shadow-xl border border-gray-200/50 px-4 py-3 flex items-center gap-3 max-w-sm' }, [
+      el('div', { className: 'w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0' }, [
+        svgIcon('M5 13l4 4L19 7', 'w-5 h-5 text-green-600')
+      ]),
+      el('div', {}, [
+        el('p', { className: 'text-sm font-semibold text-gray-800 toast-title', textContent: '' }),
+        el('p', { className: 'text-xs text-gray-500 toast-desc', textContent: '' }),
+      ])
+    ])
+  ]);
+  return toast;
+}
+
+// ===== BUILD GAME CARD =====
+function buildGameCard(key, game) {
+  const hasSlots = true;
+  const actionBtn = game.hasAgent
+    ? el('button', { className: 'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-meeple-chat-light text-meeple-chat text-xs font-semibold hover:bg-meeple-chat-mid transition-colors', onClick: () => openChatForGame(key) }, [
+        svgIcon('M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', 'w-4 h-4'),
+        document.createTextNode(' Chat')
+      ])
+    : el('button', { className: 'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-meeple-agent-light text-amber-700 text-xs font-semibold hover:bg-meeple-agent-mid transition-colors', disabled: !hasSlots, onClick: () => openWizard(key) }, [
+        svgIcon('M12 4v16m8-8H4', 'w-4 h-4'),
+        document.createTextNode(' Crea Agente')
+      ]);
+
+  const header = el('div', { className: 'h-36 bg-gradient-to-br ' + game.color + ' flex items-center justify-center relative' }, [
+    el('span', { className: 'text-6xl', textContent: game.icon })
+  ]);
+  if (game.hasAgent) {
+    header.appendChild(el('span', { className: 'absolute top-3 right-3 px-2 py-0.5 rounded-full bg-white/90 text-xs font-semibold text-amber-600', textContent: '\u{1F916} ' + game.agentName }));
+  }
+  if (!game.inCollection) {
+    header.appendChild(el('span', { className: 'absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/30 text-white text-xs font-medium', textContent: 'Catalogo' }));
+  }
+
+  return el('div', { className: 'card-hover rounded-2xl overflow-hidden border border-gray-200/50 bg-white/70 backdrop-blur-md shadow-sm' }, [
+    header,
+    el('div', { className: 'p-4' }, [
+      el('h3', { className: 'font-quicksand font-bold text-gray-800', textContent: game.name }),
+      el('p', { className: 'text-xs text-gray-500 mt-0.5', textContent: game.players + ' giocatori \u2022 ' + game.time }),
+      el('div', { className: 'flex items-center gap-1.5 mt-1' }, [
+        el('span', { className: 'px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700', textContent: game.category }),
+        game.inCollection ? el('span', { className: 'px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700', textContent: 'In collezione' }) : null
+      ].filter(Boolean)),
+      el('div', { className: 'flex items-center gap-2 mt-3 pt-3 border-t border-gray-100' }, [ actionBtn ])
+    ])
+  ]);
+}
+
+// ===== BUILD VIEWS =====
+function buildGamesView() {
+  const grid = el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5', id: 'game-cards-grid' });
+  Object.entries(games).forEach(([k, g]) => grid.appendChild(buildGameCard(k, g)));
+
+  return el('div', { id: 'view-games', className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6' }, [
+    el('div', { className: 'flex items-center justify-between mb-6' }, [
+      el('div', {}, [
+        el('h1', { className: 'font-quicksand text-2xl font-bold text-gray-800', textContent: 'I miei giochi' }),
+        el('p', { className: 'text-sm text-gray-500 mt-1', textContent: '4 giochi nella tua collezione' })
+      ])
+    ]),
+    grid
+  ]);
+}
+
+function buildAgentsView() {
+  const agents = [
+    { name: 'Overlord AI', game: 'Descent', icon: '\u2694\uFE0F', typology: 'Arbitro', status: 'active', messages: 47, model: 'GPT-4o' },
+    { name: 'Esperto di Scacchi', game: 'Chess', icon: '\u265F\uFE0F', typology: 'Stratega', status: 'idle', messages: 12, model: 'Claude 3.5' },
+  ];
+
+  const grid = el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5' });
+  agents.forEach(agent => {
+    const statusCls = agent.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
+    const dotCls = agent.status === 'active' ? 'bg-green-500' : 'bg-gray-400';
+    grid.appendChild(el('div', { className: 'card-hover rounded-2xl overflow-hidden border border-gray-200/50 bg-white/70 backdrop-blur-md shadow-sm' }, [
+      el('div', { className: 'h-28 bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center relative' }, [
+        el('span', { className: 'text-5xl', textContent: '\u{1F916}' }),
+        el('span', { className: 'absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ' + statusCls }, [
+          el('span', { className: 'w-1.5 h-1.5 rounded-full ' + dotCls }),
+          document.createTextNode(agent.status === 'active' ? ' Attivo' : ' Inattivo')
+        ])
+      ]),
+      el('div', { className: 'p-4' }, [
+        el('h3', { className: 'font-quicksand font-bold text-gray-800', textContent: agent.name }),
+        el('div', { className: 'flex items-center gap-1.5 mt-1' }, [
+          el('span', { className: 'text-sm', textContent: agent.icon }),
+          el('span', { className: 'text-xs text-gray-500', textContent: agent.game + ' \u2022 ' + agent.typology })
+        ]),
+        el('div', { className: 'flex items-center justify-between mt-3 pt-3 border-t border-gray-100' }, [
+          el('span', { className: 'text-xs text-gray-400', textContent: agent.messages + ' messaggi \u2022 ' + agent.model }),
+          el('button', { className: 'px-3 py-1.5 rounded-lg bg-meeple-chat-light text-meeple-chat text-xs font-semibold hover:bg-meeple-chat-mid transition-colors', textContent: 'Chat' })
+        ])
+      ])
+    ]));
+  });
+
+  return el('div', { id: 'view-agents', className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 hidden' }, [
+    el('div', { className: 'flex items-center justify-between mb-6' }, [
+      el('div', {}, [
+        el('h1', { className: 'font-quicksand text-2xl font-bold text-gray-800', textContent: 'I miei agenti' }),
+        el('p', { className: 'text-sm text-gray-500 mt-1', textContent: '2 agenti attivi \u2022 3 slot disponibili' })
+      ]),
+      el('button', { className: 'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all', onClick: () => openWizard('catan') }, [
+        svgIcon('M12 4v16m8-8H4', 'w-5 h-5'),
+        document.createTextNode(' Crea nuovo agente')
+      ])
+    ]),
+    el('div', { className: 'glass rounded-xl border border-gray-200/50 p-4 mb-6' }, [
+      el('div', { className: 'flex items-center justify-between mb-2' }, [
+        el('span', { className: 'text-sm font-medium text-gray-700', textContent: 'Slot agenti' }),
+        el('span', { className: 'text-sm text-gray-500', textContent: '2 / 5 usati' })
+      ]),
+      el('div', { className: 'w-full h-2 bg-gray-200 rounded-full overflow-hidden' }, [
+        el('div', { className: 'h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full progress-bar', style: { width: '40%' } })
+      ]),
+      el('p', { className: 'text-xs text-gray-400 mt-1.5', textContent: 'Piano Free: 5 slot' })
+    ]),
+    grid
+  ]);
+}
+
+function buildChatListView() {
+  const sessions = [
+    { agent: 'Overlord AI', game: 'Descent', icon: '\u2694\uFE0F', lastMessage: 'Le regole per il movimento di gruppo sono...', time: '5 min fa', unread: 2 },
+    { agent: 'Esperto di Scacchi', game: 'Chess', icon: '\u265F\uFE0F', lastMessage: "L'apertura siciliana e' la migliore contro...", time: '2 ore fa', unread: 0 },
+  ];
+  const grid = el('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5' });
+  sessions.forEach(s => {
+    const badge = s.unread > 0 ? el('span', { className: 'absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center', textContent: String(s.unread) }) : null;
+    const iconWrap = el('div', { className: 'w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center relative' }, [
+      el('span', { className: 'text-xl', textContent: '\u{1F4AC}' })
+    ]);
+    if (badge) iconWrap.appendChild(badge);
+    grid.appendChild(el('div', { className: 'card-hover rounded-2xl overflow-hidden border border-gray-200/50 bg-white/70 backdrop-blur-md shadow-sm cursor-pointer p-4' }, [
+      el('div', { className: 'flex items-center gap-3 mb-3' }, [
+        iconWrap,
+        el('div', { className: 'flex-1 min-w-0' }, [
+          el('h3', { className: 'font-quicksand font-bold text-gray-800 text-sm', textContent: s.agent }),
+          el('p', { className: 'text-xs text-gray-500', textContent: s.icon + ' ' + s.game + ' \u2022 ' + s.time })
+        ])
+      ]),
+      el('p', { className: 'text-sm text-gray-600 truncate', textContent: s.lastMessage })
+    ]));
+  });
+
+  return el('div', { id: 'view-chat-list', className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 hidden' }, [
+    el('div', { className: 'flex items-center justify-between mb-6' }, [
+      el('h1', { className: 'font-quicksand text-2xl font-bold text-gray-800', textContent: 'Le mie chat' }),
+    ]),
+    grid
+  ]);
+}
+
+// ===== BUILD CHAT VIEW =====
+function buildChatView() {
+  const messagesContainer = el('div', { id: 'chat-messages', className: 'flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-thin' });
+
+  const inputArea = el('textarea', { id: 'chat-input', rows: '1', placeholder: 'Chiedi qualcosa sulle regole...', className: 'w-full px-4 py-2.5 text-sm rounded-2xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none' });
+  inputArea.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+
+  const followupContainer = el('div', { id: 'followup-questions', className: 'space-y-1.5' });
+  const followupSection = el('div', { id: 'followup-section', className: 'hidden' }, [
+    el('h4', { className: 'font-quicksand font-bold text-xs uppercase tracking-wider text-gray-400 mb-3', textContent: 'Domande suggerite' }),
+    followupContainer
+  ]);
+
+  return el('div', { id: 'view-chat', className: 'hidden h-[calc(100vh-56px)]' }, [
+    el('div', { className: 'flex h-full' }, [
+      // Main chat
+      el('div', { className: 'flex-1 flex flex-col' }, [
+        // Header
+        el('div', { className: 'glass border-b border-gray-200/50 px-6 py-3 flex items-center justify-between' }, [
+          el('div', { className: 'flex items-center gap-3' }, [
+            el('button', { className: 'p-1.5 rounded-lg hover:bg-gray-100 transition-colors', onClick: () => showView('chat-list') }, [
+              svgIcon('M15 19l-7-7 7-7', 'w-5 h-5 text-gray-500')
+            ]),
+            el('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center' }, [
+              el('span', { className: 'text-white text-lg', textContent: '\u{1F916}' })
+            ]),
+            el('div', {}, [
+              el('h3', { id: 'chat-agent-name', className: 'font-quicksand font-bold text-gray-800 text-sm', textContent: 'Esperto di Catan' }),
+              el('p', { className: 'text-xs text-gray-500' }, [
+                document.createTextNode('Tutor \u2022 HybridSearch \u2022 '),
+                el('span', { className: 'inline-flex items-center gap-1' }, [
+                  el('span', { className: 'w-1.5 h-1.5 rounded-full bg-green-500' }),
+                  document.createTextNode(' Online')
+                ])
+              ])
+            ])
+          ]),
+          el('span', { id: 'chat-game-badge', className: 'px-2 py-0.5 text-xs font-medium rounded-full bg-meeple-game-light text-meeple-game', textContent: 'Catan' })
+        ]),
+        messagesContainer,
+        // Input
+        el('div', { className: 'border-t border-gray-200/50 px-6 py-3 glass' }, [
+          el('div', { className: 'flex items-end gap-3' }, [
+            el('div', { className: 'flex-1 relative' }, [ inputArea ]),
+            el('button', { className: 'p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:shadow-lg transition-all flex-shrink-0', onClick: sendMessage }, [
+              svgIcon('M12 19l9 2-9-18-9 18 9-2zm0 0v-8', 'w-5 h-5')
+            ])
+          ])
+        ])
+      ]),
+      // Info Panel
+      el('div', { className: 'hidden lg:block w-80 border-l border-gray-200/50 glass overflow-y-auto scrollbar-thin' }, [
+        el('div', { className: 'p-5 space-y-5' }, [
+          el('div', {}, [
+            el('h4', { className: 'font-quicksand font-bold text-xs uppercase tracking-wider text-gray-400 mb-3', textContent: 'Gioco' }),
+            el('div', { className: 'flex items-center gap-3 p-3 rounded-xl bg-meeple-game-light/50 border border-meeple-game-mid/30' }, [
+              el('div', { id: 'chat-panel-game-icon', className: 'w-12 h-12 rounded-lg bg-gradient-to-br from-orange-300 to-orange-500 flex items-center justify-center text-2xl', textContent: '\u{1F3DD}\uFE0F' }),
+              el('div', {}, [
+                el('p', { id: 'chat-panel-game-name', className: 'font-semibold text-sm text-gray-800', textContent: 'Catan' }),
+                el('p', { className: 'text-xs text-gray-500', textContent: '3-4 giocatori \u2022 60-120 min' })
+              ])
+            ])
+          ]),
+          el('div', {}, [
+            el('h4', { className: 'font-quicksand font-bold text-xs uppercase tracking-wider text-gray-400 mb-3', textContent: 'Agente' }),
+            el('div', { className: 'space-y-2' }, [
+              ['Tipologia', '\u{1F393} Tutor'], ['Strategia', 'HybridSearch'], ['Modello', 'GPT-4o mini'], ['Costo/msg', '~0.02\u20AC']
+            ].map(([label, value]) =>
+              el('div', { className: 'flex items-center justify-between text-sm' }, [
+                el('span', { className: 'text-gray-500', textContent: label }),
+                el('span', { className: 'font-medium ' + (label === 'Costo/msg' ? 'text-amber-600' : 'text-gray-700'), textContent: value })
+              ])
+            ))
+          ]),
+          el('div', {}, [
+            el('h4', { className: 'font-quicksand font-bold text-xs uppercase tracking-wider text-gray-400 mb-3', textContent: 'Knowledge Base' }),
+            el('div', { id: 'chat-kb-doc', className: 'flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100' }, [
+              el('div', { className: 'w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center', textContent: '\u{1F4C4}' }),
+              el('div', { className: 'flex-1 min-w-0' }, [
+                el('p', { className: 'text-xs font-medium text-gray-700 truncate', textContent: 'catan_rules.pdf' }),
+                el('p', { className: 'text-xs text-gray-400', textContent: '45 chunks \u2022 12 pagine' })
+              ]),
+              el('span', { className: 'text-xs text-green-600 font-medium', textContent: '\u2713' })
+            ])
+          ]),
+          followupSection
+        ])
+      ])
+    ])
+  ]);
+}
+
+// ===== BUILD WIZARD =====
+function buildWizard() {
+  const wizardSubtitle = el('p', { id: 'wizard-subtitle', className: 'text-xs text-gray-500', textContent: 'Configura il tuo assistente AI' });
+  const wizardGameName = el('p', { id: 'wizard-game-name', className: 'font-quicksand font-bold text-gray-800', textContent: 'Catan' });
+  const wizardGameIcon = el('div', { id: 'wizard-game-icon', className: 'w-14 h-14 rounded-xl bg-gradient-to-br from-orange-300 to-orange-500 flex items-center justify-center text-3xl flex-shrink-0', textContent: '\u{1F3DD}\uFE0F' });
+  const wizardGameMeta = el('p', { id: 'wizard-game-meta', className: 'text-xs text-gray-500', textContent: '3-4 giocatori \u2022 60-120 min \u2022 Strategia' });
+  const collectionBadge = el('div', { id: 'wizard-collection-badge', className: 'mt-1 flex items-center gap-1.5' }, [
+    el('span', { className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium', textContent: '\u2713 Nella tua collezione' })
+  ]);
+
+  const gameSelectorDiv = el('div', { id: 'wizard-game-selector', className: 'hidden mt-3' });
+  const searchInput = el('input', { type: 'text', placeholder: 'Cerca gioco...', className: 'w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300' });
+  const searchWrap = el('div', { className: 'relative mb-2' }, [searchInput, svgIcon('M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z', 'absolute left-2.5 top-2.5 w-4 h-4 text-gray-400')]);
+  const gameList = el('div', { className: 'space-y-1.5 max-h-40 overflow-y-auto' });
+  Object.entries(games).forEach(([k, g]) => {
+    gameList.appendChild(el('button', { className: 'w-full flex items-center gap-2 p-2 rounded-lg hover:bg-amber-50 transition-colors text-left', onClick: () => selectGame(k) }, [
+      el('span', { className: 'text-xl', textContent: g.icon }),
+      el('div', {}, [ el('p', { className: 'text-sm font-medium', textContent: g.name }), el('p', { className: 'text-xs text-gray-400', textContent: g.category }) ])
+    ]));
+  });
+  gameSelectorDiv.appendChild(searchWrap);
+  gameSelectorDiv.appendChild(gameList);
+
+  const filesContainer = el('div', { id: 'wizard-files', className: 'mt-3 space-y-2' });
+  const kbCount = el('span', { id: 'wizard-kb-count', className: 'text-xs text-gray-400', textContent: '0 documenti' });
+
+  const agentNameInput = el('input', { id: 'wizard-agent-name', type: 'text', className: 'w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300', placeholder: 'Es. Esperto di Catan' });
+
+  // Typologies
+  const typologies = [
+    { key: 'tutor', icon: '\u{1F393}', name: 'Tutor', desc: 'Spiega regole' },
+    { key: 'arbitro', icon: '\u2696\uFE0F', name: 'Arbitro', desc: 'Giudica dispute' },
+    { key: 'stratega', icon: '\u{1F9E0}', name: 'Stratega', desc: 'Consigli tattici' },
+    { key: 'narratore', icon: '\u{1F4D6}', name: 'Narratore', desc: 'Storie & lore' },
+  ];
+  const typologyGrid = el('div', { id: 'wizard-typology', className: 'grid grid-cols-2 gap-2' });
+  typologies.forEach((t, i) => {
+    const btn = el('button', { className: 'typology-btn flex items-center gap-2 p-2.5 rounded-xl border-2 text-left transition-all ' + (i === 0 ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-white hover:border-amber-300') }, [
+      el('span', { className: 'text-xl', textContent: t.icon }),
+      el('div', {}, [ el('p', { className: 'text-sm font-semibold text-gray-800', textContent: t.name }), el('p', { className: 'text-xs text-gray-500', textContent: t.desc }) ])
+    ]);
+    btn.addEventListener('click', () => {
+      typologyGrid.querySelectorAll('.typology-btn').forEach(b => { b.className = b.className.replace('border-amber-400 bg-amber-50', 'border-gray-200 bg-white'); });
+      btn.className = btn.className.replace('border-gray-200 bg-white', 'border-amber-400 bg-amber-50');
+    });
+    typologyGrid.appendChild(btn);
+  });
+
+  const strategySelect = el('select', { className: 'w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 pr-8' });
+  ['\u{1F500} HybridSearch (consigliato)', '\u{1F9F2} VectorOnly', '\u{1F524} KeywordOnly', '\u{1F3C6} Reranked (Premium)'].forEach(opt => {
+    strategySelect.appendChild(el('option', { textContent: opt }));
+  });
+
+  const modelSelect = el('select', { id: 'wizard-model-select', className: 'w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 pr-8' });
+  ['\u26A1 GPT-4o mini (~0.01\u20AC/msg)', '\u{1F9E0} GPT-4o (~0.05\u20AC/msg)', '\u2728 Claude 3.5 Sonnet (~0.03\u20AC/msg)', '\u{1F999} Llama 3.1 70B (~0.02\u20AC/msg)', '\u{1F48E} Gemini Pro (~0.02\u20AC/msg)'].forEach(opt => {
+    modelSelect.appendChild(el('option', { textContent: opt }));
+  });
+
+  const costDisplay = el('span', { id: 'wizard-cost', className: 'text-sm font-bold text-amber-600', textContent: '~0.01\u20AC' });
+
+  const createBtn = el('button', { id: 'wizard-create-btn', className: 'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all', onClick: createAgent }, [
+    svgIcon('M13 10V3L4 14h7v7l9-11h-7z', 'w-4 h-4'),
+    document.createTextNode(' Crea e Inizia Chat')
+  ]);
+
+  const overlay = el('div', { id: 'wizard-overlay', className: 'fixed inset-0 z-50 hidden' }, [
+    el('div', { className: 'absolute inset-0 bg-black/30 backdrop-blur-sm', onClick: closeWizard }),
+    el('div', { className: 'absolute right-0 top-0 bottom-0 w-full max-w-[480px] glass border-l border-gray-200/50 shadow-2xl animate-slide-in-right flex flex-col' }, [
+      // Header
+      el('div', { className: 'px-5 py-4 border-b border-gray-200/50 flex items-center justify-between flex-shrink-0' }, [
+        el('div', { className: 'flex items-center gap-3' }, [
+          el('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center' }, [
+            el('span', { className: 'text-white text-lg', textContent: '\u{1F916}' })
+          ]),
+          el('div', {}, [ el('h2', { className: 'font-quicksand font-bold text-gray-800', textContent: 'Crea Agente' }), wizardSubtitle ])
+        ]),
+        el('button', { className: 'p-2 rounded-lg hover:bg-gray-100 transition-colors', onClick: closeWizard }, [ svgIcon('M6 18L18 6M6 6l12 12', 'w-5 h-5 text-gray-400') ])
+      ]),
+      // Content
+      el('div', { className: 'flex-1 overflow-y-auto scrollbar-thin px-5 py-4 space-y-5' }, [
+        // Game section
+        el('section', {}, [
+          el('div', { className: 'flex items-center gap-2 mb-3' }, [ el('span', { className: 'text-lg', textContent: '\u{1F3B2}' }), el('h3', { className: 'font-quicksand font-bold text-sm text-gray-800', textContent: 'Gioco' }) ]),
+          el('div', { id: 'wizard-game-card', className: 'flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white/50' }, [
+            wizardGameIcon,
+            el('div', { className: 'flex-1 min-w-0' }, [ wizardGameName, wizardGameMeta, collectionBadge ]),
+            el('button', { className: 'text-xs text-amber-600 hover:text-amber-700 font-medium whitespace-nowrap', textContent: 'Cambia', onClick: () => gameSelectorDiv.classList.toggle('hidden') })
+          ]),
+          gameSelectorDiv
+        ]),
+        // KB section
+        el('section', {}, [
+          el('div', { className: 'flex items-center justify-between mb-3' }, [
+            el('div', { className: 'flex items-center gap-2' }, [ el('span', { className: 'text-lg', textContent: '\u{1F4C4}' }), el('h3', { className: 'font-quicksand font-bold text-sm text-gray-800', textContent: 'Knowledge Base' }) ]),
+            kbCount
+          ]),
+          el('div', { className: 'drop-zone rounded-xl p-5 text-center cursor-pointer', onClick: simulateUpload }, [
+            el('div', { className: 'flex flex-col items-center gap-2' }, [
+              el('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center' }, [ svgIcon('M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12', 'w-5 h-5 text-gray-400') ]),
+              el('p', { className: 'text-sm font-medium text-gray-600', textContent: 'Trascina il PDF del regolamento' }),
+              el('p', { className: 'text-xs text-gray-400', textContent: 'oppure clicca per selezionare \u2022 Max 50MB' })
+            ])
+          ]),
+          filesContainer
+        ]),
+        // Agent config section
+        el('section', {}, [
+          el('div', { className: 'flex items-center gap-2 mb-3' }, [ el('span', { className: 'text-lg', textContent: '\u{1F916}' }), el('h3', { className: 'font-quicksand font-bold text-sm text-gray-800', textContent: 'Configura Agente' }) ]),
+          el('div', { className: 'space-y-4' }, [
+            el('div', {}, [ el('label', { className: 'block text-xs font-medium text-gray-500 mb-1', textContent: 'Nome agente' }), agentNameInput ]),
+            el('div', {}, [ el('label', { className: 'block text-xs font-medium text-gray-500 mb-1.5', textContent: 'Tipologia' }), typologyGrid ]),
+            el('div', {}, [ el('label', { className: 'block text-xs font-medium text-gray-500 mb-1', textContent: 'Strategia RAG' }), strategySelect ]),
+            el('div', {}, [ el('label', { className: 'block text-xs font-medium text-gray-500 mb-1', textContent: 'Modello AI' }), modelSelect ]),
+          ])
+        ]),
+        // Cost section
+        el('section', {}, [
+          el('div', { className: 'flex items-center gap-2 mb-3' }, [ el('span', { className: 'text-lg', textContent: '\u{1F4B0}' }), el('h3', { className: 'font-quicksand font-bold text-sm text-gray-800', textContent: 'Costi & Slot' }) ]),
+          el('div', { className: 'rounded-xl border border-gray-200 bg-white/50 p-3 space-y-3' }, [
+            el('div', {}, [
+              el('div', { className: 'flex items-center justify-between mb-1.5' }, [
+                el('span', { className: 'text-xs text-gray-500', textContent: 'Slot agenti' }),
+                el('span', { className: 'text-xs font-semibold text-gray-700', textContent: '2 / 5 usati' })
+              ]),
+              el('div', { className: 'flex gap-1' }, [
+                el('div', { className: 'h-2 flex-1 rounded-full bg-amber-400' }),
+                el('div', { className: 'h-2 flex-1 rounded-full bg-amber-400' }),
+                el('div', { className: 'h-2 flex-1 rounded-full bg-amber-200 animate-pulse' }),
+                el('div', { className: 'h-2 flex-1 rounded-full bg-gray-200' }),
+                el('div', { className: 'h-2 flex-1 rounded-full bg-gray-200' }),
+              ]),
+              el('p', { className: 'text-xs text-gray-400 mt-1', textContent: 'Questo agente usera 1 slot' })
+            ]),
+            el('div', { className: 'border-t border-gray-100 pt-3' }, [
+              el('div', { className: 'flex items-center justify-between mb-1' }, [
+                el('span', { className: 'text-xs text-gray-500', textContent: 'Costo stimato per messaggio' }),
+                costDisplay
+              ]),
+              el('div', { className: 'flex items-center justify-between' }, [
+                el('span', { className: 'text-xs text-gray-500', textContent: 'Budget mensile (100 msg/giorno)' }),
+                el('span', { className: 'text-xs font-medium text-gray-600', textContent: '~30\u20AC/mese' })
+              ])
+            ]),
+            el('div', { className: 'border-t border-gray-100 pt-3' }, [
+              el('div', { className: 'flex items-center justify-between mb-1' }, [
+                el('span', { className: 'text-xs text-gray-500', textContent: 'Token disponibili' }),
+                el('span', { className: 'text-xs font-medium text-gray-600', textContent: '450 / 500 rimanenti' })
+              ]),
+              el('div', { className: 'w-full h-1.5 bg-gray-200 rounded-full overflow-hidden' }, [
+                el('div', { className: 'h-full bg-green-400 rounded-full progress-bar', style: { width: '90%' } })
+              ]),
+              el('p', { className: 'text-xs text-gray-400 mt-1', textContent: 'Si rinnova tra 12 giorni' })
+            ])
+          ])
+        ])
+      ]),
+      // Footer
+      el('div', { className: 'px-5 py-4 border-t border-gray-200/50 flex items-center justify-between flex-shrink-0 bg-white/50' }, [
+        el('button', { className: 'px-4 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 transition-colors', textContent: 'Annulla', onClick: closeWizard }),
+        createBtn
+      ])
+    ])
+  ]);
+
+  return overlay;
+}
+
+// ===== WIZARD ACTIONS =====
+function openWizard(gameKey) {
+  currentGame = gameKey;
+  const game = games[gameKey];
+  document.getElementById('wizard-game-name').textContent = game.name;
+  document.getElementById('wizard-game-icon').textContent = game.icon;
+  document.getElementById('wizard-game-icon').className = 'w-14 h-14 rounded-xl bg-gradient-to-br ' + game.color + ' flex items-center justify-center text-3xl flex-shrink-0';
+  document.getElementById('wizard-game-meta').textContent = game.players + ' giocatori \u2022 ' + game.time + ' \u2022 ' + game.category;
+  document.getElementById('wizard-subtitle').textContent = 'Configura il tuo assistente per ' + game.name;
+  document.getElementById('wizard-agent-name').value = 'Esperto di ' + game.name;
+
+  const badge = document.getElementById('wizard-collection-badge');
+  badge.textContent = '';
+  if (game.inCollection) {
+    badge.appendChild(el('span', { className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium', textContent: '\u2713 Nella tua collezione' }));
+  } else {
+    badge.appendChild(el('span', { className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium', textContent: '+ Verra aggiunto alla collezione' }));
+  }
+
+  uploadedFiles = [];
+  document.getElementById('wizard-files').textContent = '';
+  document.getElementById('wizard-kb-count').textContent = '0 documenti';
+  document.getElementById('wizard-game-selector').classList.add('hidden');
+  document.getElementById('wizard-overlay').classList.remove('hidden');
+}
+
+function closeWizard() {
+  document.getElementById('wizard-overlay').classList.add('hidden');
+}
+
+function selectGame(gameKey) {
+  currentGame = gameKey;
+  const game = games[gameKey];
+  document.getElementById('wizard-game-name').textContent = game.name;
+  document.getElementById('wizard-game-icon').textContent = game.icon;
+  document.getElementById('wizard-game-icon').className = 'w-14 h-14 rounded-xl bg-gradient-to-br ' + game.color + ' flex items-center justify-center text-3xl flex-shrink-0';
+  document.getElementById('wizard-game-meta').textContent = game.players + ' giocatori \u2022 ' + game.time + ' \u2022 ' + game.category;
+  document.getElementById('wizard-subtitle').textContent = 'Configura il tuo assistente per ' + game.name;
+  document.getElementById('wizard-agent-name').value = 'Esperto di ' + game.name;
+
+  const badge = document.getElementById('wizard-collection-badge');
+  badge.textContent = '';
+  if (game.inCollection) {
+    badge.appendChild(el('span', { className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium', textContent: '\u2713 Nella tua collezione' }));
+  } else {
+    badge.appendChild(el('span', { className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium', textContent: '+ Verra aggiunto alla collezione' }));
+  }
+  document.getElementById('wizard-game-selector').classList.add('hidden');
+}
+
+let fileCounter = 0;
+function simulateUpload() {
+  const game = games[currentGame];
+  const fileName = game.name.toLowerCase().replace(/\s+/g, '_') + '_rules.pdf';
+  fileCounter++;
+  const idx = fileCounter;
+  uploadedFiles.push(fileName);
+
+  const progressBar = el('div', { className: 'h-full bg-amber-400 rounded-full progress-bar', style: { width: '0%' } });
+  const progressText = el('span', { className: 'text-xs text-gray-400', textContent: '0%' });
+  const removeBtn = el('button', { className: 'p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors' }, [ svgIcon('M6 18L18 6M6 6l12 12', 'w-4 h-4') ]);
+
+  const fileEl = el('div', { className: 'flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white/50 animate-fade-in' }, [
+    el('div', { className: 'w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0', textContent: '\u{1F4C4}' }),
+    el('div', { className: 'flex-1 min-w-0' }, [
+      el('p', { className: 'text-sm font-medium text-gray-700 truncate', textContent: fileName }),
+      el('div', { className: 'flex items-center gap-2 mt-1' }, [
+        el('div', { className: 'flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden' }, [ progressBar ]),
+        progressText
+      ])
+    ]),
+    removeBtn
+  ]);
+  removeBtn.addEventListener('click', () => { fileEl.remove(); });
+
+  document.getElementById('wizard-files').appendChild(fileEl);
+  document.getElementById('wizard-kb-count').textContent = uploadedFiles.length + ' documento';
+
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += Math.random() * 15 + 5;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(interval);
+      progressBar.style.width = '100%';
+      progressBar.className = 'h-full bg-green-400 rounded-full progress-bar';
+      progressText.textContent = '\u2713 45 chunks';
+      progressText.className = 'text-xs text-green-600';
+    } else {
+      progressBar.style.width = progress + '%';
+      progressText.textContent = Math.round(progress) + '%';
+    }
+  }, 200);
+}
+
+function createAgent() {
+  const btn = document.getElementById('wizard-create-btn');
+  btn.disabled = true;
+  btn.textContent = '';
+  const spinner = el('span', { className: 'inline-flex items-center gap-2' }, [
+    el('span', { className: 'w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin', style: { display: 'inline-block' } }),
+    document.createTextNode(' Creazione in corso...')
+  ]);
+  btn.appendChild(spinner);
+
+  const game = games[currentGame];
+  setTimeout(() => {
+    game.hasAgent = true;
+    game.agentName = document.getElementById('wizard-agent-name').value || 'Esperto di ' + game.name;
+    if (!game.inCollection) game.inCollection = true;
+
+    closeWizard();
+    showToast('Agente creato!', '"' + game.agentName + '" e\' pronto per chattare');
+
+    // Rebuild game cards
+    const grid = document.getElementById('game-cards-grid');
+    grid.textContent = '';
+    Object.entries(games).forEach(([k, g]) => grid.appendChild(buildGameCard(k, g)));
+
+    setTimeout(() => {
+      openChatForGame(currentGame);
+      btn.disabled = false;
+      btn.textContent = '';
+      btn.appendChild(svgIcon('M13 10V3L4 14h7v7l9-11h-7z', 'w-4 h-4'));
+      btn.appendChild(document.createTextNode(' Crea e Inizia Chat'));
+    }, 1200);
+  }, 2000);
+}
+
+// ===== CHAT ACTIONS =====
+function openChatForGame(gameKey) {
+  currentGame = gameKey;
+  const game = games[gameKey];
+  const chatData = chatResponses[gameKey] || chatResponses.catan;
+
+  document.getElementById('chat-agent-name').textContent = game.agentName || 'Esperto di ' + game.name;
+  document.getElementById('chat-game-badge').textContent = game.name;
+  document.getElementById('chat-panel-game-name').textContent = game.name;
+  document.getElementById('chat-panel-game-icon').textContent = game.icon;
+
+  chatHistory = [];
+  document.getElementById('chat-messages').textContent = '';
+  document.getElementById('followup-section').classList.add('hidden');
+
+  showView('chat');
+
+  setTimeout(() => {
+    addAgentMessage(chatData.welcome);
+    setTimeout(() => {
+      showFollowups(['Come funziona il commercio?', 'Spiega il setup iniziale', 'Cosa succede quando esce 7?']);
+    }, 2500);
+  }, 800);
+}
+
+function addUserMessage(text) {
+  const container = document.getElementById('chat-messages');
+  const msgEl = el('div', { className: 'flex justify-end animate-fade-in' }, [
+    el('div', { className: 'chat-bubble-user bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200/50 px-4 py-2.5 max-w-[75%] shadow-sm' }, [
+      el('p', { className: 'text-sm text-gray-800', textContent: text }),
+      el('p', { className: 'text-[10px] text-amber-600/60 mt-1 text-right', textContent: 'Adesso' })
+    ])
+  ]);
+  container.appendChild(msgEl);
+  container.scrollTop = container.scrollHeight;
+  chatHistory.push({ role: 'user', content: text });
+}
+
+function addAgentMessage(text) {
+  const container = document.getElementById('chat-messages');
+
+  // Typing indicator
+  const typingEl = el('div', { className: 'flex justify-start animate-fade-in' }, [
+    el('div', { className: 'chat-bubble-agent glass border border-gray-200/50 px-4 py-3 shadow-sm' }, [
+      el('div', { className: 'flex items-center gap-1.5' }, [
+        el('div', { className: 'w-2 h-2 rounded-full bg-amber-400 animate-typing-1' }),
+        el('div', { className: 'w-2 h-2 rounded-full bg-amber-400 animate-typing-2' }),
+        el('div', { className: 'w-2 h-2 rounded-full bg-amber-400 animate-typing-3' }),
+      ])
+    ])
+  ]);
+  container.appendChild(typingEl);
+  container.scrollTop = container.scrollHeight;
+
+  setTimeout(() => {
+    typingEl.remove();
+    const contentDiv = el('div', { className: 'text-sm text-gray-800' });
+    renderMarkdownSafe(text, contentDiv);
+
+    const msgEl = el('div', { className: 'flex justify-start animate-fade-in' }, [
+      el('div', { className: 'chat-bubble-agent glass border border-gray-200/50 px-4 py-2.5 max-w-[75%] shadow-sm' }, [
+        contentDiv,
+        el('p', { className: 'text-[10px] text-gray-400 mt-1.5', textContent: 'Adesso' })
+      ])
+    ]);
+    container.appendChild(msgEl);
+    container.scrollTop = container.scrollHeight;
+    chatHistory.push({ role: 'agent', content: text });
+  }, 1200 + Math.random() * 800);
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  addUserMessage(text);
+  document.getElementById('followup-section').classList.add('hidden');
+
+  const chatData = chatResponses[currentGame] || chatResponses.catan;
+  let response = chatData.fallback;
+  for (const r of chatData.responses) {
+    if (r.q.test(text)) { response = r.a; break; }
+  }
+
+  setTimeout(() => {
+    addAgentMessage(response);
+    setTimeout(() => {
+      showFollowups(['Come funziona il cavaliere?', 'Quando posso costruire una citta?', 'Regole dei porti speciali']);
+    }, 2500);
+  }, 500);
+}
+
+function showFollowups(questions) {
+  const section = document.getElementById('followup-section');
+  const container = document.getElementById('followup-questions');
+  container.textContent = '';
+  questions.forEach(q => {
+    const btn = el('button', { className: 'w-full text-left px-3 py-2 text-xs rounded-lg border border-gray-200 bg-white hover:border-amber-300 hover:bg-amber-50 transition-colors text-gray-600', textContent: q, onClick: () => {
+      document.getElementById('chat-input').value = q;
+      sendMessage();
+    }});
+    container.appendChild(btn);
+  });
+  section.classList.remove('hidden');
+}
+
+// ===== INIT =====
+const app = document.getElementById('app');
+app.appendChild(buildNavbar());
+app.appendChild(buildToast());
+app.appendChild(buildGamesView());
+app.appendChild(buildAgentsView());
+app.appendChild(buildChatListView());
+app.appendChild(buildChatView());
+app.appendChild(buildWizard());
+showView('games');
+</script>
+</body>
+</html>

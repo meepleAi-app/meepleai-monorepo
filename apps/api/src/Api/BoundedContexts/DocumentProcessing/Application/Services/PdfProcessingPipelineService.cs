@@ -142,7 +142,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[PdfPipeline] Processing failed for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
             await TryMarkFailedAsync(pdfDocumentId, ex.Message).ConfigureAwait(false);
         }
 #pragma warning restore CA1031

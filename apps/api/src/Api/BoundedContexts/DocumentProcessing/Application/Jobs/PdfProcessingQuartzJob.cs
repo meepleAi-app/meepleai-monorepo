@@ -46,8 +46,10 @@ public sealed class PdfProcessingQuartzJob : IJob
         try
         {
             // Pick the highest-priority queued job
+            // AsTracking: Override global NoTracking (PERF-06) so SaveChangesAsync persists mutations
             var jobEntity = await _dbContext.ProcessingJobs
-                .Where(j => string.Equals(j.Status, nameof(JobStatus.Queued)))
+                .AsTracking()
+                .Where(j => j.Status == nameof(JobStatus.Queued))
                 .OrderBy(j => j.Priority)
                 .ThenBy(j => j.CreatedAt)
                 .FirstOrDefaultAsync(ct).ConfigureAwait(false);
@@ -58,9 +60,10 @@ public sealed class PdfProcessingQuartzJob : IJob
                 return;
             }
 
-            // Load PdfDocument for file path
+            // Load PdfDocument for file path (read-only, but FindAsync respects global tracking config)
             var pdfDoc = await _dbContext.PdfDocuments
-                .FindAsync(new object[] { jobEntity.PdfDocumentId }, ct)
+                .AsTracking()
+                .FirstOrDefaultAsync(p => p.Id == jobEntity.PdfDocumentId, ct)
                 .ConfigureAwait(false);
 
             if (pdfDoc is null)
@@ -110,7 +113,9 @@ public sealed class PdfProcessingQuartzJob : IJob
         CancellationToken ct)
     {
         // Load all steps for this job
+        // AsTracking: Override global NoTracking so step status mutations are persisted
         var steps = await _dbContext.ProcessingSteps
+            .AsTracking()
             .Where(s => s.ProcessingJobId == jobEntity.Id)
             .ToListAsync(ct).ConfigureAwait(false);
 

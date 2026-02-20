@@ -41,6 +41,7 @@ internal class TextChunkingService : ITextChunkingService
 
         while (currentPosition < textLength)
         {
+            var chunkStart = currentPosition; // Save to guarantee forward progress
             var remainingLength = textLength - currentPosition;
             var actualChunkSize = Math.Min(chunkSize, remainingLength);
 
@@ -100,12 +101,12 @@ internal class TextChunkingService : ITextChunkingService
                 chunkIndex++;
             }
 
-            // Move position forward, accounting for overlap
-            currentPosition = chunkEnd;
-            if (currentPosition < textLength)
-            {
-                currentPosition = Math.Max(0, currentPosition - overlap);
-            }
+            // Move position forward, accounting for overlap.
+            // BUGFIX: Guarantee forward progress - if the chunk produced is smaller than
+            // 'overlap', applying the overlap would cause currentPosition to regress,
+            // creating an infinite loop. In that case, skip to chunkEnd with no overlap.
+            var nextPosition = chunkEnd - overlap;
+            currentPosition = nextPosition > chunkStart ? nextPosition : chunkEnd;
         }
 
         _logger.LogInformation("Chunked {TextLength} characters into {ChunkCount} chunks", textLength, chunks.Count);

@@ -2,8 +2,8 @@ import { Suspense } from 'react';
 
 import { type Metadata } from 'next';
 
-import { GameFilters } from '@/components/admin/shared-games/game-filters';
 import { GameCatalogGrid } from '@/components/admin/shared-games/game-catalog-grid';
+import { GameFilters } from '@/components/admin/shared-games/game-filters';
 
 export const metadata: Metadata = {
   title: 'All Games',

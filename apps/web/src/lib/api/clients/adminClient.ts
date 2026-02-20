@@ -2160,6 +2160,24 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return result ?? { rebuilding: false, collection: name };
     },
 
+    // ========== Admin Embedding Service (Issue #4878) ==========
+
+    /**
+     * Get embedding service info and health
+     * GET /api/v1/admin/embedding/info
+     */
+    async getEmbeddingInfo(): Promise<EmbeddingServiceInfo | null> {
+      return httpClient.get<EmbeddingServiceInfo>('/api/v1/admin/embedding/info');
+    },
+
+    /**
+     * Get embedding service throughput metrics
+     * GET /api/v1/admin/embedding/metrics
+     */
+    async getEmbeddingMetrics(): Promise<EmbeddingServiceMetrics | null> {
+      return httpClient.get<EmbeddingServiceMetrics>('/api/v1/admin/embedding/metrics');
+    },
+
     /**
      * Get admin processing queue with pagination
      * GET /api/v1/admin/kb/processing-queue
@@ -2227,6 +2245,27 @@ export interface QdrantBrowsePoint {
 export interface QdrantBrowseResult {
   points: QdrantBrowsePoint[];
   count: number;
+}
+
+// ========== Embedding Service Types (Issue #4878) ==========
+
+export interface EmbeddingServiceInfo {
+  status: string;
+  model: string | null;
+  device: string | null;
+  supportedLanguages: string[];
+  dimension: number;
+  maxInputChars: number;
+  maxBatchSize: number;
+}
+
+export interface EmbeddingServiceMetrics {
+  requestsTotal: number;
+  failuresTotal: number;
+  durationMsSum: number;
+  totalCharsSum: number;
+  avgDurationMs: number;
+  failureRate: number;
 }
 
 // Re-export tier-strategy types for convenience

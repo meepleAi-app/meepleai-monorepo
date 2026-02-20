@@ -10,7 +10,7 @@
  * - Auto-refresh with circuit breaker
  *
  * Architecture:
- * - Uses AdminLayout (FASE 1 foundation)
+ * - Renders inside AuthenticatedLayout (via Admin Hub)
  * - Polling: 30s with circuit breaker (5 failures = pause)
  * - i18n: Italian + English support
  * - Charts: Recharts via MetricsChart component
@@ -35,7 +35,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { AdminLayout } from '@/components/admin/AdminLayout';
 import { GrafanaEmbed } from '@/components/admin/GrafanaEmbed';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 import { MetricsChart, type DataPoint, type DataSeries } from '@/components/metrics/MetricsChart';
@@ -282,7 +281,7 @@ export function InfrastructureClient() {
   const requestsSeries: DataSeries[] = [{ key: 'value', name: 'Requests/s', color: '#f9ab00' }];
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
@@ -731,6 +730,6 @@ export function InfrastructureClient() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    </>
   );
 }

@@ -44,6 +44,15 @@ const EventType = {
   Error: 5,
   Heartbeat: 6,
   FollowUpQuestions: 8,
+  // Debug events (Issue #4916) - names must match useAgentChatStream.ts constants
+  DebugAgentRouter: 10,
+  DebugStrategySelected: 11,
+  DebugRetrievalStart: 12,
+  DebugRetrievalResults: 13,
+  DebugPluginExecution: 14,
+  DebugValidationLayer: 15,
+  DebugPromptContext: 16,
+  DebugCostUpdate: 17,
 } as const;
 
 // ─── Tests ───────────────────────────────────────────────
@@ -71,6 +80,7 @@ describe('useAgentChatStream', () => {
       error: null,
       chatThreadId: null,
       totalTokens: 0,
+      debugSteps: [],
     });
   });
 
@@ -309,5 +319,112 @@ describe('useAgentChatStream', () => {
 
     // Should skip malformed line and continue
     expect(result.current.state.currentAnswer).toBe('ok');
+  });
+
+  // ─── Debug Events (Issue #4916) ───────────────────────────
+
+  it('captures DebugRetrievalResults event in debugSteps', async () => {
+    const payload = { filteredCount: 5, totalResults: 10, latencyMs: 120 };
+    const events = [
+      sseEvent(EventType.DebugRetrievalResults, payload),
+      sseEvent(EventType.Complete, { totalTokens: 1 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.debugSteps).toHaveLength(1);
+    expect(result.current.state.debugSteps[0].type).toBe(EventType.DebugRetrievalResults);
+    expect(result.current.state.debugSteps[0].payload).toMatchObject(payload);
+    expect(result.current.state.debugSteps[0].name).toBe('Retrieval Results');
+  });
+
+  it('accumulates multiple debug events in order', async () => {
+    const events = [
+      sseEvent(EventType.DebugRetrievalStart, { query: 'test', gameId: 'g1' }),
+      sseEvent(EventType.DebugRetrievalResults, { filteredCount: 3, totalResults: 8, latencyMs: 80 }),
+      sseEvent(EventType.DebugPromptContext, {
+        systemPrompt: 'You are an AI',
+        userPromptPreview: 'What are the rules?',
+        estimatedPromptTokens: 200,
+      }),
+      sseEvent(EventType.Complete, { totalTokens: 5 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.debugSteps).toHaveLength(3);
+    expect(result.current.state.debugSteps[0].type).toBe(EventType.DebugRetrievalStart);
+    expect(result.current.state.debugSteps[1].type).toBe(EventType.DebugRetrievalResults);
+    expect(result.current.state.debugSteps[2].type).toBe(EventType.DebugPromptContext);
+  });
+
+  it('captures DebugCostUpdate with token breakdown', async () => {
+    const payload = {
+      model: 'claude-3-haiku',
+      promptTokens: 500,
+      completionTokens: 150,
+      totalTokens: 650,
+      confidence: 0.88,
+    };
+    const events = [
+      sseEvent(EventType.DebugCostUpdate, payload),
+      sseEvent(EventType.Complete, { totalTokens: 650 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.debugSteps).toHaveLength(1);
+    expect(result.current.state.debugSteps[0].type).toBe(EventType.DebugCostUpdate);
+    expect(result.current.state.debugSteps[0].payload).toMatchObject(payload);
+    expect(result.current.state.debugSteps[0].name).toBe('Cost Update');
+  });
+
+  it('clears debugSteps on reset()', async () => {
+    const events = [
+      sseEvent(EventType.DebugRetrievalResults, { filteredCount: 5, totalResults: 10, latencyMs: 50 }),
+      sseEvent(EventType.Complete, { totalTokens: 1 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.debugSteps).toHaveLength(1);
+
+    act(() => {
+      result.current.reset();
+    });
+
+    expect(result.current.state.debugSteps).toHaveLength(0);
   });
 });

@@ -20,11 +20,15 @@ import { useRouter } from 'next/navigation';
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { isAdminOrAbove } from '@/types/auth';
 import type { Citation } from '@/types';
 
 import { ChatThreadHeader } from './ChatThreadHeader';
+import { DebugStepCard } from './DebugStepCard';
+import { DebugSummaryBar } from './DebugSummaryBar';
 
 // ============================================================================
 // Types
@@ -61,6 +65,8 @@ export interface ChatThreadViewProps {
 export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const isAdmin = isAdminOrAbove(user);
 
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
@@ -69,6 +75,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'chat' | 'debug'>('chat');
 
   const [showAgentConfirm, setShowAgentConfirm] = useState(false);
   const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
@@ -411,8 +418,79 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <div className="flex flex-1 min-h-0 relative">
         {/* Chat Area (left) */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Messages */}
+          {/* Chat / Debug tab bar (Issue #4916) */}
+          <div role="tablist" aria-label="Chat panels" className="flex items-center gap-1 px-4 pt-2 pb-0 border-b border-border/30">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'chat'}
+              aria-controls="panel-chat"
+              onClick={() => setActiveTab('chat')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors',
+                activeTab === 'chat'
+                  ? 'bg-background border border-b-background border-border/50 text-foreground -mb-px z-10'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              data-testid="tab-chat"
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'debug'}
+              aria-controls="panel-debug"
+              onClick={() => setActiveTab('debug')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors',
+                activeTab === 'debug'
+                  ? 'bg-background border border-b-background border-border/50 text-foreground -mb-px z-10'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              data-testid="tab-debug"
+            >
+              Debug
+              {streamState.debugSteps.length > 0 && (
+                <span className="ml-1 text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-400 px-1 rounded">
+                  {streamState.debugSteps.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Debug panel (Issue #4916) */}
+          {activeTab === 'debug' && (
+            <div id="panel-debug" role="tabpanel" className="flex-1 overflow-y-auto px-4 py-4 space-y-3" data-testid="debug-panel">
+              {streamState.debugSteps.length === 0 ? (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-sm text-muted-foreground font-nunito">
+                    Invia un messaggio per visualizzare il debug del pipeline RAG.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <DebugSummaryBar steps={streamState.debugSteps} />
+                  <div className="space-y-2">
+                    {streamState.debugSteps.map((step, i) => (
+                      <DebugStepCard
+                        key={`${step.type}-${i}`}
+                        step={step}
+                        index={i}
+                        showSystemPrompt={isAdmin}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Messages (only when chat tab is active) */}
+          {activeTab === 'chat' && (
           <div
+            id="panel-chat"
+            role="tabpanel"
             className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
             data-testid="messages-area"
           >
@@ -475,6 +553,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
             <div ref={messagesEndRef} />
           </div>
+          )}
 
           {/* Input */}
           <div

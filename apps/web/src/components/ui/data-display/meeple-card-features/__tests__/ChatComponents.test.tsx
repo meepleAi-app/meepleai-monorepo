@@ -26,28 +26,28 @@ describe('ChatStatusBadge', () => {
       render(<ChatStatusBadge status="active" />);
       const badge = screen.getByTestId('chat-status-active');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('bg-blue-100');
+      expect(badge).toHaveClass('bg-blue-50');
       expect(screen.getByText('Active')).toBeInTheDocument();
     });
 
     it('renders waiting status with yellow styling', () => {
       render(<ChatStatusBadge status="waiting" />);
       const badge = screen.getByTestId('chat-status-waiting');
-      expect(badge).toHaveClass('bg-yellow-100');
+      expect(badge).toHaveClass('bg-yellow-50');
       expect(screen.getByText('Waiting')).toBeInTheDocument();
     });
 
     it('renders archived status with gray styling', () => {
       render(<ChatStatusBadge status="archived" />);
       const badge = screen.getByTestId('chat-status-archived');
-      expect(badge).toHaveClass('bg-gray-100');
+      expect(badge).toHaveClass('bg-gray-50');
       expect(screen.getByText('Archived')).toBeInTheDocument();
     });
 
     it('renders closed status with slate styling', () => {
       render(<ChatStatusBadge status="closed" />);
       const badge = screen.getByTestId('chat-status-closed');
-      expect(badge).toHaveClass('bg-slate-100');
+      expect(badge).toHaveClass('bg-slate-50');
       expect(screen.getByText('Closed')).toBeInTheDocument();
     });
   });

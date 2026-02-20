@@ -229,11 +229,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           </div>
         </div>
 
-        <Link href={`/admin/shared-games/${gameId}/edit`}>
-          <Button variant="outline" size="sm">
-            Edit Game
-          </Button>
-        </Link>
+        <Button variant="outline" size="sm" disabled title="Edit functionality coming soon">
+          Edit Game
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -396,7 +394,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                       key={doc.id}
                       document={doc}
                       onDelete={(id) => deleteDocMutation.mutate(id)}
-                      isDeleting={deleteDocMutation.isPending}
+                      isDeleting={deleteDocMutation.isPending && deleteDocMutation.variables === doc.id}
                     />
                   ))}
                   <div className="pt-2">

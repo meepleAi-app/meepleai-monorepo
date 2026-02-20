@@ -2,6 +2,8 @@
 
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
+
 import { PdfProgressBar } from '@/components/pdf/PdfProgressBar';
 import { PdfStatusBadge } from '@/components/pdf/PdfStatusBadge';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
@@ -93,7 +95,7 @@ export function PdfAdminTable({
   };
 
   return (
-    <div className="bg-card rounded-lg border overflow-hidden">
+    <div className="bg-card rounded-lg border overflow-hidden font-nunito" data-testid="pdf-admin-table">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-muted/50">
@@ -130,7 +132,10 @@ export function PdfAdminTable({
               return (
                 <tr
                   key={pdf.id}
-                  className={`hover:bg-muted/30 ${selectedIds.has(pdf.id) ? 'bg-muted/20' : ''}`}
+                  className={cn(
+                    'border-l-4 border-l-[hsl(210,40%,55%)] hover:bg-muted/30',
+                    selectedIds.has(pdf.id) && 'bg-muted/20'
+                  )}
                 >
                   <td className="p-3">
                     <Checkbox

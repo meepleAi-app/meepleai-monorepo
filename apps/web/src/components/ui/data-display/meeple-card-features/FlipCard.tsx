@@ -494,7 +494,7 @@ export function FlipCard({
               title={title}
             />
           ) : null)}
-          {/* Flip-back button on back face (button mode only) */}
+          {/* Flip-back button on back face (touch/button mode only) */}
           {!isCardMode && (
             <button
               className={cn(

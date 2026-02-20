@@ -2214,6 +2214,15 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     async getPipelineHealth(): Promise<PipelineHealthResponse | null> {
       return httpClient.get<PipelineHealthResponse>(`/api/v1/admin/kb/pipeline/health`);
     },
+
+    /**
+     * Get processing step metrics (avg duration, percentiles)
+     * GET /api/v1/admin/pdfs/metrics/processing
+     * Issue #4880
+     */
+    async getProcessingMetrics(): Promise<ProcessingMetricsResponse | null> {
+      return httpClient.get<ProcessingMetricsResponse>(`/api/v1/admin/pdfs/metrics/processing`);
+    },
   };
 }
 
@@ -2418,4 +2427,24 @@ export type PipelineHealthResponse = {
   recentActivity: PipelineRecentActivity[];
   distribution: PipelineDistribution;
   checkedAt: string;
+};
+
+// ========== Processing Metrics Types (Issue #4880) ==========
+
+export type ProcessingStepAverages = {
+  step: string;
+  avgDuration: number;
+  sampleSize: number;
+};
+
+export type ProcessingStepPercentiles = {
+  p50: number;
+  p95: number;
+  p99: number;
+};
+
+export type ProcessingMetricsResponse = {
+  averages: Record<string, ProcessingStepAverages>;
+  percentiles: Record<string, ProcessingStepPercentiles>;
+  lastUpdated: string;
 };

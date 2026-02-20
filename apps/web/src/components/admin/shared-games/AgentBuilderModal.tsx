@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Loader2 } from 'lucide-react';
@@ -96,6 +96,11 @@ export function AgentBuilderModal({
 }: AgentBuilderModalProps) {
   const queryClient = useQueryClient();
   const [selectedKbCardIds, setSelectedKbCardIds] = useState<string[]>([]);
+
+  // Reset KB card selection whenever modal is opened
+  useEffect(() => {
+    if (open) setSelectedKbCardIds([]);
+  }, [open]);
 
   // Fetch completed KB cards for this game — only when modal is open
   const { data: kbCards, isLoading: isLoadingKbCards } = useQuery<KbCardDto[]>({

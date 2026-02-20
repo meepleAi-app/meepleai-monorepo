@@ -150,9 +150,9 @@ function DocumentListItem({
   );
 }
 
-// PDF upload section with drag-drop
+// PDF upload section with drag-drop — Issue #4927
 function PdfUploadSection({
-  gameId: _gameId,
+  gameId,
   onUploadSuccess,
 }: {
   gameId: string;
@@ -160,56 +160,55 @@ function PdfUploadSection({
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [documentType, setDocumentType] = useState<'Rulebook' | 'Errata' | 'Homerule'>('Rulebook');
+  const [version, setVersion] = useState('1.0');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: async (_file: File) => {
-      // PDF upload workflow placeholder
-      // In production, this would:
-      // 1. Upload PDF to document service to get pdfDocumentId
-      // 2. Call api.sharedGames.addDocument(gameId, { pdfDocumentId, documentType, version, ... })
-      throw new Error('PDF upload not yet implemented. Coming soon!');
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', documentType);
+      formData.append('version', version || '1.0');
+      formData.append('setAsActive', 'true');
+      return api.sharedGames.uploadDocument(gameId, formData, setUploadProgress);
     },
     onSuccess: () => {
       setUploadError(null);
+      setSelectedFile(null);
+      setUploadProgress(0);
       onUploadSuccess();
     },
     onError: (err) => {
       setUploadError(err instanceof Error ? err.message : 'Upload failed');
+      setUploadProgress(0);
     },
   });
 
   const validateFile = useCallback((file: File): string | null => {
-    if (file.type !== 'application/pdf') {
-      return 'Only PDF files are allowed';
-    }
-    if (file.size > 50 * 1024 * 1024) {
-      return 'File size must be less than 50MB';
-    }
+    if (file.type !== 'application/pdf') return 'Only PDF files are allowed';
+    if (file.size > 500 * 1024 * 1024) return 'File size must be less than 500MB';
     return null;
   }, []);
 
   const handleFile = useCallback(
     (file: File) => {
       const error = validateFile(file);
-      if (error) {
-        setUploadError(error);
-        return;
-      }
-      uploadMutation.mutate(file);
+      if (error) { setUploadError(error); return; }
+      setUploadError(null);
+      setSelectedFile(file);
     },
-    [validateFile, uploadMutation]
+    [validateFile]
   );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-
       const file = e.dataTransfer.files[0];
-      if (file) {
-        handleFile(file);
-      }
+      if (file) handleFile(file);
     },
     [handleFile]
   );
@@ -227,15 +226,42 @@ function PdfUploadSection({
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) {
-        handleFile(file);
-      }
+      if (file) handleFile(file);
     },
     [handleFile]
   );
 
   return (
     <div className="space-y-4">
+      {/* Document type + version */}
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Document Type</label>
+          <select
+            value={documentType}
+            onChange={(e) => setDocumentType(e.target.value as typeof documentType)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            disabled={uploadMutation.isPending}
+          >
+            <option value="Rulebook">Rulebook</option>
+            <option value="Errata">Errata</option>
+            <option value="Homerule">Homerule</option>
+          </select>
+        </div>
+        <div className="w-28">
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Version</label>
+          <input
+            type="text"
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
+            placeholder="1.0"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            disabled={uploadMutation.isPending}
+          />
+        </div>
+      </div>
+
+      {/* Drop zone */}
       <div
         className={`
           relative rounded-lg border-2 border-dashed p-8
@@ -246,7 +272,7 @@ function PdfUploadSection({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !uploadMutation.isPending && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
@@ -259,17 +285,36 @@ function PdfUploadSection({
           {uploadMutation.isPending ? (
             <>
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-sm font-medium">Uploading...</p>
+              <p className="text-sm font-medium">Uploading... {uploadProgress}%</p>
+            </>
+          ) : selectedFile ? (
+            <>
+              <FileText className="h-10 w-10 text-blue-500" />
+              <p className="text-sm font-medium">{selectedFile.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
+              </p>
             </>
           ) : (
             <>
               <Upload className="h-10 w-10 text-muted-foreground" />
               <p className="text-sm font-medium">Drop PDF here or click to browse</p>
-              <p className="text-xs text-muted-foreground">Max file size: 50MB</p>
+              <p className="text-xs text-muted-foreground">PDF up to 500MB</p>
             </>
           )}
         </div>
       </div>
+
+      {/* Upload button */}
+      {selectedFile && !uploadMutation.isPending && (
+        <Button
+          onClick={() => uploadMutation.mutate(selectedFile)}
+          className="w-full"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Upload {documentType}
+        </Button>
+      )}
 
       {uploadError && (
         <Alert variant="destructive">

@@ -477,7 +477,8 @@ internal static class AgentEndpoints
                 AgentId: id,
                 UserQuestion: request.Message,
                 UserId: session.User!.Id,
-                ChatThreadId: request.ChatThreadId
+                ChatThreadId: request.ChatThreadId,
+                UserRole: session.User!.Role
             );
 
             // Set SSE headers

@@ -20,7 +20,48 @@ const StreamingEventType = {
   Token: 7,
   FollowUpQuestions: 8,
   SetupStep: 9,
+  // Debug pipeline events (Issue #4916)
+  DebugAgentRouter: 10,
+  DebugStrategySelected: 11,
+  DebugRetrievalStart: 12,
+  DebugRetrievalResults: 13,
+  DebugPluginExecution: 14,
+  DebugValidationLayer: 15,
+  DebugPromptContext: 16,
+  DebugCostUpdate: 17,
+  DebugSearchDetails: 18,
+  DebugCacheCheck: 19,
+  DebugDocumentCheck: 20,
 } as const;
+
+// Debug step captured from SSE stream (Issue #4916)
+export interface DebugStep {
+  /** Event type number */
+  type: number;
+  /** Human-readable step name */
+  name: string;
+  /** Raw payload from backend */
+  payload: unknown;
+  /** Timestamp from event */
+  timestamp: string;
+  /** Latency in ms if available in payload */
+  latencyMs?: number;
+}
+
+/** Maps debug event types to display names */
+const DEBUG_STEP_NAMES: Record<number, string> = {
+  10: 'Agent Router',
+  11: 'Strategy Selected',
+  12: 'Retrieval Start',
+  13: 'Retrieval Results',
+  14: 'Plugin Execution',
+  15: 'Validation Layer',
+  16: 'Prompt Context',
+  17: 'Cost Update',
+  18: 'Search Details',
+  19: 'Cache Check',
+  20: 'Document Check',
+};
 
 export interface AgentChatStreamState {
   /** Current streaming status text */
@@ -37,6 +78,8 @@ export interface AgentChatStreamState {
   chatThreadId: string | null;
   /** Token count from complete event */
   totalTokens: number;
+  /** Debug pipeline steps captured during streaming (Issue #4916) */
+  debugSteps: DebugStep[];
 }
 
 /** Game context for OpenRouter proxy requests */
@@ -63,6 +106,7 @@ const INITIAL_STATE: AgentChatStreamState = {
   error: null,
   chatThreadId: null,
   totalTokens: 0,
+  debugSteps: [],
 };
 
 export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
@@ -251,6 +295,33 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
 
                 case StreamingEventType.Heartbeat:
                   break;
+
+                // Debug pipeline events (Issue #4916) — types 10-20
+                case StreamingEventType.DebugAgentRouter:
+                case StreamingEventType.DebugStrategySelected:
+                case StreamingEventType.DebugRetrievalStart:
+                case StreamingEventType.DebugRetrievalResults:
+                case StreamingEventType.DebugPluginExecution:
+                case StreamingEventType.DebugValidationLayer:
+                case StreamingEventType.DebugPromptContext:
+                case StreamingEventType.DebugCostUpdate:
+                case StreamingEventType.DebugSearchDetails:
+                case StreamingEventType.DebugCacheCheck:
+                case StreamingEventType.DebugDocumentCheck: {
+                  const payload = event.data as Record<string, unknown>;
+                  const step: DebugStep = {
+                    type: event.type,
+                    name: DEBUG_STEP_NAMES[event.type] ?? `Step ${event.type}`,
+                    payload,
+                    timestamp: event.timestamp,
+                    latencyMs: typeof payload?.latencyMs === 'number' ? payload.latencyMs : undefined,
+                  };
+                  setState(prev => ({
+                    ...prev,
+                    debugSteps: [...prev.debugSteps, step],
+                  }));
+                  break;
+                }
 
                 default:
                   break;

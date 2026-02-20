@@ -2081,6 +2081,85 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return result ?? { collections: [] };
     },
 
+    // ========== Admin Qdrant Operations (Issue #4877) ==========
+
+    /**
+     * Get detailed collection info from Qdrant
+     * GET /api/v1/admin/qdrant/collections/{name}
+     */
+    async getQdrantCollectionDetails(name: string): Promise<QdrantCollectionDetails | null> {
+      return httpClient.get<QdrantCollectionDetails>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}`
+      );
+    },
+
+    /**
+     * Delete an entire Qdrant collection
+     * DELETE /api/v1/admin/qdrant/collections/{name}?confirmed=true
+     */
+    async deleteQdrantCollection(name: string): Promise<void> {
+      await httpClient.delete(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}?confirmed=true`
+      );
+    },
+
+    /**
+     * Test semantic search on a Qdrant collection
+     * POST /api/v1/admin/qdrant/collections/{name}/search
+     */
+    async searchQdrantCollection(
+      name: string,
+      query: string,
+      limit?: number,
+      gameId?: string
+    ): Promise<QdrantSearchResult> {
+      const result = await httpClient.post<QdrantSearchResult>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/search`,
+        { query, limit: limit ?? 10, gameId: gameId ?? null }
+      );
+      return result ?? { query, results: [], total: 0 };
+    },
+
+    /**
+     * Browse/scroll points in a Qdrant collection
+     * GET /api/v1/admin/qdrant/collections/{name}/points?limit=20
+     */
+    async browseQdrantPoints(name: string, limit?: number): Promise<QdrantBrowseResult> {
+      const params = limit ? `?limit=${limit}` : '';
+      const result = await httpClient.get<QdrantBrowseResult>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points${params}`
+      );
+      return result ?? { points: [], count: 0 };
+    },
+
+    /**
+     * Delete vectors from a Qdrant collection by filter
+     * DELETE /api/v1/admin/qdrant/collections/{name}/points?gameId=&pdfId=&confirmed=true
+     */
+    async deleteQdrantPoints(
+      name: string,
+      opts: { gameId?: string; pdfId?: string }
+    ): Promise<void> {
+      const params = new URLSearchParams({ confirmed: 'true' });
+      if (opts.gameId) params.set('gameId', opts.gameId);
+      if (opts.pdfId) params.set('pdfId', opts.pdfId);
+      await httpClient.delete(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points?${params.toString()}`
+      );
+    },
+
+    /**
+     * Rebuild/reindex a Qdrant collection
+     * POST /api/v1/admin/qdrant/collections/{name}/rebuild?confirmed=true
+     */
+    async rebuildQdrantIndex(name: string): Promise<{ rebuilding: boolean; collection: string }> {
+      const result = await httpClient.post<{ rebuilding: boolean; collection: string }>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/rebuild?confirmed=true`,
+        {}
+      );
+      return result ?? { rebuilding: false, collection: name };
+    },
+
     /**
      * Get admin processing queue with pagination
      * GET /api/v1/admin/kb/processing-queue
@@ -2112,6 +2191,43 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Qdrant Admin Types (Issue #4877) ==========
+
+export interface QdrantCollectionDetails {
+  name: string;
+  pointsCount: number;
+  indexedVectorsCount: number;
+  status: string;
+  config: {
+    vectorSize?: number;
+    distance?: string;
+  };
+  exactCount: number;
+  health: number;
+}
+
+export interface QdrantSearchResultItem {
+  id: number;
+  score: number;
+  payload?: Record<string, string>;
+}
+
+export interface QdrantSearchResult {
+  query: string;
+  results: QdrantSearchResultItem[];
+  total: number;
+}
+
+export interface QdrantBrowsePoint {
+  id: number;
+  payload?: Record<string, string>;
+}
+
+export interface QdrantBrowseResult {
+  points: QdrantBrowsePoint[];
+  count: number;
+}
 
 // Re-export tier-strategy types for convenience
 export type { TierStrategyMatrixDto, StrategyModelMappingDto } from '../schemas/tier-strategy.schemas';

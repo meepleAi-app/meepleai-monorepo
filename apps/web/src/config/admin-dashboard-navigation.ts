@@ -33,6 +33,7 @@ import {
   TerminalIcon,
   Settings2Icon,
   MessageSquareCodeIcon,
+  ListOrderedIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -104,6 +105,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     description: 'User management, roles, and activity',
     group: 'core',
     sidebarItems: [
+      {
+        href: '/admin/users',
+        label: 'All Users',
+        icon: UsersIcon,
+        activePattern: /^\/admin\/users$/,
+      },
       {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
@@ -217,6 +224,16 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Documents',
         icon: FileTextIcon,
         activePattern: /^\/admin\/knowledge-base$/,
+      },
+      {
+        href: '/admin/knowledge-base/documents',
+        label: 'Document Library',
+        icon: ListOrderedIcon,
+      },
+      {
+        href: '/admin/knowledge-base/processing',
+        label: 'Processing Queue',
+        icon: ActivityIcon,
       },
       {
         href: '/admin/knowledge-base/vectors',

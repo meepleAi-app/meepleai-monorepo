@@ -8,6 +8,15 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { agentSlotsKeys } from './useAgentSlots';
 
+/** Centralized toast messages for agent creation flow — import in tests to avoid magic strings */
+export const AGENT_FLOW_MESSAGES = {
+  success: (agentName: string) => `Agente "${agentName}" creato! Avvio chat...`,
+  slotLimit: { title: 'Nessuno slot disponibile', description: "Effettua l'upgrade per avere più slot agente." },
+  nameConflict: { title: 'Nome agente già in uso', description: 'Scegli un nome diverso.' },
+  genericError: (description: string) => ({ title: 'Creazione agente fallita', description }),
+  fallbackErrorDesc: "Errore nella creazione dell'agente",
+} as const;
+
 export type CreateAgentFlowInput = {
   gameId: string;
   addToCollection: boolean;
@@ -44,24 +53,24 @@ export function useCreateAgentFlow(options?: {
         queryClient.invalidateQueries({ queryKey: ['user-library'] });
       }
 
-      toast.success(`Agente "${result.agentName}" creato! Avvio chat...`);
+      toast.success(AGENT_FLOW_MESSAGES.success(result.agentName));
       options?.onSuccess?.(result);
     },
 
     onError: (error) => {
-      const message = error.message || 'Errore nella creazione dell\'agente';
+      const message = error.message || AGENT_FLOW_MESSAGES.fallbackErrorDesc;
 
       if (message.includes('Agent limit reached')) {
-        toast.error('Nessuno slot disponibile', {
-          description: 'Effettua l\'upgrade per avere più slot agente.',
+        toast.error(AGENT_FLOW_MESSAGES.slotLimit.title, {
+          description: AGENT_FLOW_MESSAGES.slotLimit.description,
         });
       } else if (message.includes('unique name')) {
-        toast.error('Nome agente già in uso', {
-          description: 'Scegli un nome diverso.',
+        toast.error(AGENT_FLOW_MESSAGES.nameConflict.title, {
+          description: AGENT_FLOW_MESSAGES.nameConflict.description,
         });
       } else {
-        toast.error('Creazione agente fallita', {
-          description: message,
+        toast.error(AGENT_FLOW_MESSAGES.genericError(message).title, {
+          description: AGENT_FLOW_MESSAGES.genericError(message).description,
         });
       }
 

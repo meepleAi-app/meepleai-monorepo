@@ -4,8 +4,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { AddGameWizard } from '@/components/collection/wizard/AddGameWizard';
 import { useAddGameWizardStore } from '@/stores/addGameWizardStore';
 
@@ -24,6 +25,13 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+// Mock next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() })),
+  usePathname: vi.fn(() => '/library'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+}));
+
 describe('AddGameWizard', () => {
   beforeEach(() => {
     useAddGameWizardStore.getState().reset();
@@ -32,7 +40,7 @@ describe('AddGameWizard', () => {
 
   describe('Rendering', () => {
     it('renders wizard title and subtitle', () => {
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       expect(screen.getByTestId('wizard-title')).toHaveTextContent('Add Game to Collection');
       expect(screen.getByTestId('wizard-subtitle')).toHaveTextContent(
@@ -41,15 +49,15 @@ describe('AddGameWizard', () => {
     });
 
     it('renders back to collection link', () => {
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       const backLink = screen.getByRole('link', { name: /Back to Collection/i });
       expect(backLink).toBeInTheDocument();
-      expect(backLink).toHaveAttribute('href', '/dashboard/collection');
+      expect(backLink).toHaveAttribute('href', '/library');
     });
 
     it('renders step indicator (3 steps when shared game selected)', () => {
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       // Initially, no game selected → Step 2 hidden
       expect(screen.getByText('1. Search/Select')).toBeInTheDocument();
@@ -62,7 +70,7 @@ describe('AddGameWizard', () => {
       const { selectCustomGame } = useAddGameWizardStore.getState();
 
       selectCustomGame();
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       // All 4 steps should be visible
       expect(screen.getByText('1. Search/Select')).toBeInTheDocument();
@@ -72,7 +80,7 @@ describe('AddGameWizard', () => {
     });
 
     it('starts on search/select step', () => {
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       expect(screen.getByText('Search or Create Game')).toBeInTheDocument();
     });
@@ -84,7 +92,7 @@ describe('AddGameWizard', () => {
       const mockGame = { id: '1', title: 'Test Game', createdAt: '2024-01-01' };
 
       selectSharedGame(mockGame);
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       // Step 2 should not be visible in step indicator
       const stepLabels = screen.queryByText('2. Game Details');
@@ -94,7 +102,7 @@ describe('AddGameWizard', () => {
     it('advances to Game Details when custom game selected', () => {
       const { selectCustomGame, goNext } = useAddGameWizardStore.getState();
 
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       selectCustomGame();
       goNext();
@@ -110,7 +118,7 @@ describe('AddGameWizard', () => {
       const { selectSharedGame } = useAddGameWizardStore.getState();
 
       selectSharedGame(mockGame);
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       expect(screen.getByText('Summary')).toBeInTheDocument();
       // Game title appears in both game list and summary, use getAllByText
@@ -124,7 +132,7 @@ describe('AddGameWizard', () => {
 
       selectSharedGame(mockGame);
       setUploadedPdf('pdf-123', 'rulebook.pdf');
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       expect(screen.getByText('Summary')).toBeInTheDocument();
       expect(screen.getByText('rulebook.pdf')).toBeInTheDocument();
@@ -135,7 +143,7 @@ describe('AddGameWizard', () => {
 
       selectCustomGame();
       setCustomGameData({ name: 'My Unique Custom Game 2024' }); // Unique name to avoid conflicts
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       expect(screen.getByText('My Unique Custom Game 2024')).toBeInTheDocument();
       expect(screen.getByText('Custom')).toBeInTheDocument();
@@ -153,7 +161,7 @@ describe('AddGameWizard', () => {
         error: 'Network error occurred',
       });
 
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       expect(screen.getByText('Network error occurred')).toBeInTheDocument();
     });
@@ -161,7 +169,7 @@ describe('AddGameWizard', () => {
 
   describe('Accessibility', () => {
     it('has proper step descriptions for screen readers (shared game path)', () => {
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       // When no custom game, Step 2 hidden
       expect(screen.getByTestId('step-1-description')).toHaveTextContent('Find or create game');
@@ -174,7 +182,7 @@ describe('AddGameWizard', () => {
       const { selectCustomGame } = useAddGameWizardStore.getState();
 
       selectCustomGame();
-      render(<AddGameWizard />);
+      renderWithQuery(<AddGameWizard />);
 
       // All 4 steps visible when custom game
       expect(screen.getByTestId('step-1-description')).toHaveTextContent('Find or create game');

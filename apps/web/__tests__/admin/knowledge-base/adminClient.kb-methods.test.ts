@@ -262,7 +262,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/pdfs/admin/pdfs',
+        '/api/v1/admin/pdfs',
         expect.any(Object)
       );
     });

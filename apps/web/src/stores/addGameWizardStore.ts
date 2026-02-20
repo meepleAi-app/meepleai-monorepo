@@ -13,6 +13,12 @@ import { toast } from '@/components/layout';
 import { api } from '@/lib/api';
 import type { Game } from '@/types/domain';
 
+/** Centralized toast messages for the add-game wizard — import in tests to avoid magic strings */
+export const ADD_GAME_WIZARD_MESSAGES = {
+  gameAdded: (gameName: string) => `"${gameName}" aggiunto alla tua collezione!`,
+  pdfFailed: 'Game added, but PDF association failed. You can add it later.',
+} as const;
+
 /**
  * Custom game data (when user creates a game not in SharedGameCatalog)
  */
@@ -262,13 +268,13 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
               } catch (pdfError) {
                 // PDF association failed but game was added - log but don't fail
                 console.warn('Failed to associate PDF with library entry:', pdfError);
-                toast.warning('Game added, but PDF association failed. You can add it later.');
+                toast.warning(ADD_GAME_WIZARD_MESSAGES.pdfFailed);
               }
             }
           }
 
           const gameName = isCustomGame ? customGameData?.name : selectedGame?.title;
-          toast.success(`"${gameName}" aggiunto alla tua collezione!`);
+          toast.success(ADD_GAME_WIZARD_MESSAGES.gameAdded(gameName ?? ''));
 
           // Reset wizard on success
           get().reset();

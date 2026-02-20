@@ -7,15 +7,14 @@
  * Dashboard showing user's game proposals with status tracking.
  * Protected route - requires authentication (User, Editor, or Admin role).
  * Note: Uses force-dynamic to avoid DOMMatrix SSR errors (Issue #4133)
+ * Server component - direct imports avoid barrel re-export DOMMatrix issue.
  */
-
-'use client';
 
 // Disable SSG to prevent DOMMatrix error with react-pdf (Issue #4133)
 export const dynamic = 'force-dynamic';
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { LibraryNavTabs } from '@/components/library';
+import { LibraryNavTabs } from '@/components/library/LibraryNavTabs';
 
 import MyProposalsClient from './MyProposalsClient';
 

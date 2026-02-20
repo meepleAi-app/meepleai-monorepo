@@ -23,7 +23,7 @@ const mockCollection: VectorCollectionDto = {
   name: 'game_rules',
   vectorCount: 12500,
   dimensions: 384,
-  sizeBytes: 52428800, // 50 MB
+  storage: '50 MB',
   status: { health: 'healthy' },
 };
 
@@ -31,7 +31,7 @@ const mockDegradedCollection: VectorCollectionDto = {
   name: 'faq_embeddings',
   vectorCount: 340,
   dimensions: 768,
-  sizeBytes: 1048576, // 1 MB
+  storage: '1 MB',
   status: { health: 'degraded', optimizerStatus: 'indexing' },
 };
 
@@ -102,24 +102,14 @@ describe('VectorCollectionCard', () => {
     expect(metadata[2].label).toBe('50 MB');
   });
 
-  it('formats bytes correctly for small sizes', () => {
-    const smallCollection = { ...mockCollection, sizeBytes: 512 };
-    render(<VectorCollectionCard collection={smallCollection} />);
+  it('passes storage string directly to metadata', () => {
+    const customStorage = { ...mockCollection, storage: '3.2 GB' };
+    render(<VectorCollectionCard collection={customStorage} />);
 
     const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
     const metadata = call?.metadata as Array<{ label: string }>;
 
-    expect(metadata[2].label).toBe('512 B');
-  });
-
-  it('formats bytes correctly for KB sizes', () => {
-    const kbCollection = { ...mockCollection, sizeBytes: 15360 };
-    render(<VectorCollectionCard collection={kbCollection} />);
-
-    const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
-    const metadata = call?.metadata as Array<{ label: string }>;
-
-    expect(metadata[2].label).toBe('15 KB');
+    expect(metadata[2].label).toBe('3.2 GB');
   });
 
   it('includes quickActions when callbacks provided', () => {
@@ -183,7 +173,7 @@ describe('VectorCollectionCard', () => {
   });
 
   it('handles zero vectors', () => {
-    const emptyCollection = { ...mockCollection, vectorCount: 0, sizeBytes: 0 };
+    const emptyCollection = { ...mockCollection, vectorCount: 0, storage: '0 B' };
     render(<VectorCollectionCard collection={emptyCollection} />);
 
     const call = mockMeepleCard.mock.calls[0]?.[0] as Record<string, unknown> | undefined;

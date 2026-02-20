@@ -3,10 +3,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCwIcon, AlertCircleIcon } from 'lucide-react';
 
-import { VectorCollectionCard } from '@/components/admin/knowledge-base/vector-collection-card';
+import { VectorCollectionCard, type VectorCollectionDto } from '@/components/admin/knowledge-base/vector-collection-card';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
+
+function healthToStatus(health: number): 'healthy' | 'degraded' | 'error' {
+  if (health >= 90) return 'healthy';
+  if (health >= 70) return 'degraded';
+  return 'error';
+}
 
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
@@ -125,7 +131,16 @@ export default function VectorCollectionsPage() {
       ) : collections.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {collections.map((collection) => (
-            <VectorCollectionCard key={collection.name} {...collection} />
+            <VectorCollectionCard
+              key={collection.name}
+              collection={{
+                name: collection.name,
+                vectorCount: collection.vectorCount,
+                dimensions: collection.dimensions,
+                storage: collection.storage,
+                status: { health: healthToStatus(collection.health) },
+              }}
+            />
           ))}
         </div>
       ) : !error ? (

@@ -2205,6 +2205,15 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
       return result ?? { jobs: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     },
+
+    /**
+     * Get aggregated RAG pipeline health
+     * GET /api/v1/admin/kb/pipeline/health
+     * Issue #4879
+     */
+    async getPipelineHealth(): Promise<PipelineHealthResponse | null> {
+      return httpClient.get<PipelineHealthResponse>(`/api/v1/admin/kb/pipeline/health`);
+    },
   };
 }
 
@@ -2371,4 +2380,42 @@ export type RagExecutionStatsResult = {
   cacheHitRate: number;
   totalCost: number;
   avgConfidence: number;
+};
+
+// ========== Pipeline Health Types (Issue #4879) ==========
+
+export type PipelineStageStatus = 'healthy' | 'warning' | 'error';
+
+export type PipelineStage = {
+  name: string;
+  status: PipelineStageStatus;
+  metrics: Record<string, unknown>;
+};
+
+export type PipelineRecentActivity = {
+  jobId: string;
+  fileName: string;
+  status: string;
+  completedAt: string | null;
+  durationMs: number | null;
+};
+
+export type PipelineDistribution = {
+  totalDocuments: number;
+  totalChunks: number;
+  vectorCount: number;
+  totalFiles: number;
+  storageSizeFormatted: string;
+};
+
+export type PipelineHealthResponse = {
+  stages: PipelineStage[];
+  summary: {
+    healthyCount: number;
+    warningCount: number;
+    errorCount: number;
+  };
+  recentActivity: PipelineRecentActivity[];
+  distribution: PipelineDistribution;
+  checkedAt: string;
 };

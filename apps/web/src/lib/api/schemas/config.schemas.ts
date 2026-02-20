@@ -167,3 +167,23 @@ export const UpdatePdfTierUploadLimitsRequestSchema = z.object({
 });
 
 export type UpdatePdfTierUploadLimitsRequest = z.infer<typeof UpdatePdfTierUploadLimitsRequestSchema>;
+
+// ========== Chat History Limits (Issue #4918) ==========
+
+export const ChatHistoryLimitsDtoSchema = z.object({
+  freeTierLimit: z.number().int().min(1),
+  normalTierLimit: z.number().int().min(1),
+  premiumTierLimit: z.number().int().min(1),
+  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedByUserId: z.string().uuid().nullable(),
+});
+
+export type ChatHistoryLimitsDto = z.infer<typeof ChatHistoryLimitsDtoSchema>;
+
+export const UpdateChatHistoryLimitsRequestSchema = z.object({
+  freeTierLimit: z.number().int().min(1),
+  normalTierLimit: z.number().int().min(1),
+  premiumTierLimit: z.number().int().min(1),
+});
+
+export type UpdateChatHistoryLimitsRequest = z.infer<typeof UpdateChatHistoryLimitsRequestSchema>;

@@ -1,10 +1,11 @@
 /**
- * AuthenticatedLayout Component
+ * AuthenticatedLayout Component - Issue #4936 (updated)
  * Issue #3479 - Layout System v2: Unified Layout for Authenticated Pages
  *
  * Navigation structure:
- * - Desktop: Sidebar (collapsible, fixed left) — no top header
- * - Mobile: Compact UnifiedHeader (48px) + UnifiedActionBar (56px bottom)
+ * - ALL breakpoints: UniversalNavbar (56px, fixed top) — Logo + Search + Profile
+ * - Desktop (md+): Sidebar (collapsible, fixed left, starts at top-14)
+ * - Mobile (<md):  UnifiedActionBar (56px, fixed bottom) with FAB
  *
  * This layout replaces PublicLayout for authenticated routes.
  */
@@ -15,8 +16,8 @@ import { type ReactNode } from 'react';
 
 import { UnifiedActionBar, UnifiedActionBarSpacer } from '@/components/layout/ActionBar';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
+import { UniversalNavbar } from '@/components/layout/Navbar/UniversalNavbar';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { useSidebarState } from '@/hooks/useSidebarState';
@@ -41,8 +42,9 @@ export interface AuthenticatedLayoutProps {
  *
  * Main layout component for authenticated pages.
  * Provides unified navigation experience with:
- * - Desktop: Collapsible sidebar with nav + user section
- * - Mobile: Compact header (48px) + bottom ActionBar (56px) with FAB
+ * - ALL: Universal top navbar (56px) with Logo + Search + ProfileBar
+ * - Desktop: Collapsible context-sensitive sidebar (starts below navbar)
+ * - Mobile: Bottom ActionBar (56px) with FAB
  */
 export function AuthenticatedLayout({
   children,
@@ -51,13 +53,15 @@ export function AuthenticatedLayout({
   className,
   fullWidth = false,
 }: AuthenticatedLayoutProps) {
-  // Impersonation state (Issue #3349)
   const { isImpersonating, impersonatedUser, isLoading, endImpersonation } = useImpersonationStore();
   const { isCollapsed, toggle } = useSidebarState();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Impersonation Banner - Shows when admin is impersonating a user */}
+      {/* ── Universal Navbar (ALL breakpoints, fixed top, h-14 = 56px) ── */}
+      <UniversalNavbar />
+
+      {/* ── Impersonation Banner (below navbar) ─────────────────────── */}
       <ImpersonationBanner
         isImpersonating={isImpersonating}
         impersonatedUser={impersonatedUser}
@@ -65,24 +69,20 @@ export function AuthenticatedLayout({
         isLoading={isLoading}
       />
 
-      {/* Desktop Sidebar (fixed, md+ only) */}
+      {/* ── Desktop Sidebar (fixed, md+, starts at top-14) ───────────── */}
       <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
 
-      {/* Mobile Header (md:hidden) */}
-      <div className="md:hidden">
-        <UnifiedHeader />
-      </div>
-
-      {/* Main Content Area */}
+      {/* ── Main Content Area ────────────────────────────────────────── */}
       <main
         className={cn(
           'flex-1',
-          // Mobile: offset for compact header (48px)
-          'pt-12 md:pt-0',
-          // Desktop: offset for sidebar width
+          // ALL breakpoints: offset for Universal Navbar (56px = pt-14)
+          'pt-14',
+          // Desktop: offset for sidebar width (sidebar starts at top-14)
           isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]',
           'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none',
-          isImpersonating && 'pt-20 md:pt-8',
+          // Extra top padding when impersonation banner is visible
+          isImpersonating && 'pt-24 md:pt-24',
           !fullWidth && 'container mx-auto px-4 sm:px-6 lg:px-8',
           className
         )}
@@ -100,7 +100,7 @@ export function AuthenticatedLayout({
         </div>
       </main>
 
-      {/* Unified ActionBar - Mobile only: bottom nav + integrated FAB */}
+      {/* ── Unified ActionBar (Mobile only: bottom nav + FAB) ─────────── */}
       {showActionBar && (
         <>
           <UnifiedActionBar />
@@ -108,7 +108,7 @@ export function AuthenticatedLayout({
         </>
       )}
 
-      {/* Card Stack Panel - "Carte in Mano" navigation */}
+      {/* Card Stack Panel — "Carte in Mano" navigation */}
       <CardStackPanel />
     </div>
   );

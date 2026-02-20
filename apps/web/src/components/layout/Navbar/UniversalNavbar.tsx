@@ -42,7 +42,7 @@ export interface UniversalNavbarProps {
   className?: string;
 }
 
-/** Debounce hook for search input */
+/** Debounce hook */
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -67,9 +67,8 @@ function NavbarSearch() {
     staleTime: 30 * 1000,
   });
 
-  const results = data?.items ?? [];
+  const results = data?.games ?? [];
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
@@ -86,21 +85,10 @@ function NavbarSearch() {
     router.push(`/games/${gameId}`);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      setQuery('');
-      setIsOpen(false);
-    }
-  };
-
   return (
     <div ref={wrapperRef} className="relative w-full max-w-sm lg:max-w-md">
-      {/* Input */}
       <div className="relative flex items-center">
-        <Search
-          className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none"
-          aria-hidden="true"
-        />
+        <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
         <input
           type="search"
           value={query}
@@ -109,7 +97,7 @@ function NavbarSearch() {
             setIsOpen(e.target.value.length >= 2);
           }}
           onFocus={() => query.length >= 2 && setIsOpen(true)}
-          onKeyDown={handleKeyDown}
+          onKeyDown={(e) => e.key === 'Escape' && (setQuery(''), setIsOpen(false))}
           placeholder="Cerca giochi..."
           aria-label="Cerca giochi nel catalogo"
           className={cn(
@@ -131,7 +119,6 @@ function NavbarSearch() {
         )}
       </div>
 
-      {/* Results dropdown */}
       {isOpen && debouncedQuery.length >= 2 && (
         <div
           className={cn(
@@ -193,30 +180,22 @@ function ProfileBar() {
   const { data: user } = useCurrentUser();
   const [isLoggingOut, startTransition] = useTransition();
 
-  const isAdmin =
-    user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin';
+  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'superadmin';
   const isEditor = user?.role?.toLowerCase() === 'editor' || isAdmin;
-
   const userInitial =
-    user?.displayName?.charAt(0).toUpperCase() ||
-    user?.email?.charAt(0).toUpperCase() ||
-    'U';
+    user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
 
   const handleLogout = () => {
     startTransition(async () => {
       const result = await logoutAction();
-      if (result.success) {
-        router.push('/login');
-      }
+      if (result.success) router.push('/login');
     });
   };
 
   if (!user) {
     return (
       <Link href="/login">
-        <Button variant="default" size="sm">
-          Accedi
-        </Button>
+        <Button variant="default" size="sm">Accedi</Button>
       </Link>
     );
   }
@@ -226,19 +205,13 @@ function ProfileBar() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={cn(
-            'flex items-center gap-2 px-2 h-9',
-            'hover:bg-accent rounded-lg',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40'
-          )}
+          className="flex items-center gap-2 px-2 h-9 hover:bg-accent rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           aria-label="Menu utente"
           data-testid="universal-navbar-profile-trigger"
         >
-          {/* Avatar circle */}
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
             <span className="text-xs font-semibold text-primary">{userInitial}</span>
           </div>
-          {/* Name — desktop only */}
           <span className="hidden md:inline text-sm font-medium max-w-[120px] truncate">
             {user.displayName || user.email || 'Utente'}
           </span>
@@ -248,9 +221,7 @@ function ProfileBar() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-0.5">
-            <p className="text-sm font-medium leading-none">
-              {user.displayName || 'Utente'}
-            </p>
+            <p className="text-sm font-medium leading-none">{user.displayName || 'Utente'}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
@@ -258,19 +229,16 @@ function ProfileBar() {
 
         <DropdownMenuItem asChild data-testid="navbar-profile-item">
           <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
-            <User className="h-4 w-4" />
-            <span>Profilo</span>
+            <User className="h-4 w-4" /><span>Profilo</span>
           </Link>
         </DropdownMenuItem>
-
         <DropdownMenuSeparator />
 
         {isEditor && (
           <>
             <DropdownMenuItem asChild data-testid="navbar-editor-item">
               <Link href="/editor" className="flex items-center gap-2 cursor-pointer">
-                <FileEdit className="h-4 w-4" />
-                <span>Editor Panel</span>
+                <FileEdit className="h-4 w-4" /><span>Editor Panel</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -281,8 +249,7 @@ function ProfileBar() {
           <>
             <DropdownMenuItem asChild data-testid="navbar-admin-item">
               <Link href="/admin/overview" className="flex items-center gap-2 cursor-pointer">
-                <Shield className="h-4 w-4" />
-                <span>Admin Panel</span>
+                <Shield className="h-4 w-4" /><span>Admin Panel</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -291,17 +258,14 @@ function ProfileBar() {
 
         <DropdownMenuItem asChild data-testid="navbar-settings-item">
           <Link href="/settings" className="flex items-center gap-2 cursor-pointer">
-            <Settings className="h-4 w-4" />
-            <span>Impostazioni</span>
+            <Settings className="h-4 w-4" /><span>Impostazioni</span>
           </Link>
         </DropdownMenuItem>
-
         <DropdownMenuSeparator />
 
         <div className="px-2 py-1.5">
           <ThemeToggle showLabel size="sm" className="w-full justify-start" />
         </div>
-
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
@@ -320,9 +284,7 @@ function ProfileBar() {
 
 /**
  * UniversalNavbar
- *
  * Fixed top bar visible on ALL breakpoints (h-14 = 56px).
- * Consumers must add `pt-14` to main content area.
  */
 export function UniversalNavbar({ className }: UniversalNavbarProps) {
   const { isAuthenticated, isAuthLoading } = useNavigationItems();
@@ -337,9 +299,7 @@ export function UniversalNavbar({ className }: UniversalNavbarProps) {
   return (
     <header
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 w-full',
-        'h-14 border-b',
-        // Glass morphism (light) / solid (dark)
+        'fixed top-0 left-0 right-0 z-[110] w-full h-14 border-b',
         'bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%]',
         'dark:bg-card/95 dark:backdrop-blur-sm',
         'border-border/50 dark:border-border/30',
@@ -350,33 +310,27 @@ export function UniversalNavbar({ className }: UniversalNavbarProps) {
       data-testid="universal-navbar"
     >
       <div className="flex h-full items-center justify-between px-4 gap-3">
-        {/* ─── LEFT: Mobile hamburger + Logo ─────────────────────── */}
+        {/* Left: Mobile hamburger + Logo */}
         <div className="flex items-center gap-2 shrink-0">
           {isAuthenticated && !isAuthLoading && (
             <div className="md:hidden">
               <MobileNavDrawer />
             </div>
           )}
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2"
-            aria-label="MeepleAI — vai alla dashboard"
-          >
+          <Link href="/dashboard" className="flex items-center gap-2" aria-label="MeepleAI — vai alla dashboard">
             <MeepleLogo variant="icon" size="sm" />
-            <span className="hidden sm:inline font-quicksand font-bold text-base">
-              MeepleAI
-            </span>
+            <span className="hidden sm:inline font-quicksand font-bold text-base">MeepleAI</span>
           </Link>
         </div>
 
-        {/* ─── CENTER: Search (desktop) ────────────────────────────── */}
+        {/* Center: Search (desktop) */}
         {isAuthenticated && !isAuthLoading && (
           <div className="hidden md:flex flex-1 justify-center px-4 max-w-xl mx-auto w-full">
             <NavbarSearch />
           </div>
         )}
 
-        {/* ─── RIGHT: Notifications + Profile ─────────────────────── */}
+        {/* Right: Notifications + Profile */}
         <div className="flex items-center gap-1 shrink-0">
           {isAuthenticated && !isAuthLoading && <NotificationBell />}
           <ProfileBar />

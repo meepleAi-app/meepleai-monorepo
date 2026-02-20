@@ -2223,6 +2223,28 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     async getProcessingMetrics(): Promise<ProcessingMetricsResponse | null> {
       return httpClient.get<ProcessingMetricsResponse>(`/api/v1/admin/pdfs/metrics/processing`);
     },
+
+    /**
+     * Get KB settings (read-only from env vars/config)
+     * GET /api/v1/admin/kb/settings
+     * Issue #4881
+     */
+    async getKBSettings(): Promise<KBSettingsResponse | null> {
+      return httpClient.get<KBSettingsResponse>(`/api/v1/admin/kb/settings`);
+    },
+
+    /**
+     * Clear KB cache
+     * POST /api/v1/admin/kb/cache/clear
+     * Issue #4881
+     */
+    async clearKBCache(): Promise<KBClearCacheResponse> {
+      const result = await httpClient.post<KBClearCacheResponse>(
+        `/api/v1/admin/kb/cache/clear`,
+        {}
+      );
+      return result ?? { success: false, message: 'No response', clearedAt: null };
+    },
   };
 }
 
@@ -2447,4 +2469,55 @@ export type ProcessingMetricsResponse = {
   averages: Record<string, ProcessingStepAverages>;
   percentiles: Record<string, ProcessingStepPercentiles>;
   lastUpdated: string;
+};
+
+// ========== KB Settings Types (Issue #4881) ==========
+
+export type KBSettingsResponse = {
+  embedding: {
+    provider: string;
+    model: string;
+    serviceUrl: string;
+  };
+  vectorDatabase: {
+    type: string;
+    url: string;
+    grpcPort: string;
+  };
+  chunking: {
+    defaultChunkSize: number;
+    chunkOverlap: number;
+    minChunkSize: number;
+    maxChunkSize: number;
+    embeddingTokenLimit: number;
+    charsPerToken: number;
+  };
+  cache: {
+    redis: {
+      host: string;
+      port: string;
+    };
+    hybridCache: {
+      defaultExpiration: string;
+      l2Enabled: boolean;
+    };
+    multiTier: {
+      enabled: boolean;
+      l1Ttl: string;
+      l2Ttl: string;
+    };
+  };
+  reranker: {
+    configured: boolean;
+    url: string | null;
+  };
+  storage: {
+    provider: string;
+  };
+};
+
+export type KBClearCacheResponse = {
+  success: boolean;
+  message: string;
+  clearedAt: string | null;
 };

@@ -132,16 +132,16 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     group: 'core',
     sidebarItems: [
       {
-        href: '/admin/shared-games',
-        label: 'Approval Queue',
-        icon: CheckSquareIcon,
-        badgeKey: 'pending-approvals',
-        activePattern: /^\/admin\/shared-games$/,
-      },
-      {
         href: '/admin/shared-games/all',
         label: 'All Games',
         icon: ListIcon,
+        activePattern: /^\/admin\/shared-games(\/all)?$/,
+      },
+      {
+        href: '/admin/shared-games/pending-approvals',
+        label: 'Approval Queue',
+        icon: CheckSquareIcon,
+        badgeKey: 'pending-approvals',
       },
       {
         href: '/admin/games/new',
@@ -231,7 +231,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: ListOrderedIcon,
       },
       {
-        href: '/admin/knowledge-base/processing',
+        href: '/admin/knowledge-base/queue',
         label: 'Processing Queue',
         icon: ActivityIcon,
       },

@@ -252,13 +252,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   // ========== NEW FEATURES (Issue #4030) ==========
 
   /** Feature: Entity Quick Actions (hover-reveal buttons) */
-  entityQuickActions?: Array<{
-    icon: LucideIcon;
-    label: string;
-    onClick: () => void;
-    disabled?: boolean;
-    hidden?: boolean;
-  }>;
+  entityQuickActions?: import('./meeple-card-quick-actions').QuickAction[];
 
   /** Feature: Info Button (always-visible navigation to detail page) */
   showInfoButton?: boolean;

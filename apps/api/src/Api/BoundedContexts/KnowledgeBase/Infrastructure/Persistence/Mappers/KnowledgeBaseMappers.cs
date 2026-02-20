@@ -22,7 +22,6 @@ internal static class KnowledgeBaseMappers
         {
             Id = domain.Id,
             GameId = domain.GameId,
-            SharedGameId = domain.SharedGameId,
             PdfDocumentId = domain.PdfDocumentId,
             ChunkCount = domain.TotalChunks,
             TotalCharacters = 0, // Not tracked in domain
@@ -37,33 +36,17 @@ internal static class KnowledgeBaseMappers
 
     /// <summary>
     /// Maps persistence VectorDocumentEntity to domain VectorDocument.
-    /// Handles both user library (GameId) and admin shared game (SharedGameId) documents (Issue #4921).
     /// </summary>
     public static VectorDocument ToDomain(this VectorDocumentEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-
-        VectorDocument domain;
-        if (entity.SharedGameId.HasValue)
-        {
-            domain = VectorDocument.CreateForSharedGame(
-                id: entity.Id,
-                sharedGameId: entity.SharedGameId.Value,
-                pdfDocumentId: entity.PdfDocumentId,
-                language: "en",
-                totalChunks: entity.ChunkCount
-            );
-        }
-        else
-        {
-            domain = new VectorDocument(
-                id: entity.Id,
-                gameId: entity.GameId ?? Guid.Empty,
-                pdfDocumentId: entity.PdfDocumentId,
-                language: "en",
-                totalChunks: entity.ChunkCount
-            );
-        }
+        var domain = new VectorDocument(
+            id: entity.Id,
+            gameId: entity.GameId,
+            pdfDocumentId: entity.PdfDocumentId,
+            language: "en", // Default language (not stored in entity)
+            totalChunks: entity.ChunkCount
+        );
 
         // Restore metadata using internal method
         if (!string.IsNullOrEmpty(entity.Metadata))

@@ -10,7 +10,6 @@ import { api } from '@/lib/api';
 import {
   useAddGameWizardStore,
   type CustomGameData,
-  ADD_GAME_WIZARD_MESSAGES,
 } from '@/stores/addGameWizardStore';
 import type { Game } from '@/types/domain';
 
@@ -29,7 +28,6 @@ vi.mock('@/lib/api', () => ({
   api: {
     library: {
       addGame: vi.fn(),
-      addPrivateGame: vi.fn(),
     },
   },
 }));
@@ -318,18 +316,18 @@ describe('addGameWizardStore', () => {
       });
 
       // Should show success toast
-      expect(toast.success).toHaveBeenCalledWith(ADD_GAME_WIZARD_MESSAGES.gameAdded('Catan'));
+      expect(toast.success).toHaveBeenCalledWith('"Catan" added to your collection!');
 
       // Should reset store
       const { step, selectedGame } = useAddGameWizardStore.getState();
       expect(step).toBe(1);
       expect(selectedGame).toBeNull();
 
-      // Should redirect to /library
-      expect(window.location.href).toBe('/library');
+      // Should redirect
+      expect(window.location.href).toBe('/dashboard/collection');
     });
 
-    it('submitWizard succeeds with custom game (addPrivateGame)', async () => {
+    it('submitWizard shows info message for custom games (backend not implemented)', async () => {
       const customData: CustomGameData = { name: 'My Custom Game' };
       const {
         selectCustomGame,
@@ -338,27 +336,17 @@ describe('addGameWizardStore', () => {
         submitWizard,
       } = useAddGameWizardStore.getState();
 
-      // Mock window.location.href
-      delete (window as { location?: unknown }).location;
-      window.location = { href: '' } as Location;
-
-      // Mock successful API call for private game creation
-      vi.mocked(api.library.addPrivateGame).mockResolvedValueOnce({ id: 'custom-id' } as never);
-
       selectCustomGame();
       setCustomGameData(customData);
       setStep(4);
       await submitWizard();
 
-      // Should call addPrivateGame API
-      expect(api.library.addPrivateGame).toHaveBeenCalled();
+      // Should show info toast (custom games not yet supported by backend)
+      expect(toast.info).toHaveBeenCalledWith('Custom game support coming soon! For now, search for games in the catalog.');
 
-      // Should show success toast
-      expect(toast.success).toHaveBeenCalledWith(ADD_GAME_WIZARD_MESSAGES.gameAdded('My Custom Game'));
-
-      // Should reset store
+      // Should NOT reset store (operation didn't complete)
       const { isCustomGame } = useAddGameWizardStore.getState();
-      expect(isCustomGame).toBe(false);
+      expect(isCustomGame).toBe(true);
     });
 
     it('submitWizard handles API errors gracefully', async () => {
@@ -425,7 +413,7 @@ describe('addGameWizardStore', () => {
       await submitWizard();
 
       // Should succeed (PDF association attempted)
-      expect(toast.success).toHaveBeenCalledWith(ADD_GAME_WIZARD_MESSAGES.gameAdded('Catan'));
+      expect(toast.success).toHaveBeenCalledWith('"Catan" added to your collection!');
     });
   });
 

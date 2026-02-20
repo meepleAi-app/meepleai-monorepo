@@ -172,7 +172,7 @@ describe('PrivateGamesClient', () => {
       });
 
       expect(
-        screen.getByText('Unable to load private games. Please try again.')
+        screen.getByText('Impossibile caricare i giochi privati. Riprova.')
       ).toBeInTheDocument();
     });
 
@@ -188,7 +188,7 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId('error-state')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Refresh'));
+      await user.click(screen.getByText('Retry'));
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();

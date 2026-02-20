@@ -193,13 +193,11 @@ describe('MeepleCard - Accessibility', () => {
       expect(image).toBeInTheDocument();
     });
 
-    it('should have accessible name with placeholder image (no imageUrl)', () => {
+    it('should have alt text with placeholder image', () => {
       render(<MeepleCard {...defaultProps} variant="grid" imageUrl={undefined} />);
 
-      // When no imageUrl, the component renders a gradient placeholder (no img element).
-      // Accessibility is maintained via aria-label on the card article element.
-      const card = screen.getByTestId('meeple-card');
-      expect(card).toHaveAttribute('aria-label', 'Game: Test Game Title');
+      const image = screen.getByAltText('Test Game Title');
+      expect(image).toBeInTheDocument();
     });
 
     it('should have alt text on avatar for player entity', () => {

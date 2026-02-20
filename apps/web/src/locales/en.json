@@ -1,9 +1,4 @@
 {
-  "collection": {
-    "addGameTitle": "Add Game to Collection",
-    "addGameSubtitle": "Search for a game or create a custom entry",
-    "backToCollection": "Back to Collection"
-  },
   "accessibility": {
     "close": "Close",
     "closeNotification": "Close notification",
@@ -930,59 +925,5 @@
         }
       }
     }
-  },
-  "privateGames": {
-    "title": "Private Games",
-    "subtitle": "{count, plural, =1 {1 game} other {{count} games}}",
-    "manageCollection": "Manage your personal collection",
-    "addGame": "Add Game",
-    "searchPlaceholder": "Search games...",
-    "sortDateAdded": "Date Added",
-    "sortLastUpdated": "Last Updated",
-    "sortTitle": "Title",
-    "loading": "Loading games...",
-    "loadError": "Unable to load private games. Please try again.",
-    "noGamesFound": "No Games Found",
-    "noGamesYet": "No Private Games Yet",
-    "noGamesMatchSearch": "No games matching \"{search}\". Try another search term.",
-    "emptyStateDescription": "Start building your personal collection by adding your first private game.",
-    "addFirstGame": "Add Your First Game",
-    "pageOf": "Page {page} of {totalPages}",
-    "editGame": "Edit Game",
-    "editDescription": "Update the details of \"{title}\".",
-    "deleteGame": "Delete Game",
-    "deleteConfirm": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
-    "deleting": "Deleting...",
-    "saving": "Saving...",
-    "saveChanges": "Save Changes",
-    "addToLibrary": "Add Game to Library",
-    "addToLibrarySubtitle": "Add a new game to your private collection",
-    "cancelWizard": "← Cancel",
-    "progress": "Progress",
-    "steps": {
-      "createGame": "1. Create Game",
-      "uploadPdf": "2. Upload PDF (Optional)",
-      "configAgent": "3. Configure Agent (Optional)"
-    }
-  },
-  "privateGameForm": {
-    "title": "Title",
-    "titlePlaceholder": "e.g. Catan",
-    "minPlayers": "Min Players",
-    "maxPlayers": "Max Players",
-    "yearPublished": "Year Published",
-    "playingTime": "Playing Time (min)",
-    "playingTimePlaceholder": "e.g. 60",
-    "minAge": "Min Age",
-    "minAgePlaceholder": "e.g. 10",
-    "complexity": "Complexity (0-5)",
-    "complexityPlaceholder": "e.g. 2.5",
-    "description": "Description",
-    "descriptionPlaceholder": "Game description...",
-    "imageUrl": "Image URL",
-    "imageUrlPlaceholder": "https://example.com/image.jpg",
-    "adding": "Adding...",
-    "addPrivateGame": "Add Private Game",
-    "addFromBgg": "Add from BGG"
   }
 }

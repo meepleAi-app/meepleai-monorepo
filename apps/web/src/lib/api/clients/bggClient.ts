@@ -46,7 +46,7 @@ export function createBggClient({ httpClient }: CreateBggClientParams) {
       pageSize: number = 20
     ): Promise<BggSearchResponse> {
       const params = new URLSearchParams({
-        q: query,
+        query: query,
         page: page.toString(),
         pageSize: pageSize.toString(),
       });

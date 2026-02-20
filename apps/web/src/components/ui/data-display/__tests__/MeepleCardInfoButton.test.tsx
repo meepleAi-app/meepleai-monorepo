@@ -87,14 +87,16 @@ describe('MeepleCardInfoButton', () => {
     const { container } = render(<MeepleCardInfoButton {...defaultProps} />);
 
     const button = screen.getByTestId('meeple-card-info-button');
-    expect(button).toHaveClass('w-[30px]', 'h-[30px]');
+    // Mobile: 44px touch target (w-11), Desktop: 30px (md:w-[30px])
+    expect(button).toHaveClass('w-11', 'h-11', 'md:w-[30px]', 'md:h-[30px]');
   });
 
   it('renders with medium size when specified', () => {
     render(<MeepleCardInfoButton {...defaultProps} size="md" />);
 
     const button = screen.getByTestId('meeple-card-info-button');
-    expect(button).toHaveClass('w-[36px]', 'h-[36px]');
+    // Mobile: 44px touch target (w-11), Desktop: 36px (md:w-[36px])
+    expect(button).toHaveClass('w-11', 'h-11', 'md:w-[36px]', 'md:h-[36px]');
   });
 
   it('is always visible (opacity 100)', () => {

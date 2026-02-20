@@ -58,6 +58,8 @@ export interface CarouselGame {
   metadata?: MeepleCardMetadata[];
   badge?: string;
   description?: string;
+  /** Whether the game has PDF documents for RAG-based chat */
+  hasPdfDocuments?: boolean;
 }
 
 /**
@@ -558,6 +560,7 @@ export const GameCarousel = React.memo(function GameCarousel({
   const centerEntityActions = useEntityActions({
     entity: 'game',
     id: fallbackId,
+    data: { hasPdfDocuments: centerGame?.hasPdfDocuments ?? false },
   });
 
   // Support controlled and uncontrolled sort modes
@@ -683,7 +686,7 @@ export const GameCarousel = React.memo(function GameCarousel({
     <section
       ref={containerRef}
       className={cn(
-        'relative w-full overflow-hidden',
+        'relative w-full overflow-x-clip',
         'py-8 md:py-12',
         className
       )}
@@ -741,7 +744,7 @@ export const GameCarousel = React.memo(function GameCarousel({
       <div
         className={cn(
           'relative',
-          'h-[320px] sm:h-[360px] md:h-[400px] lg:h-[440px]',
+          'h-[350px] sm:h-[390px] md:h-[430px] lg:h-[470px]',
           // Perspective for 3D effect
           'perspective-[1200px]'
         )}
@@ -788,7 +791,7 @@ export const GameCarousel = React.memo(function GameCarousel({
                 >
                   <MeepleCard
                     entity="game"
-                    variant={isCenter ? 'featured' : 'grid'}
+                    variant="grid"
                     title={game.title}
                     subtitle={game.subtitle}
                     imageUrl={game.imageUrl}

@@ -151,7 +151,9 @@ internal static class KnowledgeBaseMappers
             name: entity.Name,
             type: agentType,
             strategy: strategy,
-            isActive: entity.IsActive
+            isActive: entity.IsActive,
+            gameId: entity.GameId,
+            createdByUserId: entity.CreatedByUserId
         );
 
         // Use reflection to set read-only properties (CreatedAt, LastInvokedAt, InvocationCount)
@@ -184,7 +186,9 @@ internal static class KnowledgeBaseMappers
             IsActive = agent.IsActive,
             CreatedAt = agent.CreatedAt,
             LastInvokedAt = agent.LastInvokedAt,
-            InvocationCount = agent.InvocationCount
+            InvocationCount = agent.InvocationCount,
+            GameId = agent.GameId,
+            CreatedByUserId = agent.CreatedByUserId
         };
     }
 

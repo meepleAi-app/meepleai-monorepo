@@ -3,10 +3,11 @@
  * Single session display for Recent Sessions list
  */
 
-import { Button } from '@/components/ui/button';
-import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
+
+import { Button } from '@/components/ui/button';
+import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
 
 interface SessionRowProps {
   session: SessionSummaryDto;
@@ -53,7 +54,7 @@ export function SessionRow({ session, onViewDetails }: SessionRowProps) {
               <span>{formatDuration(session.duration)}</span>
             </>
           )}
-          {session.averageScore != null && (
+          {session.averageScore !== null && session.averageScore !== undefined && (
             <>
               <span>•</span>
               <span>⭐ {session.averageScore}/100</span>

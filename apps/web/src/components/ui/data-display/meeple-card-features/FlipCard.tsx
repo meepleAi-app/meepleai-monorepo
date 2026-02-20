@@ -44,8 +44,10 @@ export interface MeepleCardFlipData {
 export interface FlipCardProps {
   /** Front content (the normal MeepleCard content) */
   children: React.ReactNode;
-  /** Data to display on the back */
-  flipData: MeepleCardFlipData;
+  /** Data to display on the back (used by default BackContent; optional when customBackContent is provided) */
+  flipData?: MeepleCardFlipData;
+  /** Custom back content (overrides default BackContent when provided) */
+  customBackContent?: React.ReactNode;
   /** Card variant - determines how much back content to show */
   variant?: MeepleCardVariant;
   /** Controlled mode: external flip state */
@@ -330,6 +332,7 @@ function BackContent({
 export function FlipCard({
   children,
   flipData,
+  customBackContent,
   variant = 'grid',
   isFlipped: controlledFlipped,
   onFlip,
@@ -438,7 +441,7 @@ export function FlipCard({
           data-testid="meeple-card-front"
         >
           {children}
-          {/* Flip button overlay (button mode only) */}
+          {/* Flip button overlay (touch/button mode only) */}
           {!isCardMode && (
             <button
               className={cn(
@@ -482,13 +485,15 @@ export function FlipCard({
           data-testid="meeple-card-back"
           {...(isCardMode ? { onClick: handleFlip } : {})}
         >
-          <BackContent
-            flipData={flipData}
-            variant={variant}
-            detailHref={detailHref}
-            entityColor={entityColor}
-            title={title}
-          />
+          {customBackContent ?? (flipData ? (
+            <BackContent
+              flipData={flipData}
+              variant={variant}
+              detailHref={detailHref}
+              entityColor={entityColor}
+              title={title}
+            />
+          ) : null)}
           {/* Flip-back button on back face (touch/button mode only) */}
           {!isCardMode && (
             <button

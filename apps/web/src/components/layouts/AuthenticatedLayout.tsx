@@ -18,6 +18,7 @@ import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
+import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
@@ -106,6 +107,9 @@ export function AuthenticatedLayout({
           <UnifiedActionBarSpacer />
         </>
       )}
+
+      {/* Card Stack Panel - "Carte in Mano" navigation */}
+      <CardStackPanel />
     </div>
   );
 }

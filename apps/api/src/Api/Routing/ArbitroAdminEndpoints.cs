@@ -13,7 +13,7 @@ internal static class ArbitroAdminEndpoints
 {
     public static void MapArbitroAdminEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/agents/arbitro")
+        var group = app.MapGroup("/admin/agents/arbitro")
             .WithTags("Admin - Arbitro Agent")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

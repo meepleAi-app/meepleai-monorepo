@@ -37,6 +37,18 @@ public class ParticipantConfiguration : IEntityTypeConfiguration<ParticipantEnti
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(p => p.Role)
+            .HasColumnName("role")
+            .HasMaxLength(20)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasDefaultValue(Api.BoundedContexts.SessionTracking.Domain.Enums.ParticipantRole.Player);
+
+        builder.Property(p => p.IsReady)
+            .HasColumnName("is_ready")
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(p => p.JoinOrder)
             .HasColumnName("join_order")
             .IsRequired();

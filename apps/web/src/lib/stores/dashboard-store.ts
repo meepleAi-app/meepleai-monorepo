@@ -6,6 +6,7 @@
  */
 
 import { create } from 'zustand';
+
 import {
   dashboardClient,
   type UserStatsDto,
@@ -140,7 +141,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   },
 
   loadMore: async () => {
-    const { filters } = get();
+    const { filters: _filters } = get();
     set((state) => ({
       filters: { ...state.filters, page: state.filters.page + 1 },
     }));

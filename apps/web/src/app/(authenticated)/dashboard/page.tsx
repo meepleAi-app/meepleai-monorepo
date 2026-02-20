@@ -6,7 +6,9 @@
  */
 
 import { RequireRole } from '@/components/auth/RequireRole';
+
 import { GamingHubClient } from '../gaming-hub-client';
+
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {

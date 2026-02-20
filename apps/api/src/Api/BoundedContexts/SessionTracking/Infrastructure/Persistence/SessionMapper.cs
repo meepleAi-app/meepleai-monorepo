@@ -88,6 +88,8 @@ internal static class ParticipantMapper
             UserId = domain.UserId,
             DisplayName = domain.DisplayName,
             IsOwner = domain.IsOwner,
+            Role = domain.Role,
+            IsReady = domain.IsReady,
             JoinOrder = domain.JoinOrder,
             FinalRank = domain.FinalRank,
             CreatedAt = domain.CreatedAt
@@ -103,6 +105,8 @@ internal static class ParticipantMapper
         typeof(Participant).GetProperty(nameof(Participant.UserId))!.SetValue(participant, entity.UserId);
         typeof(Participant).GetProperty(nameof(Participant.DisplayName))!.SetValue(participant, entity.DisplayName);
         typeof(Participant).GetProperty(nameof(Participant.IsOwner))!.SetValue(participant, entity.IsOwner);
+        typeof(Participant).GetProperty(nameof(Participant.Role))!.SetValue(participant, entity.Role);
+        typeof(Participant).GetProperty(nameof(Participant.IsReady))!.SetValue(participant, entity.IsReady);
         typeof(Participant).GetProperty(nameof(Participant.JoinOrder))!.SetValue(participant, entity.JoinOrder);
         typeof(Participant).GetProperty(nameof(Participant.FinalRank))!.SetValue(participant, entity.FinalRank);
         typeof(Participant).GetProperty(nameof(Participant.CreatedAt))!.SetValue(participant, entity.CreatedAt);

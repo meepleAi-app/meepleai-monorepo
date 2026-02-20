@@ -13,7 +13,7 @@ internal static class AdminBusinessStatsEndpoints
 {
     public static void MapAdminBusinessStatsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/business")
+        var group = app.MapGroup("/admin/business")
             .WithTags("Admin - Business Stats")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 

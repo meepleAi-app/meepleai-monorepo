@@ -28,6 +28,7 @@ internal static class AgentEndpoints
         MapCreateAgentEndpoint(group);
         MapGetAgentByIdEndpoint(group);
         MapGetAllAgentsEndpoint(group);
+        MapGetAgentStatusEndpoint(group); // Agent chat readiness validation
         MapConfigureAgentEndpoint(group);
         MapInvokeAgentEndpoint(group);
         MapUpdateAgentDocumentsEndpoint(group);
@@ -38,6 +39,17 @@ internal static class AgentEndpoints
         MapGetRecentAgentsEndpoint(group); // Issue #4126: Dashboard widget
         MapUnifiedAgentQueryEndpoint(group); // Issue #4338: Unified API Gateway
         MapRoutingMetricsEndpoint(group); // Issue #4338: Routing metrics observability
+
+        // Issue #4683: User-facing agent CRUD
+        MapCreateUserAgentEndpoint(group);
+        MapUpdateUserAgentEndpoint(group);
+        MapDeleteUserAgentEndpoint(group);
+
+        // Issue #4771: Agent slots quota
+        MapGetUserAgentSlotsEndpoint(group);
+
+        // Issue #4772: Orchestrated agent creation
+        MapCreateAgentWithSetupEndpoint(group);
 
         return group;
     }
@@ -139,6 +151,41 @@ internal static class AgentEndpoints
         .RequireSession() // Issue #1446: Automatic session validation
         .WithName("GetAllAgents")
         .Produces(200)
+        .Produces(500);
+    }
+
+    private static void MapGetAgentStatusEndpoint(RouteGroupBuilder group)
+    {
+        // Get agent readiness status for chat
+        group.MapGet("/agents/{id:guid}/status", async (
+            Guid id,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            _ = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new GetAgentStatusQuery(id);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (result == null)
+            {
+                return Results.NotFound(new { error = $"Agent {id} not found" });
+            }
+
+            logger.LogInformation(
+                "Agent status check: {AgentId} - Ready={IsReady}, Documents={DocumentCount}",
+                id, result.IsReady, result.DocumentCount);
+
+            return Results.Ok(result);
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .WithName("GetAgentStatus")
+        .WithDescription("Check if agent is ready for chat (has KB documents and RAG initialized)")
+        .Produces<AgentStatusDto>(200)
+        .Produces(404)
         .Produces(500);
     }
 
@@ -553,6 +600,223 @@ internal static class AgentEndpoints
         .Produces<AgentRoutingMetricsResponse>(200)
         .Produces(401);
     }
+
+    /// <summary>
+    /// Create a user-owned agent with tier-aware configuration.
+    /// Issue #4683: User Agent CRUD Endpoints.
+    /// </summary>
+    private static void MapCreateUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/user", async (
+            CreateUserAgentRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new CreateUserAgentCommand(
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role,
+                GameId: req.GameId,
+                AgentType: req.AgentType,
+                Name: req.Name,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} created agent {AgentId} for game {GameId}",
+                session.User.Id, result.Id, req.GameId);
+
+            return Results.Created($"/api/v1/agents/{result.Id}", result);
+        })
+        .RequireSession()
+        .RequireRateLimiting("AgentCreation")
+        .WithName("CreateUserAgent")
+        .WithTags("Agents", "User")
+        .WithSummary("Create a user-owned agent (tier-aware)")
+        .WithDescription(
+            "Creates an agent associated to a game. Configuration depth depends on user tier: " +
+            "Free=type only, Normal=type+strategy, Premium/Admin=full config.")
+        .Produces<KbAgentDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(409)
+        .Produces(429);
+    }
+
+    /// <summary>
+    /// Update a user-owned agent configuration.
+    /// Issue #4683: User Agent CRUD Endpoints.
+    /// </summary>
+    private static void MapUpdateUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/agents/{id:guid}/user", async (
+            Guid id,
+            UpdateUserAgentRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new UpdateUserAgentCommand(
+                AgentId: id,
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role,
+                Name: req.Name,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} updated agent {AgentId}",
+                session.User.Id, id);
+
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("UpdateUserAgent")
+        .WithTags("Agents", "User")
+        .WithSummary("Update a user-owned agent (owner/admin only)")
+        .Produces<KbAgentDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
+
+    /// <summary>
+    /// Delete a user-owned agent.
+    /// Issue #4683: User Agent CRUD Endpoints.
+    /// </summary>
+    private static void MapDeleteUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/agents/{id:guid}", async (
+            Guid id,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new DeleteUserAgentCommand(
+                AgentId: id,
+                UserId: session.User!.Id,
+                UserRole: session.User.Role
+            );
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} deleted agent {AgentId}",
+                session.User.Id, id);
+
+            return Results.NoContent();
+        })
+        .RequireSession()
+        .WithName("DeleteUserAgent")
+        .WithTags("Agents", "User")
+        .WithSummary("Delete a user-owned agent (owner/admin only)")
+        .Produces(204)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
+
+    /// <summary>
+    /// Get user's agent slot allocation and usage.
+    /// Issue #4771: Agent Slots Endpoint + Quota System.
+    /// </summary>
+    private static void MapGetUserAgentSlotsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/user/agent-slots", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new GetUserAgentSlotsQuery(
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("GetUserAgentSlots")
+        .WithTags("Agents", "User")
+        .WithSummary("Get agent slot allocation for the current user")
+        .WithDescription(
+            "Returns total, used, and available agent slots based on the user's tier. " +
+            "Each slot shows the associated agent details or availability status.")
+        .Produces<UserAgentSlotsDto>(200)
+        .Produces(401);
+    }
+
+    /// <summary>
+    /// Orchestrated agent creation: validates slots, optionally adds game to library,
+    /// creates agent, creates initial chat thread.
+    /// Issue #4772: Agent Creation Orchestration Flow.
+    /// </summary>
+    private static void MapCreateAgentWithSetupEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/create-with-setup", async (
+            CreateAgentWithSetupRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new CreateAgentWithSetupCommand(
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role,
+                GameId: req.GameId,
+                AddToCollection: req.AddToCollection,
+                AgentType: req.AgentType,
+                AgentName: req.AgentName,
+                StrategyName: req.StrategyName,
+                StrategyParameters: req.StrategyParameters
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} created agent {AgentId} with setup for game {GameId}",
+                session.User.Id, result.AgentId, req.GameId);
+
+            return Results.Created($"/api/v1/agents/{result.AgentId}", result);
+        })
+        .RequireSession()
+        .RequireRateLimiting("AgentCreation")
+        .WithName("CreateAgentWithSetup")
+        .WithTags("Agents", "User")
+        .WithSummary("Orchestrated agent creation with auto-setup")
+        .WithDescription(
+            "Creates an agent with full setup: validates slot availability, " +
+            "optionally adds game to library, creates the agent, and creates an initial chat thread.")
+        .Produces<AgentCreationResultDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(409)
+        .Produces(429);
+    }
 }
 
 /// <summary>
@@ -640,4 +904,39 @@ internal record ConfidenceThresholdInfo(
     double HighConfidence,
     double MediumConfidence,
     double MinimumForRouting
+);
+
+/// <summary>
+/// Request for user-facing agent creation.
+/// Issue #4683: User Agent CRUD Endpoints.
+/// </summary>
+internal record CreateUserAgentRequest(
+    Guid GameId,
+    string AgentType,
+    string? Name = null,
+    string? StrategyName = null,
+    IDictionary<string, object>? StrategyParameters = null
+);
+
+/// <summary>
+/// Request for user-facing agent update.
+/// Issue #4683: User Agent CRUD Endpoints.
+/// </summary>
+internal record UpdateUserAgentRequest(
+    string? Name = null,
+    string? StrategyName = null,
+    IDictionary<string, object>? StrategyParameters = null
+);
+
+/// <summary>
+/// Request for orchestrated agent creation with setup.
+/// Issue #4772: Agent Creation Orchestration Flow.
+/// </summary>
+internal record CreateAgentWithSetupRequest(
+    Guid GameId,
+    bool AddToCollection,
+    string AgentType,
+    string? AgentName = null,
+    string? StrategyName = null,
+    IDictionary<string, object>? StrategyParameters = null
 );

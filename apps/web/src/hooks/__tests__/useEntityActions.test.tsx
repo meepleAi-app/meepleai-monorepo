@@ -4,38 +4,89 @@
  */
 
 import { renderHook } from '@testing-library/react';
-import { useRouter } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { QueryClientWrapper } from '@/__tests__/utils/query-client-wrapper';
 import { useEntityActions } from '../use-entity-actions';
 
+const mockPush = vi.fn();
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(),
+  useRouter: () => ({
+    push: mockPush,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+  }),
 }));
 
 describe('useEntityActions', () => {
-  const mockPush = vi.fn();
-  const mockRouter = { push: mockPush };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    (useRouter as ReturnType<typeof vi.fn>).mockReturnValue(mockRouter);
   });
 
   describe('Game entity', () => {
-    it('returns 4 quick actions for game (including collection action)', () => {
+    it('returns 5 quick actions for game (including collection + agent)', () => {
       const { result } = renderHook(() =>
         useEntityActions({ entity: 'game', id: 'game-123' }),
         { wrapper: QueryClientWrapper }
       );
 
-      expect(result.current.quickActions).toHaveLength(4);
+      expect(result.current.quickActions).toHaveLength(5);
       expect(result.current.quickActions[0].label).toBe('Aggiungi a Collezione');
-      expect(result.current.quickActions[1].label).toBe('Chat con Agent');
-      expect(result.current.quickActions[2].label).toBe('Avvia Sessione');
-      expect(result.current.quickActions[3].label).toBe('Condividi');
+      expect(result.current.quickActions[1].label).toBe('Crea Agente');
+      expect(result.current.quickActions[2].label).toBe('Chat con Agent');
+      expect(result.current.quickActions[3].label).toBe('Avvia Sessione');
+      expect(result.current.quickActions[4].label).toBe('Condividi');
+    });
+
+    it('hides Crea Agente when onCreateAgent is not provided', () => {
+      const { result } = renderHook(() =>
+        useEntityActions({ entity: 'game', id: 'game-123' }),
+        { wrapper: QueryClientWrapper }
+      );
+
+      const agentAction = result.current.quickActions.find(a => a.label === 'Crea Agente');
+      expect(agentAction?.hidden).toBe(true);
+    });
+
+    it('shows Crea Agente when onCreateAgent is provided', () => {
+      const mockOnCreateAgent = vi.fn();
+      const { result } = renderHook(() =>
+        useEntityActions({ entity: 'game', id: 'game-123', onCreateAgent: mockOnCreateAgent }),
+        { wrapper: QueryClientWrapper }
+      );
+
+      const agentAction = result.current.quickActions.find(a => a.label === 'Crea Agente');
+      expect(agentAction?.hidden).toBe(false);
+    });
+
+    it('hides Crea Agente when game already has an agent', () => {
+      const mockOnCreateAgent = vi.fn();
+      const { result } = renderHook(() =>
+        useEntityActions({
+          entity: 'game',
+          id: 'game-123',
+          onCreateAgent: mockOnCreateAgent,
+          data: { hasAgent: true },
+        }),
+        { wrapper: QueryClientWrapper }
+      );
+
+      const agentAction = result.current.quickActions.find(a => a.label === 'Crea Agente');
+      expect(agentAction?.hidden).toBe(true);
+    });
+
+    it('calls onCreateAgent when Crea Agente is clicked', () => {
+      const mockOnCreateAgent = vi.fn();
+      const { result } = renderHook(() =>
+        useEntityActions({ entity: 'game', id: 'game-123', onCreateAgent: mockOnCreateAgent }),
+        { wrapper: QueryClientWrapper }
+      );
+
+      const agentAction = result.current.quickActions.find(a => a.label === 'Crea Agente');
+      agentAction?.onClick();
+      expect(mockOnCreateAgent).toHaveBeenCalled();
     });
 
     it('navigates to chat when Chat is clicked', () => {
@@ -44,7 +95,7 @@ describe('useEntityActions', () => {
         { wrapper: QueryClientWrapper }
       );
 
-      result.current.quickActions[1].onClick();
+      result.current.quickActions[2].onClick();
       expect(mockPush).toHaveBeenCalledWith('/chat/new?game=game-123');
     });
 
@@ -54,7 +105,7 @@ describe('useEntityActions', () => {
         { wrapper: QueryClientWrapper }
       );
 
-      result.current.quickActions[2].onClick();
+      result.current.quickActions[3].onClick();
       expect(mockPush).toHaveBeenCalledWith('/sessions/new?gameId=game-123');
     });
   });

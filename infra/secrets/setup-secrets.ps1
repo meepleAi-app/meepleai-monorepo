@@ -146,6 +146,21 @@ Write-Host "  [OK] PROMETHEUS_PASSWORD:      $(Mask-Secret $generatedValues['PRO
 $generatedValues['TRAEFIK_DASHBOARD_PASSWORD'] = New-SecurePassword -Length 16
 Write-Host "  [OK] TRAEFIK_DASHBOARD_PASSWORD: $(Mask-Secret $generatedValues['TRAEFIK_DASHBOARD_PASSWORD'])" -ForegroundColor Green
 
+# S3 Storage Credentials (optional - for Cloudflare R2 / S3-compatible providers)
+$s3AccessBytes = New-Object byte[] 16
+$s3SecretBytes = New-Object byte[] 32
+$rngS3 = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rngS3.GetBytes($s3AccessBytes)
+$rngS3.GetBytes($s3SecretBytes)
+$generatedValues['S3_TOKEN_KEY'] = 'change_me_r2_api_token'
+$generatedValues['S3_ACCESS_KEY'] = [BitConverter]::ToString($s3AccessBytes).Replace('-','').ToLowerInvariant()
+$generatedValues['S3_SECRET_KEY'] = [BitConverter]::ToString($s3SecretBytes).Replace('-','').ToLowerInvariant()
+$generatedValues['S3_ENDPOINT'] = 'change_me_r2_endpoint'
+Write-Host "  [..] S3_TOKEN_KEY:             (requires manual configuration from R2 dashboard)" -ForegroundColor DarkGray
+Write-Host "  [OK] S3_ACCESS_KEY:            $(Mask-Secret $generatedValues['S3_ACCESS_KEY'])" -ForegroundColor Green
+Write-Host "  [OK] S3_SECRET_KEY:            $(Mask-Secret $generatedValues['S3_SECRET_KEY'])" -ForegroundColor Green
+Write-Host "  [..] S3_ENDPOINT:              (requires manual configuration)" -ForegroundColor DarkGray
+
 Write-Host ""
 
 # ===========================================================================

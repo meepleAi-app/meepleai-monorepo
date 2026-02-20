@@ -59,6 +59,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useCreateShareRequest } from '@/hooks/queries/useShareRequests';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import type { PrivateGameDto, GetPrivateGamesParams } from '@/lib/api/schemas/private-games.schemas';
 
@@ -67,6 +68,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function PrivateGamesClient() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Data state
   const [games, setGames] = useState<PrivateGameDto[]>([]);
@@ -114,7 +116,7 @@ export default function PrivateGamesClient() {
       setHasPreviousPage(response.hasPreviousPage);
     } catch (err) {
       console.error('Failed to load private games:', err);
-      setError('Impossibile caricare i giochi privati. Riprova.');
+      setError(t('privateGames.loadError'));
     } finally {
       setLoading(false);
     }
@@ -225,9 +227,9 @@ export default function PrivateGamesClient() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Private Games</h1>
+          <h1 className="text-3xl font-bold">{t('privateGames.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your personal game collection ({totalCount} {totalCount === 1 ? 'game' : 'games'})
+            {t('privateGames.manageCollection')} ({t('privateGames.subtitle', { count: totalCount })})
           </p>
         </div>
         <Button
@@ -235,7 +237,7 @@ export default function PrivateGamesClient() {
           data-testid="add-private-game-btn"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Game
+          {t('privateGames.addGame')}
         </Button>
       </div>
 
@@ -244,7 +246,7 @@ export default function PrivateGamesClient() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
-            placeholder="Search games..."
+            placeholder={t('privateGames.searchPlaceholder')}
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-10"
@@ -258,9 +260,9 @@ export default function PrivateGamesClient() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="createdAt">Date Added</SelectItem>
-              <SelectItem value="updatedAt">Last Updated</SelectItem>
-              <SelectItem value="title">Title</SelectItem>
+              <SelectItem value="createdAt">{t('privateGames.sortDateAdded')}</SelectItem>
+              <SelectItem value="updatedAt">{t('privateGames.sortLastUpdated')}</SelectItem>
+              <SelectItem value="title">{t('privateGames.sortTitle')}</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -283,7 +285,7 @@ export default function PrivateGamesClient() {
       {loading ? (
         <div className="flex items-center justify-center py-16" data-testid="loading-state">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <span className="ml-3 text-muted-foreground">Loading games...</span>
+          <span className="ml-3 text-muted-foreground">{t('privateGames.loading')}</span>
         </div>
       ) : error ? (
         <Card data-testid="error-state">
@@ -291,7 +293,7 @@ export default function PrivateGamesClient() {
             <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
             <p className="text-lg font-medium text-destructive">{error}</p>
             <Button variant="outline" className="mt-4" onClick={() => loadGames()}>
-              Retry
+              {t('common.refresh')}
             </Button>
           </CardContent>
         </Card>
@@ -302,19 +304,19 @@ export default function PrivateGamesClient() {
               <Gamepad2 className="h-16 w-16 text-muted-foreground" />
             </div>
             <CardTitle>
-              {search ? 'No Games Found' : 'No Private Games Yet'}
+              {search ? t('privateGames.noGamesFound') : t('privateGames.noGamesYet')}
             </CardTitle>
             <CardDescription>
               {search
-                ? `No games matching "${search}". Try a different search term.`
-                : 'Start building your personal collection by adding your first private game.'}
+                ? t('privateGames.noGamesMatchSearch', { search })
+                : t('privateGames.emptyStateDescription')}
             </CardDescription>
           </CardHeader>
           {!search && (
             <CardContent className="text-center">
               <Button onClick={() => router.push('/library/private/add')}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Your First Game
+                {t('privateGames.addFirstGame')}
               </Button>
             </CardContent>
           )}
@@ -348,10 +350,10 @@ export default function PrivateGamesClient() {
                 aria-label="Previous page"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
+                {t('common.previous')}
               </Button>
               <span className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
+                {t('privateGames.pageOf', { page, totalPages })}
               </span>
               <Button
                 variant="outline"
@@ -360,7 +362,7 @@ export default function PrivateGamesClient() {
                 onClick={() => handlePageChange(page + 1)}
                 aria-label="Next page"
               >
-                Next
+                {t('common.next')}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -375,9 +377,9 @@ export default function PrivateGamesClient() {
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Game</DialogTitle>
+            <DialogTitle>{t('privateGames.editGame')}</DialogTitle>
             <DialogDescription>
-              Update the details of &quot;{selectedGame?.title}&quot;.
+              {t('privateGames.editDescription', { title: selectedGame?.title ?? '' })}
             </DialogDescription>
           </DialogHeader>
           {selectedGame && (
@@ -401,13 +403,13 @@ export default function PrivateGamesClient() {
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Game</AlertDialogTitle>
+            <AlertDialogTitle>{t('privateGames.deleteGame')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{selectedGame?.title}&quot;? This action cannot be undone.
+              {t('privateGames.deleteConfirm', { title: selectedGame?.title ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteGame}
               disabled={isDeleting}
@@ -417,10 +419,10 @@ export default function PrivateGamesClient() {
               {isDeleting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
+                  {t('privateGames.deleting')}
                 </>
               ) : (
-                'Delete'
+                t('common.delete')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -493,6 +495,7 @@ function EditPrivateGameFormInner({
   onCancel: () => void;
   isSubmitting: boolean;
 }) {
+  const { t } = useTranslation();
   const {
     register,
     handleSubmit,
@@ -524,7 +527,7 @@ function EditPrivateGameFormInner({
     <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="edit-title">
-          Title <span className="text-destructive">*</span>
+          {t('privateGameForm.title')} <span className="text-destructive">*</span>
         </Label>
         <Input id="edit-title" {...register('title')} disabled={isSubmitting} />
         {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
@@ -532,12 +535,12 @@ function EditPrivateGameFormInner({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="edit-minPlayers">Min Players <span className="text-destructive">*</span></Label>
+          <Label htmlFor="edit-minPlayers">{t('privateGameForm.minPlayers')} <span className="text-destructive">*</span></Label>
           <Input id="edit-minPlayers" type="number" min="1" max="99" {...register('minPlayers', { valueAsNumber: true })} disabled={isSubmitting} />
           {errors.minPlayers && <p className="text-sm text-destructive">{errors.minPlayers.message}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit-maxPlayers">Max Players <span className="text-destructive">*</span></Label>
+          <Label htmlFor="edit-maxPlayers">{t('privateGameForm.maxPlayers')} <span className="text-destructive">*</span></Label>
           <Input id="edit-maxPlayers" type="number" min="1" max="99" {...register('maxPlayers', { valueAsNumber: true })} disabled={isSubmitting} />
           {errors.maxPlayers && <p className="text-sm text-destructive">{errors.maxPlayers.message}</p>}
         </div>
@@ -545,42 +548,42 @@ function EditPrivateGameFormInner({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="edit-yearPublished">Year Published</Label>
+          <Label htmlFor="edit-yearPublished">{t('privateGameForm.yearPublished')}</Label>
           <Input id="edit-yearPublished" type="number" min="1900" max="2100" {...register('yearPublished', { valueAsNumber: true })} disabled={isSubmitting} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit-playingTimeMinutes">Playing Time (min)</Label>
+          <Label htmlFor="edit-playingTimeMinutes">{t('privateGameForm.playingTime')}</Label>
           <Input id="edit-playingTimeMinutes" type="number" min="1" max="10000" {...register('playingTimeMinutes', { valueAsNumber: true })} disabled={isSubmitting} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="edit-minAge">Min Age</Label>
+          <Label htmlFor="edit-minAge">{t('privateGameForm.minAge')}</Label>
           <Input id="edit-minAge" type="number" min="0" max="99" {...register('minAge', { valueAsNumber: true })} disabled={isSubmitting} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit-complexityRating">Complexity (0-5)</Label>
+          <Label htmlFor="edit-complexityRating">{t('privateGameForm.complexity')}</Label>
           <Input id="edit-complexityRating" type="number" min="0" max="5" step="0.1" {...register('complexityRating', { valueAsNumber: true })} disabled={isSubmitting} />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="edit-description">Description</Label>
+        <Label htmlFor="edit-description">{t('privateGameForm.description')}</Label>
         <Textarea id="edit-description" {...register('description')} rows={4} disabled={isSubmitting} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="edit-imageUrl">Image URL</Label>
+        <Label htmlFor="edit-imageUrl">{t('privateGameForm.imageUrl')}</Label>
         <Input id="edit-imageUrl" type="url" {...register('imageUrl')} disabled={isSubmitting} />
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : 'Save Changes'}
+          {isSubmitting ? t('privateGames.saving') : t('privateGames.saveChanges')}
         </Button>
       </div>
     </form>

@@ -11,4 +11,11 @@ public class AgentEntity
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastInvokedAt { get; set; }
     public int InvocationCount { get; set; }
+
+    // Issue #4682: Agent-Game association + User ownership
+    public Guid? GameId { get; set; }
+    public GameEntity? Game { get; set; }
+
+    public Guid? CreatedByUserId { get; set; }
+    public UserEntity? CreatedByUser { get; set; }
 }

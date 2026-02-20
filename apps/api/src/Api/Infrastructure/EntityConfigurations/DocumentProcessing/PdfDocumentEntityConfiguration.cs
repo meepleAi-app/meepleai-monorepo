@@ -81,6 +81,13 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.PrivateGameId).HasMaxLength(64).IsRequired(false);
         builder.HasIndex(e => e.PrivateGameId);
 
+        // Admin Wizard: Processing priority for admin queue
+        builder.Property(e => e.ProcessingPriority)
+            .IsRequired()
+            .HasMaxLength(16)
+            .HasColumnName("processing_priority")
+            .HasDefaultValue("Normal");
+
         // Issue #4219: Per-state timing fields for metrics and ETA
         builder.Property(e => e.UploadingStartedAt)
             .HasColumnName("uploading_started_at")

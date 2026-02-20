@@ -123,6 +123,14 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
             _logger,
             cancellationToken).ConfigureAwait(false);
 
+        // Seed Catan POC Agent with full domain entities (Issue #4667)
+        // Must run BEFORE StrategyPatternSeeder: creates GameEntity "Catan" needed for strategy pattern lookup
+        _logger.LogInformation("Seeding Catan POC Agent...");
+        await CatanPocAgentSeeder.SeedAsync(
+            _dbContext,
+            _logger,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
         // Seed strategy patterns for AI agent decision-making (Issue #3493, #3956, #3984)
         var seedingEnabled = _configuration.GetValue("Seeding:EnableStrategyPatterns", true);
         if (seedingEnabled)
@@ -159,6 +167,15 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
             _dbContext,
             adminUser.Id,
             _logger,
+            cancellationToken).ConfigureAwait(false);
+
+        // Seed PDF rulebooks from data/rulebook/ directory (idempotent)
+        _logger.LogInformation("Seeding PDF rulebooks...");
+        await PdfRulebookSeeder.SeedRulebooksAsync(
+            _dbContext,
+            adminUser.Id,
+            _logger,
+            _configuration["PDF_STORAGE_PATH"],
             cancellationToken).ConfigureAwait(false);
     }
 }

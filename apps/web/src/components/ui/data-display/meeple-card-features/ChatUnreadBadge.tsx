@@ -41,11 +41,17 @@ export const ChatUnreadBadge = React.memo(function ChatUnreadBadge({
         'absolute top-3 right-4 z-[16]',
         'inline-flex items-center justify-center',
         'min-w-[20px] h-5 px-1.5 rounded-full',
-        'bg-blue-500 text-white',
+        'text-white',
         'text-[10px] font-bold leading-none',
         'shadow-sm',
+        // v2: Use entity color + bounce animation on mount (Issue #4604)
+        'animate-mc-unread-bounce',
         className
       )}
+      style={{
+        // v2: Entity chat color from CSS vars
+        backgroundColor: 'hsl(var(--color-entity-chat))',
+      }}
       data-testid="chat-unread-badge"
       aria-label={`${count} unread messages`}
     >

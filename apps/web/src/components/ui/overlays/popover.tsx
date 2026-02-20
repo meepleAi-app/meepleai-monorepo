@@ -30,7 +30,7 @@ const PopoverContent = React.forwardRef<
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 w-72 rounded-md border border-border/50 dark:border-border/70',
+        'z-50 w-[calc(100vw-2rem)] max-w-sm md:w-72 rounded-md border border-border/50 dark:border-border/70',
         // Light mode: Glass morphism with enhanced blur
         'bg-popover/95 backdrop-blur-[16px]',
         // Dark mode: Solid popover for better contrast

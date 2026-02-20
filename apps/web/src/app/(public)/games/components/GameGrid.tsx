@@ -22,7 +22,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -33,6 +33,7 @@ import {
   GameCarouselSkeleton,
 } from '@/components/ui/data-display/game-carousel';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
 import { SharedGame } from '@/lib/api';
 
 export interface GameGridProps {
@@ -74,6 +75,10 @@ function mapToCarouselGame(game: SharedGame): CarouselGame {
 export function GameGrid({ games, variant, loading = false }: GameGridProps) {
   const router = useRouter();
 
+  // Batch API: Fetch library status for all games in a single call (Issue #4581)
+  const gameIds = useMemo(() => games.map(g => g.id), [games]);
+  const { data: batchStatus } = useBatchGameStatus(gameIds, !loading && gameIds.length > 0);
+
   const handleGameClick = (gameId: string) => {
     // Navigate to public game detail page (Issue #3522)
     router.push(`/games/${gameId}`);
@@ -88,7 +93,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
       <div
         className={
           variant === 'grid'
-            ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'
+            ? 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6'
             : 'flex flex-col gap-4'
         }
       >
@@ -129,7 +134,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
   // Grid view
   if (variant === 'grid') {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {games.map(game => (
           <MeepleGameCatalogCard
             key={game.id}
@@ -137,6 +142,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
             variant="grid"
             flippable
             onClick={() => handleGameClick(game.id)}
+            libraryStatus={batchStatus?.results[game.id]}
           />
         ))}
       </div>
@@ -152,6 +158,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
           game={game}
           variant="list"
           onClick={() => handleGameClick(game.id)}
+          libraryStatus={batchStatus?.results[game.id]}
         />
       ))}
     </div>

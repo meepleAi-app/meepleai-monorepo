@@ -33,9 +33,11 @@ internal sealed class ProcessPendingPdfsCommandHandler : ICommandHandler<Process
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Find all PDFs in pending or processing status
+        // Find all PDFs in pending or processing status, ordered by priority (Admin first)
         var pendingPdfs = await _dbContext.PdfDocuments
             .Where(p => p.ProcessingStatus == "pending" || p.ProcessingStatus == "processing")
+            .OrderByDescending(p => p.ProcessingPriority) // Admin > Normal
+            .ThenBy(p => p.UploadedAt)
             .Select(p => new { p.Id, p.FileName, p.ProcessingStatus })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

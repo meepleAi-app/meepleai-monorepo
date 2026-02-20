@@ -21,6 +21,10 @@
   --animate-mc-shimmer: mc-shimmer 0.8s ease-out forwards;
   --animate-mc-float-up: mc-float-up 0.35s ease-out both;
   --animate-mc-badge-pulse: mc-badge-pulse 2s ease-in-out infinite;
+  --animate-mc-pulse-glow: mc-pulse-glow 2s ease-in-out infinite;
+  --animate-mc-unread-bounce: mc-unread-bounce 0.5s ease-out;
+  --animate-mc-live-pulse: mc-live-pulse 2s ease-in-out infinite;
+  --animate-mc-spin-slow: mc-spin-slow 8s linear infinite;
 }
 
 @keyframes fadeIn {
@@ -84,6 +88,27 @@
 @keyframes mc-badge-pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
+}
+
+@keyframes mc-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+  50% { box-shadow: 0 0 12px 4px currentColor; }
+}
+
+@keyframes mc-unread-bounce {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.2); }
+  60% { transform: scale(0.95); }
+}
+
+@keyframes mc-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes mc-spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 @layer base {
@@ -238,6 +263,37 @@
   .hover-shadow-meeple:hover {
     box-shadow: 0 8px 20px rgba(139, 90, 60, 0.12);
   }
+
+  /* MeepleCard v2 hover lift effect (Issue #4604) - Tailwind v4 bracket issue workaround */
+  [data-variant="grid"]:hover,
+  [data-variant="featured"]:hover {
+    transform: translateY(-6px) !important;
+  }
+
+  [data-variant="hero"]:hover {
+    transform: scale(1.01) !important;
+  }
+
+  /* MeepleCard glassmorphism via ::before pseudo (matches mockup) */
+  [data-variant="grid"],
+  [data-variant="featured"] {
+    isolation: isolate; /* Contain ::before z-index:-1 within card */
+  }
+  [data-variant="grid"]::before,
+  [data-variant="featured"]::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px) saturate(180%);
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .dark [data-variant="grid"]::before,
+  .dark [data-variant="featured"]::before {
+    background: rgba(30, 25, 20, 0.7);
+  }
 }
 
 /* Accessibility - Reduce Motion Support (Issue #2848, #2905) */
@@ -318,6 +374,15 @@
 }
 
 :root {
+  /* MeepleCard v2 entity color shortcuts (Issue #4604) */
+  --e-game: 25 95% 45%;
+  --e-player: 262 83% 58%;
+  --e-session: 240 60% 55%;
+  --e-agent: 38 92% 50%;
+  --e-document: 210 40% 55%;
+  --e-chat: 220 80% 55%;
+  --e-event: 350 89% 60%;
+
   /* Base theme tokens - Opzione A: Playful Boardroom */
   --radius: 0.625rem;
   --background: 30 25% 97%;         /* Beige chiaro - warm background */

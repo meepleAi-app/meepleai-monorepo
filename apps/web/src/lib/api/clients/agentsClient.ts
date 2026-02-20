@@ -89,6 +89,41 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     },
 
     /**
+     * Get agent chat readiness status
+     * Validates KB populated and RAG initialized
+     * @param id Agent ID (GUID format)
+     */
+    async getStatus(id: string): Promise<{
+      agentId: string;
+      name: string;
+      isActive: boolean;
+      isReady: boolean;
+      hasConfiguration: boolean;
+      hasDocuments: boolean;
+      documentCount: number;
+      ragStatus: string;
+      blockingReason?: string | null;
+    }> {
+      const response = await httpClient.get<{
+        agentId: string;
+        name: string;
+        isActive: boolean;
+        isReady: boolean;
+        hasConfiguration: boolean;
+        hasDocuments: boolean;
+        documentCount: number;
+        ragStatus: string;
+        blockingReason?: string | null;
+      }>(`/api/v1/agents/${encodeURIComponent(id)}/status`);
+
+      if (!response) {
+        throw new Error('Failed to get agent status: no response from server');
+      }
+
+      return response;
+    },
+
+    /**
      * Get approved agent typologies (authenticated endpoint)
      * Issue #3186 (AGT-012): Agent Config Modal
      * @param status Filter by status (default: 'Approved')
@@ -312,6 +347,77 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
       if (!response) {
         throw new Error('Failed to submit feedback: no response from server');
+      }
+
+      return response;
+    },
+
+    // ========== Agent Slots & Creation Flow (Issue #4771, #4772) ==========
+
+    /**
+     * Get user's agent slot allocation and usage
+     * Issue #4771: Agent Slots Endpoint + Quota System
+     */
+    async getSlots(): Promise<{
+      total: number;
+      used: number;
+      available: number;
+      slots: Array<{
+        slotIndex: number;
+        agentId: string | null;
+        agentName: string | null;
+        gameId: string | null;
+        status: 'active' | 'available' | 'locked';
+      }>;
+    }> {
+      const response = await httpClient.get<{
+        total: number;
+        used: number;
+        available: number;
+        slots: Array<{
+          slotIndex: number;
+          agentId: string | null;
+          agentName: string | null;
+          gameId: string | null;
+          status: 'active' | 'available' | 'locked';
+        }>;
+      }>('/api/v1/user/agent-slots');
+
+      if (!response) {
+        throw new Error('Failed to get agent slots: no response from server');
+      }
+
+      return response;
+    },
+
+    /**
+     * Orchestrated agent creation with auto-setup
+     * Issue #4772: Agent Creation Orchestration Flow
+     */
+    async createWithSetup(request: {
+      gameId: string;
+      addToCollection: boolean;
+      agentType: string;
+      agentName?: string;
+      strategyName?: string;
+      strategyParameters?: Record<string, unknown>;
+    }): Promise<{
+      agentId: string;
+      agentName: string;
+      threadId: string;
+      slotUsed: number;
+      gameAddedToCollection: boolean;
+    }> {
+      const response = await httpClient.post<{
+        agentId: string;
+        agentName: string;
+        threadId: string;
+        slotUsed: number;
+        gameAddedToCollection: boolean;
+      }>('/api/v1/agents/create-with-setup', request);
+
+      if (!response) {
+        throw new Error('Failed to create agent: no response from server');
       }
 
       return response;

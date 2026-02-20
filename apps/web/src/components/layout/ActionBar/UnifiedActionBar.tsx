@@ -140,8 +140,8 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
   function UnifiedActionBar({ staggerDelay = 50, className, ...props }, ref) {
     const {
       visibleNavItems,
-      overflowItems,
-      hasOverflow,
+      overflowItems: _overflowItems,
+      hasOverflow: _hasOverflow,
       isVisible,
       breakpoint,
       handleItemClick,
@@ -471,7 +471,8 @@ interface UnifiedOverflowMenuProps {
   animationDelay: number;
 }
 
-function UnifiedOverflowMenu({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _UnifiedOverflowMenu({
   items,
   onItemClick,
   animationDelay,

@@ -33,7 +33,6 @@ export function ChatNavigationContext({ threadId }: ChatNavigationContextProps) 
         const navLinks = getNavigationLinks('chatSession', {
           id: thread.id,
           gameId: thread.gameId ?? undefined,
-          agentId: thread.agentId ?? undefined,
         });
         setLinks(navLinks);
       } catch {

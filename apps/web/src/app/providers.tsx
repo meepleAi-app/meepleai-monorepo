@@ -20,6 +20,7 @@ import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PWAProvider } from '@/components/pwa';
+import { AddGameWizardProvider } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
@@ -146,7 +147,9 @@ export function AppProviders({ children }: AppProvidersProps) {
             <LayoutProvider>
               <ErrorBoundary componentName="App" showDetails={process.env.NODE_ENV === 'development'}>
                 <RouteErrorBoundary routeName="AppContent">
-                  <AppContent>{children}</AppContent>
+                  <AddGameWizardProvider>
+                    <AppContent>{children}</AppContent>
+                  </AddGameWizardProvider>
                 </RouteErrorBoundary>
               </ErrorBoundary>
             </LayoutProvider>

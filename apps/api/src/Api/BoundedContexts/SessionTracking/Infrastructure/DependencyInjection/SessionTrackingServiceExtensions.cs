@@ -25,6 +25,8 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<IDiceRollRepository, DiceRollRepository>();
         services.AddScoped<ISessionDeckRepository, SessionDeckRepository>();
         services.AddScoped<ISessionNoteRepository, SessionNoteRepository>();
+        services.AddScoped<ISessionMediaRepository, SessionMediaRepository>(); // ISSUE-4760
+        services.AddScoped<ISessionChatRepository, SessionChatRepository>(); // ISSUE-4760
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -34,6 +36,10 @@ internal static class SessionTrackingServiceExtensions
 
         // GST-003: Register SSE synchronization service (singleton for shared state)
         services.AddSingleton<ISessionSyncService, SessionSyncService>();
+
+        // Issue #4764: Enhanced broadcast service with Redis Pub/Sub, connection pooling,
+        // event buffering, selective broadcasting, and Last-Event-ID reconnection
+        services.AddSingleton<ISessionBroadcastService, SessionBroadcastService>();
 
         // Issue #3345: Register timer state manager (singleton for in-memory timer state)
         services.AddSingleton<TimerStateManager>();

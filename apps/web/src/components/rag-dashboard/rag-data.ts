@@ -5,8 +5,8 @@
  * This file is the authoritative source - all documentation and components
  * should reference these values.
  *
- * @version 2.0.0
- * @lastUpdated 2026-02-02
+ * @version 2.1.0
+ * @lastUpdated 2026-02-19
  * @see docs/03-api/rag/appendix/F-calculation-formulas.md
  */
 

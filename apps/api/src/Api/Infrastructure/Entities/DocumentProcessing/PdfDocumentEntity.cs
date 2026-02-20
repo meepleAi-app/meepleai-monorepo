@@ -73,6 +73,9 @@ public class PdfDocumentEntity
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; set; }
 
+    // Admin Wizard: Processing priority (Normal=0, Admin=10)
+    public string ProcessingPriority { get; set; } = "Normal";
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; set; }
     public DateTime? ExtractingStartedAt { get; set; }

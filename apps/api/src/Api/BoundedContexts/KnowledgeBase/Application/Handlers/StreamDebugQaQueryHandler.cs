@@ -247,11 +247,22 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
             query.GameId, query.Query, snippets, chatHistoryContext).ConfigureAwait(false);
 
         var estimatedTokens = (systemPrompt.Length + userPrompt.Length) / 4; // rough estimate
-        yield return CreateEvent(StreamingEventType.DebugPromptContext,
-            new DebugPromptContextData(
-                SystemPrompt: systemPrompt,
-                UserPrompt: userPrompt,
-                EstimatedTokens: estimatedTokens));
+        if (query.IncludePrompts)
+        {
+            yield return CreateEvent(StreamingEventType.DebugPromptContext,
+                new DebugPromptContextData(
+                    SystemPrompt: systemPrompt,
+                    UserPrompt: userPrompt,
+                    EstimatedTokens: estimatedTokens));
+        }
+        else
+        {
+            yield return CreateEvent(StreamingEventType.DebugPromptContext,
+                new DebugPromptContextData(
+                    SystemPrompt: "[hidden — enable includePrompts to view]",
+                    UserPrompt: "[hidden — enable includePrompts to view]",
+                    EstimatedTokens: estimatedTokens));
+        }
 
         // ── Step 10: Stream LLM tokens ───────────────────────────────────
         var answerBuilder = new StringBuilder();
@@ -447,7 +458,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         return (systemPrompt, userPrompt);
     }
 
-    private async Task<Confidence> CalculateAndCacheResponseAsync(
+    private Task<Confidence> CalculateAndCacheResponseAsync(
         string answer, List<Snippet> snippets, List<Domain.Entities.SearchResult> domainSearchResults,
         Confidence searchConfidence, int tokenCount, string cacheKey,
         LlmUsage? llmUsage, LlmCost? llmCost, CancellationToken cancellationToken)
@@ -467,10 +478,10 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         var llmConfidence = _qualityTrackingService.CalculateLlmConfidence(answer, domainSearchResults);
         var overallConfidence = _qualityTrackingService.CalculateOverallConfidence(searchConfidence, llmConfidence);
 
-        var response = new QaResponse(answer, snippets, 0, tokenCount, tokenCount, overallConfidence.Value, null);
-        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+        // Debug handler intentionally skips cache writes to avoid polluting
+        // the production cache with strategy-override or debug-session results.
 
-        return overallConfidence;
+        return Task.FromResult(overallConfidence);
     }
 
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(

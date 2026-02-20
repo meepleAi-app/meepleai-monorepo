@@ -35,6 +35,7 @@ export default function AdminDebugChatPage() {
   const [selectedStrategy, setSelectedStrategy] = useState('');
   const lastQueryRef = useRef<{ gameId: string; query: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const messageIdRef = useRef(0);
 
   const { state, sendMessage, stopStreaming, reset } = useDebugChatStream({
     onComplete: (answer) => {
@@ -69,16 +70,18 @@ export default function AdminDebugChatPage() {
     if (!query || !selectedGameId || state.isStreaming) return;
 
     // Add user message
+    const userMsgId = ++messageIdRef.current;
+    const assistantMsgId = ++messageIdRef.current;
     setMessages(prev => [
       ...prev,
       {
-        id: `user-${Date.now()}`,
+        id: `user-${userMsgId}`,
         role: 'user',
         content: query,
         timestamp: new Date(),
       },
       {
-        id: `assistant-${Date.now()}`,
+        id: `assistant-${assistantMsgId}`,
         role: 'assistant',
         content: '',
         timestamp: new Date(),
@@ -103,16 +106,18 @@ export default function AdminDebugChatPage() {
     // Reset debug events but keep chat
     reset();
 
+    const reUserMsgId = ++messageIdRef.current;
+    const reAssistantMsgId = ++messageIdRef.current;
     setMessages(prev => [
       ...prev,
       {
-        id: `user-${Date.now()}`,
+        id: `user-${reUserMsgId}`,
         role: 'user',
         content: `[Re-execute] ${query}`,
         timestamp: new Date(),
       },
       {
-        id: `assistant-${Date.now()}`,
+        id: `assistant-${reAssistantMsgId}`,
         role: 'assistant',
         content: '',
         timestamp: new Date(),
@@ -264,6 +269,11 @@ export default function AdminDebugChatPage() {
         </div>
 
         {/* ── Right Panel: Debug Timeline ─────────────────────────────── */}
+        {/* Mobile hint - shown below lg breakpoint */}
+        <div className="lg:hidden border-t px-4 py-2 text-xs text-muted-foreground bg-muted/30 text-center">
+          Debug timeline is available on wider screens (1024px+).
+          {state.debugEvents.length > 0 && ` ${state.debugEvents.length} events captured.`}
+        </div>
         <div className="min-h-0 hidden lg:flex lg:flex-col">
           <DebugTimeline
             events={state.debugEvents}

@@ -13,10 +13,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <param name="ThreadId">Optional chat thread ID for context</param>
 /// <param name="DocumentIds">Optional document IDs to filter sources (null = all documents)</param>
 /// <param name="StrategyOverride">Optional RAG strategy name to override default selection</param>
+/// <param name="IncludePrompts">When true, system/user prompts are included in debug events (default: false)</param>
 internal record StreamDebugQaQuery(
     string GameId,
     string Query,
     Guid? ThreadId = null,
     IReadOnlyList<Guid>? DocumentIds = null,
-    string? StrategyOverride = null
+    string? StrategyOverride = null,
+    bool IncludePrompts = false
 ) : IStreamingQuery<RagStreamingEvent>;

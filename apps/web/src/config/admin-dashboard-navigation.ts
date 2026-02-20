@@ -16,7 +16,6 @@ import {
   ActivityIcon,
   ServerIcon,
   ShieldIcon,
-  CheckSquareIcon,
   ListIcon,
   TagIcon,
   PlusCircleIcon,
@@ -140,13 +139,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         activePattern: /^\/admin\/shared-games(\/all)?$/,
       },
       {
-        href: '/admin/shared-games/pending-approvals',
-        label: 'Approval Queue',
-        icon: CheckSquareIcon,
-        badgeKey: 'pending-approvals',
-      },
-      {
-        href: '/admin/games/new',
+        href: '/admin/shared-games/new',
         label: 'Add Game',
         icon: PlusCircleIcon,
       },

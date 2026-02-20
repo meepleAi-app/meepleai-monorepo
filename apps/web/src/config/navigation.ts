@@ -18,6 +18,7 @@ import {
   Gamepad2,
   History,
   LayoutDashboard,
+  ShieldIcon,
   User,
   Users,
 } from 'lucide-react';
@@ -170,6 +171,19 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     activePattern: /^\/sessions/,
     visibility: { authOnly: true },
     group: 'strumenti',
+  },
+  {
+    id: 'admin',
+    href: '/admin',
+    icon: ShieldIcon,
+    iconName: 'shield',
+    label: 'Admin Hub',
+    ariaLabel: 'Navigate to admin hub',
+    priority: 9,
+    testId: 'nav-admin',
+    activePattern: /^\/admin/,
+    visibility: { authOnly: true, minRole: 'Admin' },
+    group: 'admin',
   },
 ];
 

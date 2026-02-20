@@ -10,7 +10,6 @@ import { useState } from 'react';
 
 import { AlertCircle, Star } from 'lucide-react';
 
-import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AiModelsTable } from '@/components/admin/AiModelsTable';
 import { BudgetAlertBanner } from '@/components/admin/BudgetAlertBanner';
 import { ExportUsageButton } from '@/components/admin/ExportUsageButton';
@@ -87,7 +86,7 @@ export function AiModelsClient() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -284,6 +283,6 @@ export function AiModelsClient() {
         modelId={configureModal.modelId}
         model={configureModal.model}
       />
-    </AdminLayout>
+    </>
   );
 }

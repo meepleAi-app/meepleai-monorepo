@@ -2081,6 +2081,103 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return result ?? { collections: [] };
     },
 
+    // ========== Admin Qdrant Operations (Issue #4877) ==========
+
+    /**
+     * Get detailed collection info from Qdrant
+     * GET /api/v1/admin/qdrant/collections/{name}
+     */
+    async getQdrantCollectionDetails(name: string): Promise<QdrantCollectionDetails | null> {
+      return httpClient.get<QdrantCollectionDetails>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}`
+      );
+    },
+
+    /**
+     * Delete an entire Qdrant collection
+     * DELETE /api/v1/admin/qdrant/collections/{name}?confirmed=true
+     */
+    async deleteQdrantCollection(name: string): Promise<void> {
+      await httpClient.delete(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}?confirmed=true`
+      );
+    },
+
+    /**
+     * Test semantic search on a Qdrant collection
+     * POST /api/v1/admin/qdrant/collections/{name}/search
+     */
+    async searchQdrantCollection(
+      name: string,
+      query: string,
+      limit?: number,
+      gameId?: string
+    ): Promise<QdrantSearchResult> {
+      const result = await httpClient.post<QdrantSearchResult>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/search`,
+        { query, limit: limit ?? 10, gameId: gameId ?? null }
+      );
+      return result ?? { query, results: [], total: 0 };
+    },
+
+    /**
+     * Browse/scroll points in a Qdrant collection
+     * GET /api/v1/admin/qdrant/collections/{name}/points?limit=20
+     */
+    async browseQdrantPoints(name: string, limit?: number): Promise<QdrantBrowseResult> {
+      const params = limit ? `?limit=${limit}` : '';
+      const result = await httpClient.get<QdrantBrowseResult>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points${params}`
+      );
+      return result ?? { points: [], count: 0 };
+    },
+
+    /**
+     * Delete vectors from a Qdrant collection by filter
+     * DELETE /api/v1/admin/qdrant/collections/{name}/points?gameId=&pdfId=&confirmed=true
+     */
+    async deleteQdrantPoints(
+      name: string,
+      opts: { gameId?: string; pdfId?: string }
+    ): Promise<void> {
+      const params = new URLSearchParams({ confirmed: 'true' });
+      if (opts.gameId) params.set('gameId', opts.gameId);
+      if (opts.pdfId) params.set('pdfId', opts.pdfId);
+      await httpClient.delete(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points?${params.toString()}`
+      );
+    },
+
+    /**
+     * Rebuild/reindex a Qdrant collection
+     * POST /api/v1/admin/qdrant/collections/{name}/rebuild?confirmed=true
+     */
+    async rebuildQdrantIndex(name: string): Promise<{ rebuilding: boolean; collection: string }> {
+      const result = await httpClient.post<{ rebuilding: boolean; collection: string }>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/rebuild?confirmed=true`,
+        {}
+      );
+      return result ?? { rebuilding: false, collection: name };
+    },
+
+    // ========== Admin Embedding Service (Issue #4878) ==========
+
+    /**
+     * Get embedding service info and health
+     * GET /api/v1/admin/embedding/info
+     */
+    async getEmbeddingInfo(): Promise<EmbeddingServiceInfo | null> {
+      return httpClient.get<EmbeddingServiceInfo>('/api/v1/admin/embedding/info');
+    },
+
+    /**
+     * Get embedding service throughput metrics
+     * GET /api/v1/admin/embedding/metrics
+     */
+    async getEmbeddingMetrics(): Promise<EmbeddingServiceMetrics | null> {
+      return httpClient.get<EmbeddingServiceMetrics>('/api/v1/admin/embedding/metrics');
+    },
+
     /**
      * Get admin processing queue with pagination
      * GET /api/v1/admin/kb/processing-queue
@@ -2108,10 +2205,108 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
       return result ?? { jobs: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     },
+
+    /**
+     * Get aggregated RAG pipeline health
+     * GET /api/v1/admin/kb/pipeline/health
+     * Issue #4879
+     */
+    async getPipelineHealth(): Promise<PipelineHealthResponse | null> {
+      return httpClient.get<PipelineHealthResponse>(`/api/v1/admin/kb/pipeline/health`);
+    },
+
+    /**
+     * Get processing step metrics (avg duration, percentiles)
+     * GET /api/v1/admin/pdfs/metrics/processing
+     * Issue #4880
+     */
+    async getProcessingMetrics(): Promise<ProcessingMetricsResponse | null> {
+      return httpClient.get<ProcessingMetricsResponse>(`/api/v1/admin/pdfs/metrics/processing`);
+    },
+
+    /**
+     * Get KB settings (read-only from env vars/config)
+     * GET /api/v1/admin/kb/settings
+     * Issue #4881
+     */
+    async getKBSettings(): Promise<KBSettingsResponse | null> {
+      return httpClient.get<KBSettingsResponse>(`/api/v1/admin/kb/settings`);
+    },
+
+    /**
+     * Clear KB cache
+     * POST /api/v1/admin/kb/cache/clear
+     * Issue #4881
+     */
+    async clearKBCache(): Promise<KBClearCacheResponse> {
+      const result = await httpClient.post<KBClearCacheResponse>(
+        `/api/v1/admin/kb/cache/clear`,
+        {}
+      );
+      return result ?? { success: false, message: 'No response', clearedAt: null };
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Qdrant Admin Types (Issue #4877) ==========
+
+export interface QdrantCollectionDetails {
+  name: string;
+  pointsCount: number;
+  indexedVectorsCount: number;
+  status: string;
+  config: {
+    vectorSize?: number;
+    distance?: string;
+  };
+  exactCount: number;
+  health: number;
+}
+
+export interface QdrantSearchResultItem {
+  id: number;
+  score: number;
+  payload?: Record<string, string>;
+}
+
+export interface QdrantSearchResult {
+  query: string;
+  results: QdrantSearchResultItem[];
+  total: number;
+}
+
+export interface QdrantBrowsePoint {
+  id: number;
+  payload?: Record<string, string>;
+}
+
+export interface QdrantBrowseResult {
+  points: QdrantBrowsePoint[];
+  count: number;
+}
+
+// ========== Embedding Service Types (Issue #4878) ==========
+
+export interface EmbeddingServiceInfo {
+  status: string;
+  model: string | null;
+  device: string | null;
+  supportedLanguages: string[];
+  dimension: number;
+  maxInputChars: number;
+  maxBatchSize: number;
+}
+
+export interface EmbeddingServiceMetrics {
+  requestsTotal: number;
+  failuresTotal: number;
+  durationMsSum: number;
+  totalCharsSum: number;
+  avgDurationMs: number;
+  failureRate: number;
+}
 
 // Re-export tier-strategy types for convenience
 export type { TierStrategyMatrixDto, StrategyModelMappingDto } from '../schemas/tier-strategy.schemas';
@@ -2216,4 +2411,113 @@ export type RagExecutionStatsResult = {
   cacheHitRate: number;
   totalCost: number;
   avgConfidence: number;
+};
+
+// ========== Pipeline Health Types (Issue #4879) ==========
+
+export type PipelineStageStatus = 'healthy' | 'warning' | 'error';
+
+export type PipelineStage = {
+  name: string;
+  status: PipelineStageStatus;
+  metrics: Record<string, unknown>;
+};
+
+export type PipelineRecentActivity = {
+  jobId: string;
+  fileName: string;
+  status: string;
+  completedAt: string | null;
+  durationMs: number | null;
+};
+
+export type PipelineDistribution = {
+  totalDocuments: number;
+  totalChunks: number;
+  vectorCount: number;
+  totalFiles: number;
+  storageSizeFormatted: string;
+};
+
+export type PipelineHealthResponse = {
+  stages: PipelineStage[];
+  summary: {
+    healthyCount: number;
+    warningCount: number;
+    errorCount: number;
+  };
+  recentActivity: PipelineRecentActivity[];
+  distribution: PipelineDistribution;
+  checkedAt: string;
+};
+
+// ========== Processing Metrics Types (Issue #4880) ==========
+
+export type ProcessingStepAverages = {
+  step: string;
+  avgDuration: number;
+  sampleSize: number;
+};
+
+export type ProcessingStepPercentiles = {
+  p50: number;
+  p95: number;
+  p99: number;
+};
+
+export type ProcessingMetricsResponse = {
+  averages: Record<string, ProcessingStepAverages>;
+  percentiles: Record<string, ProcessingStepPercentiles>;
+  lastUpdated: string;
+};
+
+// ========== KB Settings Types (Issue #4881) ==========
+
+export type KBSettingsResponse = {
+  embedding: {
+    provider: string;
+    model: string;
+    serviceUrl: string;
+  };
+  vectorDatabase: {
+    type: string;
+    url: string;
+    grpcPort: string;
+  };
+  chunking: {
+    defaultChunkSize: number;
+    chunkOverlap: number;
+    minChunkSize: number;
+    maxChunkSize: number;
+    embeddingTokenLimit: number;
+    charsPerToken: number;
+  };
+  cache: {
+    redis: {
+      host: string;
+      port: string;
+    };
+    hybridCache: {
+      defaultExpiration: string;
+      l2Enabled: boolean;
+    };
+    multiTier: {
+      enabled: boolean;
+      l1Ttl: string;
+      l2Ttl: string;
+    };
+  };
+  reranker: {
+    configured: boolean;
+    url: string | null;
+  };
+  storage: {
+    provider: string;
+  };
+};
+
+export type KBClearCacheResponse = {
+  success: boolean;
+  message: string;
+  clearedAt: string | null;
 };

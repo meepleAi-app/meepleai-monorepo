@@ -224,6 +224,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: DatabaseIcon,
       },
       {
+        href: '/admin/knowledge-base/embedding',
+        label: 'Embedding Service',
+        icon: CpuIcon,
+      },
+      {
         href: '/admin/knowledge-base/upload',
         label: 'Upload & Process',
         icon: UploadIcon,

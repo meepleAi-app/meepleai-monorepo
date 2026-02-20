@@ -186,7 +186,8 @@ internal record DebugChatRequest(
     string query,
     Guid? chatId = null,
     IReadOnlyList<Guid>? documentIds = null,
-    string? strategyOverride = null);
+    string? strategyOverride = null,
+    bool includePrompts = false);
 
 // CHAT-02: Follow-Up Questions models
 internal record StreamingFollowUpQuestions(

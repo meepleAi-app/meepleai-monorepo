@@ -33,6 +33,9 @@ internal static class AdminDebugChatEndpoints
         if (string.IsNullOrWhiteSpace(req.gameId))
             return Results.BadRequest(new { error = "gameId is required" });
 
+        if (!Guid.TryParse(req.gameId, out _))
+            return Results.BadRequest(new { error = "gameId must be a valid GUID" });
+
         if (string.IsNullOrWhiteSpace(req.query))
             return Results.BadRequest(new { error = "query is required" });
 
@@ -51,7 +54,8 @@ internal static class AdminDebugChatEndpoints
                 req.query,
                 req.chatId,
                 req.documentIds,
-                req.strategyOverride);
+                req.strategyOverride,
+                req.includePrompts);
 
             await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
             {
@@ -73,7 +77,7 @@ internal static class AdminDebugChatEndpoints
             {
                 var errorEvent = new RagStreamingEvent(
                     StreamingEventType.Error,
-                    new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
+                    new StreamingError("An internal error occurred. See server logs for details.", "INTERNAL_ERROR"),
                     DateTime.UtcNow);
                 var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions.Default);
                 await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);

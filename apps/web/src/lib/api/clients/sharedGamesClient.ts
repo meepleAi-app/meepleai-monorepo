@@ -777,9 +777,11 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       formData: FormData,
       onProgress?: (percent: number) => void
     ): Promise<{ pdfDocumentId: string; sharedGameDocumentId: string; processingStatus: string }> {
-      const apiBase = typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8080')
-        : 'http://localhost:8080';
+      const UploadResultSchema = z.object({
+        pdfDocumentId: z.string().uuid(),
+        sharedGameDocumentId: z.string().uuid(),
+        processingStatus: z.string(),
+      });
 
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -793,13 +795,14 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
-              resolve(JSON.parse(xhr.responseText));
+              const parsed = UploadResultSchema.parse(JSON.parse(xhr.responseText));
+              resolve(parsed);
             } catch {
               reject(new Error('Invalid response format'));
             }
           } else {
             try {
-              const err = JSON.parse(xhr.responseText);
+              const err = JSON.parse(xhr.responseText) as { error?: string };
               reject(new Error(err.error ?? `Upload failed: ${xhr.status}`));
             } catch {
               reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
@@ -810,8 +813,8 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-        xhr.open('POST', `${apiBase}/api/v1/admin/shared-games/${gameId}/documents/upload`);
-        xhr.withCredentials = true;
+        // Use relative URL so requests route through the Next.js API proxy
+        xhr.open('POST', `/api/v1/admin/shared-games/${gameId}/documents/upload`);
         xhr.send(formData);
       });
     },

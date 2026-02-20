@@ -1,14 +1,19 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
+
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
-/// Tracks which PDF documents have been indexed in Qdrant
+/// Tracks which PDF documents have been indexed in Qdrant.
+/// Either GameId (user library) or SharedGameId (admin-owned content) must be set.
 /// </summary>
 public class VectorDocumentEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
-    // DDD-PHASE2: Converted to Guid for domain alignment
-    public Guid GameId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment. Nullable — either GameId or SharedGameId must be set.
+    public Guid? GameId { get; set; }
+    // Issue #4921: Admin-owned content. Either GameId or SharedGameId must be set.
+    public Guid? SharedGameId { get; set; }
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid PdfDocumentId { get; set; } // FK to PdfDocumentEntity
 
@@ -27,6 +32,7 @@ public class VectorDocumentEntity
     public string? Metadata { get; set; }
 
     // Navigation properties
-    public GameEntity Game { get; set; } = default!;
+    public GameEntity? Game { get; set; }
+    public SharedGameEntity? SharedGame { get; set; }
     public PdfDocumentEntity PdfDocument { get; set; } = default!;
 }

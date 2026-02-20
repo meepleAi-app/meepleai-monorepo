@@ -8,10 +8,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 /// VectorDocument aggregate root.
 /// Represents a document that has been indexed in the vector database.
 /// Controls embeddings and search operations for the document.
+/// Either GameId (user library) or SharedGameId (admin-owned content) must be set.
 /// </summary>
 internal sealed class VectorDocument : AggregateRoot<Guid>
 {
-    public Guid GameId { get; private set; }
+    public Guid? GameId { get; private set; }
+    /// <summary>Issue #4921: For admin-owned shared game content.</summary>
+    public Guid? SharedGameId { get; private set; }
     public Guid PdfDocumentId { get; private set; }
     public string Language { get; private set; }
     public int TotalChunks { get; private set; }
@@ -32,7 +35,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Creates a new vector document.
+    /// Creates a new vector document for a user library game.
     /// </summary>
     public VectorDocument(
         Guid id,
@@ -54,7 +57,39 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         IndexedAt = DateTime.UtcNow;
         SearchCount = 0;
 
-        AddDomainEvent(new VectorDocumentIndexedEvent(id, gameId, totalChunks));
+        AddDomainEvent(new VectorDocumentIndexedEvent(id, gameId, null, totalChunks));
+    }
+
+    /// <summary>
+    /// Creates a new vector document for admin-owned shared game content (Issue #4921).
+    /// </summary>
+    public static VectorDocument CreateForSharedGame(
+        Guid id,
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        string language,
+        int totalChunks)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+            throw new ArgumentException("Language cannot be empty", nameof(language));
+
+        if (totalChunks <= 0)
+            throw new ArgumentException("Total chunks must be positive", nameof(totalChunks));
+
+        var doc = new VectorDocument
+        {
+            Id = id,
+            SharedGameId = sharedGameId,
+            PdfDocumentId = pdfDocumentId,
+            Language = language.ToLowerInvariant(),
+            TotalChunks = totalChunks,
+            IndexedAt = DateTime.UtcNow,
+            SearchCount = 0
+        };
+
+        doc.AddDomainEvent(new VectorDocumentIndexedEvent(id, null, sharedGameId, totalChunks));
+
+        return doc;
     }
 
     /// <summary>
@@ -83,5 +118,13 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
     internal void SetMetadata(string? metadata)
     {
         Metadata = metadata;
+    }
+
+    /// <summary>
+    /// Sets SharedGameId value (internal for mapper reconstitution only, Issue #4921).
+    /// </summary>
+    internal void SetSharedGameId(Guid? sharedGameId)
+    {
+        SharedGameId = sharedGameId;
     }
 }

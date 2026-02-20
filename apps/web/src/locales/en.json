@@ -1,4 +1,9 @@
 {
+  "collection": {
+    "addGameTitle": "Add Game to Collection",
+    "addGameSubtitle": "Search for a game or create a custom entry",
+    "backToCollection": "Back to Collection"
+  },
   "accessibility": {
     "close": "Close",
     "closeNotification": "Close notification",

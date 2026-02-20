@@ -55,6 +55,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<SessionTeamEntity> SessionTeams => Set<SessionTeamEntity>(); // ISSUE-4750: Live session teams
     public DbSet<LiveRoundScoreEntity> LiveRoundScores => Set<LiveRoundScoreEntity>(); // ISSUE-4750: Live session round scores
     public DbSet<LiveTurnRecordEntity> LiveTurnRecords => Set<LiveTurnRecordEntity>(); // ISSUE-4750: Live session turn records
+    public DbSet<GameStrategyEntity> GameStrategies => Set<GameStrategyEntity>(); // ISSUE-4903: Game strategies
     public DbSet<RuleSpecEntity> RuleSpecs => Set<RuleSpecEntity>();
     public DbSet<RuleAtomEntity> RuleAtoms => Set<RuleAtomEntity>();
     public DbSet<AgentEntity> Agents => Set<AgentEntity>();
@@ -243,6 +244,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(); // ISSUE-4755
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameStrategy>(); // ISSUE-4903
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051

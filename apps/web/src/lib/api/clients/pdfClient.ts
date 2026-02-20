@@ -124,6 +124,91 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
       });
     },
 
+    // ========== Chunked Upload ==========
+
+    /**
+     * Initialize a chunked upload session for large PDF files.
+     * POST /api/v1/ingest/pdf/chunked/init
+     * @param gameId Game ID to associate the PDF with
+     * @param fileName Original file name
+     * @param totalFileSize Total file size in bytes
+     */
+    async initChunkedUpload(
+      gameId: string,
+      fileName: string,
+      totalFileSize: number
+    ): Promise<ChunkedUploadInitResult> {
+      const result = await httpClient.post<ChunkedUploadInitResult>(
+        '/api/v1/ingest/pdf/chunked/init',
+        { gameId, fileName, totalFileSize }
+      );
+      return result ?? { sessionId: '', totalChunks: 0, chunkSizeBytes: 0, expiresAt: '' };
+    },
+
+    /**
+     * Upload a single chunk of a large PDF file.
+     * POST /api/v1/ingest/pdf/chunked/chunk
+     * @param sessionId Chunked upload session ID
+     * @param chunkIndex Zero-based chunk index
+     * @param chunk Blob representing the chunk data
+     */
+    async uploadChunk(
+      sessionId: string,
+      chunkIndex: number,
+      chunk: Blob
+    ): Promise<ChunkedUploadChunkResult> {
+      const baseUrl = getApiBase();
+      const url = `${baseUrl}/api/v1/ingest/pdf/chunked/chunk`;
+      const formData = new FormData();
+      formData.append('sessionId', sessionId);
+      formData.append('chunkIndex', chunkIndex.toString());
+      formData.append('chunk', chunk, `chunk-${chunkIndex}`);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        let message = `Chunk upload failed (${response.status})`;
+        try {
+          const err = await response.json();
+          message = err.detail || err.title || err.message || message;
+        } catch { /* use default */ }
+        throw new Error(message);
+      }
+
+      return await response.json();
+    },
+
+    /**
+     * Complete a chunked upload session, assembling all chunks.
+     * POST /api/v1/ingest/pdf/chunked/complete
+     * @param sessionId Chunked upload session ID
+     */
+    async completeChunkedUpload(
+      sessionId: string
+    ): Promise<{ success: boolean; documentId: string; fileName: string }> {
+      const result = await httpClient.post<{ success: boolean; documentId: string; fileName: string }>(
+        '/api/v1/ingest/pdf/chunked/complete',
+        { sessionId }
+      );
+      return result ?? { success: false, documentId: '', fileName: '' };
+    },
+
+    /**
+     * Get the status of a chunked upload session.
+     * GET /api/v1/ingest/pdf/chunked/{sessionId}/status
+     */
+    async getChunkedUploadStatus(
+      sessionId: string
+    ): Promise<ChunkedUploadStatusResult | null> {
+      return httpClient.get<ChunkedUploadStatusResult>(
+        `/api/v1/ingest/pdf/chunked/${encodeURIComponent(sessionId)}/status`
+      );
+    },
+
     /**
      * Set PDF visibility in public library (Admin Wizard)
      * PATCH /api/v1/pdfs/{pdfId}/visibility
@@ -311,6 +396,32 @@ export interface PdfStatusDistribution {
   countByState: Record<string, number>;
   totalDocuments: number;
   topBySize: Array<{ id: string; fileName: string; fileSizeBytes: number }>;
+}
+
+// ========== Chunked Upload Types ==========
+
+export interface ChunkedUploadInitResult {
+  sessionId: string;
+  totalChunks: number;
+  chunkSizeBytes: number;
+  expiresAt: string;
+}
+
+export interface ChunkedUploadChunkResult {
+  success: boolean;
+  receivedChunks: number;
+  totalChunks: number;
+  progressPercentage: number;
+  isComplete: boolean;
+}
+
+export interface ChunkedUploadStatusResult {
+  sessionId: string;
+  status: string;
+  receivedChunks: number;
+  totalChunks: number;
+  progressPercentage: number;
+  isComplete: boolean;
 }
 
 export type PdfClient = ReturnType<typeof createPdfClient>;

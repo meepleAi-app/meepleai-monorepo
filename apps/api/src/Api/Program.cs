@@ -567,6 +567,7 @@ v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3
 v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
 v1Api.MapAdminQdrantEndpoints();       // Qdrant admin operations (Issue #4877)
 v1Api.MapAdminEmbeddingEndpoints();    // Embedding service dashboard (Issue #4878)
+v1Api.MapAdminPipelineEndpoints();     // Pipeline health overview (Issue #4879)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)

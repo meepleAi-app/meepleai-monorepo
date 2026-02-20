@@ -55,6 +55,18 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         return entities.Select(e => e.ToDomain()).ToList();
     }
 
+    public async Task<List<VectorDocument>> GetBySharedGameIdAsync(
+        Guid sharedGameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.VectorDocuments
+            .AsNoTracking()
+            .Where(vd => vd.SharedGameId == sharedGameId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(e => e.ToDomain()).ToList();
+    }
+
     public async Task AddAsync(VectorDocument document, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(document);

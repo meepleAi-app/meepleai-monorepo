@@ -775,12 +775,30 @@ public sealed class KnowledgeBaseDomainEventsTests
         var gameId = Guid.NewGuid();
 
         // Act
-        var evt = new VectorDocumentIndexedEvent(documentId, gameId, 42);
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, null, 42);
 
         // Assert
         evt.DocumentId.Should().Be(documentId);
         evt.GameId.Should().Be(gameId);
+        evt.SharedGameId.Should().BeNull();
         evt.ChunkCount.Should().Be(42);
+    }
+
+    [Fact]
+    public void VectorDocumentIndexedEvent_WithSharedGameId_SetsProperties()
+    {
+        // Arrange
+        var documentId = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+
+        // Act
+        var evt = new VectorDocumentIndexedEvent(documentId, null, sharedGameId, 15);
+
+        // Assert
+        evt.DocumentId.Should().Be(documentId);
+        evt.GameId.Should().BeNull();
+        evt.SharedGameId.Should().Be(sharedGameId);
+        evt.ChunkCount.Should().Be(15);
     }
 
     [Fact]
@@ -791,7 +809,7 @@ public sealed class KnowledgeBaseDomainEventsTests
         var gameId = Guid.NewGuid();
 
         // Act
-        var evt = new VectorDocumentIndexedEvent(documentId, gameId, 0);
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, null, 0);
 
         // Assert
         evt.ChunkCount.Should().Be(0);
@@ -805,7 +823,7 @@ public sealed class KnowledgeBaseDomainEventsTests
         var gameId = Guid.NewGuid();
 
         // Act
-        var evt = new VectorDocumentIndexedEvent(documentId, gameId, 500);
+        var evt = new VectorDocumentIndexedEvent(documentId, gameId, null, 500);
 
         // Assert
         evt.ChunkCount.Should().Be(500);

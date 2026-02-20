@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 
 /**
- * Processing Queue - redirects to Knowledge Base main page
- * Stub until full processing queue UI is implemented
+ * Processing Queue - redirects to the existing queue page
+ * Alias route: /admin/knowledge-base/processing → /admin/knowledge-base/queue
  */
 export default function ProcessingQueuePage() {
-  redirect('/admin/knowledge-base');
+  redirect('/admin/knowledge-base/queue');
 }

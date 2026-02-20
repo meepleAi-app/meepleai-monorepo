@@ -137,6 +137,15 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the count of library entries with a configured game agent for a user.
+    /// Issue #4944: Required for agent creation quota enforcement.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Count of entries with a custom agent configuration</returns>
+    Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets unplayed games or games not played for a specified number of days.
     /// Issue #3916: Required for AI insights backlog detection.
     /// </summary>

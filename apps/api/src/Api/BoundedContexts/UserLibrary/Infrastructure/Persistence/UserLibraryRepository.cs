@@ -215,6 +215,15 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <inheritdoc />
+    public async Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .CountAsync(e => e.UserId == userId && e.CustomAgentConfigJson != null, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<UserLibraryEntry>> GetRecentlyPlayedAsync(
         Guid userId,
         int limit,

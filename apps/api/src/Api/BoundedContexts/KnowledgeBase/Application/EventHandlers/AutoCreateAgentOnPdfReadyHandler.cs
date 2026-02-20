@@ -76,13 +76,32 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
                 return;
             }
 
+            // Look up the user's tier and role for quota enforcement (Issue #4944)
+            var userInfo = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.Id == notification.UploadedByUserId)
+                .Select(u => new { u.Tier, u.Role })
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (userInfo == null)
+            {
+                _logger.LogWarning(
+                    "AutoCreateAgent: User {UserId} not found in database. Cannot determine tier/role for quota enforcement. Skipping auto-agent creation for game {GameId}",
+                    notification.UploadedByUserId,
+                    pdfEntity.GameId);
+                return;
+            }
+
             // Create agent with defaults
             var command = new CreateGameAgentCommand(
                 GameId: pdfEntity.GameId,
                 TypologyId: defaultTypology.Id,
                 StrategyName: "Balanced",
                 StrategyParameters: null,
-                UserId: notification.UploadedByUserId);
+                UserId: notification.UploadedByUserId,
+                UserTier: userInfo.Tier,
+                UserRole: userInfo.Role);
 
             var result = await _mediator.Send(command, cancellationToken).ConfigureAwait(false);
 

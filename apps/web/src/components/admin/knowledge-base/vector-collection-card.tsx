@@ -1,6 +1,7 @@
 /**
  * VectorCollectionCard Component
  * Issue #4861: MeepleCard design system for /admin/knowledge-base/vectors
+ * Issue #4877: Qdrant Advanced Operations + Delete
  *
  * Displays a Qdrant vector collection using MeepleCard entity="document" variant="grid"
  * with collection metrics, health status badge, and admin quick actions.
@@ -8,69 +9,50 @@
 
 'use client';
 
-import { Database, HardDrive, Layers, RefreshCw, Settings, Trash2 } from 'lucide-react';
+import { Database, Layers, RefreshCw, Trash2 } from 'lucide-react';
 
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 
-export interface VectorCollectionStatus {
-  health: 'healthy' | 'degraded' | 'error';
-  optimizerStatus?: string;
-}
-
-export interface VectorCollectionDto {
+export interface VectorCollectionCardProps {
   name: string;
   vectorCount: number;
   dimensions: number;
-  sizeBytes: number;
-  status: VectorCollectionStatus;
-}
-
-interface VectorCollectionCardProps {
-  collection: VectorCollectionDto;
-  onOptimize?: (name: string) => void;
+  storage: string;
+  health: number;
   onReindex?: (name: string) => void;
   onDelete?: (name: string) => void;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+function healthLabel(health: number): string {
+  if (health >= 90) return 'Healthy';
+  if (health >= 70) return 'Degraded';
+  return 'Error';
 }
 
-const healthLabels: Record<string, string> = {
-  healthy: 'Healthy',
-  degraded: 'Degraded',
-  error: 'Error',
-};
-
 export function VectorCollectionCard({
-  collection,
-  onOptimize,
+  name,
+  vectorCount,
+  dimensions,
+  storage,
+  health,
   onReindex,
   onDelete,
 }: VectorCollectionCardProps) {
   const metadata: MeepleCardMetadata[] = [
-    { icon: Database, label: `${collection.vectorCount.toLocaleString()} vectors` },
-    { icon: Layers, label: `${collection.dimensions}D` },
-    { icon: HardDrive, label: formatBytes(collection.sizeBytes) },
+    { icon: Database, label: `${vectorCount.toLocaleString()} vectors` },
+    { icon: Layers, label: `${dimensions}D` },
   ];
 
   const quickActions = [
-    ...(onOptimize
-      ? [{ icon: Settings, label: 'Optimize', onClick: () => onOptimize(collection.name) }]
-      : []),
     ...(onReindex
-      ? [{ icon: RefreshCw, label: 'Reindex', onClick: () => onReindex(collection.name) }]
+      ? [{ icon: RefreshCw, label: 'Rebuild Index', onClick: () => onReindex(name) }]
       : []),
     ...(onDelete
       ? [
           {
             icon: Trash2,
             label: 'Delete',
-            onClick: () => onDelete(collection.name),
+            onClick: () => onDelete(name),
             destructive: true,
           },
         ]
@@ -81,12 +63,12 @@ export function VectorCollectionCard({
     <MeepleCard
       entity="document"
       variant="grid"
-      title={collection.name}
-      subtitle={`${collection.vectorCount.toLocaleString()} vettori \u00b7 ${collection.dimensions}D`}
-      badge={healthLabels[collection.status.health] || collection.status.health}
+      title={name}
+      subtitle={`${vectorCount.toLocaleString()} vectors · ${dimensions}D · ${storage}`}
+      badge={healthLabel(health)}
       metadata={metadata}
       quickActions={quickActions.length > 0 ? quickActions : undefined}
-      data-testid={`vector-collection-card-${collection.name}`}
+      data-testid={`vector-collection-card-${name}`}
     />
   );
 }

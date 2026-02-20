@@ -85,7 +85,7 @@ describe('useCreateAgentFlow hook', () => {
         await result.current.mutateAsync(mockInput);
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Agent "MyAgent" created successfully');
+      expect(toast.success).toHaveBeenCalledWith('Agente "MyAgent" creato! Avvio chat...');
     });
 
     it('invalidates agent slots cache', async () => {
@@ -172,8 +172,8 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith('No agent slots available', {
-        description: 'Upgrade your tier for more agent slots.',
+      expect(toast.error).toHaveBeenCalledWith('Nessuno slot disponibile', {
+        description: "Effettua l'upgrade per avere più slot agente.",
       });
     });
 
@@ -191,8 +191,8 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Agent name conflict', {
-        description: 'Please choose a different name.',
+      expect(toast.error).toHaveBeenCalledWith('Nome agente già in uso', {
+        description: 'Scegli un nome diverso.',
       });
     });
 
@@ -210,7 +210,7 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Agent creation failed', {
+      expect(toast.error).toHaveBeenCalledWith('Creazione agente fallita', {
         description: 'Something unexpected happened',
       });
     });
@@ -229,8 +229,8 @@ describe('useCreateAgentFlow hook', () => {
         }
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Agent creation failed', {
-        description: 'Failed to create agent',
+      expect(toast.error).toHaveBeenCalledWith('Creazione agente fallita', {
+        description: "Errore nella creazione dell'agente",
       });
     });
 

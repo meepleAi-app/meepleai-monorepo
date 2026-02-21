@@ -22,6 +22,7 @@ internal static class SystemConfigurationServiceExtensions
         services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
         services.AddScoped<IRateLimitConfigRepository, RateLimitConfigRepository>(); // Issue #2730: Rate limit config
         services.AddScoped<IUserRateLimitOverrideRepository, UserRateLimitOverrideRepository>(); // Issue #2730: User overrides
+        services.AddScoped<IFeatureFlagRepository, FeatureFlagRepository>();
 
         // Register domain services
         services.AddScoped<ConfigurationValidator>();

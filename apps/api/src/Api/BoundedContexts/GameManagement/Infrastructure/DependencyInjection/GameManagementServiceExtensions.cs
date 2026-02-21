@@ -29,6 +29,8 @@ internal static class GameManagementServiceExtensions
         services.AddSingleton<ILiveSessionRepository, LiveSessionRepository>(); // Issue #4749: Live session in-memory store
         services.AddScoped<IToolStateRepository, ToolStateRepository>(); // Issue #4754: ToolState persistence
         services.AddScoped<ISessionSnapshotRepository, SessionSnapshotRepository>(); // Issue #4755: SessionSnapshot persistence
+        services.AddScoped<IGameReviewRepository, GameReviewRepository>();
+        services.AddScoped<IGameStrategyRepository, GameStrategyRepository>();
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

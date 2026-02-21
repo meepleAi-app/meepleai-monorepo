@@ -24,6 +24,8 @@ export { ExportSession } from './ExportSession';
 export { InviteSession } from './InviteSession';
 export { CounterTool } from './CounterTool';
 export type { CounterToolProps } from './CounterTool';
+export { WhiteboardTool } from './WhiteboardTool';
+export type { WhiteboardToolProps } from './WhiteboardTool';
 
 export type {
   Participant,
@@ -51,6 +53,14 @@ export type {
   TurnAdvancedPayload,
   CounterToolConfig,
   CounterState,
+  WhiteboardMode,
+  GridSize,
+  DrawingThickness,
+  Stroke,
+  StrokePoint,
+  WhiteboardToken,
+  WhiteboardState,
+  WhiteboardSSEEvent,
 } from './types';
 
-export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS } from './types';
+export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS, WHITEBOARD_COLORS, TOKEN_COLORS, THICKNESS_VALUES } from './types';

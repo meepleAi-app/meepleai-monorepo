@@ -3,6 +3,7 @@
  * Issue #4757 - ExtraMeepleCard Component Base + Session Tabs
  * Issue #4762 - Media Tab + AI Tab + Other Entity Types
  * Issue #4763 - Interactive Cards + Timer + Events Timeline UI
+ * Issue #5026 - AgentExtraMeepleCard (Epic #5023)
  */
 
 export { ExtraMeepleCard } from './ExtraMeepleCard';
@@ -10,6 +11,7 @@ export {
   GameExtraMeepleCard,
   PlayerExtraMeepleCard,
   CollectionExtraMeepleCard,
+  AgentExtraMeepleCard,
 } from './EntityExtraMeepleCard';
 export {
   ExtraMeepleCardDrawer,
@@ -48,6 +50,9 @@ export type {
   GameDetailData,
   PlayerDetailData,
   CollectionDetailData,
+  AgentDetailData,
+  ChatThreadPreview,
+  KbDocumentPreview,
   CardZone,
   CardEntry,
   CardDeckState,

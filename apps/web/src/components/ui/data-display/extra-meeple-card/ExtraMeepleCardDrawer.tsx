@@ -10,7 +10,7 @@
  *
  * Routing:
  *   game   → GameDrawerContent    (GameExtraMeepleCard)
- *   agent  → AgentDrawerContent   (stub — Issue #5026)
+ *   agent  → AgentDrawerContent   (AgentExtraMeepleCard — Issue #5026)
  *   chat   → ChatDrawerContent    (stub — Issue #5027)
  *   kb     → KbDrawerContent      (stub — Issue #5028)
  */
@@ -35,8 +35,8 @@ import {
   SheetTitle,
 } from '@/components/ui/navigation/sheet';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
-import { GameExtraMeepleCard } from './EntityExtraMeepleCard';
-import type { GameDetailData } from './types';
+import { GameExtraMeepleCard, AgentExtraMeepleCard } from './EntityExtraMeepleCard';
+import type { GameDetailData, AgentDetailData } from './types';
 
 // ============================================================================
 // Types
@@ -193,15 +193,21 @@ function GameDrawerContent({ entityId }: { entityId: string }) {
 }
 
 // ============================================================================
-// Stub Drawer Contents
-// Will be replaced in Issues #5026 (agent), #5027 (chat), #5028 (kb).
+// Agent Drawer Content
+// Fetches agent data by ID and renders AgentExtraMeepleCard.
 // ============================================================================
 
-function AgentDrawerContent({ entityId: _entityId }: { entityId: string }) {
+function AgentDrawerContent({ entityId }: { entityId: string }) {
+  const { data, loading, error, retry } = useAgentDetail(entityId);
+
+  if (loading) return <DrawerLoadingSkeleton />;
+  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data)   return <DrawerLoadingSkeleton />;
+
   return (
-    <DrawerComingSoon
-      label="AgentExtraMeepleCard"
-      issueNumber={5026}
+    <AgentExtraMeepleCard
+      data={data}
+      className="w-full rounded-none border-0 shadow-none bg-transparent"
     />
   );
 }
@@ -404,5 +410,78 @@ function mapToGameDetailData(json: Record<string, unknown>): GameDetailData {
     totalPlays:         json.totalPlays         != null ? Number(json.totalPlays)        : undefined,
     faqCount:           json.faqCount           != null ? Number(json.faqCount)          : undefined,
     rulesDocumentCount: json.rulesDocumentCount != null ? Number(json.rulesDocumentCount): undefined,
+  };
+}
+
+// ============================================================================
+// Data Fetching Hook — Agent
+// ============================================================================
+
+interface UseAgentDetailResult {
+  data: AgentDetailData | null;
+  loading: boolean;
+  error: string | null;
+  retry: () => void;
+}
+
+function useAgentDetail(agentId: string): UseAgentDetailResult {
+  const [data, setData] = React.useState<AgentDetailData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchData = React.useCallback(async (signal: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/agents/${agentId}`, { signal });
+      if (!res.ok) {
+        throw new Error(`Errore ${res.status}: agente non trovato`);
+      }
+      const json = (await res.json()) as Record<string, unknown>;
+      setData(mapToAgentDetailData(json));
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossibile caricare i dati dell\'agente',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [agentId]);
+
+  React.useEffect(() => {
+    if (!agentId) return;
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => { controller.abort(); };
+  }, [agentId, fetchData]);
+
+  const retry = React.useCallback(() => {
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+  }, [fetchData]);
+
+  return { data, loading, error, retry };
+}
+
+function mapToAgentDetailData(json: Record<string, unknown>): AgentDetailData {
+  const params = (json.strategyParameters != null && typeof json.strategyParameters === 'object')
+    ? (json.strategyParameters as Record<string, unknown>)
+    : {};
+  return {
+    id:                 String(json.id ?? ''),
+    name:               String(json.name ?? ''),
+    type:               String(json.type ?? ''),
+    strategyName:       String(json.strategyName ?? ''),
+    strategyParameters: params,
+    isActive:           Boolean(json.isActive ?? false),
+    isIdle:             Boolean(json.isIdle ?? true),
+    invocationCount:    json.invocationCount != null ? Number(json.invocationCount) : 0,
+    lastInvokedAt:      json.lastInvokedAt   != null ? String(json.lastInvokedAt)  : null,
+    createdAt:          String(json.createdAt ?? new Date().toISOString()),
+    gameId:             json.gameId   != null ? String(json.gameId)   : undefined,
+    gameName:           json.gameName != null ? String(json.gameName) : undefined,
   };
 }

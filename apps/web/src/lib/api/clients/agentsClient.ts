@@ -469,6 +469,75 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
+    // ========== Admin Agent Testing (Issue #4962) ==========
+
+    /**
+     * Test an agent typology with a query (Admin/Editor only)
+     * POST /api/v1/agent-typologies/{id}/test
+     * Issue #4962: Wire agent test console to real backend API
+     */
+    async testTypology(typologyId: string, testQuery: string): Promise<{
+      success: boolean;
+      response: string;
+      confidenceScore: number;
+    }> {
+      const response = await httpClient.post<{
+        success: boolean;
+        response: string;
+        confidenceScore: number;
+      }>(
+        `/api/v1/agent-typologies/${encodeURIComponent(typologyId)}/test`,
+        { testQuery }
+      );
+
+      if (!response) {
+        throw new Error('Failed to test agent typology: no response from server');
+      }
+
+      return response;
+    },
+
+    /**
+     * Save a test result to history (Admin only)
+     * POST /api/v1/admin/test-results → 201 Created { id }
+     * Issue #4962: Wire agent test console to real backend API
+     */
+    async saveTestResult(result: {
+      typologyId: string;
+      query: string;
+      response: string;
+      modelUsed: string;
+      confidenceScore: number;
+      tokensUsed: number;
+      costEstimate: number;
+      latencyMs: number;
+      strategyOverride?: string;
+      citationsJson?: string;
+    }): Promise<{ id: string }> {
+      const saved = await httpClient.post<{ id: string }>(
+        '/api/v1/admin/test-results',
+        {
+          typologyId: result.typologyId,
+          query: result.query,
+          response: result.response,
+          modelUsed: result.modelUsed,
+          confidenceScore: result.confidenceScore,
+          tokensUsed: result.tokensUsed,
+          costEstimate: result.costEstimate,
+          latencyMs: result.latencyMs,
+          strategyOverride: result.strategyOverride,
+          citationsJson: result.citationsJson,
+        },
+        z.object({ id: z.string() })
+      );
+
+      if (!saved) {
+        throw new Error('Failed to save test result: no response from server');
+      }
+
+      return saved;
+    },
+
     // ========== Agent Chat SSE (Issue #4126) ==========
 
     /**

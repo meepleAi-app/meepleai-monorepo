@@ -154,9 +154,11 @@ export function PdfAdminClient() {
 
   const handleRetry = async (pdfId: string, fileName: string) => {
     try {
-      await fetch(`/api/v1/documents/${pdfId}/retry`, { method: 'POST' });
+      // Admin uses reindexDocument (POST /admin/pdfs/{id}/reindex) intentionally:
+      // bypasses the user-facing retry count limit (max 3) which is appropriate for admin operations.
+      await apiClient.pdf.reindexDocument(pdfId);
       toast.success(`Retrying ${fileName}...`);
-      refetch();
+      invalidateAll();
     } catch {
       toast.error('Failed to retry processing');
     }

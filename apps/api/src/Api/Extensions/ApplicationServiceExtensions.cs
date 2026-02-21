@@ -91,9 +91,6 @@ internal static class ApplicationServiceExtensions
         // ISSUE-2371: SharedGameCatalog authorization policies
         services.AddSharedGameCatalogPolicies();
 
-        // ISSUE-2371: SharedGameCatalog authorization policies
-        services.AddSharedGameCatalogPolicies();
-
         return services;
     }
 

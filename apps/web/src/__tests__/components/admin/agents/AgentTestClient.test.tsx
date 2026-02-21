@@ -101,13 +101,15 @@ describe('AgentTestClient', () => {
     it('renders strategy selector with default value', async () => {
       render(<AgentTestClient />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Strategy Override')).toBeInTheDocument();
+      // Label is "Strategy" with a "logged only" tooltip span
+      expect(screen.getByText(/^Strategy/)).toBeInTheDocument();
     });
 
     it('renders model selector with default value', async () => {
       render(<AgentTestClient />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Model Override')).toBeInTheDocument();
+      // Label is "Model" with a "logged only" tooltip span
+      expect(screen.getByText(/^Model/)).toBeInTheDocument();
     });
   });
 
@@ -148,9 +150,8 @@ describe('AgentTestClient', () => {
     it('contains all strategy options', async () => {
       render(<AgentTestClient />, { wrapper: createWrapper() });
 
-      // Check that strategy options data is rendered properly
-      // The component should have strategy dropdown
-      expect(screen.getByText('Strategy Override')).toBeInTheDocument();
+      // Strategy selector exists with its label
+      expect(screen.getByText(/^Strategy/)).toBeInTheDocument();
     });
   });
 
@@ -158,8 +159,8 @@ describe('AgentTestClient', () => {
     it('contains model options', async () => {
       render(<AgentTestClient />, { wrapper: createWrapper() });
 
-      // Check that model options data is rendered properly
-      expect(screen.getByText('Model Override')).toBeInTheDocument();
+      // Model selector exists with its label
+      expect(screen.getByText(/^Model/)).toBeInTheDocument();
     });
   });
 });

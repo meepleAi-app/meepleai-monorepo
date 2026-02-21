@@ -59,11 +59,7 @@ export interface JourneyProgressProps {
 // Constants
 // ============================================================================
 
-const BASE_STORAGE_KEY = 'journey-progress-dismissed';
-
-function getStorageKey(gameId?: string): string {
-  return gameId ? `${BASE_STORAGE_KEY}-${gameId}` : BASE_STORAGE_KEY;
-}
+const STORAGE_KEY = 'journey-progress-dismissed';
 
 // ============================================================================
 // Component
@@ -76,13 +72,15 @@ export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
   const [dismissed, setDismissed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-  // Read persisted dismiss state after mount (SSR-safe)
+  // Read persisted dismiss state after mount (SSR-safe).
+  // Only the global key is checked; per-game auto-dismiss keys are intentionally
+  // not checked here so the banner re-appears if the user revisits the page
+  // and the journey has regressed (e.g., agent deleted).
   useEffect(() => {
-    const key = getStorageKey(gameId);
     try {
-      if (localStorage.getItem(key) === 'true') setDismissed(true);
+      if (localStorage.getItem(STORAGE_KEY) === 'true') setDismissed(true);
     } catch { /* localStorage unavailable */ }
-  }, [gameId]);
+  }, []);
 
   // ── Data sources ─────────────────────────────────────────────────────────
 
@@ -200,11 +198,14 @@ export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
   // ── Journey complete? ──────────────────────────────────────────────────
   const isComplete = steps.every(s => s.status === 'completed');
 
-  // Auto-dismiss when complete
+  // Auto-dismiss when complete.
+  // Writes a per-game key (when gameId is provided) so different games track
+  // their own completion state independently.
   useEffect(() => {
     if (isComplete) {
       try {
-        localStorage.setItem(getStorageKey(gameId), 'true');
+        const key = gameId ? `${STORAGE_KEY}-${gameId}` : STORAGE_KEY;
+        localStorage.setItem(key, 'true');
       } catch { /* ignore */ }
       setDismissed(true);
     }
@@ -213,9 +214,10 @@ export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
   // ── Hide when dismissed or complete ───────────────────────────────────
   if (dismissed) return null;
 
+  // Manual dismiss writes to the global key to suppress the banner across all games.
   const handleDismiss = () => {
     try {
-      localStorage.setItem(getStorageKey(gameId), 'true');
+      localStorage.setItem(STORAGE_KEY, 'true');
     } catch { /* ignore */ }
     setDismissed(true);
   };

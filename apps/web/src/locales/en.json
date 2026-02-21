@@ -571,6 +571,47 @@
     },
     "title": "PDF Import Wizard"
   },
+  "pdfIndexing": {
+    "pending": "Waiting for processing",
+    "processing": "Processing...",
+    "indexed": "Knowledge Base ready!",
+    "failed": "Indexing failed",
+    "progress": "{progress}%",
+    "chunksCount": "{count} chunks indexed",
+    "backgroundNote": "You can continue — indexing will complete in the background.",
+    "continueToAgent": "Continue: configure agent",
+    "stageCompleted": "completed",
+    "stageActive": "in progress...",
+    "stageFailed": "error",
+    "stagePending": "pending",
+    "steps": {
+      "uploading": "Uploading file",
+      "extracting": "Extracting text",
+      "chunking": "Semantic chunking",
+      "indexing": "Vector indexing"
+    }
+  },
+  "kbStatus": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "indexed": "Knowledge Base ready",
+    "failed": "Indexing failed",
+    "createAgent": "Create agent",
+    "retry": "Retry"
+  },
+  "notificationCenter": {
+    "title": "Notifications",
+    "newSection": "NEW",
+    "previousSection": "PREVIOUS",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "emptySubtext": "Your notifications will appear here",
+    "viewAll": "View all",
+    "loading": "Loading notifications...",
+    "kbReady": {
+      "cta": "→ Create your agent"
+    }
+  },
   "legal": {
     "tableOfContents": "Table of Contents",
     "lastUpdated": "Last updated: {date}",

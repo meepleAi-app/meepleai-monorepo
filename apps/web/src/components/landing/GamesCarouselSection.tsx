@@ -114,6 +114,7 @@ function useIntersectionObserver(
 
 function FeaturedGamesSection() {
   const router = useRouter();
+  const { data: user } = useCurrentUser();
 
   const {
     data: featuredData,
@@ -146,6 +147,7 @@ function FeaturedGamesSection() {
       <GameCarousel
         games={featuredData.games}
         onGameSelect={handleGameSelect}
+        userId={user?.id}
         showDots
         autoPlay
         autoPlayInterval={6000}
@@ -162,6 +164,7 @@ function TrendingGamesSection() {
   const router = useRouter();
   const sectionRef = useRef<HTMLElement>(null);
   const isVisible = useIntersectionObserver(sectionRef);
+  const { data: user } = useCurrentUser();
 
   const {
     data: trendingData,
@@ -193,6 +196,7 @@ function TrendingGamesSection() {
         <GameCarousel
           games={trendingData.games}
           onGameSelect={handleGameSelect}
+          userId={user?.id}
           showDots
         />
       )}
@@ -248,6 +252,7 @@ function UserLibrarySection() {
         <GameCarousel
           games={libraryData?.games ?? []}
           onGameSelect={handleGameSelect}
+          userId={user?.id}
           showDots
         />
       )}

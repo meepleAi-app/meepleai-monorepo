@@ -676,7 +676,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
         yearPublished: entry.gameYearPublished ?? undefined,
         addedAt: entry.addedAt,
         playCount: 0,
-        hasPdf: entry.hasPdfDocuments,
+        hasPdf: entry.hasKb,
         hasActiveChat: false,
         chatCount: 0,
         status: stateToStatus[entry.currentState] ?? 'owned',
@@ -692,7 +692,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
       title: entry.gameTitle,
       subtitle: entry.gamePublisher ?? undefined,
       imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
-      hasPdfDocuments: entry.hasPdfDocuments,
+      hasKb: entry.hasKb,
     }));
   }, [libraryData]);
 

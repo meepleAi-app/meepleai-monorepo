@@ -107,7 +107,7 @@ export function GameSelector({
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-orange-500" />
               <span>{selectedGame.gameTitle}</span>
-              {selectedGame.hasPdfDocuments && (
+              {selectedGame.hasKb && (
                 <span className="text-xs text-green-600 dark:text-green-400">📚</span>
               )}
             </div>
@@ -155,7 +155,7 @@ export function GameSelector({
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {game.hasPdfDocuments && (
+                    {game.hasKb && (
                       <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300">
                         📚 Rulebook
                       </span>

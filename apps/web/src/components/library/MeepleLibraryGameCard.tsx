@@ -212,7 +212,7 @@ export function MeepleLibraryGameCard({
       onClick: () => {
         window.location.href = `/chat/new?game=${game.gameId}`;
       },
-      hidden: !game.hasPdfDocuments,
+      hidden: !game.hasKb,
     },
     {
       icon: Settings,
@@ -239,8 +239,8 @@ export function MeepleLibraryGameCard({
       icon: Bot,
       label: 'Chiedi all\'Agent',
       onClick: () => onAskAgent(game.gameId),
-      disabled: !game.hasPdfDocuments,
-      hidden: !game.hasPdfDocuments,
+      disabled: !game.hasKb,
+      hidden: !game.hasKb,
     },
     {
       icon: Trash2,
@@ -267,10 +267,14 @@ export function MeepleLibraryGameCard({
     });
   }
 
-  // Add PDF status if documents available
-  if (game.hasPdfDocuments) {
+  // Add KB status if documents available
+  if (game.hasKb) {
     metadata.push({
-      label: '📄 PDF',
+      label: game.kbCardCount > 1 ? `📄 ${game.kbIndexedCount}/${game.kbCardCount} KB` : '📄 KB',
+    });
+  } else if (game.kbProcessingCount > 0) {
+    metadata.push({
+      label: '⏳ KB in elaborazione',
     });
   }
 

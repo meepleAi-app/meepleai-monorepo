@@ -100,7 +100,7 @@ const mockLibraryResponse = {
       id: 'entry-1', userId: 'u-1', gameId: 'game-1', gameTitle: 'Catan',
       gamePublisher: 'Kosmos', gameYearPublished: 1995, gameIconUrl: null, gameImageUrl: null,
       addedAt: '2024-01-01T00:00:00Z', notes: null, isFavorite: true, currentState: 'Owned',
-      stateChangedAt: null, stateNotes: null, hasPdfDocuments: true,
+      stateChangedAt: null, stateNotes: null, hasKb: true, kbCardCount: 1, kbIndexedCount: 1, kbProcessingCount: 0, agentIsOwned: true,
     },
   ],
   page: 1, pageSize: 100, totalCount: 1, totalPages: 1,

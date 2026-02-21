@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
@@ -45,15 +46,30 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             cancellationToken
         ).ConfigureAwait(false);
 
-        // Batch load: Get all GameIds that have PDF documents (single query)
+        // Issue #4998: Batch load KB stats per game (replaces HasPdfDocuments with granular KB fields)
+        // ProcessingState is stored as string in DB, so we group in memory to avoid EF Core translation issues.
         var gameIds = entries.Select(e => e.GameId).ToList();
-        var gameIdsWithPdfs = await _dbContext.PdfDocuments
+        var pdfDocumentsRaw = await _dbContext.PdfDocuments
             .Where(p => gameIds.Contains(p.GameId))
-            .Select(p => p.GameId)
-            .Distinct()
+            .Select(p => new { p.GameId, p.ProcessingState })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var pdfGameSet = gameIdsWithPdfs.ToHashSet();
+
+        // ProcessingState is stored as the enum member name (e.g., "Ready", "Failed")
+        // because PdfDocumentEntity.ProcessingState is a string property (HasConversion<string>()).
+        var kbStatsByGame = pdfDocumentsRaw
+            .GroupBy(p => p.GameId)
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    KbCardCount = g.Count(),
+                    KbIndexedCount = g.Count(p => string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal)),
+                    KbProcessingCount = g.Count(p =>
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal) &&
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal) &&
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Pending), StringComparison.Ordinal)),
+                });
 
         // Batch load: Get all SharedGames in a single query (prevents N+1)
         var sharedGames = await _sharedGameRepository.GetByIdsAsync(gameIds, cancellationToken).ConfigureAwait(false);
@@ -74,6 +90,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             // Try SharedGame first (most common)
             if (sharedGames.TryGetValue(entry.GameId, out var sharedGame))
             {
+                // Issue #4998: Compute KB stats for this game
+                kbStatsByGame.TryGetValue(entry.GameId, out var kbStats);
                 entryDtos.Add(new UserLibraryEntryDto(
                     Id: entry.Id,
                     UserId: entry.UserId,
@@ -89,7 +107,11 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     CurrentState: entry.CurrentState.Value.ToString(),
                     StateChangedAt: entry.CurrentState.ChangedAt,
                     StateNotes: entry.CurrentState.StateNotes,
-                    HasPdfDocuments: pdfGameSet.Contains(entry.GameId)
+                    HasKb: kbStats?.KbIndexedCount > 0,
+                    KbCardCount: kbStats?.KbCardCount ?? 0,
+                    KbIndexedCount: kbStats?.KbIndexedCount ?? 0,
+                    KbProcessingCount: kbStats?.KbProcessingCount ?? 0,
+                    AgentIsOwned: true // Always true in library context: user owns all their library agents
                 ));
             }
             // Check PrivateGame entries (batch-loaded above)
@@ -97,6 +119,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                      libraryEntity.PrivateGame != null)
             {
                 var privateGame = libraryEntity.PrivateGame;
+                // Issue #4998: Compute KB stats for this private game
+                kbStatsByGame.TryGetValue(libraryEntity.PrivateGameId!.Value, out var privateKbStats);
                 entryDtos.Add(new UserLibraryEntryDto(
                     Id: entry.Id,
                     UserId: entry.UserId,
@@ -112,7 +136,11 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     CurrentState: entry.CurrentState.Value.ToString(),
                     StateChangedAt: entry.CurrentState.ChangedAt,
                     StateNotes: entry.CurrentState.StateNotes,
-                    HasPdfDocuments: pdfGameSet.Contains(libraryEntity.PrivateGameId!.Value)
+                    HasKb: privateKbStats?.KbIndexedCount > 0,
+                    KbCardCount: privateKbStats?.KbCardCount ?? 0,
+                    KbIndexedCount: privateKbStats?.KbIndexedCount ?? 0,
+                    KbProcessingCount: privateKbStats?.KbProcessingCount ?? 0,
+                    AgentIsOwned: true // Always true in library context
                 ));
             }
         }

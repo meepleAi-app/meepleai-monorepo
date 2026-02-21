@@ -45,6 +45,12 @@ export interface FinalizeSessionRequest {
 }
 
 /**
+ * Active tool identifier. Base tools have fixed IDs; custom toolkit tools use their name.
+ * Issue #4973: Session Tool Rail. Kept as a shared type for SessionToolRail/SessionToolLayout.
+ */
+export type ToolId = 'scoreboard' | 'turn-order' | 'dice' | 'whiteboard' | string;
+
+/**
  * Session Store State
  */
 export interface SessionStore {

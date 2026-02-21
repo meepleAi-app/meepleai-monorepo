@@ -187,3 +187,53 @@
 .session-crown-shimmer {
   animation: crown-shimmer 2s ease-in-out infinite;
 }
+
+/* ===================================================================
+   Session Tool Rail + Layout (Issue #4973)
+   =================================================================== */
+
+/* Tool fade animation on tool change */
+@keyframes tool-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tool-fade {
+  animation: tool-fade 0.18s ease-out both;
+}
+
+/* Toolkit layout root */
+.session-toolkit-layout {
+  /* Ensure full viewport coverage with sticky header */
+  height: 100dvh;
+}
+
+/* Side rail: subtle wood-grain left border */
+.session-tool-rail {
+  border-right: 2px solid;
+  border-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-stone-300, #d6d3d1) 20%,
+    var(--color-stone-300, #d6d3d1) 80%,
+    transparent
+  ) 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .session-tool-rail {
+    border-image: linear-gradient(
+      to bottom,
+      transparent,
+      var(--color-stone-700, #44403c) 20%,
+      var(--color-stone-700, #44403c) 80%,
+      transparent
+    ) 1;
+  }
+}

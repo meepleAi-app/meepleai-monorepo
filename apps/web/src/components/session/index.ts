@@ -1,6 +1,12 @@
 // Session Toolkit Components - Barrel Export
 
 export { SessionHeader } from './SessionHeader';
+export { ToolRail, BASE_TOOLS } from './ToolRail';
+export { SessionToolLayout } from './SessionToolLayout';
+export { TurnIndicatorBar } from './TurnIndicatorBar';
+export type { ToolItem, ToolRailProps } from './ToolRail';
+export type { SessionToolLayoutProps } from './SessionToolLayout';
+export type { TurnIndicatorBarProps } from './TurnIndicatorBar';
 export { ParticipantCard } from './ParticipantCard';
 export { ScoreInput } from './ScoreInput';
 export { Scoreboard } from './Scoreboard';

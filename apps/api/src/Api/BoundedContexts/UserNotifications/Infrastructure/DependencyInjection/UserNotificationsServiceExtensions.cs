@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 
+
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
 
 /// <summary>
@@ -28,6 +29,7 @@ internal static class UserNotificationsServiceExtensions
 
         // Register services
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>(); // Issue #4417
+        services.AddSingleton<IUserNotificationBroadcaster, InMemoryUserNotificationBroadcaster>(); // Issue #5005
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

@@ -1,3 +1,5 @@
+using Api.BoundedContexts.UserNotifications.Application.DTOs;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -16,9 +18,15 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 /// </summary>
 internal class NotificationRepository : RepositoryBase, INotificationRepository
 {
-    public NotificationRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+    private readonly IUserNotificationBroadcaster _broadcaster;
+
+    public NotificationRepository(
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        IUserNotificationBroadcaster broadcaster)
         : base(dbContext, eventCollector)
     {
+        _broadcaster = broadcaster;
     }
 
     public async Task<Notification?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -91,6 +99,10 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
 
         // Record metric for notification creation
         MeepleAiMetrics.RecordNotificationCreated(notification.Type.Value, notification.Severity.Value);
+
+        // Broadcast to connected SSE clients (Issue #5005).
+        // Fires before UnitOfWork.SaveChangesAsync — matches metric recording pattern.
+        _broadcaster.Publish(notification.UserId, MapToDto(notification));
     }
 
     public async Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)
@@ -138,6 +150,22 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             ReadAt = notification.ReadAt
         };
     }
+
+    // Domain → DTO mapping (used for SSE broadcasting)
+    private static NotificationDto MapToDto(Notification notification) =>
+        new(
+            notification.Id,
+            notification.UserId,
+            notification.Type.Value,
+            notification.Severity.Value,
+            notification.Title,
+            notification.Message,
+            notification.Link,
+            notification.Metadata,
+            notification.IsRead,
+            notification.CreatedAt,
+            notification.ReadAt
+        );
 
     // Persistence → Domain mapping
     private static Notification MapToDomain(NotificationEntity entity)

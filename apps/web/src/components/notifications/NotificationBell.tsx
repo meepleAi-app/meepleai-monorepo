@@ -30,10 +30,8 @@ export function NotificationBell() {
   const fetchUnreadCount = useNotificationStore(state => state.fetchUnreadCount);
   const [isOpen, setIsOpen] = useState(false);
 
-  // SSE real-time notifications (Issue #4414, #4736)
-  // TODO: Re-enable when backend SSE endpoint /api/v1/notifications/stream is implemented
-  // The endpoint does not exist yet — enabling it causes 5 repeated 404 errors on mount.
-  useNotificationSSE({ enabled: false });
+  // SSE real-time notifications (Issue #4414, #4736, #5005)
+  useNotificationSSE({ enabled: true });
 
   // Fetch unread count on mount
   useEffect(() => {

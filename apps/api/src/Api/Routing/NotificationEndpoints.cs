@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.BoundedContexts.UserNotifications.Application.DTOs;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
+using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +18,16 @@ namespace Api.Routing;
 /// </summary>
 internal static class NotificationEndpoints
 {
+    private static readonly JsonSerializerOptions SseJsonOptions =
+        new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     public static RouteGroupBuilder MapNotificationEndpoints(this RouteGroupBuilder group)
     {
         MapGetNotificationsEndpoint(group);
         MapGetUnreadCountEndpoint(group);
         MapMarkNotificationReadEndpoint(group);
         MapMarkAllNotificationsReadEndpoint(group);
+        MapNotificationStreamEndpoint(group);  // Issue #5005
 
         return group;
     }
@@ -145,6 +151,71 @@ internal static class NotificationEndpoints
         .WithTags("Notifications")
         .WithSummary("Mark all notifications as read")
         .WithDescription("Bulk operation to mark all unread notifications as read for authenticated user. Returns count of updated notifications. Rate limited: 10 requests per minute.");
+    }
+
+    private static void MapNotificationStreamEndpoint(RouteGroupBuilder group)
+    {
+        // SSE endpoint: real-time notification delivery (Issue #5005)
+        group.MapGet("/notifications/stream", async (
+            IUserNotificationBroadcaster broadcaster,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            var response = context.Response;
+            response.Headers["Content-Type"] = "text/event-stream";
+            response.Headers["Cache-Control"] = "no-cache";
+            response.Headers["Connection"] = "keep-alive";
+            response.Headers["X-Accel-Buffering"] = "no";
+
+            await response.Body.FlushAsync(ct).ConfigureAwait(false);
+
+            using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+            var heartbeatTask = Task.Run(async () =>
+            {
+                while (!heartbeatCts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
+                        await response.WriteAsync(": heartbeat\n\n", heartbeatCts.Token).ConfigureAwait(false);
+                        await response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+            }, heartbeatCts.Token);
+
+            try
+            {
+                await foreach (var notification in broadcaster.SubscribeAsync(userId, ct).ConfigureAwait(false))
+                {
+                    var json = JsonSerializer.Serialize(notification, SseJsonOptions);
+                    await response.WriteAsync($"event: notification\ndata: {json}\n\n", ct).ConfigureAwait(false);
+                    await response.Body.FlushAsync(ct).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                await heartbeatCts.CancelAsync().ConfigureAwait(false);
+                await heartbeatTask.ConfigureAwait(false);
+            }
+
+            return Results.Empty;
+        })
+        .RequireAuthenticatedUser()
+        .Produces(200)
+        .WithTags("Notifications")
+        .WithSummary("SSE stream for real-time notifications")
+        .WithDescription("Server-Sent Events stream delivering real-time notifications to authenticated users. Sends 30-second heartbeat comments to keep the connection alive.");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

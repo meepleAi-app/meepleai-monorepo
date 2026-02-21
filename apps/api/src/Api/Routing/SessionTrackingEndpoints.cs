@@ -90,6 +90,11 @@ internal static class SessionTrackingEndpoints
         // Player action endpoints (Issue #4765)
         MapMarkPlayerReadyEndpoint(group);
         MapKickParticipantEndpoint(group);
+        MapUpdatePlayerScoreEndpoint(group);
+        MapRollSessionDiceEndpoint(group);
+        MapDrawSessionCardEndpoint(group);
+        MapSessionTimerActionEndpoint(group);
+        MapSendChatActionEndpoint(group);
 
         // Session join + role management endpoints (Issue #4766)
         MapJoinSessionByCodeEndpoint(group);
@@ -1627,6 +1632,172 @@ internal static class SessionTrackingEndpoints
         .Produces(404)
         .Produces(409);
     }
+
+    private static void MapUpdatePlayerScoreEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/actions/score", async (
+            Guid sessionId,
+            UpdatePlayerScoreRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new UpdatePlayerScoreCommand(
+                sessionId,
+                request.ParticipantId,
+                userId,
+                request.ScoreValue,
+                request.RoundNumber,
+                request.Category);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("UpdatePlayerScore")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Update player score")
+        .WithDescription("Submits a score delta for the specified participant. Requires Player role. Handles optimistic concurrency conflicts.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+    }
+
+    private static void MapRollSessionDiceEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/actions/roll-dice", async (
+            Guid sessionId,
+            RollSessionDiceRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new RollSessionDiceCommand(sessionId, request.ParticipantId, userId, request.Formula, request.Label);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("RollSessionDice")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Roll dice")
+        .WithDescription("Rolls dice using the given formula. Requires Player role. Result is broadcast to all participants.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+    }
+
+    private static void MapDrawSessionCardEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/actions/draw-card", async (
+            Guid sessionId,
+            DrawSessionCardRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new DrawSessionCardCommand(sessionId, request.DeckId, request.ParticipantId, userId, request.Count);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("DrawSessionCard")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Draw cards from a deck")
+        .WithDescription("Draws one or more cards from a session deck. Requires Player role.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409);
+    }
+
+    private static void MapSessionTimerActionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/actions/timer", async (
+            Guid sessionId,
+            SessionTimerActionRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new SessionTimerActionCommand(
+                sessionId,
+                request.ParticipantId ?? userId,
+                userId,
+                request.Action,
+                request.ParticipantName ?? string.Empty,
+                request.DurationSeconds ?? 60);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("SessionTimerAction")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Control session timer")
+        .WithDescription("Start, pause, resume, or reset the session countdown timer. Requires Player role.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(409);
+    }
+
+    private static void MapSendChatActionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/actions/chat", async (
+            Guid sessionId,
+            SendChatActionRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+
+            var command = new SendChatActionCommand(
+                sessionId,
+                userId,
+                userId,
+                request.Content,
+                request.TurnNumber,
+                request.MentionsJson);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("SendChatAction")
+        .WithTags("SessionTracking", "PlayerActions")
+        .WithSummary("Send a chat message")
+        .WithDescription("Sends a chat message. Available to all participants including spectators.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
 }
 
 /// <summary>
@@ -1643,3 +1814,22 @@ public sealed record JoinSessionByCodeRequest(string DisplayName);
 /// Request body for assigning a participant role.
 /// </summary>
 public sealed record AssignParticipantRoleRequest(Api.BoundedContexts.SessionTracking.Domain.Enums.ParticipantRole NewRole);
+
+/// <summary>Request body for updating a player score.</summary>
+public sealed record UpdatePlayerScoreRequest(Guid ParticipantId, decimal ScoreValue, int? RoundNumber = null, string? Category = null);
+
+/// <summary>Request body for rolling dice.</summary>
+public sealed record RollSessionDiceRequest(Guid ParticipantId, string Formula, string? Label = null);
+
+/// <summary>Request body for drawing cards from a deck.</summary>
+public sealed record DrawSessionCardRequest(Guid ParticipantId, Guid DeckId, int Count = 1);
+
+/// <summary>Request body for controlling the session timer.</summary>
+public sealed record SessionTimerActionRequest(
+    Api.BoundedContexts.SessionTracking.Application.Commands.TimerAction Action,
+    string? ParticipantName = null,
+    int? DurationSeconds = null,
+    Guid? ParticipantId = null);
+
+/// <summary>Request body for sending a chat action. SenderId is derived from the authenticated user.</summary>
+public sealed record SendChatActionRequest(string Content, int? TurnNumber = null, string? MentionsJson = null);

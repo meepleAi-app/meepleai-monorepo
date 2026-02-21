@@ -104,6 +104,8 @@ import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
 // Issue #4361: Agent-specific display components
 // Issue #4400: ChatSession-specific display components
+// Issue #5001: Document/KB-specific display components
+import { DocumentStatusBadge, type DocumentIndexingStatus } from './meeple-card-features/DocumentStatusBadge';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -284,6 +286,11 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   agentStats?: AgentStats;
   /** Agent capabilities list (e.g., ['rag', 'vision', 'code']) */
   capabilities?: string[];
+
+  // ========== DOCUMENT / KB ENTITY FEATURES (Issue #5001) ==========
+
+  /** Document KB indexing status (processing/indexed/failed/none) */
+  documentStatus?: DocumentIndexingStatus;
 
   // ========== CHAT SESSION ENTITY FEATURES (Issue #4400) ==========
 
@@ -969,6 +976,8 @@ export const MeepleCard = React.memo(function MeepleCard({
   onSnapshotSelect,
   isTimeTravelMode,
   onTimeTravelToggle,
+  // Issue #5001: Document/KB entity features
+  documentStatus,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1269,6 +1278,13 @@ export const MeepleCard = React.memo(function MeepleCard({
             max={ratingMax}
             className={cn('mb-2', variant === 'hero' && 'text-white')}
           />
+        )}
+
+        {/* Document/KB-specific info (Issue #5001) */}
+        {entity === 'document' && variant !== 'compact' && documentStatus && (
+          <div className="mb-2" data-testid="document-info-section">
+            <DocumentStatusBadge status={documentStatus} size="sm" />
+          </div>
         )}
 
         {/* Agent-specific info (Issue #4361) */}
@@ -1592,6 +1608,7 @@ export { MeepleCardSkeleton, entityColors };
 export type { MeepleCardMetadata as MeepleMetadata, MeepleCardAction as MeepleAction };
 export type { MeepleCardFlipData } from './meeple-card-features/FlipCard';
 export type { AgentStatus } from './meeple-card-features/AgentStatusBadge';
+export type { DocumentIndexingStatus } from './meeple-card-features/DocumentStatusBadge';
 export type { AgentStats } from './meeple-card-features/AgentStatsDisplay';
 export type { ModelParameters } from './meeple-card-features/AgentModelInfo';
 export type { ChatStatus } from './meeple-card-features/ChatStatusBadge';

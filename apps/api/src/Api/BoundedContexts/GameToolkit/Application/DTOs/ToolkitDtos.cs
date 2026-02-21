@@ -5,11 +5,15 @@ namespace Api.BoundedContexts.GameToolkit.Application.DTOs;
 
 internal record GameToolkitDto(
     Guid Id,
-    Guid GameId,
+    Guid? GameId,
+    Guid? PrivateGameId,
     string Name,
     int Version,
     Guid CreatedByUserId,
     bool IsPublished,
+    bool OverridesTurnOrder,
+    bool OverridesScoreboard,
+    bool OverridesDiceSet,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     IReadOnlyList<DiceToolDto> DiceTools,
@@ -92,12 +96,19 @@ internal record StateTemplateDto(
 
 // Request DTOs
 internal record CreateToolkitRequest(
-    Guid GameId,
-    string Name
+    Guid? GameId,
+    Guid? PrivateGameId,
+    string Name,
+    bool OverridesTurnOrder = false,
+    bool OverridesScoreboard = false,
+    bool OverridesDiceSet = false
 );
 
 internal record UpdateToolkitRequest(
-    string? Name
+    string? Name,
+    bool? OverridesTurnOrder = null,
+    bool? OverridesScoreboard = null,
+    bool? OverridesDiceSet = null
 );
 
 internal record AddDiceToolRequest(

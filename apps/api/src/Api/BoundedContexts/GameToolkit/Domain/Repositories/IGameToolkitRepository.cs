@@ -7,6 +7,9 @@ internal interface IGameToolkitRepository : IRepository<Domain.Entities.GameTool
     Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetByGameIdAsync(
         Guid gameId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetByPrivateGameIdAsync(
+        Guid privateGameId, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetPublishedAsync(
         CancellationToken cancellationToken = default);
 }

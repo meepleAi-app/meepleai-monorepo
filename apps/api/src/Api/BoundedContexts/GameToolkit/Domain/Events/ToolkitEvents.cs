@@ -5,13 +5,15 @@ namespace Api.BoundedContexts.GameToolkit.Domain.Events;
 internal sealed class ToolkitCreatedEvent : DomainEventBase
 {
     public Guid ToolkitId { get; }
-    public Guid GameId { get; }
+    public Guid? GameId { get; }
+    public Guid? PrivateGameId { get; }
     public string Name { get; }
 
-    public ToolkitCreatedEvent(Guid toolkitId, Guid gameId, string name)
+    public ToolkitCreatedEvent(Guid toolkitId, Guid? gameId, Guid? privateGameId, string name)
     {
         ToolkitId = toolkitId;
         GameId = gameId;
+        PrivateGameId = privateGameId;
         Name = name;
     }
 }

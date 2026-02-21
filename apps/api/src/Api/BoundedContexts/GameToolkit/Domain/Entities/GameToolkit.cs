@@ -15,13 +15,19 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     private readonly List<TimerToolConfig> _timerTools = new();
     private readonly List<CounterToolConfig> _counterTools = new();
 
-    public Guid GameId { get; private set; }
+    public Guid? GameId { get; private set; }
+    public Guid? PrivateGameId { get; private set; }
     public string Name { get; private set; }
     public int Version { get; private set; }
     public Guid CreatedByUserId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public bool IsPublished { get; private set; }
+
+    // Override flags — when set, the corresponding base session tool is hidden
+    public bool OverridesTurnOrder { get; private set; }
+    public bool OverridesScoreboard { get; private set; }
+    public bool OverridesDiceSet { get; private set; }
 
     // Tool collections (read-only external access)
     public IReadOnlyList<DiceToolConfig> DiceTools => _diceTools.AsReadOnly();
@@ -41,16 +47,27 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
 #pragma warning restore CS8618
 
     /// <summary>
-    /// Factory constructor - creates a new toolkit for a game.
+    /// Factory constructor - creates a new toolkit linked to either a SharedGame or a PrivateGame.
+    /// Exactly one of gameId or privateGameId must be non-empty. Issue #4972.
     /// </summary>
     public GameToolkit(
         Guid id,
-        Guid gameId,
+        Guid? gameId,
         string name,
-        Guid createdByUserId) : base(id)
+        Guid createdByUserId,
+        Guid? privateGameId = null,
+        bool overridesTurnOrder = false,
+        bool overridesScoreboard = false,
+        bool overridesDiceSet = false) : base(id)
     {
-        if (gameId == Guid.Empty)
-            throw new ArgumentException("GameId cannot be empty", nameof(gameId));
+        bool hasGameId = gameId.HasValue && gameId != Guid.Empty;
+        bool hasPrivateGameId = privateGameId.HasValue && privateGameId != Guid.Empty;
+
+        if (hasGameId == hasPrivateGameId)
+            throw new ArgumentException(
+                "Exactly one of gameId or privateGameId must be provided (mutually exclusive).",
+                nameof(gameId));
+
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Toolkit name cannot be empty", nameof(name));
         if (name.Length > 200)
@@ -58,15 +75,19 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
         if (createdByUserId == Guid.Empty)
             throw new ArgumentException("CreatedByUserId cannot be empty", nameof(createdByUserId));
 
-        GameId = gameId;
+        GameId = hasGameId ? gameId : null;
+        PrivateGameId = hasPrivateGameId ? privateGameId : null;
         Name = name.Trim();
         Version = 1;
         CreatedByUserId = createdByUserId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
         IsPublished = false;
+        OverridesTurnOrder = overridesTurnOrder;
+        OverridesScoreboard = overridesScoreboard;
+        OverridesDiceSet = overridesDiceSet;
 
-        AddDomainEvent(new ToolkitCreatedEvent(id, gameId, Name));
+        AddDomainEvent(new ToolkitCreatedEvent(id, GameId, PrivateGameId, Name));
     }
 
     // ========================================================================
@@ -85,6 +106,19 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
         Name = name.Trim();
         UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new ToolkitUpdatedEvent(Id, Name));
+    }
+
+    /// <summary>
+    /// Updates the override flags that hide base session tools when this custom toolkit is active.
+    /// Issue #4972.
+    /// </summary>
+    public void UpdateOverrideFlags(bool overridesTurnOrder, bool overridesScoreboard, bool overridesDiceSet,
+        TimeProvider? timeProvider = null)
+    {
+        OverridesTurnOrder = overridesTurnOrder;
+        OverridesScoreboard = overridesScoreboard;
+        OverridesDiceSet = overridesDiceSet;
+        UpdatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
     }
 
     public void Publish()

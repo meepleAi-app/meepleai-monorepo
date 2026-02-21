@@ -6,14 +6,21 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.GameToolkit.Application.Commands;
 
 internal record CreateToolkitCommand(
-    Guid GameId,
+    Guid? GameId,
     string Name,
-    Guid CreatedByUserId
+    Guid CreatedByUserId,
+    Guid? PrivateGameId = null,
+    bool OverridesTurnOrder = false,
+    bool OverridesScoreboard = false,
+    bool OverridesDiceSet = false
 ) : ICommand<GameToolkitDto>;
 
 internal record UpdateToolkitCommand(
     Guid ToolkitId,
-    string? Name
+    string? Name,
+    bool? OverridesTurnOrder = null,
+    bool? OverridesScoreboard = null,
+    bool? OverridesDiceSet = null
 ) : ICommand<GameToolkitDto>;
 
 internal record PublishToolkitCommand(

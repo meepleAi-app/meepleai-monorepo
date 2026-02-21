@@ -39,6 +39,15 @@ internal static class GameToolkitRoutes
         .WithSummary("Get all toolkits for a game")
         .Produces<IReadOnlyList<GameToolkitDto>>(200);
 
+        toolkits.MapGet("/by-private-game/{privateGameId:guid}", async (Guid privateGameId, IMediator m) =>
+        {
+            var result = await m.Send(new GetToolkitsByPrivateGameQuery(privateGameId)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetToolkitsByPrivateGame")
+        .WithSummary("Get all toolkits for a private game")
+        .Produces<IReadOnlyList<GameToolkitDto>>(200);
+
         toolkits.MapGet("/published", async (IMediator m) =>
         {
             var result = await m.Send(new GetPublishedToolkitsQuery()).ConfigureAwait(false);
@@ -55,7 +64,10 @@ internal static class GameToolkitRoutes
             var userId = ctx.User.GetUserId();
             if (userId == Guid.Empty)
                 return Results.Unauthorized();
-            var command = new CreateToolkitCommand(request.GameId, request.Name, userId);
+            var command = new CreateToolkitCommand(
+                request.GameId, request.Name, userId,
+                request.PrivateGameId, request.OverridesTurnOrder,
+                request.OverridesScoreboard, request.OverridesDiceSet);
             var result = await m.Send(command).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-toolkits/{result.Id}", result);
         })
@@ -65,7 +77,9 @@ internal static class GameToolkitRoutes
 
         toolkits.MapPut("/{id:guid}", async (Guid id, UpdateToolkitRequest request, IMediator m) =>
         {
-            var command = new UpdateToolkitCommand(id, request.Name);
+            var command = new UpdateToolkitCommand(
+                id, request.Name, request.OverridesTurnOrder,
+                request.OverridesScoreboard, request.OverridesDiceSet);
             var result = await m.Send(command).ConfigureAwait(false);
             return Results.Ok(result);
         })

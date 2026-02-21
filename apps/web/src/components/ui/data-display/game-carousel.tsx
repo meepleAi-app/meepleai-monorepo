@@ -58,8 +58,8 @@ export interface CarouselGame {
   metadata?: MeepleCardMetadata[];
   badge?: string;
   description?: string;
-  /** Whether the game has PDF documents for RAG-based chat */
-  hasPdfDocuments?: boolean;
+  /** Whether the game has an indexed knowledge base for RAG-based chat */
+  hasKb?: boolean;
 }
 
 /**
@@ -564,7 +564,7 @@ export const GameCarousel = React.memo(function GameCarousel({
     entity: 'game',
     id: fallbackId,
     userId,
-    data: { hasPdfDocuments: centerGame?.hasPdfDocuments ?? false },
+    data: { hasKb: centerGame?.hasKb ?? false },
   });
 
   // Support controlled and uncontrolled sort modes

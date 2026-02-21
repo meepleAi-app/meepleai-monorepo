@@ -201,7 +201,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
           </DropdownMenu>
 
           {/* Rules PDF Button */}
-          {gameDetail.hasPdfDocuments && (
+          {gameDetail.hasCustomPdf && (
             <Button
               variant="outline"
               className="border-[rgba(45,42,38,0.12)] font-quicksand font-semibold text-[#6B665C] hover:bg-[rgba(45,42,38,0.04)] hover:text-[#2D2A26]"

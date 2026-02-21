@@ -299,14 +299,23 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   /** Navigation links to related entities (rendered as icon footer) */
   navigateTo?: import('@/config/entity-navigation').ResolvedNavigationLink[];
 
-  // ========== AGENT ACTION FOOTER (Issue #4777) ==========
+  // ========== AGENT ACTION FOOTER (Issue #4777, #4999) ==========
 
   /** Whether this game entity already has an agent */
   hasAgent?: boolean;
   /** Agent ID for chat navigation (when hasAgent is true) */
   agentId?: string;
+  /** Whether this game entity has a KB (at least one indexed document) */
+  hasKb?: boolean;
   /** Callback to open agent creation wizard */
   onCreateAgent?: () => void;
+  /** Callback to open add-to-collection wizard (replaces direct add) */
+  onAddToCollection?: () => void;
+
+  // ========== DOCUMENT / KB ENTITY FEATURES (Issue #5001) ==========
+
+  /** KB document indexing status (drives DocumentStatusBadge) */
+  documentStatus?: import('./meeple-card-features/DocumentStatusBadge').DocumentIndexingStatus;
 
   // ========== SESSION ENTITY FEATURES (Issue #4751) ==========
 

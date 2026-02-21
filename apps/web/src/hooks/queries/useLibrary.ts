@@ -716,7 +716,7 @@ export interface LibraryGameDetail {
   stateChangedAt: string | null;
   stateNotes: string | null;
   isAvailableForPlay: boolean;
-  hasPdfDocuments: boolean;
+  hasCustomPdf: boolean;
   // Game metadata
   gameTitle: string;
   gamePublisher: string | null;
@@ -796,7 +796,7 @@ export function useLibraryGameDetail(
         stateChangedAt: gameDetail.stateChangedAt,
         stateNotes: gameDetail.stateNotes,
         isAvailableForPlay: gameDetail.isAvailableForPlay,
-        hasPdfDocuments: !!gameDetail.customPdf,
+        hasCustomPdf: !!gameDetail.customPdf,
         // Game metadata
         gameTitle: gameDetail.gameTitle,
         gamePublisher: gameDetail.gamePublisher,

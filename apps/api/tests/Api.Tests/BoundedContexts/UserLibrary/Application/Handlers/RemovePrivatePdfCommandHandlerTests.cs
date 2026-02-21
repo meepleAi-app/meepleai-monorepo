@@ -175,7 +175,7 @@ public class RemovePrivatePdfCommandHandlerTests
         result.Id.Should().Be(entryId);
         result.UserId.Should().Be(userId);
         result.GameId.Should().Be(gameId);
-        result.HasPdfDocuments.Should().BeFalse();
+        result.HasKb.Should().BeFalse();
 
         _mockLibraryRepository.Verify(r => r.UpdateAsync(entry, It.IsAny<CancellationToken>()), Times.Once);
         _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

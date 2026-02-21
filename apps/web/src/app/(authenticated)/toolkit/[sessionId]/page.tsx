@@ -11,17 +11,19 @@ import {
   SessionToolLayout,
   Scoreboard,
   TurnIndicatorBar,
-  type SyncStatus,
+  TurnOrderTool,
 } from '@/components/session';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
+import { useTurnOrder } from '@/lib/hooks/useTurnOrder';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 
 /**
- * Active Session Page — Tool Rail Layout (Issue #4973)
+ * Active Session Page — Tool Rail Layout (Issues #4973, #4975)
  *
- * New layout: collapsible side rail (desktop) / bottom nav (mobile).
- * Tool area renders the active tool (scoreboard default until #4974).
- * TurnIndicatorBar is a placeholder until #4975 wires TurnOrder state.
+ * Layout: collapsible side rail (desktop) / bottom nav (mobile).
+ * TurnIndicatorBar wired to live TurnOrder state (Issue #4975).
+ * TurnOrderTool wired to useTurnOrder hook (Issue #4975).
+ * Remaining tools: dice (#4974), whiteboard (#4977).
  */
 export default function ActiveSessionPage() {
   const params = useParams();
@@ -37,7 +39,6 @@ export default function ActiveSessionPage() {
     scoreboard,
     participants,
     loadSession,
-    updateScore,
     pauseSession,
     resumeSession,
     finalizeSession,
@@ -46,8 +47,17 @@ export default function ActiveSessionPage() {
     error,
   } = useSessionStore();
 
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [activeTool, setActiveTool] = useState<string>('scoreboard');
+
+  // ── Turn order (Issue #4975) ─────────────────────────────────────────────────
+  const {
+    turnOrder,
+    isLoading: isTurnLoading,
+    isAdvancing,
+    error: turnError,
+    advance: advanceTurn,
+    reset: resetTurnOrder,
+  } = useTurnOrder({ sessionId });
 
   // Load session details on mount
   useEffect(() => {
@@ -62,7 +72,7 @@ export default function ActiveSessionPage() {
     void load();
   }, [sessionId, loadSession, router]);
 
-  // Initialize SSE connection
+  // Initialize SSE connection (v1 — scores + session lifecycle)
   const { isConnected, error: sseError } = useSessionSync({
     sessionId,
     onScoreUpdate: scoreEntry => {
@@ -77,23 +87,6 @@ export default function ActiveSessionPage() {
     onFinalized: () => toast.success('Session finalized'),
     onError: err => toast.error(`Connection error: ${err.message}`),
   });
-
-  const handleScoreSubmit = async (data: {
-    participantId: string;
-    roundNumber: number | null;
-    category: string | null;
-    scoreValue: number;
-  }) => {
-    setSyncStatus('saving');
-    try {
-      await updateScore(data);
-      setSyncStatus('synced');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-    } catch (err) {
-      setSyncStatus('error');
-      toast.error(err instanceof Error ? err.message : 'Failed to update score');
-    }
-  };
 
   const handlePause = async () => {
     try {
@@ -125,6 +118,10 @@ export default function ActiveSessionPage() {
     }
   };
 
+  // Current user is a session owner if any participant marked isCurrentUser + isOwner
+  const isCurrentUserOwner =
+    participants.find(p => p.isCurrentUser)?.isOwner ?? false;
+
   // Loading state
   if (isLoading || !activeSession || !scoreboard) {
     return (
@@ -146,7 +143,27 @@ export default function ActiveSessionPage() {
     );
   }
 
-  // Compose header: SessionHeader + TurnIndicatorBar
+  // Advance turn handler with toast
+  const handleAdvanceTurn = async () => {
+    try {
+      const updated = await advanceTurn();
+      toast.info(`Turn: ${updated.currentPlayer}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to advance turn');
+    }
+  };
+
+  // Reset turn order handler with toast
+  const handleResetTurnOrder = async () => {
+    try {
+      await resetTurnOrder();
+      toast.info('Ordine di turno reimpostato');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reset turn order');
+    }
+  };
+
+  // Compose header: SessionHeader + TurnIndicatorBar (wired to turn order, Issue #4975)
   const header = (
     <>
       <SessionHeader
@@ -154,45 +171,47 @@ export default function ActiveSessionPage() {
         onPause={activeSession.status === 'Active' ? handlePause : undefined}
         onFinalize={handleFinalize}
       />
-      {/* Turn indicator sub-line — wired to TurnOrder in #4975 */}
       <TurnIndicatorBar
-        activePlayerName={null}
-        roundNumber={null}
-        canEndTurn={false}
+        activePlayerName={turnOrder?.currentPlayer ?? null}
+        roundNumber={turnOrder?.roundNumber ?? null}
+        canEndTurn={!!turnOrder && !isAdvancing}
+        onEndTurn={() => void handleAdvanceTurn()}
       />
     </>
   );
 
-  /**
-   * Tool area content — rendered based on activeTool.
-   * Remaining tools wired in Issue #4974 (Base Toolkit Integration).
-   * syncStatus passed to Scoreboard via unused param until #4974.
-   * @ts-expect-error syncStatus used by ScoreInput (removed in this redesign)
-   */
-  void syncStatus;
-
+  // Tool area content — rendered based on activeTool.
   const toolContent = (() => {
     switch (activeTool) {
       case 'scoreboard':
         return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
+
       case 'turn-order':
         return (
-          <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
-            Turn Order tool — coming in Issue #4975
-          </div>
+          <TurnOrderTool
+            turnOrder={turnOrder}
+            isLoading={isTurnLoading}
+            error={turnError}
+            isHost={isCurrentUserOwner}
+            onAdvanceTurn={handleAdvanceTurn}
+            onResetTurnOrder={handleResetTurnOrder}
+          />
         );
+
       case 'dice':
         return (
           <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
             Dice — coming in Issue #4974
           </div>
         );
+
       case 'whiteboard':
         return (
           <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
             Whiteboard — coming in Issue #4977
           </div>
         );
+
       default:
         return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
     }

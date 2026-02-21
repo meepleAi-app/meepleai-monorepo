@@ -78,7 +78,7 @@ function ToolButton({
       aria-label={tool.label}
       onClick={onClick}
       className={cn(
-        'group flex items-center gap-3 w-full px-3 py-2.5 rounded-lg',
+        'group relative flex items-center gap-3 w-full px-3 py-2.5 rounded-lg',
         'transition-all duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
         isActive

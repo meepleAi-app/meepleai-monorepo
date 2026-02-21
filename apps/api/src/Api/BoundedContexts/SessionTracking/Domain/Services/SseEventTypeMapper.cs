@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using MediatR;
 
@@ -55,6 +56,9 @@ public static class SseEventTypeMapper
         // Media → session:toolkit
         [typeof(SessionMediaUploadedEvent)] = "session:toolkit",
         [typeof(SessionMediaDeletedEvent)] = "session:toolkit",
+
+        // Turn order → session:toolkit (Issue #4970)
+        [typeof(TurnAdvancedEvent)] = "session:toolkit",
     };
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
+using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
@@ -31,6 +32,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<ISessionSnapshotRepository, SessionSnapshotRepository>(); // Issue #4755: SessionSnapshot persistence
         services.AddScoped<IGameReviewRepository, GameReviewRepository>();
         services.AddScoped<IGameStrategyRepository, GameStrategyRepository>();
+        services.AddScoped<ITurnOrderRepository, TurnOrderRepository>(); // Issue #4970: TurnOrder base toolkit
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

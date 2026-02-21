@@ -169,6 +169,7 @@ public class MeepleAiDbContext : DbContext
     // Issue #4754: ToolState for live game sessions
     public DbSet<ToolStateEntity> ToolStates => Set<ToolStateEntity>();
     public DbSet<SessionSnapshotEntity> SessionSnapshots => Set<SessionSnapshotEntity>(); // ISSUE-4755
+    public DbSet<TurnOrderEntity> TurnOrders => Set<TurnOrderEntity>(); // ISSUE-4970: TurnOrder base toolkit
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity> SessionMedia => Set<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>(); // ISSUE-4760
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
@@ -243,6 +244,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(); // ISSUE-4753
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(); // ISSUE-4754
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(); // ISSUE-4755
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.TurnOrder.TurnOrder>(); // ISSUE-4970
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916

@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { GameCreationStep } from '@/app/(authenticated)/admin/wizard/steps/GameCreationStep';
 import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
 import { toast } from '@/components/layout';
+import { PdfProcessingStatus } from '@/components/library/PdfProcessingStatus';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -56,6 +57,9 @@ export function UserWizardClient() {
     pdfFileName: null,
   });
 
+  // Track whether to show PdfProcessingStatus after upload (stays on 'pdf' step)
+  const [showProcessing, setShowProcessing] = useState(false);
+
   // Step 1: Game created
   const handleGameCreated = useCallback((gameId: string, gameName: string) => {
     setState(prev => ({ ...prev, gameId, gameName, currentStep: 'pdf' }));
@@ -67,9 +71,16 @@ export function UserWizardClient() {
     router.push('/library/private');
   }, [router, state.gameName]);
 
-  // Step 2: PDF uploaded
+  // Step 2: PDF uploaded — show processing status (user can continue to agent any time)
   const handlePdfUploaded = useCallback((pdfId: string, fileName: string) => {
-    setState(prev => ({ ...prev, pdfId, pdfFileName: fileName, currentStep: 'agent' }));
+    setState(prev => ({ ...prev, pdfId, pdfFileName: fileName }));
+    setShowProcessing(true);
+  }, []);
+
+  // Step 2: User clicks "Continue to agent" from PdfProcessingStatus
+  const handleContinueToAgent = useCallback(() => {
+    setShowProcessing(false);
+    setState(prev => ({ ...prev, currentStep: 'agent' }));
   }, []);
 
   // Step 2: Skip PDF from upload step
@@ -184,21 +195,34 @@ export function UserWizardClient() {
             />
           )}
 
-          {state.currentStep === 'pdf' && state.gameId && (
+          {state.currentStep === 'pdf' && state.gameId && !showProcessing && (
             <PdfUploadStep
               onComplete={handlePdfUploaded}
             />
           )}
 
-          {state.currentStep === 'agent' && state.gameId && state.pdfId && (
-            <ConfigAgentStep
+          {state.currentStep === 'pdf' && state.gameId && showProcessing && state.pdfFileName && (
+            <PdfProcessingStatus
               gameId={state.gameId}
-              gameName={state.gameName || 'Game'}
-              pdfId={state.pdfId}
-              onComplete={handleAgentConfigured}
-              onSkip={handleSkipAgent}
-              onBack={goBack}
+              pdfFileName={state.pdfFileName}
+              onContinue={handleContinueToAgent}
             />
+          )}
+
+          {state.currentStep === 'agent' && state.gameId && state.pdfId && (
+            <div className="space-y-6">
+              {/* PDF indexing progress — shown while indexing is in progress (Issue #4946) */}
+              <PdfProcessingStatus gameId={state.gameId} />
+
+              <ConfigAgentStep
+                gameId={state.gameId}
+                gameName={state.gameName || 'Game'}
+                pdfId={state.pdfId}
+                onComplete={handleAgentConfigured}
+                onSkip={handleSkipAgent}
+                onBack={goBack}
+              />
+            </div>
           )}
         </Card>
 

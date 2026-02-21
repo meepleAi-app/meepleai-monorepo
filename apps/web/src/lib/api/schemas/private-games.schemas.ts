@@ -93,3 +93,14 @@ export interface GetPrivateGamesParams {
   sortBy?: 'title' | 'createdAt' | 'updatedAt';
   sortDirection?: 'asc' | 'desc';
 }
+
+// PDF Indexing Status (Issue #4946 — depends on backend Issue #4943)
+// Maps to PdfIndexingStatusDto from the backend
+export const PdfIndexingStatusSchema = z.object({
+  status: z.enum(['pending', 'processing', 'indexed', 'failed']),
+  progress: z.number().int().min(0).max(100).nullable().optional(),
+  chunkCount: z.number().int().nonnegative().nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+});
+
+export type PdfIndexingStatus = z.infer<typeof PdfIndexingStatusSchema>;

@@ -27,6 +27,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
+import { KbStatusBadge } from '@/components/library/KbStatusBadge';
+import { LibraryEmptyState } from '@/components/library/LibraryEmptyState';
 import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -298,29 +300,23 @@ export default function PrivateGamesClient() {
           </CardContent>
         </Card>
       ) : games.length === 0 ? (
-        <Card data-testid="empty-state">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-              <Gamepad2 className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <CardTitle>
-              {search ? t('privateGames.noGamesFound') : t('privateGames.noGamesYet')}
-            </CardTitle>
-            <CardDescription>
-              {search
-                ? t('privateGames.noGamesMatchSearch', { search })
-                : t('privateGames.emptyStateDescription')}
-            </CardDescription>
-          </CardHeader>
-          {!search && (
-            <CardContent className="text-center">
-              <Button onClick={() => router.push('/library/private/add')}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('privateGames.addFirstGame')}
-              </Button>
-            </CardContent>
-          )}
-        </Card>
+        search ? (
+          // Search returned no results — keep the simple "no results" card
+          <Card data-testid="empty-state">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4">
+                <Gamepad2 className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <CardTitle>{t('privateGames.noGamesFound')}</CardTitle>
+              <CardDescription>
+                {t('privateGames.noGamesMatchSearch', { search })}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          // True empty library — show the onboarding empty state (Issue #4945)
+          <LibraryEmptyState />
+        )
       ) : (
         <>
           {/* Games Grid */}
@@ -329,13 +325,16 @@ export default function PrivateGamesClient() {
             data-testid="games-grid"
           >
             {games.map((game) => (
-              <PrivateGameCard
-                key={game.id}
-                game={game}
-                onEdit={openEdit}
-                onDelete={openDelete}
-                onPropose={openPropose}
-              />
+              <div key={game.id} className="relative">
+                <PrivateGameCard
+                  game={game}
+                  onEdit={openEdit}
+                  onDelete={openDelete}
+                  onPropose={openPropose}
+                />
+                {/* KB indexing badge — overlays bottom of card (Issue #4946) */}
+                <KbStatusBadge gameId={game.id} />
+              </div>
             ))}
           </div>
 

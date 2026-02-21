@@ -111,6 +111,10 @@ function LibraryPanel({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Library navigation">
+      {/* Back to Dashboard */}
+      <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={false} isCollapsed={isCollapsed} />
+      <hr className="my-1 border-sidebar-border" />
+
       <SidebarLink href="/library" icon={BookOpen} label="Tutti i giochi" isActive={pathname === '/library'} isCollapsed={isCollapsed} />
       <SidebarLink href="/library/favorites" icon={Heart} label="Preferiti" isActive={pathname?.startsWith('/library/favorites')} isCollapsed={isCollapsed} />
       <SidebarLink href="/library/wishlist" icon={Star} label="Wishlist" isActive={pathname?.startsWith('/library/wishlist')} isCollapsed={isCollapsed} />
@@ -127,6 +131,10 @@ function GamesPanel({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Games catalog navigation">
+      {/* Back to Dashboard */}
+      <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={false} isCollapsed={isCollapsed} />
+      <hr className="my-1 border-sidebar-border" />
+
       <SidebarLink href="/games" icon={Gamepad2} label="Tutti i giochi" isActive={pathname === '/games'} isCollapsed={isCollapsed} />
 
       <SectionLabel label="Filtri rapidi" isCollapsed={isCollapsed} />

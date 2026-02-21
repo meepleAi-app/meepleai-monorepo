@@ -9,7 +9,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure;
 
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SessionTracking")]
-public class SessionBroadcastServiceTests : IDisposable
+public sealed class SessionBroadcastServiceTests : IDisposable
 {
     private readonly SessionBroadcastService _service;
 

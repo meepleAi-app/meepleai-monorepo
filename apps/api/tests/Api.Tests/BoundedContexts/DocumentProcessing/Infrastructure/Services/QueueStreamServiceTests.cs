@@ -81,7 +81,9 @@ public sealed class QueueStreamServiceTests
             await foreach (var e in _service.SubscribeToQueue(cts.Token))
             {
                 queueReceived.Add(e);
+#pragma warning disable S1751 // Intentional: retrieve only the first event then exit
                 break; // Just get one event
+#pragma warning restore S1751
             }
         }, cts.Token);
 
@@ -116,7 +118,9 @@ public sealed class QueueStreamServiceTests
             await foreach (var e in _service.SubscribeToQueue(cts.Token))
             {
                 queueReceived.Add(e);
+#pragma warning disable S1751 // Intentional: retrieve only the first event then exit
                 break;
+#pragma warning restore S1751
             }
         }, cts.Token);
 

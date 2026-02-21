@@ -492,12 +492,4 @@ public sealed class SendAgentMessageCommandHandlerTests
         _dbContext.SaveChanges();
     }
 
-    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
-    {
-        foreach (var item in items)
-        {
-            await Task.Yield();
-            yield return item;
-        }
-    }
 }

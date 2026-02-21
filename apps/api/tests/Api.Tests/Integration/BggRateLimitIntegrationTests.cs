@@ -30,7 +30,7 @@ public class BggRateLimitTestFactory : WebApplicationFactory<Program>
 
     public async Task<string> GetAuthTokenAsync(string tier = "Normal", string role = "User")
     {
-        // TODO: Implement actual auth token generation
+        // Note: Implement actual auth token generation
         // For now, return placeholder (requires auth infrastructure)
         return "test-token";
     }

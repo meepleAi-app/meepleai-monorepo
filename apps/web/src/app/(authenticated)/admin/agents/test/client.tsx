@@ -1,8 +1,13 @@
 /**
  * Agent Testing Console Client
- * Issue #3378
+ * Issue #3378 / #4962
  *
  * Interactive testing interface for admin testing of agent typologies.
+ * Wired to real backend: POST /api/v1/agent-typologies/{id}/test
+ *
+ * Note: the backend TestQueryRequest only accepts `testQuery`. Strategy and model
+ * fields are saved as metadata alongside the result but do NOT currently affect
+ * the test execution itself. Future: extend backend TestQueryRequest with overrides.
  */
 
 'use client';
@@ -10,7 +15,7 @@
 import { useState, useCallback } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { TestChatInterface } from '@/components/admin/agents/TestChatInterface';
@@ -64,6 +69,10 @@ interface TestResult {
   confidenceScore: number;
   citations: Array<{ page: number; text: string }>;
   timestamp: Date;
+  // Captured at test time to avoid stale closure on save (optional for sub-component compat)
+  typologyId?: string;
+  modelUsed?: string;
+  strategyOverride?: string;
 }
 
 export function AgentTestClient() {
@@ -89,37 +98,33 @@ export function AgentTestClient() {
     }
 
     setIsLoading(true);
+    const startTime = Date.now();
 
     try {
-      // Simulate API call - replace with actual API when available
-      // const response = await api.agents.test(selectedTypologyId, {
-      //   query,
-      //   strategyOverride: selectedStrategy,
-      //   modelOverride: selectedModel,
-      // });
+      const result = await api.agents.testTypology(selectedTypologyId, query);
 
-      // Mock response for now
-      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+      const latencySeconds = (Date.now() - startTime) / 1000;
 
-      const mockResult: TestResult = {
+      // Capture typologyId, model, and strategy at test time to avoid stale closure on save
+      const testResult: TestResult = {
         query,
-        response: `Based on the game rules, ${query.toLowerCase().includes('setup') ? 'to set up the game, follow these steps...' : 'the rule states that...'} This is a simulated response for testing purposes.`,
-        latency: 1.2 + Math.random() * 2,
-        tokensUsed: Math.floor(200 + Math.random() * 300),
-        costEstimate: 0.001 + Math.random() * 0.005,
-        confidenceScore: 0.75 + Math.random() * 0.2,
-        citations: [
-          { page: 12, text: 'Section 4.2: Game Setup' },
-          { page: 15, text: 'Section 5.1: Turn Structure' },
-        ],
+        response: result.response,
+        latency: latencySeconds,
+        tokensUsed: 0,
+        costEstimate: 0,
+        confidenceScore: result.confidenceScore,
+        citations: [],
         timestamp: new Date(),
+        typologyId: selectedTypologyId,
+        modelUsed: selectedModel,
+        strategyOverride: selectedStrategy,
       };
 
-      setTestResults(prev => [mockResult, ...prev]);
+      setTestResults(prev => [testResult, ...prev]);
       setQuery('');
 
       toast.success('Test Completed', {
-        description: `Response received in ${mockResult.latency.toFixed(2)}s`,
+        description: `Response received in ${latencySeconds.toFixed(2)}s`,
       });
     } catch (error) {
       toast.error('Test Failed', {
@@ -128,11 +133,26 @@ export function AgentTestClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedTypologyId, query]);
+  }, [selectedTypologyId, query, selectedModel, selectedStrategy]);
 
-  const handleSaveResult = useCallback(async (_result: TestResult) => {
+  const handleSaveResult = useCallback(async (result: TestResult) => {
+    if (!result.typologyId) {
+      toast.error('Save Failed', { description: 'Missing test metadata. Please re-run the test.' });
+      return;
+    }
     try {
-      // TODO: Implement save to history - Issue #3379
+      // Use values captured at test time, not from current UI state (avoids stale closure)
+      await api.agents.saveTestResult({
+        typologyId: result.typologyId,
+        query: result.query,
+        response: result.response,
+        modelUsed: result.modelUsed ?? '',
+        confidenceScore: result.confidenceScore,
+        tokensUsed: result.tokensUsed,
+        costEstimate: result.costEstimate,
+        latencyMs: Math.round(result.latency * 1000),
+        strategyOverride: result.strategyOverride,
+      });
       toast.success('Result Saved', {
         description: 'Test result saved to history.',
       });
@@ -182,9 +202,15 @@ export function AgentTestClient() {
               </Select>
             </div>
 
-            {/* Strategy Override */}
+            {/* Strategy — logged as metadata, does not yet affect test execution */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Strategy Override</label>
+              <label className="text-sm font-medium flex items-center gap-1">
+                Strategy
+                <span className="text-xs text-muted-foreground font-normal flex items-center gap-0.5">
+                  <Info className="h-3 w-3" />
+                  logged only
+                </span>
+              </label>
               <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
                 <SelectTrigger>
                   <SelectValue />
@@ -204,9 +230,15 @@ export function AgentTestClient() {
               </Select>
             </div>
 
-            {/* Model Override */}
+            {/* Model — logged as metadata, does not yet affect test execution */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Model Override</label>
+              <label className="text-sm font-medium flex items-center gap-1">
+                Model
+                <span className="text-xs text-muted-foreground font-normal flex items-center gap-0.5">
+                  <Info className="h-3 w-3" />
+                  logged only
+                </span>
+              </label>
               <Select value={selectedModel} onValueChange={setSelectedModel}>
                 <SelectTrigger>
                   <SelectValue />

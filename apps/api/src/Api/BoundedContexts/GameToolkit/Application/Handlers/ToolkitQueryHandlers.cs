@@ -54,7 +54,7 @@ internal class GetToolkitsByPrivateGameQueryHandler : IQueryHandler<GetToolkitsB
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var toolkits = await _repository.GetByPrivateGameIdAsync(query.PrivateGameId, cancellationToken).ConfigureAwait(false);
+        var toolkits = await _repository.GetByPrivateGameIdAsync(query.PrivateGameId, query.CallingUserId, cancellationToken).ConfigureAwait(false);
         return toolkits.Select(ToolkitMapper.ToDto).ToList();
     }
 }

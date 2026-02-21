@@ -39,9 +39,12 @@ internal static class GameToolkitRoutes
         .WithSummary("Get all toolkits for a game")
         .Produces<IReadOnlyList<GameToolkitDto>>(200);
 
-        toolkits.MapGet("/by-private-game/{privateGameId:guid}", async (Guid privateGameId, IMediator m) =>
+        toolkits.MapGet("/by-private-game/{privateGameId:guid}", async (Guid privateGameId, HttpContext ctx, IMediator m) =>
         {
-            var result = await m.Send(new GetToolkitsByPrivateGameQuery(privateGameId)).ConfigureAwait(false);
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new GetToolkitsByPrivateGameQuery(privateGameId, userId)).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("GetToolkitsByPrivateGame")

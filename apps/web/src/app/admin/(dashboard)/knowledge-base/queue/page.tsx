@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   description: 'Monitor and manage PDF processing jobs',
 };
 
-export default function ProcessingQueuePage() {
-  return <QueueDashboardClient />;
+export default async function ProcessingQueuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ gameId?: string }>;
+}) {
+  const { gameId } = await searchParams;
+  return <QueueDashboardClient gameId={gameId} />;
 }

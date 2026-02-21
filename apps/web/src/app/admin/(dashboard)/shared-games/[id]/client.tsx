@@ -463,6 +463,12 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                   <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
                   <p className="text-sm font-medium">No agent linked</p>
                   <p className="text-xs mt-1">Select an agent below to enable AI chat for this game.</p>
+                  <Link
+                    href="/admin/agent-definitions/create"
+                    className="text-xs text-primary underline underline-offset-2 mt-2 inline-block hover:text-primary/80"
+                  >
+                    Create a new agent →
+                  </Link>
                 </div>
               )}
 
@@ -625,7 +631,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                     />
                   ))}
                   <div className="pt-2">
-                    <Link href="/admin/knowledge-base/queue">
+                    <Link href={`/admin/knowledge-base/queue?gameId=${gameId}`}>
                       <Button variant="outline" size="sm">
                         View in Processing Queue →
                       </Button>

@@ -17,7 +17,7 @@ import { QueueList } from './queue-list';
 import { JobDetailPanel } from './job-detail-panel';
 import { SSEConnectionIndicator } from './sse-connection-indicator';
 
-export function QueueDashboardClient() {
+export function QueueDashboardClient({ gameId }: { gameId?: string }) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<QueueFilters>({
     page: 1,
@@ -49,7 +49,7 @@ export function QueueDashboardClient() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/admin/knowledge-base">
+          <Link href={gameId ? `/admin/shared-games/${gameId}` : '/admin/knowledge-base'}>
             <Button variant="ghost" size="icon" className="h-8 w-8">
               <ArrowLeftIcon className="h-4 w-4" />
             </Button>
@@ -59,7 +59,7 @@ export function QueueDashboardClient() {
               Processing Queue
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Monitor and manage PDF processing jobs
+              {gameId ? 'Processing jobs for selected game' : 'Monitor and manage PDF processing jobs'}
             </p>
           </div>
         </div>
@@ -72,7 +72,7 @@ export function QueueDashboardClient() {
             <RefreshCwIcon className="h-4 w-4 mr-1" />
             Refresh
           </Button>
-          <Link href="/admin/knowledge-base/upload">
+          <Link href={`/admin/knowledge-base/upload${gameId ? `?gameId=${gameId}` : ''}`}>
             <Button size="sm">
               <PlusIcon className="h-4 w-4 mr-1" />
               Add PDF

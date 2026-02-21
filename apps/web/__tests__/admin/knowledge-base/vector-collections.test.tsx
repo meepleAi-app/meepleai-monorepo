@@ -29,6 +29,7 @@ vi.mock('@/lib/api/core/httpClient', () => ({
 }));
 
 // Mock VectorCollectionCard since it's a separate component
+// Props match VectorCollectionCardProps (flat props, not a { collection } object)
 vi.mock('@/components/admin/knowledge-base/vector-collection-card', () => ({
   VectorCollectionCard: ({ name, vectorCount }: { name: string; vectorCount: number }) => (
     <div data-testid={`collection-card-${name}`}>

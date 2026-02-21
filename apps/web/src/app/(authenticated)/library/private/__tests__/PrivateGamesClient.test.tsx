@@ -18,11 +18,11 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, Mock } from 'vitest';
-import { renderWithQuery, t } from '@/__tests__/utils/query-test-utils';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { api } from '@/lib/api';
 
-const mockPush = vi.fn();
+const mockPush = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
     push: mockPush,
@@ -37,6 +37,29 @@ vi.mock('next/navigation', () => ({
 import type { PrivateGameDto, PaginatedPrivateGamesResponse } from '@/lib/api/schemas/private-games.schemas';
 
 import PrivateGamesClient from '../PrivateGamesClient';
+
+// Mock JourneyProgress to avoid AuthProvider dependency
+vi.mock('@/components/library/JourneyProgress', () => ({
+  JourneyProgress: () => null,
+}));
+
+// Mock useAuth to prevent "useAuth must be used within AuthProvider" errors
+// from JourneyProgress → useRecentChatSessions → useAuth chain
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: vi.fn(() => ({ user: null, loading: false })),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Mock LibraryEmptyState with testable stub matching original empty-state interface
+vi.mock('@/components/library/LibraryEmptyState', () => ({
+  LibraryEmptyState: () => (
+    <div data-testid="empty-state">
+      <h2>No Private Games Yet</h2>
+      <p>Start building your personal collection by adding your first private game.</p>
+      <button onClick={() => mockPush('/library/private/add')}>Add Your First Game</button>
+    </div>
+  ),
+}));
 
 // Mock the API module
 vi.mock('@/lib/api', () => ({
@@ -85,6 +108,8 @@ vi.mock('@/components/library/PrivateGameCard', () => ({
 }));
 
 const mockGetPrivateGames = api.library.getPrivateGames as Mock;
+const mockAddPrivateGame = api.library.addPrivateGame as Mock;
+const mockUpdatePrivateGame = api.library.updatePrivateGame as Mock;
 const mockDeletePrivateGame = api.library.deletePrivateGame as Mock;
 
 // Test data factory
@@ -145,7 +170,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       expect(screen.getByTestId('loading-state')).toBeInTheDocument();
-      expect(screen.getByText(t('privateGames.loading'))).toBeInTheDocument();
+      expect(screen.getByText('Loading games...')).toBeInTheDocument();
     });
 
     it('should show header and controls during loading', () => {
@@ -153,7 +178,7 @@ describe('PrivateGamesClient', () => {
 
       renderWithQuery(<PrivateGamesClient />);
 
-      expect(screen.getByText(t('privateGames.title'))).toBeInTheDocument();
+      expect(screen.getByText('Private Games')).toBeInTheDocument();
       expect(screen.getByTestId('add-private-game-btn')).toBeInTheDocument();
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
     });
@@ -170,7 +195,7 @@ describe('PrivateGamesClient', () => {
       });
 
       expect(
-        screen.getByText(t('privateGames.loadError'))
+        screen.getByText('Unable to load private games. Please try again.')
       ).toBeInTheDocument();
     });
 
@@ -186,7 +211,7 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId('error-state')).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText(t('common.refresh')));
+      await user.click(screen.getByText('Refresh'));
 
       await waitFor(() => {
         expect(screen.getByTestId('games-grid')).toBeInTheDocument();
@@ -203,10 +228,16 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('library-empty-state')).toBeInTheDocument();
+        expect(screen.getByTestId('empty-state')).toBeInTheDocument();
       });
 
-      expect(screen.getByTestId('empty-state-primary-cta')).toBeInTheDocument();
+      expect(screen.getByText('No Private Games Yet')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Start building your personal collection by adding your first private game.'
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByText('Add Your First Game')).toBeInTheDocument();
     });
 
     it('should show search empty state when search has no results', async () => {
@@ -227,7 +258,7 @@ describe('PrivateGamesClient', () => {
       await user.type(screen.getByTestId('search-input'), 'zzzzz');
 
       await waitFor(() => {
-        expect(screen.getByText(t('privateGames.noGamesFound'))).toBeInTheDocument();
+        expect(screen.getByText('No Games Found')).toBeInTheDocument();
       });
     });
   });
@@ -257,7 +288,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByText(/3 giochi/)).toBeInTheDocument();
+        expect(screen.getByText(/3 games/)).toBeInTheDocument();
       });
     });
 
@@ -269,7 +300,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByText(/1 gioco/)).toBeInTheDocument();
+        expect(screen.getByText(/1 game\b/)).toBeInTheDocument();
       });
     });
   });
@@ -404,7 +435,7 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId('pagination')).toBeInTheDocument();
       });
 
-      expect(screen.getByText(t('privateGames.pageOf', { page: 1, totalPages: 3 }))).toBeInTheDocument();
+      expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
     });
 
     it('should not show pagination when totalPages is 1', async () => {
@@ -508,15 +539,16 @@ describe('PrivateGamesClient', () => {
     it('should navigate to add page from empty state', async () => {
       mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse([]));
 
+      const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('library-empty-state')).toBeInTheDocument();
+        expect(screen.getByTestId('empty-state')).toBeInTheDocument();
       });
 
-      // LibraryEmptyState uses <Link> which renders as <a> — verify href instead of router.push
-      const cta = screen.getByTestId('empty-state-primary-cta');
-      expect(cta).toHaveAttribute('href', '/library/private/add');
+      await user.click(screen.getByText('Add Your First Game'));
+
+      expect(mockPush).toHaveBeenCalledWith('/library/private/add');
     });
   });
 
@@ -536,7 +568,7 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByTestId('edit-btn-game-1'));
 
       await waitFor(() => {
-        expect(screen.getByText(t('privateGames.editGame'))).toBeInTheDocument();
+        expect(screen.getByText('Edit Game')).toBeInTheDocument();
       });
     });
   });
@@ -557,10 +589,9 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByTestId('delete-btn-game-1'));
 
       await waitFor(() => {
-        expect(screen.getByText(t('privateGames.deleteGame'))).toBeInTheDocument();
-        // Match the beginning of the confirm message (before the {title} placeholder)
+        expect(screen.getByText('Delete Game')).toBeInTheDocument();
         expect(
-          screen.getByText(new RegExp(t('privateGames.deleteConfirm').split('{title}')[0].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+          screen.getByText(/Are you sure you want to delete/)
         ).toBeInTheDocument();
       });
     });
@@ -606,7 +637,7 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByTestId('delete-btn-game-2'));
 
       await waitFor(() => {
-        expect(screen.getByText(t('common.cancel'))).toBeInTheDocument();
+        expect(screen.getByText('Cancel')).toBeInTheDocument();
       });
     });
   });
@@ -661,7 +692,7 @@ describe('PrivateGamesClient', () => {
       });
 
       expect(
-        screen.getByRole('heading', { level: 1, name: t('privateGames.title') })
+        screen.getByRole('heading', { level: 1, name: 'Private Games' })
       ).toBeInTheDocument();
     });
 

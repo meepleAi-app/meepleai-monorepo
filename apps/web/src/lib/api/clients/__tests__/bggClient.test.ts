@@ -39,7 +39,7 @@ describe('createBggClient', () => {
       const result = await bggClient.search('catan');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('q=catan'),
+        expect.stringContaining('query=catan'),
         expect.anything(),
         expect.anything()
       );
@@ -52,7 +52,7 @@ describe('createBggClient', () => {
       await bggClient.search('Catan', true);
 
       const callUrl = mockHttpClient.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('q=Catan');
+      expect(callUrl).toContain('query=Catan');
       expect(callUrl).toContain('exact=true');
     });
 
@@ -62,7 +62,7 @@ describe('createBggClient', () => {
       await bggClient.search('Pandemic');
 
       const callUrl = mockHttpClient.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('q=Pandemic');
+      expect(callUrl).toContain('query=Pandemic');
       expect(callUrl).not.toContain('exact=');
     });
 
@@ -81,7 +81,7 @@ describe('createBggClient', () => {
       await bggClient.search('');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('q='),
+        expect.stringContaining('query='),
         expect.anything(),
         expect.anything()
       );
@@ -93,7 +93,7 @@ describe('createBggClient', () => {
       await bggClient.search('Ticket to Ride');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('q=Ticket+to+Ride'),
+        expect.stringContaining('query=Ticket+to+Ride'),
         expect.anything(),
         expect.anything()
       );

@@ -396,6 +396,56 @@ export interface TurnPhaseState {
 // Component Props
 // ============================================================================
 
+// ============================================================================
+// SharedGame Admin Types
+// ============================================================================
+
+/** Document info from SharedGameDocument API */
+export interface SharedGameDocumentInfo {
+  id: string;
+  /** PDF document ID — used by PdfIndexingStatus */
+  pdfDocumentId: string;
+  /** Numeric type: 0=Rulebook, 1=Errata, 2=Homerule */
+  documentType: number;
+  version: string;
+  isActive: boolean;
+  tags: string[];
+  createdAt: string;
+}
+
+/** KB card info from KbCardDto API */
+export interface SharedGameKbCardInfo {
+  id: string;
+  pdfDocumentId: string;
+  fileName: string;
+  indexingStatus: string; // 'pending'|'processing'|'completed'|'failed'
+  chunkCount: number;
+  indexedAt: string | null;
+  documentType: string | null;
+  version: string | null;
+  isActive: boolean;
+}
+
+/** Aggregated detail data for the SharedGame admin card */
+export interface SharedGameDetailData extends GameDetailData {
+  status: string;
+  documents: SharedGameDocumentInfo[];
+  kbCards: SharedGameKbCardInfo[];
+  linkedAgent: { id: string; name: string; isActive: boolean } | null;
+}
+
+export type SharedGameExtraMeepleCardTab = 'details' | 'documents' | 'kb-cards';
+
+export interface SharedGameExtraMeepleCardProps {
+  data: SharedGameDetailData;
+  onUploadPdf?: () => void;
+  onCreateAgent?: () => void;
+  loading?: boolean;
+  error?: string;
+  className?: string;
+  'data-testid'?: string;
+}
+
 /** ExtraMeepleCard component props */
 export interface ExtraMeepleCardProps {
   /** Session ID */

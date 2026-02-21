@@ -54,4 +54,10 @@ export type {
   EventsTimelineData,
   EventsTimelineActions,
   TurnPhaseState,
+  // SharedGame admin types
+  SharedGameDocumentInfo,
+  SharedGameKbCardInfo,
+  SharedGameDetailData,
+  SharedGameExtraMeepleCardTab,
+  SharedGameExtraMeepleCardProps,
 } from './types';

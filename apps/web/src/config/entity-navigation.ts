@@ -42,7 +42,10 @@ export type EntityIdBag = Record<string, string | undefined>;
 export interface ResolvedNavigationLink {
   entity: MeepleEntityType;
   label: string;
-  href: string;
+  /** Route navigation — optional when onClick is provided. */
+  href?: string;
+  /** Callback for sheet/modal — alternative to href. */
+  onClick?: () => void;
 }
 
 // ---------------------------------------------------------------------------

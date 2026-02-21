@@ -68,18 +68,13 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
           const Icon = ENTITY_NAV_ICONS[link.entity] ?? ENTITY_NAV_ICONS.game;
           // eslint-disable-next-line security/detect-object-injection -- entity from typed config
           const hsl = NAV_ENTITY_HSL[link.entity] ?? NAV_ENTITY_HSL.custom;
-
-          return (
-            <Link
-              key={`${link.entity}-${link.href}`}
-              href={link.href}
-              className={cn(
-                'group/nav flex flex-col items-center gap-0.5',
-                'no-underline transition-all duration-200',
-              )}
-              title={link.label}
-              onClick={(e) => e.stopPropagation()}
-            >
+          const key = `${link.entity}-${link.label}`;
+          const sharedClassName = cn(
+            'group/nav flex flex-col items-center gap-0.5',
+            'no-underline transition-all duration-200',
+          );
+          const iconContent = (
+            <>
               <span
                 className={cn(
                   'flex items-center justify-center',
@@ -90,12 +85,7 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
                   'transition-all duration-200',
                   'group-hover/nav:scale-110',
                 )}
-                style={{
-                  // Entity-coloured hover glow
-                  '--nav-hsl': hsl,
-                } as React.CSSProperties}
-                // Dynamic hover styles via inline + tailwind arbitrary
-                // We rely on a parent hover to set bg/border/shadow
+                style={{ '--nav-hsl': hsl } as React.CSSProperties}
                 data-entity={link.entity}
               >
                 <Icon className="w-3.5 h-3.5 text-muted-foreground transition-colors duration-200 group-hover/nav:text-[hsl(var(--nav-hsl))]" />
@@ -103,6 +93,32 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
               <span className="text-[8px] font-nunito font-bold uppercase tracking-[0.04em] text-muted-foreground/70 transition-colors duration-200 group-hover/nav:text-[hsl(var(--nav-hsl))]">
                 {link.label}
               </span>
+            </>
+          );
+
+          if (link.onClick) {
+            return (
+              <button
+                key={key}
+                type="button"
+                className={cn(sharedClassName, 'cursor-pointer bg-transparent border-0 p-0')}
+                title={link.label}
+                onClick={(e) => { e.stopPropagation(); link.onClick!(); }}
+              >
+                {iconContent}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={key}
+              href={link.href!}
+              className={sharedClassName}
+              title={link.label}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {iconContent}
             </Link>
           );
         })}

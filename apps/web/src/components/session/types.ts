@@ -43,6 +43,8 @@ export interface Session {
   id: string;
   sessionCode: string;
   sessionType: 'Generic' | 'GameSpecific';
+  /** ID of the linked shared-game catalog entry (GameSpecific sessions only). Issue #4976. */
+  gameId?: string | null;
   gameName?: string;
   gameIcon?: string;
   sessionDate: Date;

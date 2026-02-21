@@ -2,11 +2,12 @@
 
 import React, { useEffect, useRef } from 'react';
 
-import { Loader2 } from 'lucide-react';
+import { Hash, Loader2 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import {
+  CounterTool,
   DiceRoller,
   SessionHeader,
   SessionToolLayout,
@@ -15,25 +16,96 @@ import {
   TurnOrderTool,
   WhiteboardTool,
 } from '@/components/session';
+import type { CounterToolConfig, Participant } from '@/components/session/types';
+import { useCounterTool } from '@/lib/hooks/useCounterTool';
 import { useDiceRoller } from '@/lib/hooks/useDiceRoller';
+import { useGameToolkit } from '@/lib/hooks/useGameToolkit';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { useTurnOrder } from '@/lib/hooks/useTurnOrder';
 import { useWhiteboardTool } from '@/lib/hooks/useWhiteboardTool';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 import type { ToolId } from '@/lib/stores/sessionStore';
+import type { CounterToolDto } from '@/lib/types/gameToolkit';
+import { resolveSessionTools } from '@/lib/utils/resolveSessionTools';
 
 /**
- * Active Session Page — Tool Rail Layout (Issues #4973, #4974, #4975, #4977)
+ * Active Session Page — Tool Rail Layout (Issues #4973, #4974, #4975, #4977, #4976)
  *
- * Wires all 4 base toolkit tools:
+ * Wires all 4 base toolkit tools + custom GameToolkit tools:
  *  🔄 Turn Order  → TurnOrderTool + useTurnOrder
  *  🎲 Dice        → DiceRoller + useDiceRoller
  *  🖊️ Whiteboard  → WhiteboardTool + useWhiteboardTool
  *  📊 Scoreboard  → Scoreboard (data from sessionStore)
  *
+ * Custom toolkit tools (Issue #4976):
+ *  - Fetches published GameToolkit via useGameToolkit(session.gameId)
+ *  - Override flags hide base tools; custom tools appear in "Custom" section
+ *  - Counter tools use CounterToolContent sub-component (encapsulates hook)
+ *
  * Active tool persisted in URL query param `?tool=<toolId>` (Issue #4974).
  * `sessionStore.activeTool` mirrors the URL for cross-component access.
  */
+
+// ── CounterToolContent ─────────────────────────────────────────────────────────
+
+/**
+ * Wrapper component that owns the useCounterTool hook, allowing it to be
+ * rendered from the switch statement without violating Rules of Hooks.
+ */
+function CounterToolContent({
+  sessionId,
+  toolDto,
+  participants,
+  currentUserId,
+}: {
+  sessionId: string;
+  toolDto: CounterToolDto;
+  participants: Participant[];
+  currentUserId: string;
+}) {
+  const config: CounterToolConfig = {
+    name: toolDto.name,
+    minValue: toolDto.minValue,
+    maxValue: toolDto.maxValue,
+    defaultValue: toolDto.defaultValue,
+    isPerPlayer: toolDto.isPerPlayer,
+    icon: toolDto.icon ?? null,
+    color: toolDto.color ?? null,
+  };
+
+  const { state, isPending, error, applyChange } = useCounterTool({
+    sessionId,
+    toolName: toolDto.name,
+  });
+
+  return (
+    <CounterTool
+      config={config}
+      counterState={state}
+      participants={participants}
+      currentUserId={currentUserId}
+      isPending={isPending}
+      error={error}
+      onApplyChange={applyChange}
+    />
+  );
+}
+
+// ── CustomToolPlaceholder ─────────────────────────────────────────────────────
+
+/** Shown for custom tool types not yet fully implemented (card, timer, dice). */
+function CustomToolPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-400 dark:text-stone-500">
+      <Hash className="w-10 h-10" aria-hidden="true" />
+      <p className="text-sm font-medium">{label}</p>
+      <p className="text-xs">Custom tool — coming soon</p>
+    </div>
+  );
+}
+
+// ── ActiveSessionPage ─────────────────────────────────────────────────────────
+
 export default function ActiveSessionPage() {
   const params = useParams();
   const router = useRouter();
@@ -79,6 +151,11 @@ export default function ActiveSessionPage() {
     next.set('tool', toolId);
     router.replace(`?${next.toString()}`, { scroll: false });
   };
+
+  // ── Game Toolkit (Issue #4976) ────────────────────────────────────────────
+
+  const { toolkit } = useGameToolkit(activeSession?.gameId);
+  const { visibleBaseToolIds, customTools } = resolveSessionTools(toolkit);
 
   // ── Turn order (Issue #4975) ─────────────────────────────────────────────
 
@@ -235,49 +312,78 @@ export default function ActiveSessionPage() {
   // ── Tool area ─────────────────────────────────────────────────────────────
 
   const toolContent = (() => {
-    switch (activeTool) {
-      case 'scoreboard':
-        return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
-
-      case 'turn-order':
-        return (
-          <TurnOrderTool
-            turnOrder={turnOrder}
-            isLoading={isTurnLoading}
-            error={turnError}
-            isHost={isCurrentUserOwner}
-            onAdvanceTurn={handleAdvanceTurn}
-            onResetTurnOrder={handleResetTurnOrder}
-          />
-        );
-
-      case 'dice':
-        return (
-          <DiceRoller
-            sessionId={sessionId}
-            participantId={currentParticipant?.id ?? ''}
-            participantName={currentParticipant?.displayName ?? ''}
-            onRoll={diceRoller.roll}
-            rollHistory={diceRoller.rollHistory}
-            disabled={diceRoller.isRolling}
-          />
-        );
-
-      case 'whiteboard':
-        return (
-          <WhiteboardTool
-            whiteboardState={whiteboard.whiteboardState}
-            isPending={whiteboard.isPending}
-            error={whiteboard.error}
-            onStrokesChange={whiteboard.saveStrokes}
-            onStructuredChange={whiteboard.saveStructured}
-            onClear={whiteboard.clear}
-          />
-        );
-
-      default:
-        return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
+    // ── Base tools (only rendered when not overridden) ──────────────────────
+    if (activeTool === 'scoreboard' && visibleBaseToolIds.has('scoreboard')) {
+      return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
     }
+
+    if (activeTool === 'turn-order' && visibleBaseToolIds.has('turn-order')) {
+      return (
+        <TurnOrderTool
+          turnOrder={turnOrder}
+          isLoading={isTurnLoading}
+          error={turnError}
+          isHost={isCurrentUserOwner}
+          onAdvanceTurn={handleAdvanceTurn}
+          onResetTurnOrder={handleResetTurnOrder}
+        />
+      );
+    }
+
+    if (activeTool === 'dice' && visibleBaseToolIds.has('dice')) {
+      return (
+        <DiceRoller
+          sessionId={sessionId}
+          participantId={currentParticipant?.id ?? ''}
+          participantName={currentParticipant?.displayName ?? ''}
+          onRoll={diceRoller.roll}
+          rollHistory={diceRoller.rollHistory}
+          disabled={diceRoller.isRolling}
+        />
+      );
+    }
+
+    if (activeTool === 'whiteboard') {
+      // Whiteboard is NEVER overridable
+      return (
+        <WhiteboardTool
+          whiteboardState={whiteboard.whiteboardState}
+          isPending={whiteboard.isPending}
+          error={whiteboard.error}
+          onStrokesChange={whiteboard.saveStrokes}
+          onStructuredChange={whiteboard.saveStructured}
+          onClear={whiteboard.clear}
+        />
+      );
+    }
+
+    // ── Custom toolkit tools (Issue #4976) ──────────────────────────────────
+    if (toolkit && activeTool.startsWith('custom-')) {
+      // Counter tools
+      if (activeTool.startsWith('custom-counter-')) {
+        const idx = parseInt(activeTool.replace('custom-counter-', ''), 10);
+        const toolDto = toolkit.counterTools[idx];
+        if (toolDto) {
+          return (
+            <CounterToolContent
+              sessionId={sessionId}
+              toolDto={toolDto}
+              participants={participants}
+              currentUserId={currentParticipant?.id ?? ''}
+            />
+          );
+        }
+      }
+
+      // Dice, card, timer — placeholder for now
+      const customTool = customTools.find(t => t.id === activeTool);
+      if (customTool) {
+        return <CustomToolPlaceholder label={customTool.label} />;
+      }
+    }
+
+    // Fallback to scoreboard
+    return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
   })();
 
   return (
@@ -285,7 +391,7 @@ export default function ActiveSessionPage() {
       header={header}
       activeTool={activeTool}
       onToolSelect={handleToolSelect}
-      customTools={[]}
+      customTools={customTools}
     >
       {toolContent}
     </SessionToolLayout>

@@ -305,7 +305,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   /** Navigation links to related entities (rendered as icon footer) */
   navigateTo?: import('@/config/entity-navigation').ResolvedNavigationLink[];
 
-  // ========== AGENT ACTION FOOTER (Issue #4777) ==========
+  // ========== AGENT ACTION FOOTER (Issue #4777, Issue #4999) ==========
 
   /** Whether this game entity already has an agent */
   hasAgent?: boolean;
@@ -313,6 +313,12 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   agentId?: string;
   /** Callback to open agent creation wizard */
   onCreateAgent?: () => void;
+  /** Whether game has indexed KB documents (Issue #4999) */
+  hasKb?: boolean;
+  /** Callback for Upload PDF footer CTA when !hasKb (admin/editor context) */
+  onUploadPdf?: () => void;
+  /** Callback for Add to Collection footer CTA when !hasKb (catalog context) */
+  onAddToCollection?: () => void;
 
   // ========== SESSION ENTITY FEATURES (Issue #4751) ==========
 
@@ -940,10 +946,13 @@ export const MeepleCard = React.memo(function MeepleCard({
   chatPreview,
   unreadCount,
   navigateTo,
-  // Issue #4777: Agent action footer
+  // Issue #4777, #4999: Agent action footer
   hasAgent,
   agentId,
   onCreateAgent,
+  hasKb,
+  onUploadPdf,
+  onAddToCollection,
   // Issue #4751: Session entity features
   sessionStatus,
   sessionPlayers,
@@ -1432,6 +1441,9 @@ export const MeepleCard = React.memo(function MeepleCard({
           agentId={agentId}
           gameId={id}
           onCreateAgent={onCreateAgent}
+          hasKb={hasKb}
+          onUploadPdf={onUploadPdf}
+          onAddToCollection={onAddToCollection}
           variant={variant}
           hasNavFooter={!!(navigateTo && navigateTo.length > 0)}
         />

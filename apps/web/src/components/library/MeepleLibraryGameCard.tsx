@@ -23,7 +23,6 @@
  *   onUploadPdf={handleUploadPdf}
  *   onEditNotes={handleEditNotes}
  *   onRemove={handleRemove}
- *   onAskAgent={handleAskAgent}
  *   selectable={selectionMode}
  *   selected={isSelected}
  *   onSelect={handleSelect}
@@ -72,8 +71,12 @@ export interface MeepleLibraryGameCardProps {
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   /** Remove game callback */
   onRemove: (gameId: string, gameTitle: string) => void;
-  /** Ask AI Agent callback */
-  onAskAgent: (gameId: string) => void;
+  /**
+   * @deprecated Unused since Issue #4999 removed inline chat action.
+   * Chat navigation is handled directly in the quick action onClick.
+   * Will be removed in a future cleanup PR.
+   */
+  onAskAgent?: (gameId: string) => void;
   /** Change game state callback */
   onChangeState?: (gameId: string, gameTitle: string, newState: GameStateType) => void;
   /** Share game callback */
@@ -139,7 +142,7 @@ export function MeepleLibraryGameCard({
   onUploadPdf,
   onEditNotes,
   onRemove,
-  onAskAgent,
+  onAskAgent: _onAskAgent,
   onChangeState: _onChangeState,
   onShare: _onShare,
   selectionMode = false,
@@ -212,7 +215,9 @@ export function MeepleLibraryGameCard({
       onClick: () => {
         window.location.href = `/chat/new?game=${game.gameId}`;
       },
+      // Issue #4999: visible only if hasKb; disabled if no agent configured
       hidden: !game.hasKb,
+      disabled: game.hasKb && !agentConfigured,
     },
     {
       icon: Settings,
@@ -234,13 +239,6 @@ export function MeepleLibraryGameCard({
       label: game.isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti',
       onClick: handleToggleFavorite,
       disabled: isTogglingFavorite,
-    },
-    {
-      icon: Bot,
-      label: 'Chiedi all\'Agent',
-      onClick: () => onAskAgent(game.gameId),
-      disabled: !game.hasKb,
-      hidden: !game.hasKb,
     },
     {
       icon: Trash2,
@@ -321,8 +319,9 @@ export function MeepleLibraryGameCard({
         className={className}
         // Epic #4688: Navigation footer
         navigateTo={getNavigationLinks('game', { id: game.gameId })}
-        // Issue #4777: Agent action footer
+        // Issue #4777, #4999: Agent action footer
         hasAgent={agentConfigured}
+        hasKb={game.hasKb}
         onCreateAgent={handleCreateAgent}
         data-testid={`library-game-card-${game.gameId}`}
         // Issue #4045: Quick actions + Info button

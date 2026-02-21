@@ -233,8 +233,12 @@ export function MeepleGameCatalogCard({
         className={className}
         // Epic #4688: Navigation footer
         navigateTo={getNavigationLinks('game', { id: game.id })}
-        // Issue #4777: Agent action footer
-        hasAgent={false}
+        // Issue #4777, #4999: Agent action footer
+        // When not in library: show "Aggiungi" CTA via !hasKb + onAddToCollection
+        // When in library: suppress footer (hasAgent=undefined)
+        hasAgent={inLibrary ? undefined : false}
+        hasKb={inLibrary ? undefined : false}
+        onAddToCollection={inLibrary ? undefined : handleAddToCollection}
         onCreateAgent={handleCreateAgent}
         data-testid={`catalog-game-card-${game.id}`}
         // Issue #4040: New action system

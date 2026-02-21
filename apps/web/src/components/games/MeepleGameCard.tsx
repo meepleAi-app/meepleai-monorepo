@@ -147,8 +147,11 @@ export function MeepleGameCard({
         infoTooltip="Vai al dettaglio"
         // Epic #4688: Navigation footer
         navigateTo={getNavigationLinks('game', { id: game.id })}
-        // Issue #4777: Agent action footer
+        // Issue #4777, #4999: Agent action footer
+        // Catalog context: show "Aggiungi" CTA via !hasKb + onAddToCollection
         hasAgent={false}
+        hasKb={false}
+        onAddToCollection={handleAddToCollection}
         onCreateAgent={handleCreateAgent}
         data-testid={`game-card-${game.id}`}
       />

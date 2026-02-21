@@ -15,6 +15,17 @@ export { RandomTools } from './RandomTools';
 export { ExportSession } from './ExportSession';
 export { InviteSession } from './InviteSession';
 
+// ── Epic #4968: Session Tool Layout ──────────────────────────────────────────
+export { ToolRail } from './ToolRail';
+export { SessionToolLayout } from './SessionToolLayout';
+export { TurnIndicatorBar } from './TurnIndicatorBar';
+export { TurnOrderTool } from './TurnOrderTool';
+export { WhiteboardTool } from './WhiteboardTool';
+export { CounterTool } from './CounterTool';
+
+export type { ToolItem } from './ToolRail';
+export type { CounterToolConfig } from './CounterTool';
+
 export type {
   Participant,
   ScoreEntry,
@@ -37,6 +48,15 @@ export type {
   InviteTokenResponse,
   SessionInviteResponse,
   JoinSessionResponse,
+  // Epic #4968 types
+  TurnOrderData,
+  WhiteboardState,
+  WhiteboardToken,
+  Stroke,
+  StrokePoint,
+  GridSize,
+  WhiteboardMode,
+  CounterState,
 } from './types';
 
 export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS } from './types';

@@ -12,4 +12,8 @@ internal record GetToolkitsByGameQuery(
     Guid GameId
 ) : IQuery<IReadOnlyList<GameToolkitDto>>;
 
+internal record GetToolkitsByPrivateGameQuery(
+    Guid PrivateGameId
+) : IQuery<IReadOnlyList<GameToolkitDto>>;
+
 internal record GetPublishedToolkitsQuery() : IQuery<IReadOnlyList<GameToolkitDto>>;

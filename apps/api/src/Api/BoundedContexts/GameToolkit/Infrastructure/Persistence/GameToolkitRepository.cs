@@ -57,6 +57,19 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetByPrivateGameIdAsync(
+        Guid privateGameId, CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.Set<GameToolkitEntity>()
+            .AsNoTracking()
+            .Where(t => t.PrivateGameId == privateGameId)
+            .OrderByDescending(t => t.Version)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetPublishedAsync(
         CancellationToken cancellationToken = default)
     {
@@ -117,10 +130,14 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         // Restore scalar properties via reflection
         SetPrivateProperty(toolkit, "Id", entity.Id);
         SetPrivateProperty(toolkit, "GameId", entity.GameId);
+        SetPrivateProperty(toolkit, "PrivateGameId", entity.PrivateGameId);
         SetPrivateProperty(toolkit, "Name", entity.Name);
         SetPrivateProperty(toolkit, "CreatedByUserId", entity.CreatedByUserId);
         SetPrivateProperty(toolkit, "Version", entity.Version);
         SetPrivateProperty(toolkit, "IsPublished", entity.IsPublished);
+        SetPrivateProperty(toolkit, "OverridesTurnOrder", entity.OverridesTurnOrder);
+        SetPrivateProperty(toolkit, "OverridesScoreboard", entity.OverridesScoreboard);
+        SetPrivateProperty(toolkit, "OverridesDiceSet", entity.OverridesDiceSet);
         SetPrivateProperty(toolkit, "CreatedAt", entity.CreatedAt);
         SetPrivateProperty(toolkit, "UpdatedAt", entity.UpdatedAt);
         SetPrivateProperty(toolkit, "AgentConfig", entity.AgentConfig);
@@ -217,7 +234,11 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         {
             Id = toolkit.Id,
             GameId = toolkit.GameId,
+            PrivateGameId = toolkit.PrivateGameId,
             Name = toolkit.Name,
+            OverridesTurnOrder = toolkit.OverridesTurnOrder,
+            OverridesScoreboard = toolkit.OverridesScoreboard,
+            OverridesDiceSet = toolkit.OverridesDiceSet,
             Version = toolkit.Version,
             CreatedByUserId = toolkit.CreatedByUserId,
             IsPublished = toolkit.IsPublished,

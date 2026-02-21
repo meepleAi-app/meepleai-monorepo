@@ -10,10 +10,14 @@ internal static class ToolkitMapper
         return new GameToolkitDto(
             Id: toolkit.Id,
             GameId: toolkit.GameId,
+            PrivateGameId: toolkit.PrivateGameId,
             Name: toolkit.Name,
             Version: toolkit.Version,
             CreatedByUserId: toolkit.CreatedByUserId,
             IsPublished: toolkit.IsPublished,
+            OverridesTurnOrder: toolkit.OverridesTurnOrder,
+            OverridesScoreboard: toolkit.OverridesScoreboard,
+            OverridesDiceSet: toolkit.OverridesDiceSet,
             CreatedAt: toolkit.CreatedAt,
             UpdatedAt: toolkit.UpdatedAt,
             DiceTools: toolkit.DiceTools.Select(d => new DiceToolDto(

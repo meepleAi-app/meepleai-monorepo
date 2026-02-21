@@ -1,3 +1,5 @@
+using Api.Infrastructure.Entities.UserLibrary;
+
 namespace Api.Infrastructure.Entities.GameToolkit;
 
 /// <summary>
@@ -7,11 +9,15 @@ namespace Api.Infrastructure.Entities.GameToolkit;
 public class GameToolkitEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid GameId { get; set; }
+    public Guid? GameId { get; set; }
+    public Guid? PrivateGameId { get; set; }
     public string Name { get; set; } = default!;
     public int Version { get; set; } = 1;
     public Guid CreatedByUserId { get; set; }
     public bool IsPublished { get; set; }
+    public bool OverridesTurnOrder { get; set; }
+    public bool OverridesScoreboard { get; set; }
+    public bool OverridesDiceSet { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
@@ -30,6 +36,7 @@ public class GameToolkitEntity
     // Concurrency
     public byte[] RowVersion { get; set; } = default!;
 
-    // Navigation (FK to GameEntity)
+    // Navigation properties
     public GameEntity? Game { get; set; }
+    public PrivateGameEntity? PrivateGame { get; set; }
 }

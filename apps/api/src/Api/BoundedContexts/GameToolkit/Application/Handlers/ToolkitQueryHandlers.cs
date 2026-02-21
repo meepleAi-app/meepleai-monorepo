@@ -41,6 +41,24 @@ internal class GetToolkitsByGameQueryHandler : IQueryHandler<GetToolkitsByGameQu
     }
 }
 
+internal class GetToolkitsByPrivateGameQueryHandler : IQueryHandler<GetToolkitsByPrivateGameQuery, IReadOnlyList<GameToolkitDto>>
+{
+    private readonly IGameToolkitRepository _repository;
+
+    public GetToolkitsByPrivateGameQueryHandler(IGameToolkitRepository repository)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+    }
+
+    public async Task<IReadOnlyList<GameToolkitDto>> Handle(GetToolkitsByPrivateGameQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var toolkits = await _repository.GetByPrivateGameIdAsync(query.PrivateGameId, cancellationToken).ConfigureAwait(false);
+        return toolkits.Select(ToolkitMapper.ToDto).ToList();
+    }
+}
+
 internal class GetPublishedToolkitsQueryHandler : IQueryHandler<GetPublishedToolkitsQuery, IReadOnlyList<GameToolkitDto>>
 {
     private readonly IGameToolkitRepository _repository;

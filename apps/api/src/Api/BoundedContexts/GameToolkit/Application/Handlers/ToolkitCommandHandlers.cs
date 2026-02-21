@@ -27,7 +27,11 @@ internal class CreateToolkitCommandHandler : ICommandHandler<CreateToolkitComman
             id: Guid.NewGuid(),
             gameId: command.GameId,
             name: command.Name,
-            createdByUserId: command.CreatedByUserId
+            createdByUserId: command.CreatedByUserId,
+            privateGameId: command.PrivateGameId,
+            overridesTurnOrder: command.OverridesTurnOrder,
+            overridesScoreboard: command.OverridesScoreboard,
+            overridesDiceSet: command.OverridesDiceSet
         );
 
         await _repository.AddAsync(toolkit, cancellationToken).ConfigureAwait(false);
@@ -56,6 +60,14 @@ internal class UpdateToolkitCommandHandler : ICommandHandler<UpdateToolkitComman
             ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
 
         toolkit.UpdateDetails(command.Name);
+
+        if (command.OverridesTurnOrder.HasValue || command.OverridesScoreboard.HasValue || command.OverridesDiceSet.HasValue)
+        {
+            toolkit.UpdateOverrideFlags(
+                command.OverridesTurnOrder ?? toolkit.OverridesTurnOrder,
+                command.OverridesScoreboard ?? toolkit.OverridesScoreboard,
+                command.OverridesDiceSet ?? toolkit.OverridesDiceSet);
+        }
 
         await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

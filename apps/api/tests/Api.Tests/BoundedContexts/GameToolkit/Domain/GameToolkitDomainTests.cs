@@ -59,6 +59,82 @@ public class GameToolkitDomainTests
     }
 
     // ========================================================================
+    // PrivateGameId + Override Flags (Issue #4972)
+    // ========================================================================
+
+    [Fact]
+    public void Constructor_WithPrivateGameId_CreatesToolkit()
+    {
+        var privateGameId = Guid.NewGuid();
+        var toolkit = new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
+            Guid.NewGuid(), null, "Private Toolkit", UserId, privateGameId);
+
+        Assert.Null(toolkit.GameId);
+        Assert.Equal(privateGameId, toolkit.PrivateGameId);
+        Assert.False(toolkit.OverridesTurnOrder);
+        Assert.False(toolkit.OverridesScoreboard);
+        Assert.False(toolkit.OverridesDiceSet);
+    }
+
+    [Fact]
+    public void Constructor_WithOverrideFlags_SetsFlags()
+    {
+        var toolkit = new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
+            Guid.NewGuid(), GameId, "Flagged Toolkit", UserId,
+            overridesTurnOrder: true, overridesScoreboard: true, overridesDiceSet: false);
+
+        Assert.True(toolkit.OverridesTurnOrder);
+        Assert.True(toolkit.OverridesScoreboard);
+        Assert.False(toolkit.OverridesDiceSet);
+    }
+
+    [Fact]
+    public void Constructor_WithBothGameIdAndPrivateGameId_ThrowsArgumentException()
+    {
+        var privateGameId = Guid.NewGuid();
+
+        Assert.Throws<ArgumentException>(() =>
+            new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
+                Guid.NewGuid(), GameId, "Bad Toolkit", UserId, privateGameId));
+    }
+
+    [Fact]
+    public void Constructor_WithNeitherGameIdNorPrivateGameId_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
+                Guid.NewGuid(), null, "Bad Toolkit", UserId, null));
+    }
+
+    [Fact]
+    public void UpdateOverrideFlags_UpdatesAllFlags()
+    {
+        var toolkit = CreateToolkit();
+        var before = toolkit.UpdatedAt;
+
+        toolkit.UpdateOverrideFlags(true, true, true);
+
+        Assert.True(toolkit.OverridesTurnOrder);
+        Assert.True(toolkit.OverridesScoreboard);
+        Assert.True(toolkit.OverridesDiceSet);
+        Assert.True(toolkit.UpdatedAt >= before);
+    }
+
+    [Fact]
+    public void UpdateOverrideFlags_CanClearFlags()
+    {
+        var toolkit = new Api.BoundedContexts.GameToolkit.Domain.Entities.GameToolkit(
+            Guid.NewGuid(), GameId, "Test", UserId,
+            overridesTurnOrder: true, overridesScoreboard: true, overridesDiceSet: true);
+
+        toolkit.UpdateOverrideFlags(false, false, false);
+
+        Assert.False(toolkit.OverridesTurnOrder);
+        Assert.False(toolkit.OverridesScoreboard);
+        Assert.False(toolkit.OverridesDiceSet);
+    }
+
+    // ========================================================================
     // UpdateDetails
     // ========================================================================
 

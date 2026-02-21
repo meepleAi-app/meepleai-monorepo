@@ -42,13 +42,16 @@ import type {
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
+// Static date avoids SSR/client hydration mismatch (new Date() differs between renders)
+const MOCK_DATE = new Date('2025-02-21T20:00:00');
+
 const MOCK_SESSION: Session = {
   id: 'demo-session-1',
   sessionCode: 'DEMO42',
   sessionType: 'GameSpecific',
   gameName: 'Catan',
   gameIcon: '🌾',
-  sessionDate: new Date(),
+  sessionDate: MOCK_DATE,
   status: 'Active',
   participantCount: 3,
 };
@@ -97,12 +100,12 @@ const MOCK_COUNTER_STATE_INIT: CounterState = {
 };
 
 const MOCK_SCORES: ScoreEntry[] = [
-  { id: 's1', participantId: 'p1', roundNumber: 1, category: 'Risorse', scoreValue: 3, timestamp: new Date(), createdBy: 'p1' },
-  { id: 's2', participantId: 'p2', roundNumber: 1, category: 'Risorse', scoreValue: 2, timestamp: new Date(), createdBy: 'p2' },
-  { id: 's3', participantId: 'p3', roundNumber: 1, category: 'Risorse', scoreValue: 1, timestamp: new Date(), createdBy: 'p3' },
-  { id: 's4', participantId: 'p1', roundNumber: 2, category: 'Città',   scoreValue: 5, timestamp: new Date(), createdBy: 'p1' },
-  { id: 's5', participantId: 'p2', roundNumber: 2, category: 'Città',   scoreValue: 5, timestamp: new Date(), createdBy: 'p2' },
-  { id: 's6', participantId: 'p3', roundNumber: 2, category: 'Città',   scoreValue: 4, timestamp: new Date(), createdBy: 'p3' },
+  { id: 's1', participantId: 'p1', roundNumber: 1, category: 'Risorse', scoreValue: 3, timestamp: MOCK_DATE, createdBy: 'p1' },
+  { id: 's2', participantId: 'p2', roundNumber: 1, category: 'Risorse', scoreValue: 2, timestamp: MOCK_DATE, createdBy: 'p2' },
+  { id: 's3', participantId: 'p3', roundNumber: 1, category: 'Risorse', scoreValue: 1, timestamp: MOCK_DATE, createdBy: 'p3' },
+  { id: 's4', participantId: 'p1', roundNumber: 2, category: 'Città',   scoreValue: 5, timestamp: MOCK_DATE, createdBy: 'p1' },
+  { id: 's5', participantId: 'p2', roundNumber: 2, category: 'Città',   scoreValue: 5, timestamp: MOCK_DATE, createdBy: 'p2' },
+  { id: 's6', participantId: 'p3', roundNumber: 2, category: 'Città',   scoreValue: 4, timestamp: MOCK_DATE, createdBy: 'p3' },
 ];
 
 const MOCK_SCOREBOARD: ScoreboardData = {

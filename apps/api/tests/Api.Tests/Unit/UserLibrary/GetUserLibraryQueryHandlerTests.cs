@@ -20,6 +20,7 @@ namespace Api.Tests.Unit.UserLibrary;
 /// <summary>
 /// Unit tests for GetUserLibraryQueryHandler.
 /// Issue #3208: Verify hasPdfDocuments field population.
+/// Issue #4998: Updated to verify KB-aware fields (hasKb, kbCardCount, kbIndexedCount, kbProcessingCount).
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserLibrary")]
@@ -54,7 +55,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_WithPdfDocuments_SetsHasPdfDocumentsTrue()
+    public async Task Handle_WithReadyPdf_SetsHasKbTrue()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -79,7 +80,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var gameId = sharedGame.Id;
         var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
 
-        // Add PDF document to DbContext
+        // Add fully indexed PDF document (ProcessingState = "Ready") to DbContext
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
@@ -88,7 +89,8 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = userId,
-            ProcessingStatus = "completed"
+            ProcessingStatus = "completed",
+            ProcessingState = "Ready" // Issue #4998: fully indexed in RAG
         });
         await _dbContext.SaveChangesAsync();
 
@@ -120,11 +122,15 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Single(result.Items);
-        Assert.True(result.Items.First().HasPdfDocuments, "Should have hasPdfDocuments=true when PDF exists");
+        var item = result.Items.First();
+        Assert.True(item.HasKb, "Should have hasKb=true when a PDF is fully indexed (Ready)");
+        Assert.Equal(1, item.KbCardCount);
+        Assert.Equal(1, item.KbIndexedCount);
+        Assert.Equal(0, item.KbProcessingCount);
     }
 
     [Fact]
-    public async Task Handle_WithoutPdfDocuments_SetsHasPdfDocumentsFalse()
+    public async Task Handle_WithoutPdfDocuments_SetsHasKbFalse()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -179,7 +185,10 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Single(result.Items);
-        Assert.False(result.Items.First().HasPdfDocuments, "Should have hasPdfDocuments=false when no PDF exists");
+        var item = result.Items.First();
+        Assert.False(item.HasKb, "Should have hasKb=false when no PDF exists");
+        Assert.Equal(0, item.KbCardCount);
+        Assert.Equal(0, item.KbIndexedCount);
     }
 
     public void Dispose()

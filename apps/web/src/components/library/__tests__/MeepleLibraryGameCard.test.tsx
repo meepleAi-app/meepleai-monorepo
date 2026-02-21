@@ -3,8 +3,10 @@
  * Issue #4045 - Library integration tests
  */
 
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 import { MeepleLibraryGameCard } from '../MeepleLibraryGameCard';
@@ -32,6 +34,22 @@ vi.mock('@/hooks/queries', () => ({
   }),
 }));
 
+// Mock AgentCreationSheet to avoid deep QueryClient usage in tests
+vi.mock('@/components/agent/config', () => ({
+  AgentCreationSheet: () => null,
+}));
+
+// ============================================================================
+// Test Utilities
+// ============================================================================
+
+function createWrapper() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  };
+}
+
 // Mock toast
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
@@ -58,7 +76,11 @@ const mockGame: UserLibraryEntry = {
   addedAt: '2024-01-01T00:00:00Z',
   isFavorite: false,
   currentState: 'Owned',
-  hasPdfDocuments: true,
+  hasKb: true,
+  kbCardCount: 1,
+  kbIndexedCount: 1,
+  kbProcessingCount: 0,
+  agentIsOwned: true,
   notes: 'Test notes',
 };
 
@@ -86,21 +108,21 @@ describe('MeepleLibraryGameCard', () => {
   });
 
   it('renders game title and subtitle', () => {
-    render(<MeepleLibraryGameCard {...defaultProps} />);
+    render(<MeepleLibraryGameCard {...defaultProps} />, { wrapper: createWrapper() });
 
     expect(screen.getByText('Test Game')).toBeInTheDocument();
     expect(screen.getByText('Test Publisher')).toBeInTheDocument();
   });
 
   it('renders in grid variant by default', () => {
-    const { container } = render(<MeepleLibraryGameCard {...defaultProps} />);
+    const { container } = render(<MeepleLibraryGameCard {...defaultProps} />, { wrapper: createWrapper() });
 
     const card = container.querySelector('[data-testid^="library-game-card"]');
     expect(card).toBeInTheDocument();
   });
 
   it('renders in list variant when specified', () => {
-    render(<MeepleLibraryGameCard {...defaultProps} variant="list" />);
+    render(<MeepleLibraryGameCard {...defaultProps} variant="list" />, { wrapper: createWrapper() });
 
     const card = screen.getByTestId('library-game-card-game-123');
     expect(card).toBeInTheDocument();
@@ -108,27 +130,27 @@ describe('MeepleLibraryGameCard', () => {
 
   it('shows favorite badge when game is favorite', () => {
     const favoriteGame = { ...mockGame, isFavorite: true };
-    render(<MeepleLibraryGameCard {...defaultProps} game={favoriteGame} />);
+    render(<MeepleLibraryGameCard {...defaultProps} game={favoriteGame} />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/❤️ Preferito/i)).toBeInTheDocument();
   });
 
-  it('shows PDF metadata when documents available', () => {
-    render(<MeepleLibraryGameCard {...defaultProps} />);
+  it('shows KB metadata when documents available', () => {
+    render(<MeepleLibraryGameCard {...defaultProps} />, { wrapper: createWrapper() });
 
-    expect(screen.getByText(/📄 PDF/i)).toBeInTheDocument();
+    expect(screen.getByText(/📄 KB/i)).toBeInTheDocument();
   });
 
-  it('does not show PDF metadata when no documents', () => {
-    const gameNoPdf = { ...mockGame, hasPdfDocuments: false };
-    render(<MeepleLibraryGameCard {...defaultProps} game={gameNoPdf} />);
+  it('does not show KB metadata when no documents', () => {
+    const gameNoPdf = { ...mockGame, hasKb: false, kbCardCount: 0, kbIndexedCount: 0, kbProcessingCount: 0 };
+    render(<MeepleLibraryGameCard {...defaultProps} game={gameNoPdf} />, { wrapper: createWrapper() });
 
     expect(screen.queryByText(/📄 PDF/i)).not.toBeInTheDocument();
   });
 
   it('maps game state to status correctly', () => {
     const ownedGame = { ...mockGame, currentState: 'Owned' as const };
-    const { rerender } = render(<MeepleLibraryGameCard {...defaultProps} game={ownedGame} />);
+    const { rerender } = render(<MeepleLibraryGameCard {...defaultProps} game={ownedGame} />, { wrapper: createWrapper() });
 
     // Status badge should show "owned"
     const card = screen.getByTestId('library-game-card-game-123');
@@ -147,7 +169,8 @@ describe('MeepleLibraryGameCard', () => {
         selectionMode={true}
         isSelected={false}
         onSelect={vi.fn()}
-      />
+      />,
+      { wrapper: createWrapper() }
     );
 
     const checkbox = screen.getByRole('checkbox');
@@ -162,7 +185,8 @@ describe('MeepleLibraryGameCard', () => {
         selectionMode={true}
         isSelected={true}
         onSelect={vi.fn()}
-      />
+      />,
+      { wrapper: createWrapper() }
     );
 
     const checkbox = screen.getByRole('checkbox');
@@ -198,7 +222,7 @@ describe('MeepleLibraryGameCard', () => {
   });
 
   it('formats metadata correctly', () => {
-    render(<MeepleLibraryGameCard {...defaultProps} />);
+    render(<MeepleLibraryGameCard {...defaultProps} />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/Mai giocato/i)).toBeInTheDocument();
     expect(screen.getByText(/N\/A/i)).toBeInTheDocument(); // Win rate

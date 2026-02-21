@@ -302,7 +302,11 @@ describe('addGameWizardStore', () => {
         currentState: 'Owned',
         stateChangedAt: null,
         stateNotes: null,
-        hasPdfDocuments: false,
+        hasKb: false,
+        kbCardCount: 0,
+        kbIndexedCount: 0,
+        kbProcessingCount: 0,
+        agentIsOwned: true,
       });
 
       selectSharedGame(mockGame);
@@ -398,7 +402,11 @@ describe('addGameWizardStore', () => {
         currentState: 'Owned',
         stateChangedAt: null,
         stateNotes: null,
-        hasPdfDocuments: false,
+        hasKb: false,
+        kbCardCount: 0,
+        kbIndexedCount: 0,
+        kbProcessingCount: 0,
+        agentIsOwned: true,
       });
 
       // Mock fetch for PDF association

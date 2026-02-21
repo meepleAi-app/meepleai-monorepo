@@ -9,7 +9,42 @@
 
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { IntlProvider } from 'react-intl';
 import { ReactElement, ReactNode } from 'react';
+
+import { flattenMessages, getMessages, DEFAULT_LOCALE } from '@/locales';
+
+// Pre-flatten Italian messages once for all tests in this wrapper
+export const TEST_MESSAGES = flattenMessages(getMessages(DEFAULT_LOCALE) as Record<string, unknown>);
+
+/**
+ * Translation helper for use in tests.
+ *
+ * Resolves a flat message key against the active locale messages and
+ * performs simple `{variable}` substitution.
+ *
+ * ⚠️ ICU plural syntax (e.g. `{count, plural, =1 {...} other {...}}`) is NOT
+ * evaluated — the raw pattern is returned with `{count}` replaced literally.
+ * For plural keys, assert against the rendered DOM using a regex pattern
+ * (e.g. `/3 giochi/`) so the real IntlProvider inside renderWithQuery resolves them.
+ *
+ * Usage:
+ * ```ts
+ * import { t } from '@/__tests__/utils/query-test-utils';
+ *
+ * expect(screen.getByText(t('privateGames.title'))).toBeInTheDocument();
+ * expect(screen.getByText(t('privateGames.pageOf', { page: 1, totalPages: 3 }))).toBeInTheDocument();
+ * ```
+ */
+export function t(key: string, params?: Record<string, string | number>): string {
+  let msg = (TEST_MESSAGES[key] as string) ?? key;
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+    });
+  }
+  return msg;
+}
 
 /**
  * Create a new QueryClient for testing
@@ -51,7 +86,11 @@ interface QueryWrapperProps {
 function QueryWrapper({ children, queryClient }: QueryWrapperProps) {
   const client = queryClient || createTestQueryClient();
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <IntlProvider locale={DEFAULT_LOCALE} messages={TEST_MESSAGES}>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </IntlProvider>
+  );
 }
 
 /**

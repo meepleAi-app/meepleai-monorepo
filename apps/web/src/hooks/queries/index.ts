@@ -186,6 +186,9 @@ export {
   type CreateAgentFlowResult,
 } from './useCreateAgentFlow';
 
+// PDF Processing Status (Issue #4946)
+export { usePdfProcessingStatus, pdfStatusKeys } from './usePdfProcessingStatus';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

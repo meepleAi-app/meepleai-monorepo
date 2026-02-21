@@ -59,9 +59,11 @@ import {
 import {
   PrivateGameDtoSchema,
   PaginatedPrivateGamesResponseSchema,
+  PdfIndexingStatusSchema,
   type PrivateGameDto,
   type AddPrivateGameRequest,
   type UpdatePrivateGameRequest,
+  type PdfIndexingStatus,
   type PaginatedPrivateGamesResponse,
   type GetPrivateGamesParams,
 } from '../schemas/private-games.schemas';
@@ -110,6 +112,8 @@ export interface LibraryClient {
   addPrivateGame(request: AddPrivateGameRequest): Promise<PrivateGameDto>;
   updatePrivateGame(id: string, request: UpdatePrivateGameRequest): Promise<PrivateGameDto>;
   deletePrivateGame(id: string): Promise<void>;
+  // PDF Indexing Status (Issue #4946)
+  getPdfProcessingStatus(gameId: string): Promise<PdfIndexingStatus>;
   // Proposal Migrations (Issue #3669)
   getPendingMigrations(): Promise<PendingMigrationDto[]>;
   chooseMigration(migrationId: string, request: MigrationChoiceRequest): Promise<MigrationChoiceResponse>;
@@ -625,6 +629,26 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async deletePrivateGame(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/private-games/${id}`);
+    },
+
+    // ==================== PDF Indexing Status (Issue #4946) ====================
+
+    /**
+     * Get PDF indexing/processing status for a game
+     * @param gameId - Game UUID
+     * @returns PDF indexing status with progress, chunkCount and errorMessage
+     */
+    async getPdfProcessingStatus(gameId: string): Promise<PdfIndexingStatus> {
+      const data = await httpClient.get<PdfIndexingStatus>(
+        `/api/v1/library/games/${gameId}/pdf-status`,
+        PdfIndexingStatusSchema
+      );
+
+      if (!data) {
+        throw new Error('Failed to fetch PDF processing status');
+      }
+
+      return data;
     },
 
     // ==================== Proposal Migrations (Issue #3669) ====================

@@ -568,6 +568,10 @@
     "noGamesMatchSearch": "Nessun gioco corrispondente a \"{search}\". Prova un altro termine.",
     "emptyStateDescription": "Inizia a costruire la tua collezione personale aggiungendo il tuo primo gioco privato.",
     "addFirstGame": "Aggiungi il Tuo Primo Gioco",
+    "emptyCollectionTitle": "La tua collezione è ancora vuota",
+    "emptyCollectionDescription": "Aggiungi il tuo primo gioco da tavolo, carica il manuale e lascia che l'AI diventi il tuo esperto personale delle regole.",
+    "createFirstGame": "Crea il tuo primo gioco",
+    "browseCatalog": "Cerca nel catalogo condiviso",
     "pageOf": "Pagina {page} di {totalPages}",
     "editGame": "Modifica Gioco",
     "editDescription": "Aggiorna i dettagli di \"{title}\".",
@@ -633,6 +637,34 @@
       "upload": "Carica"
     },
     "title": "Wizard Importazione PDF"
+  },
+  "pdfIndexing": {
+    "pending": "In attesa di elaborazione",
+    "processing": "Elaborazione in corso...",
+    "indexed": "Knowledge Base pronta!",
+    "failed": "Indicizzazione fallita",
+    "progress": "{progress}%",
+    "chunksCount": "{count} blocchi indicizzati",
+    "backgroundNote": "Puoi continuare — l'indicizzazione terminerà in background.",
+    "continueToAgent": "Continua: configura agente",
+    "stageCompleted": "completato",
+    "stageActive": "in corso...",
+    "stageFailed": "errore",
+    "stagePending": "in attesa",
+    "steps": {
+      "uploading": "Caricamento file",
+      "extracting": "Estrazione testo",
+      "chunking": "Chunking semantico",
+      "indexing": "Indicizzazione vettoriale"
+    }
+  },
+  "kbStatus": {
+    "pending": "In attesa",
+    "processing": "Elaborazione in corso",
+    "indexed": "Knowledge Base pronta",
+    "failed": "Indicizzazione fallita",
+    "createAgent": "Crea agente",
+    "retry": "Riprova"
   },
   "legal": {
     "tableOfContents": "Indice",

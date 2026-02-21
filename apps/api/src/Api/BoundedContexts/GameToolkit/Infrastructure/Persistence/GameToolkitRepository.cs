@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.BoundedContexts.GameToolkit.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameToolkit;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -58,11 +59,14 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
     }
 
     public async Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetByPrivateGameIdAsync(
-        Guid privateGameId, CancellationToken cancellationToken = default)
+        Guid privateGameId, Guid callingUserId, CancellationToken cancellationToken = default)
     {
+        // JOIN with PrivateGameEntity to enforce ownership — only the owner may read their toolkits
         var entities = await DbContext.Set<GameToolkitEntity>()
             .AsNoTracking()
-            .Where(t => t.PrivateGameId == privateGameId)
+            .Where(t => t.PrivateGameId == privateGameId
+                && DbContext.Set<PrivateGameEntity>()
+                    .Any(pg => pg.Id == privateGameId && pg.OwnerId == callingUserId))
             .OrderByDescending(t => t.Version)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

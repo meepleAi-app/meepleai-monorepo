@@ -100,7 +100,7 @@ function AppContent({ children }: { children: ReactNode }) {
   };
 
   return (
-    <PWAProvider>
+    <PWAProvider showInstallPrompt={false}>
       {/* Skip to main content link (UI-05 WCAG 2.1 AA requirement) */}
       <AccessibleSkipLink href="#main-content" />
       {children}

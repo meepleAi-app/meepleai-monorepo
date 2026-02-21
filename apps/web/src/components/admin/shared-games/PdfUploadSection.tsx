@@ -152,7 +152,7 @@ export function PdfUploadSection({
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ id: string }>((resolve, reject) => {
+      const uploadPromise = new Promise<{ documentId: string; fileName: string }>((resolve, reject) => {
         xhr.upload.addEventListener('progress', e => {
           if (e.lengthComputable) {
             setUploadProgress(Math.round((e.loaded / e.total) * 100));
@@ -181,7 +181,7 @@ export function PdfUploadSection({
           reject(new Error('Errore di rete durante l\'upload'));
         });
 
-        xhr.open('POST', `${API_BASE}/api/v1/ingest/upload`);
+        xhr.open('POST', '/api/v1/ingest/pdf');
         xhr.withCredentials = true;
         xhr.send(formData);
       });
@@ -189,7 +189,7 @@ export function PdfUploadSection({
       const result = await uploadPromise;
 
       const uploaded: UploadedPdf = {
-        id: result.id,
+        id: result.documentId,
         fileName: file.name,
         fileSize: file.size,
       };
@@ -201,7 +201,7 @@ export function PdfUploadSection({
 
       // If we have a gameId, link the PDF to the game
       if (gameId) {
-        await linkPdfToGame(gameId, result.id);
+        await linkPdfToGame(gameId, result.documentId);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore sconosciuto';

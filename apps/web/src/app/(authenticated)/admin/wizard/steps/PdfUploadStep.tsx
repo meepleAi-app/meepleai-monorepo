@@ -79,7 +79,7 @@ export function PdfUploadStep({ onComplete }: PdfUploadStepProps) {
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ id: string }>((resolve, reject) => {
+      const uploadPromise = new Promise<{ documentId: string; fileName: string }>((resolve, reject) => {
         xhr.upload.addEventListener('progress', e => {
           if (e.lengthComputable) {
             setUploadProgress(Math.round((e.loaded / e.total) * 100));
@@ -110,7 +110,7 @@ export function PdfUploadStep({ onComplete }: PdfUploadStepProps) {
 
         // Note: We upload to a temporary game ID, then associate with the real game in step 2
         // For now, we use a placeholder approach - upload without gameId
-        xhr.open('POST', `${API_BASE}/api/v1/ingest/upload`);
+        xhr.open('POST', '/api/v1/ingest/pdf');
         xhr.withCredentials = true;
         xhr.send(formData);
       });
@@ -118,7 +118,7 @@ export function PdfUploadStep({ onComplete }: PdfUploadStepProps) {
       const result = await uploadPromise;
 
       toast.success('PDF caricato con successo!');
-      onComplete(result.id, file.name, isPublic);
+      onComplete(result.documentId, file.name, isPublic);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore sconosciuto';
       toast.error(`Upload fallito: ${message}`);

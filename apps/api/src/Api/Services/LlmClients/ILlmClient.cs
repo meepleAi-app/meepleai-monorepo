@@ -56,4 +56,10 @@ internal interface ILlmClient
     /// <param name="modelId">Model identifier to check</param>
     /// <returns>True if model is supported by this provider</returns>
     bool SupportsModel(string modelId);
+
+    /// <summary>
+    /// Lightweight reachability check using a metadata endpoint (no LLM inference).
+    /// Ollama: GET /api/tags — OpenRouter: GET /api/v1/models
+    /// </summary>
+    Task<bool> CheckHealthAsync(CancellationToken ct = default);
 }

@@ -27,6 +27,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
+import { JourneyProgress } from '@/components/library/JourneyProgress';
 import { KbStatusBadge } from '@/components/library/KbStatusBadge';
 import { LibraryEmptyState } from '@/components/library/LibraryEmptyState';
 import { PrivateGameCard } from '@/components/library/PrivateGameCard';
@@ -226,6 +227,9 @@ export default function PrivateGamesClient() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      {/* Journey Progress Banner */}
+      <JourneyProgress />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

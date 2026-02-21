@@ -67,20 +67,20 @@ describe('AgentConfigForm', () => {
   });
 
   describe('Initial State', () => {
-    it('defaults to "arbitro" typology (aria-pressed=true)', () => {
+    it('defaults to "arbitro" typology (aria-checked=true)', () => {
       render(<AgentConfigForm gameId="game-1" hasIndexedKb={false} />);
 
-      const arbitroBtn = screen.getByRole('button', { name: /arbitro/i });
-      expect(arbitroBtn).toHaveAttribute('aria-pressed', 'true');
+      const arbitroBtn = screen.getByRole('radio', { name: /arbitro/i });
+      expect(arbitroBtn).toHaveAttribute('aria-checked', 'true');
     });
 
     it('tutor and strategist start deselected', () => {
       render(<AgentConfigForm gameId="game-1" hasIndexedKb={false} />);
 
-      const tutorBtn = screen.getByRole('button', { name: /tutor/i });
-      const strategistBtn = screen.getByRole('button', { name: /strategist/i });
-      expect(tutorBtn).toHaveAttribute('aria-pressed', 'false');
-      expect(strategistBtn).toHaveAttribute('aria-pressed', 'false');
+      const tutorBtn = screen.getByRole('radio', { name: /tutor/i });
+      const strategistBtn = screen.getByRole('radio', { name: /strategist/i });
+      expect(tutorBtn).toHaveAttribute('aria-checked', 'false');
+      expect(strategistBtn).toHaveAttribute('aria-checked', 'false');
     });
 
     it('respects initialTypology prop', () => {
@@ -92,12 +92,12 @@ describe('AgentConfigForm', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /tutor/i })).toHaveAttribute(
-        'aria-pressed',
+      expect(screen.getByRole('radio', { name: /tutor/i })).toHaveAttribute(
+        'aria-checked',
         'true'
       );
-      expect(screen.getByRole('button', { name: /arbitro/i })).toHaveAttribute(
-        'aria-pressed',
+      expect(screen.getByRole('radio', { name: /arbitro/i })).toHaveAttribute(
+        'aria-checked',
         'false'
       );
     });
@@ -108,14 +108,14 @@ describe('AgentConfigForm', () => {
       const user = userEvent.setup();
       render(<AgentConfigForm gameId="game-1" hasIndexedKb={false} />);
 
-      await user.click(screen.getByRole('button', { name: /tutor/i }));
+      await user.click(screen.getByRole('radio', { name: /tutor/i }));
 
-      expect(screen.getByRole('button', { name: /tutor/i })).toHaveAttribute(
-        'aria-pressed',
+      expect(screen.getByRole('radio', { name: /tutor/i })).toHaveAttribute(
+        'aria-checked',
         'true'
       );
-      expect(screen.getByRole('button', { name: /arbitro/i })).toHaveAttribute(
-        'aria-pressed',
+      expect(screen.getByRole('radio', { name: /arbitro/i })).toHaveAttribute(
+        'aria-checked',
         'false'
       );
     });
@@ -124,10 +124,10 @@ describe('AgentConfigForm', () => {
       const user = userEvent.setup();
       render(<AgentConfigForm gameId="game-1" hasIndexedKb={false} />);
 
-      await user.click(screen.getByRole('button', { name: /strategist/i }));
+      await user.click(screen.getByRole('radio', { name: /strategist/i }));
 
-      expect(screen.getByRole('button', { name: /strategist/i })).toHaveAttribute(
-        'aria-pressed',
+      expect(screen.getByRole('radio', { name: /strategist/i })).toHaveAttribute(
+        'aria-checked',
         'true'
       );
     });
@@ -137,7 +137,7 @@ describe('AgentConfigForm', () => {
       render(<AgentConfigForm gameId="game-1" hasIndexedKb={false} />);
 
       // Strategist balanced costs more than arbitro balanced
-      await user.click(screen.getByRole('button', { name: /strategist/i }));
+      await user.click(screen.getByRole('radio', { name: /strategist/i }));
 
       expect(screen.getByText('~0.02€')).toBeInTheDocument();
     });
@@ -262,6 +262,52 @@ describe('AgentConfigForm', () => {
 
       // Default is strategist balanced = ~0.02€
       expect(screen.getByText('~0.02€')).toBeInTheDocument();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('shows error message when onSave rejects', async () => {
+      const onSave = vi.fn().mockRejectedValue(new Error('Network error'));
+      const user = userEvent.setup();
+
+      render(
+        <AgentConfigForm
+          gameId="game-1"
+          hasIndexedKb={true}
+          onSave={onSave}
+        />
+      );
+
+      await user.click(screen.getByTestId('save-and-chat-btn'));
+
+      expect(screen.getByTestId('save-error')).toBeInTheDocument();
+      expect(screen.getByText(/Errore durante la configurazione/i)).toBeInTheDocument();
+    });
+
+    it('clears error on next save attempt', async () => {
+      let callCount = 0;
+      const onSave = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.reject(new Error('fail'));
+        return Promise.resolve();
+      });
+      const user = userEvent.setup();
+
+      render(
+        <AgentConfigForm
+          gameId="game-1"
+          hasIndexedKb={true}
+          onSave={onSave}
+        />
+      );
+
+      // First click → error
+      await user.click(screen.getByTestId('save-and-chat-btn'));
+      expect(screen.getByTestId('save-error')).toBeInTheDocument();
+
+      // Second click → error disappears immediately, then resolves
+      await user.click(screen.getByTestId('save-and-chat-btn'));
+      expect(screen.queryByTestId('save-error')).not.toBeInTheDocument();
     });
   });
 

@@ -10,6 +10,8 @@
 
 'use client';
 
+import { useCallback, useState } from 'react';
+
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -20,7 +22,6 @@ import { KbStatusPanel } from '@/components/library/KbStatusPanel';
 import { Button } from '@/components/ui/primitives/button';
 import { useCreateAgentFlow } from '@/hooks/queries/useCreateAgentFlow';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
-import { usePdfProcessingStatus } from '@/hooks/queries/usePdfProcessingStatus';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { cn } from '@/lib/utils';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
@@ -78,12 +79,17 @@ export default function AgentConfigPage() {
   // Game details (for breadcrumb title)
   const { data: gameDetail, isLoading: gameLoading } = useLibraryGameDetail(gameId);
 
-  // PDF status — used to derive hasIndexedKb for AgentConfigForm
-  const { data: pdfStatus } = usePdfProcessingStatus(gameId);
-  const hasIndexedKb = pdfStatus?.status === 'indexed';
+  // hasIndexedKb is derived from KbStatusPanel via onStatusChange callback
+  // to avoid a duplicate usePdfProcessingStatus subscription (KbStatusPanel owns the hook)
+  const [hasIndexedKb, setHasIndexedKb] = useState(false);
+  const handleStatusChange = useCallback((isIndexed: boolean) => {
+    setHasIndexedKb(isIndexed);
+  }, []);
 
   // Recent chat sessions for this game (last 5)
-  const { data: chatData } = useRecentChatSessions(30);
+  // Note: limited to 100 most-recent sessions across all games to reduce risk
+  // of game-specific sessions being pushed out of the window.
+  const { data: chatData } = useRecentChatSessions(100);
   const gameChats = (chatData?.sessions ?? [])
     .filter(s => s.gameId === gameId)
     .slice(0, 5);
@@ -136,8 +142,8 @@ export default function AgentConfigPage() {
 
         {/* 2-column layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left: KB Status Panel */}
-          <KbStatusPanel gameId={gameId} />
+          {/* Left: KB Status Panel — single source of truth for PDF status */}
+          <KbStatusPanel gameId={gameId} onStatusChange={handleStatusChange} />
 
           {/* Right: Agent Config Form */}
           <div className="rounded-xl border border-border/50 bg-card p-5">

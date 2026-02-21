@@ -113,12 +113,13 @@ function mockAllHooks({
 describe('JourneyProgress', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Clear localStorage before each test
-    localStorage.removeItem('journey-progress-dismissed');
+    // Clear all localStorage entries (component uses per-game keys like
+    // 'journey-progress-dismissed-game-1' so we must clear all, not just base key)
+    localStorage.clear();
   });
 
   afterEach(() => {
-    localStorage.removeItem('journey-progress-dismissed');
+    localStorage.clear();
   });
 
   describe('Visibility', () => {
@@ -454,7 +455,8 @@ describe('JourneyProgress', () => {
       render(<JourneyProgress gameId="game-1" />);
 
       await waitFor(() => {
-        expect(localStorage.getItem('journey-progress-dismissed')).toBe('true');
+        // Component uses per-game key when gameId is provided
+        expect(localStorage.getItem('journey-progress-dismissed-game-1')).toBe('true');
       });
     });
   });

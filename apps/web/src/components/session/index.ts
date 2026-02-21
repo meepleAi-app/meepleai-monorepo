@@ -22,6 +22,8 @@ export { WheelSpinner } from './WheelSpinner';
 export { RandomTools } from './RandomTools';
 export { ExportSession } from './ExportSession';
 export { InviteSession } from './InviteSession';
+export { CounterTool } from './CounterTool';
+export type { CounterToolProps } from './CounterTool';
 
 export type {
   Participant,
@@ -47,6 +49,8 @@ export type {
   JoinSessionResponse,
   TurnOrderData,
   TurnAdvancedPayload,
+  CounterToolConfig,
+  CounterState,
 } from './types';
 
 export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS } from './types';

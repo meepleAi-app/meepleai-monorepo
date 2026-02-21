@@ -2,22 +2,26 @@
  * Game Detail Client Component - New Admin Dashboard
  *
  * Route: /admin/shared-games/[id]
- * Two tabs: Details (game info + image) and Documents (PDF upload + list with RAG status).
+ * Three tabs: Details (game info + image), Documents (PDF upload + list), Agent (KB linking).
  */
 
 'use client';
 
-import { use, useCallback } from 'react';
+import { use, useCallback, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   ArrowLeft,
+  Bot,
+  CheckCircle2,
   Download,
   ExternalLink,
   FileText,
+  Link2,
   MoreHorizontal,
   Trash2,
+  Unlink,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -38,7 +42,15 @@ import {
 } from '@/components/ui/navigation/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { api, type SharedGameDocument } from '@/lib/api';
+import { getAgentDefinitions } from '@/lib/api/admin-agent-client';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -159,6 +171,45 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
     },
   });
 
+  // ── Agent linking state ──────────────────────────────────────────────────
+  const [selectedAgentId, setSelectedAgentId] = useState('');
+
+  const { data: linkedAgent, isLoading: linkedAgentLoading } = useQuery({
+    queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
+    queryFn: () => api.sharedGames.getLinkedAgent(gameId),
+    enabled: !!game,
+  });
+
+  const { data: kbCards } = useQuery({
+    queryKey: ['admin', 'shared-games', gameId, 'kb-cards'],
+    queryFn: () => api.sharedGames.getKbCards(gameId),
+    enabled: !!game,
+  });
+
+  const { data: agentDefinitions, isLoading: agentsLoading } = useQuery({
+    queryKey: ['admin', 'agent-definitions', 'list'],
+    queryFn: () => getAgentDefinitions({ activeOnly: true }),
+    enabled: !!game,
+  });
+
+  const linkAgentMutation = useMutation({
+    mutationFn: (agentId: string) => api.sharedGames.linkAgent(gameId, agentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId, 'linked-agent'] });
+      setSelectedAgentId('');
+    },
+  });
+
+  const unlinkAgentMutation = useMutation({
+    mutationFn: () => api.sharedGames.unlinkAgent(gameId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId, 'linked-agent'] });
+    },
+  });
+
+  const kbCompletedCount = kbCards?.filter(k => k.indexingStatus === 'Completed').length ?? 0;
+  const kbTotalCount = kbCards?.length ?? 0;
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -240,6 +291,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="documents">
             Documents{documents && documents.length > 0 ? ` (${documents.length})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="agent">
+            Agent{linkedAgent ? ' ✓' : ''}
           </TabsTrigger>
         </TabsList>
 
@@ -356,6 +410,179 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               </Card>
             </div>
           </div>
+        </TabsContent>
+
+        {/* ── Agent Tab ───────────────────────────────────────────────────── */}
+        <TabsContent value="agent" className="space-y-6 mt-6">
+          {/* Current linked agent */}
+          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+            <CardHeader>
+              <CardTitle className="font-quicksand flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                Linked Agent
+              </CardTitle>
+              <CardDescription>
+                One AI agent definition can be linked to this game to power its chat experience.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {linkedAgentLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ) : linkedAgent ? (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                      <Bot className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{linkedAgent.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{linkedAgent.type}</p>
+                      {linkedAgent.strategyName && (
+                        <Badge variant="outline" className="mt-1.5 text-xs">
+                          {linkedAgent.strategyName}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => unlinkAgentMutation.mutate()}
+                    disabled={unlinkAgentMutation.isPending}
+                    className="text-destructive hover:text-destructive shrink-0"
+                  >
+                    <Unlink className="mr-1.5 h-3.5 w-3.5" />
+                    {unlinkAgentMutation.isPending ? 'Unlinking…' : 'Unlink'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm font-medium">No agent linked</p>
+                  <p className="text-xs mt-1">Select an agent below to enable AI chat for this game.</p>
+                </div>
+              )}
+
+              {unlinkAgentMutation.isError && (
+                <Alert variant="destructive" className="mt-3">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {unlinkAgentMutation.error instanceof Error
+                      ? unlinkAgentMutation.error.message
+                      : 'Failed to unlink agent.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Link new agent — only shown when no agent is linked */}
+          {!linkedAgent && !linkedAgentLoading && (
+            <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+              <CardHeader>
+                <CardTitle className="font-quicksand text-base">Link an Agent</CardTitle>
+                <CardDescription>
+                  Choose an active agent definition to connect to this game.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <Select
+                    value={selectedAgentId}
+                    onValueChange={setSelectedAgentId}
+                    disabled={agentsLoading || linkAgentMutation.isPending}
+                  >
+                    <SelectTrigger className="flex-1 h-9 text-sm">
+                      <SelectValue placeholder={agentsLoading ? 'Loading agents…' : 'Select agent definition'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agentDefinitions?.map(agent => (
+                        <SelectItem key={agent.id} value={agent.id} className="text-sm">
+                          <span className="font-medium">{agent.name}</span>
+                          <span className="text-muted-foreground ml-2 text-xs">{agent.type}</span>
+                        </SelectItem>
+                      ))}
+                      {agentDefinitions?.length === 0 && (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">No active agents found.</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={() => linkAgentMutation.mutate(selectedAgentId)}
+                    disabled={!selectedAgentId || linkAgentMutation.isPending}
+                  >
+                    <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                    {linkAgentMutation.isPending ? 'Linking…' : 'Link'}
+                  </Button>
+                </div>
+
+                {linkAgentMutation.isError && (
+                  <Alert variant="destructive" className="mt-3">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {linkAgentMutation.error instanceof Error
+                        ? linkAgentMutation.error.message
+                        : 'Failed to link agent.'}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* KB Cards status */}
+          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+            <CardHeader>
+              <CardTitle className="font-quicksand text-base flex items-center gap-2">
+                Knowledge Base Status
+                {kbTotalCount > 0 && (
+                  <Badge variant={kbCompletedCount === kbTotalCount ? 'default' : 'secondary'}>
+                    {kbCompletedCount}/{kbTotalCount} indexed
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Documents indexed and available for RAG retrieval.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {kbTotalCount === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No KB cards yet. Upload and process documents in the Documents tab.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {kbCards?.map(card => (
+                    <div key={card.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="truncate text-xs">{card.fileName}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        {card.indexingStatus === 'Completed' && (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                        )}
+                        <Badge
+                          variant={card.indexingStatus === 'Completed' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {card.indexingStatus}
+                        </Badge>
+                        {card.chunkCount > 0 && (
+                          <span className="text-xs text-muted-foreground">{card.chunkCount} chunks</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ── Documents Tab ───────────────────────────────────────────────── */}

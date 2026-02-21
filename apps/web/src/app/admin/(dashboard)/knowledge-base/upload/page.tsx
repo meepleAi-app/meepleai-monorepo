@@ -17,7 +17,13 @@ function CardSkeleton({ height = 'h-[300px]' }: { height?: string }) {
   );
 }
 
-export default function UploadProcessPage() {
+export default async function UploadProcessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ gameId?: string }>;
+}) {
+  const { gameId } = await searchParams;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -32,7 +38,7 @@ export default function UploadProcessPage() {
 
       {/* Upload Zone */}
       <Suspense fallback={<CardSkeleton height="h-[200px]" />}>
-        <UploadZone />
+        <UploadZone initialGameId={gameId} />
       </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

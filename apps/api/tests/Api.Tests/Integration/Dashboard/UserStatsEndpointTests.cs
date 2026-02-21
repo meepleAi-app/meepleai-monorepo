@@ -28,7 +28,6 @@ public sealed class UserStatsEndpointTests : IAsyncLifetime
     private readonly SharedTestcontainersFixture _fixture;
     private string _dbName = null!;
     private MeepleAiDbContext _dbContext = null!;
-    private GetUserStatsQueryHandler _handler = null!;
 
     public UserStatsEndpointTests(SharedTestcontainersFixture fixture)
     {
@@ -49,14 +48,6 @@ public sealed class UserStatsEndpointTests : IAsyncLifetime
         _dbContext = new MeepleAiDbContext(optionsBuilder.Options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.MigrateAsync();
 
-        // Setup handler with HybridCache
-        var services = new ServiceCollection();
-        services.AddHybridCache();
-        var serviceProvider = services.BuildServiceProvider();
-        var cache = serviceProvider.GetRequiredService<HybridCache>();
-
-        var mockHttpContext = TestHttpContextFactory.CreateMockHttpContextAccessor(Guid.NewGuid());
-        _handler = new GetUserStatsQueryHandler(_dbContext, cache, mockHttpContext.Object);
     }
 
     public async ValueTask DisposeAsync()

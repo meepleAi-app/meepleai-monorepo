@@ -214,7 +214,7 @@ public class CreateAgentWithSetupCommandHandlerTests
     public async Task Handle_NoAgentName_GeneratesDefault()
     {
         // Arrange
-        var command = CreateCommand(agentName: null);
+        var command = CreateCommand(agentName: null!);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);

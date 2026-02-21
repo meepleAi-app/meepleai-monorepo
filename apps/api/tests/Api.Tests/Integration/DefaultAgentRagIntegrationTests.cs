@@ -23,7 +23,6 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
     private readonly IMediator _mediator;
 
     // Test constants
-    private const string AgentName = "MeepleAssistant POC";
     private readonly Guid _agentId = Guid.Parse("49365068-d1db-4a66-aff5-f9fadca2763b");
     private readonly Guid _vectorDocId = Guid.Parse("8b78c72a-b5bc-454e-875b-22754a673c40"); // Azul
     private readonly Guid _testUserId = Guid.Parse("ce8ba2ac-bae5-4052-a6f7-6f71a6f5728e"); // Admin user

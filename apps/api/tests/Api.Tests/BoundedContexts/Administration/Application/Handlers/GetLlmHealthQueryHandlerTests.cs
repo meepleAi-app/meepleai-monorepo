@@ -57,7 +57,7 @@ public class GetLlmHealthQueryHandlerTests
             modelConfigRepositoryMock.Object,
             publisherMock.Object,
             healthCheckServiceMock.Object,
-            (IUserBudgetService?)null);
+            null!);
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()

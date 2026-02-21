@@ -1,7 +1,9 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Application.DTOs.ToolState;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
@@ -217,6 +219,14 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Get current turn phases")
             .WithDescription("Returns the current phase configuration and state. Issue #4761.");
+
+        group.MapGet("/live-sessions/{sessionId}/tools", HandleGetSessionTools)
+            .RequireAuthenticatedUser()
+            .Produces<SessionToolsDto>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get session toolkit")
+            .WithDescription("Returns the four implicit base tools and any custom ToolState items for the session. Issue #4969.");
 
         return group;
     }
@@ -483,6 +493,15 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetTurnPhasesQuery(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetSessionTools(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetSessionToolsQuery(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

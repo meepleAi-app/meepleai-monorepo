@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using MediatR;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;

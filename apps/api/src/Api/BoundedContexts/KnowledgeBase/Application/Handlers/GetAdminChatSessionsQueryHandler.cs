@@ -41,17 +41,14 @@ internal class GetAdminChatSessionsQueryHandler
             "Admin chat sessions query: {Count}/{Total} results (page {Page})",
             items.Count, totalCount, request.Page);
 
-        var sessions = items.Select(item =>
+        var sessions = items.Select(summary =>
         {
-            var (thread, email, displayName) = item;
+            var userName = summary.UserDisplayName
+                ?? (summary.UserEmail != null ? summary.UserEmail.Split('@')[0] : $"user:{summary.UserId.ToString()[..8]}");
 
-            var userName = displayName
-                ?? (email != null ? email.Split('@')[0] : $"user:{thread.UserId.ToString()[..8]}");
+            var durationSeconds = (int)(summary.LastMessageAt - summary.CreatedAt).TotalSeconds;
 
-            var durationSeconds = (int)(thread.LastMessageAt - thread.CreatedAt).TotalSeconds;
-
-            var preview = thread.Messages
-                .Take(2)
+            var preview = summary.PreviewMessages
                 .Select(m => new AdminChatPreviewMessageDto(
                     Role: m.Role,
                     Content: m.Content.Length > 200 ? m.Content[..200] + "..." : m.Content
@@ -59,13 +56,13 @@ internal class GetAdminChatSessionsQueryHandler
                 .ToList();
 
             return new AdminChatSessionDto(
-                Id: thread.Id.ToString(),
-                UserId: thread.UserId.ToString(),
+                Id: summary.Id.ToString(),
+                UserId: summary.UserId.ToString(),
                 UserName: userName,
-                Agent: thread.AgentType ?? "auto",
-                MessageCount: thread.MessageCount,
+                Agent: summary.AgentType ?? "auto",
+                MessageCount: summary.MessageCount,
                 DurationSeconds: durationSeconds,
-                Date: thread.LastMessageAt.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+                Date: summary.LastMessageAt.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
                 Preview: preview
             );
         }).ToList();

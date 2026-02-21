@@ -66,7 +66,11 @@ const mockLibraryData: UserLibraryEntry[] = [
     isFavorite: true,
     currentState: 'Owned',
     stateChangedAt: '2024-01-15T10:00:00Z',
-    hasPdfDocuments: true,
+    hasKb: true,
+    kbCardCount: 1,
+    kbIndexedCount: 1,
+    kbProcessingCount: 0,
+    agentIsOwned: true,
   },
   {
     id: '223e4567-e89b-12d3-a456-426614174001',
@@ -81,7 +85,11 @@ const mockLibraryData: UserLibraryEntry[] = [
     isFavorite: false,
     currentState: 'Wishlist',
     stateChangedAt: '2024-01-16T10:00:00Z',
-    hasPdfDocuments: false,
+    hasKb: false,
+    kbCardCount: 0,
+    kbIndexedCount: 0,
+    kbProcessingCount: 0,
+    agentIsOwned: true,
   },
 ];
 

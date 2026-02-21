@@ -25,6 +25,7 @@ import { AgentCreationSheet } from '@/components/agent/config';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import { useEntityActions } from '@/hooks/use-entity-actions';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import type { Game } from '@/lib/api';
 
@@ -77,6 +78,9 @@ export function MeepleGameCard({
   onClick,
   className,
 }: MeepleGameCardProps) {
+  // Auth state — navigation footer only for authenticated users
+  const { user } = useAuthUser();
+
   // Issue #4777: Agent creation sheet state
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
   const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
@@ -145,10 +149,13 @@ export function MeepleGameCard({
         showInfoButton
         infoHref={`/games/${game.id}`}
         infoTooltip="Vai al dettaglio"
-        // Epic #4688: Navigation footer
-        navigateTo={getNavigationLinks('game', { id: game.id })}
-        // Issue #4777: Agent action footer
+        // Epic #4688: Navigation footer — only for authenticated users
+        navigateTo={user ? getNavigationLinks('game', { id: game.id }) : undefined}
+        // Issue #4777, #4999: Agent action footer
+        // Catalog context: show "Aggiungi" CTA via !hasKb + onAddToCollection
         hasAgent={false}
+        hasKb={false}
+        onAddToCollection={handleAddToCollection}
         onCreateAgent={handleCreateAgent}
         data-testid={`game-card-${game.id}`}
       />

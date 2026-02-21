@@ -14,7 +14,7 @@
  * Architecture:
  * - Client Component with useState/useEffect
  * - Direct API calls (no React Query - different from existing pattern)
- * - AdminLayout integration
+ * - Renders inside AuthenticatedLayout (via Admin Hub)
  * - i18n support (Italian + English)
  */
 
@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { AdminLayout } from '@/components/admin/AdminLayout';
 import { OverallStatusBadge } from '@/components/admin/OverallStatusBadge';
 import { ServiceStatusCard } from '@/components/admin/ServiceStatusCard';
 import { Card, CardContent } from '@/components/ui/data-display/card';
@@ -286,7 +285,7 @@ export function ServicesClient() {
   };
 
   return (
-    <AdminLayout>
+    <>
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">
@@ -438,6 +437,6 @@ export function ServicesClient() {
           </CardContent>
         </Card>
       )}
-    </AdminLayout>
+    </>
   );
 }

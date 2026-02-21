@@ -2,10 +2,9 @@
  * Alert Management Page (Issue #921)
  *
  * Server Component wrapper for the alert management client page.
- * Renders the client component with AdminLayout.
  */
 
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { RequireRole } from '@/components/auth/RequireRole';
 
 import { AlertsPageClient } from './client';
 
@@ -16,8 +15,8 @@ export const metadata = {
 
 export default function AlertsPage() {
   return (
-    <AdminLayout>
+    <RequireRole allowedRoles={['Admin']}>
       <AlertsPageClient />
-    </AdminLayout>
+    </RequireRole>
   );
 }

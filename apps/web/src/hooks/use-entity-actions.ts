@@ -168,7 +168,7 @@ export function useEntityActions({
               onClick: () => (onAddToCollection ? onAddToCollection() : gameCollection.add()),
             };
 
-        const hasRag = data?.hasPdfDocuments === true;
+        const hasRag = data?.hasKb === true;
         const hasAgent = data?.hasAgent === true;
 
         return {

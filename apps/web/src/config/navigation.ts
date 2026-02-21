@@ -20,6 +20,7 @@ import {
   Gamepad2,
   History,
   LayoutDashboard,
+  ShieldIcon,
   User,
   Users,
   Users2,
@@ -212,6 +213,19 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     activePattern: /^\/knowledge-base/,
     visibility: { authOnly: true },
     group: 'strumenti',
+  },
+  {
+    id: 'admin',
+    href: '/admin',
+    icon: ShieldIcon,
+    iconName: 'shield',
+    label: 'Admin Hub',
+    ariaLabel: 'Navigate to admin hub',
+    priority: 12,
+    testId: 'nav-admin',
+    activePattern: /^\/admin/,
+    visibility: { authOnly: true, minRole: 'Admin' },
+    group: 'admin',
   },
 ];
 

@@ -11,6 +11,12 @@ export {
   PlayerExtraMeepleCard,
   CollectionExtraMeepleCard,
 } from './EntityExtraMeepleCard';
+export {
+  ExtraMeepleCardDrawer,
+  DrawerLoadingSkeleton,
+  DrawerErrorState,
+} from './ExtraMeepleCardDrawer';
+export type { DrawerEntityType, ExtraMeepleCardDrawerProps } from './ExtraMeepleCardDrawer';
 export { MediaTab } from './tabs/MediaTab';
 export { AITab } from './tabs/AITab';
 export { InteractiveCardDeck } from './tabs/InteractiveCardDeck';

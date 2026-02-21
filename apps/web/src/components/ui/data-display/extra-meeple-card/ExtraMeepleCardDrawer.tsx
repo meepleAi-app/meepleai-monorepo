@@ -1,0 +1,408 @@
+'use client';
+
+/**
+ * ExtraMeepleCardDrawer — Sheet wrapper for entity detail cards
+ * Issue #5024 - ExtraMeepleCard Drawer System (Epic #5023)
+ *
+ * A Sheet (drawer) that renders the appropriate ExtraMeepleCard variant
+ * based on entity type. Each entity content component handles its own
+ * data fetching by entityId.
+ *
+ * Routing:
+ *   game   → GameDrawerContent    (GameExtraMeepleCard)
+ *   agent  → AgentDrawerContent   (stub — Issue #5026)
+ *   chat   → ChatDrawerContent    (stub — Issue #5027)
+ *   kb     → KbDrawerContent      (stub — Issue #5028)
+ */
+
+import React from 'react';
+import {
+  AlertCircle,
+  Bot,
+  FileText,
+  Gamepad2,
+  MessageCircle,
+  RefreshCw,
+  Wrench,
+  X,
+} from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTitle,
+} from '@/components/ui/navigation/sheet';
+import { DRAWER_TEST_IDS } from './drawer-test-ids';
+import { GameExtraMeepleCard } from './EntityExtraMeepleCard';
+import type { GameDetailData } from './types';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export type DrawerEntityType = 'game' | 'agent' | 'chat' | 'kb';
+
+export interface ExtraMeepleCardDrawerProps {
+  /** Type of entity to display */
+  entityType: DrawerEntityType;
+  /** ID of the entity to load */
+  entityId: string;
+  /** Controls drawer visibility */
+  open: boolean;
+  /** Called when the drawer requests to close */
+  onClose: () => void;
+  className?: string;
+  'data-testid'?: string;
+}
+
+// ============================================================================
+// Entity Configuration
+// ============================================================================
+
+const ENTITY_CONFIG: Record<
+  DrawerEntityType,
+  {
+    label: string;
+    /** HSL color string (without hsl()) */
+    color: string;
+    Icon: React.ComponentType<{ className?: string }>;
+  }
+> = {
+  game:  { label: 'Dettaglio Gioco',   color: '25 95% 45%',   Icon: Gamepad2      },
+  agent: { label: 'Dettaglio Agente',  color: '220 70% 55%',  Icon: Bot           },
+  chat:  { label: 'Dettaglio Chat',    color: '262 83% 58%',  Icon: MessageCircle },
+  kb:    { label: 'Documento KB',      color: '174 60% 40%',  Icon: FileText      },
+};
+
+// ============================================================================
+// ExtraMeepleCardDrawer
+// ============================================================================
+
+export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
+  entityType,
+  entityId,
+  open,
+  onClose,
+  className,
+  'data-testid': testId,
+}: ExtraMeepleCardDrawerProps) {
+  const config = ENTITY_CONFIG[entityType];
+  const { Icon } = config;
+
+  return (
+    <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <SheetContent
+        side="right"
+        className={cn(
+          // Layout overrides: remove default padding, set full-height flex column
+          'flex flex-col p-0',
+          // Width override for wide drawer
+          'w-full sm:w-[600px] sm:max-w-[600px]',
+          // Hide the built-in close button (we render our own in the colored header)
+          '[&>button:first-child]:hidden',
+          className,
+        )}
+        data-testid={testId}
+      >
+        {/* Screen-reader title (required by Radix Dialog for accessibility) */}
+        <SheetTitle className="sr-only">
+          {config.label}
+        </SheetTitle>
+
+        {/* Entity-colored header */}
+        <div
+          className="relative flex h-14 shrink-0 items-center gap-2.5 px-5"
+          style={{ backgroundColor: `hsl(${config.color})` }}
+        >
+          <Icon className="h-4.5 w-4.5 text-white" aria-hidden="true" />
+          <h2
+            className="font-quicksand text-base font-bold text-white"
+            data-testid={DRAWER_TEST_IDS.ENTITY_LABEL}
+          >
+            {config.label}
+          </h2>
+
+          {/* Close button */}
+          <SheetClose
+            className={cn(
+              'absolute right-4 top-1/2 -translate-y-1/2',
+              'flex h-7 w-7 items-center justify-center rounded-full',
+              'bg-white/20 text-white transition-colors duration-150',
+              'hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/50',
+            )}
+            aria-label="Chiudi pannello"
+          >
+            <X className="h-3.5 w-3.5" />
+          </SheetClose>
+        </div>
+
+        {/* Scrollable entity content */}
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <DrawerEntityRouter entityType={entityType} entityId={entityId} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+});
+
+// ============================================================================
+// Entity Router
+// ============================================================================
+
+function DrawerEntityRouter({
+  entityType,
+  entityId,
+}: {
+  entityType: DrawerEntityType;
+  entityId: string;
+}) {
+  switch (entityType) {
+    case 'game':
+      return <GameDrawerContent entityId={entityId} />;
+    case 'agent':
+      return <AgentDrawerContent entityId={entityId} />;
+    case 'chat':
+      return <ChatDrawerContent entityId={entityId} />;
+    case 'kb':
+      return <KbDrawerContent entityId={entityId} />;
+    default:
+      return <DrawerErrorState error="Tipo entità non supportato" />;
+  }
+}
+
+// ============================================================================
+// Game Drawer Content
+// Fetches game data by ID and renders GameExtraMeepleCard.
+// ============================================================================
+
+function GameDrawerContent({ entityId }: { entityId: string }) {
+  const { data, loading, error, retry } = useGameDetail(entityId);
+
+  if (loading) return <DrawerLoadingSkeleton />;
+  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data)   return <DrawerLoadingSkeleton />;
+
+  return (
+    <GameExtraMeepleCard
+      data={data}
+      className="w-full rounded-none border-0 shadow-none bg-transparent"
+    />
+  );
+}
+
+// ============================================================================
+// Stub Drawer Contents
+// Will be replaced in Issues #5026 (agent), #5027 (chat), #5028 (kb).
+// ============================================================================
+
+function AgentDrawerContent({ entityId: _entityId }: { entityId: string }) {
+  return (
+    <DrawerComingSoon
+      label="AgentExtraMeepleCard"
+      issueNumber={5026}
+    />
+  );
+}
+
+function ChatDrawerContent({ entityId: _entityId }: { entityId: string }) {
+  return (
+    <DrawerComingSoon
+      label="ChatExtraMeepleCard"
+      issueNumber={5027}
+    />
+  );
+}
+
+function KbDrawerContent({ entityId: _entityId }: { entityId: string }) {
+  return (
+    <DrawerComingSoon
+      label="KbExtraMeepleCard"
+      issueNumber={5028}
+    />
+  );
+}
+
+// ============================================================================
+// Shared UI States
+// ============================================================================
+
+/** Animated skeleton shown while entity content loads */
+export function DrawerLoadingSkeleton({
+  'data-testid': testId,
+}: {
+  'data-testid'?: string;
+}) {
+  return (
+    <div
+      className="flex flex-col gap-3 p-5"
+      data-testid={testId ?? DRAWER_TEST_IDS.LOADING_SKELETON}
+      aria-busy="true"
+      aria-label="Caricamento in corso"
+    >
+      {/* Fake hero image */}
+      <div className="h-[140px] w-full animate-pulse rounded-xl bg-slate-200" />
+      {/* Fake tab strip */}
+      <div className="flex gap-2">
+        {[80, 110, 70].map((w) => (
+          <div
+            key={w}
+            className="h-8 animate-pulse rounded-lg bg-slate-200"
+            style={{ width: w }}
+          />
+        ))}
+      </div>
+      {/* Fake stat cards */}
+      <div className="grid grid-cols-3 gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-16 animate-pulse rounded-lg bg-slate-200" />
+        ))}
+      </div>
+      {/* Fake text block */}
+      <div className="h-20 w-full animate-pulse rounded-lg bg-slate-200" />
+    </div>
+  );
+}
+
+/** Error state with optional retry button */
+export function DrawerErrorState({
+  error,
+  onRetry,
+  'data-testid': testId,
+}: {
+  error: string;
+  onRetry?: () => void;
+  'data-testid'?: string;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-4 p-8 text-center"
+      data-testid={testId ?? DRAWER_TEST_IDS.ERROR_STATE}
+      role="alert"
+    >
+      <AlertCircle className="h-10 w-10 text-red-400" aria-hidden="true" />
+      <div className="space-y-1">
+        <p className="font-quicksand text-sm font-semibold text-slate-700">
+          Si è verificato un errore
+        </p>
+        <p className="font-nunito text-xs text-slate-500">{error}</p>
+      </div>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg',
+            'bg-slate-100 px-3 py-1.5',
+            'font-nunito text-xs font-medium text-slate-700',
+            'transition-colors duration-150 hover:bg-slate-200',
+            'focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1',
+          )}
+        >
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+          Riprova
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Placeholder shown for entity types not yet implemented */
+function DrawerComingSoon({
+  label,
+  issueNumber,
+}: {
+  label: string;
+  issueNumber: number;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-3 p-8 text-center"
+      data-testid={DRAWER_TEST_IDS.COMING_SOON(issueNumber)}
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+        <Wrench className="h-5 w-5 text-slate-400" aria-hidden="true" />
+      </div>
+      <div className="space-y-1">
+        <p className="font-quicksand text-sm font-semibold text-slate-600">
+          {label}
+        </p>
+        <p className="font-nunito text-xs text-slate-400">
+          In arrivo — Issue #{issueNumber}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Data Fetching Hook — Game
+// ============================================================================
+
+interface UseGameDetailResult {
+  data: GameDetailData | null;
+  loading: boolean;
+  error: string | null;
+  retry: () => void;
+}
+
+function useGameDetail(gameId: string): UseGameDetailResult {
+  const [data, setData] = React.useState<GameDetailData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchData = React.useCallback(async (signal: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/library/games/${gameId}`, { signal });
+      if (!res.ok) {
+        throw new Error(`Errore ${res.status}: gioco non trovato`);
+      }
+      const json = (await res.json()) as Record<string, unknown>;
+      setData(mapToGameDetailData(json));
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossibile caricare i dati del gioco',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [gameId]);
+
+  React.useEffect(() => {
+    if (!gameId) return;
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => { controller.abort(); };
+  }, [gameId, fetchData]);
+
+  // retry creates a fresh controller each time
+  const retry = React.useCallback(() => {
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+  }, [fetchData]);
+
+  return { data, loading, error, retry };
+}
+
+function mapToGameDetailData(json: Record<string, unknown>): GameDetailData {
+  return {
+    id:                 String(json.id ?? ''),
+    title:              String(json.title ?? json.name ?? ''),
+    imageUrl:           json.imageUrl          != null ? String(json.imageUrl)          : undefined,
+    publisher:          json.publisher         != null ? String(json.publisher)         : undefined,
+    yearPublished:      json.yearPublished      != null ? Number(json.yearPublished)     : undefined,
+    minPlayers:         json.minPlayers         != null ? Number(json.minPlayers)        : undefined,
+    maxPlayers:         json.maxPlayers         != null ? Number(json.maxPlayers)        : undefined,
+    playTimeMinutes:    json.playTimeMinutes    != null ? Number(json.playTimeMinutes)   : undefined,
+    description:        json.description        != null ? String(json.description)       : undefined,
+    averageRating:      json.averageRating      != null ? Number(json.averageRating)     : undefined,
+    totalPlays:         json.totalPlays         != null ? Number(json.totalPlays)        : undefined,
+    faqCount:           json.faqCount           != null ? Number(json.faqCount)          : undefined,
+    rulesDocumentCount: json.rulesDocumentCount != null ? Number(json.rulesDocumentCount): undefined,
+  };
+}

@@ -26,6 +26,7 @@ import {
   FilterBar,
   EmptyState,
 } from '@/components/dashboard-v2';
+import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/primitives/button';
 import { useAuthUser } from '@/hooks/useAuthUser';
@@ -80,6 +81,7 @@ function SectionHeader({
 export function GamingHubClient() {
   const { user } = useAuthUser();
   const router = useRouter();
+  const { openWizard } = useAddGameWizard();
 
   const {
     stats,
@@ -171,7 +173,10 @@ export function GamingHubClient() {
           />
 
           {games.length === 0 && !isLoadingGames ? (
-            <EmptyState variant="no-games" />
+            <EmptyState
+              variant="no-games"
+              onAction={() => openWizard({ type: 'fromLibrary' })}
+            />
           ) : (
             <GameCollectionGrid
               games={games}

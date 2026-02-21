@@ -61,6 +61,9 @@ export interface SessionStore {
   isLoading: boolean;
   error: string | null;
 
+  /** Currently active tool in the session Tool Rail (Issue #4974) */
+  activeTool: ToolId;
+
   // Actions
   createSession: (request: CreateSessionRequest) => Promise<void>;
   joinSession: (code: string) => Promise<void>;
@@ -69,6 +72,9 @@ export interface SessionStore {
   pauseSession: () => Promise<void>;
   resumeSession: () => Promise<void>;
   finalizeSession: (request: FinalizeSessionRequest) => Promise<void>;
+
+  /** Set the active tool in the Tool Rail */
+  setActiveTool: (tool: ToolId) => void;
 
   // SSE Integration
   addScoreFromSSE: (scoreEntry: ScoreEntry) => void;
@@ -86,6 +92,7 @@ const initialState = {
   participants: [],
   isLoading: false,
   error: null,
+  activeTool: 'scoreboard' as ToolId,
 };
 
 /**
@@ -415,6 +422,11 @@ export const useSessionStore = create<SessionStore>()(
           set({ error: errorMessage, isLoading: false }, false, 'finalizeSession/error');
           throw err;
         }
+      },
+
+      // ========== Active Tool ==========
+      setActiveTool: (tool: ToolId) => {
+        set({ activeTool: tool }, false, 'setActiveTool');
       },
 
       // ========== SSE Integration ==========

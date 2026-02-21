@@ -1,33 +1,43 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { Loader2 } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import {
+  DiceRoller,
   SessionHeader,
   SessionToolLayout,
   Scoreboard,
   TurnIndicatorBar,
   TurnOrderTool,
+  WhiteboardTool,
 } from '@/components/session';
+import { useDiceRoller } from '@/lib/hooks/useDiceRoller';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { useTurnOrder } from '@/lib/hooks/useTurnOrder';
+import { useWhiteboardTool } from '@/lib/hooks/useWhiteboardTool';
 import { useSessionStore } from '@/lib/stores/sessionStore';
+import type { ToolId } from '@/lib/stores/sessionStore';
 
 /**
- * Active Session Page — Tool Rail Layout (Issues #4973, #4975)
+ * Active Session Page — Tool Rail Layout (Issues #4973, #4974, #4975, #4977)
  *
- * Layout: collapsible side rail (desktop) / bottom nav (mobile).
- * TurnIndicatorBar wired to live TurnOrder state (Issue #4975).
- * TurnOrderTool wired to useTurnOrder hook (Issue #4975).
- * Remaining tools: dice (#4974), whiteboard (#4977).
+ * Wires all 4 base toolkit tools:
+ *  🔄 Turn Order  → TurnOrderTool + useTurnOrder
+ *  🎲 Dice        → DiceRoller + useDiceRoller
+ *  🖊️ Whiteboard  → WhiteboardTool + useWhiteboardTool
+ *  📊 Scoreboard  → Scoreboard (data from sessionStore)
+ *
+ * Active tool persisted in URL query param `?tool=<toolId>` (Issue #4974).
+ * `sessionStore.activeTool` mirrors the URL for cross-component access.
  */
 export default function ActiveSessionPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const sessionId = params?.sessionId as string;
 
   if (!sessionId) {
@@ -45,11 +55,33 @@ export default function ActiveSessionPage() {
     addScoreFromSSE,
     isLoading,
     error,
+    activeTool,
+    setActiveTool,
   } = useSessionStore();
 
-  const [activeTool, setActiveTool] = useState<string>('scoreboard');
+  // ── URL ↔ store sync ──────────────────────────────────────────────────────
 
-  // ── Turn order (Issue #4975) ─────────────────────────────────────────────────
+  // On mount: read URL param and initialise store (one-way URL → store).
+  const syncedRef = useRef(false);
+  useEffect(() => {
+    if (syncedRef.current) return;
+    syncedRef.current = true;
+    const urlTool = searchParams.get('tool');
+    if (urlTool) {
+      setActiveTool(urlTool as ToolId);
+    }
+  }, [searchParams, setActiveTool]);
+
+  /** Update both the store and the URL when the user switches tools. */
+  const handleToolSelect = (toolId: string) => {
+    setActiveTool(toolId as ToolId);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set('tool', toolId);
+    router.replace(`?${next.toString()}`, { scroll: false });
+  };
+
+  // ── Turn order (Issue #4975) ─────────────────────────────────────────────
+
   const {
     turnOrder,
     isLoading: isTurnLoading,
@@ -59,7 +91,26 @@ export default function ActiveSessionPage() {
     reset: resetTurnOrder,
   } = useTurnOrder({ sessionId });
 
-  // Load session details on mount
+  // ── Dice roller (Issue #4974) ─────────────────────────────────────────────
+
+  const currentParticipant = participants.find(p => p.isCurrentUser);
+  const diceRoller = useDiceRoller({
+    sessionId,
+    participantId: currentParticipant?.id ?? '',
+    participantName: currentParticipant?.displayName ?? '',
+    onRollReceived: (roll) => {
+      if (!roll.participantId || roll.participantId !== currentParticipant?.id) {
+        toast.info(`${roll.participantName}: ${roll.formula} = ${roll.total}`);
+      }
+    },
+  });
+
+  // ── Whiteboard (Issue #4977) ──────────────────────────────────────────────
+
+  const whiteboard = useWhiteboardTool({ sessionId });
+
+  // ── Session lifecycle ─────────────────────────────────────────────────────
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -143,7 +194,8 @@ export default function ActiveSessionPage() {
     );
   }
 
-  // Advance turn handler with toast
+  // ── Turn-order action handlers ────────────────────────────────────────────
+
   const handleAdvanceTurn = async () => {
     try {
       const updated = await advanceTurn();
@@ -153,7 +205,6 @@ export default function ActiveSessionPage() {
     }
   };
 
-  // Reset turn order handler with toast
   const handleResetTurnOrder = async () => {
     try {
       await resetTurnOrder();
@@ -163,7 +214,8 @@ export default function ActiveSessionPage() {
     }
   };
 
-  // Compose header: SessionHeader + TurnIndicatorBar (wired to turn order, Issue #4975)
+  // ── Header composition ────────────────────────────────────────────────────
+
   const header = (
     <>
       <SessionHeader
@@ -180,7 +232,8 @@ export default function ActiveSessionPage() {
     </>
   );
 
-  // Tool area content — rendered based on activeTool.
+  // ── Tool area ─────────────────────────────────────────────────────────────
+
   const toolContent = (() => {
     switch (activeTool) {
       case 'scoreboard':
@@ -200,16 +253,26 @@ export default function ActiveSessionPage() {
 
       case 'dice':
         return (
-          <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
-            Dice — coming in Issue #4974
-          </div>
+          <DiceRoller
+            sessionId={sessionId}
+            participantId={currentParticipant?.id ?? ''}
+            participantName={currentParticipant?.displayName ?? ''}
+            onRoll={diceRoller.roll}
+            rollHistory={diceRoller.rollHistory}
+            disabled={diceRoller.isRolling}
+          />
         );
 
       case 'whiteboard':
         return (
-          <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
-            Whiteboard — coming in Issue #4977
-          </div>
+          <WhiteboardTool
+            whiteboardState={whiteboard.whiteboardState}
+            isPending={whiteboard.isPending}
+            error={whiteboard.error}
+            onStrokesChange={whiteboard.saveStrokes}
+            onStructuredChange={whiteboard.saveStructured}
+            onClear={whiteboard.clear}
+          />
         );
 
       default:
@@ -221,7 +284,7 @@ export default function ActiveSessionPage() {
     <SessionToolLayout
       header={header}
       activeTool={activeTool}
-      onToolSelect={setActiveTool}
+      onToolSelect={handleToolSelect}
       customTools={[]}
     >
       {toolContent}

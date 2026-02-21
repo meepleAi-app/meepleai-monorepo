@@ -16,6 +16,35 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { CollectionDashboard } from '@/components/collection/CollectionDashboard';
 
+// Mock window.matchMedia to avoid jsdom limitation (MeepleCard uses it)
+vi.stubGlobal('matchMedia', (query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+}));
+
+// Mock useTranslation to avoid IntlProvider dependency
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'collection.addFromCatalog': 'Aggiungi dal catalogo',
+        'collection.addPrivateGame': 'Aggiungi gioco privato',
+        'collection.year': 'Anno',
+        'collection.plays': 'Partite',
+      };
+      return map[key] ?? key;
+    },
+    formatMessage: ({ id }: { id: string }) => id,
+    locale: 'it',
+  }),
+}));
+
 // ============================================================================
 // Mock Data
 // ============================================================================
@@ -284,23 +313,25 @@ describe('CollectionDashboard', () => {
       expect(screen.getByText('La tua collezione è vuota')).toBeInTheDocument();
     });
 
-    it('should show different message when filters return no results', async () => {
-      const user = userEvent.setup();
+    it('should show empty state when filters return no results', async () => {
       const { useLibrary } = await import('@/hooks/queries/useLibrary');
 
-      // First render with normal data
+      // Pre-mock before render so the component sees empty results immediately
+      vi.mocked(useLibrary).mockReturnValue({
+        data: { items: [], totalCount: 0, pageSize: 20, page: 1, totalPages: 0 },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useLibrary>);
+
+      const user = userEvent.setup();
       renderWithProviders(<CollectionDashboard />);
 
       // Apply a filter
       const favoritesChip = screen.getByTestId('filter-chip-favorites');
       await user.click(favoritesChip);
 
-      // Mock empty results for filtered query
-      vi.mocked(useLibrary).mockReturnValue({
-        data: { items: [], totalCount: 0, pageSize: 20, page: 1, totalPages: 0 },
-        isLoading: false,
-        error: null,
-      } as ReturnType<typeof useLibrary>);
+      // Empty state should still be visible
+      expect(screen.getByTestId('collection-empty-state')).toBeInTheDocument();
     });
   });
 
@@ -322,8 +353,12 @@ describe('CollectionDashboard', () => {
     it('should have proper ARIA labels on filter chips', () => {
       renderWithProviders(<CollectionDashboard />);
 
-      const chips = screen.getAllByRole('button', { pressed: true });
-      expect(chips.length).toBeGreaterThan(0);
+      // Initially "all" chip is active (aria-pressed="true"), others are inactive
+      const allChip = screen.getByTestId('filter-chip-all');
+      expect(allChip).toHaveAttribute('aria-pressed', 'true');
+
+      const favoritesChip = screen.getByTestId('filter-chip-favorites');
+      expect(favoritesChip).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('should have proper section landmarks', () => {

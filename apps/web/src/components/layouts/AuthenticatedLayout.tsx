@@ -15,7 +15,7 @@
 import { type ReactNode } from 'react';
 
 import { UnifiedActionBar, UnifiedActionBarSpacer } from '@/components/layout/ActionBar';
-import { Breadcrumb } from '@/components/layout/Breadcrumb';
+import { Breadcrumb, DesktopBreadcrumb } from '@/components/layout/Breadcrumb';
 import { UniversalNavbar } from '@/components/layout/Navbar/UniversalNavbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
@@ -87,11 +87,11 @@ export function AuthenticatedLayout({
           className
         )}
       >
-        {/* Breadcrumb Navigation (hidden on mobile) */}
+        {/* Desktop breadcrumb — path-based trail, visible on md+ only.
+            The border/spacing is rendered inside DesktopBreadcrumb to avoid
+            an empty separator bar when the component returns null. */}
         {showBreadcrumb && (
-          <div className="hidden sm:block py-3">
-            <Breadcrumb />
-          </div>
+          <DesktopBreadcrumb className="hidden md:flex py-3 border-b border-border/40 mb-2" />
         )}
 
         {/* Page Content */}
@@ -99,6 +99,9 @@ export function AuthenticatedLayout({
           {children}
         </div>
       </main>
+
+      {/* ── Mobile context indicator (Breadcrumb floating pill, md:hidden) ── */}
+      {showBreadcrumb && <Breadcrumb />}
 
       {/* ── Unified ActionBar (Mobile only: bottom nav + FAB) ─────────── */}
       {showActionBar && (

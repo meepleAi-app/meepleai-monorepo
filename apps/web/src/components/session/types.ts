@@ -1,5 +1,23 @@
 // Session Toolkit - TypeScript Interfaces
 
+// Turn Order Types (Issue #4970 / #4975)
+export interface TurnOrderData {
+  id: string;
+  sessionId: string;
+  playerOrder: string[];
+  currentIndex: number;
+  currentPlayer: string | null;
+  nextPlayer: string | null;
+  roundNumber: number;
+}
+
+export interface TurnAdvancedPayload {
+  currentPlayerName: string;
+  previousPlayerName: string;
+  nextPlayerName: string;
+  roundNumber: number;
+}
+
 export interface Participant {
   id: string;
   displayName: string;

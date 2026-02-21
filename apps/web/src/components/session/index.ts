@@ -4,6 +4,8 @@ export { SessionHeader } from './SessionHeader';
 export { ToolRail, BASE_TOOLS } from './ToolRail';
 export { SessionToolLayout } from './SessionToolLayout';
 export { TurnIndicatorBar } from './TurnIndicatorBar';
+export { TurnOrderTool } from './TurnOrderTool';
+export type { TurnOrderToolProps } from './TurnOrderTool';
 export type { ToolItem, ToolRailProps } from './ToolRail';
 export type { SessionToolLayoutProps } from './SessionToolLayout';
 export type { TurnIndicatorBarProps } from './TurnIndicatorBar';
@@ -43,6 +45,8 @@ export type {
   InviteTokenResponse,
   SessionInviteResponse,
   JoinSessionResponse,
+  TurnOrderData,
+  TurnAdvancedPayload,
 } from './types';
 
 export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS } from './types';

@@ -46,18 +46,45 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             cancellationToken
         ).ConfigureAwait(false);
 
-        // Issue #4998: Batch load KB stats per game (replaces HasPdfDocuments with granular KB fields)
-        // ProcessingState is stored as string in DB, so we group in memory to avoid EF Core translation issues.
-        var gameIds = entries.Select(e => e.GameId).ToList();
+        // Issue #4998: Load PrivateGame entries FIRST — needed to resolve correct PrivateGameIds before the PDF query.
+        // For private game library entries, the domain UserLibraryEntry.GameId = Guid.Empty
+        // (computed from UserLibraryEntryEntity.SharedGameId ?? Guid.Empty), so we cannot use
+        // entry.GameId to find their PDFs. Private game PDFs are stored with GameId = PrivateGameId.
+        var entryIds = entries.Select(e => e.Id).ToList();
+        var privateGameEntries = await _dbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Include(e => e.PrivateGame)
+            .Where(e => entryIds.Contains(e.Id) && e.PrivateGameId.HasValue)
+            .ToDictionaryAsync(e => e.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Build ID lists for the PDF batch query.
+        // Shared game IDs: exclude Guid.Empty (private game placeholder in the domain model).
+        // Private game IDs: resolved from the EF entities loaded above.
+        var sharedGameIds = entries.Select(e => e.GameId).Where(id => id != Guid.Empty).ToList();
+        var privateGameIds = privateGameEntries.Values
+            .Where(e => e.PrivateGameId.HasValue)
+            .Select(e => e.PrivateGameId!.Value)
+            .Distinct()
+            .ToList();
+
+        // Issue #4998: Batch load KB stats for both shared and private games in a single query.
+        // Private game PDFs are stored with GameId = PrivateGameId AND PrivateGameId = PrivateGameId,
+        // so we match them via the PrivateGameId column. We project PrivateGameId to split results
+        // into two dictionaries without a second round-trip.
+        // ProcessingState is stored as string (HasConversion<string>()), so group in memory.
         var pdfDocumentsRaw = await _dbContext.PdfDocuments
-            .Where(p => gameIds.Contains(p.GameId))
-            .Select(p => new { p.GameId, p.ProcessingState })
+            .Where(p => sharedGameIds.Contains(p.GameId) ||
+                        (p.PrivateGameId.HasValue && privateGameIds.Contains(p.PrivateGameId.Value)))
+            .Select(p => new { p.GameId, p.PrivateGameId, p.ProcessingState })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // ProcessingState is stored as the enum member name (e.g., "Ready", "Failed")
         // because PdfDocumentEntity.ProcessingState is a string property (HasConversion<string>()).
+        // Shared game PDFs: PrivateGameId IS NULL.
         var kbStatsByGame = pdfDocumentsRaw
+            .Where(p => !p.PrivateGameId.HasValue)
             .GroupBy(p => p.GameId)
             .ToDictionary(
                 g => g.Key,
@@ -71,17 +98,26 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                         !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Pending), StringComparison.Ordinal)),
                 });
 
-        // Batch load: Get all SharedGames in a single query (prevents N+1)
-        var sharedGames = await _sharedGameRepository.GetByIdsAsync(gameIds, cancellationToken).ConfigureAwait(false);
+        // Private game PDFs: PrivateGameId IS NOT NULL. Keyed by PrivateGameId.
+        var kbStatsByPrivateGame = pdfDocumentsRaw
+            .Where(p => p.PrivateGameId.HasValue)
+            .GroupBy(p => p.PrivateGameId!.Value)
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    KbCardCount = g.Count(),
+                    KbIndexedCount = g.Count(p => string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal)),
+                    KbProcessingCount = g.Count(p =>
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal) &&
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal) &&
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Pending), StringComparison.Ordinal)),
+                });
 
-        // Batch load: Get all PrivateGame library entries in a single query
-        var entryIds = entries.Select(e => e.Id).ToList();
-        var privateGameEntries = await _dbContext.UserLibraryEntries
-            .AsNoTracking()
-            .Include(e => e.PrivateGame)
-            .Where(e => entryIds.Contains(e.Id) && e.PrivateGameId.HasValue)
-            .ToDictionaryAsync(e => e.Id, cancellationToken)
-            .ConfigureAwait(false);
+        // Batch load: Get all SharedGames in a single query (prevents N+1).
+        // Exclude Guid.Empty (private game placeholder) — consistent with sharedGameIds above.
+        var gameIds = entries.Select(e => e.GameId).Where(id => id != Guid.Empty).ToList();
+        var sharedGames = await _sharedGameRepository.GetByIdsAsync(gameIds, cancellationToken).ConfigureAwait(false);
 
         // Build DTOs from batch-loaded data
         var entryDtos = new List<UserLibraryEntryDto>();
@@ -119,8 +155,9 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                      libraryEntity.PrivateGame != null)
             {
                 var privateGame = libraryEntity.PrivateGame;
-                // Issue #4998: Compute KB stats for this private game
-                kbStatsByGame.TryGetValue(libraryEntity.PrivateGameId!.Value, out var privateKbStats);
+                // Issue #4998: Use kbStatsByPrivateGame (keyed by PrivateGameId) for private game KB stats.
+                // kbStatsByGame only covers shared game PDFs (PrivateGameId IS NULL in DB).
+                kbStatsByPrivateGame.TryGetValue(libraryEntity.PrivateGameId!.Value, out var privateKbStats);
                 entryDtos.Add(new UserLibraryEntryDto(
                     Id: entry.Id,
                     UserId: entry.UserId,

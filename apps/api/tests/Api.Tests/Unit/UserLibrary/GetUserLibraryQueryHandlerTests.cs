@@ -3,10 +3,12 @@ using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Handlers;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
+using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -189,6 +191,92 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         Assert.False(item.HasKb, "Should have hasKb=false when no PDF exists");
         Assert.Equal(0, item.KbCardCount);
         Assert.Equal(0, item.KbIndexedCount);
+    }
+
+    [Fact]
+    public async Task Handle_WithPrivateGameAndReadyPdf_SetsHasKbTrue()
+    {
+        // Arrange
+        // Fix #private-game-kb-stats: private game PDFs are stored with GameId = PrivateGameId
+        // AND PrivateGameId = PrivateGameId. The handler must query via PrivateGameId column,
+        // not via the domain entry's GameId (which equals Guid.Empty from the EF computed property).
+        var userId = Guid.NewGuid();
+        var entryId = Guid.NewGuid();
+        var privateGameId = Guid.NewGuid();
+
+        // Add PrivateGame entity to in-memory DB
+        _dbContext.PrivateGames.Add(new PrivateGameEntity
+        {
+            Id = privateGameId,
+            OwnerId = userId,
+            Title = "My Private Game",
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            Source = PrivateGameSource.Manual
+        });
+
+        // Add UserLibraryEntry entity with PrivateGameId (no SharedGameId)
+        _dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            Id = entryId,
+            UserId = userId,
+            PrivateGameId = privateGameId
+            // SharedGameId = null (private game — GameId computed property returns Guid.Empty)
+        });
+
+        // Add PDF for private game: GameId = PrivateGameId (placeholder), PrivateGameId = PrivateGameId
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = privateGameId,      // Private game PDFs use PrivateGameId as GameId placeholder
+            PrivateGameId = privateGameId,
+            FileName = "private-rules.pdf",
+            FilePath = "/pdfs/private-rules.pdf",
+            FileSizeBytes = 2048,
+            UploadedByUserId = userId,
+            ProcessingStatus = "completed",
+            ProcessingState = "Ready"    // Fully indexed in RAG
+        });
+        await _dbContext.SaveChangesAsync();
+
+        // Mock library repo: return entry with privateGameId as GameId
+        // (In production the EF entity's computed GameId = Guid.Empty for private games,
+        // which would crash the domain constructor. Here we use the real GUID so the handler
+        // falls into the private game branch via the EF-loaded privateGameEntries dictionary.)
+        var libraryEntry = new UserLibraryEntry(entryId, userId, privateGameId);
+
+        _mockLibraryRepo
+            .Setup(r => r.GetUserLibraryPaginatedAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new[] { libraryEntry }, 1));
+
+        // No shared game matches — forces handler into the private game branch
+        _mockSharedGameRepo
+            .Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>());
+
+        var query = new GetUserLibraryQuery(userId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result.Items);
+        var item = result.Items.First();
+        Assert.Equal(privateGameId, item.GameId);
+        Assert.True(item.HasKb, "Private game with a Ready PDF should have hasKb=true");
+        Assert.Equal(1, item.KbCardCount);
+        Assert.Equal(1, item.KbIndexedCount);
+        Assert.Equal(0, item.KbProcessingCount);
     }
 
     public void Dispose()

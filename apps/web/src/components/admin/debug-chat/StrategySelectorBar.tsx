@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RefreshCwIcon } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import { PanelRightIcon, PanelRightCloseIcon, RefreshCwIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Known RAG strategies (matching backend AgentStrategy value object)
@@ -41,6 +42,8 @@ interface StrategySelectorBarProps {
   onReExecute: () => void;
   isStreaming: boolean;
   hasLastQuery: boolean;
+  showDebug: boolean;
+  onToggleDebug: () => void;
 }
 
 export function StrategySelectorBar({
@@ -51,6 +54,8 @@ export function StrategySelectorBar({
   onReExecute,
   isStreaming,
   hasLastQuery,
+  showDebug,
+  onToggleDebug,
 }: StrategySelectorBarProps) {
   const [games, setGames] = useState<GameOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,6 +138,35 @@ export function StrategySelectorBar({
         <RefreshCwIcon className={cn('h-3.5 w-3.5', isStreaming && 'animate-spin')} />
         Re-execute
       </button>
+
+      {/* Debug panel toggle */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onToggleDebug}
+              className={cn(
+                'inline-flex items-center justify-center rounded-md p-1.5 transition-colors',
+                showDebug
+                  ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+              type="button"
+              aria-label={showDebug ? 'Nascondi pipeline debug' : 'Mostra pipeline debug'}
+              aria-pressed={showDebug}
+            >
+              {showDebug ? (
+                <PanelRightCloseIcon className="h-4 w-4" />
+              ) : (
+                <PanelRightIcon className="h-4 w-4" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            {showDebug ? 'Nascondi pipeline debug' : 'Mostra pipeline debug'}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }

@@ -13,8 +13,10 @@ import { useState, useCallback, useRef } from 'react';
 import { SendIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDebugChatStream } from '@/hooks/useDebugChatStream';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { StrategySelectorBar } from '@/components/admin/debug-chat/StrategySelectorBar';
 import { DebugTimeline } from '@/components/admin/debug-chat/DebugTimeline';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +38,14 @@ export default function AdminDebugChatPage() {
   const lastQueryRef = useRef<{ gameId: string; query: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef(0);
+
+  // Debug panel toggle — persisted in localStorage
+  const [showDebug, setShowDebug] = useLocalStorage('admin-debug-panel-visible', true);
+  const [mobileDebugOpen, setMobileDebugOpen] = useState(false);
+
+  const handleToggleDebug = useCallback(() => {
+    setShowDebug(prev => !prev);
+  }, [setShowDebug]);
 
   const { state, sendMessage, stopStreaming, reset } = useDebugChatStream({
     onComplete: (answer) => {
@@ -164,10 +174,17 @@ export default function AdminDebugChatPage() {
         onReExecute={handleReExecute}
         isStreaming={state.isStreaming}
         hasLastQuery={!!lastQueryRef.current}
+        showDebug={showDebug}
+        onToggleDebug={handleToggleDebug}
       />
 
       {/* Main split view */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[55%_45%] min-h-0">
+      <div
+        className={cn(
+          'flex-1 grid min-h-0',
+          showDebug ? 'grid-cols-1 lg:grid-cols-[55%_45%]' : 'grid-cols-1'
+        )}
+      >
         {/* ── Left Panel: Chat ────────────────────────────────────────── */}
         <div className="flex flex-col border-r min-h-0">
           {/* Messages */}
@@ -269,18 +286,48 @@ export default function AdminDebugChatPage() {
         </div>
 
         {/* ── Right Panel: Debug Timeline ─────────────────────────────── */}
-        {/* Mobile hint - shown below lg breakpoint */}
-        <div className="lg:hidden border-t px-4 py-2 text-xs text-muted-foreground bg-muted/30 text-center">
-          Debug timeline is available on wider screens (1024px+).
-          {state.debugEvents.length > 0 && ` ${state.debugEvents.length} events captured.`}
-        </div>
-        <div className="min-h-0 hidden lg:flex lg:flex-col">
-          <DebugTimeline
-            events={state.debugEvents}
-            isStreaming={state.isStreaming}
-          />
-        </div>
+        {showDebug && (
+          <>
+            {/* Mobile: button to open Sheet */}
+            <div className="lg:hidden border-t px-4 py-2 text-xs text-muted-foreground bg-muted/30 flex items-center justify-between">
+              <span>
+                Pipeline debug
+                {state.debugEvents.length > 0 && ` · ${state.debugEvents.length} eventi`}
+              </span>
+              <button
+                onClick={() => setMobileDebugOpen(true)}
+                className="text-xs font-medium text-primary underline underline-offset-2"
+                type="button"
+              >
+                Apri
+              </button>
+            </div>
+
+            {/* Desktop: inline panel */}
+            <div className="min-h-0 hidden lg:flex lg:flex-col">
+              <DebugTimeline
+                events={state.debugEvents}
+                isStreaming={state.isStreaming}
+              />
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Mobile debug Sheet */}
+      <Sheet open={mobileDebugOpen} onOpenChange={setMobileDebugOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+          <SheetHeader className="px-4 py-3 border-b">
+            <SheetTitle className="text-sm">Pipeline Debug</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <DebugTimeline
+              events={state.debugEvents}
+              isStreaming={state.isStreaming}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

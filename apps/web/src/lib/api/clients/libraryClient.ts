@@ -17,6 +17,10 @@ import {
   type UpdateAgentConfigRequest,
 } from '../schemas/agent-config.schemas';
 import {
+  GamePdfDtoSchema,
+  type GamePdfDto,
+} from '../schemas/pdf.schemas';
+import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
@@ -109,6 +113,8 @@ export interface LibraryClient {
   // Proposal Migrations (Issue #3669)
   getPendingMigrations(): Promise<PendingMigrationDto[]>;
   chooseMigration(migrationId: string, request: MigrationChoiceRequest): Promise<MigrationChoiceResponse>;
+  // Game PDFs (Issue #4915)
+  getGamePdfs(gameId: string): Promise<GamePdfDto[]>;
 }
 
 /**
@@ -661,6 +667,19 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       }
 
       return data;
+    },
+
+    /**
+     * Get PDFs for a game in user's library (custom + catalog)
+     * Issue #4915: Agent creation wizard PDF selection
+     * @param gameId - Game UUID
+     */
+    async getGamePdfs(gameId: string): Promise<GamePdfDto[]> {
+      const data = await httpClient.get<GamePdfDto[]>(
+        `/api/v1/library/games/${gameId}/pdfs`,
+        z.array(GamePdfDtoSchema)
+      );
+      return data ?? [];
     },
   };
 }

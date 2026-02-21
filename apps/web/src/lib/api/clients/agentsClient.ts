@@ -80,6 +80,25 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     },
 
     /**
+     * Get user-owned agents for a specific game.
+     * Issue #4914: returns custom agents created by the current user for the given game.
+     * @param gameId Game UUID
+     */
+    async getUserAgentsForGame(gameId: string): Promise<AgentDto[]> {
+      const params = new URLSearchParams({
+        gameId,
+        userOwned: 'true',
+        activeOnly: 'true',
+      });
+      const response = await httpClient.get<{
+        success: boolean;
+        agents: AgentDto[];
+        count: number;
+      }>(`/api/v1/agents?${params.toString()}`, GetAllAgentsResponseSchema);
+      return response?.agents ?? [];
+    },
+
+    /**
      * Get agent by ID
      * Implements GetAgentByIdQuery from backend
      * @param id Agent ID (GUID format)
@@ -347,6 +366,33 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
       if (!response) {
         throw new Error('Failed to submit feedback: no response from server');
+      }
+
+      return response;
+    },
+
+    // ========== User-Owned Agent CRUD (Issue #4683, #4915) ==========
+
+    /**
+     * Create a user-owned agent with tier-aware configuration
+     * Issue #4683: User Agent CRUD Endpoints
+     * @param request Agent creation params (gameId, agentType, name, etc.)
+     */
+    async createUserAgent(request: {
+      gameId: string;
+      agentType: string;
+      name?: string;
+      strategyName?: string;
+      strategyParameters?: Record<string, unknown>;
+    }): Promise<AgentDto> {
+      const response = await httpClient.post<AgentDto>(
+        '/api/v1/agents/user',
+        request,
+        AgentDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to create user agent: no response from server');
       }
 
       return response;

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, Fragment, type KeyboardEvent } from 'react';
+import { Fragment, useEffect, useState, type KeyboardEvent } from 'react';
 
-import { ChevronDownIcon, ChevronRightIcon, StarIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronRightIcon, Loader2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { adminDashboardClient } from '@/lib/api/clients/adminDashboardClient';
 
 interface ChatSession {
   id: string;
@@ -12,90 +13,59 @@ interface ChatSession {
   userName: string;
   agent: string;
   messageCount: number;
-  duration: number;
-  satisfaction: number;
+  durationSeconds: number;
   date: string;
   preview: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
-const MOCK_SESSIONS: ChatSession[] = [
-  {
-    id: 'chat-001',
-    userId: 'user-123',
-    userName: 'Sarah Chen',
-    agent: 'Rules Expert',
-    messageCount: 12,
-    duration: 245,
-    satisfaction: 5,
-    date: '2026-02-18 14:30',
-    preview: [
-      { role: 'user', content: 'What happens when you roll doubles in Catan?' },
-      { role: 'assistant', content: 'In Catan, rolling doubles has no special effect...' },
-    ],
-  },
-  {
-    id: 'chat-002',
-    userId: 'user-456',
-    userName: 'Mike Johnson',
-    agent: 'Strategy Advisor',
-    messageCount: 8,
-    duration: 180,
-    satisfaction: 4,
-    date: '2026-02-18 13:15',
-    preview: [
-      { role: 'user', content: 'Best opening strategy for Wingspan?' },
-      { role: 'assistant', content: 'For Wingspan, focus on bird powers in early rounds...' },
-    ],
-  },
-  {
-    id: 'chat-003',
-    userId: 'user-789',
-    userName: 'Emily Rodriguez',
-    agent: 'Game Recommender',
-    messageCount: 15,
-    duration: 320,
-    satisfaction: 5,
-    date: '2026-02-18 11:45',
-    preview: [
-      { role: 'user', content: 'Games similar to Pandemic for 3 players?' },
-      { role: 'assistant', content: 'For 3-player cooperative games similar to Pandemic...' },
-    ],
-  },
-  {
-    id: 'chat-004',
-    userId: 'user-234',
-    userName: 'Alex Kim',
-    agent: 'Rules Expert',
-    messageCount: 6,
-    duration: 95,
-    satisfaction: 3,
-    date: '2026-02-18 10:20',
-    preview: [
-      { role: 'user', content: 'Combat rules in Scythe?' },
-      { role: 'assistant', content: 'Scythe combat works as follows...' },
-    ],
-  },
-];
+interface ChatHistoryResponse {
+  sessions: ChatSession[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
 
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex gap-1">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <StarIcon
-          key={i}
-          className={`w-4 h-4 ${
-            i < rating
-              ? 'fill-amber-500 text-amber-500'
-              : 'text-gray-300 dark:text-zinc-600'
-          }`}
-        />
-      ))}
-    </div>
-  );
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('it-IT', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
 }
 
 export function ChatHistoryTable() {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsLoading(true);
+    adminDashboardClient
+      .getChatHistory()
+      .then((res) => {
+        const data = res as ChatHistoryResponse;
+        setSessions(data?.sessions ?? []);
+      })
+      .catch((err) => {
+        console.error('Failed to load chat history:', err);
+        setError('Impossibile caricare la cronologia chat');
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const toggleRow = (id: string) => {
     setExpandedRow((prev) => (prev === id ? null : id));
@@ -107,6 +77,31 @@ export function ChatHistoryTable() {
       toggleRow(id);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50">
+        <Loader2 className="w-6 h-6 animate-spin text-amber-500 mr-2" />
+        <span className="text-muted-foreground text-sm">Caricamento sessioni...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-16 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-red-200/50 dark:border-red-700/50">
+        <span className="text-red-600 dark:text-red-400 text-sm">{error}</span>
+      </div>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-16 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50">
+        <span className="text-muted-foreground text-sm">Nessuna sessione chat trovata</span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50 overflow-hidden">
@@ -130,16 +125,13 @@ export function ChatHistoryTable() {
               <th className="text-right py-3 px-4 text-sm font-bold text-amber-900 dark:text-amber-400 uppercase">
                 Duration
               </th>
-              <th className="text-center py-3 px-4 text-sm font-bold text-amber-900 dark:text-amber-400 uppercase">
-                Satisfaction
-              </th>
               <th className="text-left py-3 px-4 text-sm font-bold text-amber-900 dark:text-amber-400 uppercase">
                 Date
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-zinc-700">
-            {MOCK_SESSIONS.map((session) => {
+            {sessions.map((session) => {
               const isExpanded = expandedRow === session.id;
               return (
                 <Fragment key={session.id}>
@@ -158,7 +150,7 @@ export function ChatHistoryTable() {
                       )}
                     </td>
                     <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-zinc-400">
-                      {session.id}
+                      {session.id.slice(0, 8)}...
                     </td>
                     <td className="py-3 px-4 text-sm font-medium text-slate-900 dark:text-zinc-100">
                       {session.userName}
@@ -172,38 +164,39 @@ export function ChatHistoryTable() {
                       {session.messageCount}
                     </td>
                     <td className="py-3 px-4 text-right font-mono text-sm text-slate-600 dark:text-zinc-400">
-                      {Math.floor(session.duration / 60)}m {session.duration % 60}s
-                    </td>
-                    <td className="py-3 px-4 flex justify-center">
-                      <StarRating rating={session.satisfaction} />
+                      {formatDuration(session.durationSeconds)}
                     </td>
                     <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-zinc-400">
-                      {session.date}
+                      {formatDate(session.date)}
                     </td>
                   </tr>
                   {isExpanded && (
                     <tr>
-                      <td colSpan={8} className="bg-slate-50/50 dark:bg-zinc-900/30">
+                      <td colSpan={7} className="bg-slate-50/50 dark:bg-zinc-900/30">
                         <div className="p-4 space-y-3">
                           <h4 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                             Chat Preview
                           </h4>
-                          {session.preview.map((msg, idx) => (
-                            <div
-                              key={idx}
-                              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
+                          {session.preview.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">Nessun messaggio da visualizzare</p>
+                          ) : (
+                            session.preview.map((msg, idx) => (
                               <div
-                                className={`max-w-[70%] px-4 py-2 rounded-lg text-sm ${
-                                  msg.role === 'user'
-                                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-300'
-                                    : 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100'
-                                }`}
+                                key={idx}
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                               >
-                                {msg.content}
+                                <div
+                                  className={`max-w-[70%] px-4 py-2 rounded-lg text-sm ${
+                                    msg.role === 'user'
+                                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-300'
+                                      : 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100'
+                                  }`}
+                                >
+                                  {msg.content}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </td>
                     </tr>

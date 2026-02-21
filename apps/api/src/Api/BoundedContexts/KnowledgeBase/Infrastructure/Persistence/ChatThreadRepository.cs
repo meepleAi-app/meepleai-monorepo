@@ -141,6 +141,47 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         return (items, totalCount);
     }
 
+    /// <summary>
+    /// Admin-only: gets all chat threads across users with optional filtering and pagination.
+    /// Issue #4917: Admin chat history real data.
+    /// </summary>
+    public async Task<(IReadOnlyList<(ChatThread Thread, string? UserEmail, string? UserDisplayName)> Items, int TotalCount)> GetAllFilteredAsync(
+        string? agentType = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.ChatThreads
+            .AsNoTracking()
+            .Include(t => t.User)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(agentType))
+            query = query.Where(t => t.AgentType == agentType);
+
+        if (dateFrom.HasValue)
+            query = query.Where(t => t.LastMessageAt >= dateFrom.Value);
+
+        if (dateTo.HasValue)
+            query = query.Where(t => t.LastMessageAt <= dateTo.Value);
+
+        var totalCount = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        var entities = await query
+            .OrderByDescending(t => t.LastMessageAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var items = entities
+            .Select(e => (MapToDomain(e), e.User?.Email, e.User?.DisplayName))
+            .ToList();
+
+        return (items, totalCount);
+    }
+
     public async Task AddAsync(ChatThread thread, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(thread);

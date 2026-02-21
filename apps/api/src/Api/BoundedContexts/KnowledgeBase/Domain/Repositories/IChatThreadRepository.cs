@@ -45,4 +45,16 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Admin-only: gets all chat threads across users with optional filtering and pagination.
+    /// Issue #4917: Admin chat history real data.
+    /// </summary>
+    Task<(IReadOnlyList<(ChatThread Thread, string? UserEmail, string? UserDisplayName)> Items, int TotalCount)> GetAllFilteredAsync(
+        string? agentType = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
 }

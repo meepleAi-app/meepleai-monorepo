@@ -55,7 +55,8 @@ describe('useNavigationItems', () => {
     expect(ids).toContain('library');
     expect(ids).toContain('catalog');
     expect(ids).toContain('chat');
-    expect(ids).toContain('profile');
+    // 'profile' has hideFromMainNav: true so it's filtered out by useNavigationItems
+    expect(ids).not.toContain('profile');
     expect(ids).toContain('agents');
     expect(ids).toContain('sessions');
     expect(result.current.isAuthenticated).toBe(true);

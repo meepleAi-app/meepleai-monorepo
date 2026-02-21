@@ -118,7 +118,7 @@ describe('ViewModeSwitcher', () => {
     it('should wrap around at edges with ArrowRight', async () => {
       const user = userEvent.setup();
 
-      render(<ViewModeSwitcher value="carousel" onChange={mockOnChange} />);
+      render(<ViewModeSwitcher value="table" onChange={mockOnChange} />);
 
       const activeButton = screen.getByRole('radio', { checked: true });
       activeButton.focus();
@@ -140,7 +140,7 @@ describe('ViewModeSwitcher', () => {
       await user.keyboard('{ArrowLeft}');
 
       // Should wrap to last mode
-      expect(mockOnChange).toHaveBeenCalledWith('carousel');
+      expect(mockOnChange).toHaveBeenCalledWith('table');
     });
 
     it('should navigate with ArrowDown (alternative)', async () => {
@@ -209,7 +209,7 @@ describe('ViewModeSwitcher', () => {
     it('should have radio role on mode buttons', () => {
       render(<ViewModeSwitcher value="grid" onChange={mockOnChange} />);
 
-      expect(screen.getAllByRole('radio')).toHaveLength(3);
+      expect(screen.getAllByRole('radio')).toHaveLength(4);
     });
 
     it('should have descriptive aria-label for each button', () => {
@@ -253,7 +253,7 @@ describe('ViewModeSwitcher', () => {
 
       // Labels should have hidden sm:inline classes (mobile hide, desktop show)
       const labels = container.querySelectorAll('span.hidden.sm\\:inline');
-      expect(labels).toHaveLength(3); // One per mode
+      expect(labels).toHaveLength(4); // One per mode
     });
   });
 

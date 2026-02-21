@@ -31,7 +31,7 @@ import type { LucideIcon } from 'lucide-react';
 export interface QuickAction {
   /** Lucide icon component */
   icon: LucideIcon;
-  /** Action label (for tooltip) */
+  /** Action label (stable accessible name) */
   label: string;
   /** Click handler */
   onClick: () => void;
@@ -39,6 +39,8 @@ export interface QuickAction {
   disabled?: boolean;
   /** Hide action (conditional visibility) */
   hidden?: boolean;
+  /** Tooltip shown when action is disabled (explains why) */
+  disabledTooltip?: string;
 }
 
 export interface MeepleCardQuickActionsProps {
@@ -121,7 +123,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                   // Entity-colored focus ring
                   ['--tw-ring-color' as string]: `hsl(${entityColor})`,
                 }}
-                aria-label={action.label}
+                aria-label={action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label}
               >
                 <Icon
                   className={cn(
@@ -146,7 +148,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={10}>
-              {action.label}
+              {action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label}
             </TooltipContent>
           </Tooltip>
         );

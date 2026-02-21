@@ -115,6 +115,8 @@ export interface GameCarouselProps {
   className?: string;
   /** Test ID */
   'data-testid'?: string;
+  /** Current user ID (for auth-gated actions) */
+  userId?: string;
 }
 
 // ============================================================================
@@ -541,6 +543,7 @@ export const GameCarousel = React.memo(function GameCarousel({
   flippable,
   className,
   'data-testid': testId,
+  userId,
 }: GameCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -560,6 +563,7 @@ export const GameCarousel = React.memo(function GameCarousel({
   const centerEntityActions = useEntityActions({
     entity: 'game',
     id: fallbackId,
+    userId,
     data: { hasPdfDocuments: centerGame?.hasPdfDocuments ?? false },
   });
 

@@ -112,9 +112,11 @@ export function useEntityActions({
 
   // Issue #4259: Collection actions for game entity (Phase 1)
   // Call hook unconditionally (hooks rules), but only use for entity='game'
+  // Pass userId so the hook skips the API call for unauthenticated users
   const gameCollection = useCollectionActions(
     entity === 'game' ? id : '',
-    onShowRemovalWarning
+    onShowRemovalWarning,
+    userId
   );
 
   // Issue #4263: Generic collection actions for other entities (Phase 2)
@@ -145,8 +147,16 @@ export function useEntityActions({
   return useMemo(() => {
     switch (entity) {
       case 'game': {
-        // Build collection action (conditional: Add or Remove)
-        const collectionAction: QuickAction = gameCollection.isInCollection
+        const isAuthenticated = !!userId;
+
+        // Build collection action — redirect to login if unauthenticated
+        const collectionAction: QuickAction = !isAuthenticated
+          ? {
+              icon: Plus,
+              label: 'Aggiungi a Collezione',
+              onClick: () => router.push('/login?reason=collection'),
+            }
+          : gameCollection.isInCollection
           ? {
               icon: Trash2,
               label: 'Rimuovi da Collezione',
@@ -179,13 +189,15 @@ export function useEntityActions({
             {
               icon: Play,
               label: 'Avvia Sessione',
-              onClick: () => router.push(`/sessions/new?gameId=${id}`),
+              onClick: () =>
+                isAuthenticated
+                  ? router.push(`/sessions/new?gameId=${id}`)
+                  : router.push('/login?reason=session'),
             },
             {
               icon: Share2,
               label: 'Condividi',
               onClick: () => {
-                // TODO: Share modal or copy link
                 navigator.clipboard?.writeText(`${window.location.origin}/games/${id}`);
               },
             },

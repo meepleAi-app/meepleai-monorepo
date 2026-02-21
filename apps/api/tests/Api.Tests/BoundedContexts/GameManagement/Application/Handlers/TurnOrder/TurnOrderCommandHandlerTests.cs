@@ -12,7 +12,7 @@ using MediatR;
 using Moq;
 using Xunit;
 
-namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.TurnOrder;
+namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.TurnOrderHandlers;
 
 /// <summary>
 /// Unit tests for TurnOrder command handlers.

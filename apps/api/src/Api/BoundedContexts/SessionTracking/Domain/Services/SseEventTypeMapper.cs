@@ -59,6 +59,12 @@ public static class SseEventTypeMapper
 
         // Turn order → session:toolkit (Issue #4970)
         [typeof(TurnAdvancedEvent)] = "session:toolkit",
+
+        // Whiteboard → session:whiteboard (Issue #4971)
+        [typeof(StrokeAddedEvent)] = "session:whiteboard",
+        [typeof(StrokeRemovedEvent)] = "session:whiteboard",
+        [typeof(StructuredUpdatedEvent)] = "session:whiteboard",
+        [typeof(WhiteboardClearedEvent)] = "session:whiteboard",
     };
 
     /// <summary>

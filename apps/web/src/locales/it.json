@@ -666,6 +666,19 @@
     "createAgent": "Crea agente",
     "retry": "Riprova"
   },
+  "notificationCenter": {
+    "title": "Notifiche",
+    "newSection": "NUOVE",
+    "previousSection": "PRECEDENTI",
+    "markAllRead": "Segna tutte come lette",
+    "empty": "Nessuna notifica",
+    "emptySubtext": "Le tue notifiche appariranno qui",
+    "viewAll": "Vedi tutte",
+    "loading": "Caricamento notifiche...",
+    "kbReady": {
+      "cta": "→ Crea il tuo agente"
+    }
+  },
   "legal": {
     "tableOfContents": "Indice",
     "lastUpdated": "Ultimo aggiornamento: {date}",

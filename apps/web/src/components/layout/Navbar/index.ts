@@ -15,3 +15,4 @@ export { Logo, type LogoProps } from './Logo';
 export { NavItems, NavItemButton, type NavItem, type NavItemsProps, type NavItemButtonProps } from './NavItems';
 export { ProfileBar, type ProfileBarProps } from './ProfileBar';
 export { UniversalNavbar, type UniversalNavbarProps } from './UniversalNavbar';
+export { NotificationCenter, type NotificationCenterProps } from './NotificationCenter';

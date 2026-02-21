@@ -30,10 +30,10 @@ vi.mock('@/lib/api/core/httpClient', () => ({
 
 // Mock VectorCollectionCard since it's a separate component
 vi.mock('@/components/admin/knowledge-base/vector-collection-card', () => ({
-  VectorCollectionCard: ({ collection }: { collection: { name: string; vectorCount: number } }) => (
-    <div data-testid={`collection-card-${collection.name}`}>
-      <span>{collection.name}</span>
-      <span>{collection.vectorCount.toLocaleString()}</span>
+  VectorCollectionCard: ({ name, vectorCount }: { name: string; vectorCount: number }) => (
+    <div data-testid={`collection-card-${name}`}>
+      <span>{name}</span>
+      <span>{vectorCount.toLocaleString()}</span>
     </div>
   ),
 }));

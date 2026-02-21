@@ -17,10 +17,21 @@ import userEvent from '@testing-library/user-event';
 import { NotificationBell } from '../NotificationBell';
 import { useNotificationStore } from '@/store/notification/store';
 
+// Mock NotificationCenter to avoid IntlProvider requirement in bell unit tests
+vi.mock('@/components/layout/Navbar/NotificationCenter', () => ({
+  NotificationCenter: () => null,
+}));
+
 // Track if useNotificationSSE was called
 const mockUseNotificationSSE = vi.fn();
 vi.mock('@/hooks/useNotificationSSE', () => ({
   useNotificationSSE: (...args: unknown[]) => mockUseNotificationSSE(...args),
+}));
+
+// Mock NotificationCenter Sheet to isolate bell tests
+vi.mock('@/components/layout/Navbar/NotificationCenter', () => ({
+  NotificationCenter: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
+    open ? <div data-testid="notification-center-mock" role="dialog" aria-label="Notifications" /> : null,
 }));
 
 // Mock store with all selectors
@@ -125,9 +136,9 @@ describe('NotificationBell', () => {
     await user.tab();
     expect(button).toHaveFocus();
 
-    // Press Enter to open (Shadcn DropdownMenu handles this)
+    // Press Enter to open (triggers onClick → setIsOpen(true))
     await user.keyboard('{Enter}');
-    // Panel opens (tested by Shadcn/ui, we just verify button responds to keyboard)
+    // Panel opens (Sheet behavior tested in NotificationCenter.test.tsx)
   });
 
   it('should have correct ARIA attributes', () => {
@@ -140,6 +151,26 @@ describe('NotificationBell', () => {
 
     const button = screen.getByRole('button');
     expect(button).toHaveAttribute('aria-label', 'Notifications (7 unread)');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('should open NotificationCenter when clicked', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useNotificationStore).mockImplementation(selector => {
+      const state = { unreadCount: 3, fetchUnreadCount: mockFetchUnreadCount };
+      return typeof selector === 'function' ? selector(state) : state;
+    });
+
+    render(<NotificationBell />);
+
+    const button = screen.getByTestId('notification-bell-button');
+    expect(screen.queryByTestId('notification-center-mock')).not.toBeInTheDocument();
+
+    await user.click(button);
+
+    expect(screen.getByTestId('notification-center-mock')).toBeInTheDocument();
+    expect(button).toHaveAttribute('aria-expanded', 'true');
   });
 
   // SSE Integration Tests (Issue #4425)

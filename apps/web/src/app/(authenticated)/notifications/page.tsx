@@ -43,6 +43,7 @@ const TYPE_LABELS: Record<NotificationType | 'all', string> = {
   pdf_upload_completed: 'PDF completati',
   rule_spec_generated: 'Regole generate',
   processing_failed: 'Errori',
+  processing_job_completed: 'KB pronta',
   new_comment: 'Commenti',
   shared_link_accessed: 'Link condivisi',
 };

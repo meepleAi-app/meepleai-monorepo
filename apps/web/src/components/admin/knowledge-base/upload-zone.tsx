@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 import {
   UploadCloudIcon,
@@ -35,9 +35,10 @@ const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
 // ── Component ──────────────────────────────────────────────────────────
 
-export function UploadZone() {
+export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const api = useApiClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const preSelectedRef = useRef(false);
 
   // Game search state
   const [gameQuery, setGameQuery] = useState('');
@@ -209,6 +210,21 @@ export function UploadZone() {
     setGameQuery(game.name);
     setShowGameDropdown(false);
   }, []);
+
+  // Pre-select game when navigating from shared game detail page
+  useEffect(() => {
+    if (!initialGameId || preSelectedRef.current) return;
+    preSelectedRef.current = true;
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8080';
+    fetch(`${baseUrl}/api/v1/shared-games/${initialGameId}`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { id?: unknown; title?: unknown; name?: unknown } | null) => {
+        if (data?.id && (data.title ?? data.name)) {
+          selectGame({ id: String(data.id), name: String(data.title ?? data.name) });
+        }
+      })
+      .catch(() => {});
+  }, [initialGameId, selectGame]);
 
   // ── Render ──────────────────────────────────────────────────────────
 

@@ -18,7 +18,6 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
 
     private const int CheckIntervalSeconds = 60; // Health check every 60 seconds
     private const int HealthCheckTimeoutSeconds = 5; // 5s timeout for health checks
-    private const string HealthCheckPrompt = "ping"; // Simple test prompt
 
     public ProviderHealthCheckService(
         IServiceScopeFactory scopeFactory,
@@ -110,19 +109,8 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(HealthCheckTimeoutSeconds));
 
-            // Determine appropriate model for health check
-            var model = GetHealthCheckModel(client);
-
-            // Simple health check request
-            var result = await client.GenerateCompletionAsync(
-                model,
-                "You are a health check system.",
-                HealthCheckPrompt,
-                temperature: 0.1,
-                maxTokens: 10,
-                cts.Token).ConfigureAwait(false);
-
-            var success = result.Success && !string.IsNullOrWhiteSpace(result.Response);
+            // Lightweight metadata ping — no LLM inference, no token consumption
+            var success = await client.CheckHealthAsync(cts.Token).ConfigureAwait(false);
 
             // Update health status
             lock (_healthLock)
@@ -140,8 +128,8 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
                     else
                     {
                         _logger.LogWarning(
-                            "Health check FAIL: {Provider} - {Status}, Error: {Error}",
-                            providerName, status.GetStatusSummary(), result.ErrorMessage ?? "unknown");
+                            "Health check FAIL: {Provider} - {Status}",
+                            providerName, status.GetStatusSummary());
                     }
                 }
             }
@@ -174,20 +162,6 @@ internal sealed class ProviderHealthCheckService : BackgroundService, IProviderH
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Get appropriate model for health check based on provider
-    /// </summary>
-    private static string GetHealthCheckModel(ILlmClient client)
-    {
-        // Use fastest/cheapest model for health checks
-        return client.ProviderName.ToLowerInvariant() switch
-        {
-            "ollama" => "llama3:8b",
-            "openrouter" => "meta-llama/llama-3.3-70b-instruct:free", // Free tier
-            _ => "llama3:8b" // Default
-        };
     }
 
     /// <summary>

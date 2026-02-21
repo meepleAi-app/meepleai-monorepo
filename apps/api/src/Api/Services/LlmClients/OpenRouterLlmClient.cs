@@ -234,6 +234,21 @@ internal class OpenRouterLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
+    public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync("models", ct).ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "OpenRouter health check failed");
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
     public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string model,
         string systemPrompt,

@@ -366,6 +366,21 @@ internal class OllamaLlmClient : ILlmClient
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync("api/tags", ct).ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Ollama health check failed");
+            return false;
+        }
+    }
+
     /// <summary>
     /// Estimate token count using word-based heuristic (~0.75 tokens per word)
     /// </summary>

@@ -5,5 +5,6 @@
  */
 
 export { SessionQuotaBar, type SessionQuotaBarProps } from './SessionQuotaBar';
+export { MeepleSessionCard, MeepleSessionCardSkeleton, type MeepleSessionCardProps } from './MeepleSessionCard';
 
 // Note: Storybook stories are in SessionQuotaBar.stories.tsx

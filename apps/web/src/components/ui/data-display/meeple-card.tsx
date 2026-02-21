@@ -260,6 +260,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
     onClick: () => void;
     disabled?: boolean;
     hidden?: boolean;
+    disabledTooltip?: string;
   }>;
 
   /** Feature: Info Button (always-visible navigation to detail page) */
@@ -1511,7 +1512,7 @@ export const MeepleCard = React.memo(function MeepleCard({
                   disabled={action.disabled}
                 >
                   {action.icon && <action.icon className="w-4 h-4 inline-block mr-2" />}
-                  {action.label}
+                  {action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label}
                 </button>
               ))}
             </>

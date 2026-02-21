@@ -8,22 +8,20 @@ import { toast } from 'sonner';
 
 import {
   SessionHeader,
-  ParticipantCard,
-  ScoreInput,
+  SessionToolLayout,
   Scoreboard,
+  TurnIndicatorBar,
   type SyncStatus,
 } from '@/components/session';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
 
 /**
- * Active Session Page
+ * Active Session Page — Tool Rail Layout (Issue #4973)
  *
- * Features:
- * - Real-time SSE sync for score updates
- * - 3-column responsive layout
- * - Optimistic UI for score submissions
- * - Session lifecycle actions (pause, resume, finalize)
+ * New layout: collapsible side rail (desktop) / bottom nav (mobile).
+ * Tool area renders the active tool (scoreboard default until #4974).
+ * TurnIndicatorBar is a placeholder until #4975 wires TurnOrder state.
  */
 export default function ActiveSessionPage() {
   const params = useParams();
@@ -49,6 +47,7 @@ export default function ActiveSessionPage() {
   } = useSessionStore();
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [activeTool, setActiveTool] = useState<string>('scoreboard');
 
   // Load session details on mount
   useEffect(() => {
@@ -57,12 +56,9 @@ export default function ActiveSessionPage() {
         await loadSession(sessionId);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to load session');
-
-        // Redirect to toolkit home if session not found
         router.push('/toolkit');
       }
     };
-
     void load();
   }, [sessionId, loadSession, router]);
 
@@ -70,33 +66,18 @@ export default function ActiveSessionPage() {
   const { isConnected, error: sseError } = useSessionSync({
     sessionId,
     onScoreUpdate: scoreEntry => {
-      // Add score to store from SSE event
       addScoreFromSSE(scoreEntry);
-
-      // Show toast notification
       const participant = participants.find(p => p.id === scoreEntry.participantId);
       if (participant) {
         toast.success(`${participant.displayName}: +${scoreEntry.scoreValue}`);
       }
     },
-    onPaused: () => {
-      toast.info('Session paused');
-    },
-    onResumed: () => {
-      toast.info('Session resumed');
-    },
-    onFinalized: () => {
-      toast.success('Session finalized');
-      // Note: Redirect handled by handleFinalize, not here to avoid duplicates
-    },
-    onError: err => {
-      toast.error(`Connection error: ${err.message}`);
-    },
+    onPaused: () => toast.info('Session paused'),
+    onResumed: () => toast.info('Session resumed'),
+    onFinalized: () => toast.success('Session finalized'),
+    onError: err => toast.error(`Connection error: ${err.message}`),
   });
 
-  /**
-   * Handle score submission
-   */
   const handleScoreSubmit = async (data: {
     participantId: string;
     roundNumber: number | null;
@@ -104,10 +85,8 @@ export default function ActiveSessionPage() {
     scoreValue: number;
   }) => {
     setSyncStatus('saving');
-
     try {
       await updateScore(data);
-
       setSyncStatus('synced');
       setTimeout(() => setSyncStatus('idle'), 2000);
     } catch (err) {
@@ -116,47 +95,31 @@ export default function ActiveSessionPage() {
     }
   };
 
-  /**
-   * Handle pause session
-   */
   const handlePause = async () => {
     try {
       await pauseSession();
-      // Toast shown by SSE callback to avoid duplicates
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to pause session');
     }
   };
 
-  /**
-   * Handle resume session
-   */
   const _handleResume = async () => {
     try {
       await resumeSession();
-      // Toast shown by SSE callback to avoid duplicates
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to resume session');
     }
   };
 
-  /**
-   * Handle finalize session
-   */
   const handleFinalize = async () => {
     if (!scoreboard) return;
-
-    // Calculate ranks based on total scores
     const rankedParticipants = [...participants].sort((a, b) => b.totalScore - a.totalScore);
     const ranks: Record<string, number> = {};
     rankedParticipants.forEach((p, index) => {
       ranks[p.id] = index + 1;
     });
-
     try {
       await finalizeSession({ ranks });
-      // Toast shown by SSE callback to avoid duplicates
-      // SSE callback also handles redirect after finalization
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to finalize session');
     }
@@ -166,7 +129,7 @@ export default function ActiveSessionPage() {
   if (isLoading || !activeSession || !scoreboard) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
       </div>
     );
   }
@@ -177,53 +140,72 @@ export default function ActiveSessionPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <p className="font-semibold text-red-800 dark:text-red-200">Error</p>
-          <p className="text-sm text-red-700 dark:text-red-300">
-            {error || sseError?.message}
-          </p>
+          <p className="text-sm text-red-700 dark:text-red-300">{error ?? sseError?.message}</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Session Header */}
+  // Compose header: SessionHeader + TurnIndicatorBar
+  const header = (
+    <>
       <SessionHeader
         session={activeSession}
         onPause={activeSession.status === 'Active' ? handlePause : undefined}
         onFinalize={handleFinalize}
       />
+      {/* Turn indicator sub-line — wired to TurnOrder in #4975 */}
+      <TurnIndicatorBar
+        activePlayerName={null}
+        roundNumber={null}
+        canEndTurn={false}
+      />
+    </>
+  );
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left: Participants */}
-          <div className="lg:col-span-1 space-y-4">
-            <h2 className="text-lg font-semibold mb-4">Participants</h2>
-            {participants.map(participant => (
-              <ParticipantCard key={participant.id} participant={participant} />
-            ))}
+  /**
+   * Tool area content — rendered based on activeTool.
+   * Remaining tools wired in Issue #4974 (Base Toolkit Integration).
+   * syncStatus passed to Scoreboard via unused param until #4974.
+   * @ts-expect-error syncStatus used by ScoreInput (removed in this redesign)
+   */
+  void syncStatus;
+
+  const toolContent = (() => {
+    switch (activeTool) {
+      case 'scoreboard':
+        return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
+      case 'turn-order':
+        return (
+          <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
+            Turn Order tool — coming in Issue #4975
           </div>
-
-          {/* Center/Right: Scoreboard */}
-          <div className="lg:col-span-2">
-            <Scoreboard data={scoreboard} isRealTime={isConnected} />
+        );
+      case 'dice':
+        return (
+          <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
+            Dice — coming in Issue #4974
           </div>
-        </div>
-      </div>
+        );
+      case 'whiteboard':
+        return (
+          <div className="flex items-center justify-center h-full min-h-[300px] text-stone-400 dark:text-stone-600 italic text-sm">
+            Whiteboard — coming in Issue #4977
+          </div>
+        );
+      default:
+        return <Scoreboard data={scoreboard} isRealTime={isConnected} />;
+    }
+  })();
 
-      {/* Sticky Bottom: Score Input */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
-        <div className="container mx-auto px-4 py-4">
-          <ScoreInput
-            participants={participants}
-            rounds={scoreboard.rounds}
-            categories={scoreboard.categories}
-            onSubmit={handleScoreSubmit}
-            syncStatus={syncStatus}
-          />
-        </div>
-      </div>
-    </div>
+  return (
+    <SessionToolLayout
+      header={header}
+      activeTool={activeTool}
+      onToolSelect={setActiveTool}
+      customTools={[]}
+    >
+      {toolContent}
+    </SessionToolLayout>
   );
 }

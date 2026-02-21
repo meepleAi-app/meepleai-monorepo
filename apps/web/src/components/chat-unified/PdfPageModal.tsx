@@ -20,9 +20,12 @@ import type { Citation } from '@/types';
 
 const PdfDocument = dynamic(
   () => import('react-pdf').then((mod) => {
-    // Configure worker on first load
+    // Configure worker using local bundle (avoid CDN — security fix)
     const { pdfjs } = mod;
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url,
+    ).toString();
     return mod.Document;
   }),
   {

@@ -145,7 +145,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     /// Admin-only: gets all chat threads across users with optional filtering and pagination.
     /// Issue #4917: Admin chat history real data.
     /// </summary>
-    public async Task<(IReadOnlyList<(ChatThread Thread, string? UserEmail, string? UserDisplayName)> Items, int TotalCount)> GetAllFilteredAsync(
+    public async Task<(IReadOnlyList<IChatThreadRepository.AdminChatSummary> Items, int TotalCount)> GetAllFilteredAsync(
         string? agentType = null,
         DateTime? dateFrom = null,
         DateTime? dateTo = null,
@@ -175,8 +175,24 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .Take(pageSize)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
+        // Lightweight projection — avoids full MapToDomain + MessagesJson deserialization per row.
+        // Only the first 2 messages are parsed for the admin preview (Issue #4917 code review fix).
         var items = entities
-            .Select(e => (MapToDomain(e), e.User?.Email, e.User?.DisplayName))
+            .Select(e =>
+            {
+                var (msgCount, preview) = ParseMessagesForAdmin(e.MessagesJson, maxPreview: 2);
+                return new IChatThreadRepository.AdminChatSummary(
+                    Id: e.Id,
+                    UserId: e.UserId,
+                    AgentType: e.AgentType,
+                    MessageCount: msgCount,
+                    LastMessageAt: e.LastMessageAt,
+                    CreatedAt: e.CreatedAt,
+                    UserEmail: e.User?.Email,
+                    UserDisplayName: e.User?.DisplayName,
+                    PreviewMessages: preview
+                );
+            })
             .ToList();
 
         return (items, totalCount);
@@ -215,6 +231,35 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.ChatThreads.AnyAsync(t => t.Id == id, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Lightweight JSON parse: returns total message count + first N messages for admin preview.
+    /// Single-pass over MessagesJson — avoids full MapToDomain overhead for admin listing.
+    /// </summary>
+    private static (int Count, IReadOnlyList<(string Role, string Content)> Preview)
+        ParseMessagesForAdmin(string messagesJson, int maxPreview)
+    {
+        if (string.IsNullOrWhiteSpace(messagesJson)) return (0, []);
+        try
+        {
+            using var doc = JsonDocument.Parse(messagesJson);
+            var all = doc.RootElement.EnumerateArray().ToList();
+            var preview = all
+                .Take(maxPreview)
+                .Select(el =>
+                {
+                    var role = el.TryGetProperty("Role", out var r) ? r.GetString() ?? "" : "";
+                    var content = el.TryGetProperty("Content", out var c) ? c.GetString() ?? "" : "";
+                    return (role, content);
+                })
+                .ToList<(string Role, string Content)>();
+            return (all.Count, preview);
+        }
+        catch (JsonException)
+        {
+            return (0, []);
+        }
     }
 
     /// <summary>

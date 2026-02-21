@@ -126,6 +126,8 @@ internal static class AgentEndpoints
         group.MapGet("/agents", async (
             [FromQuery] bool? activeOnly,
             [FromQuery] string? type,
+            [FromQuery] Guid? gameId,
+            [FromQuery] bool? userOwned,
             HttpContext context,
             IMediator mediator,
             ILogger<Program> logger,
@@ -134,7 +136,9 @@ internal static class AgentEndpoints
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
-            var query = new GetAllAgentsQuery(activeOnly, type);
+            // Issue #4914: when userOwned=true, filter by game + current user
+            var ownedByUserId = userOwned.GetValueOrDefault(false) ? session!.User!.Id : (Guid?)null;
+            var query = new GetAllAgentsQuery(activeOnly, type, gameId, ownedByUserId);
             var results = await mediator.Send(query, ct).ConfigureAwait(false);
 
             logger.LogInformation(

@@ -25,6 +25,24 @@ export const PdfDocumentDtoSchema = z.object({
 
 export type PdfDocumentDto = z.infer<typeof PdfDocumentDtoSchema>;
 
+// ========== Game PDF DTO (Issue #4915) ==========
+
+/**
+ * Game PDF DTO from GET /api/v1/library/games/{gameId}/pdfs
+ * Matches GamePdfDto from UserLibrary bounded context
+ */
+export const GamePdfDtoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  pageCount: z.number().int().nonnegative(),
+  fileSizeBytes: z.number().nonnegative(),
+  uploadedAt: z.string().datetime(),
+  source: z.string(), // "Custom" or "Catalog"
+  language: z.string().nullable().optional(),
+});
+
+export type GamePdfDto = z.infer<typeof GamePdfDtoSchema>;
+
 // ========== Processing Step Enum ==========
 
 /**

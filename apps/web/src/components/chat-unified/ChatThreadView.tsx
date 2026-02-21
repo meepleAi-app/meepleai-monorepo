@@ -27,6 +27,7 @@ import { isAdminOrAbove } from '@/types/auth';
 import type { Citation } from '@/types';
 
 import { ChatThreadHeader } from './ChatThreadHeader';
+import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
 
@@ -517,12 +518,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   {msg.citations && msg.citations.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {msg.citations.map((c, i) => (
-                        <span
+                        <CitationBadge
                           key={`${c.documentId}-${c.pageNumber}-${i}`}
-                          className="text-[10px] px-1.5 py-0.5 bg-orange-500/20 text-orange-700 dark:text-orange-300 rounded"
-                        >
-                          p.{c.pageNumber}
-                        </span>
+                          citation={c}
+                        />
                       ))}
                     </div>
                   )}
@@ -611,11 +610,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           {allCitations.length > 0 && (
             <div className="mb-4">
               <h4 className="text-sm font-semibold font-quicksand mb-2">Citazioni ({allCitations.length})</h4>
-              <div className="space-y-1">
-                {allCitations.slice(0, 10).map((c, i) => (
-                  <div key={`${c.documentId}-${c.pageNumber}-${i}`} className="text-xs px-2 py-1 bg-amber-50 dark:bg-amber-500/10 rounded">
-                    p.{c.pageNumber} - {c.documentId?.slice(0, 8)}
-                  </div>
+              <div className="flex flex-wrap gap-1">
+                {allCitations.slice(0, 20).map((c, i) => (
+                  <CitationBadge
+                    key={`panel-${c.documentId}-${c.pageNumber}-${i}`}
+                    citation={c}
+                  />
                 ))}
               </div>
             </div>

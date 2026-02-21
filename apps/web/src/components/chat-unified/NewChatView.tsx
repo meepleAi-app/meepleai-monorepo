@@ -16,7 +16,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 
-import { Bot, Gamepad2, MessageSquarePlus, Search, Sparkles, Zap } from 'lucide-react';
+import { Bot, Gamepad2, MessageSquarePlus, Plus, Search, Sparkles, Zap } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
@@ -36,6 +37,13 @@ interface AgentOption {
   type: string;
   description: string;
   icon: string;
+}
+
+/** Custom agent from backend — user-owned */
+interface CustomAgent {
+  id: string;
+  name: string;
+  type: string;
 }
 
 /** Quick start suggestion */
@@ -243,6 +251,83 @@ function AgentGrid({
   );
 }
 
+function CustomAgentGrid({
+  agents,
+  selectedCustomAgentId,
+  onSelect,
+  gameId,
+  isLoading,
+}: {
+  agents: CustomAgent[];
+  selectedCustomAgentId: string | null;
+  onSelect: (agentId: string) => void;
+  gameId: string;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex gap-3 mb-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="h-20 w-32 rounded-xl bg-muted/50 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (agents.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 font-nunito">
+          I tuoi agent
+        </p>
+        <Link
+          href={`/chat/agents/create?gameId=${gameId}`}
+          className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-nunito transition-colors"
+          data-testid="create-agent-link"
+        >
+          <Plus className="h-3 w-3" />
+          Crea nuovo agent
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {agents.map(agent => (
+          <button
+            key={agent.id}
+            onClick={() => onSelect(agent.id)}
+            className={cn(
+              'text-left rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40',
+              selectedCustomAgentId === agent.id
+                ? 'ring-2 ring-amber-500 scale-[1.02]'
+                : 'hover:scale-[1.01]'
+            )}
+            aria-pressed={selectedCustomAgentId === agent.id}
+            data-testid={`custom-agent-card-${agent.id}`}
+          >
+            <MeepleCard
+              entity="agent"
+              variant="compact"
+              title={agent.name}
+              subtitle={agent.type}
+              badge="🤖"
+              className={cn(
+                'border-amber-300/50',
+                selectedCustomAgentId === agent.id && 'border-amber-500'
+              )}
+            />
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 border-t border-border/30 pt-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground font-nunito">
+          Agent di sistema
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function QuickStartSection({
   suggestions,
   onSuggestionClick,
@@ -290,9 +375,12 @@ export function NewChatView() {
   // State
   const [games, setGames] = useState<Game[]>([]);
   const [agents, setAgents] = useState<AgentDto[]>([]);
+  const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [selectedAgentType, setSelectedAgentType] = useState<string | null>('auto');
+  const [selectedCustomAgentId, setSelectedCustomAgentId] = useState<string | null>(null);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
+  const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -305,7 +393,7 @@ export function NewChatView() {
     if (agentParam) setSelectedAgentType(agentParam);
   }, [searchParams]);
 
-  // Load games + agents on mount
+  // Load games + system agents on mount
   useEffect(() => {
     async function loadData() {
       setIsLoadingGames(true);
@@ -325,7 +413,47 @@ export function NewChatView() {
     void loadData();
   }, []);
 
-  // Resolve actual agent ID from backend agents list
+  // Issue #4914: load custom agents when game selected
+  useEffect(() => {
+    if (!selectedGameId) {
+      setCustomAgents([]);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingCustomAgents(true);
+
+    api.agents.getUserAgentsForGame(selectedGameId)
+      .then(result => {
+        if (!cancelled) {
+          setCustomAgents(result.map(a => ({ id: a.id, name: a.name, type: a.type })));
+        }
+      })
+      .catch(() => { /* silent fail — custom agents not critical */ })
+      .finally(() => { if (!cancelled) setIsLoadingCustomAgents(false); });
+
+    return () => { cancelled = true; };
+  }, [selectedGameId]);
+
+  // Handle game selection — reset custom agent selection
+  const handleGameSelect = useCallback((gameId: string) => {
+    setSelectedGameId(gameId);
+    setSelectedCustomAgentId(null);
+  }, []);
+
+  // Handle custom agent selection — clear system agent
+  const handleCustomAgentSelect = useCallback((agentId: string) => {
+    setSelectedCustomAgentId(agentId);
+    setSelectedAgentType(null);
+  }, []);
+
+  // Handle system agent selection — clear custom agent
+  const handleSystemAgentSelect = useCallback((agentType: string) => {
+    setSelectedAgentType(agentType);
+    setSelectedCustomAgentId(null);
+  }, []);
+
+  // Resolve actual agent ID from backend agents list (for system agents)
   const resolveAgentId = useCallback(
     (agentType: string | null): string | undefined => {
       if (!agentType || agentType === 'auto') return undefined;
@@ -354,7 +482,8 @@ export function NewChatView() {
 
       try {
         const gameId = selectedGameId && selectedGameId !== '' ? selectedGameId : undefined;
-        const agentId = resolveAgentId(selectedAgentType);
+        // Issue #4914: custom agent → use UUID directly; system agent → resolve from list
+        const agentId = selectedCustomAgentId ?? resolveAgentId(selectedAgentType);
 
         const thread = await api.chat.createThread({
           gameId: gameId ?? null,
@@ -384,7 +513,7 @@ export function NewChatView() {
     [handleStartChat]
   );
 
-  const canStart = selectedAgentType !== null;
+  const canStart = selectedAgentType !== null || selectedCustomAgentId !== null;
 
   return (
     <div className="min-h-dvh bg-background">
@@ -424,7 +553,7 @@ export function NewChatView() {
             <GameGrid
               games={games}
               selectedGameId={selectedGameId}
-              onSelect={setSelectedGameId}
+              onSelect={handleGameSelect}
               isLoading={isLoadingGames}
             />
           </section>
@@ -435,10 +564,20 @@ export function NewChatView() {
             data-testid="agent-selection-section"
           >
             <SectionTitle icon={Bot} title="Seleziona un agente" />
+            {/* Custom agents (only when game selected) */}
+            {selectedGameId && selectedGameId !== '' && (
+              <CustomAgentGrid
+                agents={customAgents}
+                selectedCustomAgentId={selectedCustomAgentId}
+                onSelect={handleCustomAgentSelect}
+                gameId={selectedGameId}
+                isLoading={isLoadingCustomAgents}
+              />
+            )}
             <AgentGrid
               agents={DEFAULT_AGENTS}
               selectedAgentType={selectedAgentType}
-              onSelect={setSelectedAgentType}
+              onSelect={handleSystemAgentSelect}
             />
           </section>
 

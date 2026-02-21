@@ -239,6 +239,7 @@ describe('KbStatusPanel', () => {
 
       const progressBar = screen.getByRole('progressbar');
       expect(progressBar).toHaveAttribute('aria-valuenow', '75');
+      expect(progressBar).toHaveAttribute('aria-label', 'Elaborazione PDF in corso');
     });
 
     it('uses default progress when progress is null', () => {

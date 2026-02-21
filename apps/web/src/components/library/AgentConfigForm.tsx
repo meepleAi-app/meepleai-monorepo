@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 
-import { BotOff, Loader2, MessageSquare, Sparkles } from 'lucide-react';
+import { AlertCircle, BotOff, Loader2, MessageSquare, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/primitives/button';
@@ -101,7 +101,8 @@ function TypologyCard({
           ? 'border-primary bg-primary/5 ring-1 ring-primary'
           : 'border-border hover:border-muted-foreground/40 hover:bg-muted/50'
       )}
-      aria-pressed={selected}
+      role="radio"
+      aria-checked={selected}
     >
       {/* Radio indicator */}
       <div
@@ -141,12 +142,14 @@ export function AgentConfigForm({
   const [typology, setTypology] = useState<AgentTypology>(initialTypology);
   const [strategy, setStrategy] = useState<AgentStrategy>(initialStrategy);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const costEstimate = COST_ESTIMATES[typology][strategy];
 
   const handleSaveAndChat = async () => {
     if (!hasIndexedKb) return;
 
+    setSaveError(null);
     setIsSaving(true);
     try {
       if (onSave) {
@@ -158,6 +161,7 @@ export function AgentConfigForm({
       }
     } catch (error) {
       console.error('Failed to save agent config:', error);
+      setSaveError('Errore durante la configurazione. Riprova.');
     } finally {
       setIsSaving(false);
     }
@@ -222,6 +226,18 @@ export function AgentConfigForm({
         <span className="text-muted-foreground">Stima costo per sessione</span>
         <span className="font-medium">{costEstimate}</span>
       </div>
+
+      {/* Save error */}
+      {saveError && (
+        <div
+          className="flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300"
+          role="alert"
+          data-testid="save-error"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {saveError}
+        </div>
+      )}
 
       {/* CTA */}
       {hasIndexedKb ? (

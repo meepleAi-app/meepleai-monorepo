@@ -12,6 +12,8 @@
 
 'use client';
 
+import { useEffect } from 'react';
+
 import Link from 'next/link';
 
 import {
@@ -30,6 +32,11 @@ import { cn } from '@/lib/utils';
 interface KbStatusPanelProps {
   /** UUID of the private game */
   gameId: string;
+  /**
+   * Called whenever the indexed state changes.
+   * Allows parent to derive `hasIndexedKb` without a duplicate hook subscription.
+   */
+  onStatusChange?: (isIndexed: boolean) => void;
 }
 
 function StatusBadge({
@@ -69,8 +76,14 @@ function StatusBadge({
   }
 }
 
-export function KbStatusPanel({ gameId }: KbStatusPanelProps) {
+export function KbStatusPanel({ gameId, onStatusChange }: KbStatusPanelProps) {
   const { data, isLoading, isError } = usePdfProcessingStatus(gameId);
+
+  useEffect(() => {
+    if (onStatusChange) {
+      onStatusChange(data?.status === 'indexed');
+    }
+  }, [data?.status, onStatusChange]);
 
   return (
     <div
@@ -201,6 +214,7 @@ export function KbStatusPanel({ gameId }: KbStatusPanelProps) {
                   className="h-full rounded-full bg-amber-400 dark:bg-amber-500 transition-all duration-500"
                   style={{ width: `${data.progress ?? 15}%` }}
                   role="progressbar"
+                  aria-label="Elaborazione PDF in corso"
                   aria-valuenow={data.progress ?? 15}
                   aria-valuemin={0}
                   aria-valuemax={100}

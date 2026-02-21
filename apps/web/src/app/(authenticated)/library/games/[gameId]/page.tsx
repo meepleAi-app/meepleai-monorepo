@@ -16,6 +16,7 @@ import { ArrowLeft, Clock, Gauge, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+import { JourneyProgress } from '@/components/library/JourneyProgress';
 import { UserActionSection } from '@/components/library/game-detail/UserActionSection';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
@@ -137,6 +138,9 @@ export default function LibraryGameDetailPage() {
 
       {/* Main Content */}
       <main className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {/* Journey Progress Banner */}
+        <JourneyProgress gameId={gameId} className="mb-6" />
+
         {/* Cards Section - MeepleCard (hero, flippable) + MeepleInfoCard */}
         <section className="mb-8 flex flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
           {/* Flippable Game Card */}

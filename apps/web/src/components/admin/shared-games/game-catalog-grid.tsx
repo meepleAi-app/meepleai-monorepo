@@ -9,17 +9,21 @@
 
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { ArchiveRestore, Clock, Pencil, Share2, Trash2, Upload, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { Sheet, SheetContent } from '@/components/ui/navigation/sheet';
 import { sharedGamesKeys, useSharedGames } from '@/hooks/queries';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api';
+import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import type { GameStatus } from '@/lib/api/schemas/shared-games.schemas';
+
+import { AdminSharedGameCardContainer } from './AdminSharedGameCardContainer';
 
 // ============================================================================
 // Helpers
@@ -60,9 +64,10 @@ interface AdminGameCardProps {
   onPublish: (id: string) => void;
   onArchive: (id: string) => void;
   onDelete: (id: string) => void;
+  onOpenExtraCard: (id: string) => void;
 }
 
-function AdminGameCard({ game, onPublish, onArchive, onDelete }: AdminGameCardProps) {
+function AdminGameCard({ game, onPublish, onArchive, onDelete, onOpenExtraCard }: AdminGameCardProps) {
   const router = useRouter();
 
   const metadata = [
@@ -101,6 +106,14 @@ function AdminGameCard({ game, onPublish, onArchive, onDelete }: AdminGameCardPr
     },
   ];
 
+  const navigateTo: ResolvedNavigationLink[] = [
+    {
+      entity: 'document',
+      label: 'Info',
+      onClick: () => onOpenExtraCard(game.id),
+    },
+  ];
+
   return (
     <MeepleCard
       id={game.id}
@@ -115,6 +128,7 @@ function AdminGameCard({ game, onPublish, onArchive, onDelete }: AdminGameCardPr
       badge={STATUS_LABELS[game.status]}
       onClick={() => router.push(`/admin/shared-games/${game.id}`)}
       entityQuickActions={quickActions}
+      navigateTo={navigateTo}
       showInfoButton
       infoHref={`/admin/shared-games/${game.id}`}
       infoTooltip="Dettaglio admin"
@@ -131,6 +145,9 @@ export function GameCatalogGrid() {
   const queryClient = useQueryClient();
   const { data, isLoading } = useSharedGames({ pageSize: 50 });
   const games = data?.items ?? [];
+
+  // ExtraCard sheet state
+  const [sheetGameId, setSheetGameId] = useState<string | null>(null);
 
   const publishMutation = useMutation({
     mutationFn: (id: string) => api.sharedGames.publish(id),
@@ -150,6 +167,7 @@ export function GameCatalogGrid() {
   const handlePublish = useCallback((id: string) => publishMutation.mutate(id), [publishMutation]);
   const handleArchive = useCallback((id: string) => archiveMutation.mutate(id), [archiveMutation]);
   const handleDelete = useCallback((id: string) => deleteMutation.mutate(id), [deleteMutation]);
+  const handleOpenExtraCard = useCallback((id: string) => setSheetGameId(id), []);
 
   const published = games.filter((g) => g.status === 'Published').length;
   const draft = games.filter((g) => g.status === 'Draft').length;
@@ -206,10 +224,23 @@ export function GameCatalogGrid() {
               onPublish={handlePublish}
               onArchive={handleArchive}
               onDelete={handleDelete}
+              onOpenExtraCard={handleOpenExtraCard}
             />
           ))}
         </div>
       )}
+
+      {/* ExtraCard Sheet */}
+      <Sheet open={!!sheetGameId} onOpenChange={(open) => { if (!open) setSheetGameId(null); }}>
+        <SheetContent side="right" className="w-[640px] sm:max-w-[640px] p-0 overflow-y-auto">
+          {sheetGameId && (
+            <AdminSharedGameCardContainer
+              gameId={sheetGameId}
+              onClose={() => setSheetGameId(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

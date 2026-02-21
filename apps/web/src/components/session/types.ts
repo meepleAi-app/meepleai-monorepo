@@ -189,6 +189,26 @@ export const DEFAULT_WHEEL_COLORS = [
   '#06b6d4', // cyan
 ];
 
+// Counter Tool Types (Issue #4979)
+export interface CounterToolConfig {
+  name: string;
+  minValue: number;
+  maxValue: number;
+  defaultValue: number;
+  isPerPlayer: boolean;
+  icon?: string | null;
+  color?: string | null;
+}
+
+export interface CounterState {
+  minValue: number;
+  maxValue: number;
+  defaultValue: number;
+  isPerPlayer: boolean;
+  currentValue: number;
+  playerValues: Record<string, number>;
+}
+
 // Session Invite Types (Issue #3354)
 export interface InviteTokenResponse {
   inviteToken: string;

@@ -52,6 +52,9 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType ProcessingJobCompleted = new("processing_job_completed");
     public static readonly NotificationType ProcessingJobFailed = new("processing_job_failed");
 
+    // ISSUE-5009: Agent linked to shared game notification
+    public static readonly NotificationType AgentLinked = new("agent_linked");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -100,6 +103,7 @@ internal sealed class NotificationType : ValueObject
             "game_proposal_kb_merged" => GameProposalKbMerged,
             "processing_job_completed" => ProcessingJobCompleted,
             "processing_job_failed" => ProcessingJobFailed,
+            "agent_linked" => AgentLinked,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

@@ -11,6 +11,8 @@
  * @see docs/03-api/rag/ for detailed documentation
  */
 
+import { Suspense } from 'react';
+
 import { RagDashboard } from '@/components/rag-dashboard/RagDashboard';
 
 import type { Metadata } from 'next';
@@ -36,5 +38,9 @@ export const metadata: Metadata = {
 };
 
 export default function RagDashboardPage() {
-  return <RagDashboard />;
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <RagDashboard />
+    </Suspense>
+  );
 }

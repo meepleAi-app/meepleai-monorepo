@@ -25,6 +25,7 @@ import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { useAddGameWizard } from '@/hooks/useAddGameWizard';
 import { useTranslation } from '@/hooks/useTranslation';
+import { WIZARD_TEST_IDS } from '@/lib/test-ids';
 
 // Step components
 import { GameDetailsForm } from './steps/GameDetailsForm';
@@ -107,11 +108,11 @@ export function AddGameWizard() {
           <div>
             <h1
               className="text-3xl font-bold text-slate-900 dark:text-white mb-2"
-              data-testid="wizard-title"
+              data-testid={WIZARD_TEST_IDS.title}
             >
               {t('collection.addGameTitle')}
             </h1>
-            <p className="text-slate-600 dark:text-slate-400" data-testid="wizard-subtitle">
+            <p className="text-slate-600 dark:text-slate-400" data-testid={WIZARD_TEST_IDS.subtitle}>
               {t('collection.addGameSubtitle')}
             </p>
           </div>
@@ -157,7 +158,7 @@ export function AddGameWizard() {
                     </span>
                     <span
                       className="text-xs text-slate-500 dark:text-slate-400"
-                      data-testid={`step-${stepInfo.number}-description`}
+                      data-testid={WIZARD_TEST_IDS.stepDescription(stepInfo.number)}
                     >
                       {stepInfo.description}
                     </span>

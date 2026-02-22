@@ -22,6 +22,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import React from 'react';
 
+import { CHAT_TEST_IDS } from '@/lib/test-ids';
 import { NewChatView } from '../NewChatView';
 
 // Mock next/navigation
@@ -85,7 +86,7 @@ async function renderView() {
   const result = render(<NewChatView />);
   // Wait for games to load
   await waitFor(() => {
-    expect(screen.queryByTestId('game-selection-section')).toBeInTheDocument();
+    expect(screen.queryByTestId(CHAT_TEST_IDS.gameSelectionSection)).toBeInTheDocument();
   });
   return result;
 }
@@ -114,27 +115,27 @@ describe('NewChatView', () => {
 
   it('renders game selection section', async () => {
     await renderView();
-    expect(screen.getByTestId('game-selection-section')).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.gameSelectionSection)).toBeInTheDocument();
     expect(screen.getByText('Seleziona un gioco')).toBeInTheDocument();
   });
 
   it('renders agent selection with 4 options', async () => {
     await renderView();
-    expect(screen.getByTestId('agent-selection-section')).toBeInTheDocument();
-    expect(screen.getByTestId('agent-card-auto')).toBeInTheDocument();
-    expect(screen.getByTestId('agent-card-qa')).toBeInTheDocument();
-    expect(screen.getByTestId('agent-card-rules')).toBeInTheDocument();
-    expect(screen.getByTestId('agent-card-strategy')).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentSelectionSection)).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('auto'))).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('qa'))).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules'))).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('strategy'))).toBeInTheDocument();
   });
 
   it('renders quick start section', async () => {
     await renderView();
-    expect(screen.getByTestId('quick-start-section')).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.quickStartSection)).toBeInTheDocument();
   });
 
   it('renders start chat button', async () => {
     await renderView();
-    expect(screen.getByTestId('start-chat-btn')).toBeInTheDocument();
+    expect(screen.getByTestId(CHAT_TEST_IDS.startChatBtn)).toBeInTheDocument();
     expect(screen.getByText('Inizia Chat')).toBeInTheDocument();
   });
 
@@ -157,12 +158,12 @@ describe('NewChatView', () => {
     await renderView();
 
     await waitFor(() => {
-      expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toBeInTheDocument();
     });
 
-    await user.click(screen.getByTestId('game-card-game-1'));
+    await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1')));
 
-    expect(screen.getByTestId('game-card-game-1')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('filters games with search input', async () => {
@@ -173,7 +174,7 @@ describe('NewChatView', () => {
       expect(screen.getByText('Catan')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByTestId('game-search-input');
+    const searchInput = screen.getByTestId(CHAT_TEST_IDS.gameSearchInput);
     await user.type(searchInput, 'Catan');
 
     expect(screen.getByText('Catan')).toBeInTheDocument();
@@ -185,10 +186,10 @@ describe('NewChatView', () => {
     await renderView();
 
     await waitFor(() => {
-      expect(screen.getByTestId('skip-game-btn')).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.skipGameBtn)).toBeInTheDocument();
     });
 
-    await user.click(screen.getByTestId('skip-game-btn'));
+    await user.click(screen.getByTestId(CHAT_TEST_IDS.skipGameBtn));
     expect(screen.getByText('Continua senza gioco (chat generica)')).toBeInTheDocument();
   });
 
@@ -200,13 +201,13 @@ describe('NewChatView', () => {
     const user = userEvent.setup();
     await renderView();
 
-    await user.click(screen.getByTestId('agent-card-rules'));
-    expect(screen.getByTestId('agent-card-rules')).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules')));
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules'))).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('has auto agent pre-selected by default', async () => {
     await renderView();
-    expect(screen.getByTestId('agent-card-auto')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('auto'))).toHaveAttribute('aria-pressed', 'true');
   });
 
   // --------------------------------------------------------------------------
@@ -218,14 +219,14 @@ describe('NewChatView', () => {
     await renderView();
 
     await waitFor(() => {
-      expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toBeInTheDocument();
     });
 
     // Before selecting game - generic suggestions
     expect(screen.getByText('Consiglia un gioco')).toBeInTheDocument();
 
     // Select game
-    await user.click(screen.getByTestId('game-card-game-1'));
+    await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1')));
 
     // After selecting - contextual suggestions
     await waitFor(() => {
@@ -242,23 +243,22 @@ describe('NewChatView', () => {
     await renderView();
 
     await waitFor(() => {
-      expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toBeInTheDocument();
     });
 
     // Select game
-    await user.click(screen.getByTestId('game-card-game-1'));
+    await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1')));
 
     // Click start
-    await user.click(screen.getByTestId('start-chat-btn'));
+    await user.click(screen.getByTestId(CHAT_TEST_IDS.startChatBtn));
 
     await waitFor(() => {
-      expect(apiMock.chat.createThread).toHaveBeenCalledWith(
-        expect.objectContaining({
-          gameId: 'game-1',
-          title: 'Chat: Catan',
-          initialMessage: null,
-        })
-      );
+      expect(apiMock.chat.createThread).toHaveBeenCalledWith({
+        gameId: 'game-1',
+        agentId: null,
+        title: 'Chat: Catan',
+        initialMessage: null,
+      });
       expect(mockPush).toHaveBeenCalledWith('/chat?threadId=thread-new-1');
     });
   });
@@ -268,16 +268,15 @@ describe('NewChatView', () => {
     await renderView();
 
     // Click start without game
-    await user.click(screen.getByTestId('start-chat-btn'));
+    await user.click(screen.getByTestId(CHAT_TEST_IDS.startChatBtn));
 
     await waitFor(() => {
-      expect(apiMock.chat.createThread).toHaveBeenCalledWith(
-        expect.objectContaining({
-          gameId: null,
-          title: 'Nuova conversazione',
-          initialMessage: null,
-        })
-      );
+      expect(apiMock.chat.createThread).toHaveBeenCalledWith({
+        gameId: null,
+        agentId: null,
+        title: 'Nuova conversazione',
+        initialMessage: null,
+      });
     });
   });
 
@@ -290,7 +289,7 @@ describe('NewChatView', () => {
     render(<NewChatView />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('new-chat-error')).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.newChatError)).toBeInTheDocument();
       expect(screen.getByText('Errore nel caricamento dei dati')).toBeInTheDocument();
     });
   });

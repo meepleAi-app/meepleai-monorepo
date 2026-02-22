@@ -183,6 +183,28 @@ import {
 
 import type { HttpClient } from '../core/httpClient';
 
+// ============================================================================
+// Route Constants — import in tests to avoid magic strings
+// ============================================================================
+
+export const ADMIN_PDF_ROUTES = {
+  base: '/api/v1/admin/pdfs',
+  bulkDelete: '/api/v1/admin/pdfs/bulk/delete',
+  reindex: (pdfId: string) => `/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}/reindex` as const,
+  purgeStale: '/api/v1/admin/pdfs/maintenance/purge-stale',
+  cleanupOrphans: '/api/v1/admin/pdfs/maintenance/cleanup-orphans',
+  statusDistribution: '/api/v1/admin/pdfs/analytics/distribution',
+  storageHealth: '/api/v1/admin/pdfs/storage/health',
+  processingMetrics: '/api/v1/admin/pdfs/metrics/processing',
+} as const;
+
+export const ADMIN_KB_ROUTES = {
+  vectorCollections: '/api/v1/admin/kb/vector-collections',
+  processingQueue: '/api/v1/admin/kb/processing-queue',
+} as const;
+
+// ============================================================================
+
 export interface CreateAdminClientParams {
   httpClient: HttpClient;
 }

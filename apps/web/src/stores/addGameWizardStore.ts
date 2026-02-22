@@ -11,6 +11,7 @@ import { devtools } from 'zustand/middleware';
 
 import { toast } from '@/components/layout';
 import { api } from '@/lib/api';
+import { ERROR_MESSAGES } from '@/lib/errors/messages';
 import type { Game } from '@/types/domain';
 
 /** Centralized toast messages for the add-game wizard — import in tests to avoid magic strings */
@@ -208,18 +209,18 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
 
           // Validate final state
           if (!selectedGame && !isCustomGame) {
-            throw new Error('No game selected');
+            throw new Error(ERROR_MESSAGES.wizard.noGameSelected);
           }
 
           if (isCustomGame && (!customGameData || !customGameData.name.trim())) {
-            throw new Error('Custom game requires a name');
+            throw new Error(ERROR_MESSAGES.wizard.customGameRequiresName);
           }
 
           let entryGameId: string;
 
           if (isCustomGame) {
             if (!customGameData || !customGameData.name.trim()) {
-              throw new Error('Custom game requires a name');
+              throw new Error(ERROR_MESSAGES.wizard.customGameRequiresName);
             }
 
             const result = await api.library.addPrivateGame({

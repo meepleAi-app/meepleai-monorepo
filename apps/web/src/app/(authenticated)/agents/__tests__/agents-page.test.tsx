@@ -81,7 +81,7 @@ vi.mock('@/hooks/queries/useRagStrategies', () => ({
   }),
 }));
 
-import AgentsPage from '../page';
+import AgentsPage from '@/app/(authenticated)/agents/page';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 

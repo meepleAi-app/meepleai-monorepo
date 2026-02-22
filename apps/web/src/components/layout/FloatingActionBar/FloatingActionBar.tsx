@@ -25,6 +25,7 @@
 import { useRef, useState } from 'react';
 
 import { useNavigation } from '@/context/NavigationContext';
+import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
 // ─── FloatingActionBar ────────────────────────────────────────────────────────
@@ -34,10 +35,10 @@ export interface FloatingActionBarProps {
 }
 
 export function FloatingActionBar({ className }: FloatingActionBarProps) {
-  const { actionBar } = useNavigation();
+  const { actionBarActions } = useNavigation();
 
   // Only render visible actions
-  const visibleActions = actionBar.filter((a) => !a.hidden);
+  const visibleActions = actionBarActions.filter((a) => !a.hidden);
 
   // Hide when no actions configured
   if (visibleActions.length === 0) return null;
@@ -48,7 +49,7 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
 
   return (
     <div
-      data-testid="floating-action-bar"
+      data-testid={NAV_TEST_IDS.floatingActionBar}
       className={cn(
         // Positioning: fixed bottom-center
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
@@ -88,7 +89,7 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
 // ─── ActionButton ──────────────────────────────────────────────────────────────
 
 interface ActionButtonProps {
-  action: ReturnType<typeof useNavigation>['actionBar'][number];
+  action: ReturnType<typeof useNavigation>['actionBarActions'][number];
   compact?: boolean;
 }
 

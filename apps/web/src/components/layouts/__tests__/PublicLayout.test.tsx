@@ -22,6 +22,7 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
   })),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock('next/link', () => ({
@@ -50,6 +51,17 @@ vi.mock('@/components/ui/meeple/meeple-logo', () => ({
 // Mock NotificationCenter to avoid IntlProvider dependency (it uses useTranslation/useIntl)
 vi.mock('@/components/layout/Navbar/NotificationCenter', () => ({
   NotificationCenter: () => null,
+}));
+
+// Mock ActionBar components to avoid useLayout context dependency
+vi.mock('@/components/layout/ActionBar', () => ({
+  UnifiedActionBar: () => null,
+  UnifiedActionBarSpacer: () => null,
+}));
+
+// Mock Sidebar to avoid complex context dependencies when authenticated
+vi.mock('@/components/layout/Sidebar', () => ({
+  Sidebar: () => null,
 }));
 
 // Mock useCurrentUser to avoid QueryClient dependency in UnifiedHeader

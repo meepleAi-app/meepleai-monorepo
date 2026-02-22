@@ -8,6 +8,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { CHAT_TEST_IDS } from '@/lib/test-ids';
 import { ChatAgentInfo } from '../ChatAgentInfo';
 import { ChatGameContext } from '../ChatGameContext';
 import { ChatStatsDisplay, formatDuration } from '../ChatStatsDisplay';
@@ -24,7 +25,7 @@ describe('ChatStatusBadge', () => {
   describe('Status States', () => {
     it('renders active status with blue styling', () => {
       render(<ChatStatusBadge status="active" />);
-      const badge = screen.getByTestId('chat-status-active');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.statusBadge('active'));
       expect(badge).toBeInTheDocument();
       expect(badge).toHaveClass('bg-blue-50');
       expect(screen.getByText('Active')).toBeInTheDocument();
@@ -32,21 +33,21 @@ describe('ChatStatusBadge', () => {
 
     it('renders waiting status with yellow styling', () => {
       render(<ChatStatusBadge status="waiting" />);
-      const badge = screen.getByTestId('chat-status-waiting');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.statusBadge('waiting'));
       expect(badge).toHaveClass('bg-yellow-50');
       expect(screen.getByText('Waiting')).toBeInTheDocument();
     });
 
     it('renders archived status with gray styling', () => {
       render(<ChatStatusBadge status="archived" />);
-      const badge = screen.getByTestId('chat-status-archived');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.statusBadge('archived'));
       expect(badge).toHaveClass('bg-gray-50');
       expect(screen.getByText('Archived')).toBeInTheDocument();
     });
 
     it('renders closed status with slate styling', () => {
       render(<ChatStatusBadge status="closed" />);
-      const badge = screen.getByTestId('chat-status-closed');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.statusBadge('closed'));
       expect(badge).toHaveClass('bg-slate-50');
       expect(screen.getByText('Closed')).toBeInTheDocument();
     });
@@ -93,7 +94,7 @@ describe('ChatStatusBadge', () => {
   describe('Accessibility', () => {
     it('has descriptive aria-label', () => {
       render(<ChatStatusBadge status="active" />);
-      const badge = screen.getByTestId('chat-status-active');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.statusBadge('active'));
       expect(badge).toHaveAttribute('aria-label', 'Chat status: Active');
     });
   });
@@ -109,7 +110,7 @@ describe('ChatAgentInfo', () => {
   describe('Rendering', () => {
     it('renders with agent name and model', () => {
       render(<ChatAgentInfo agent={mockAgent} />);
-      expect(screen.getByTestId('chat-agent-info')).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.agentInfo)).toBeInTheDocument();
       expect(screen.getByText('Tutor Bot')).toBeInTheDocument();
       expect(screen.getByText('GPT-4o-mini')).toBeInTheDocument();
     });
@@ -162,18 +163,18 @@ describe('ChatStatsDisplay', () => {
   describe('Rendering', () => {
     it('renders with all stats', () => {
       render(<ChatStatsDisplay stats={mockStats} />);
-      expect(screen.getByTestId('chat-stats-display')).toBeInTheDocument();
-      expect(screen.getByTestId('message-count')).toBeInTheDocument();
-      expect(screen.getByTestId('last-message-at')).toBeInTheDocument();
-      expect(screen.getByTestId('chat-duration')).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.statsDisplay)).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.messageCount)).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.lastMessageAt)).toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.duration)).toBeInTheDocument();
     });
 
     it('renders without optional stats', () => {
       const minimalStats: ChatStats = { messageCount: 10 };
       render(<ChatStatsDisplay stats={minimalStats} />);
-      expect(screen.getByTestId('message-count')).toBeInTheDocument();
-      expect(screen.queryByTestId('last-message-at')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('chat-duration')).not.toBeInTheDocument();
+      expect(screen.getByTestId(CHAT_TEST_IDS.messageCount)).toBeInTheDocument();
+      expect(screen.queryByTestId(CHAT_TEST_IDS.lastMessageAt)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(CHAT_TEST_IDS.duration)).not.toBeInTheDocument();
     });
   });
 
@@ -215,13 +216,13 @@ describe('ChatStatsDisplay', () => {
   describe('Layout', () => {
     it('horizontal layout by default', () => {
       render(<ChatStatsDisplay stats={mockStats} />);
-      const display = screen.getByTestId('chat-stats-display');
+      const display = screen.getByTestId(CHAT_TEST_IDS.statsDisplay);
       expect(display).toHaveClass('flex-row');
     });
 
     it('vertical layout when specified', () => {
       render(<ChatStatsDisplay stats={mockStats} layout="vertical" />);
-      const display = screen.getByTestId('chat-stats-display');
+      const display = screen.getByTestId(CHAT_TEST_IDS.statsDisplay);
       expect(display).toHaveClass('flex-col');
     });
   });
@@ -235,7 +236,7 @@ describe('ChatGameContext', () => {
   describe('Rendering', () => {
     it('renders game name with orange dot', () => {
       render(<ChatGameContext game={{ name: 'Catan' }} />);
-      const chip = screen.getByTestId('chat-game-context');
+      const chip = screen.getByTestId(CHAT_TEST_IDS.gameContext);
       expect(chip).toBeInTheDocument();
       expect(screen.getByText('Catan')).toBeInTheDocument();
     });
@@ -250,13 +251,13 @@ describe('ChatGameContext', () => {
   describe('Link behavior', () => {
     it('renders as span when no game ID', () => {
       render(<ChatGameContext game={{ name: 'Catan' }} />);
-      const chip = screen.getByTestId('chat-game-context');
+      const chip = screen.getByTestId(CHAT_TEST_IDS.gameContext);
       expect(chip.tagName).toBe('SPAN');
     });
 
     it('renders as link when game ID is provided', () => {
       render(<ChatGameContext game={{ name: 'Catan', id: 'abc-123' }} />);
-      const chip = screen.getByTestId('chat-game-context');
+      const chip = screen.getByTestId(CHAT_TEST_IDS.gameContext);
       expect(chip.tagName).toBe('A');
       expect(chip).toHaveAttribute('href', '/games/abc-123');
     });
@@ -271,19 +272,19 @@ describe('ChatUnreadBadge', () => {
   describe('Rendering', () => {
     it('renders when count > 0', () => {
       render(<ChatUnreadBadge count={5} />);
-      const badge = screen.getByTestId('chat-unread-badge');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.unreadBadge);
       expect(badge).toBeInTheDocument();
       expect(screen.getByText('5')).toBeInTheDocument();
     });
 
     it('does not render when count is 0', () => {
       render(<ChatUnreadBadge count={0} />);
-      expect(screen.queryByTestId('chat-unread-badge')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(CHAT_TEST_IDS.unreadBadge)).not.toBeInTheDocument();
     });
 
     it('does not render when count is negative', () => {
       render(<ChatUnreadBadge count={-1} />);
-      expect(screen.queryByTestId('chat-unread-badge')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(CHAT_TEST_IDS.unreadBadge)).not.toBeInTheDocument();
     });
   });
 
@@ -312,13 +313,13 @@ describe('ChatUnreadBadge', () => {
   describe('Accessibility', () => {
     it('has descriptive aria-label', () => {
       render(<ChatUnreadBadge count={7} />);
-      const badge = screen.getByTestId('chat-unread-badge');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.unreadBadge);
       expect(badge).toHaveAttribute('aria-label', '7 unread messages');
     });
 
     it('uses actual count in aria-label even for 99+ display', () => {
       render(<ChatUnreadBadge count={150} />);
-      const badge = screen.getByTestId('chat-unread-badge');
+      const badge = screen.getByTestId(CHAT_TEST_IDS.unreadBadge);
       expect(badge).toHaveAttribute('aria-label', '150 unread messages');
     });
   });

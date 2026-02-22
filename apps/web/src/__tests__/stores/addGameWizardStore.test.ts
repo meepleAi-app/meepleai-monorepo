@@ -13,6 +13,7 @@ import {
   ADD_GAME_WIZARD_MESSAGES,
 } from '@/stores/addGameWizardStore';
 import type { Game } from '@/types/domain';
+import { ERROR_MESSAGES } from '@/lib/errors/messages';
 
 // Mock toast
 vi.mock('@/components/layout', () => ({
@@ -264,8 +265,8 @@ describe('addGameWizardStore', () => {
 
       const { isProcessing, error } = useAddGameWizardStore.getState();
       expect(isProcessing).toBe(false);
-      expect(error).toBe('No game selected');
-      expect(toast.error).toHaveBeenCalledWith('No game selected');
+      expect(error).toBe(ERROR_MESSAGES.wizard.noGameSelected);
+      expect(toast.error).toHaveBeenCalledWith(ERROR_MESSAGES.wizard.noGameSelected);
     });
 
     it('submitWizard fails with custom game but no name', async () => {
@@ -276,8 +277,8 @@ describe('addGameWizardStore', () => {
 
       const { isProcessing, error } = useAddGameWizardStore.getState();
       expect(isProcessing).toBe(false);
-      expect(error).toBe('Custom game requires a name');
-      expect(toast.error).toHaveBeenCalledWith('Custom game requires a name');
+      expect(error).toBe(ERROR_MESSAGES.wizard.customGameRequiresName);
+      expect(toast.error).toHaveBeenCalledWith(ERROR_MESSAGES.wizard.customGameRequiresName);
     });
 
     it('submitWizard succeeds with shared game', async () => {
@@ -333,7 +334,7 @@ describe('addGameWizardStore', () => {
       expect(window.location.href).toBe('/library');
     });
 
-    it('submitWizard succeeds with custom game (addPrivateGame)', async () => {
+    it('submitWizard handles custom game submission via private game API', async () => {
       const customData: CustomGameData = { name: 'My Custom Game' };
       const {
         selectCustomGame,
@@ -346,8 +347,10 @@ describe('addGameWizardStore', () => {
       delete (window as { location?: unknown }).location;
       window.location = { href: '' } as Location;
 
-      // Mock successful API call for private game creation
-      vi.mocked(api.library.addPrivateGame).mockResolvedValueOnce({ id: 'custom-id' } as never);
+      // Mock addPrivateGame API call
+      vi.mocked(api.library.addPrivateGame).mockResolvedValueOnce({
+        id: 'private-entry-uuid',
+      } as any);
 
       selectCustomGame();
       setCustomGameData(customData);
@@ -355,7 +358,14 @@ describe('addGameWizardStore', () => {
       await submitWizard();
 
       // Should call addPrivateGame API
-      expect(api.library.addPrivateGame).toHaveBeenCalled();
+      expect(api.library.addPrivateGame).toHaveBeenCalledWith({
+        source: 'Manual',
+        title: 'My Custom Game',
+        minPlayers: 1,
+        maxPlayers: 4,
+        playingTimeMinutes: null,
+        complexityRating: null,
+      });
 
       // Should show success toast
       expect(toast.success).toHaveBeenCalledWith(ADD_GAME_WIZARD_MESSAGES.gameAdded('My Custom Game'));
@@ -363,6 +373,9 @@ describe('addGameWizardStore', () => {
       // Should reset store
       const { isCustomGame } = useAddGameWizardStore.getState();
       expect(isCustomGame).toBe(false);
+
+      // Should redirect
+      expect(window.location.href).toBe('/library');
     });
 
     it('submitWizard handles API errors gracefully', async () => {

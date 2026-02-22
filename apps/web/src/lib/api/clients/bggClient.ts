@@ -21,6 +21,12 @@ import type { HttpClient } from '../core/httpClient';
 // BGG API timeout configuration (30 seconds)
 const BGG_TIMEOUT_MS = 30000;
 
+export const BGG_ROUTES = {
+  search: '/api/v1/bgg/search',
+  gameDetails: (bggId: number) => `/api/v1/bgg/games/${bggId}` as const,
+  thumbnails: '/api/v1/bgg/thumbnails',
+} as const;
+
 export interface CreateBggClientParams {
   httpClient: HttpClient;
 }

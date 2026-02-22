@@ -14,6 +14,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { ADMIN_TEST_IDS } from '@/lib/test-ids';
+
 const { mockGetVectorCollections } = vi.hoisted(() => ({
   mockGetVectorCollections: vi.fn(),
 }));
@@ -30,10 +32,10 @@ vi.mock('@/lib/api/core/httpClient', () => ({
 
 // Mock VectorCollectionCard since it's a separate component
 vi.mock('@/components/admin/knowledge-base/vector-collection-card', () => ({
-  VectorCollectionCard: ({ collection }: { collection: { name: string; vectorCount: number } }) => (
-    <div data-testid={`collection-card-${collection.name}`}>
-      <span>{collection.name}</span>
-      <span>{collection.vectorCount.toLocaleString()}</span>
+  VectorCollectionCard: ({ name, vectorCount }: { name: string; vectorCount: number }) => (
+    <div data-testid={ADMIN_TEST_IDS.collectionCard(name)}>
+      <span>{name}</span>
+      <span>{vectorCount.toLocaleString()}</span>
     </div>
   ),
 }));
@@ -97,11 +99,11 @@ describe('VectorCollectionsPage', () => {
     renderWithQuery(<VectorCollectionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('collection-card-Game Rules')).toBeInTheDocument();
+      expect(screen.getByTestId(ADMIN_TEST_IDS.collectionCard('Game Rules'))).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('collection-card-Strategy Guides')).toBeInTheDocument();
-    expect(screen.getByTestId('collection-card-FAQ Database')).toBeInTheDocument();
+    expect(screen.getByTestId(ADMIN_TEST_IDS.collectionCard('Strategy Guides'))).toBeInTheDocument();
+    expect(screen.getByTestId(ADMIN_TEST_IDS.collectionCard('FAQ Database'))).toBeInTheDocument();
   });
 
   it('should show error state when fetch fails', async () => {

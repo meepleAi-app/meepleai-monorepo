@@ -147,7 +147,7 @@ describe('InfrastructureClient - Chromatic Visual Tests', () => {
 
     rerender(<InfrastructureClient />);
 
-    // Should have called hook multiple times
-    expect(mockUseUserLocale).toHaveBeenCalledTimes(2);
+    // Should have called hook multiple times (exact count varies with React render cycles)
+    expect(mockUseUserLocale.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

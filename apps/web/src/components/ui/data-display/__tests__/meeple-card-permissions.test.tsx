@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { CARD_TEST_IDS } from '@/lib/test-ids';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MeepleCard } from '../meeple-card';
@@ -27,6 +28,16 @@ describe('MeepleCard Permission Integration', () => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } }
     });
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
   });
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -218,7 +229,7 @@ describe('MeepleCard Permission Integration', () => {
 
       // Card still renders even on permission error
       await screen.findByText('Wingspan');
-      expect(screen.getByTestId('meeple-card')).toBeInTheDocument();
+      expect(screen.getByTestId(CARD_TEST_IDS.card)).toBeInTheDocument();
 
       vi.restoreAllMocks();
     });
@@ -235,7 +246,7 @@ describe('MeepleCard Permission Integration', () => {
         { wrapper }
       );
 
-      expect(screen.getByTestId('meeple-card-skeleton')).toBeInTheDocument();
+      expect(screen.getByTestId(CARD_TEST_IDS.skeleton)).toBeInTheDocument();
     });
   });
 

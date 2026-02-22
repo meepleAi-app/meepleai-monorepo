@@ -70,6 +70,7 @@ import {
 } from '@/hooks/queries/useLibrary';
 import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 import { useTranslation } from '@/hooks/useTranslation';
+import { COLLECTION_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
 
@@ -200,7 +201,7 @@ function HeroStatCard({ stat, index }: { stat: HeroStat; index: number }) {
         colors.bg,
         colors.border
       )}
-      data-testid={`hero-stat-${stat.id}`}
+      data-testid={COLLECTION_TEST_IDS.heroStat(stat.id)}
     >
       <div className="flex items-center justify-between">
         <Icon className={cn('h-5 w-5', colors.icon)} />
@@ -327,7 +328,7 @@ function CollectionToolbar({
   const hasActiveFilters = Boolean(searchQuery) || favoritesOnly || stateFilter.length > 0;
 
   return (
-    <div className="space-y-4" data-testid="collection-toolbar">
+    <div className="space-y-4" data-testid={COLLECTION_TEST_IDS.toolbar}>
       {/* Search and Actions Row */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {/* Search Input */}
@@ -340,7 +341,7 @@ function CollectionToolbar({
             onChange={e => handleSearchInput(e.target.value)}
             className="pl-9 pr-9"
             aria-label="Search collection"
-            data-testid="collection-search"
+            data-testid={COLLECTION_TEST_IDS.search}
           />
           {localSearch && (
             <Button
@@ -386,7 +387,7 @@ function CollectionToolbar({
               className="h-8 w-8"
               onClick={() => onViewModeChange('grid')}
               aria-label="Grid view"
-              data-testid="view-mode-grid"
+              data-testid={COLLECTION_TEST_IDS.viewModeGrid}
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
@@ -396,7 +397,7 @@ function CollectionToolbar({
               className="h-8 w-8"
               onClick={() => onViewModeChange('list')}
               aria-label="List view"
-              data-testid="view-mode-list"
+              data-testid={COLLECTION_TEST_IDS.viewModeList}
             >
               <List className="h-4 w-4" />
             </Button>
@@ -457,7 +458,7 @@ function CollectionToolbar({
               onClick={() => handleFilterChipClick(chip.id)}
               role="button"
               aria-pressed={isActive}
-              data-testid={`filter-chip-${chip.id.toLowerCase()}`}
+              data-testid={COLLECTION_TEST_IDS.filterChip(chip.id)}
             >
               {chip.icon && <span className="mr-1">{chip.icon}</span>}
               {chip.label}
@@ -498,7 +499,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-16 text-center"
-      data-testid="collection-empty-state"
+      data-testid={COLLECTION_TEST_IDS.emptyState}
     >
       <div className="rounded-full bg-muted/50 p-6 mb-4">
         <Library className="h-12 w-12 text-muted-foreground" />
@@ -697,7 +698,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
   }, [libraryData]);
 
   return (
-    <div className={cn('space-y-6', className)} data-testid="collection-dashboard">
+    <div className={cn('space-y-6', className)} data-testid={COLLECTION_TEST_IDS.dashboard}>
       {/* Hero Stats Section */}
       <section aria-label="Collection statistics">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -776,7 +777,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
                       ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                       : 'flex flex-col gap-3'
                   )}
-                  data-testid="collection-grid"
+                  data-testid={COLLECTION_TEST_IDS.grid}
                 >
                   {games.map(game => (
                     <MeepleCard

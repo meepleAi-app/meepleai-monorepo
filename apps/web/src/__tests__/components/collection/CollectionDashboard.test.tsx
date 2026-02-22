@@ -15,6 +15,11 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { CollectionDashboard } from '@/components/collection/CollectionDashboard';
+import { COLLECTION_TEST_IDS } from '@/lib/test-ids';
+
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: (k: string) => k }),
+}));
 
 // ============================================================================
 // Mock Data
@@ -141,6 +146,17 @@ function renderWithProviders(component: React.ReactElement) {
 describe('CollectionDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Stub window.matchMedia required by MeepleCard in jsdom
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
   });
 
   afterEach(() => {
@@ -150,57 +166,57 @@ describe('CollectionDashboard', () => {
   describe('Rendering', () => {
     it('should render the dashboard container', () => {
       renderWithProviders(<CollectionDashboard />);
-      expect(screen.getByTestId('collection-dashboard')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.dashboard)).toBeInTheDocument();
     });
 
     it('should render hero stats section', () => {
       renderWithProviders(<CollectionDashboard />);
 
-      expect(screen.getByTestId('hero-stat-total')).toBeInTheDocument();
-      expect(screen.getByTestId('hero-stat-favorites')).toBeInTheDocument();
-      expect(screen.getByTestId('hero-stat-quota')).toBeInTheDocument();
-      expect(screen.getByTestId('hero-stat-usage')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.heroStat('total'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.heroStat('favorites'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.heroStat('quota'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.heroStat('usage'))).toBeInTheDocument();
     });
 
     it('should render toolbar with search input', () => {
       renderWithProviders(<CollectionDashboard />);
 
-      expect(screen.getByTestId('collection-toolbar')).toBeInTheDocument();
-      expect(screen.getByTestId('collection-search')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.toolbar)).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.search)).toBeInTheDocument();
     });
 
     it('should render view mode toggle buttons', () => {
       renderWithProviders(<CollectionDashboard />);
 
-      expect(screen.getByTestId('view-mode-grid')).toBeInTheDocument();
-      expect(screen.getByTestId('view-mode-list')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.viewModeGrid)).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.viewModeList)).toBeInTheDocument();
     });
 
     it('should render filter chips', () => {
       renderWithProviders(<CollectionDashboard />);
 
-      expect(screen.getByTestId('filter-chip-all')).toBeInTheDocument();
-      expect(screen.getByTestId('filter-chip-favorites')).toBeInTheDocument();
-      expect(screen.getByTestId('filter-chip-nuovo')).toBeInTheDocument();
-      expect(screen.getByTestId('filter-chip-inprestito')).toBeInTheDocument();
-      expect(screen.getByTestId('filter-chip-wishlist')).toBeInTheDocument();
-      expect(screen.getByTestId('filter-chip-owned')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.filterChip('all'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.filterChip('favorites'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.filterChip('nuovo'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.filterChip('inprestito'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.filterChip('wishlist'))).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.filterChip('owned'))).toBeInTheDocument();
     });
 
     it('should render game grid', () => {
       renderWithProviders(<CollectionDashboard />);
 
-      expect(screen.getByTestId('collection-grid')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.grid)).toBeInTheDocument();
     });
 
     it('should display correct stat values', () => {
       renderWithProviders(<CollectionDashboard />);
 
       // Check hero stats display correct values
-      const totalStat = screen.getByTestId('hero-stat-total');
+      const totalStat = screen.getByTestId(COLLECTION_TEST_IDS.heroStat('total'));
       expect(within(totalStat).getByText('25')).toBeInTheDocument();
 
-      const favoritesStat = screen.getByTestId('hero-stat-favorites');
+      const favoritesStat = screen.getByTestId(COLLECTION_TEST_IDS.heroStat('favorites'));
       expect(within(favoritesStat).getByText('8')).toBeInTheDocument();
     });
   });
@@ -211,21 +227,21 @@ describe('CollectionDashboard', () => {
       renderWithProviders(<CollectionDashboard />);
 
       // Grid should be default active
-      const gridButton = screen.getByTestId('view-mode-grid');
-      const listButton = screen.getByTestId('view-mode-list');
+      const gridButton = screen.getByTestId(COLLECTION_TEST_IDS.viewModeGrid);
+      const listButton = screen.getByTestId(COLLECTION_TEST_IDS.viewModeList);
 
       // Click list view
       await user.click(listButton);
 
       // Grid should still exist (view changes don't remove elements)
-      expect(screen.getByTestId('collection-grid')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.grid)).toBeInTheDocument();
     });
 
     it('should update search when typing in search input', async () => {
       const user = userEvent.setup();
       renderWithProviders(<CollectionDashboard />);
 
-      const searchInput = screen.getByTestId('collection-search');
+      const searchInput = screen.getByTestId(COLLECTION_TEST_IDS.search);
       await user.type(searchInput, 'Wingspan');
 
       expect(searchInput).toHaveValue('Wingspan');
@@ -235,7 +251,7 @@ describe('CollectionDashboard', () => {
       const user = userEvent.setup();
       renderWithProviders(<CollectionDashboard />);
 
-      const favoritesChip = screen.getByTestId('filter-chip-favorites');
+      const favoritesChip = screen.getByTestId(COLLECTION_TEST_IDS.filterChip('favorites'));
       await user.click(favoritesChip);
 
       // Check aria-pressed state changed
@@ -247,7 +263,7 @@ describe('CollectionDashboard', () => {
       renderWithProviders(<CollectionDashboard />);
 
       // First activate a filter
-      const favoritesChip = screen.getByTestId('filter-chip-favorites');
+      const favoritesChip = screen.getByTestId(COLLECTION_TEST_IDS.filterChip('favorites'));
       await user.click(favoritesChip);
 
       // Should show clear button
@@ -255,7 +271,7 @@ describe('CollectionDashboard', () => {
       await user.click(clearButton);
 
       // All chip should now be active
-      const allChip = screen.getByTestId('filter-chip-all');
+      const allChip = screen.getByTestId(COLLECTION_TEST_IDS.filterChip('all'));
       expect(allChip).toHaveAttribute('aria-pressed', 'true');
     });
   });
@@ -288,7 +304,7 @@ describe('CollectionDashboard', () => {
 
       renderWithProviders(<CollectionDashboard />);
 
-      expect(screen.getByTestId('collection-empty-state')).toBeInTheDocument();
+      expect(screen.getByTestId(COLLECTION_TEST_IDS.emptyState)).toBeInTheDocument();
       expect(screen.getByText('La tua collezione è vuota')).toBeInTheDocument();
     });
 
@@ -300,7 +316,7 @@ describe('CollectionDashboard', () => {
       renderWithProviders(<CollectionDashboard />);
 
       // Apply a filter
-      const favoritesChip = screen.getByTestId('filter-chip-favorites');
+      const favoritesChip = screen.getByTestId(COLLECTION_TEST_IDS.filterChip('favorites'));
       await user.click(favoritesChip);
 
       // Mock empty results for filtered query

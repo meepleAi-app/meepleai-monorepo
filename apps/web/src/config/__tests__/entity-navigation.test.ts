@@ -81,10 +81,10 @@ describe('entity-navigation', () => {
       const links = getNavigationLinks('game', { id: 'game-123' });
       expect(links).toHaveLength(4);
       expect(links[0]).toEqual<ResolvedNavigationLink>({
-        entity: 'document', label: 'KB', href: '/games/game-123/knowledge-base',
+        entity: 'document', label: 'KB', href: '/library/game-123?tab=agent',
       });
       expect(links[1]).toEqual<ResolvedNavigationLink>({
-        entity: 'agent', label: 'Agents', href: '/games/game-123/agents',
+        entity: 'agent', label: 'Agents', href: '/library/game-123?tab=agent',
       });
     });
 
@@ -93,7 +93,7 @@ describe('entity-navigation', () => {
         id: 'chat-1', gameId: 'game-1', agentId: 'agent-1', sessionId: 'session-1',
       });
       expect(links).toHaveLength(3);
-      expect(links[0].href).toBe('/games/game-1');
+      expect(links[0].href).toBe('/library/game-1');
       expect(links[1].href).toBe('/agents/agent-1');
       expect(links[2].href).toBe('/sessions/session-1');
     });
@@ -119,7 +119,7 @@ describe('entity-navigation', () => {
         id: 'doc-1', gameId: 'game-1', agentId: 'agent-1',
       });
       expect(links).toHaveLength(2);
-      expect(links[0].href).toBe('/games/game-1');
+      expect(links[0].href).toBe('/library/game-1');
       expect(links[1].href).toBe('/agents/agent-1');
     });
 

@@ -9,8 +9,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { createAdminClient, ADMIN_PDF_ROUTES, ADMIN_KB_ROUTES } from '@/lib/api/clients/adminClient';
 import type { HttpClient } from '@/lib/api/core/httpClient';
+import { ERROR_MESSAGES } from '@/lib/errors/messages';
 
 const mockHttpClient: HttpClient = {
   get: vi.fn(),
@@ -40,7 +41,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/bulk/delete',
+        ADMIN_PDF_ROUTES.bulkDelete,
         { pdfIds: ['pdf-1', 'pdf-2'] },
         expect.any(Object)
       );
@@ -56,7 +57,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/pdf-123/reindex',
+        ADMIN_PDF_ROUTES.reindex('pdf-123'),
         {},
         expect.any(Object)
       );
@@ -68,7 +69,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
       await client.reindexPdf('pdf with spaces');
 
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/pdf%20with%20spaces/reindex',
+        ADMIN_PDF_ROUTES.reindex('pdf with spaces'),
         {},
         expect.any(Object)
       );
@@ -84,7 +85,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/maintenance/purge-stale',
+        ADMIN_PDF_ROUTES.purgeStale,
         {},
         expect.any(Object)
       );
@@ -100,7 +101,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/maintenance/cleanup-orphans',
+        ADMIN_PDF_ROUTES.cleanupOrphans,
         {},
         expect.any(Object)
       );
@@ -122,7 +123,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/analytics/distribution',
+        ADMIN_PDF_ROUTES.statusDistribution,
         expect.any(Object)
       );
     });
@@ -151,7 +152,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/storage/health',
+        ADMIN_PDF_ROUTES.storageHealth,
         expect.any(Object)
       );
     });
@@ -159,7 +160,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
     it('should throw when API returns null', async () => {
       vi.mocked(mockHttpClient.get).mockResolvedValue(null);
 
-      await expect(client.getPdfStorageHealth()).rejects.toThrow('Failed to fetch PDF storage health');
+      await expect(client.getPdfStorageHealth()).rejects.toThrow(ERROR_MESSAGES.pdfStorage.fetchFailed);
     });
   });
 
@@ -176,7 +177,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/admin/pdfs/metrics/processing',
+        ADMIN_PDF_ROUTES.processingMetrics,
         expect.any(Object)
       );
     });
@@ -197,7 +198,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/admin/kb/vector-collections',
+        ADMIN_KB_ROUTES.vectorCollections,
         expect.any(Object)
       );
     });
@@ -220,7 +221,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/admin/kb/processing-queue',
+        ADMIN_KB_ROUTES.processingQueue,
         expect.any(Object)
       );
     });
@@ -262,7 +263,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
       expect(result).toEqual(mockResult);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/pdfs/admin/pdfs',
+        ADMIN_PDF_ROUTES.base,
         expect.any(Object)
       );
     });

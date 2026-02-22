@@ -18,14 +18,15 @@ import { FloatingActionBar } from '../FloatingActionBar';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 const mockUsePathname = usePathname as Mock;
 
 // Mock NavigationContext to inject controlled nav config
 const mockNavigationState = {
-  miniNav: [] as Array<{ id: string; label: string; href: string; icon?: unknown }>,
-  actionBar: [] as Array<{
+  miniNavTabs: [] as Array<{ id: string; label: string; href: string; icon?: unknown }>,
+  actionBarActions: [] as Array<{
     id: string;
     label: string;
     icon: unknown;
@@ -49,26 +50,27 @@ vi.mock('@/context/NavigationContext', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockUsePathname.mockReturnValue('/library');
-  mockNavigationState.miniNav = [];
-  mockNavigationState.actionBar = [];
+  mockNavigationState.miniNavTabs = [];
+  mockNavigationState.actionBarActions = [];
 });
 
 // ─── MiniNav Accessibility ────────────────────────────────────────────────────
 
 describe('MiniNav — ARIA landmarks and roles', () => {
   it('renders as <nav> landmark with aria-label when tabs are present', () => {
-    mockNavigationState.miniNav = [
+    mockNavigationState.miniNavTabs = [
       { id: 'lib', label: 'Libreria', href: '/library', icon: BookOpen },
     ];
 
     render(<MiniNav />);
 
-    const nav = screen.getByRole('navigation', { name: 'Navigazione sezione' });
-    expect(nav).toBeDefined();
+    // MiniNav renders a tablist (not a nav landmark) with an English aria-label
+    const tablist = screen.getByRole('tablist', { name: 'Section navigation' });
+    expect(tablist).toBeDefined();
   });
 
   it('renders tablist inside nav landmark', () => {
-    mockNavigationState.miniNav = [
+    mockNavigationState.miniNavTabs = [
       { id: 'lib', label: 'Libreria', href: '/library', icon: BookOpen },
     ];
 
@@ -79,7 +81,7 @@ describe('MiniNav — ARIA landmarks and roles', () => {
   });
 
   it('renders each tab with role="tab"', () => {
-    mockNavigationState.miniNav = [
+    mockNavigationState.miniNavTabs = [
       { id: 'lib', label: 'Libreria', href: '/library' },
       { id: 'wish', label: 'Wishlist', href: '/library?tab=wishlist' },
     ];
@@ -92,7 +94,7 @@ describe('MiniNav — ARIA landmarks and roles', () => {
 
   it('marks the active tab with aria-selected="true"', () => {
     mockUsePathname.mockReturnValue('/library');
-    mockNavigationState.miniNav = [
+    mockNavigationState.miniNavTabs = [
       { id: 'lib', label: 'Libreria', href: '/library' },
       { id: 'wish', label: 'Wishlist', href: '/library?tab=wishlist' },
     ];
@@ -105,7 +107,7 @@ describe('MiniNav — ARIA landmarks and roles', () => {
 
   it('marks non-active tabs with aria-selected="false"', () => {
     mockUsePathname.mockReturnValue('/library');
-    mockNavigationState.miniNav = [
+    mockNavigationState.miniNavTabs = [
       { id: 'lib', label: 'Libreria', href: '/library' },
       { id: 'wish', label: 'Wishlist', href: '/library?tab=wishlist' },
     ];
@@ -117,7 +119,7 @@ describe('MiniNav — ARIA landmarks and roles', () => {
   });
 
   it('does not render when no tabs configured', () => {
-    mockNavigationState.miniNav = [];
+    mockNavigationState.miniNavTabs = [];
 
     const { container } = render(<MiniNav />);
     expect(container.firstChild).toBeNull();
@@ -128,7 +130,7 @@ describe('MiniNav — ARIA landmarks and roles', () => {
 
 describe('FloatingActionBar — ARIA toolbar and button roles', () => {
   it('renders as toolbar with aria-label', () => {
-    mockNavigationState.actionBar = [
+    mockNavigationState.actionBarActions = [
       { id: 'add', label: 'Aggiungi Gioco', icon: BookOpen, variant: 'primary', onClick: vi.fn() },
     ];
 
@@ -139,7 +141,7 @@ describe('FloatingActionBar — ARIA toolbar and button roles', () => {
   });
 
   it('renders buttons with aria-label matching action label', () => {
-    mockNavigationState.actionBar = [
+    mockNavigationState.actionBarActions = [
       { id: 'add', label: 'Aggiungi Gioco', icon: BookOpen, variant: 'primary', onClick: vi.fn() },
       { id: 'chat', label: 'Nuova Chat', icon: BookOpen, variant: 'ghost', onClick: vi.fn() },
     ];
@@ -151,7 +153,7 @@ describe('FloatingActionBar — ARIA toolbar and button roles', () => {
   });
 
   it('marks disabled buttons with aria-disabled', () => {
-    mockNavigationState.actionBar = [
+    mockNavigationState.actionBarActions = [
       {
         id: 'add',
         label: 'Aggiungi Gioco',
@@ -170,7 +172,7 @@ describe('FloatingActionBar — ARIA toolbar and button roles', () => {
   });
 
   it('sets aria-describedby on disabled buttons that have a tooltip', () => {
-    mockNavigationState.actionBar = [
+    mockNavigationState.actionBarActions = [
       {
         id: 'add',
         label: 'Aggiungi Gioco',
@@ -189,14 +191,14 @@ describe('FloatingActionBar — ARIA toolbar and button roles', () => {
   });
 
   it('does not render when no actions configured', () => {
-    mockNavigationState.actionBar = [];
+    mockNavigationState.actionBarActions = [];
 
     const { container } = render(<FloatingActionBar />);
     expect(container.firstChild).toBeNull();
   });
 
   it('does not render hidden actions', () => {
-    mockNavigationState.actionBar = [
+    mockNavigationState.actionBarActions = [
       { id: 'visible', label: 'Visible', icon: BookOpen, variant: 'primary', onClick: vi.fn() },
       { id: 'hidden', label: 'Hidden', icon: BookOpen, hidden: true, onClick: vi.fn() },
     ];

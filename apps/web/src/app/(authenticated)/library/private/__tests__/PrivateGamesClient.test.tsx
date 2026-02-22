@@ -21,6 +21,7 @@ import { vi, Mock } from 'vitest';
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { api } from '@/lib/api';
+import { LIBRARY_TEST_IDS } from '@/lib/test-ids';
 
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -37,6 +38,37 @@ vi.mock('next/navigation', () => ({
 import type { PrivateGameDto, PaginatedPrivateGamesResponse } from '@/lib/api/schemas/private-games.schemas';
 
 import PrivateGamesClient from '../PrivateGamesClient';
+
+// Mock useTranslation to avoid react-intl IntlProvider requirement
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, unknown>) => {
+      const map: Record<string, string | ((v: Record<string, unknown>) => string)> = {
+        'privateGames.loading': 'Loading games...',
+        'privateGames.title': 'Private Games',
+        'privateGames.loadError': 'Impossibile caricare i giochi privati. Riprova.',
+        'common.refresh': 'Retry',
+        'privateGames.noGamesYet': 'No Private Games Yet',
+        'privateGames.emptyStateDescription': 'Start building your personal collection by adding your first private game.',
+        'privateGames.addFirstGame': 'Add Your First Game',
+        'privateGames.noGamesFound': 'No Games Found',
+        'privateGames.editGame': 'Edit Game',
+        'privateGames.deleteGame': 'Delete Game',
+        'privateGames.deleteConfirm': (v) => `Are you sure you want to delete "${v?.title}"?`,
+        'privateGames.deleting': 'Deleting...',
+        'common.cancel': 'Cancel',
+        'privateGames.subtitle': (v) => {
+          const count = v?.count as number;
+          return `${count} ${count === 1 ? 'game' : 'games'}`;
+        },
+        'privateGames.pageOf': (v) => `Page ${v?.page} of ${v?.totalPages}`,
+      };
+      const entry = map[key];
+      if (typeof entry === 'function') return entry(values ?? {});
+      return (entry as string) ?? key;
+    },
+  }),
+}));
 
 // Mock the API module
 vi.mock('@/lib/api', () => ({
@@ -146,7 +178,7 @@ describe('PrivateGamesClient', () => {
 
       renderWithQuery(<PrivateGamesClient />);
 
-      expect(screen.getByTestId('loading-state')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.loadingState)).toBeInTheDocument();
       expect(screen.getByText('Loading games...')).toBeInTheDocument();
     });
 
@@ -156,8 +188,8 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       expect(screen.getByText('Private Games')).toBeInTheDocument();
-      expect(screen.getByTestId('add-private-game-btn')).toBeInTheDocument();
-      expect(screen.getByTestId('search-input')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addPrivateGameBtn)).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.searchInput)).toBeInTheDocument();
     });
   });
 
@@ -168,7 +200,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('error-state')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.errorState)).toBeInTheDocument();
       });
 
       expect(
@@ -185,13 +217,13 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('error-state')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.errorState)).toBeInTheDocument();
       });
 
       await user.click(screen.getByText('Retry'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
       expect(mockGetPrivateGames).toHaveBeenCalledTimes(2);
@@ -205,7 +237,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
       expect(screen.getByText('No Private Games Yet')).toBeInTheDocument();
@@ -227,12 +259,12 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
       // All subsequent calls return empty (handleSearch fires per keystroke)
       mockGetPrivateGames.mockResolvedValue(createPaginatedResponse([]));
-      await user.type(screen.getByTestId('search-input'), 'zzzzz');
+      await user.type(screen.getByTestId(LIBRARY_TEST_IDS.searchInput), 'zzzzz');
 
       await waitFor(() => {
         expect(screen.getByText('No Games Found')).toBeInTheDocument();
@@ -249,12 +281,12 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      expect(screen.getByTestId('game-card-game-1')).toBeInTheDocument();
-      expect(screen.getByTestId('game-card-game-2')).toBeInTheDocument();
-      expect(screen.getByTestId('game-card-game-3')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.gameCard('game-1'))).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.gameCard('game-2'))).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.gameCard('game-3'))).toBeInTheDocument();
     });
 
     it('should display total game count in subtitle', async () => {
@@ -292,10 +324,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.type(screen.getByTestId('search-input'), 'Catan');
+      await user.type(screen.getByTestId(LIBRARY_TEST_IDS.searchInput), 'Catan');
 
       await waitFor(() => {
         const lastCall =
@@ -317,10 +349,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.type(screen.getByTestId('search-input'), 'a');
+      await user.type(screen.getByTestId(LIBRARY_TEST_IDS.searchInput), 'a');
 
       await waitFor(() => {
         const lastCall =
@@ -352,11 +384,11 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
       // Default is 'desc', click to toggle to 'asc'
-      await user.click(screen.getByTestId('sort-direction-btn'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.sortDirectionBtn));
 
       await waitFor(() => {
         const lastCall =
@@ -377,7 +409,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
       // Default desc → button says "Sort ascending"
@@ -409,7 +441,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('pagination')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.pagination)).toBeInTheDocument();
       });
 
       expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
@@ -423,10 +455,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      expect(screen.queryByTestId('pagination')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(LIBRARY_TEST_IDS.pagination)).not.toBeInTheDocument();
     });
 
     it('should disable Previous button on first page', async () => {
@@ -441,7 +473,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('pagination')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.pagination)).toBeInTheDocument();
       });
 
       expect(screen.getByLabelText('Previous page')).toBeDisabled();
@@ -460,7 +492,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('pagination')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.pagination)).toBeInTheDocument();
       });
 
       expect(screen.getByLabelText('Next page')).toBeDisabled();
@@ -480,7 +512,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('pagination')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.pagination)).toBeInTheDocument();
       });
 
       await user.click(screen.getByLabelText('Next page'));
@@ -505,10 +537,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByTestId('add-private-game-btn'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.addPrivateGameBtn));
 
       expect(mockPush).toHaveBeenCalledWith('/library/private/add');
     });
@@ -520,7 +552,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
       await user.click(screen.getByText('Add Your First Game'));
@@ -539,10 +571,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByTestId('edit-btn-game-1'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.editBtn('game-1')));
 
       await waitFor(() => {
         expect(screen.getByText('Edit Game')).toBeInTheDocument();
@@ -560,10 +592,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByTestId('delete-btn-game-1'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.deleteBtn('game-1')));
 
       await waitFor(() => {
         expect(screen.getByText('Delete Game')).toBeInTheDocument();
@@ -583,16 +615,16 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByTestId('delete-btn-game-1'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.deleteBtn('game-1')));
 
       await waitFor(() => {
-        expect(screen.getByTestId('confirm-delete-btn')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.confirmDeleteBtn)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByTestId('confirm-delete-btn'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.confirmDeleteBtn));
 
       await waitFor(() => {
         expect(mockDeletePrivateGame).toHaveBeenCalledWith('game-1');
@@ -608,10 +640,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByTestId('delete-btn-game-2'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.deleteBtn('game-2')));
 
       await waitFor(() => {
         expect(screen.getByText('Cancel')).toBeInTheDocument();
@@ -647,10 +679,10 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByTestId('add-private-game-btn'));
+      await user.click(screen.getByTestId(LIBRARY_TEST_IDS.addPrivateGameBtn));
 
       expect(mockPush).toHaveBeenCalledWith('/library/private/add');
     });
@@ -665,7 +697,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('games-grid')).toBeInTheDocument();
+        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
       });
 
       expect(

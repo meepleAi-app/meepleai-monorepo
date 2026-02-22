@@ -47,6 +47,8 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { useSessionQuotaWithStatus } from '@/hooks/queries/useSessionQuota';
 import { api, GameSessionDto, Game, PaginatedSessionsResponse } from '@/lib/api';
+
+import { SessionsNavConfig } from './NavConfig';
 import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
 import { logger } from '@/lib/logger';
@@ -380,6 +382,7 @@ export default function ActiveSessionsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
+      <SessionsNavConfig />
       <Card>
         <CardHeader className="flex flex-row items-start justify-between">
           <div>

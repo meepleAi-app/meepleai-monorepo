@@ -4,8 +4,10 @@ import { type ReactNode } from 'react';
 
 import { usePathname } from 'next/navigation';
 
+import { NavActionBar } from '@/components/layout/ActionBar/NavActionBar';
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { getActiveSection } from '@/config/admin-dashboard-navigation';
+import { NavigationProvider } from '@/context/NavigationContext';
 import { cn } from '@/lib/utils';
 
 import { AdminContextualSidebar } from './AdminContextualSidebar';
@@ -32,6 +34,7 @@ export function AdminShell({
   const activeSection = getActiveSection(pathname);
 
   return (
+    <NavigationProvider>
     <TooltipProvider>
       <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-amber-50/20 to-orange-50/10 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
         {/* Top Navigation */}
@@ -81,9 +84,13 @@ export function AdminShell({
             <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
               {children}
             </div>
+
+            {/* NavActionBar (L3) — contextual actions registered by admin hub pages */}
+            <NavActionBar />
           </main>
         </div>
       </div>
     </TooltipProvider>
+    </NavigationProvider>
   );
 }

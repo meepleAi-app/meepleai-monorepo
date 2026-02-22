@@ -149,12 +149,47 @@ const nextConfig = {
   // Permanent redirects
   async redirects() {
     return [
-      // Issue #1672: Remove deprecated /profile page
-      {
-        source: '/profile',
-        destination: '/settings',
-        permanent: true, // 308 redirect for SEO
-      },
+      // ── Issue #5039: Consolidate User Routes ──────────────────────────────
+      // Library sub-routes → query-param tabs (more specific first)
+      { source: '/library/games/:id/agent',      destination: '/library/:id?tab=agent',      permanent: true },
+      { source: '/library/games/:id/toolkit',    destination: '/library/:id?tab=toolkit',    permanent: true },
+      { source: '/library/games/:id/faqs',       destination: '/library/:id?tab=faq',        permanent: true },
+      { source: '/library/games/:id/reviews',    destination: '/library/:id?tab=reviews',    permanent: true },
+      { source: '/library/games/:id/rules',      destination: '/library/:id?tab=rules',      permanent: true },
+      { source: '/library/games/:id/sessions',   destination: '/library/:id?tab=sessions',   permanent: true },
+      { source: '/library/games/:id/strategies', destination: '/library/:id?tab=strategies', permanent: true },
+      { source: '/library/games/:id',            destination: '/library/:id',                permanent: true },
+      { source: '/library/wishlist',             destination: '/library?tab=wishlist',        permanent: true },
+      { source: '/library/private',              destination: '/library?tab=private',         permanent: true },
+      { source: '/library/proposals',            destination: '/discover?tab=proposals',      permanent: true },
+      { source: '/library/propose',              destination: '/discover/propose',            permanent: true },
+
+      // Profile / Settings consolidation
+      // NOTE: /profile → /settings (Issue #1672) is REMOVED — /profile is now
+      //       the canonical profile page; /settings redirects here instead.
+      { source: '/settings/notifications', destination: '/profile?tab=settings&section=notifications', permanent: true },
+      { source: '/settings/security',      destination: '/profile?tab=settings&section=security',      permanent: true },
+      { source: '/settings',              destination: '/profile?tab=settings',                         permanent: true },
+      { source: '/profile/achievements',  destination: '/profile?tab=achievements',                     permanent: true },
+      { source: '/badges',                destination: '/profile?tab=badges',                           permanent: true },
+
+      // Agents
+      { source: '/agent/slots', destination: '/agents?tab=slots', permanent: true },
+
+      // Sessions & Play Records
+      { source: '/sessions/history',    destination: '/sessions?tab=history',       permanent: true },
+      { source: '/play-records/stats',  destination: '/play-records?tab=stats',     permanent: true },
+
+      // Discover / Community catalog
+      // /games/[id] sub-pages → /discover/[id] with tabs
+      { source: '/games/:id/faqs',       destination: '/discover/:id?tab=faq',        permanent: true },
+      { source: '/games/:id/reviews',    destination: '/discover/:id?tab=reviews',    permanent: true },
+      { source: '/games/:id/rules',      destination: '/discover/:id?tab=rules',      permanent: true },
+      { source: '/games/:id/sessions',   destination: '/discover/:id?tab=sessions',   permanent: true },
+      { source: '/games/:id/strategies', destination: '/discover/:id?tab=strategies', permanent: true },
+      { source: '/games/:id',            destination: '/discover/:id',                permanent: true },
+
+      // ── Legacy redirects (pre-Issue #5039) ───────────────────────────────
       // Issue #3843: Redirect old /giochi route to new /games route
       {
         source: '/giochi/:id*',

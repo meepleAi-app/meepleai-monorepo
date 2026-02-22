@@ -27,9 +27,9 @@ vi.mock('@/actions/auth', () => ({
   getCurrentUser: vi.fn(),
 }));
 
-// Mock LibraryNavTabs to isolate page-level testing (Issue #4055)
-vi.mock('@/components/library', () => ({
-  LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
+// Mock LibraryNavConfig to isolate page-level testing (Issue #5054)
+vi.mock('../../NavConfig', () => ({
+  LibraryNavConfig: () => <div data-testid="library-nav-config">Nav Config</div>,
 }));
 
 // Mock MyProposalsClient to isolate page-level testing
@@ -111,7 +111,7 @@ describe('MyProposalsPage', () => {
     expect(await screen.findByText('Le Mie Proposte')).toBeInTheDocument();
   });
 
-  it('should render LibraryNavTabs when authenticated (Issue #4055)', async () => {
+  it('should render LibraryNavConfig when authenticated (Issue #5054)', async () => {
     mockGetCurrentUser.mockResolvedValue({
       success: true,
       user: { id: '1', email: 'test@test.com', role: 'User' },
@@ -119,6 +119,6 @@ describe('MyProposalsPage', () => {
 
     renderWithQuery(<MyProposalsPage />);
 
-    expect(await screen.findByTestId('library-nav-tabs')).toBeInTheDocument();
+    expect(await screen.findByTestId('library-nav-config')).toBeInTheDocument();
   });
 });

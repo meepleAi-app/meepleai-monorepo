@@ -35,7 +35,7 @@ const navigationItems: NavItem[] = [
   { label: 'Ask AI', href: '/chat/new', icon: '💬', color: 'var(--color-blue)' },
   { label: 'My Games', href: '/games', icon: '🎮', color: 'var(--color-green)' },
   { label: 'Library', href: '/library', icon: '📚', color: 'var(--color-secondary-500)' },
-  { label: 'Settings', href: '/settings', icon: '⚙️', color: 'var(--color-neutral-600)' },
+  { label: 'Settings', href: '/profile?tab=settings', icon: '⚙️', color: 'var(--color-neutral-600)' },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -129,7 +129,7 @@ export function AppShell({ children }: AppShellProps) {
           {userMenuOpen && (
             <div className="user-menu">
               <Link href="/profile">Profile</Link>
-              <Link href="/settings">Settings</Link>
+              <Link href="/profile?tab=settings">Settings</Link>
               <hr />
               <button>Logout</button>
             </div>

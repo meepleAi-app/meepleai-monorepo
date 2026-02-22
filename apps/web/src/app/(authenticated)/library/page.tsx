@@ -28,8 +28,9 @@
 import dynamic from 'next/dynamic';
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { LibraryNavTabs } from '@/components/library/LibraryNavTabs';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+
+import { LibraryNavConfig } from './NavConfig';
 
 // Dynamically import the client component with SSR disabled
 // This prevents framer-motion from being evaluated during SSG
@@ -56,7 +57,7 @@ const LibraryPageClient = dynamic(() => import('./LibraryPageClient'), {
 export default function LibraryPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <LibraryNavTabs />
+      <LibraryNavConfig />
       <LibraryPageClient />
     </RequireRole>
   );

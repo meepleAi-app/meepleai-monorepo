@@ -6,6 +6,7 @@
  * Issue #5026 - AgentExtraMeepleCard (Epic #5023)
  * Issue #5027 - ChatExtraMeepleCard (Epic #5023)
  * Issue #5028 - KbExtraMeepleCard (Epic #5023)
+ * Issue #5029 - GameExtraMeepleCard update: KB + Agent tabs (Epic #5023)
  */
 
 export { ExtraMeepleCard } from './ExtraMeepleCard';
@@ -52,6 +53,7 @@ export type {
   AIQuickAction,
   AITabData,
   GameDetailData,
+  GameAgentPreview,
   PlayerDetailData,
   CollectionDetailData,
   AgentDetailData,

@@ -14,6 +14,8 @@ import {
 } from '../EntityExtraMeepleCard';
 import type {
   GameDetailData,
+  KbDocumentPreview,
+  GameAgentPreview,
   PlayerDetailData,
   CollectionDetailData,
 } from '../types';
@@ -103,12 +105,14 @@ describe('GameExtraMeepleCard', () => {
     expect(screen.getByText('Trade, build, settle.')).toBeInTheDocument();
   });
 
-  it('renders all 3 tabs', () => {
+  it('renders all 5 tabs', () => {
     render(<GameExtraMeepleCard data={mockGameData} />);
 
     expect(screen.getByRole('tab', { name: /details/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /rules/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /stats/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^kb/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /agent/i })).toBeInTheDocument();
   });
 
   it('starts on details tab by default', () => {
@@ -159,6 +163,168 @@ describe('GameExtraMeepleCard', () => {
     render(<GameExtraMeepleCard data={data} />);
 
     expect(screen.getByText('Kosmos')).toBeInTheDocument();
+  });
+});
+
+// ============================================================================
+// GameExtraMeepleCard — KB Tab Tests (Issue #5029)
+// ============================================================================
+
+describe('GameExtraMeepleCard — KB tab', () => {
+  it('shows empty state when no kbDocuments provided', async () => {
+    const user = userEvent.setup();
+    render(<GameExtraMeepleCard data={mockGameData} />);
+
+    await user.click(screen.getByRole('tab', { name: /^kb/i }));
+
+    expect(screen.getByText('Nessun documento caricato')).toBeInTheDocument();
+  });
+
+  it('shows upload CTA in empty state', async () => {
+    const user = userEvent.setup();
+    render(<GameExtraMeepleCard data={mockGameData} />);
+
+    await user.click(screen.getByRole('tab', { name: /^kb/i }));
+
+    expect(screen.getByTestId('game-kb-upload-cta')).toBeInTheDocument();
+    expect(screen.getByTestId('game-kb-upload-cta')).toHaveTextContent('Carica PDF');
+  });
+
+  it('shows documents list when kbDocuments are provided', async () => {
+    const user = userEvent.setup();
+    const kbDocuments: KbDocumentPreview[] = [
+      { id: 'doc-1', fileName: 'catan-rules.pdf', uploadedAt: '2026-01-10T09:00:00Z', status: 'indexed' },
+      { id: 'doc-2', fileName: 'faq.pdf',          uploadedAt: '2026-01-11T10:00:00Z', status: 'processing' },
+    ];
+    const data = { ...mockGameData, kbDocuments };
+    render(<GameExtraMeepleCard data={data} />);
+
+    await user.click(screen.getByRole('tab', { name: /^kb/i }));
+
+    expect(screen.getByTestId('game-kb-documents-list')).toBeInTheDocument();
+    expect(screen.getByTestId('game-kb-doc-doc-1')).toBeInTheDocument();
+    expect(screen.getByTestId('game-kb-doc-doc-2')).toBeInTheDocument();
+    expect(screen.getByText('catan-rules.pdf')).toBeInTheDocument();
+    expect(screen.getByText('faq.pdf')).toBeInTheDocument();
+  });
+
+  it('shows KB tab badge with indexed count', () => {
+    const kbDocuments: KbDocumentPreview[] = [
+      { id: 'doc-1', fileName: 'rules.pdf', uploadedAt: '2026-01-10T09:00:00Z', status: 'indexed' },
+      { id: 'doc-2', fileName: 'faq.pdf',   uploadedAt: '2026-01-11T10:00:00Z', status: 'indexed' },
+    ];
+    const data = { ...mockGameData, kbDocuments };
+    render(<GameExtraMeepleCard data={data} />);
+
+    // Badge "2" should appear in the KB tab trigger
+    const kbTab = screen.getByRole('tab', { name: /^kb/i });
+    expect(kbTab).toHaveTextContent('2');
+  });
+
+  it('does not show KB tab badge when no indexed documents', () => {
+    const kbDocuments: KbDocumentPreview[] = [
+      { id: 'doc-1', fileName: 'faq.pdf', uploadedAt: '2026-01-10T09:00:00Z', status: 'processing' },
+    ];
+    const data = { ...mockGameData, kbDocuments };
+    render(<GameExtraMeepleCard data={data} />);
+
+    const kbTab = screen.getByRole('tab', { name: /^kb/i });
+    // Tab label is just "KB" without a numeric badge
+    expect(kbTab.textContent?.trim()).toBe('KB');
+  });
+
+  it('sorts documents with indexed first', async () => {
+    const user = userEvent.setup();
+    const kbDocuments: KbDocumentPreview[] = [
+      { id: 'doc-processing', fileName: 'processing.pdf', uploadedAt: '2026-01-11T10:00:00Z', status: 'processing' },
+      { id: 'doc-indexed',    fileName: 'indexed.pdf',    uploadedAt: '2026-01-10T09:00:00Z', status: 'indexed'    },
+    ];
+    const data = { ...mockGameData, kbDocuments };
+    render(<GameExtraMeepleCard data={data} />);
+
+    await user.click(screen.getByRole('tab', { name: /^kb/i }));
+
+    const docs = screen.getByTestId('game-kb-documents-list').querySelectorAll('[data-testid^="game-kb-doc-"]');
+    expect(docs[0]).toHaveAttribute('data-testid', 'game-kb-doc-doc-indexed');
+    expect(docs[1]).toHaveAttribute('data-testid', 'game-kb-doc-doc-processing');
+  });
+});
+
+// ============================================================================
+// GameExtraMeepleCard — Agent Tab Tests (Issue #5029)
+// ============================================================================
+
+describe('GameExtraMeepleCard — Agent tab', () => {
+  it('shows empty state when no agent is configured', async () => {
+    const user = userEvent.setup();
+    render(<GameExtraMeepleCard data={mockGameData} />);
+
+    await user.click(screen.getByRole('tab', { name: /agent/i }));
+
+    expect(screen.getByText('Nessun agente configurato')).toBeInTheDocument();
+  });
+
+  it('shows create agent CTA in empty state', async () => {
+    const user = userEvent.setup();
+    render(<GameExtraMeepleCard data={mockGameData} />);
+
+    await user.click(screen.getByRole('tab', { name: /agent/i }));
+
+    expect(screen.getByTestId('game-agent-create-cta')).toBeInTheDocument();
+    expect(screen.getByTestId('game-agent-create-cta')).toHaveTextContent('Crea Agente');
+  });
+
+  it('shows agent card when agent is configured', async () => {
+    const user = userEvent.setup();
+    const agent: GameAgentPreview = { id: 'agent-1', name: 'Catan Expert', isActive: true };
+    const data = { ...mockGameData, agent };
+    render(<GameExtraMeepleCard data={data} />);
+
+    await user.click(screen.getByRole('tab', { name: /agent/i }));
+
+    expect(screen.getByTestId('game-agent-card')).toBeInTheDocument();
+    expect(screen.getByText('Catan Expert')).toBeInTheDocument();
+  });
+
+  it('shows start chat and configure CTAs when agent is present', async () => {
+    const user = userEvent.setup();
+    const agent: GameAgentPreview = { id: 'agent-1', name: 'Catan Expert', isActive: true };
+    const data = { ...mockGameData, agent };
+    render(<GameExtraMeepleCard data={data} />);
+
+    await user.click(screen.getByRole('tab', { name: /agent/i }));
+
+    expect(screen.getByTestId('game-agent-start-chat')).toBeInTheDocument();
+    expect(screen.getByTestId('game-agent-configure')).toBeInTheDocument();
+  });
+
+  it('shows model name inside agent card when provided', async () => {
+    const user = userEvent.setup();
+    const agent: GameAgentPreview = { id: 'agent-1', name: 'Catan Expert', model: 'gpt-4o', isActive: true };
+    const data = { ...mockGameData, agent };
+    render(<GameExtraMeepleCard data={data} />);
+
+    await user.click(screen.getByRole('tab', { name: /agent/i }));
+
+    expect(screen.getByText('gpt-4o')).toBeInTheDocument();
+  });
+
+  it('shows "Attivo" badge on Agent tab when agent is active', () => {
+    const agent: GameAgentPreview = { id: 'agent-1', name: 'Catan Expert', isActive: true };
+    const data = { ...mockGameData, agent };
+    render(<GameExtraMeepleCard data={data} />);
+
+    const agentTab = screen.getByRole('tab', { name: /agent/i });
+    expect(agentTab).toHaveTextContent('Attivo');
+  });
+
+  it('does not show "Attivo" badge when agent is inactive', () => {
+    const agent: GameAgentPreview = { id: 'agent-1', name: 'Catan Expert', isActive: false };
+    const data = { ...mockGameData, agent };
+    render(<GameExtraMeepleCard data={data} />);
+
+    const agentTab = screen.getByRole('tab', { name: /agent/i });
+    expect(agentTab).not.toHaveTextContent('Attivo');
   });
 });
 

@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/navigation/sheet';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { GameExtraMeepleCard, AgentExtraMeepleCard, ChatExtraMeepleCard, KbExtraMeepleCard } from './EntityExtraMeepleCard';
-import type { GameDetailData, AgentDetailData, ChatDetailData, ChatDetailMessage, KbDetailData } from './types';
+import type { GameDetailData, AgentDetailData, ChatDetailData, ChatDetailMessage, KbDetailData, KbDocumentPreview, GameAgentPreview } from './types';
 
 // ============================================================================
 // Types
@@ -375,12 +375,28 @@ function useGameDetail(gameId: string): UseGameDetailResult {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/library/games/${gameId}`, { signal });
-      if (!res.ok) {
-        throw new Error(`Errore ${res.status}: gioco non trovato`);
+      // Fetch game details, PDF list, and agent config in parallel (Issue #5029).
+      // KB: /pdfs returns List<GamePdfDto> (bare array). Agent: /agent-config returns
+      // AgentConfigDto? (null when not configured). Both handled gracefully on non-200.
+      const [gameRes, kbRes, agentRes] = await Promise.all([
+        fetch(`/api/v1/library/games/${gameId}`, { signal }),
+        fetch(`/api/v1/library/games/${gameId}/pdfs`, { signal }),
+        fetch(`/api/v1/library/games/${gameId}/agent-config`, { signal }),
+      ]);
+
+      if (!gameRes.ok) {
+        throw new Error(`Errore ${gameRes.status}: gioco non trovato`);
       }
-      const json = (await res.json()) as Record<string, unknown>;
-      setData(mapToGameDetailData(json));
+
+      const json = (await gameRes.json()) as Record<string, unknown>;
+      const kbRawJson = kbRes.ok ? (await kbRes.json()) as unknown : [];
+      const agentJson = agentRes.ok ? (await agentRes.json()) as Record<string, unknown> : null;
+
+      setData(mapToGameDetailData(
+        json,
+        Array.isArray(kbRawJson) ? kbRawJson : [],
+        agentJson,
+      ));
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       setError(
@@ -409,7 +425,32 @@ function useGameDetail(gameId: string): UseGameDetailResult {
   return { data, loading, error, retry };
 }
 
-function mapToGameDetailData(json: Record<string, unknown>): GameDetailData {
+function mapToGameDetailData(
+  json: Record<string, unknown>,
+  kbRaw: unknown[] = [],
+  agentRaw: Record<string, unknown> | null = null,
+): GameDetailData {
+  // GamePdfDto shape: { id, name, pageCount, fileSizeBytes, uploadedAt, source, language }
+  // PDFs returned by /pdfs are already indexed/available — no processingStatus field.
+  const kbDocuments: KbDocumentPreview[] = kbRaw.map((item) => {
+    const d = item as Record<string, unknown>;
+    return {
+      id:         String(d.id ?? ''),
+      fileName:   String(d.name ?? 'Documento'),
+      uploadedAt: String(d.uploadedAt ?? new Date().toISOString()),
+      status:     'indexed' as const,
+    };
+  });
+
+  // AgentConfigDto shape: { llmModel, temperature, maxTokens, personality, detailLevel, personalNotes }
+  // No identity fields (id/name/isActive) — use placeholder values when config exists.
+  const agent: GameAgentPreview | undefined = agentRaw != null ? {
+    id:       '',
+    name:     'Agente AI',
+    model:    agentRaw.llmModel != null ? String(agentRaw.llmModel) : undefined,
+    isActive: true,
+  } : undefined;
+
   return {
     id:                 String(json.id ?? ''),
     title:              String(json.title ?? json.name ?? ''),
@@ -424,6 +465,8 @@ function mapToGameDetailData(json: Record<string, unknown>): GameDetailData {
     totalPlays:         json.totalPlays         != null ? Number(json.totalPlays)        : undefined,
     faqCount:           json.faqCount           != null ? Number(json.faqCount)          : undefined,
     rulesDocumentCount: json.rulesDocumentCount != null ? Number(json.rulesDocumentCount): undefined,
+    kbDocuments:        kbDocuments.length > 0 ? kbDocuments : undefined,
+    agent,
   };
 }
 

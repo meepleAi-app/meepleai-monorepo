@@ -196,10 +196,39 @@ describe('ExtraMeepleCardDrawer', () => {
       });
     });
 
-    it('renders agent stub for agent entity', () => {
+    it('shows skeleton initially while fetching agent data', () => {
+      // fetch never resolves during this check
+      mockFetch.mockReturnValue(new Promise(() => {}));
       renderDrawer({ entityType: 'agent', entityId: 'agent-1' });
 
-      expect(screen.getByTestId(DRAWER_TEST_IDS.COMING_SOON(5026))).toBeInTheDocument();
+      expect(screen.getByTestId(DRAWER_TEST_IDS.LOADING_SKELETON)).toBeInTheDocument();
+    });
+
+    it('renders agent content after successful fetch', async () => {
+      const agentApiResponse = {
+        id: 'agent-1',
+        name: 'Catan Expert',
+        type: 'qa',
+        strategyName: 'hybrid-rag',
+        strategyParameters: {},
+        isActive: true,
+        isIdle: false,
+        invocationCount: 5,
+        lastInvokedAt: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      };
+      mockFetch.mockImplementation((url: string) => {
+        if ((url as string).includes('/api/v1/agents/')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(agentApiResponse) } as Response);
+        }
+        // threads / docs secondary calls
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+      });
+      renderDrawer({ entityType: 'agent', entityId: 'agent-1' });
+
+      await waitFor(() => {
+        expect(screen.getByText('Catan Expert')).toBeInTheDocument();
+      });
     });
 
     it('renders chat stub for chat entity', () => {
@@ -212,13 +241,6 @@ describe('ExtraMeepleCardDrawer', () => {
       renderDrawer({ entityType: 'kb', entityId: 'doc-1' });
 
       expect(screen.getByTestId(DRAWER_TEST_IDS.COMING_SOON(5028))).toBeInTheDocument();
-    });
-
-    it('stubs show issue reference text', () => {
-      renderDrawer({ entityType: 'agent', entityId: 'agent-1' });
-
-      expect(screen.getByText('AgentExtraMeepleCard')).toBeInTheDocument();
-      expect(screen.getByText(/In arrivo — Issue #5026/i)).toBeInTheDocument();
     });
   });
 

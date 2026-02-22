@@ -278,6 +278,43 @@ export interface CollectionDetailData {
   games: { id: string; title: string; imageUrl?: string }[];
 }
 
+/** Agent entity detail data (Issue #5026 — AgentExtraMeepleCard) */
+export interface AgentDetailData {
+  id: string;
+  name: string;
+  /** Agent type e.g. 'qa', 'assistant' */
+  type: string;
+  /** Strategy name e.g. 'hybrid-rag' */
+  strategyName: string;
+  strategyParameters: Record<string, unknown>;
+  isActive: boolean;
+  /** True when the agent has not been invoked recently */
+  isIdle: boolean;
+  invocationCount: number;
+  lastInvokedAt: string | null;
+  createdAt: string;
+  /** ID of the game this agent is associated with */
+  gameId?: string;
+  /** Display name of the linked game */
+  gameName?: string;
+}
+
+/** Chat thread preview for the History tab (Issue #5026) */
+export interface ChatThreadPreview {
+  id: string;
+  createdAt: string;
+  messageCount: number;
+  firstMessagePreview: string;
+}
+
+/** KB document preview for the KB tab (Issue #5026) */
+export interface KbDocumentPreview {
+  id: string;
+  fileName: string;
+  uploadedAt: string;
+  status: 'processing' | 'indexed' | 'failed' | 'none';
+}
+
 // ============================================================================
 // Interactive Card Deck Types (Issue #4763)
 // ============================================================================

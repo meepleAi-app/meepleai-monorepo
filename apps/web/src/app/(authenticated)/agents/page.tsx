@@ -33,6 +33,8 @@ import {
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
 
+import { AgentsNavConfig } from './NavConfig';
+
 /** Agent card wrapper to use entity actions hook per-card */
 function AgentCard({ agent, onClick }: { agent: { id: string; name: string; type: string; invocationCount: number; strategyName: string }; onClick: () => void }) {
   const entityActions = useEntityActions({ entity: 'agent', id: agent.id });
@@ -104,6 +106,7 @@ export default function AgentsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
+      <AgentsNavConfig />
       {/* Header */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>

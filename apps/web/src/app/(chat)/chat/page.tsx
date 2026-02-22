@@ -23,6 +23,8 @@ import { getNavigationLinks } from '@/config/entity-navigation';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 
+import { ChatNavConfig } from './NavConfig';
+
 function formatRelativeDate(dateString: string | null): string {
   if (!dateString) return 'Mai';
   const date = new Date(dateString);
@@ -82,6 +84,7 @@ export default function ChatListPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
+      <ChatNavConfig />
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

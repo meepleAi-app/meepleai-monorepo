@@ -12,14 +12,14 @@
 export const dynamic = 'force-dynamic';
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { LibraryNavTabs } from '@/components/library/LibraryNavTabs';
 
+import { LibraryNavConfig } from '../NavConfig';
 import PrivateGamesClient from './PrivateGamesClient';
 
 export default function PrivateGamesPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <LibraryNavTabs />
+      <LibraryNavConfig />
       <PrivateGamesClient />
     </RequireRole>
   );

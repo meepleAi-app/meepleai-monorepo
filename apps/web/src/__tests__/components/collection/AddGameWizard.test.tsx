@@ -8,6 +8,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 import { AddGameWizard } from '@/components/collection/wizard/AddGameWizard';
 import { useAddGameWizardStore } from '@/stores/addGameWizardStore';
+import { WIZARD_TEST_IDS } from '@/lib/test-ids';
+import { t, getTextMatcher } from '@/test-utils/test-i18n';
 
 // Mock toast
 vi.mock('@/components/layout', () => ({
@@ -24,6 +26,10 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t }),
+}));
+
 describe('AddGameWizard', () => {
   beforeEach(() => {
     useAddGameWizardStore.getState().reset();
@@ -34,18 +40,18 @@ describe('AddGameWizard', () => {
     it('renders wizard title and subtitle', () => {
       render(<AddGameWizard />);
 
-      expect(screen.getByTestId('wizard-title')).toHaveTextContent('Add Game to Collection');
-      expect(screen.getByTestId('wizard-subtitle')).toHaveTextContent(
-        'Search for a game or create a custom entry'
+      expect(screen.getByTestId(WIZARD_TEST_IDS.title)).toHaveTextContent(t('collection.addGameTitle'));
+      expect(screen.getByTestId(WIZARD_TEST_IDS.subtitle)).toHaveTextContent(
+        t('collection.addGameSubtitle')
       );
     });
 
     it('renders back to collection link', () => {
       render(<AddGameWizard />);
 
-      const backLink = screen.getByRole('link', { name: /Back to Collection/i });
+      const backLink = screen.getByRole('link', { name: getTextMatcher('collection.backToCollection') });
       expect(backLink).toBeInTheDocument();
-      expect(backLink).toHaveAttribute('href', '/dashboard/collection');
+      expect(backLink).toHaveAttribute('href', '/library');
     });
 
     it('renders step indicator (3 steps when shared game selected)', () => {
@@ -164,10 +170,10 @@ describe('AddGameWizard', () => {
       render(<AddGameWizard />);
 
       // When no custom game, Step 2 hidden
-      expect(screen.getByTestId('step-1-description')).toHaveTextContent('Find or create game');
-      expect(screen.queryByTestId('step-2-description')).not.toBeInTheDocument();
-      expect(screen.getByTestId('step-3-description')).toHaveTextContent('Optional rulebook');
-      expect(screen.getByTestId('step-4-description')).toHaveTextContent('Confirm and submit');
+      expect(screen.getByTestId(WIZARD_TEST_IDS.stepDescription(1))).toHaveTextContent('Find or create game');
+      expect(screen.queryByTestId(WIZARD_TEST_IDS.stepDescription(2))).not.toBeInTheDocument();
+      expect(screen.getByTestId(WIZARD_TEST_IDS.stepDescription(3))).toHaveTextContent('Optional rulebook');
+      expect(screen.getByTestId(WIZARD_TEST_IDS.stepDescription(4))).toHaveTextContent('Confirm and submit');
     });
 
     it('has all step descriptions when custom game selected', () => {
@@ -177,10 +183,10 @@ describe('AddGameWizard', () => {
       render(<AddGameWizard />);
 
       // All 4 steps visible when custom game
-      expect(screen.getByTestId('step-1-description')).toHaveTextContent('Find or create game');
-      expect(screen.getByTestId('step-2-description')).toHaveTextContent('Custom game info');
-      expect(screen.getByTestId('step-3-description')).toHaveTextContent('Optional rulebook');
-      expect(screen.getByTestId('step-4-description')).toHaveTextContent('Confirm and submit');
+      expect(screen.getByTestId(WIZARD_TEST_IDS.stepDescription(1))).toHaveTextContent('Find or create game');
+      expect(screen.getByTestId(WIZARD_TEST_IDS.stepDescription(2))).toHaveTextContent('Custom game info');
+      expect(screen.getByTestId(WIZARD_TEST_IDS.stepDescription(3))).toHaveTextContent('Optional rulebook');
+      expect(screen.getByTestId(WIZARD_TEST_IDS.stepDescription(4))).toHaveTextContent('Confirm and submit');
     });
   });
 });

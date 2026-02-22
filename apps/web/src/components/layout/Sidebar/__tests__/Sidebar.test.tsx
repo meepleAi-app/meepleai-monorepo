@@ -107,7 +107,7 @@ describe('Sidebar', () => {
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
       expect(screen.getByText('Chat')).toBeInTheDocument();
-      expect(screen.getByText('Catalogo')).toBeInTheDocument();
+      expect(screen.getByText('Scopri')).toBeInTheDocument();
     });
 
     it('shows MeepleAI wordmark next to icon', () => {

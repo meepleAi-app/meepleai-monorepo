@@ -9,29 +9,22 @@
  * Aesthetic: "Neural Command Center" - compact, efficient, sci-fi
  */
 
-import React, { useState } from 'react';
+import React from 'react';
+
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Dices,
-  Code2,
-  Briefcase,
-  BookOpen,
-  GitBranch,
-  Zap,
-  Bot,
-  Cpu,
-  LineChart,
-  Workflow,
-  ChevronRight,
-} from 'lucide-react';
+import { Bot, ChevronRight, Cpu, LineChart, Workflow, Zap } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 import { AgentRagIntegration } from './AgentRagIntegration';
 import { AgentRoleConfigurator } from './AgentRoleConfigurator';
 import { ArchitectureExplorer } from './ArchitectureExplorer';
+import { BusinessKpiCards } from './BusinessKpiCards';
+import { BusinessRoiCalculator } from './BusinessRoiCalculator';
+import { BusinessStrategyComparison } from './BusinessStrategyComparison';
+import { BusinessUseCases } from './BusinessUseCases';
 import { CostCalculator } from './CostCalculator';
 import { DecisionWalkthrough } from './DecisionWalkthrough';
 import { LayerDeepDocs } from './LayerDeepDocs';
@@ -41,6 +34,7 @@ import { PerformanceMetricsTable } from './PerformanceMetricsTable';
 import { PocStatus } from './PocStatus';
 import { PromptTemplateBuilder } from './PromptTemplateBuilder';
 import { QuerySimulator } from './QuerySimulator';
+import { RagHero } from './RagHero';
 import { METRICS } from './rag-data';
 import { StatsGrid } from './StatsGrid';
 import { TechnicalReference } from './TechnicalReference';
@@ -118,99 +112,6 @@ export const NAVIGATION_GROUPS: NavGroup[] = TECHNICAL_TABS.map(tab => ({
   description: tab.description,
   sections: [{ id: tab.id, label: tab.label }], // Single section per tab in new design
 }));
-
-// =============================================================================
-// View Mode Toggle
-// =============================================================================
-
-interface ViewToggleProps {
-  mode: ViewMode;
-  onChange: (mode: ViewMode) => void;
-}
-
-function ViewToggle({ mode, onChange }: ViewToggleProps) {
-  return (
-    <div className="rag-view-toggle">
-      <button
-        className="rag-view-toggle-btn flex items-center gap-2"
-        data-active={mode === 'technical'}
-        onClick={() => onChange('technical')}
-      >
-        <Code2 className="h-4 w-4" />
-        <span>Technical</span>
-      </button>
-      <button
-        className="rag-view-toggle-btn flex items-center gap-2"
-        data-active={mode === 'business'}
-        onClick={() => onChange('business')}
-      >
-        <Briefcase className="h-4 w-4" />
-        <span>Business</span>
-      </button>
-    </div>
-  );
-}
-
-// =============================================================================
-// Compact Header
-// =============================================================================
-
-interface HeaderProps {
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-}
-
-function DashboardHeader({ viewMode, onViewModeChange }: HeaderProps) {
-  return (
-    <motion.header
-      className="relative overflow-hidden border-b border-border/50"
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-purple-500/5 to-orange-500/5" />
-
-      <div className="relative z-10 py-4 px-6">
-        <div className="flex items-center justify-between gap-4">
-          {/* Title - Compact */}
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-primary to-purple-600 p-2 rounded-xl">
-              <Dices className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold font-quicksand flex items-center gap-2">
-                <span className="text-foreground">MeepleAI</span>
-                <span className="bg-gradient-to-r from-primary via-purple-500 to-orange-500 bg-clip-text text-transparent">
-                  RAG Dashboard
-                </span>
-              </h1>
-              <p className="text-xs text-muted-foreground">TOMAC-RAG System</p>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <ViewToggle mode={viewMode} onChange={onViewModeChange} />
-
-            <div className="hidden md:flex items-center gap-2">
-              <Button variant="ghost" size="sm" asChild>
-                <a href="/docs/03-api/rag/README.md" target="_blank">
-                  <BookOpen className="h-4 w-4" />
-                </a>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <a href="https://github.com/meepleai" target="_blank" rel="noopener noreferrer">
-                  <GitBranch className="h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.header>
-  );
-}
 
 // =============================================================================
 // Tab Navigation Sidebar
@@ -453,69 +354,38 @@ function TechnicalView({ activeTab, onTabChange }: TechnicalViewProps) {
 }
 
 // =============================================================================
-// Business View - Compact
+// Business View — enriched with new business components
 // =============================================================================
 
 function BusinessView() {
   return (
     <div className="space-y-8">
-      {/* Stats Overview */}
       <Section
-        title="System Overview"
-        description="Key business metrics and cost efficiency indicators"
+        title="Business Metrics"
+        description="Key cost efficiency and accuracy indicators"
       >
-        <StatsGrid stats={DEFAULT_STATS} viewMode="business" />
+        <BusinessKpiCards />
       </Section>
 
-      {/* Executive Summary Cards */}
-      <Section title="Executive Summary" description="Key takeaways for stakeholders">
-        <div className="grid md:grid-cols-3 gap-4">
-          {/* Cost Efficiency */}
-          <div className="p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20">
-            <h3 className="font-semibold text-green-600 dark:text-green-400 mb-2 text-sm">
-              Cost Efficiency
-            </h3>
-            <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li>• {Math.abs(METRICS.tokenReduction)}% token reduction</li>
-              <li>• {METRICS.cacheHitRateTarget}% cache hit rate</li>
-              <li>• Free models for 60-70% queries</li>
-            </ul>
-          </div>
-
-          {/* Quality */}
-          <div className="p-5 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20">
-            <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-2 text-sm">
-              Quality Assurance
-            </h3>
-            <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li>• {METRICS.accuracy.ruleLookup.target}% accuracy target</li>
-              <li>• CRAG prevents hallucinations</li>
-              <li>• Self-RAG auto-correction</li>
-            </ul>
-          </div>
-
-          {/* Scalability */}
-          <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20">
-            <h3 className="font-semibold text-purple-600 dark:text-purple-400 mb-2 text-sm">
-              Scalability
-            </h3>
-            <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li>• {METRICS.totalVariants} configurable variants</li>
-              <li>• Tier-based allocation</li>
-              <li>• Adaptive strategy selection</li>
-            </ul>
-          </div>
-        </div>
+      <Section
+        title="Strategy Comparison"
+        description="Performance and cost breakdown by RAG strategy"
+      >
+        <BusinessStrategyComparison />
       </Section>
 
-      {/* Cost Calculator */}
-      <Section title="Cost Projection" description="Project ROI and cost savings">
-        <CostCalculator />
+      <Section
+        title="ROI Calculator"
+        description="Project savings vs. a naive single-model approach"
+      >
+        <BusinessRoiCalculator />
       </Section>
 
-      {/* Decision Walkthrough */}
-      <Section title="How It Works" description="See how queries are processed through the system">
-        <DecisionWalkthrough />
+      <Section
+        title="Use Cases"
+        description="Real-world board game scenarios mapped to TOMAC-RAG strategies"
+      >
+        <BusinessUseCases />
       </Section>
     </div>
   );
@@ -526,14 +396,29 @@ function BusinessView() {
 // =============================================================================
 
 export function RagDashboard() {
-  const [viewMode, setViewMode] = useState<ViewMode>('technical');
-  const [activeTab, setActiveTab] = useState<TechnicalTab>('overview');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const viewMode = (searchParams.get('view') as ViewMode | null) ?? 'technical';
+  const activeTab = (searchParams.get('tab') as TechnicalTab | null) ?? 'overview';
+
+  function handleViewModeChange(mode: ViewMode) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('view', mode);
+    router.replace(`/rag?${params.toString()}`, { scroll: false });
+  }
+
+  function handleTabChange(tab: TechnicalTab) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.replace(`/rag?${params.toString()}`, { scroll: false });
+  }
 
   return (
     <div className="rag-dashboard min-h-screen">
       <div className="relative z-10">
-        {/* Compact Header */}
-        <DashboardHeader viewMode={viewMode} onViewModeChange={setViewMode} />
+        {/* Animated 6-layer pipeline hero with view toggle */}
+        <RagHero viewMode={viewMode} onViewModeChange={handleViewModeChange} />
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
@@ -546,7 +431,7 @@ export function RagDashboard() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <TechnicalView activeTab={activeTab} onTabChange={setActiveTab} />
+                <TechnicalView activeTab={activeTab} onTabChange={handleTabChange} />
               </motion.div>
             ) : (
               <motion.div
@@ -562,9 +447,9 @@ export function RagDashboard() {
           </AnimatePresence>
         </main>
 
-        {/* Compact Footer */}
+        {/* Footer */}
         <footer className="mt-8 py-4 px-6 border-t border-border/50 text-center text-xs text-muted-foreground">
-          MeepleAI RAG Dashboard • Next.js 14 + shadcn/ui •{' '}
+          MeepleAI RAG Dashboard • Next.js 15 + shadcn/ui •{' '}
           <a
             href="https://github.com/meepleai"
             className="text-primary hover:underline"

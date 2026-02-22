@@ -118,7 +118,13 @@ describe('ViewModeSwitcher', () => {
     it('should wrap around at edges with ArrowRight', async () => {
       const user = userEvent.setup();
 
-      render(<ViewModeSwitcher value="table" onChange={mockOnChange} />);
+      render(
+        <ViewModeSwitcher
+          value="carousel"
+          onChange={mockOnChange}
+          availableModes={['grid', 'list', 'carousel']}
+        />
+      );
 
       const activeButton = screen.getByRole('radio', { checked: true });
       activeButton.focus();
@@ -132,7 +138,13 @@ describe('ViewModeSwitcher', () => {
     it('should wrap around at edges with ArrowLeft', async () => {
       const user = userEvent.setup();
 
-      render(<ViewModeSwitcher value="grid" onChange={mockOnChange} />);
+      render(
+        <ViewModeSwitcher
+          value="grid"
+          onChange={mockOnChange}
+          availableModes={['grid', 'list', 'carousel']}
+        />
+      );
 
       const activeButton = screen.getByRole('radio', { checked: true });
       activeButton.focus();

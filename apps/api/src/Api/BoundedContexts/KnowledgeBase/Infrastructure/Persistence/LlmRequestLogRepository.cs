@@ -10,6 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// <summary>
 /// Repository implementation for LLM request log persistence.
 /// Issue #5072: OpenRouter monitoring — request log with 30-day retention.
+/// Issues #5078-#5083: Analytics query methods for admin usage dashboard.
 /// </summary>
 public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
 {
@@ -98,5 +99,172 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         }
 
         return deleted;
+    }
+
+    public async Task<IReadOnlyList<(DateTime Bucket, string Source, int Count, decimal CostUsd)>> GetTimelineAsync(
+        DateTime from,
+        DateTime until,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.LlmRequestLogs
+            .AsNoTracking()
+            .Where(x => x.RequestedAt >= from && x.RequestedAt <= until)
+            .Select(x => new
+            {
+                x.RequestedAt,
+                x.RequestSource,
+                x.CostUsd
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = rows
+            .GroupBy(x => new
+            {
+                Bucket = groupByHour
+                    ? new DateTime(x.RequestedAt.Year, x.RequestedAt.Month, x.RequestedAt.Day,
+                                   x.RequestedAt.Hour, 0, 0, DateTimeKind.Utc)
+                    : new DateTime(x.RequestedAt.Year, x.RequestedAt.Month, x.RequestedAt.Day,
+                                   0, 0, 0, DateTimeKind.Utc),
+                x.RequestSource
+            })
+            .Select(g => (
+                Bucket: g.Key.Bucket,
+                Source: g.Key.RequestSource,
+                Count:  g.Count(),
+                CostUsd: g.Sum(x => x.CostUsd)
+            ))
+            .OrderBy(x => x.Bucket)
+            .ThenBy(x => x.Source, StringComparer.Ordinal)
+            .ToList();
+
+        return result;
+    }
+
+    public async Task<(
+        IReadOnlyList<(string ModelId, decimal CostUsd, int Requests, int TotalTokens)> ByModel,
+        IReadOnlyList<(string Source, decimal CostUsd, int Requests)> BySource,
+        IReadOnlyList<(string Tier, decimal CostUsd, int Requests)> ByTier,
+        decimal TotalCostUsd,
+        int TotalRequests
+    )> GetCostBreakdownAsync(
+        DateTime from,
+        DateTime until,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.LlmRequestLogs
+            .AsNoTracking()
+            .Where(x => x.RequestedAt >= from && x.RequestedAt <= until)
+            .Select(x => new
+            {
+                x.ModelId,
+                x.RequestSource,
+                x.UserRole,
+                x.CostUsd,
+                x.TotalTokens
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var byModel = rows
+            .GroupBy(x => x.ModelId, StringComparer.Ordinal)
+            .Select(g => (
+                ModelId:     g.Key,
+                CostUsd:     g.Sum(x => x.CostUsd),
+                Requests:    g.Count(),
+                TotalTokens: g.Sum(x => x.TotalTokens)
+            ))
+            .OrderByDescending(x => x.CostUsd)
+            .ToList<(string ModelId, decimal CostUsd, int Requests, int TotalTokens)>();
+
+        var bySource = rows
+            .GroupBy(x => x.RequestSource, StringComparer.Ordinal)
+            .Select(g => (
+                Source:   g.Key,
+                CostUsd:  g.Sum(x => x.CostUsd),
+                Requests: g.Count()
+            ))
+            .OrderByDescending(x => x.CostUsd)
+            .ToList<(string Source, decimal CostUsd, int Requests)>();
+
+        var byTier = rows
+            .GroupBy(x => x.UserRole ?? "Unknown", StringComparer.Ordinal)
+            .Select(g => (
+                Tier:     g.Key,
+                CostUsd:  g.Sum(x => x.CostUsd),
+                Requests: g.Count()
+            ))
+            .OrderByDescending(x => x.CostUsd)
+            .ToList<(string Tier, decimal CostUsd, int Requests)>();
+
+        var totalCostUsd = rows.Sum(x => x.CostUsd);
+        var totalRequests = rows.Count;
+
+        return (byModel, bySource, byTier, totalCostUsd, totalRequests);
+    }
+
+    public async Task<IReadOnlyList<(string ModelId, int RequestsToday)>> GetFreeModelUsageAsync(
+        DateOnly forDate,
+        CancellationToken cancellationToken = default)
+    {
+        var startUtc = forDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var endUtc   = forDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+
+        var rows = await _context.LlmRequestLogs
+            .AsNoTracking()
+            .Where(x => x.IsFreeModel
+                     && x.RequestedAt >= startUtc
+                     && x.RequestedAt <= endUtc)
+            .Select(x => x.ModelId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows
+            .GroupBy(modelId => modelId, StringComparer.Ordinal)
+            .Select(g => (ModelId: g.Key, RequestsToday: g.Count()))
+            .OrderByDescending(x => x.RequestsToday)
+            .ToList();
+    }
+
+    public async Task<(IReadOnlyList<LlmRequestLogEntity> Items, int Total)> GetPagedAsync(
+        string? source,
+        string? model,
+        DateTime? from,
+        DateTime? until,
+        bool? successOnly,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.LlmRequestLogs.AsNoTracking();
+
+        if (!string.IsNullOrEmpty(source))
+            query = query.Where(x => x.RequestSource == source);
+
+        if (!string.IsNullOrEmpty(model))
+            query = query.Where(x => EF.Functions.ILike(x.ModelId, $"%{model}%"));
+
+        if (from.HasValue)
+            query = query.Where(x => x.RequestedAt >= from.Value);
+
+        if (until.HasValue)
+            query = query.Where(x => x.RequestedAt <= until.Value);
+
+        if (successOnly.HasValue)
+            query = query.Where(x => x.Success == successOnly.Value);
+
+        var total = await query
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var items = await query
+            .OrderByDescending(x => x.RequestedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (items, total);
     }
 }

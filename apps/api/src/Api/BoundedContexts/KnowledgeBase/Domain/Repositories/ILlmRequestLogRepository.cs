@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities;
 using Api.Services;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -40,4 +41,51 @@ public interface ILlmRequestLogRepository
     /// Returns number of deleted records.
     /// </summary>
     Task<int> DeleteExpiredAsync(DateTime cutoff, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns per-source request counts grouped into time buckets (hourly or daily).
+    /// Issue #5078: request timeline chart data.
+    /// </summary>
+    Task<IReadOnlyList<(DateTime Bucket, string Source, int Count, decimal CostUsd)>> GetTimelineAsync(
+        DateTime from,
+        DateTime until,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns aggregated cost data grouped by model, source, and user tier/role.
+    /// Issue #5080: cost breakdown panel data.
+    /// </summary>
+    Task<(
+        IReadOnlyList<(string ModelId, decimal CostUsd, int Requests, int TotalTokens)> ByModel,
+        IReadOnlyList<(string Source, decimal CostUsd, int Requests)> BySource,
+        IReadOnlyList<(string Tier, decimal CostUsd, int Requests)> ByTier,
+        decimal TotalCostUsd,
+        int TotalRequests
+    )> GetCostBreakdownAsync(
+        DateTime from,
+        DateTime until,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns today's request counts grouped by free model (IsFreeModel = true).
+    /// Issue #5082: free quota indicator data.
+    /// </summary>
+    Task<IReadOnlyList<(string ModelId, int RequestsToday)>> GetFreeModelUsageAsync(
+        DateOnly forDate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a paginated, optionally filtered list of recent LLM request log entries.
+    /// Issue #5083: recent requests table data.
+    /// </summary>
+    Task<(IReadOnlyList<LlmRequestLogEntity> Items, int Total)> GetPagedAsync(
+        string? source,
+        string? model,
+        DateTime? from,
+        DateTime? until,
+        bool? successOnly,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }

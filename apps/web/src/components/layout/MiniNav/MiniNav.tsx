@@ -30,6 +30,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import { useNavigation } from '@/context/NavigationContext';
 import { Button } from '@/components/ui/primitives/button';
+import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
 import { MiniNavTab } from './MiniNavTab';
@@ -158,7 +159,7 @@ export function MiniNav({ className }: MiniNavProps) {
         'bg-background/95 backdrop-blur-sm',
         className,
       )}
-      data-testid="mini-nav"
+      data-testid={NAV_TEST_IDS.miniNav}
     >
       {/* Left scroll arrow (desktop, tabs > ARROW_THRESHOLD) */}
       {showArrows && (
@@ -172,7 +173,7 @@ export function MiniNav({ className }: MiniNavProps) {
           )}
           onClick={scrollLeft}
           aria-label="Scorri tab a sinistra"
-          data-testid="mini-nav-scroll-left"
+          data-testid={NAV_TEST_IDS.miniNavScrollLeft}
           tabIndex={canScrollLeft ? 0 : -1}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -194,7 +195,7 @@ export function MiniNav({ className }: MiniNavProps) {
           // Left/right padding when arrows shown
           showArrows ? 'px-0' : 'px-2',
         )}
-        data-testid="mini-nav-tablist"
+        data-testid={NAV_TEST_IDS.miniNavTablist}
       >
         {miniNavTabs.map((tab) => (
           <MiniNavTab
@@ -217,7 +218,7 @@ export function MiniNav({ className }: MiniNavProps) {
           )}
           onClick={scrollRight}
           aria-label="Scorri tab a destra"
-          data-testid="mini-nav-scroll-right"
+          data-testid={NAV_TEST_IDS.miniNavScrollRight}
           tabIndex={canScrollRight ? 0 : -1}
         >
           <ChevronRight className="h-4 w-4" aria-hidden="true" />

@@ -12,6 +12,7 @@ import { Home, Settings, Users, BookOpen, MessageSquare, Gamepad2, BarChart3, Li
 import { MiniNav } from '../MiniNav';
 import { MiniNavTab } from '../MiniNavTab';
 import type { NavTab } from '@/types/navigation';
+import { NAV_TEST_IDS } from '@/lib/test-ids';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ const mockPathname = vi.fn(() => '/library');
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname(),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 const mockMiniNavTabs = vi.fn<[], NavTab[]>(() => []);
@@ -74,7 +76,7 @@ describe('MiniNav', () => {
   it('renders when tabs are provided', () => {
     mockMiniNavTabs.mockReturnValue(libraryTabs);
     render(<MiniNav />);
-    expect(screen.getByTestId('mini-nav')).toBeInTheDocument();
+    expect(screen.getByTestId(NAV_TEST_IDS.miniNav)).toBeInTheDocument();
   });
 
   // ── ARIA ────────────────────────────────────────────────────────────────────
@@ -170,15 +172,15 @@ describe('MiniNav', () => {
   it('does NOT render scroll arrows when tabs ≤ 8', () => {
     mockMiniNavTabs.mockReturnValue(libraryTabs); // 4 tabs
     render(<MiniNav />);
-    expect(screen.queryByTestId('mini-nav-scroll-left')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('mini-nav-scroll-right')).not.toBeInTheDocument();
+    expect(screen.queryByTestId(NAV_TEST_IDS.miniNavScrollLeft)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(NAV_TEST_IDS.miniNavScrollRight)).not.toBeInTheDocument();
   });
 
   it('renders scroll arrows when tabs > 8', () => {
     mockMiniNavTabs.mockReturnValue(manyTabs); // 9 tabs
     render(<MiniNav />);
-    expect(screen.getByTestId('mini-nav-scroll-left')).toBeInTheDocument();
-    expect(screen.getByTestId('mini-nav-scroll-right')).toBeInTheDocument();
+    expect(screen.getByTestId(NAV_TEST_IDS.miniNavScrollLeft)).toBeInTheDocument();
+    expect(screen.getByTestId(NAV_TEST_IDS.miniNavScrollRight)).toBeInTheDocument();
   });
 
   // ── Custom className ────────────────────────────────────────────────────────
@@ -259,6 +261,6 @@ describe('MiniNavTab', () => {
 
   it('has data-testid with tab id', () => {
     render(<MiniNavTab tab={tab} isActive={false} />);
-    expect(screen.getByTestId('mini-nav-tab-games')).toBeInTheDocument();
+    expect(screen.getByTestId(NAV_TEST_IDS.miniNavTab('games'))).toBeInTheDocument();
   });
 });

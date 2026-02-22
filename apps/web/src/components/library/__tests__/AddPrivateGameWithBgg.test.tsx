@@ -7,7 +7,22 @@ import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
+import { LIBRARY_TEST_IDS } from '@/lib/test-ids';
+
 import { AddPrivateGameWithBgg } from '../AddPrivateGameWithBgg';
+
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'common.cancel': 'Cancel',
+        'privateGameForm.addFromBgg': 'Add from BGG',
+        'privateGameForm.addPrivateGame': 'Add Private Game',
+      };
+      return map[key] ?? key;
+    },
+  }),
+}));
 
 // Mock BggGameSearch
 vi.mock('../BggGameSearch', () => ({
@@ -139,9 +154,9 @@ describe('AddPrivateGameWithBgg', () => {
   it('renders choose mode initially', () => {
     renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
     expect(screen.getByTestId('bgg-game-search')).toBeInTheDocument();
-    expect(screen.getByTestId('manual-entry-btn')).toBeInTheDocument();
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn)).toBeInTheDocument();
   });
 
   it('shows description text in choose mode', () => {
@@ -165,16 +180,16 @@ describe('AddPrivateGameWithBgg', () => {
   it('switches to manual form when manual entry button is clicked', () => {
     renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
 
-    expect(screen.getByTestId('add-game-manual-form')).toBeInTheDocument();
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameManualForm)).toBeInTheDocument();
     expect(screen.getByTestId('add-private-game-form')).toBeInTheDocument();
   });
 
   it('shows "Manuale" badge in manual mode', () => {
     renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
 
     expect(screen.getByText('Manuale')).toBeInTheDocument();
   });
@@ -182,7 +197,7 @@ describe('AddPrivateGameWithBgg', () => {
   it('submits with Manual source in manual mode', async () => {
     renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
     fireEvent.click(screen.getByTestId('mock-form-submit'));
 
     await waitFor(() => {
@@ -196,7 +211,7 @@ describe('AddPrivateGameWithBgg', () => {
   it('shows submit label "Add Private Game" in manual mode', () => {
     renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
 
     expect(screen.getByTestId('form-submit-label')).toHaveTextContent('Add Private Game');
   });
@@ -210,7 +225,7 @@ describe('AddPrivateGameWithBgg', () => {
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('loading-bgg-details')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.loadingBggDetails)).toBeInTheDocument();
     });
   });
 
@@ -221,7 +236,7 @@ describe('AddPrivateGameWithBgg', () => {
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-bgg-form')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameBggForm)).toBeInTheDocument();
     });
   });
 
@@ -275,7 +290,7 @@ describe('AddPrivateGameWithBgg', () => {
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-bgg-form')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameBggForm)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('mock-form-submit'));
@@ -306,11 +321,11 @@ describe('AddPrivateGameWithBgg', () => {
   it('goes back to choose mode from manual form', () => {
     renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
-    expect(screen.getByTestId('add-game-manual-form')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameManualForm)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('back-to-search-btn'));
-    expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.backToSearchBtn));
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
   });
 
   it('goes back to choose mode from BGG form', async () => {
@@ -320,11 +335,11 @@ describe('AddPrivateGameWithBgg', () => {
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-bgg-form')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameBggForm)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('back-to-search-btn'));
-    expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.backToSearchBtn));
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
   });
 
   // ===== Error Handling =====
@@ -336,7 +351,7 @@ describe('AddPrivateGameWithBgg', () => {
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
     });
   });
 

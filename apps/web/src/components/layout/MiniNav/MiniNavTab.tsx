@@ -10,6 +10,7 @@
 import Link from 'next/link';
 
 import type { NavTab } from '@/types/navigation';
+import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ export function MiniNavTab({ tab, isActive, onClick }: MiniNavTabProps) {
       href={tab.href}
       role="tab"
       aria-selected={isActive}
-      data-testid={`mini-nav-tab-${tab.id}`}
+      data-testid={NAV_TEST_IDS.miniNavTab(tab.id)}
       onClick={onClick}
       className={cn(
         // Base layout

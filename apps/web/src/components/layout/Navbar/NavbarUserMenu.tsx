@@ -56,7 +56,8 @@ export function NavbarUserMenu({ className }: NavbarUserMenuProps) {
 
   const isAdmin =
     user?.role?.toLowerCase() === 'admin' ||
-    user?.role?.toLowerCase() === 'superadmin';
+    user?.role?.toLowerCase() === 'superadmin' ||
+    user?.role?.toLowerCase() === 'editor';
 
   const userInitial =
     user?.displayName?.charAt(0).toUpperCase() ||

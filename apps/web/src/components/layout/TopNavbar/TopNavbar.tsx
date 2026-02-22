@@ -477,8 +477,8 @@ export function TopNavbar({ className }: TopNavbarProps) {
             {adminSection && (
               <SectionDropdown
                 section={adminSection}
-                isOpen={openSection === 'admin'}
-                onToggle={() => toggleSection('admin')}
+                isOpen={openSection === adminSection.id}
+                onToggle={() => toggleSection(adminSection.id)}
                 onClose={closeSection}
                 isActive={isSectionActive(adminSection)}
               />

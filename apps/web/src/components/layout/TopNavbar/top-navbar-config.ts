@@ -47,7 +47,7 @@ export const TOOL_SECTION: NavSection = {
   items: [
     {
       label: 'Dashboard',
-      href: '/',
+      href: '/dashboard',
       icon: LayoutDashboard,
       description: 'La tua homepage personale',
     },
@@ -156,7 +156,7 @@ export const ADMIN_SECTION: NavSection = {
 
 /** Editor section — subset of admin (editor role only) */
 export const EDITOR_SECTION: NavSection = {
-  id: 'admin',
+  id: 'editor',
   label: 'Editor',
   items: [
     {

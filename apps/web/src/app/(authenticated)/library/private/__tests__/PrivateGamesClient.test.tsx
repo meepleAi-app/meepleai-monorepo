@@ -22,6 +22,7 @@ import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { api } from '@/lib/api';
 import { LIBRARY_TEST_IDS } from '@/lib/test-ids';
+import { t as testI18nT } from '@/test-utils/test-i18n';
 
 const mockPush = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
@@ -51,44 +52,22 @@ vi.mock('@/components/auth/AuthProvider', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Mock LibraryEmptyState with testable stub matching original empty-state interface
-vi.mock('@/components/library/LibraryEmptyState', () => ({
-  LibraryEmptyState: () => (
-    <div data-testid="empty-state">
-      <h2>No Private Games Yet</h2>
-      <p>Start building your personal collection by adding your first private game.</p>
-      <button onClick={() => mockPush('/library/private/add')}>Add Your First Game</button>
-    </div>
-  ),
-}));
-
-// Mock useTranslation to avoid react-intl IntlProvider requirement
+// Mock useTranslation — delegates to real locale files via test-i18n;
+// parameterized ICU keys use explicit handlers since test-i18n.t doesn't interpolate.
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({
     t: (key: string, values?: Record<string, unknown>) => {
-      const map: Record<string, string | ((v: Record<string, unknown>) => string)> = {
-        'privateGames.loading': 'Loading games...',
-        'privateGames.title': 'Private Games',
-        'privateGames.loadError': 'Impossibile caricare i giochi privati. Riprova.',
-        'common.refresh': 'Retry',
-        'privateGames.noGamesYet': 'No Private Games Yet',
-        'privateGames.emptyStateDescription': 'Start building your personal collection by adding your first private game.',
-        'privateGames.addFirstGame': 'Add Your First Game',
-        'privateGames.noGamesFound': 'No Games Found',
-        'privateGames.editGame': 'Edit Game',
-        'privateGames.deleteGame': 'Delete Game',
-        'privateGames.deleteConfirm': (v) => `Are you sure you want to delete "${v?.title}"?`,
-        'privateGames.deleting': 'Deleting...',
-        'common.cancel': 'Cancel',
-        'privateGames.subtitle': (v) => {
-          const count = v?.count as number;
-          return `${count} ${count === 1 ? 'game' : 'games'}`;
-        },
-        'privateGames.pageOf': (v) => `Page ${v?.page} of ${v?.totalPages}`,
-      };
-      const entry = map[key];
-      if (typeof entry === 'function') return entry(values ?? {});
-      return (entry as string) ?? key;
+      if (key === 'privateGames.deleteConfirm') {
+        return `Are you sure you want to delete "${values?.title}"? This action cannot be undone.`;
+      }
+      if (key === 'privateGames.subtitle') {
+        const count = values?.count as number;
+        return `${count} ${count === 1 ? 'game' : 'games'}`;
+      }
+      if (key === 'privateGames.pageOf') {
+        return `Page ${values?.page} of ${values?.totalPages}`;
+      }
+      return testI18nT(key);
     },
   }),
 }));
@@ -202,7 +181,7 @@ describe('PrivateGamesClient', () => {
       renderWithQuery(<PrivateGamesClient />);
 
       expect(screen.getByTestId(LIBRARY_TEST_IDS.loadingState)).toBeInTheDocument();
-      expect(screen.getByText('Loading games...')).toBeInTheDocument();
+      expect(screen.getByText(testI18nT('privateGames.loading'))).toBeInTheDocument();
     });
 
     it('should show header and controls during loading', () => {
@@ -210,7 +189,7 @@ describe('PrivateGamesClient', () => {
 
       renderWithQuery(<PrivateGamesClient />);
 
-      expect(screen.getByText('Private Games')).toBeInTheDocument();
+      expect(screen.getByText(testI18nT('privateGames.title'))).toBeInTheDocument();
       expect(screen.getByTestId(LIBRARY_TEST_IDS.addPrivateGameBtn)).toBeInTheDocument();
       expect(screen.getByTestId(LIBRARY_TEST_IDS.searchInput)).toBeInTheDocument();
     });
@@ -227,7 +206,7 @@ describe('PrivateGamesClient', () => {
       });
 
       expect(
-        screen.getByText('Unable to load private games. Please try again.')
+        screen.getByText(testI18nT('privateGames.loadError'))
       ).toBeInTheDocument();
     });
 
@@ -243,7 +222,7 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.errorState)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Refresh'));
+      await user.click(screen.getByText(testI18nT('common.refresh')));
 
       await waitFor(() => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
@@ -263,13 +242,11 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
-      expect(screen.getByText('No Private Games Yet')).toBeInTheDocument();
+      expect(screen.getByText(testI18nT('privateGames.noGamesYet'))).toBeInTheDocument();
       expect(
-        screen.getByText(
-          'Start building your personal collection by adding your first private game.'
-        )
+        screen.getByText(testI18nT('privateGames.emptyStateDescription'))
       ).toBeInTheDocument();
-      expect(screen.getByText('Add Your First Game')).toBeInTheDocument();
+      expect(screen.getByText(testI18nT('privateGames.addFirstGame'))).toBeInTheDocument();
     });
 
     it('should show search empty state when search has no results', async () => {
@@ -290,7 +267,7 @@ describe('PrivateGamesClient', () => {
       await user.type(screen.getByTestId(LIBRARY_TEST_IDS.searchInput), 'zzzzz');
 
       await waitFor(() => {
-        expect(screen.getByText('No Games Found')).toBeInTheDocument();
+        expect(screen.getByText(testI18nT('privateGames.noGamesFound'))).toBeInTheDocument();
       });
     });
   });
@@ -578,7 +555,7 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText('Add Your First Game'));
+      await user.click(screen.getByText(testI18nT('privateGames.addFirstGame')));
 
       expect(mockPush).toHaveBeenCalledWith('/library/private/add');
     });
@@ -600,7 +577,7 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByTestId(LIBRARY_TEST_IDS.editBtn('game-1')));
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Game')).toBeInTheDocument();
+        expect(screen.getByText(testI18nT('privateGames.editGame'))).toBeInTheDocument();
       });
     });
   });
@@ -621,7 +598,7 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByTestId(LIBRARY_TEST_IDS.deleteBtn('game-1')));
 
       await waitFor(() => {
-        expect(screen.getByText('Delete Game')).toBeInTheDocument();
+        expect(screen.getByText(testI18nT('privateGames.deleteGame'))).toBeInTheDocument();
         expect(
           screen.getByText(/Are you sure you want to delete/)
         ).toBeInTheDocument();
@@ -669,7 +646,7 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByTestId(LIBRARY_TEST_IDS.deleteBtn('game-2')));
 
       await waitFor(() => {
-        expect(screen.getByText('Cancel')).toBeInTheDocument();
+        expect(screen.getByText(testI18nT('common.cancel'))).toBeInTheDocument();
       });
     });
   });
@@ -724,7 +701,7 @@ describe('PrivateGamesClient', () => {
       });
 
       expect(
-        screen.getByRole('heading', { level: 1, name: 'Private Games' })
+        screen.getByRole('heading', { level: 1, name: testI18nT('privateGames.title') })
       ).toBeInTheDocument();
     });
 

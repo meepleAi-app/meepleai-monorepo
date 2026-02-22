@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs.Decisore;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -175,7 +176,8 @@ internal sealed class DecisoreAgentService : IDecisoreAgentService
             var llmResult = await _llmService.GenerateCompletionAsync(
                 systemPrompt: SystemPrompt,
                 userPrompt: prompt,
-                cancellationToken).ConfigureAwait(false);
+                source: RequestSource.AgentTask,
+                ct: cancellationToken).ConfigureAwait(false);
 
             if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
             {

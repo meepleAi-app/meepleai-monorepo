@@ -270,7 +270,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         LlmUsage? llmUsage = null;
         LlmCost? llmCost = null;
 
-        await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, RequestSource.AdminOperation, cancellationToken).ConfigureAwait(false))
         {
             cancellationToken.ThrowIfCancellationRequested();
 

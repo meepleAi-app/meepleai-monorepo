@@ -123,6 +123,7 @@ internal class HybridLlmService : ILlmService
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default)
     {
         return await GenerateCompletionAsync(
@@ -130,6 +131,7 @@ internal class HybridLlmService : ILlmService
             userPrompt,
             user: null, // No user context (anonymous)
             strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            source: source,
             ct).ConfigureAwait(false);
     }
 
@@ -142,6 +144,7 @@ internal class HybridLlmService : ILlmService
         string userPrompt,
         User? user,
         RagStrategy strategy = RagStrategy.Balanced,
+        RequestSource source = RequestSource.Manual,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
@@ -212,12 +215,12 @@ internal class HybridLlmService : ILlmService
                 {
                     RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
+                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                     return result;
                 }
 
                 RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
-                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
+                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -229,7 +232,7 @@ internal class HybridLlmService : ILlmService
                     "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
                     client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
 
-                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
+                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -254,6 +257,7 @@ internal class HybridLlmService : ILlmService
     public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default)
     {
         return GenerateCompletionStreamAsync(
@@ -261,6 +265,7 @@ internal class HybridLlmService : ILlmService
             userPrompt,
             user: null, // No user context (anonymous)
             strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            source: source,
             ct);
     }
 
@@ -276,6 +281,7 @@ internal class HybridLlmService : ILlmService
         string userPrompt,
         User? user,
         RagStrategy strategy = RagStrategy.Balanced,
+        RequestSource source = RequestSource.Manual,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
 #pragma warning restore S4456
 #pragma warning restore S3400
@@ -321,6 +327,7 @@ internal class HybridLlmService : ILlmService
     public async Task<T?> GenerateJsonAsync<T>(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default) where T : class
     {
         return await GenerateJsonAsync<T>(
@@ -328,6 +335,7 @@ internal class HybridLlmService : ILlmService
             userPrompt,
             user: null, // No user context (anonymous)
             strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            source: source,
             ct).ConfigureAwait(false);
     }
 
@@ -340,6 +348,7 @@ internal class HybridLlmService : ILlmService
         string userPrompt,
         User? user,
         RagStrategy strategy = RagStrategy.Balanced,
+        RequestSource source = RequestSource.Manual,
         CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
@@ -352,7 +361,7 @@ internal class HybridLlmService : ILlmService
             Just the raw JSON object that matches the required structure.
             """;
 
-        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, strategy, cancellationToken).ConfigureAwait(false);
+        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, strategy, source, cancellationToken).ConfigureAwait(false);
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
         {
@@ -518,6 +527,7 @@ internal class HybridLlmService : ILlmService
         LlmCompletionResult result,
         User? user,
         long latencyMs,
+        RequestSource source,
         CancellationToken cancellationToken)
     {
         try
@@ -540,6 +550,7 @@ internal class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
+                source: source,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Issue #2520: Update model usage statistics
@@ -613,6 +624,7 @@ internal class HybridLlmService : ILlmService
         string? errorMessage,
         User? user,
         long latencyMs,
+        RequestSource source,
         CancellationToken cancellationToken)
     {
         try
@@ -627,6 +639,7 @@ internal class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
+                source: source,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Exception logEx)
@@ -893,6 +906,7 @@ internal class HybridLlmService : ILlmService
         string explicitModel,
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(explicitModel);
@@ -972,7 +986,7 @@ internal class HybridLlmService : ILlmService
             }
 
             // Log cost asynchronously (fire-and-forget)
-            _ = LogCostAsync(result, user: null, stopwatch.ElapsedMilliseconds, ct);
+            _ = LogCostAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, ct);
 
             _logger.LogInformation(
                 "Explicit model {Model} completion successful (tokens: {Tokens}, cost: ${Cost:F6}, latency: {Latency}ms)",

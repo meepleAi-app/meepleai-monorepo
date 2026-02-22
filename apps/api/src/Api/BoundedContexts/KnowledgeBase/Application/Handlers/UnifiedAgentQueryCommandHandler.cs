@@ -199,6 +199,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
         await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(
             systemPrompt,
             command.Query,
+            RequestSource.Manual,
             cancellationToken).ConfigureAwait(false))
         {
             if (!string.IsNullOrEmpty(chunk.Content))

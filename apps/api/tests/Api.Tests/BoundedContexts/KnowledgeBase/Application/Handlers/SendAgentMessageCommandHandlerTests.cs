@@ -103,7 +103,7 @@ public sealed class SendAgentMessageCommandHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Catan is a board game."));
 
         // Act
@@ -169,7 +169,7 @@ public sealed class SendAgentMessageCommandHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Chess is..."));
 
         // Act
@@ -203,7 +203,7 @@ public sealed class SendAgentMessageCommandHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Response"));
 
         // Act
@@ -240,7 +240,7 @@ public sealed class SendAgentMessageCommandHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(""));
 
         // Act
@@ -287,7 +287,7 @@ public sealed class SendAgentMessageCommandHandlerTests
 
         _mockLlmService
             .Setup(s => s.GenerateCompletionWithModelAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer"));
 
         // Act
@@ -325,7 +325,7 @@ public sealed class SendAgentMessageCommandHandlerTests
 
         _mockLlmService
             .Setup(s => s.GenerateCompletionWithModelAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Response"));
 
         // Act
@@ -390,7 +390,7 @@ public sealed class SendAgentMessageCommandHandlerTests
 
         _mockLlmService
             .Setup(s => s.GenerateCompletionWithModelAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer"));
 
         // Act
@@ -422,7 +422,7 @@ public sealed class SendAgentMessageCommandHandlerTests
 
         _mockLlmService
             .Setup(s => s.GenerateCompletionWithModelAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer"));
 
         // Act
@@ -453,7 +453,7 @@ public sealed class SendAgentMessageCommandHandlerTests
 
         _mockLlmService
             .Setup(s => s.GenerateCompletionWithModelAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Catan is great"));
 
         // Act

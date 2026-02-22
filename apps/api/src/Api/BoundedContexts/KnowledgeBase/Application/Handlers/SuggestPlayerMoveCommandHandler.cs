@@ -316,6 +316,7 @@ internal sealed class SuggestPlayerMoveCommandHandler
             var llmOutput = await _llmService.GenerateJsonAsync<LlmMoveGenerationOutput>(
                 systemPrompt,
                 userPrompt,
+                RequestSource.Manual,
                 cancellationToken
             ).ConfigureAwait(false);
 

@@ -48,7 +48,7 @@ public class LlmRulebookMergerTests
             .Setup(x => x.GenerateJsonAsync<LlmMergedResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmMergedResponse?)llmResponse);
 
         // Act
@@ -86,8 +86,8 @@ public class LlmRulebookMergerTests
             .Setup(x => x.GenerateJsonAsync<LlmMergedResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, userPrompt, _) => capturedPrompt = userPrompt)
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, userPrompt, _, _) => capturedPrompt = userPrompt)
             .ReturnsAsync((LlmMergedResponse?)llmResponse);
 
         // Act
@@ -128,7 +128,7 @@ public class LlmRulebookMergerTests
             .Setup(x => x.GenerateJsonAsync<LlmMergedResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmMergedResponse?)llmResponse);
 
         // Act
@@ -164,7 +164,7 @@ public class LlmRulebookMergerTests
             .Setup(x => x.GenerateJsonAsync<LlmMergedResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmMergedResponse?)llmResponse);
 
         // Act
@@ -190,7 +190,7 @@ public class LlmRulebookMergerTests
             .Setup(x => x.GenerateJsonAsync<LlmMergedResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmMergedResponse?)null);
 
         // Act
@@ -214,7 +214,7 @@ public class LlmRulebookMergerTests
             .Setup(x => x.GenerateJsonAsync<LlmMergedResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Merge failed"));
 
         // Act
@@ -237,7 +237,7 @@ public class LlmRulebookMergerTests
             .Setup(x => x.GenerateJsonAsync<LlmMergedResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmMergedResponse?)null); // Force fallback
 
         // Act

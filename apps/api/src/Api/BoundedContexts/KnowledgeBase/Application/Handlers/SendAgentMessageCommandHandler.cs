@@ -383,6 +383,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             modelToUse,
             systemPrompt,
             userPrompt,
+            RequestSource.Manual,
             cancellationToken).ConfigureAwait(false);
 
         if (!llmResult.Success)

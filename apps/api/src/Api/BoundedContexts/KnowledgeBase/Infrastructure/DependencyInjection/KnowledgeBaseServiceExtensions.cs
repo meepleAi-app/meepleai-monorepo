@@ -194,6 +194,11 @@ internal static class KnowledgeBaseServiceExtensions
             Directory.CreateDirectory(logDir);
             return new OpenRouterFileLogger(logDir);
         });
+
+        // Issue #5074: OpenRouter usage cache — polls /auth/key every 60s, accumulates daily spend
+        services.AddHostedService<OpenRouterUsageService>();
+        services.AddSingleton<IOpenRouterUsageService>(sp =>
+            sp.GetServices<IHostedService>().OfType<OpenRouterUsageService>().First());
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)

@@ -61,6 +61,7 @@ internal class HybridLlmService : ILlmService
     private readonly IAiModelConfigurationRepository _modelConfigRepository;
     private readonly IPublisher _publisher;
     private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
+    private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -89,7 +90,8 @@ internal class HybridLlmService : ILlmService
         IPublisher publisher,
         IProviderHealthCheckService? healthCheckService = null,
         IUserBudgetService? userBudgetService = null,
-        IOpenRouterFileLogger? openRouterFileLogger = null)
+        IOpenRouterFileLogger? openRouterFileLogger = null,
+        IOpenRouterUsageService? openRouterUsageService = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -101,6 +103,7 @@ internal class HybridLlmService : ILlmService
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
         _userBudgetService = userBudgetService; // Optional - for credit tracking
         _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
+        _openRouterUsageService = openRouterUsageService; // Issue #5074: Optional - Redis usage cache
 
         if (_clients.Count == 0)
         {
@@ -599,6 +602,10 @@ internal class HybridLlmService : ILlmService
                 success: true,
                 isFreeModel: result.Cost.TotalCost == 0,
                 sessionId: null);
+
+            // Issue #5074: Accumulate daily spend in Redis (fire-and-forget)
+            if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
+                _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost);
         }
         catch (Exception logEx)
         {

@@ -33,6 +33,7 @@ import {
   Settings2Icon,
   MessageSquareCodeIcon,
   ListOrderedIcon,
+  TrendingUpIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -208,6 +209,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/agents/chat-limits',
         label: 'Chat Limits',
         icon: SettingsIcon,
+      },
+      {
+        href: '/admin/agents/usage',
+        label: 'Usage & Costs',
+        icon: TrendingUpIcon,
       },
     ],
   },

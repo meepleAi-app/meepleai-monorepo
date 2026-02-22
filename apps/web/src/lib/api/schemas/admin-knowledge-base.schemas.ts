@@ -188,3 +188,20 @@ export const ProcessingQueueResponseSchema = z.object({
 
 export type ProcessingJobDto = z.infer<typeof ProcessingJobDtoSchema>;
 export type ProcessingQueueResponse = z.infer<typeof ProcessingQueueResponseSchema>;
+
+// ─── OpenRouter Status (Issue #5077) ─────────────────────────────────────────
+
+export const OpenRouterStatusDtoSchema = z.object({
+  balanceUsd: z.number(),
+  dailySpendUsd: z.number(),
+  todayRequestCount: z.number(),
+  currentRpm: z.number(),
+  limitRpm: z.number(),
+  utilizationPercent: z.number(),
+  isThrottled: z.boolean(),
+  isFreeTier: z.boolean(),
+  rateLimitInterval: z.string(),
+  lastUpdated: z.string().nullable(),
+});
+
+export type OpenRouterStatusDto = z.infer<typeof OpenRouterStatusDtoSchema>;

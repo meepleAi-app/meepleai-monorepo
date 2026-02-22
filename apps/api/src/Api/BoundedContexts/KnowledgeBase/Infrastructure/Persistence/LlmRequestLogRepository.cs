@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// Repository implementation for LLM request log persistence.
 /// Issue #5072: OpenRouter monitoring — request log with 30-day retention.
 /// </summary>
-internal sealed class LlmRequestLogRepository : ILlmRequestLogRepository
+public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
 {
     private static readonly TimeSpan RetentionPeriod = TimeSpan.FromDays(30);
 

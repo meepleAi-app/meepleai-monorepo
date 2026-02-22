@@ -231,10 +231,36 @@ describe('ExtraMeepleCardDrawer', () => {
       });
     });
 
-    it('renders chat stub for chat entity', () => {
+    it('shows skeleton initially while fetching chat data', () => {
+      mockFetch.mockReturnValue(new Promise(() => {}));
       renderDrawer({ entityType: 'chat', entityId: 'thread-1' });
 
-      expect(screen.getByTestId(DRAWER_TEST_IDS.COMING_SOON(5027))).toBeInTheDocument();
+      expect(screen.getByTestId(DRAWER_TEST_IDS.LOADING_SKELETON)).toBeInTheDocument();
+    });
+
+    it('renders chat content after successful fetch', async () => {
+      const threadApiResponse = {
+        id: 'thread-1',
+        status: 'active',
+        agentId: 'agent-1',
+        agentName: 'Catan Expert',
+        agentModel: 'gpt-4o',
+        gameId: 'game-1',
+        gameName: 'Catan',
+        startedAt: '2026-01-15T10:00:00Z',
+        messageCount: 2,
+      };
+      mockFetch.mockImplementation((url: string) => {
+        if ((url as string).includes('/messages')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(threadApiResponse) } as Response);
+      });
+      renderDrawer({ entityType: 'chat', entityId: 'thread-1' });
+
+      await waitFor(() => {
+        expect(screen.getByText('Catan Expert')).toBeInTheDocument();
+      });
     });
 
     it('renders kb stub for kb entity', () => {

@@ -315,6 +315,49 @@ export interface KbDocumentPreview {
   status: 'processing' | 'indexed' | 'failed' | 'none';
 }
 
+/** Chat status — re-exported from ChatStatusBadge to avoid duplication */
+export type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
+
+/** Single message in a chat thread (Issue #5027 — ChatExtraMeepleCard) */
+export interface ChatDetailMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+/** Chat thread detail data (Issue #5027 — ChatExtraMeepleCard) */
+export interface ChatDetailData {
+  id: string;
+  status: ChatStatus;
+  /** ID of the agent that handles this thread */
+  agentId?: string;
+  /** Display name of the linked agent */
+  agentName?: string;
+  /** Model identifier for the agent */
+  agentModel?: string;
+  /** ID of the game used as context */
+  gameId?: string;
+  /** Display name of the context game */
+  gameName?: string;
+  /** Thumbnail URL of the context game */
+  gameThumbnailUrl?: string;
+  /** ISO timestamp when the thread was started */
+  startedAt: string;
+  /** Total duration of the thread in minutes */
+  durationMinutes?: number;
+  /** Total number of messages in the thread */
+  messageCount: number;
+  /** Last N messages (fetched with ?limit=10) */
+  messages: ChatDetailMessage[];
+  /** LLM temperature parameter */
+  temperature?: number;
+  /** LLM max tokens parameter */
+  maxTokens?: number;
+  /** System prompt used for this thread */
+  systemPrompt?: string;
+}
+
 // ============================================================================
 // Interactive Card Deck Types (Issue #4763)
 // ============================================================================

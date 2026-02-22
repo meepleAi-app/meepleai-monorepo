@@ -457,7 +457,7 @@ public class AskQuestionQueryHandlerSecurityTests
 
         // Setup LlmService
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: "Test answer",
                 usage: new LlmUsage(10, 10, 20),

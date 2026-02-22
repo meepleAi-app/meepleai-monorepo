@@ -252,7 +252,7 @@ public class WizardFailureScenarioTests
 
         _llmServiceMock
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameMetadataDto
             {
                 Title = "Unknown Game"
@@ -285,7 +285,7 @@ public class WizardFailureScenarioTests
 
         _llmServiceMock
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("LLM API unreachable"));
 
         var result = await handler.Handle(

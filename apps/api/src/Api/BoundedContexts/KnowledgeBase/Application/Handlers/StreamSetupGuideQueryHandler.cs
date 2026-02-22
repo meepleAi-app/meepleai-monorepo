@@ -264,7 +264,7 @@ etc.";
 
 TASK: Generate a step-by-step setup guide for this board game. Focus on the initial setup before gameplay begins.";
 
-        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken).ConfigureAwait(false);
 
         if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
         {

@@ -99,7 +99,7 @@ public class WizardE2EWorkflowTests
 
         _llmServiceMock
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameMetadataDto
             {
                 Title = "Catan",
@@ -209,7 +209,7 @@ public class WizardE2EWorkflowTests
 
         _llmServiceMock
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameMetadataDto
             {
                 Title = "Obscure Board Game",
@@ -314,7 +314,7 @@ public class WizardE2EWorkflowTests
         // LLM returns null (parsing failure)
         _llmServiceMock
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameMetadataDto?)null);
 
         var result = await extractHandler.Handle(

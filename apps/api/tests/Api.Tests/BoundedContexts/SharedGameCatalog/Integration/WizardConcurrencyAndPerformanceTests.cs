@@ -123,7 +123,7 @@ public class WizardConcurrencyAndPerformanceTests
 
                 llmServiceMock
                     .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                        It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new GameMetadataDto
                     {
                         Title = gameTitle,
@@ -234,7 +234,7 @@ public class WizardConcurrencyAndPerformanceTests
 
         llmServiceMock
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameMetadataDto
             {
                 Title = "Performance Test Game",
@@ -345,7 +345,7 @@ public class WizardConcurrencyAndPerformanceTests
 
                     llmServiceMock
                         .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
-                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
                         .ReturnsAsync(new GameMetadataDto { Title = $"Game {index}" });
 
                     var handler = new ExtractGameMetadataFromPdfQueryHandler(

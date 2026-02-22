@@ -85,6 +85,7 @@ internal sealed class LlmQuickQuestionGenerator : IQuickQuestionGenerator
             var result = await _llmService.GenerateJsonAsync<LlmQuestionResponse>(
                 SystemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result?.Questions == null || result.Questions.Count == 0)

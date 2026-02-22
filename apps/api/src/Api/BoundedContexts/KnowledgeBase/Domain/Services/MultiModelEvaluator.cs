@@ -138,6 +138,7 @@ internal sealed class MultiModelEvaluator : IMultiModelEvaluator
                 modelName,  // Explicit model ID (e.g., "openai/gpt-4")
                 SystemPrompt,
                 prompt,
+                RequestSource.AgentTask,
                 cancellationToken).ConfigureAwait(false);
 
             if (!result.Success || string.IsNullOrWhiteSpace(result.Response))

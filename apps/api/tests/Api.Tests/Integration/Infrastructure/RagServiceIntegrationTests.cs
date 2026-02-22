@@ -238,7 +238,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(hybridResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -292,7 +292,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(semanticResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -344,7 +344,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(keywordResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -399,7 +399,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(searchResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -445,7 +445,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(lowConfidenceResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -496,7 +496,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(hybridResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -546,7 +546,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
 
         var callCount = 0;
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -601,7 +601,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
 
         var callCount = 0;
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -662,7 +662,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(searchResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -744,7 +744,7 @@ public sealed class RagServiceIntegrationTests : IAsyncLifetime
             .ReturnsAsync(fusedResults);
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,

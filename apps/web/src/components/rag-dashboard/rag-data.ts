@@ -7,7 +7,7 @@
  *
  * @version 2.1.0
  * @lastUpdated 2026-02-19
- * @see docs/03-api/rag/appendix/F-calculation-formulas.md
+ * @see docs/api/rag/appendix/F-calculation-formulas.md
  */
 
 import type { RagStrategy } from './types';

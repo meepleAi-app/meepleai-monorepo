@@ -194,14 +194,444 @@ const nextConfig = {
       {
         source: '/giochi/:id*',
         destination: '/games/:id*',
-        permanent: true, // 301 redirect for SEO (update index)
+        permanent: true,
       },
-      // Legacy board-game-ai/ask redirect (consolidated from deleted src/middleware.ts)
+      // Legacy board-game-ai/ask redirect
       {
         source: '/board-game-ai/ask/:path*',
         destination: '/chat/new',
         permanent: true,
       },
+
+      // ── Issue #5039: User Route Consolidation ──────────────────────────────
+
+      // Library sub-routes → tabs on /library
+      {
+        source: '/library/wishlist',
+        destination: '/library?tab=wishlist',
+        permanent: true,
+      },
+      {
+        source: '/library/private',
+        destination: '/library?tab=private',
+        permanent: true,
+      },
+      {
+        source: '/library/proposals',
+        destination: '/discover?tab=proposals',
+        permanent: true,
+      },
+      {
+        source: '/library/propose',
+        destination: '/discover/propose',
+        permanent: true,
+      },
+
+      // Library game detail: /library/games/[gameId] → /library/[gameId]
+      {
+        source: '/library/games/:gameId',
+        destination: '/library/:gameId',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:gameId/agent',
+        destination: '/library/:gameId?tab=agent',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:gameId/toolkit',
+        destination: '/library/:gameId?tab=toolkit',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:gameId/faqs',
+        destination: '/library/:gameId?tab=faq',
+        permanent: true,
+      },
+      // Public game detail pages → /discover/[gameId]
+      {
+        source: '/games/:gameId/reviews',
+        destination: '/discover/:gameId?tab=reviews',
+        permanent: true,
+      },
+      {
+        source: '/games/:gameId/rules',
+        destination: '/discover/:gameId?tab=rules',
+        permanent: true,
+      },
+      {
+        source: '/games/:gameId/sessions',
+        destination: '/discover/:gameId?tab=sessions',
+        permanent: true,
+      },
+      {
+        source: '/games/:gameId/strategies',
+        destination: '/discover/:gameId?tab=strategies',
+        permanent: true,
+      },
+      {
+        source: '/games/:gameId/faqs',
+        destination: '/discover/:gameId?tab=faq',
+        permanent: true,
+      },
+      // Issue #5055: Game detail sub-routes (KB, agents, chats) → new canonical paths
+      {
+        source: '/games/:gameId/knowledge-base',
+        destination: '/library/:gameId?tab=agent',
+        permanent: true,
+      },
+      {
+        source: '/games/:gameId/agents',
+        destination: '/library/:gameId?tab=agent',
+        permanent: true,
+      },
+      {
+        source: '/games/:gameId/chats',
+        destination: '/chat',
+        permanent: true,
+      },
+      // Games catalog and add → /discover (specific routes before catch-all)
+      {
+        source: '/games/catalog',
+        destination: '/discover',
+        permanent: true,
+      },
+      {
+        source: '/games/add',
+        destination: '/discover/add',
+        permanent: true,
+      },
+
+      // Generic game detail → /discover (public catalog)
+      {
+        source: '/games/:gameId',
+        destination: '/discover/:gameId',
+        permanent: true,
+      },
+
+      // Agents: /agent/slots → /agents?tab=slots
+      {
+        source: '/agent/slots',
+        destination: '/agents?tab=slots',
+        permanent: true,
+      },
+
+      // Play records sub-routes → tabs on /play-records
+      {
+        source: '/play-records/stats',
+        destination: '/play-records?tab=stats',
+        permanent: true,
+      },
+
+      // Sessions sub-routes → tabs on /sessions
+      {
+        source: '/sessions/history',
+        destination: '/sessions?tab=history',
+        permanent: true,
+      },
+
+      // Profile & settings consolidation → /profile hub
+      // Reverse the old /profile → /settings redirect
+      {
+        source: '/settings',
+        destination: '/profile?tab=settings',
+        permanent: true,
+      },
+      {
+        source: '/settings/notifications',
+        destination: '/profile?tab=settings&section=notifications',
+        permanent: true,
+      },
+      {
+        source: '/settings/security',
+        destination: '/profile?tab=settings&section=security',
+        permanent: true,
+      },
+      // Catch-all for any other /settings sub-paths not explicitly listed above
+      {
+        source: '/settings/:path*',
+        destination: '/profile?tab=settings',
+        permanent: true,
+      },
+      {
+        source: '/profile/achievements',
+        destination: '/profile?tab=achievements',
+        permanent: true,
+      },
+      {
+        source: '/badges',
+        destination: '/profile?tab=badges',
+        permanent: true,
+      },
+
+      // Dashboard → /library (home for authenticated users)
+      // Note: / is the public landing; (public)/page.tsx redirects auth users to /dashboard.
+      // We redirect /dashboard → /library so the gaming hub is at /library (primary user route).
+      // The dashboard page at /dashboard is preserved as fallback during transition.
+      // {
+      //   source: '/dashboard',
+      //   destination: '/library',
+      //   permanent: true,
+      // },
+
+      // ── Issue #5040: Admin Route Consolidation ─────────────────────────────
+
+      // Admin AI hub (/admin/ai)
+      {
+        source: '/admin/agents/catalog',
+        destination: '/admin/ai',
+        permanent: true,
+      },
+      {
+        source: '/admin/agents/metrics',
+        destination: '/admin/ai?tab=agents&section=metrics',
+        permanent: true,
+      },
+      {
+        source: '/admin/agents/test',
+        destination: '/admin/ai?tab=agents&section=test',
+        permanent: true,
+      },
+      {
+        source: '/admin/agents/test-history',
+        destination: '/admin/ai?tab=agents&section=test-history',
+        permanent: true,
+      },
+      {
+        source: '/admin/agent-typologies',
+        destination: '/admin/ai?tab=typologies',
+        permanent: true,
+      },
+      {
+        source: '/admin/agent-typologies/create',
+        destination: '/admin/ai?tab=typologies&action=create',
+        permanent: true,
+      },
+      {
+        source: '/admin/agent-typologies/pending',
+        destination: '/admin/ai?tab=typologies&section=pending',
+        permanent: true,
+      },
+      {
+        source: '/admin/agent-definitions',
+        destination: '/admin/ai?tab=definitions',
+        permanent: true,
+      },
+      {
+        source: '/admin/agent-definitions/create',
+        destination: '/admin/ai?tab=definitions&action=create',
+        permanent: true,
+      },
+      {
+        source: '/admin/agent-definitions/playground',
+        destination: '/admin/ai?tab=definitions&section=playground',
+        permanent: true,
+      },
+      {
+        source: '/admin/ai-lab',
+        destination: '/admin/ai?tab=lab',
+        permanent: true,
+      },
+      {
+        source: '/admin/ai-lab/multi-agent',
+        destination: '/admin/ai?tab=lab&section=multi-agent',
+        permanent: true,
+      },
+      {
+        source: '/admin/prompts',
+        destination: '/admin/ai?tab=prompts',
+        permanent: true,
+      },
+      {
+        source: '/admin/ai-models',
+        destination: '/admin/ai?tab=models',
+        permanent: true,
+      },
+      {
+        source: '/admin/ai-requests',
+        destination: '/admin/ai?tab=requests',
+        permanent: true,
+      },
+      {
+        source: '/admin/rag',
+        destination: '/admin/ai?tab=rag',
+        permanent: true,
+      },
+      {
+        source: '/admin/rag-executions',
+        destination: '/admin/ai?tab=rag&section=executions',
+        permanent: true,
+      },
+
+      // Admin Content hub (/admin/content)
+      {
+        source: '/admin/games',
+        destination: '/admin/content',
+        permanent: true,
+      },
+      {
+        source: '/admin/games/import',
+        destination: '/admin/content?tab=games&section=import',
+        permanent: true,
+      },
+      {
+        source: '/admin/games/import/:path*',
+        destination: '/admin/content?tab=games&section=import',
+        permanent: true,
+      },
+      {
+        source: '/admin/shared-games',
+        destination: '/admin/content?tab=shared',
+        permanent: true,
+      },
+      {
+        source: '/admin/shared-games/approval-queue',
+        destination: '/admin/content?tab=shared&section=approval',
+        permanent: true,
+      },
+      {
+        source: '/admin/shared-games/pending-approvals',
+        destination: '/admin/content?tab=shared&section=pending',
+        permanent: true,
+      },
+      {
+        source: '/admin/shared-games/pending-deletes',
+        destination: '/admin/content?tab=shared&section=pending-deletes',
+        permanent: true,
+      },
+      {
+        source: '/admin/faqs',
+        destination: '/admin/content?tab=faqs',
+        permanent: true,
+      },
+      {
+        source: '/admin/pdfs',
+        destination: '/admin/content?tab=kb',
+        permanent: true,
+      },
+      {
+        source: '/admin/game-sessions',
+        destination: '/admin/content?tab=sessions',
+        permanent: true,
+      },
+      {
+        source: '/admin/share-requests',
+        destination: '/admin/content?tab=shared&section=requests',
+        permanent: true,
+      },
+
+      // Admin Analytics hub (/admin/analytics)
+      {
+        source: '/admin/usage-stats',
+        destination: '/admin/analytics?tab=ai-usage',
+        permanent: true,
+      },
+      {
+        source: '/admin/ai-usage',
+        destination: '/admin/analytics?tab=ai-usage',
+        permanent: true,
+      },
+      {
+        source: '/admin/audit-log',
+        destination: '/admin/analytics?tab=audit',
+        permanent: true,
+      },
+      {
+        source: '/admin/reports',
+        destination: '/admin/analytics?tab=reports',
+        permanent: true,
+      },
+      {
+        source: '/admin/api-keys',
+        destination: '/admin/analytics?tab=api-keys',
+        permanent: true,
+      },
+
+      // Admin Config hub (/admin/config)
+      {
+        source: '/admin/configuration',
+        destination: '/admin/config',
+        permanent: true,
+      },
+      {
+        source: '/admin/configuration/:path*',
+        destination: '/admin/config?tab=limits&section=:path',
+        permanent: true,
+      },
+      {
+        source: '/admin/feature-flags',
+        destination: '/admin/config?tab=flags',
+        permanent: true,
+      },
+      {
+        source: '/admin/config/rate-limits',
+        destination: '/admin/config?tab=rate-limits',
+        permanent: true,
+      },
+      {
+        source: '/admin/tier-limits',
+        destination: '/admin/config?tab=limits&section=tiers',
+        permanent: true,
+      },
+      {
+        source: '/admin/n8n-templates',
+        destination: '/admin/config?tab=n8n',
+        permanent: true,
+      },
+      {
+        source: '/admin/wizard',
+        destination: '/admin/config?tab=wizard',
+        permanent: true,
+      },
+
+      // Admin Monitor hub (/admin/monitor)
+      {
+        source: '/admin/alerts',
+        destination: '/admin/monitor',
+        permanent: true,
+      },
+      {
+        source: '/admin/alerts/config',
+        destination: '/admin/monitor?tab=alerts&section=config',
+        permanent: true,
+      },
+      {
+        source: '/admin/alert-rules',
+        destination: '/admin/monitor?tab=alerts&section=rules',
+        permanent: true,
+      },
+      {
+        source: '/admin/cache',
+        destination: '/admin/monitor?tab=cache',
+        permanent: true,
+      },
+      {
+        source: '/admin/infrastructure',
+        destination: '/admin/monitor?tab=infra',
+        permanent: true,
+      },
+      {
+        source: '/admin/services',
+        destination: '/admin/monitor?tab=services',
+        permanent: true,
+      },
+      {
+        source: '/admin/command-center',
+        destination: '/admin/monitor?tab=command',
+        permanent: true,
+      },
+      {
+        source: '/admin/testing',
+        destination: '/admin/monitor?tab=testing',
+        permanent: true,
+      },
+      {
+        source: '/admin/bulk-export',
+        destination: '/admin/monitor?tab=export',
+        permanent: true,
+      },
+
+      // Admin Users hub (/admin/users)
     ];
   },
 

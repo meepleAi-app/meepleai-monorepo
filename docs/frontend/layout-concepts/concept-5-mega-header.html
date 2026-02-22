@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeepleAI — Concept 5: Mega-Header</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:             hsl(30, 25%, 97%);
+      --fg:             hsl(30, 15%, 15%);
+      --card:           hsl(0, 0%, 100%);
+      --card-fg:        hsl(30, 15%, 15%);
+      --border:         hsl(30, 15%, 85%);
+      --muted:          hsl(30, 20%, 90%);
+      --muted-fg:       hsl(30, 12%, 35%);
+      --primary:        hsl(25, 95%, 38%);
+      --primary-fg:     hsl(0, 0%, 100%);
+      --secondary:      hsl(142, 76%, 28%);
+      --accent:         hsl(271, 91%, 55%);
+      --sidebar-bg:     hsl(30, 22%, 94%);
+      --sidebar-fg:     hsl(30, 15%, 20%);
+      --sidebar-border: hsl(30, 15%, 82%);
+      --e-game:         hsl(25, 95%, 45%);
+      --e-agent:        hsl(38, 92%, 50%);
+      --e-chat:         hsl(220, 80%, 55%);
+      --e-session:      hsl(240, 60%, 55%);
+      --shadow-sm:      0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --shadow-md:      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.12), 0 1px 2px rgba(180,130,80,0.08);
+      --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.15), 0 2px 4px rgba(180,130,80,0.08);
+      --radius-sm:   6px;
+      --radius-md:   8px;
+      --radius-lg:   12px;
+      --radius-xl:   16px;
+      --radius-full: 9999px;
+      --transition:  200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html.dark {
+      --bg:             hsl(0, 0%, 10%);
+      --fg:             hsl(30, 25%, 90%);
+      --card:           hsl(0, 0%, 18%);
+      --card-fg:        hsl(30, 25%, 90%);
+      --border:         hsl(0, 0%, 25%);
+      --muted:          hsl(0, 0%, 22%);
+      --muted-fg:       hsl(30, 10%, 60%);
+      --sidebar-bg:     hsl(0, 0%, 15%);
+      --sidebar-fg:     hsl(30, 25%, 90%);
+      --sidebar-border: hsl(0, 0%, 22%);
+      --shadow-warm-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-warm-md: 0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    body.mobile-view .app-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      background: hsl(220, 15%, 30%);
+      padding: 24px;
+    }
+    body.mobile-view .app {
+      width: 375px;
+      height: 812px;
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+      border: 8px solid hsl(220,10%,20%);
+    }
+    body.mobile-view .mega-row-1 { height: auto; flex-wrap: wrap; gap: 4px; padding: 8px 12px; }
+    body.mobile-view .mega-row-2 { height: auto; flex-wrap: wrap; gap: 4px; padding: 6px 12px; }
+    body.mobile-view .row1-actions { flex-wrap: wrap; gap: 4px; }
+    body.mobile-view .action-label { display: none; }
+    body.mobile-view .row1-title { font-size: 16px; }
+
+    /* ─── MEGA-HEADER ───────────────────────────────────────────────────────── */
+    .mega-header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    /* ROW 1: section title + mini-nav tabs */
+    .mega-row-1 {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .row1-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--primary);
+      text-decoration: none;
+      margin-right: 16px;
+      white-space: nowrap;
+    }
+    .logo-icon { font-size: 20px; }
+    .row1-title {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--fg);
+      margin-right: 20px;
+      white-space: nowrap;
+    }
+    .row1-title-divider {
+      width: 1px; height: 20px;
+      background: var(--border);
+      margin-right: 12px;
+    }
+
+    /* Mini-nav tabs in row 1 */
+    .row1-tabs {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+    }
+    .r1-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: none;
+      background: transparent;
+      color: var(--muted-fg);
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+      white-space: nowrap;
+    }
+    .r1-tab:hover { background: var(--muted); color: var(--fg); }
+    .r1-tab.active {
+      background: hsl(25, 95%, 45%, 0.12);
+      color: var(--primary);
+    }
+    .tab-indicator {
+      display: none;
+      width: 6px; height: 6px;
+      background: var(--primary);
+      border-radius: var(--radius-full);
+    }
+    .r1-tab.active .tab-indicator { display: inline-block; }
+    .tab-count {
+      background: var(--muted); color: var(--muted-fg);
+      font-size: 11px; font-weight: 700;
+      padding: 1px 6px; border-radius: var(--radius-full);
+    }
+    .r1-tab.active .tab-count { background: hsl(25, 95%, 45%, 0.15); color: var(--primary); }
+
+    /* Row 1 right: actions */
+    .row1-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .btn-primary {
+      display: flex; align-items: center; gap: 5px; padding: 7px 14px;
+      background: var(--primary); color: white; border: none;
+      border-radius: var(--radius-md); font-family: 'Nunito', sans-serif;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background var(--transition); white-space: nowrap;
+    }
+    .btn-primary:hover { background: hsl(25, 95%, 34%); }
+    .btn-ghost-sm {
+      display: flex; align-items: center; gap: 5px; padding: 7px 11px;
+      border: 1px solid var(--border); background: transparent;
+      border-radius: var(--radius-md); font-family: 'Nunito', sans-serif;
+      font-size: 13px; font-weight: 600; color: var(--fg);
+      cursor: pointer; transition: background var(--transition); white-space: nowrap;
+    }
+    .btn-ghost-sm:hover { background: var(--muted); }
+    .action-label { display: inline; }
+
+    /* ROW 2: main nav icons + right controls */
+    .mega-row-2 {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 0;
+      background: var(--sidebar-bg);
+    }
+
+    /* Main nav as icon + label items */
+    .row2-mainnav {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+    }
+    .main-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: none;
+      background: transparent;
+      color: var(--sidebar-fg);
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+      white-space: nowrap;
+    }
+    .main-nav-item:hover { background: hsl(30,20%,88%); }
+    html.dark .main-nav-item:hover { background: hsl(0,0%,20%); }
+    .main-nav-item.active { background: hsl(25, 95%, 45%, 0.12); color: var(--primary); }
+    .nav-icon { font-size: 16px; }
+
+    .row2-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .row2-divider { width: 1px; height: 20px; background: var(--sidebar-border); }
+    .icon-btn {
+      position: relative; width: 34px; height: 34px;
+      border: none; background: transparent; border-radius: var(--radius-md);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--sidebar-fg); transition: background var(--transition);
+    }
+    .icon-btn:hover { background: hsl(30,20%,88%); }
+    html.dark .icon-btn:hover { background: hsl(0,0%,20%); }
+    .badge {
+      position: absolute; top: 1px; right: 1px;
+      background: hsl(0, 80%, 55%); color: white;
+      font-size: 8px; font-weight: 700; min-width: 14px; height: 14px;
+      border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; padding: 0 2px;
+    }
+    .avatar {
+      width: 30px; height: 30px; border-radius: var(--radius-full);
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 11px;
+      cursor: pointer; border: 2px solid var(--border);
+    }
+
+    /* ─── CONTENT (full width, no bottom bar) ───────────────────────────────── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      background: var(--bg);
+    }
+    .content-header {
+      display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 20px;
+    }
+    .content-title { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 22px; color: var(--fg); }
+    .content-subtitle { font-size: 13px; color: var(--muted-fg); margin-top: 2px; }
+    .search-input {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-full); padding: 6px 14px;
+      font-size: 13px; color: var(--muted-fg); cursor: text;
+      min-width: 180px; box-shadow: var(--shadow-warm-sm);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    /* ─── MEEPLE CARD ───────────────────────────────────────────────────────── */
+    .meeple-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); box-shadow: var(--shadow-warm-sm);
+      overflow: hidden; transition: transform var(--transition), box-shadow var(--transition);
+      cursor: pointer; display: flex; flex-direction: column;
+    }
+    .meeple-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-warm-md); }
+    .card-image { height: 180px; position: relative; overflow: hidden; flex-shrink: 0; }
+    .card-image-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 64px; }
+    .card-image-overlay { position: absolute; inset: 0; opacity: 0.15; }
+    .card-image-gradient { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to top, rgba(0,0,0,0.5), transparent); }
+    .card-rating-badge {
+      position: absolute; top: 10px; right: 10px;
+      background: var(--primary); color: white;
+      font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 13px;
+      padding: 3px 8px; border-radius: var(--radius-full);
+    }
+    .card-entity-tag {
+      position: absolute; bottom: 10px; left: 10px;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); color: white;
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full);
+    }
+    .card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .card-title {
+      font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 15px;
+      color: var(--card-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-subtitle { font-size: 12px; color: var(--muted-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-stats { display: flex; gap: 10px; margin-top: 2px; }
+    .card-stat { font-size: 11px; color: var(--muted-fg); }
+    .card-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+    .card-tag { background: hsl(25, 95%, 45%, 0.1); color: var(--primary); border-radius: var(--radius-full); padding: 2px 8px; font-size: 11px; font-weight: 600; }
+    .card-actions { display: flex; gap: 6px; padding: 8px 14px 12px; border-top: 1px solid var(--border); margin-top: auto; }
+    .card-action-btn {
+      flex: 1; padding: 6px 8px; border: 1px solid var(--border);
+      background: transparent; border-radius: var(--radius-md);
+      font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 600; color: var(--fg);
+      cursor: pointer; transition: background var(--transition);
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .card-action-btn:hover { background: var(--muted); }
+    .card-action-btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+    .card-action-btn.primary:hover { background: hsl(25, 95%, 34%); }
+
+    /* ─── Concept Label ─────────────────────────────────────────────────────── */
+    .concept-label {
+      position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: white;
+      font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 12px;
+      padding: 4px 14px; border-radius: var(--radius-full);
+      z-index: 9999; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-md);
+    }
+    .controls {
+      position: fixed; bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 8px; z-index: 9999;
+    }
+    .control-btn {
+      display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-full);
+      font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 700; color: var(--fg);
+      cursor: pointer; box-shadow: var(--shadow-md); transition: background var(--transition); white-space: nowrap;
+    }
+    .control-btn:hover { background: var(--muted); }
+    .switcher {
+      position: fixed; bottom: 24px; left: 24px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 10px; box-shadow: var(--shadow-md);
+      z-index: 9999; display: flex; flex-direction: column; gap: 4px; min-width: 180px;
+    }
+    .switcher-title {
+      font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-fg);
+      padding: 0 4px 4px; border-bottom: 1px solid var(--border); margin-bottom: 2px;
+    }
+    .switcher a {
+      display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+      border-radius: var(--radius-md); font-family: 'Nunito', sans-serif;
+      font-size: 12px; font-weight: 600; color: var(--muted-fg);
+      text-decoration: none; transition: background var(--transition), color var(--transition);
+    }
+    .switcher a:hover { background: var(--muted); color: var(--fg); }
+    .switcher a.current { background: hsl(25, 95%, 45%, 0.12); color: var(--primary); }
+    .switcher-dot { width: 8px; height: 8px; border-radius: var(--radius-full); flex-shrink: 0; }
+    .content::-webkit-scrollbar { width: 6px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-full); }
+  </style>
+</head>
+<body>
+  <div class="concept-label">Concept 5 — Mega-Header</div>
+
+  <div class="app-wrapper">
+    <div class="app">
+
+      <!-- MEGA-HEADER -->
+      <header class="mega-header">
+
+        <!-- ROW 1: logo + section title + mini-nav tabs + action buttons -->
+        <div class="mega-row-1">
+          <a class="row1-logo" href="#">
+            <span class="logo-icon">🎲</span>
+          </a>
+          <div class="row1-title-divider"></div>
+          <span class="row1-title">Library</span>
+          <div class="row1-title-divider"></div>
+
+          <!-- Mini-nav tabs embedded in row 1 -->
+          <div class="row1-tabs">
+            <button class="r1-tab active">
+              <span class="tab-indicator"></span>
+              Games <span class="tab-count">47</span>
+            </button>
+            <button class="r1-tab">Wishlist <span class="tab-count">12</span></button>
+            <button class="r1-tab">Private <span class="tab-count">4</span></button>
+            <button class="r1-tab">History</button>
+          </div>
+
+          <!-- Action buttons on the right of row 1 -->
+          <div class="row1-actions">
+            <button class="btn-primary">＋ <span class="action-label">Add Game</span></button>
+            <button class="btn-ghost-sm">📋 <span class="action-label">Import BGG</span></button>
+            <button class="btn-ghost-sm">📄 <span class="action-label">Import PDF</span></button>
+            <button class="btn-ghost-sm">⚙ <span class="action-label">Filter</span></button>
+          </div>
+        </div>
+
+        <!-- ROW 2: main nav icons + search + avatar -->
+        <div class="mega-row-2">
+          <div class="row2-mainnav">
+            <button class="main-nav-item active">
+              <span class="nav-icon">📚</span>Library
+            </button>
+            <button class="main-nav-item">
+              <span class="nav-icon">🤖</span>Tool
+            </button>
+            <button class="main-nav-item">
+              <span class="nav-icon">🔍</span>Discover
+            </button>
+            <button class="main-nav-item">
+              <span class="nav-icon">💬</span>Chat
+            </button>
+            <button class="main-nav-item">
+              <span class="nav-icon">📊</span>Sessions
+            </button>
+            <button class="main-nav-item">
+              <span class="nav-icon">⚙</span>Admin
+            </button>
+          </div>
+
+          <div class="row2-right">
+            <div class="search-input" style="min-width: 160px; padding: 5px 12px; font-size: 12px;">
+              <span>🔍</span> Search…
+            </div>
+            <div class="row2-divider"></div>
+            <button class="icon-btn" aria-label="Notifications">🔔<span class="badge">3</span></button>
+            <div class="avatar">MU</div>
+          </div>
+        </div>
+
+      </header>
+
+      <!-- CONTENT: full width, no bottom bar -->
+      <main class="content">
+        <div class="content-header">
+          <div>
+            <div class="content-title">My Library</div>
+            <div class="content-subtitle">47 games in your collection</div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="meeple-card">
+            <div class="card-image">
+              <div class="card-image-bg" style="background: linear-gradient(135deg, hsl(25,95%,30%), hsl(38,92%,40%));">🏝️</div>
+              <div class="card-image-overlay" style="background: var(--e-game);"></div>
+              <div class="card-image-gradient"></div>
+              <span class="card-rating-badge">★ 8.4</span>
+              <span class="card-entity-tag">Strategy</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Catan</div>
+              <div class="card-subtitle">Klaus Teuber · 1995</div>
+              <div class="card-stats"><span class="card-stat">👥 3–4</span><span class="card-stat">⏱️ 90 min</span><span class="card-stat">🎯 3/5</span></div>
+              <div class="card-tags"><span class="card-tag">Trading</span><span class="card-tag">Resource</span></div>
+            </div>
+            <div class="card-actions">
+              <button class="card-action-btn primary">▶ Play</button>
+              <button class="card-action-btn">🤖 AI</button>
+              <button class="card-action-btn">···</button>
+            </div>
+          </div>
+
+          <div class="meeple-card">
+            <div class="card-image">
+              <div class="card-image-bg" style="background: linear-gradient(135deg, hsl(220,80%,30%), hsl(200,70%,40%));">🦠</div>
+              <div class="card-image-overlay" style="background: var(--e-chat);"></div>
+              <div class="card-image-gradient"></div>
+              <span class="card-rating-badge">★ 9.1</span>
+              <span class="card-entity-tag">Cooperative</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Pandemic</div>
+              <div class="card-subtitle">Matt Leacock · 2008</div>
+              <div class="card-stats"><span class="card-stat">👥 2–4</span><span class="card-stat">⏱️ 75 min</span><span class="card-stat">🎯 4/5</span></div>
+              <div class="card-tags"><span class="card-tag">Co-op</span><span class="card-tag">Medical</span></div>
+            </div>
+            <div class="card-actions">
+              <button class="card-action-btn primary">▶ Play</button>
+              <button class="card-action-btn">🤖 AI</button>
+              <button class="card-action-btn">···</button>
+            </div>
+          </div>
+
+          <div class="meeple-card">
+            <div class="card-image">
+              <div class="card-image-bg" style="background: linear-gradient(135deg, hsl(15,80%,35%), hsl(35,75%,45%));">🪐</div>
+              <div class="card-image-overlay" style="background: var(--e-game);"></div>
+              <div class="card-image-gradient"></div>
+              <span class="card-rating-badge">★ 9.3</span>
+              <span class="card-entity-tag">Engine Building</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Terraforming Mars</div>
+              <div class="card-subtitle">Jacob Fryxelius · 2016</div>
+              <div class="card-stats"><span class="card-stat">👥 1–5</span><span class="card-stat">⏱️ 180 min</span><span class="card-stat">🎯 4/5</span></div>
+              <div class="card-tags"><span class="card-tag">Sci-Fi</span><span class="card-tag">Drafting</span></div>
+            </div>
+            <div class="card-actions">
+              <button class="card-action-btn primary">▶ Play</button>
+              <button class="card-action-btn">🤖 AI</button>
+              <button class="card-action-btn">···</button>
+            </div>
+          </div>
+
+          <div class="meeple-card">
+            <div class="card-image">
+              <div class="card-image-bg" style="background: linear-gradient(135deg, hsl(142,60%,25%), hsl(170,55%,35%));">🦅</div>
+              <div class="card-image-overlay" style="background: var(--secondary);"></div>
+              <div class="card-image-gradient"></div>
+              <span class="card-rating-badge">★ 9.0</span>
+              <span class="card-entity-tag">Engine Building</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Wingspan</div>
+              <div class="card-subtitle">Elizabeth Hargrave · 2019</div>
+              <div class="card-stats"><span class="card-stat">👥 1–5</span><span class="card-stat">⏱️ 90 min</span><span class="card-stat">🎯 3/5</span></div>
+              <div class="card-tags"><span class="card-tag">Nature</span><span class="card-tag">Cards</span></div>
+            </div>
+            <div class="card-actions">
+              <button class="card-action-btn primary">▶ Play</button>
+              <button class="card-action-btn">🤖 AI</button>
+              <button class="card-action-btn">···</button>
+            </div>
+          </div>
+
+          <div class="meeple-card">
+            <div class="card-image">
+              <div class="card-image-bg" style="background: linear-gradient(135deg, hsl(38,70%,35%), hsl(55,65%,40%));">🏰</div>
+              <div class="card-image-overlay" style="background: var(--e-agent);"></div>
+              <div class="card-image-gradient"></div>
+              <span class="card-rating-badge">★ 8.7</span>
+              <span class="card-entity-tag">Tile Placement</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Carcassonne</div>
+              <div class="card-subtitle">Klaus-Jürgen Wrede · 2000</div>
+              <div class="card-stats"><span class="card-stat">👥 2–5</span><span class="card-stat">⏱️ 45 min</span><span class="card-stat">🎯 2/5</span></div>
+              <div class="card-tags"><span class="card-tag">Medieval</span><span class="card-tag">Tiles</span></div>
+            </div>
+            <div class="card-actions">
+              <button class="card-action-btn primary">▶ Play</button>
+              <button class="card-action-btn">🤖 AI</button>
+              <button class="card-action-btn">···</button>
+            </div>
+          </div>
+
+          <div class="meeple-card">
+            <div class="card-image">
+              <div class="card-image-bg" style="background: linear-gradient(135deg, hsl(271,60%,30%), hsl(290,55%,40%));">👑</div>
+              <div class="card-image-overlay" style="background: var(--accent);"></div>
+              <div class="card-image-gradient"></div>
+              <span class="card-rating-badge">★ 8.9</span>
+              <span class="card-entity-tag">Deck Building</span>
+            </div>
+            <div class="card-body">
+              <div class="card-title">Dominion</div>
+              <div class="card-subtitle">Donald X. Vaccarino · 2008</div>
+              <div class="card-stats"><span class="card-stat">👥 2–4</span><span class="card-stat">⏱️ 30 min</span><span class="card-stat">🎯 3/5</span></div>
+              <div class="card-tags"><span class="card-tag">Deck Build</span><span class="card-tag">Cards</span></div>
+            </div>
+            <div class="card-actions">
+              <button class="card-action-btn primary">▶ Play</button>
+              <button class="card-action-btn">🤖 AI</button>
+              <button class="card-action-btn">···</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="control-btn" id="darkToggle" onclick="toggleDark()">🌙 Dark Mode</button>
+    <button class="control-btn" id="mobileToggle" onclick="toggleMobile()">📱 Mobile View</button>
+  </div>
+
+  <div class="switcher">
+    <div class="switcher-title">Layout Concepts</div>
+    <a href="concept-1-stack.html"><span class="switcher-dot" style="background:hsl(25,95%,45%)"></span>1 — Stack</a>
+    <a href="concept-2-commander.html"><span class="switcher-dot" style="background:hsl(220,80%,55%)"></span>2 — Commander</a>
+    <a href="concept-3-sidebar-free.html"><span class="switcher-dot" style="background:hsl(142,76%,28%)"></span>3 — Sidebar-Free</a>
+    <a href="concept-4-floating.html"><span class="switcher-dot" style="background:hsl(38,92%,50%)"></span>4 — Floating</a>
+    <a href="concept-5-mega-header.html" class="current"><span class="switcher-dot" style="background:hsl(271,91%,55%)"></span>5 — Mega-Header</a>
+  </div>
+
+  <script>
+    function toggleDark() {
+      document.documentElement.classList.toggle('dark');
+      document.getElementById('darkToggle').textContent =
+        document.documentElement.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+    function toggleMobile() {
+      document.body.classList.toggle('mobile-view');
+      document.getElementById('mobileToggle').textContent =
+        document.body.classList.contains('mobile-view') ? '🖥 Desktop View' : '📱 Mobile View';
+    }
+    document.querySelectorAll('.r1-tab').forEach(t => {
+      t.addEventListener('click', () => {
+        document.querySelectorAll('.r1-tab').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+      });
+    });
+    document.querySelectorAll('.main-nav-item').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.main-nav-item').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -102,9 +102,13 @@ import { TimeTravelOverlay } from './meeple-card-features/TimeTravelOverlay';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
+// Issue #5025: Drawer integration
+import { ExtraMeepleCardDrawer } from './extra-meeple-card/ExtraMeepleCardDrawer';
+import type { DrawerEntityType } from './extra-meeple-card/ExtraMeepleCardDrawer';
 // Issue #4361: Agent-specific display components
 // Issue #4400: ChatSession-specific display components
 
+import { Info } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // Feature components (Issue #3820)
@@ -256,6 +260,13 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   /** Feature: Info Button (always-visible navigation to detail page) */
   showInfoButton?: boolean;
+  /**
+   * Entity ID for drawer-based detail view (Issue #5025).
+   * When present, the "i" button opens ExtraMeepleCardDrawer instead of navigating.
+   * If absent, the button is not rendered (unless infoHref is set for backward compat).
+   */
+  entityId?: string;
+  /** @deprecated Use entityId instead. Kept for backward compatibility. */
   infoHref?: string;
   infoTooltip?: string;
 
@@ -369,6 +380,15 @@ const entityColors: Record<MeepleEntityType, { hsl: string; name: string }> = {
   chatSession: { hsl: '220 80% 55%', name: 'Chat' }, // Blue
   event: { hsl: '350 89% 60%', name: 'Event' },      // Rose
   custom: { hsl: '220 70% 50%', name: 'Custom' },    // Blue (default)
+};
+
+// Map MeepleEntityType → DrawerEntityType for ExtraMeepleCardDrawer (Issue #5025)
+// Entities absent from this map do not render an info button.
+const DRAWER_ENTITY_TYPE_MAP: Partial<Record<MeepleEntityType, DrawerEntityType>> = {
+  game: 'game',
+  agent: 'agent',
+  chatSession: 'chat',
+  document: 'kb',
 };
 
 // ============================================================================
@@ -924,6 +944,7 @@ export const MeepleCard = React.memo(function MeepleCard({
   // Issue #4030: New action props
   entityQuickActions,
   showInfoButton,
+  entityId,
   infoHref,
   infoTooltip,
   // Issue #4181: Vertical Tag Strip
@@ -978,11 +999,17 @@ export const MeepleCard = React.memo(function MeepleCard({
   const hasQuickActions = quickActions && quickActions.length > 0;
   const showWishlistBtn = showWishlist && !hasQuickActions; // Priority: quickActions > wishlist
 
+  // Drawer state (Issue #5025)
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // eslint-disable-next-line security/detect-object-injection
+  const drawerEntityType = DRAWER_ENTITY_TYPE_MAP[entity];
+
   // Mobile touch UX: Bottom sheet for actions (Issue #4604)
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const cardRef = useRef<HTMLDivElement | HTMLElement>(null);
-  const hasMobileActions = isMobile && (hasQuickActions || entityQuickActions || showWishlistBtn || showInfoButton);
+  const hasMobileActions = isMobile && (hasQuickActions || entityQuickActions || showWishlistBtn || (showInfoButton && (entityId || infoHref)));
 
   // Detect mobile/tablet viewport
   useEffect(() => {
@@ -1173,7 +1200,7 @@ export const MeepleCard = React.memo(function MeepleCard({
       <div className={contentVariants({ variant })}>
         {/* Feature: Top-right actions row (Issue #4030: QuickActions + InfoButton) */}
         {/* Desktop only: Show on hover. Mobile: Hidden (bottom sheet instead) */}
-        {(entityQuickActions || showInfoButton || showWishlistBtn || hasQuickActions) && (
+        {(entityQuickActions || (showInfoButton && (entityId || infoHref)) || showWishlistBtn || hasQuickActions) && (
           <div className={cn(
             "absolute right-2.5 flex items-center gap-1.5 z-15",
             // Push actions below unread badge row for chatSession
@@ -1207,7 +1234,18 @@ export const MeepleCard = React.memo(function MeepleCard({
             )}
 
             {/* Info button (Issue #4030 - always visible, rightmost) */}
-            {showInfoButton && infoHref && (
+            {/* Issue #5025: entityId present → button mode (opens drawer) */}
+            {showInfoButton && entityId && drawerEntityType && (
+              <MeepleCardInfoButton
+                onClick={() => setDrawerOpen(true)}
+                entityType={entity}
+                customColor={customColor}
+                tooltip={infoTooltip}
+                size="sm"
+              />
+            )}
+            {/* Backward compat: only infoHref, no entityId → link mode */}
+            {showInfoButton && infoHref && !entityId && (
               <MeepleCardInfoButton
                 href={infoHref}
                 entityType={entity}
@@ -1445,6 +1483,16 @@ export const MeepleCard = React.memo(function MeepleCard({
         <CardNavigationFooter links={navigateTo} />
       )}
 
+      {/* ExtraMeepleCardDrawer (Issue #5025) — rendered inside card, portal to body */}
+      {entityId && drawerEntityType && (
+        <ExtraMeepleCardDrawer
+          entityType={drawerEntityType}
+          entityId={entityId}
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
+
       {/* Mobile Touch UX: Bottom Sheet for Quick Actions (Issue #4604) */}
       {showMobileActions && hasMobileActions && (
         <div
@@ -1493,13 +1541,24 @@ export const MeepleCard = React.memo(function MeepleCard({
           )}
 
           {/* Info Button */}
-          {showInfoButton && infoHref && (
+          {/* Issue #5025: entityId → opens drawer; fallback infoHref → navigate */}
+          {showInfoButton && entityId && drawerEntityType && (
+            <button
+              type="button"
+              className="px-4 py-2.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium min-h-[44px] flex items-center gap-2"
+              onClick={() => { setShowMobileActions(false); setDrawerOpen(true); }}
+            >
+              <Info className="h-4 w-4" aria-hidden="true" />
+              {infoTooltip || 'Info'}
+            </button>
+          )}
+          {showInfoButton && infoHref && !entityId && (
             <a
               href={infoHref}
               className="px-4 py-2.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium min-h-[44px] flex items-center gap-2"
               onClick={() => setShowMobileActions(false)}
             >
-              <span className="text-lg">ℹ️</span>
+              <Info className="h-4 w-4" aria-hidden="true" />
               {infoTooltip || 'Info'}
             </a>
           )}

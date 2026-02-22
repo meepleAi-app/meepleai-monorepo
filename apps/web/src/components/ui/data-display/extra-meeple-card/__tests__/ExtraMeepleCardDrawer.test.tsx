@@ -231,16 +231,66 @@ describe('ExtraMeepleCardDrawer', () => {
       });
     });
 
-    it('renders chat stub for chat entity', () => {
+    it('shows skeleton initially while fetching chat data', () => {
+      mockFetch.mockReturnValue(new Promise(() => {}));
       renderDrawer({ entityType: 'chat', entityId: 'thread-1' });
 
-      expect(screen.getByTestId(DRAWER_TEST_IDS.COMING_SOON(5027))).toBeInTheDocument();
+      expect(screen.getByTestId(DRAWER_TEST_IDS.LOADING_SKELETON)).toBeInTheDocument();
     });
 
-    it('renders kb stub for kb entity', () => {
+    it('renders chat content after successful fetch', async () => {
+      const threadApiResponse = {
+        id: 'thread-1',
+        status: 'active',
+        agentId: 'agent-1',
+        agentName: 'Catan Expert',
+        agentModel: 'gpt-4o',
+        gameId: 'game-1',
+        gameName: 'Catan',
+        startedAt: '2026-01-15T10:00:00Z',
+        messageCount: 2,
+      };
+      mockFetch.mockImplementation((url: string) => {
+        if ((url as string).includes('/messages')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response);
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(threadApiResponse) } as Response);
+      });
+      renderDrawer({ entityType: 'chat', entityId: 'thread-1' });
+
+      await waitFor(() => {
+        expect(screen.getByText('Catan Expert')).toBeInTheDocument();
+      });
+    });
+
+    it('shows skeleton initially while fetching kb data', () => {
+      mockFetch.mockReturnValue(new Promise(() => {}));
       renderDrawer({ entityType: 'kb', entityId: 'doc-1' });
 
-      expect(screen.getByTestId(DRAWER_TEST_IDS.COMING_SOON(5028))).toBeInTheDocument();
+      expect(screen.getByTestId(DRAWER_TEST_IDS.LOADING_SKELETON)).toBeInTheDocument();
+    });
+
+    it('renders kb content after successful fetch', async () => {
+      const kbApiResponse = {
+        id: 'doc-1',
+        fileName: 'catan-rules.pdf',
+        processingStatus: 'indexed',
+        fileSize: 204800,
+        pageCount: 10,
+        characterCount: 5000,
+        uploadedAt: '2026-01-10T09:00:00Z',
+        processedAt: '2026-01-10T09:05:00Z',
+        extractedText: 'Regole del gioco...',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(kbApiResponse),
+      } as Response);
+      renderDrawer({ entityType: 'kb', entityId: 'doc-1' });
+
+      await waitFor(() => {
+        expect(screen.getAllByText('catan-rules.pdf').length).toBeGreaterThan(0);
+      });
     });
   });
 
@@ -305,13 +355,15 @@ describe('ExtraMeepleCardDrawer', () => {
       renderDrawer({ entityType: 'game' });
 
       await waitFor(() => screen.getByRole('button', { name: /riprova/i }));
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // Game drawer makes 3 parallel calls (game, pdfs, agent-config)
+      const callsAfterInitial = mockFetch.mock.calls.length;
+      expect(callsAfterInitial).toBeGreaterThanOrEqual(1);
 
       // Setup successful response for retry
       mockSuccessfulFetch();
       await userEvent.click(screen.getByRole('button', { name: /riprova/i }));
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls.length).toBeGreaterThan(callsAfterInitial);
       await waitFor(() => {
         expect(screen.getByText('Catan')).toBeInTheDocument();
       });

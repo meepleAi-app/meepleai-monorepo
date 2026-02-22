@@ -56,13 +56,19 @@ export interface ResolvedNavigationLink {
  * The full entity-relationship navigation graph.
  *
  * ```
- * Game ──► KB, Agents, Chats, Sessions
- * Agent ──► Games, KB, Chats, Sessions
- * Document ──► Game, Agent
- * Session ──► Game, Players, Agent, Chats
- * Player ──► Sessions, Games
- * ChatSession ──► Game, Agent, Session
+ * Game ──► KB/Agent tab, Agent tab, Chats, Sessions
+ * Agent ──► Library, Library, Chats, Sessions
+ * Document ──► Game (library), Agent
+ * Session ──► Game (library), Players, Agent, Chats
+ * Player ──► Sessions, Library
+ * ChatSession ──► Game (library), Agent, Session
  * ```
+ *
+ * URLs updated for Epic #5033 route consolidation (Issue #5055):
+ * - Game detail pages → /library/[gameId] (was /games/[gameId])
+ * - KB / Agent views → /library/[gameId]?tab=agent (was /games/[gameId]/knowledge-base)
+ * - Chat lists → /chat (was /games/[gameId]/chats)
+ * - Session lists → /sessions (was /games/[gameId]/sessions)
  */
 export const ENTITY_NAVIGATION_GRAPH: Partial<
   Record<MeepleEntityType, EntityNavigationTarget[]>
@@ -71,45 +77,45 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<
     {
       entity: 'document',
       label: 'KB',
-      buildHref: (id) => `/games/${id}/knowledge-base`,
+      buildHref: (id) => `/library/${id}?tab=agent`,
     },
     {
       entity: 'agent',
       label: 'Agents',
-      buildHref: (id) => `/games/${id}/agents`,
+      buildHref: (id) => `/library/${id}?tab=agent`,
     },
     {
       entity: 'chatSession',
       label: 'Chats',
-      buildHref: (id) => `/games/${id}/chats`,
+      buildHref: (_id) => `/chat`,
     },
     {
       entity: 'session',
       label: 'Sessions',
-      buildHref: (id) => `/games/${id}/sessions`,
+      buildHref: (_id) => `/sessions`,
     },
   ],
 
   agent: [
     {
       entity: 'game',
-      label: 'Games',
-      buildHref: (id) => `/agents/${id}/games`,
+      label: 'Library',
+      buildHref: (_id) => `/library`,
     },
     {
       entity: 'document',
       label: 'KB',
-      buildHref: (id) => `/agents/${id}/knowledge-base`,
+      buildHref: (_id) => `/library`,
     },
     {
       entity: 'chatSession',
       label: 'Chats',
-      buildHref: (id) => `/agents/${id}/chats`,
+      buildHref: (_id) => `/chat`,
     },
     {
       entity: 'session',
       label: 'Sessions',
-      buildHref: (id) => `/agents/${id}/sessions`,
+      buildHref: (_id) => `/sessions`,
     },
   ],
 
@@ -118,7 +124,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<
       entity: 'game',
       label: 'Game',
       idKey: 'gameId',
-      buildHref: (id) => `/games/${id}`,
+      buildHref: (id) => `/library/${id}`,
     },
     {
       entity: 'agent',
@@ -133,7 +139,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<
       entity: 'game',
       label: 'Game',
       idKey: 'gameId',
-      buildHref: (id) => `/games/${id}`,
+      buildHref: (id) => `/library/${id}`,
     },
     {
       entity: 'player',
@@ -161,8 +167,8 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<
     },
     {
       entity: 'game',
-      label: 'Games',
-      buildHref: (id) => `/players/${id}/games`,
+      label: 'Library',
+      buildHref: (_id) => `/library`,
     },
   ],
 
@@ -171,7 +177,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<
       entity: 'game',
       label: 'Game',
       idKey: 'gameId',
-      buildHref: (id) => `/games/${id}`,
+      buildHref: (id) => `/library/${id}`,
     },
     {
       entity: 'agent',
@@ -198,7 +204,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<
  *
  * ```ts
  * const links = getNavigationLinks('game', { id: '123' });
- * // [{ entity: 'document', label: 'KB', href: '/games/123/knowledge-base' }, …]
+ * // [{ entity: 'document', label: 'KB', href: '/library/123?tab=agent' }, …]
  * ```
  */
 export function getNavigationLinks(

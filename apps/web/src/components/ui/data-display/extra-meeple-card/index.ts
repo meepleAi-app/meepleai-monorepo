@@ -4,6 +4,9 @@
  * Issue #4762 - Media Tab + AI Tab + Other Entity Types
  * Issue #4763 - Interactive Cards + Timer + Events Timeline UI
  * Issue #5026 - AgentExtraMeepleCard (Epic #5023)
+ * Issue #5027 - ChatExtraMeepleCard (Epic #5023)
+ * Issue #5028 - KbExtraMeepleCard (Epic #5023)
+ * Issue #5029 - GameExtraMeepleCard update: KB + Agent tabs (Epic #5023)
  */
 
 export { ExtraMeepleCard } from './ExtraMeepleCard';
@@ -12,6 +15,8 @@ export {
   PlayerExtraMeepleCard,
   CollectionExtraMeepleCard,
   AgentExtraMeepleCard,
+  ChatExtraMeepleCard,
+  KbExtraMeepleCard,
 } from './EntityExtraMeepleCard';
 export {
   ExtraMeepleCardDrawer,
@@ -48,11 +53,16 @@ export type {
   AIQuickAction,
   AITabData,
   GameDetailData,
+  GameAgentPreview,
   PlayerDetailData,
   CollectionDetailData,
   AgentDetailData,
   ChatThreadPreview,
   KbDocumentPreview,
+  ChatStatus,
+  ChatDetailMessage,
+  ChatDetailData,
+  KbDetailData,
   CardZone,
   CardEntry,
   CardDeckState,

@@ -16,14 +16,16 @@
 import React from 'react';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { LIBRARY_TABS, getActiveLibraryTab } from '@/config/library-navigation';
 import { cn } from '@/lib/utils';
 
 export function LibraryNavTabs() {
   const pathname = usePathname() ?? '/library';
-  const activeTabId = getActiveLibraryTab(pathname);
+  const searchParams = useSearchParams();
+  const search = searchParams?.toString() ? `?${searchParams.toString()}` : '';
+  const activeTabId = getActiveLibraryTab(pathname, search);
 
   const handleKeyDown = (e: React.KeyboardEvent, tabIndex: number) => {
     let newIndex = tabIndex;

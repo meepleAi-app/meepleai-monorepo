@@ -14,6 +14,7 @@ import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, CheckSquare, Plus, Share2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import {
   QuotaStatusBar,
@@ -37,7 +38,14 @@ import { useLibrary, useLibraryQuota } from '@/hooks/queries/useLibrary';
 import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 import { useBulkSelectionStore } from '@/lib/stores/bulk-selection-store';
 
+import PrivateGamesClient from './private/PrivateGamesClient';
+import WishlistPage from './wishlist/page';
+
 export default function LibraryPageClient() {
+  // Active tab from URL (?tab=games|wishlist|private|history)
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') ?? 'games';
+
   // Filter state (Issue #2866)
   const [filters, setFilters] = useState<GetUserLibraryParams>({
     page: 1,
@@ -266,6 +274,20 @@ export default function LibraryPageClient() {
       toggleSelection(gameId);
     }
   };
+
+  // Tab-based routing: render sub-pages for non-default tabs
+  if (tab === 'wishlist') return <WishlistPage />;
+  if (tab === 'private') return <PrivateGamesClient />;
+  if (tab === 'history') {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold font-quicksand">Storico Giochi</h1>
+        <p className="mt-2 text-muted-foreground">
+          Lo storico partite sarà disponibile con Issue #5041.
+        </p>
+      </div>
+    );
+  }
 
   // Loading state with staggered skeleton animations (Issue #2618)
   if (libraryLoading || quotaLoading) {

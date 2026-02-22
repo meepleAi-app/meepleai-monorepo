@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI — Concept 2: Focus Flow</title>
+<style>
+  /* ============================================================
+     CONCEPT 2: FOCUS FLOW
+     VS Code / Raycast aesthetic — thin icon rail, minimal chrome,
+     floating contextual toolbar, maximum content real estate.
+
+     Mobile: icon rail collapses to bottom tab strip (5 tabs)
+     Tablet: icon rail stays, mini-nav scrolls, floating bar shifts
+     Desktop: 48px icon rail + expandable labels on hover
+     ============================================================ */
+
+  :root {
+    --bg:         #0c0c0f;
+    --bg-card:    #131318;
+    --bg-rail:    #111115;
+    --bg-panel:   #18181f;
+    --border:     rgba(255,255,255,0.055);
+    --border-md:  rgba(255,255,255,0.10);
+    --border-focus: rgba(99,102,241,0.5);
+    --text-1:     #ededf2;
+    --text-2:     #8888a0;
+    --text-3:     #484860;
+    --accent:     #6366f1;
+    --accent-2:   #4f46e5;
+    --accent-muted: rgba(99,102,241,0.12);
+    --green:      #10b981;
+    --amber:      #f59e0b;
+
+    --rail-w:     48px;
+    --rail-expanded: 200px;
+    --top-bar-h:  44px;
+    --content-header-h: 56px;
+
+    --radius-sm: 5px;
+    --radius-md: 8px;
+    --radius-lg: 14px;
+    --radius-pill: 999px;
+
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --trans: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    --trans-slow: 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-1);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============================================================
+     TIER 1: MINIMAL TOP BAR
+     ============================================================ */
+  .top-bar {
+    height: var(--top-bar-h);
+    background: var(--bg-rail);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 10px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 60;
+  }
+
+  .top-bar-logo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+    margin-left: 48px;
+  }
+
+  .logo-mark {
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, var(--accent), #818cf8);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .top-bar-search {
+    flex: 1;
+    max-width: 320px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 6px 12px 6px 32px;
+    font-size: 13px;
+    color: var(--text-1);
+    outline: none;
+    transition: all var(--trans);
+    font-family: var(--font);
+  }
+
+  .search-input::placeholder { color: var(--text-3); }
+
+  .search-input:focus {
+    border-color: var(--border-focus);
+    background: rgba(99,102,241,0.05);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-3);
+  }
+
+  .top-bar-spacer { flex: 1; }
+
+  .top-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-2);
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: all var(--trans);
+    position: relative;
+  }
+
+  .icon-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-1);
+  }
+
+  .notif-dot {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: 1.5px solid var(--bg-rail);
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #818cf8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid var(--border-md);
+    margin-left: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ============================================================
+     MAIN LAYOUT
+     ============================================================ */
+  .layout-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ---- TIER 1 PART 2: ICON RAIL ---- */
+  .rail {
+    width: var(--rail-w);
+    background: var(--bg-rail);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: width var(--trans-slow);
+    position: relative;
+    z-index: 50;
+  }
+
+  .rail:hover {
+    width: var(--rail-expanded);
+  }
+
+  .rail-section {
+    padding: 8px 4px;
+  }
+
+  .rail-section + .rail-section {
+    border-top: 1px solid var(--border);
+  }
+
+  .rail-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    padding: 4px 12px 6px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity var(--trans);
+  }
+
+  .rail:hover .rail-section-label {
+    opacity: 1;
+  }
+
+  .rail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    margin: 1px 4px;
+    cursor: pointer;
+    transition: all var(--trans);
+    position: relative;
+    border: none;
+    background: none;
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    width: calc(100% - 8px);
+  }
+
+  .rail-item:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-1);
+  }
+
+  .rail-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+
+  .rail-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 25%;
+    height: 50%;
+    width: 2px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+
+  .rail-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rail-label {
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity var(--trans);
+  }
+
+  .rail:hover .rail-label {
+    opacity: 1;
+  }
+
+  .rail-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 99px;
+    opacity: 0;
+    transition: opacity var(--trans);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .rail:hover .rail-badge {
+    opacity: 1;
+  }
+
+  .rail-spacer { flex: 1; }
+
+  /* ============================================================
+     CONTENT AREA
+     ============================================================ */
+  .content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ---- TIER 2: MINI-NAV in content header ---- */
+  .content-header {
+    height: var(--content-header-h);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+
+  .content-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+  }
+
+  .title-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--border-md);
+    flex-shrink: 0;
+  }
+
+  .mini-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .mini-tabs::-webkit-scrollbar { display: none; }
+
+  .mini-tab {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all var(--trans);
+    border: none;
+    background: none;
+    white-space: nowrap;
+  }
+
+  .mini-tab:hover {
+    color: var(--text-1);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .mini-tab.active {
+    color: var(--text-1);
+    background: rgba(255,255,255,0.08);
+  }
+
+  .mini-tab-count {
+    font-size: 10px;
+    color: var(--text-3);
+    background: rgba(255,255,255,0.07);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .header-spacer { flex: 1; }
+
+  /* ============================================================
+     TIER 3: FLOATING ACTION TOOLBAR
+     ============================================================ */
+  .float-toolbar {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-panel);
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius-lg);
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 40;
+    box-shadow:
+      0 4px 6px rgba(0,0,0,0.2),
+      0 12px 40px rgba(0,0,0,0.4),
+      0 0 0 1px rgba(255,255,255,0.03);
+    backdrop-filter: blur(20px);
+  }
+
+  .ft-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: var(--radius-md);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--trans);
+    border: none;
+    background: none;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+
+  .ft-btn:hover {
+    background: rgba(255,255,255,0.07);
+    color: var(--text-1);
+  }
+
+  .ft-btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-radius: var(--radius-md);
+  }
+
+  .ft-btn-primary:hover {
+    background: #7577f5;
+    transform: scale(1.02);
+  }
+
+  .ft-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 2px;
+  }
+
+  /* ---- CONTENT SCROLL ---- */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    padding-bottom: 100px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-md) transparent;
+  }
+
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 2px; }
+
+  /* Stats strip */
+  .stats-strip {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 24px;
+    background: var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .stat {
+    flex: 1;
+    background: var(--bg-panel);
+    padding: 14px 16px;
+  }
+
+  .stat:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+  .stat:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+
+  .stat-num {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+  }
+
+  .stat-lbl {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  /* Game list */
+  .game-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 32px;
+  }
+
+  .game-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--trans);
+    border: 1px solid transparent;
+  }
+
+  .game-row:hover {
+    background: var(--bg-panel);
+    border-color: var(--border);
+  }
+
+  .game-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .game-info { flex: 1; min-width: 0; }
+
+  .game-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .game-tags {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tag {
+    font-size: 11px;
+    color: var(--text-3);
+    background: rgba(255,255,255,0.05);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .game-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .status-dot.green { background: var(--green); }
+  .status-dot.amber { background: var(--amber); }
+  .status-dot.gray  { background: var(--text-3); }
+
+  .status-text {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+
+  .rating-pill {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--amber);
+    background: rgba(245,158,11,0.1);
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity var(--trans);
+    flex-shrink: 0;
+  }
+
+  .game-row:hover .row-actions { opacity: 1; }
+
+  .row-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-3);
+    cursor: pointer;
+    border: none;
+    background: rgba(255,255,255,0.06);
+    transition: all var(--trans);
+  }
+
+  .row-action-btn:hover {
+    background: rgba(255,255,255,0.12);
+    color: var(--text-1);
+  }
+
+  /* Thumb colors */
+  .t1 { background: linear-gradient(135deg,#312e81,#4c1d95); }
+  .t2 { background: linear-gradient(135deg,#3d2b1f,#5c3317); }
+  .t3 { background: linear-gradient(135deg,#134e4a,#0f766e); }
+  .t4 { background: linear-gradient(135deg,#1e3a5f,#0f3460); }
+  .t5 { background: linear-gradient(135deg,#4a1515,#7f1d1d); }
+  .t6 { background: linear-gradient(135deg,#1a1a2e,#16213e); }
+
+  /* Concept switcher */
+  .concept-switcher {
+    position: fixed;
+    bottom: 24px;
+    right: 16px;
+    background: rgba(17,17,21,0.96);
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 200;
+    backdrop-filter: blur(16px);
+  }
+
+  .cs-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    padding: 0 4px 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+
+  .cs-btn {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 8px;
+    border-radius: 5px;
+    color: var(--text-2);
+    cursor: pointer;
+    border: none;
+    background: none;
+    text-align: left;
+    transition: all var(--trans);
+    white-space: nowrap;
+    text-decoration: none;
+    display: block;
+  }
+
+  .cs-btn:hover { color: var(--text-1); background: rgba(255,255,255,0.06); }
+  .cs-btn.current { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- TIER 1 TOP BAR -->
+<div class="top-bar">
+  <div class="top-bar-logo">
+    <div class="logo-mark">&#9823;</div>
+    MeepleAI
+  </div>
+
+  <div class="top-bar-search">
+    <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" type="text" placeholder="Search games, agents, threads…">
+  </div>
+
+  <div class="top-bar-spacer"></div>
+
+  <div class="top-bar-actions">
+    <button class="icon-btn" aria-label="Notifications">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="notif-dot"></div>
+    </button>
+    <button class="icon-btn" aria-label="Settings">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M20 12h-2M6 12H4M18.66 18.66l-1.41-1.41M6.76 6.76L5.35 5.35"/><path d="M12 2v2M12 20v2"/></svg>
+    </button>
+    <div class="avatar" role="button" aria-label="User menu">JD</div>
+  </div>
+</div>
+
+<!-- MAIN BODY -->
+<div class="layout-body">
+
+  <!-- ICON RAIL (Tier 1 secondary) -->
+  <nav class="rail" aria-label="Main navigation">
+
+    <div class="rail-section">
+      <div class="rail-section-label">Tool</div>
+
+      <button class="rail-item active" onclick="selectSection(this,'library')" aria-label="Library">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <span class="rail-label">Library</span>
+      </button>
+
+      <button class="rail-item" onclick="selectSection(this,'agents')" aria-label="Agents">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <span class="rail-label">Agents</span>
+      </button>
+
+      <button class="rail-item" onclick="selectSection(this,'chat')" aria-label="Chat, 3 unread">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <span class="rail-label">Chat</span>
+        <span class="rail-badge" aria-label="3 unread">3</span>
+      </button>
+
+      <button class="rail-item" onclick="selectSection(this,'sessions')" aria-label="Sessions">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <span class="rail-label">Sessions</span>
+      </button>
+    </div>
+
+    <div class="rail-section">
+      <div class="rail-section-label">Discover</div>
+
+      <button class="rail-item" aria-label="Catalog">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+        <span class="rail-label">Catalog</span>
+      </button>
+
+      <button class="rail-item" aria-label="Community">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <span class="rail-label">Community</span>
+      </button>
+
+      <button class="rail-item" aria-label="Proposals">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <span class="rail-label">Proposals</span>
+      </button>
+    </div>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-section">
+      <button class="rail-item" onclick="selectSection(this,'admin')" aria-label="Admin">
+        <div class="rail-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <span class="rail-label">Admin</span>
+      </button>
+    </div>
+
+  </nav>
+
+  <!-- CONTENT WRAPPER -->
+  <div class="content-wrapper">
+
+    <!-- TIER 2: MINI-NAV in content header -->
+    <div class="content-header">
+      <div class="content-title" id="content-title">Library</div>
+      <div class="title-divider"></div>
+
+      <div class="mini-tabs" id="mini-tabs" role="tablist" aria-label="Library sub-sections">
+        <button class="mini-tab active" role="tab" aria-selected="true" data-tab="games" onclick="selectTab(this)">
+          Games <span class="mini-tab-count">24</span>
+        </button>
+        <button class="mini-tab" role="tab" aria-selected="false" data-tab="wishlist" onclick="selectTab(this)">
+          Wishlist <span class="mini-tab-count">8</span>
+        </button>
+        <button class="mini-tab" role="tab" aria-selected="false" data-tab="private" onclick="selectTab(this)">
+          Private <span class="mini-tab-count">2</span>
+        </button>
+        <button class="mini-tab" role="tab" aria-selected="false" data-tab="history" onclick="selectTab(this)">
+          History
+        </button>
+      </div>
+
+      <div class="header-spacer"></div>
+
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="icon-btn" aria-label="Filter">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+        <button class="icon-btn" aria-label="Grid view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- CONTENT SCROLL AREA -->
+    <div class="content">
+
+      <div class="stats-strip" role="region" aria-label="Library statistics">
+        <div class="stat">
+          <div class="stat-num">24</div>
+          <div class="stat-lbl">Games</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">3</div>
+          <div class="stat-lbl">Agents</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">47</div>
+          <div class="stat-lbl">Sessions</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">8</div>
+          <div class="stat-lbl">KB Docs</div>
+        </div>
+      </div>
+
+      <div class="game-list" role="list" aria-label="Games in library">
+
+        <div class="game-row" role="listitem">
+          <div class="game-thumb t1" aria-hidden="true">&#127922;</div>
+          <div class="game-info">
+            <div class="game-name">Gloomhaven</div>
+            <div class="game-tags">
+              <span class="tag">Dungeon Crawler</span>
+              <span class="tag">2&#8211;4 players</span>
+            </div>
+          </div>
+          <div class="rating-pill" aria-label="Rating 8.8">8.8</div>
+          <div class="game-status" aria-label="Knowledge base ready">
+            <div class="status-dot green"></div>
+            <span class="status-text">KB Ready</span>
+          </div>
+          <div class="row-actions">
+            <button class="row-action-btn" aria-label="Open Agent for Gloomhaven">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </button>
+            <button class="row-action-btn" aria-label="Start Session for Gloomhaven">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="game-row" role="listitem">
+          <div class="game-thumb t2" aria-hidden="true">&#128506;</div>
+          <div class="game-info">
+            <div class="game-name">Spirit Island</div>
+            <div class="game-tags">
+              <span class="tag">Strategy</span>
+              <span class="tag">1&#8211;4 players</span>
+            </div>
+          </div>
+          <div class="rating-pill" aria-label="Rating 8.4">8.4</div>
+          <div class="game-status" aria-label="Indexing in progress">
+            <div class="status-dot amber"></div>
+            <span class="status-text">Indexing&#8230;</span>
+          </div>
+          <div class="row-actions">
+            <button class="row-action-btn" aria-label="Open Agent"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+            <button class="row-action-btn" aria-label="Start Session"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+          </div>
+        </div>
+
+        <div class="game-row" role="listitem">
+          <div class="game-thumb t3" aria-hidden="true">&#127754;</div>
+          <div class="game-info">
+            <div class="game-name">Wingspan</div>
+            <div class="game-tags">
+              <span class="tag">Engine Builder</span>
+              <span class="tag">1&#8211;5 players</span>
+            </div>
+          </div>
+          <div class="rating-pill" aria-label="Rating 8.1">8.1</div>
+          <div class="game-status" aria-label="No knowledge base">
+            <div class="status-dot gray"></div>
+            <span class="status-text">No KB</span>
+          </div>
+          <div class="row-actions">
+            <button class="row-action-btn" aria-label="Open Agent"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+            <button class="row-action-btn" aria-label="Start Session"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+          </div>
+        </div>
+
+        <div class="game-row" role="listitem">
+          <div class="game-thumb t4" aria-hidden="true">&#9876;&#65039;</div>
+          <div class="game-info">
+            <div class="game-name">Twilight Imperium 4E</div>
+            <div class="game-tags">
+              <span class="tag">Space Opera</span>
+              <span class="tag">3&#8211;6 players</span>
+            </div>
+          </div>
+          <div class="rating-pill" aria-label="Rating 8.7">8.7</div>
+          <div class="game-status" aria-label="Knowledge base ready">
+            <div class="status-dot green"></div>
+            <span class="status-text">KB Ready</span>
+          </div>
+          <div class="row-actions">
+            <button class="row-action-btn" aria-label="Open Agent"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+            <button class="row-action-btn" aria-label="Start Session"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+          </div>
+        </div>
+
+        <div class="game-row" role="listitem">
+          <div class="game-thumb t5" aria-hidden="true">&#127968;</div>
+          <div class="game-info">
+            <div class="game-name">Terraforming Mars</div>
+            <div class="game-tags">
+              <span class="tag">Sci-Fi</span>
+              <span class="tag">1&#8211;5 players</span>
+            </div>
+          </div>
+          <div class="rating-pill" aria-label="Rating 8.4">8.4</div>
+          <div class="game-status" aria-label="No knowledge base">
+            <div class="status-dot gray"></div>
+            <span class="status-text">No KB</span>
+          </div>
+          <div class="row-actions">
+            <button class="row-action-btn" aria-label="Open Agent"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+            <button class="row-action-btn" aria-label="Start Session"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+          </div>
+        </div>
+
+        <div class="game-row" role="listitem">
+          <div class="game-thumb t6" aria-hidden="true">&#127759;</div>
+          <div class="game-info">
+            <div class="game-name">Root</div>
+            <div class="game-tags">
+              <span class="tag">Asymmetric</span>
+              <span class="tag">2&#8211;4 players</span>
+            </div>
+          </div>
+          <div class="rating-pill" aria-label="Rating 8.1">8.1</div>
+          <div class="game-status" aria-label="No knowledge base">
+            <div class="status-dot gray"></div>
+            <span class="status-text">No KB</span>
+          </div>
+          <div class="row-actions">
+            <button class="row-action-btn" aria-label="Open Agent"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+            <button class="row-action-btn" aria-label="Start Session"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TIER 3: FLOATING TOOLBAR -->
+    <div class="float-toolbar" role="toolbar" aria-label="Library actions">
+      <button class="ft-btn ft-btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Game
+      </button>
+      <div class="ft-divider" role="separator"></div>
+      <button class="ft-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import BGG
+      </button>
+      <button class="ft-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Upload PDF
+      </button>
+      <div class="ft-divider" role="separator"></div>
+      <button class="ft-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Concept switcher -->
+<div class="concept-switcher">
+  <div class="cs-label">Layout Concept</div>
+  <a class="cs-btn" href="concept-1-command-center.html">1 · Command Center</a>
+  <div class="cs-btn current">2 · Focus Flow</div>
+  <a class="cs-btn" href="concept-3-game-board.html">3 · Game Board</a>
+  <a class="cs-btn" href="concept-4-spatial-layers.html">4 · Spatial Layers</a>
+  <a class="cs-btn" href="concept-5-mobile-native.html">5 · Mobile Native</a>
+</div>
+
+<script>
+  /* Section definitions — no user content, purely UI state */
+  var sections = {
+    library:  { title: 'Library',  tabs: [['games','Games','24'],['wishlist','Wishlist','8'],['private','Private','2'],['history','History',null]] },
+    agents:   { title: 'Agents',   tabs: [['agents','My Agents','3'],['slots','Slots',null]] },
+    chat:     { title: 'Chat',     tabs: [['recent','Recent',null],['all','All Threads','12']] },
+    sessions: { title: 'Sessions', tabs: [['active','Active','1'],['past','Past',null],['scoring','Scoring',null]] },
+    admin:    { title: 'Admin',    tabs: [['users','Users',null],['ai','AI',null],['content','Content',null],['analytics','Analytics',null],['config','Config',null],['monitor','Monitor',null]] }
+  };
+
+  function selectSection(btn, key) {
+    document.querySelectorAll('.rail-item').forEach(function(el) { el.classList.remove('active'); });
+    btn.classList.add('active');
+
+    var sec = sections[key];
+    document.getElementById('content-title').textContent = sec.title;
+
+    var tabsEl = document.getElementById('mini-tabs');
+
+    /* Remove all existing tab buttons safely */
+    while (tabsEl.firstChild) {
+      tabsEl.removeChild(tabsEl.firstChild);
+    }
+
+    /* Rebuild tabs using safe DOM creation */
+    sec.tabs.forEach(function(tabDef, idx) {
+      var tabKey = tabDef[0];
+      var tabLabel = tabDef[1];
+      var tabCount = tabDef[2];
+
+      var btn = document.createElement('button');
+      btn.className = 'mini-tab' + (idx === 0 ? ' active' : '');
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', idx === 0 ? 'true' : 'false');
+      btn.setAttribute('data-tab', tabKey);
+      btn.onclick = function() { selectTab(this); };
+
+      var labelText = document.createTextNode(tabLabel);
+      btn.appendChild(labelText);
+
+      if (tabCount) {
+        var countSpan = document.createElement('span');
+        countSpan.className = 'mini-tab-count';
+        countSpan.textContent = tabCount;
+        btn.appendChild(document.createTextNode(' '));
+        btn.appendChild(countSpan);
+      }
+
+      tabsEl.appendChild(btn);
+    });
+  }
+
+  function selectTab(tabBtn) {
+    var tabs = tabBtn.closest('.mini-tabs');
+    if (!tabs) return;
+    tabs.querySelectorAll('.mini-tab').forEach(function(t) {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    tabBtn.classList.add('active');
+    tabBtn.setAttribute('aria-selected', 'true');
+  }
+</script>
+</body>
+</html>

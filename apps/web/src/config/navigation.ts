@@ -126,14 +126,16 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
   },
   {
     id: 'catalog',
-    href: '/games',
+    // Issue #5039: /games/* consolidated into /discover
+    href: '/discover',
     icon: Gamepad2,
     iconName: 'gamepad-2',
-    label: 'Catalogo',
-    ariaLabel: 'Navigate to games catalog',
+    label: 'Scopri',
+    ariaLabel: 'Navigate to discover page',
     priority: 5,
     testId: 'nav-catalog',
-    activePattern: /^\/games/,
+    // Match both /discover and legacy /games (while redirects drain)
+    activePattern: /^\/(discover|games)/,
     // No visibility — visible to everyone
   },
   {

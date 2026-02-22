@@ -11,8 +11,8 @@
  * Routing:
  *   game   → GameDrawerContent    (GameExtraMeepleCard)
  *   agent  → AgentDrawerContent   (AgentExtraMeepleCard — Issue #5026)
- *   chat   → ChatDrawerContent    (stub — Issue #5027)
- *   kb     → KbDrawerContent      (stub — Issue #5028)
+ *   chat   → ChatDrawerContent    (ChatExtraMeepleCard — Issue #5027)
+ *   kb     → KbDrawerContent      (KbExtraMeepleCard — Issue #5028)
  */
 
 import React from 'react';
@@ -35,8 +35,8 @@ import {
   SheetTitle,
 } from '@/components/ui/navigation/sheet';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
-import { GameExtraMeepleCard, AgentExtraMeepleCard } from './EntityExtraMeepleCard';
-import type { GameDetailData, AgentDetailData } from './types';
+import { GameExtraMeepleCard, AgentExtraMeepleCard, ChatExtraMeepleCard, KbExtraMeepleCard } from './EntityExtraMeepleCard';
+import type { GameDetailData, AgentDetailData, ChatDetailData, ChatDetailMessage, KbDetailData, KbDocumentPreview, GameAgentPreview } from './types';
 
 // ============================================================================
 // Types
@@ -212,20 +212,34 @@ function AgentDrawerContent({ entityId }: { entityId: string }) {
   );
 }
 
-function ChatDrawerContent({ entityId: _entityId }: { entityId: string }) {
+function ChatDrawerContent({ entityId }: { entityId: string }) {
+  const { data, loading, error, retry } = useChatDetail(entityId);
+
+  if (loading) return <DrawerLoadingSkeleton />;
+  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data)   return <DrawerLoadingSkeleton />;
+
   return (
-    <DrawerComingSoon
-      label="ChatExtraMeepleCard"
-      issueNumber={5027}
+    <ChatExtraMeepleCard
+      data={data}
+      className="w-full rounded-none border-0 shadow-none bg-transparent"
     />
   );
 }
 
-function KbDrawerContent({ entityId: _entityId }: { entityId: string }) {
+function KbDrawerContent({ entityId }: { entityId: string }) {
+  const { data, loading, error, retry } = useKbDetail(entityId);
+
+  if (loading) return <DrawerLoadingSkeleton />;
+  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data)   return <DrawerLoadingSkeleton />;
+
+  // v1: delete and retry are omitted in the drawer (read-only preview);
+  // consumers needing these actions should use KbExtraMeepleCard standalone.
   return (
-    <DrawerComingSoon
-      label="KbExtraMeepleCard"
-      issueNumber={5028}
+    <KbExtraMeepleCard
+      data={data}
+      className="w-full rounded-none border-0 shadow-none bg-transparent"
     />
   );
 }
@@ -361,12 +375,28 @@ function useGameDetail(gameId: string): UseGameDetailResult {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/library/games/${gameId}`, { signal });
-      if (!res.ok) {
-        throw new Error(`Errore ${res.status}: gioco non trovato`);
+      // Fetch game details, PDF list, and agent config in parallel (Issue #5029).
+      // KB: /pdfs returns List<GamePdfDto> (bare array). Agent: /agent-config returns
+      // AgentConfigDto? (null when not configured). Both handled gracefully on non-200.
+      const [gameRes, kbRes, agentRes] = await Promise.all([
+        fetch(`/api/v1/library/games/${gameId}`, { signal }),
+        fetch(`/api/v1/library/games/${gameId}/pdfs`, { signal }),
+        fetch(`/api/v1/library/games/${gameId}/agent-config`, { signal }),
+      ]);
+
+      if (!gameRes.ok) {
+        throw new Error(`Errore ${gameRes.status}: gioco non trovato`);
       }
-      const json = (await res.json()) as Record<string, unknown>;
-      setData(mapToGameDetailData(json));
+
+      const json = (await gameRes.json()) as Record<string, unknown>;
+      const kbRawJson = kbRes.ok ? (await kbRes.json()) as unknown : [];
+      const agentJson = agentRes.ok ? (await agentRes.json()) as Record<string, unknown> : null;
+
+      setData(mapToGameDetailData(
+        json,
+        Array.isArray(kbRawJson) ? kbRawJson : [],
+        agentJson,
+      ));
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       setError(
@@ -395,7 +425,32 @@ function useGameDetail(gameId: string): UseGameDetailResult {
   return { data, loading, error, retry };
 }
 
-function mapToGameDetailData(json: Record<string, unknown>): GameDetailData {
+function mapToGameDetailData(
+  json: Record<string, unknown>,
+  kbRaw: unknown[] = [],
+  agentRaw: Record<string, unknown> | null = null,
+): GameDetailData {
+  // GamePdfDto shape: { id, name, pageCount, fileSizeBytes, uploadedAt, source, language }
+  // PDFs returned by /pdfs are already indexed/available — no processingStatus field.
+  const kbDocuments: KbDocumentPreview[] = kbRaw.map((item) => {
+    const d = item as Record<string, unknown>;
+    return {
+      id:         String(d.id ?? ''),
+      fileName:   String(d.name ?? 'Documento'),
+      uploadedAt: String(d.uploadedAt ?? new Date().toISOString()),
+      status:     'indexed' as const,
+    };
+  });
+
+  // AgentConfigDto shape: { llmModel, temperature, maxTokens, personality, detailLevel, personalNotes }
+  // No identity fields (id/name/isActive) — use placeholder values when config exists.
+  const agent: GameAgentPreview | undefined = agentRaw != null ? {
+    id:       '',
+    name:     'Agente AI',
+    model:    agentRaw.llmModel != null ? String(agentRaw.llmModel) : undefined,
+    isActive: true,
+  } : undefined;
+
   return {
     id:                 String(json.id ?? ''),
     title:              String(json.title ?? json.name ?? ''),
@@ -410,6 +465,8 @@ function mapToGameDetailData(json: Record<string, unknown>): GameDetailData {
     totalPlays:         json.totalPlays         != null ? Number(json.totalPlays)        : undefined,
     faqCount:           json.faqCount           != null ? Number(json.faqCount)          : undefined,
     rulesDocumentCount: json.rulesDocumentCount != null ? Number(json.rulesDocumentCount): undefined,
+    kbDocuments:        kbDocuments.length > 0 ? kbDocuments : undefined,
+    agent,
   };
 }
 
@@ -483,5 +540,184 @@ function mapToAgentDetailData(json: Record<string, unknown>): AgentDetailData {
     createdAt:          String(json.createdAt ?? new Date().toISOString()),
     gameId:             json.gameId   != null ? String(json.gameId)   : undefined,
     gameName:           json.gameName != null ? String(json.gameName) : undefined,
+  };
+}
+
+// ============================================================================
+// Data Fetching Hook — Chat
+// ============================================================================
+
+interface UseChatDetailResult {
+  data: ChatDetailData | null;
+  loading: boolean;
+  error: string | null;
+  retry: () => void;
+}
+
+function useChatDetail(threadId: string): UseChatDetailResult {
+  const [data, setData] = React.useState<ChatDetailData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchData = React.useCallback(async (signal: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [threadRes, msgsRes] = await Promise.all([
+        fetch(`/api/v1/chat/threads/${threadId}`, { signal }),
+        fetch(`/api/v1/chat/threads/${threadId}/messages?limit=10`, { signal }),
+      ]);
+      if (!threadRes.ok) {
+        throw new Error(`Errore ${threadRes.status}: thread non trovato`);
+      }
+      const thread = (await threadRes.json()) as Record<string, unknown>;
+      const msgs = msgsRes.ok ? ((await msgsRes.json()) as unknown[]) : [];
+      setData(mapToChatDetailData(thread, msgs));
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossibile caricare i dati della chat',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [threadId]);
+
+  React.useEffect(() => {
+    if (!threadId) return;
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => { controller.abort(); };
+  }, [threadId, fetchData]);
+
+  const retry = React.useCallback(() => {
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+  }, [fetchData]);
+
+  return { data, loading, error, retry };
+}
+
+function mapToChatDetailData(
+  thread: Record<string, unknown>,
+  msgs: unknown[],
+): ChatDetailData {
+  const statusMap: Record<string, ChatDetailData['status']> = {
+    active: 'active', waiting: 'waiting', archived: 'archived', closed: 'closed',
+  };
+  const rawStatus = String(thread.status ?? 'closed').toLowerCase();
+  return {
+    id:               String(thread.id ?? ''),
+    status:           statusMap[rawStatus] ?? 'closed',
+    agentId:          thread.agentId          != null ? String(thread.agentId)          : undefined,
+    agentName:        thread.agentName        != null ? String(thread.agentName)        : undefined,
+    agentModel:       thread.agentModel       != null ? String(thread.agentModel)       : undefined,
+    gameId:           thread.gameId           != null ? String(thread.gameId)           : undefined,
+    gameName:         thread.gameName         != null ? String(thread.gameName)         : undefined,
+    gameThumbnailUrl: thread.gameThumbnailUrl != null ? String(thread.gameThumbnailUrl) : undefined,
+    startedAt:        String(thread.startedAt ?? thread.createdAt ?? new Date().toISOString()),
+    durationMinutes:  thread.durationMinutes  != null ? Number(thread.durationMinutes)  : undefined,
+    messageCount:     thread.messageCount     != null ? Number(thread.messageCount)     : msgs.length,
+    messages:         mapChatMessages(msgs),
+    temperature:      thread.temperature      != null ? Number(thread.temperature)      : undefined,
+    maxTokens:        thread.maxTokens        != null ? Number(thread.maxTokens)        : undefined,
+    systemPrompt:     thread.systemPrompt     != null ? String(thread.systemPrompt)     : undefined,
+  };
+}
+
+function mapChatMessages(json: unknown[]): ChatDetailMessage[] {
+  return json.map((raw) => {
+    const m = raw as Record<string, unknown>;
+    return {
+      id:        String(m.id ?? ''),
+      role:      m.role === 'user' ? 'user' : 'assistant',
+      content:   String(m.content ?? ''),
+      createdAt: String(m.createdAt ?? m.timestamp ?? new Date().toISOString()),
+    };
+  });
+}
+
+// ============================================================================
+// KB Detail Hook (Issue #5028)
+// ============================================================================
+
+interface UseKbDetailResult {
+  data: KbDetailData | null;
+  loading: boolean;
+  error: string | null;
+  retry: () => void;
+}
+
+function useKbDetail(pdfId: string): UseKbDetailResult {
+  const [data, setData] = React.useState<KbDetailData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const loadKbDetail = React.useCallback(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/v1/pdfs/${pdfId}/text`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const doc = (await res.json()) as Record<string, unknown>;
+        setData(mapToKbDetailData(doc));
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Errore caricamento documento');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+    return () => controller.abort();
+  }, [pdfId]);
+
+  React.useEffect(() => {
+    const cleanup = loadKbDetail();
+    return cleanup;
+  }, [loadKbDetail]);
+
+  return { data, loading, error, retry: loadKbDetail };
+}
+
+function mapToKbDetailData(doc: Record<string, unknown>): KbDetailData {
+  const rawStatus = String(doc.processingStatus ?? 'none').toLowerCase();
+  const statusMap: Record<string, KbDetailData['status']> = {
+    uploaded:   'processing',
+    extracting: 'processing',
+    indexing:   'processing',
+    indexed:    'indexed',
+    failed:     'failed',
+    none:       'none',
+  };
+  const status = statusMap[rawStatus] ?? 'none';
+
+  const extractedText = doc.extractedText != null ? String(doc.extractedText) : undefined;
+  const MAX_CHARS = 2000; // ~500 words
+  const extractedContent = extractedText
+    ? extractedText.slice(0, MAX_CHARS)
+    : undefined;
+  const hasMoreContent = extractedText ? extractedText.length > MAX_CHARS : false;
+
+  return {
+    id:               String(doc.id ?? ''),
+    fileName:         String(doc.fileName ?? 'Documento'),
+    fileSize:         doc.fileSize    != null ? Number(doc.fileSize)    : undefined,
+    pageCount:        doc.pageCount   != null ? Number(doc.pageCount)   : undefined,
+    characterCount:   doc.characterCount != null ? Number(doc.characterCount) : undefined,
+    uploadedAt:       doc.uploadedAt  != null ? String(doc.uploadedAt)  : undefined,
+    processedAt:      doc.processedAt != null ? String(doc.processedAt) : undefined,
+    status,
+    errorMessage:     doc.processingError != null ? String(doc.processingError) : undefined,
+    extractedContent,
+    hasMoreContent,
   };
 }

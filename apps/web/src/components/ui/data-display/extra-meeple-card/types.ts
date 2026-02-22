@@ -17,6 +17,7 @@ import type {
   SessionActionHandlers,
 } from '../meeple-card-features/session-types';
 import type { LucideIcon } from 'lucide-react';
+import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 
 // Re-export session types for convenience
 export type {
@@ -356,6 +357,37 @@ export interface ChatDetailData {
   maxTokens?: number;
   /** System prompt used for this thread */
   systemPrompt?: string;
+}
+
+/** KB document detail data (Issue #5028 — KbExtraMeepleCard) */
+export interface KbDetailData {
+  id: string;
+  /** ID of the game this document belongs to */
+  gameId?: string;
+  /** Display name of the linked game */
+  gameName?: string;
+  /** Thumbnail URL of the linked game */
+  gameThumbnailUrl?: string;
+  /** Original filename */
+  fileName: string;
+  /** File size in bytes */
+  fileSize?: number;
+  /** Number of pages */
+  pageCount?: number;
+  /** Total character count */
+  characterCount?: number;
+  /** ISO timestamp when the document was uploaded */
+  uploadedAt?: string;
+  /** ISO timestamp when indexing completed (processedAt from API) */
+  processedAt?: string;
+  /** Current indexing status */
+  status: 'processing' | 'indexed' | 'failed' | 'none';
+  /** Error message when status === 'failed' */
+  errorMessage?: string;
+  /** First ~500 words of extracted text */
+  extractedContent?: string;
+  /** Whether the document has more content beyond extractedContent */
+  hasMoreContent?: boolean;
 }
 
 // ============================================================================

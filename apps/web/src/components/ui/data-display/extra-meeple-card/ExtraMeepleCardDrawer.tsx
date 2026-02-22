@@ -12,7 +12,7 @@
  *   game   → GameDrawerContent    (GameExtraMeepleCard)
  *   agent  → AgentDrawerContent   (AgentExtraMeepleCard — Issue #5026)
  *   chat   → ChatDrawerContent    (ChatExtraMeepleCard — Issue #5027)
- *   kb     → KbDrawerContent      (stub — Issue #5028)
+ *   kb     → KbDrawerContent      (KbExtraMeepleCard — Issue #5028)
  */
 
 import React from 'react';
@@ -35,8 +35,8 @@ import {
   SheetTitle,
 } from '@/components/ui/navigation/sheet';
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
-import { GameExtraMeepleCard, AgentExtraMeepleCard, ChatExtraMeepleCard } from './EntityExtraMeepleCard';
-import type { GameDetailData, AgentDetailData, ChatDetailData, ChatDetailMessage } from './types';
+import { GameExtraMeepleCard, AgentExtraMeepleCard, ChatExtraMeepleCard, KbExtraMeepleCard } from './EntityExtraMeepleCard';
+import type { GameDetailData, AgentDetailData, ChatDetailData, ChatDetailMessage, KbDetailData } from './types';
 
 // ============================================================================
 // Types
@@ -227,11 +227,19 @@ function ChatDrawerContent({ entityId }: { entityId: string }) {
   );
 }
 
-function KbDrawerContent({ entityId: _entityId }: { entityId: string }) {
+function KbDrawerContent({ entityId }: { entityId: string }) {
+  const { data, loading, error, retry } = useKbDetail(entityId);
+
+  if (loading) return <DrawerLoadingSkeleton />;
+  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data)   return <DrawerLoadingSkeleton />;
+
+  // v1: delete and retry are omitted in the drawer (read-only preview);
+  // consumers needing these actions should use KbExtraMeepleCard standalone.
   return (
-    <DrawerComingSoon
-      label="KbExtraMeepleCard"
-      issueNumber={5028}
+    <KbExtraMeepleCard
+      data={data}
+      className="w-full rounded-none border-0 shadow-none bg-transparent"
     />
   );
 }
@@ -586,4 +594,87 @@ function mapChatMessages(json: unknown[]): ChatDetailMessage[] {
       createdAt: String(m.createdAt ?? m.timestamp ?? new Date().toISOString()),
     };
   });
+}
+
+// ============================================================================
+// KB Detail Hook (Issue #5028)
+// ============================================================================
+
+interface UseKbDetailResult {
+  data: KbDetailData | null;
+  loading: boolean;
+  error: string | null;
+  retry: () => void;
+}
+
+function useKbDetail(pdfId: string): UseKbDetailResult {
+  const [data, setData] = React.useState<KbDetailData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const loadKbDetail = React.useCallback(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/v1/pdfs/${pdfId}/text`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const doc = (await res.json()) as Record<string, unknown>;
+        setData(mapToKbDetailData(doc));
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Errore caricamento documento');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+    return () => controller.abort();
+  }, [pdfId]);
+
+  React.useEffect(() => {
+    const cleanup = loadKbDetail();
+    return cleanup;
+  }, [loadKbDetail]);
+
+  return { data, loading, error, retry: loadKbDetail };
+}
+
+function mapToKbDetailData(doc: Record<string, unknown>): KbDetailData {
+  const rawStatus = String(doc.processingStatus ?? 'none').toLowerCase();
+  const statusMap: Record<string, KbDetailData['status']> = {
+    uploaded:   'processing',
+    extracting: 'processing',
+    indexing:   'processing',
+    indexed:    'indexed',
+    failed:     'failed',
+    none:       'none',
+  };
+  const status = statusMap[rawStatus] ?? 'none';
+
+  const extractedText = doc.extractedText != null ? String(doc.extractedText) : undefined;
+  const MAX_CHARS = 2000; // ~500 words
+  const extractedContent = extractedText
+    ? extractedText.slice(0, MAX_CHARS)
+    : undefined;
+  const hasMoreContent = extractedText ? extractedText.length > MAX_CHARS : false;
+
+  return {
+    id:               String(doc.id ?? ''),
+    fileName:         String(doc.fileName ?? 'Documento'),
+    fileSize:         doc.fileSize    != null ? Number(doc.fileSize)    : undefined,
+    pageCount:        doc.pageCount   != null ? Number(doc.pageCount)   : undefined,
+    characterCount:   doc.characterCount != null ? Number(doc.characterCount) : undefined,
+    uploadedAt:       doc.uploadedAt  != null ? String(doc.uploadedAt)  : undefined,
+    processedAt:      doc.processedAt != null ? String(doc.processedAt) : undefined,
+    status,
+    errorMessage:     doc.processingError != null ? String(doc.processingError) : undefined,
+    extractedContent,
+    hasMoreContent,
+  };
 }

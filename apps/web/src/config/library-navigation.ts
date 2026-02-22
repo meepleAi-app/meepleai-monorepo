@@ -26,7 +26,10 @@ export interface LibraryTab {
 }
 
 /**
- * Library section tabs - route-based navigation
+ * Library section tabs — query-param based navigation (Issue #5039)
+ *
+ * Tabs now use ?tab= query params on /library instead of sub-routes.
+ * "Proposte" moved to /discover?tab=proposals (community section).
  */
 export const LIBRARY_TABS: LibraryTab[] = [
   {
@@ -36,32 +39,39 @@ export const LIBRARY_TABS: LibraryTab[] = [
     href: '/library',
   },
   {
+    id: 'wishlist',
+    label: 'Wishlist',
+    icon: Heart,
+    href: '/library?tab=wishlist',
+  },
+  {
     id: 'private',
     label: 'Giochi Privati',
     icon: LockIcon,
-    href: '/library/private',
+    href: '/library?tab=private',
   },
   {
     id: 'proposals',
     label: 'Le Mie Proposte',
     icon: SendIcon,
-    href: '/library/proposals',
-  },
-  {
-    id: 'wishlist',
-    label: 'Wishlist',
-    icon: Heart,
-    href: '/library/wishlist',
+    href: '/discover?tab=proposals',
   },
 ];
 
 /**
- * Check if a pathname matches a library tab
+ * Check if a pathname+search matches a library tab (Issue #5039)
+ *
+ * Accepts full URL (pathname + search) or just pathname.
  */
-export function getActiveLibraryTab(pathname: string): string {
-  if (pathname.startsWith('/library/private')) return 'private';
-  if (pathname.startsWith('/library/proposals')) return 'proposals';
-  if (pathname.startsWith('/library/wishlist')) return 'wishlist';
+export function getActiveLibraryTab(pathname: string, search?: string): string {
+  const tab = search
+    ? new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab')
+    : null;
+
+  if (tab === 'wishlist') return 'wishlist';
+  if (tab === 'private') return 'private';
+  // proposals live under /discover
+  if (pathname.startsWith('/discover') && tab === 'proposals') return 'proposals';
   if (pathname === '/library') return 'collection';
   return 'collection';
 }

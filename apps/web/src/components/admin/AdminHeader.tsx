@@ -178,7 +178,7 @@ export function AdminHeader({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/settings" className="flex items-center cursor-pointer">
+              <Link href="/profile?tab=settings" className="flex items-center cursor-pointer">
                 <SettingsIcon className="mr-2 h-4 w-4" />
                 Settings
               </Link>

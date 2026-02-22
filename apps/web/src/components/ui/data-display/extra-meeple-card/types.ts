@@ -17,6 +17,7 @@ import type {
   SessionActionHandlers,
 } from '../meeple-card-features/session-types';
 import type { LucideIcon } from 'lucide-react';
+import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 
 // Re-export session types for convenience
 export type {
@@ -236,6 +237,14 @@ export interface AITabData {
 /** Entity types supported by ExtraMeepleCard variants */
 export type ExtraMeepleCardEntity = 'session' | 'game' | 'player' | 'collection';
 
+/** Compact agent preview for the GameExtraMeepleCard Agent tab (Issue #5029) */
+export interface GameAgentPreview {
+  id: string;
+  name: string;
+  model?: string;
+  isActive: boolean;
+}
+
 /** Game entity detail data */
 export interface GameDetailData {
   id: string;
@@ -251,6 +260,10 @@ export interface GameDetailData {
   totalPlays?: number;
   faqCount?: number;
   rulesDocumentCount?: number;
+  /** KB documents indexed for this game (Issue #5029) */
+  kbDocuments?: KbDocumentPreview[];
+  /** Agent configured for this game (Issue #5029) */
+  agent?: GameAgentPreview;
 }
 
 /** Player entity detail data */
@@ -313,6 +326,80 @@ export interface KbDocumentPreview {
   fileName: string;
   uploadedAt: string;
   status: 'processing' | 'indexed' | 'failed' | 'none';
+}
+
+/** Chat status — re-exported from ChatStatusBadge to avoid duplication */
+export type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
+
+/** Single message in a chat thread (Issue #5027 — ChatExtraMeepleCard) */
+export interface ChatDetailMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+/** Chat thread detail data (Issue #5027 — ChatExtraMeepleCard) */
+export interface ChatDetailData {
+  id: string;
+  status: ChatStatus;
+  /** ID of the agent that handles this thread */
+  agentId?: string;
+  /** Display name of the linked agent */
+  agentName?: string;
+  /** Model identifier for the agent */
+  agentModel?: string;
+  /** ID of the game used as context */
+  gameId?: string;
+  /** Display name of the context game */
+  gameName?: string;
+  /** Thumbnail URL of the context game */
+  gameThumbnailUrl?: string;
+  /** ISO timestamp when the thread was started */
+  startedAt: string;
+  /** Total duration of the thread in minutes */
+  durationMinutes?: number;
+  /** Total number of messages in the thread */
+  messageCount: number;
+  /** Last N messages (fetched with ?limit=10) */
+  messages: ChatDetailMessage[];
+  /** LLM temperature parameter */
+  temperature?: number;
+  /** LLM max tokens parameter */
+  maxTokens?: number;
+  /** System prompt used for this thread */
+  systemPrompt?: string;
+}
+
+/** KB document detail data (Issue #5028 — KbExtraMeepleCard) */
+export interface KbDetailData {
+  id: string;
+  /** ID of the game this document belongs to */
+  gameId?: string;
+  /** Display name of the linked game */
+  gameName?: string;
+  /** Thumbnail URL of the linked game */
+  gameThumbnailUrl?: string;
+  /** Original filename */
+  fileName: string;
+  /** File size in bytes */
+  fileSize?: number;
+  /** Number of pages */
+  pageCount?: number;
+  /** Total character count */
+  characterCount?: number;
+  /** ISO timestamp when the document was uploaded */
+  uploadedAt?: string;
+  /** ISO timestamp when indexing completed (processedAt from API) */
+  processedAt?: string;
+  /** Current indexing status */
+  status: 'processing' | 'indexed' | 'failed' | 'none';
+  /** Error message when status === 'failed' */
+  errorMessage?: string;
+  /** First ~500 words of extracted text */
+  extractedContent?: string;
+  /** Whether the document has more content beyond extractedContent */
+  hasMoreContent?: boolean;
 }
 
 // ============================================================================

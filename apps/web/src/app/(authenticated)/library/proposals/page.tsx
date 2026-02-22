@@ -14,14 +14,14 @@
 export const dynamic = 'force-dynamic';
 
 import { RequireRole } from '@/components/auth/RequireRole';
-import { LibraryNavTabs } from '@/components/library/LibraryNavTabs';
 
+import { LibraryNavConfig } from '../NavConfig';
 import MyProposalsClient from './MyProposalsClient';
 
 export default function MyProposalsPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <LibraryNavTabs />
+      <LibraryNavConfig />
       <MyProposalsClient />
     </RequireRole>
   );

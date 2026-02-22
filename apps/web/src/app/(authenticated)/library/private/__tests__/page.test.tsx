@@ -107,7 +107,7 @@ describe('PrivateGamesPage', () => {
     expect(await screen.findByTestId('private-games-client')).toBeInTheDocument();
   });
 
-  it('should render LibraryNavTabs when authenticated (Issue #4055)', async () => {
+  it('should render LibraryNavConfig when authenticated (Issue #5054)', async () => {
     mockGetCurrentUser.mockResolvedValue({
       success: true,
       user: { id: '1', email: 'test@test.com', role: 'User' },
@@ -115,6 +115,6 @@ describe('PrivateGamesPage', () => {
 
     render(<PrivateGamesPage />);
 
-    expect(await screen.findByTestId('library-nav-tabs')).toBeInTheDocument();
+    expect(await screen.findByTestId('library-nav-config')).toBeInTheDocument();
   });
 });

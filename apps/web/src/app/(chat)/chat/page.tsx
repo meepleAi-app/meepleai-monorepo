@@ -209,6 +209,7 @@ export default function ChatListPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
+      <ChatNavConfig />
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

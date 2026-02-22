@@ -112,7 +112,7 @@ describe('MyProposalsPage', () => {
     expect(await screen.findByText('Le Mie Proposte')).toBeInTheDocument();
   });
 
-  it('should render LibraryNavTabs when authenticated (Issue #4055)', async () => {
+  it('should render LibraryNavConfig when authenticated (Issue #5054)', async () => {
     mockGetCurrentUser.mockResolvedValue({
       success: true,
       user: { id: '1', email: 'test@test.com', role: 'User' },
@@ -120,6 +120,6 @@ describe('MyProposalsPage', () => {
 
     renderWithQuery(<MyProposalsPage />);
 
-    expect(await screen.findByTestId('library-nav-tabs')).toBeInTheDocument();
+    expect(await screen.findByTestId('library-nav-config')).toBeInTheDocument();
   });
 });

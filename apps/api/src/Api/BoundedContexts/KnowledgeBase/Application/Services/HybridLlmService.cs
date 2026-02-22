@@ -62,6 +62,7 @@ internal class HybridLlmService : ILlmService
     private readonly IPublisher _publisher;
     private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
     private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
+    private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -91,7 +92,8 @@ internal class HybridLlmService : ILlmService
         IProviderHealthCheckService? healthCheckService = null,
         IUserBudgetService? userBudgetService = null,
         IOpenRouterFileLogger? openRouterFileLogger = null,
-        IOpenRouterUsageService? openRouterUsageService = null)
+        IOpenRouterUsageService? openRouterUsageService = null,
+        IOpenRouterRateLimitTracker? rateLimitTracker = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -104,6 +106,7 @@ internal class HybridLlmService : ILlmService
         _userBudgetService = userBudgetService; // Optional - for credit tracking
         _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
         _openRouterUsageService = openRouterUsageService; // Issue #5074: Optional - Redis usage cache
+        _rateLimitTracker = rateLimitTracker; // Issue #5075: Optional - RPM/TPM sliding window
 
         if (_clients.Count == 0)
         {
@@ -204,6 +207,16 @@ internal class HybridLlmService : ILlmService
                 "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
                 client.ProviderName, decision.ModelId, decision.Reason);
 
+            // Issue #5075: Warn if approaching RPM limit before sending request
+            if (_rateLimitTracker != null)
+            {
+                var isApproaching = await _rateLimitTracker
+                    .IsApproachingLimitAsync(client.ProviderName, thresholdPercent: 80, cancellationToken)
+                    .ConfigureAwait(false);
+                if (isApproaching)
+                    _logger.LogWarning("OpenRouter rate limit approaching 80% for provider {Provider}", client.ProviderName);
+            }
+
             var attemptStopwatch = Stopwatch.StartNew();
             try
             {
@@ -222,6 +235,14 @@ internal class HybridLlmService : ILlmService
                     RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
                     await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+
+                    // Issue #5075: Record request in RPM/TPM sliding window (fire-and-forget)
+                    if (_rateLimitTracker != null)
+                    {
+                        var totalTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
+                        _ = _rateLimitTracker.RecordRequestAsync(client.ProviderName, decision.ModelId, totalTokens);
+                    }
+
                     return result;
                 }
 

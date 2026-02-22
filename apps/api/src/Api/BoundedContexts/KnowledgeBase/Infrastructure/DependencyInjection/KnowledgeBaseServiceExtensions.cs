@@ -199,6 +199,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddHostedService<OpenRouterUsageService>();
         services.AddSingleton<IOpenRouterUsageService>(sp =>
             sp.GetServices<IHostedService>().OfType<OpenRouterUsageService>().First());
+
+        // Issue #5075: RPM/TPM rate limit tracker using Redis sliding window (Singleton - stateless HTTP-independent)
+        services.AddSingleton<IOpenRouterRateLimitTracker, OpenRouterRateLimitTracker>();
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)

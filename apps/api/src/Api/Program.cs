@@ -493,6 +493,7 @@ v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
 v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
+v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard

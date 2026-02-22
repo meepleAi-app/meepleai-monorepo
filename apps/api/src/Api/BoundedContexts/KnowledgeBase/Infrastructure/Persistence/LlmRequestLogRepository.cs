@@ -73,6 +73,16 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
             provider, modelId, source, promptTokens + completionTokens, costUsd, latencyMs);
     }
 
+    public async Task<int> GetTodayCountAsync(DateOnly utcDate, CancellationToken cancellationToken = default)
+    {
+        var startUtc = utcDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var endUtc = utcDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+
+        return await _context.LlmRequestLogs
+            .CountAsync(x => x.RequestedAt >= startUtc && x.RequestedAt <= endUtc, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<int> DeleteExpiredAsync(DateTime cutoff, CancellationToken cancellationToken = default)
     {
         var deleted = await _context.LlmRequestLogs

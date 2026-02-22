@@ -134,6 +134,8 @@ import {
   type VectorCollectionsResponse,
   type ProcessingQueueResponse,
   type PdfListResult,
+  OpenRouterStatusDtoSchema,
+  type OpenRouterStatusDto,
 } from '../schemas/admin-knowledge-base.schemas';
 import {
   AgentCostEstimationResultSchema,
@@ -1071,6 +1073,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         throw new Error('Failed to fetch cost tracking data');
       }
       return result;
+    },
+
+    /**
+     * Get OpenRouter account status and rate-limit utilization snapshot.
+     * GET /api/v1/admin/openrouter/status
+     * Issue #5077: Admin usage dashboard KPI cards.
+     */
+    async getOpenRouterStatus(): Promise<OpenRouterStatusDto | null> {
+      const result = await httpClient.get(
+        '/api/v1/admin/openrouter/status',
+        OpenRouterStatusDtoSchema
+      );
+      return result ?? null;
     },
 
     /**

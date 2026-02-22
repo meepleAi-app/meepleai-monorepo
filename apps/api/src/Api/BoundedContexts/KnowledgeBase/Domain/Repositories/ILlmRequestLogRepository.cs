@@ -30,6 +30,12 @@ public interface ILlmRequestLogRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the total number of LLM request log entries recorded on the specified UTC date.
+    /// Used by the admin usage dashboard to display today's request count.
+    /// </summary>
+    Task<int> GetTodayCountAsync(DateOnly utcDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Deletes all log entries with ExpiresAt older than the specified cutoff.
     /// Returns number of deleted records.
     /// </summary>

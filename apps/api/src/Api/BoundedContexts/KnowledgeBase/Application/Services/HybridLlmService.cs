@@ -60,6 +60,7 @@ internal class HybridLlmService : ILlmService
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly IAiModelConfigurationRepository _modelConfigRepository;
     private readonly IPublisher _publisher;
+    private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -87,7 +88,8 @@ internal class HybridLlmService : ILlmService
         IAiModelConfigurationRepository modelConfigRepository,
         IPublisher publisher,
         IProviderHealthCheckService? healthCheckService = null,
-        IUserBudgetService? userBudgetService = null)
+        IUserBudgetService? userBudgetService = null,
+        IOpenRouterFileLogger? openRouterFileLogger = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -98,6 +100,7 @@ internal class HybridLlmService : ILlmService
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
         _userBudgetService = userBudgetService; // Optional - for credit tracking
+        _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
 
         if (_clients.Count == 0)
         {
@@ -581,6 +584,21 @@ internal class HybridLlmService : ILlmService
                         Timestamp: DateTime.UtcNow),
                     cancellationToken).ConfigureAwait(false);
             }
+
+            // Issue #5073: Write to rotating OpenRouter file log
+            _openRouterFileLogger?.LogRequest(
+                requestId: Guid.NewGuid().ToString(),
+                model: result.Cost.ModelId,
+                provider: result.Cost.Provider,
+                source: source.ToString(),
+                userId: user?.Id,
+                promptTokens: result.Usage.PromptTokens,
+                completionTokens: result.Usage.CompletionTokens,
+                costUsd: result.Cost.TotalCost,
+                latencyMs: latencyMs,
+                success: true,
+                isFreeModel: result.Cost.TotalCost == 0,
+                sessionId: null);
         }
         catch (Exception logEx)
         {
@@ -641,6 +659,22 @@ internal class HybridLlmService : ILlmService
                 userAgent: null,
                 source: source,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Issue #5073: Write failure to rotating OpenRouter file log
+            _openRouterFileLogger?.LogRequest(
+                requestId: Guid.NewGuid().ToString(),
+                model: string.Empty,
+                provider: string.Empty,
+                source: source.ToString(),
+                userId: user?.Id,
+                promptTokens: 0,
+                completionTokens: 0,
+                costUsd: 0,
+                latencyMs: latencyMs,
+                success: false,
+                isFreeModel: false,
+                sessionId: null,
+                errorMessage: errorMessage);
         }
         catch (Exception logEx)
         {

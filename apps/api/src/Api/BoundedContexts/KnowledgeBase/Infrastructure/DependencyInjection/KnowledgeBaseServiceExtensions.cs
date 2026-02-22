@@ -185,6 +185,15 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-1725: LLM budget monitoring background service
         services.AddHostedService<LlmBudgetMonitoringService>();
+
+        // Issue #5073: Rotating JSONL file logger for OpenRouter requests (Singleton - owns file handle)
+        services.AddSingleton<IOpenRouterFileLogger>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var logDir = config["OPENROUTER_LOG_PATH"] ?? Path.Combine("logs", "openrouter");
+            Directory.CreateDirectory(logDir);
+            return new OpenRouterFileLogger(logDir);
+        });
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)

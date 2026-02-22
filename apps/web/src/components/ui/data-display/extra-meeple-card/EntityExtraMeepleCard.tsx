@@ -1377,12 +1377,12 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
           ) : (
             <div className="relative h-full overflow-hidden">
               <div className="h-full overflow-y-auto pr-1">
-                <pre
-                  className="font-mono text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words"
+                <div
+                  className="font-nunito text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words"
                   data-testid="kb-extracted-content"
                 >
                   {data.extractedContent}
-                </pre>
+                </div>
               </div>
               {data.hasMoreContent && (
                 <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pb-2 pt-8 bg-gradient-to-t from-white/95 to-transparent">
@@ -1435,6 +1435,8 @@ export const KbExtraMeepleCard = React.memo(function KbExtraMeepleCard({
                 className="h-1.5 w-full overflow-hidden rounded-full bg-teal-100"
                 role="progressbar"
                 aria-label="Elaborazione in corso"
+                aria-valuemin={0}
+                aria-valuemax={100}
               >
                 <div className="h-full rounded-full bg-teal-500 animate-[pulse_1.5s_ease-in-out_infinite] w-2/3" />
               </div>

@@ -3,7 +3,7 @@
 /**
  * BusinessStrategyComparison — Interactive strategy table for Business view
  *
- * Shows all 5 primary strategies side-by-side with:
+ * Shows all 6 strategies side-by-side with:
  * - Accuracy visual bars
  * - Cost per query
  * - Latency
@@ -21,7 +21,7 @@ import { STRATEGY_CONFIGS } from './types';
 // Data
 // =============================================================================
 
-const STRATEGIES_TO_SHOW = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS'] as const;
+const STRATEGIES_TO_SHOW = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'] as const;
 
 // Parse "78-85%" → average 81.5 for bar width
 function parseAccuracyMidpoint(range: string): number {
@@ -37,6 +37,7 @@ const STRATEGY_COLORS: Record<string, string> = {
   PRECISE: 'hsl(25,95%,53%)',
   EXPERT: 'hsl(262,83%,62%)',
   CONSENSUS: 'hsl(0,72%,51%)',
+  CUSTOM: 'hsl(45,93%,47%)',
 };
 
 const STRATEGY_BG: Record<string, string> = {
@@ -45,6 +46,7 @@ const STRATEGY_BG: Record<string, string> = {
   PRECISE: 'hsla(25,95%,53%,0.12)',
   EXPERT: 'hsla(262,83%,62%,0.12)',
   CONSENSUS: 'hsla(0,72%,51%,0.12)',
+  CUSTOM: 'hsla(45,93%,47%,0.12)',
 };
 // =============================================================================
 // Component

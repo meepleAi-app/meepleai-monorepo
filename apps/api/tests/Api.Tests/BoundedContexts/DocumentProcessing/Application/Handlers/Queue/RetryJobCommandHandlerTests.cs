@@ -67,7 +67,7 @@ public sealed class RetryJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_QueuedJob_ThrowsInvalidOperationException()
+    public async Task Handle_QueuedJob_ThrowsConflictException()
     {
         // Arrange
         var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 0, 0, _timeProvider);
@@ -77,13 +77,13 @@ public sealed class RetryJobCommandHandlerTests
             .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
 
-        // Act & Assert
+        // Act & Assert - ConflictException (409) per CLAUDE.md #2568 conventions
         await FluentActions.Invoking(() => _handler.Handle(new RetryJobCommand(job.Id), CancellationToken.None))
-            .Should().ThrowAsync<InvalidOperationException>();
+            .Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
-    public async Task Handle_MaxRetriesExceeded_ThrowsInvalidOperationException()
+    public async Task Handle_MaxRetriesExceeded_ThrowsConflictException()
     {
         // Arrange
         var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 0, 0, _timeProvider);
@@ -105,9 +105,9 @@ public sealed class RetryJobCommandHandlerTests
             .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
 
-        // Act & Assert
+        // Act & Assert - ConflictException (409) per CLAUDE.md #2568 conventions
         await FluentActions.Invoking(() => _handler.Handle(new RetryJobCommand(job.Id), CancellationToken.None))
-            .Should().ThrowAsync<InvalidOperationException>()
+            .Should().ThrowAsync<ConflictException>()
             .WithMessage("*maximum retries*");
     }
 }

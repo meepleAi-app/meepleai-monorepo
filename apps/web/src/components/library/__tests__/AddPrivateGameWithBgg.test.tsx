@@ -8,20 +8,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import { LIBRARY_TEST_IDS } from '@/lib/test-ids';
+import { t } from '@/test-utils/test-i18n';
 
 import { AddPrivateGameWithBgg } from '../AddPrivateGameWithBgg';
 
 vi.mock('@/hooks/useTranslation', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        'common.cancel': 'Cancel',
-        'privateGameForm.addFromBgg': 'Add from BGG',
-        'privateGameForm.addPrivateGame': 'Add Private Game',
-      };
-      return map[key] ?? key;
-    },
-  }),
+  useTranslation: () => ({ t }),
 }));
 
 // Mock BggGameSearch
@@ -170,7 +162,7 @@ describe('AddPrivateGameWithBgg', () => {
   it('renders cancel button in choose mode', () => {
     renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    const cancelBtn = screen.getByText('Cancel');
+    const cancelBtn = screen.getByText(t('common.cancel'));
     fireEvent.click(cancelBtn);
     expect(defaultProps.onCancel).toHaveBeenCalled();
   });
@@ -213,7 +205,7 @@ describe('AddPrivateGameWithBgg', () => {
 
     fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
 
-    expect(screen.getByTestId('form-submit-label')).toHaveTextContent('Add Private Game');
+    expect(screen.getByTestId('form-submit-label')).toHaveTextContent(t('privateGameForm.addPrivateGame'));
   });
 
   // ===== BGG Search Flow =====
@@ -312,7 +304,7 @@ describe('AddPrivateGameWithBgg', () => {
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('form-submit-label')).toHaveTextContent('Add from BGG');
+      expect(screen.getByTestId('form-submit-label')).toHaveTextContent(t('privateGameForm.addFromBgg'));
     });
   });
 

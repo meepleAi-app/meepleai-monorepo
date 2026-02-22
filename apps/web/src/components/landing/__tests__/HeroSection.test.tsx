@@ -9,24 +9,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { HeroSection } from '../HeroSection';
 
 import { vi } from 'vitest';
+import { t } from '@/test-utils/test-i18n';
 
-// Mock translations - matches it.json locale file
-const mockTranslations: Record<string, string> = {
-  'home.hero.title': 'Il tuo Assistente AI per Regolamenti di Giochi da Tavolo',
-  'home.hero.subtitle':
-    'Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.',
-  'home.hero.cta.getStarted': 'Inizia Gratis',
-  'home.hero.cta.learnMore': 'Scopri di più',
-  'home.hero.scrollToFeatures': 'Scorri alla sezione caratteristiche',
-  'home.hero.trustIndicators.users': 'Oltre 1.250 utenti',
-  'home.hero.trustIndicators.accuracy': '95% accuratezza',
-};
-
-// Mock useTranslation hook
 vi.mock('@/hooks/useTranslation', () => ({
-  useTranslation: () => ({
-    t: (key: string) => mockTranslations[key] || key,
-  }),
+  useTranslation: () => ({ t }),
 }));
 
 // Mock Next.js Link
@@ -58,13 +44,13 @@ describe('HeroSection', () => {
       render(<HeroSection />);
 
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent(mockTranslations['home.hero.title']);
+      expect(heading).toHaveTextContent(t('home.hero.title'));
     });
 
     it('displays subheading description', () => {
       render(<HeroSection />);
 
-      expect(screen.getByText(mockTranslations['home.hero.subtitle'])).toBeInTheDocument();
+      expect(screen.getByText(t('home.hero.subtitle'))).toBeInTheDocument();
     });
   });
 
@@ -73,7 +59,7 @@ describe('HeroSection', () => {
       render(<HeroSection />);
 
       const ctaButton = screen.getByRole('link', {
-        name: new RegExp(mockTranslations['home.hero.cta.getStarted'], 'i'),
+        name: new RegExp(t('home.hero.cta.getStarted'), 'i'),
       });
       expect(ctaButton).toBeInTheDocument();
       expect(ctaButton).toHaveAttribute('href', '/register');
@@ -84,11 +70,11 @@ describe('HeroSection', () => {
 
       // There are 2 buttons with scroll aria-label: secondary CTA and scroll indicator
       const scrollButtons = screen.getAllByRole('button', {
-        name: new RegExp(mockTranslations['home.hero.scrollToFeatures'], 'i'),
+        name: new RegExp(t('home.hero.scrollToFeatures'), 'i'),
       });
       expect(scrollButtons.length).toBe(2);
       // First one is the secondary CTA (contains "Scopri di più" text)
-      expect(scrollButtons[0]).toHaveTextContent(mockTranslations['home.hero.cta.learnMore']);
+      expect(scrollButtons[0]).toHaveTextContent(t('home.hero.cta.learnMore'));
     });
 
     it('scroll button triggers smooth scroll to features section', () => {
@@ -100,7 +86,7 @@ describe('HeroSection', () => {
       render(<HeroSection />);
 
       const scrollButtons = screen.getAllByRole('button', {
-        name: new RegExp(mockTranslations['home.hero.scrollToFeatures'], 'i'),
+        name: new RegExp(t('home.hero.scrollToFeatures'), 'i'),
       });
       fireEvent.click(scrollButtons[0]);
 
@@ -116,7 +102,7 @@ describe('HeroSection', () => {
       render(<HeroSection />);
 
       const scrollButtons = screen.getAllByRole('button', {
-        name: new RegExp(mockTranslations['home.hero.scrollToFeatures'], 'i'),
+        name: new RegExp(t('home.hero.scrollToFeatures'), 'i'),
       });
 
       // Should not throw error
@@ -172,7 +158,7 @@ describe('HeroSection', () => {
 
       // Both secondary CTA and scroll indicator share the same aria-label
       const scrollIndicators = screen.getAllByLabelText(
-        mockTranslations['home.hero.scrollToFeatures']
+        t('home.hero.scrollToFeatures')
       );
       expect(scrollIndicators.length).toBe(2);
     });
@@ -197,7 +183,7 @@ describe('HeroSection', () => {
       render(<HeroSection />);
 
       const ctaLink = screen.getByRole('link', {
-        name: new RegExp(mockTranslations['home.hero.cta.getStarted'], 'i'),
+        name: new RegExp(t('home.hero.cta.getStarted'), 'i'),
       });
       // Button is wrapped, check that link exists (styling applied via Button component)
       expect(ctaLink).toBeInTheDocument();

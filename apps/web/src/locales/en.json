@@ -988,5 +988,14 @@
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
     "addFromBgg": "Add from BGG"
+  },
+  "collection": {
+    "addFromCatalog": "From catalog",
+    "addPrivateGame": "Private game",
+    "year": "Year",
+    "plays": "Plays",
+    "backToCollection": "Back to Collection",
+    "addGameTitle": "Add Game to Collection",
+    "addGameSubtitle": "Search for a game or create a custom entry"
   }
 }

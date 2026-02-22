@@ -198,6 +198,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
+        services.AddScoped<ILlmRequestLogRepository, LlmRequestLogRepository>(); // ISSUE-5072: Detailed request logging with 30-day retention
         services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>(); // Issue #3808: AgentDefinition for AI Lab
         services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
@@ -339,6 +340,21 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithIdentity("conversation-memory-cleanup-trigger", "knowledge-base")
                 .WithCronSchedule("0 0 3 * * ?")
                 .WithDescription("Runs daily at 3 AM UTC to clean up conversation memories older than 90 days for GDPR compliance"));
+        });
+
+        // Issue #5072: Daily cleanup of expired LLM request logs (30-day retention)
+        // Only register job definition here - do NOT call AddQuartzHostedService (would duplicate).
+        services.AddQuartz(q =>
+        {
+            q.AddJob<LlmRequestLogCleanupJob>(opts => opts
+                .WithIdentity("llm-request-log-cleanup-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("llm-request-log-cleanup-job", "knowledge-base")
+                .WithIdentity("llm-request-log-cleanup-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 4 * * ?")
+                .WithDescription("Runs daily at 4 AM UTC to delete LLM request logs older than 30 days"));
         });
     }
 }

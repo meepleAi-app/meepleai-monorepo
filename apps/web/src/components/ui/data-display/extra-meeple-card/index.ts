@@ -5,6 +5,7 @@
  * Issue #4763 - Interactive Cards + Timer + Events Timeline UI
  * Issue #5026 - AgentExtraMeepleCard (Epic #5023)
  * Issue #5027 - ChatExtraMeepleCard (Epic #5023)
+ * Issue #5028 - KbExtraMeepleCard (Epic #5023)
  */
 
 export { ExtraMeepleCard } from './ExtraMeepleCard';
@@ -14,6 +15,7 @@ export {
   CollectionExtraMeepleCard,
   AgentExtraMeepleCard,
   ChatExtraMeepleCard,
+  KbExtraMeepleCard,
 } from './EntityExtraMeepleCard';
 export {
   ExtraMeepleCardDrawer,
@@ -58,6 +60,7 @@ export type {
   ChatStatus,
   ChatDetailMessage,
   ChatDetailData,
+  KbDetailData,
   CardZone,
   CardEntry,
   CardDeckState,

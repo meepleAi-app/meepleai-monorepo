@@ -263,10 +263,34 @@ describe('ExtraMeepleCardDrawer', () => {
       });
     });
 
-    it('renders kb stub for kb entity', () => {
+    it('shows skeleton initially while fetching kb data', () => {
+      mockFetch.mockReturnValue(new Promise(() => {}));
       renderDrawer({ entityType: 'kb', entityId: 'doc-1' });
 
-      expect(screen.getByTestId(DRAWER_TEST_IDS.COMING_SOON(5028))).toBeInTheDocument();
+      expect(screen.getByTestId(DRAWER_TEST_IDS.LOADING_SKELETON)).toBeInTheDocument();
+    });
+
+    it('renders kb content after successful fetch', async () => {
+      const kbApiResponse = {
+        id: 'doc-1',
+        fileName: 'catan-rules.pdf',
+        processingStatus: 'indexed',
+        fileSize: 204800,
+        pageCount: 10,
+        characterCount: 5000,
+        uploadedAt: '2026-01-10T09:00:00Z',
+        processedAt: '2026-01-10T09:05:00Z',
+        extractedText: 'Regole del gioco...',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(kbApiResponse),
+      } as Response);
+      renderDrawer({ entityType: 'kb', entityId: 'doc-1' });
+
+      await waitFor(() => {
+        expect(screen.getAllByText('catan-rules.pdf').length).toBeGreaterThan(0);
+      });
     });
   });
 

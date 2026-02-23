@@ -548,16 +548,15 @@ describe('PrivateGamesClient', () => {
     it('should navigate to add page from empty state', async () => {
       mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse([]));
 
-      const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
 
       await waitFor(() => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.emptyState)).toBeInTheDocument();
       });
 
-      await user.click(screen.getByText(testI18nT('privateGames.addFirstGame')));
-
-      expect(mockPush).toHaveBeenCalledWith('/library/private/add');
+      // LibraryEmptyState renders the CTA as a <Link> (→ <a href>), not router.push
+      const addLink = screen.getByText(testI18nT('privateGames.addFirstGame')).closest('a');
+      expect(addLink).toHaveAttribute('href', '/library/private/add');
     });
   });
 

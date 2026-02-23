@@ -48,6 +48,9 @@ public sealed class EntityLink
     public bool IsAdminApproved { get; private set; }
     public bool IsBggImported { get; private set; }
 
+    public bool IsDeleted { get; private set; }
+    public DateTime? DeletedAt { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -119,9 +122,11 @@ public sealed class EntityLink
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>Records deletion domain event before removal.</summary>
+    /// <summary>Soft-deletes the link and records a deletion domain event.</summary>
     public void Delete(Guid deletedByUserId)
     {
+        IsDeleted = true;
+        DeletedAt = DateTime.UtcNow;
         _domainEvents.Add(new EntityLinkDeletedEvent(Id, deletedByUserId));
         UpdatedAt = DateTime.UtcNow;
     }

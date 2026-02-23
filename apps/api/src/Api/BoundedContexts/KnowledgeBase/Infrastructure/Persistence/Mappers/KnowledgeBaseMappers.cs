@@ -30,7 +30,8 @@ internal static class KnowledgeBaseMappers
             IndexingError = null,
             EmbeddingModel = "nomic-embed-text", // Default model
             EmbeddingDimensions = 768, // Default dimensions
-            Metadata = domain.Metadata // Map metadata field
+            Metadata = domain.Metadata, // Map metadata field
+            SharedGameId = domain.SharedGameId // Issue #5185: cross-BC reference
         };
     }
 
@@ -45,7 +46,8 @@ internal static class KnowledgeBaseMappers
             gameId: entity.GameId,
             pdfDocumentId: entity.PdfDocumentId,
             language: "en", // Default language (not stored in entity)
-            totalChunks: entity.ChunkCount
+            totalChunks: entity.ChunkCount,
+            sharedGameId: entity.SharedGameId // Issue #5185
         );
 
         // Restore metadata using internal method

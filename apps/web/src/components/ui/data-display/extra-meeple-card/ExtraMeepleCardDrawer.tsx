@@ -37,6 +37,7 @@ import {
 import { DRAWER_TEST_IDS } from './drawer-test-ids';
 import { GameExtraMeepleCard, AgentExtraMeepleCard, ChatExtraMeepleCard, KbExtraMeepleCard } from './EntityExtraMeepleCard';
 import type { GameDetailData, AgentDetailData, ChatDetailData, ChatDetailMessage, KbDetailData, KbDocumentPreview, GameAgentPreview } from './types';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // ============================================================================
 // Types
@@ -356,6 +357,45 @@ function DrawerComingSoon({
 }
 
 // ============================================================================
+// PDF Document Helpers (Issue #5195)
+// ============================================================================
+
+/** Map PdfProcessingState string → KbDocumentPreview status */
+function mapProcessingStateToStatus(state: string): 'processing' | 'indexed' | 'failed' | 'none' {
+  switch (state) {
+    case 'Ready':     return 'indexed';
+    case 'Failed':    return 'failed';
+    case 'Extracting':
+    case 'Chunking':
+    case 'Embedding':
+    case 'Indexing':
+    case 'Uploading': return 'processing';
+    default:          return 'none';
+  }
+}
+
+/** Map raw JSON object from /api/v1/games/{id}/pdfs → PdfDocumentDto */
+function mapRawToPdfDocumentDto(raw: Record<string, unknown>): PdfDocumentDto {
+  return {
+    id:               String(raw.id ?? ''),
+    gameId:           String(raw.gameId ?? ''),
+    fileName:         String(raw.fileName ?? raw.name ?? ''),
+    filePath:         String(raw.filePath ?? ''),
+    fileSizeBytes:    Number(raw.fileSizeBytes ?? 0),
+    processingStatus: String(raw.processingStatus ?? 'Pending'),
+    uploadedAt:       String(raw.uploadedAt ?? new Date().toISOString()),
+    processedAt:      raw.processedAt != null ? String(raw.processedAt) : null,
+    pageCount:        raw.pageCount != null ? Number(raw.pageCount) : null,
+    documentType:     (raw.documentType as 'base' | 'expansion' | 'errata' | 'homerule') ?? 'base',
+    isPublic:         Boolean(raw.isPublic ?? false),
+    processingState:  String(raw.processingState ?? 'Pending'),
+    progressPercentage: Number(raw.progressPercentage ?? 0),
+    retryCount:       Number(raw.retryCount ?? 0),
+    maxRetries:       Number(raw.maxRetries ?? 3),
+  };
+}
+
+// ============================================================================
 // Data Fetching Hook — Game
 // ============================================================================
 
@@ -375,12 +415,13 @@ function useGameDetail(gameId: string): UseGameDetailResult {
     setLoading(true);
     setError(null);
     try {
-      // Fetch game details, PDF list, and agent config in parallel (Issue #5029).
-      // KB: /pdfs returns List<GamePdfDto> (bare array). Agent: /agent-config returns
-      // AgentConfigDto? (null when not configured). Both handled gracefully on non-200.
+      // Fetch game details, full PDF list (with processing state), and agent config in parallel.
+      // KB: /api/v1/games/{id}/pdfs returns { pdfs: PdfDocumentDto[] } with processingState.
+      // Agent: /agent-config returns AgentConfigDto? (null when not configured).
+      // Both handled gracefully on non-200. (Issue #5029, #5195)
       const [gameRes, kbRes, agentRes] = await Promise.all([
         fetch(`/api/v1/library/games/${gameId}`, { signal }),
-        fetch(`/api/v1/library/games/${gameId}/pdfs`, { signal }),
+        fetch(`/api/v1/games/${gameId}/pdfs`, { signal }),
         fetch(`/api/v1/library/games/${gameId}/agent-config`, { signal }),
       ]);
 
@@ -389,14 +430,16 @@ function useGameDetail(gameId: string): UseGameDetailResult {
       }
 
       const json = (await gameRes.json()) as Record<string, unknown>;
-      const kbRawJson = kbRes.ok ? (await kbRes.json()) as unknown : [];
+      const kbRawJson = kbRes.ok ? (await kbRes.json()) as unknown : null;
+      // /api/v1/games/{id}/pdfs returns { pdfs: [...] } shape
+      const kbPdfsRaw: unknown[] = kbRawJson != null
+        ? Array.isArray(kbRawJson)
+          ? kbRawJson
+          : ((kbRawJson as { pdfs?: unknown[] }).pdfs ?? [])
+        : [];
       const agentJson = agentRes.ok ? (await agentRes.json()) as Record<string, unknown> : null;
 
-      setData(mapToGameDetailData(
-        json,
-        Array.isArray(kbRawJson) ? kbRawJson : [],
-        agentJson,
-      ));
+      setData(mapToGameDetailData(json, kbPdfsRaw, agentJson));
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       setError(
@@ -430,17 +473,18 @@ function mapToGameDetailData(
   kbRaw: unknown[] = [],
   agentRaw: Record<string, unknown> | null = null,
 ): GameDetailData {
-  // GamePdfDto shape: { id, name, pageCount, fileSizeBytes, uploadedAt, source, language }
-  // PDFs returned by /pdfs are already indexed/available — no processingStatus field.
-  const kbDocuments: KbDocumentPreview[] = kbRaw.map((item) => {
-    const d = item as Record<string, unknown>;
-    return {
-      id:         String(d.id ?? ''),
-      fileName:   String(d.name ?? 'Documento'),
-      uploadedAt: String(d.uploadedAt ?? new Date().toISOString()),
-      status:     'indexed' as const,
-    };
-  });
+  // Map full PdfDocumentDto data (Issue #5195: from /api/v1/games/{gameId}/pdfs)
+  const pdfDocuments: PdfDocumentDto[] = kbRaw.map((item) =>
+    mapRawToPdfDocumentDto(item as Record<string, unknown>)
+  );
+
+  // KbDocumentPreview for simpler consumers — derive status from processingState
+  const kbDocuments: KbDocumentPreview[] = pdfDocuments.map((pdf) => ({
+    id:         pdf.id,
+    fileName:   pdf.fileName,
+    uploadedAt: pdf.uploadedAt,
+    status:     mapProcessingStateToStatus(pdf.processingState),
+  }));
 
   // AgentConfigDto shape: { llmModel, temperature, maxTokens, personality, detailLevel, personalNotes }
   // No identity fields (id/name/isActive) — use placeholder values when config exists.
@@ -466,6 +510,7 @@ function mapToGameDetailData(
     faqCount:           json.faqCount           != null ? Number(json.faqCount)          : undefined,
     rulesDocumentCount: json.rulesDocumentCount != null ? Number(json.rulesDocumentCount): undefined,
     kbDocuments:        kbDocuments.length > 0 ? kbDocuments : undefined,
+    pdfDocuments:       pdfDocuments.length > 0 ? pdfDocuments : undefined,
     agent,
   };
 }

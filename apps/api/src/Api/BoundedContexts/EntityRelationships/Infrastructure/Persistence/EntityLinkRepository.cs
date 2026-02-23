@@ -98,6 +98,7 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
         Guid entityId,
         EntityLinkScope? scope = null,
         EntityLinkType? linkType = null,
+        MeepleEntityType? targetEntityType = null,
         CancellationToken cancellationToken = default)
     {
         // Bidirectional query: entity as source OR as target of a bilateral link
@@ -110,6 +111,14 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
 
         if (linkType.HasValue)
             query = query.Where(x => x.LinkType == linkType.Value);
+
+        // Issue #5188: Filter by "other entity" type — direction-aware for bidirectional links.
+        // When entity is the source, the other entity is the target (x.TargetEntityType).
+        // When entity is the bidirectional target, the other entity is the source (x.SourceEntityType).
+        if (targetEntityType.HasValue)
+            query = query.Where(x =>
+                (x.SourceEntityType == entityType && x.TargetEntityType == targetEntityType.Value) ||
+                (x.IsBidirectional && x.TargetEntityType == entityType && x.SourceEntityType == targetEntityType.Value));
 
         return await query
             .OrderByDescending(x => x.CreatedAt)

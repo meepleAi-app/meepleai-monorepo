@@ -34,7 +34,11 @@ internal class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocuments
             UploadedAt: doc.UploadedAt,
             ProcessedAt: doc.ProcessedAt,
             PageCount: doc.PageCount,
-            DocumentType: doc.DocumentType?.Value ?? "base" // Issue #2051
+            DocumentType: doc.DocumentType?.Value ?? "base", // Issue #2051
+            ProcessingState: doc.ProcessingState.ToString(),
+            ProgressPercentage: doc.ProgressPercentage,
+            RetryCount: doc.RetryCount,
+            MaxRetries: doc.MaxRetries
         );
     }
 }

@@ -7,11 +7,12 @@
  * - Upload progress tracking
  * - File validation (PDF, 50MB limit)
  * - Links uploaded PDF to SharedGame
+ * - Live processing status polling after upload (Issue #5196)
  */
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +20,8 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
+import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // ========== Types ==========
 
@@ -57,7 +60,57 @@ export function PdfUploadSection({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Processing status polling (Issue #5196)
+  const [processingDoc, setProcessingDoc] = useState<PdfDocumentDto | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+  const TERMINAL_STATES = new Set(['Ready', 'Failed']);
+
+  // Poll document processing status after upload (Issue #5196)
+  useEffect(() => {
+    if (!processingDoc || !gameId || TERMINAL_STATES.has(processingDoc.processingState)) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/v1/games/${gameId}/pdfs`, { credentials: 'include' });
+        if (!res.ok) return;
+        const json = await res.json() as { pdfs?: PdfDocumentDto[] } | PdfDocumentDto[];
+        const pdfs: PdfDocumentDto[] = Array.isArray(json) ? json : (json.pdfs ?? []);
+        const doc = pdfs.find((p) => p.id === processingDoc.id);
+        if (doc) {
+          setProcessingDoc(doc);
+          if (TERMINAL_STATES.has(doc.processingState)) {
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+            if (doc.processingState === 'Ready') {
+              toast.success('PDF indicizzato con successo!');
+            }
+          }
+        }
+      } catch {
+        // ignore transient errors
+      }
+    };
+
+    pollingRef.current = setInterval(() => { void poll(); }, 3000);
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processingDoc?.id, processingDoc?.processingState, gameId]);
 
   // Validate file selection
   const validateFile = useCallback((selectedFile: File): boolean => {
@@ -199,9 +252,27 @@ export function PdfUploadSection({
       toast.success('PDF caricato con successo!');
       onPdfUploaded?.(uploaded);
 
-      // If we have a gameId, link the PDF to the game
+      // If we have a gameId, link the PDF to the game and start polling
       if (gameId) {
         await linkPdfToGame(gameId, result.documentId);
+        // Start processing status polling (Issue #5196)
+        setProcessingDoc({
+          id: result.documentId,
+          gameId,
+          fileName: file.name,
+          filePath: '',
+          fileSizeBytes: file.size,
+          processingStatus: 'Processing',
+          uploadedAt: new Date().toISOString(),
+          processedAt: null,
+          pageCount: null,
+          documentType: 'base',
+          isPublic: false,
+          processingState: 'Uploading',
+          progressPercentage: 0,
+          retryCount: 0,
+          maxRetries: 3,
+        });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore sconosciuto';
@@ -217,6 +288,7 @@ export function PdfUploadSection({
     setUploadedPdf(null);
     setFile(null);
     setError(null);
+    setProcessingDoc(null);
     onPdfRemoved?.();
   }, [onPdfRemoved]);
 
@@ -262,6 +334,16 @@ export function PdfUploadSection({
             >
               <X className="h-4 w-4" />
             </Button>
+          </div>
+        )}
+
+        {/* Processing status (polling after upload) - Issue #5196 */}
+        {processingDoc && (
+          <div data-testid="pdf-processing-status">
+            <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
+              Stato elaborazione
+            </p>
+            <KbCardStatusRow document={processingDoc} />
           </div>
         )}
 

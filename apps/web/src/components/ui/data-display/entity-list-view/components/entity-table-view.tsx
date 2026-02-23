@@ -40,6 +40,7 @@ const ENTITY_BORDER_COLORS: Record<MeepleEntityType, string> = {
   chatSession: 'border-l-[hsl(220,80%,55%)]',
   event: 'border-l-[hsl(350,89%,60%)]',
   custom: 'border-l-[hsl(30,15%,50%)]',
+  kb_card: 'border-l-[hsl(174,60%,40%)]',
 };
 
 // ============================================================================

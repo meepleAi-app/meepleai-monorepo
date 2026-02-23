@@ -18,6 +18,7 @@ export const MeepleEntityTypeSchema = z.enum([
   'ChatSession',
   'Event',
   'Toolkit',
+  'KbCard',
 ]);
 export type MeepleEntityType = z.infer<typeof MeepleEntityTypeSchema>;
 

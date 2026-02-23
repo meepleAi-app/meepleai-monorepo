@@ -99,6 +99,10 @@ export function KnowledgeBaseStep() {
           pageCount: null,
           documentType: 'base' as const,
           isPublic: false,
+          processingState: 'Uploading',
+          progressPercentage: 0,
+          retryCount: 0,
+          maxRetries: 3,
         },
       ]);
     },

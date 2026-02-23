@@ -11,13 +11,15 @@ namespace Api.BoundedContexts.EntityRelationships.Application.Queries;
 /// - the source (always)
 /// - the target of a bidirectional link (IsBidirectional=true)
 ///
-/// Supports optional filtering by Scope and LinkType.
+/// Supports optional filtering by Scope, LinkType, and TargetEntityType.
 /// Pass RequestingUserId to populate IsOwner on each returned DTO.
+/// Issue #5188: Added TargetEntityType filter for KB card queries.
 /// </summary>
 internal record GetEntityLinksQuery(
     MeepleEntityType EntityType,
     Guid EntityId,
     Guid? RequestingUserId = null,
     EntityLinkScope? Scope = null,
-    EntityLinkType? LinkType = null
+    EntityLinkType? LinkType = null,
+    MeepleEntityType? TargetEntityType = null
 ) : IQuery<IReadOnlyList<EntityLinkDto>>;

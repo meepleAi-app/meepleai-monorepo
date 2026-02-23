@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -14,6 +15,7 @@ using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
@@ -63,6 +65,7 @@ internal class HybridLlmService : ILlmService
     private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
     private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
+    private readonly IServiceScopeFactory? _scopeFactory; // Issue #5086: for fire-and-forget circuit breaker notifications
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -93,7 +96,8 @@ internal class HybridLlmService : ILlmService
         IUserBudgetService? userBudgetService = null,
         IOpenRouterFileLogger? openRouterFileLogger = null,
         IOpenRouterUsageService? openRouterUsageService = null,
-        IOpenRouterRateLimitTracker? rateLimitTracker = null)
+        IOpenRouterRateLimitTracker? rateLimitTracker = null,
+        IServiceScopeFactory? scopeFactory = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -107,6 +111,7 @@ internal class HybridLlmService : ILlmService
         _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
         _openRouterUsageService = openRouterUsageService; // Issue #5074: Optional - Redis usage cache
         _rateLimitTracker = rateLimitTracker; // Issue #5075: Optional - RPM/TPM sliding window
+        _scopeFactory = scopeFactory; // Issue #5086: Optional - for circuit breaker notifications
 
         if (_clients.Count == 0)
         {
@@ -114,10 +119,13 @@ internal class HybridLlmService : ILlmService
         }
 
         // ISSUE-962: Initialize circuit breakers and latency stats for each provider
-        // ISSUE-962: Initialize circuit breakers and latency stats for each provider
+        // ISSUE-5086: Subscribe OnStateTransition callback for admin notifications
         foreach (var providerName in _clients.Select(client => client.ProviderName))
         {
-            _circuitBreakers[providerName] = new CircuitBreakerState();
+            var breaker = new CircuitBreakerState();
+            var capturedProvider = providerName; // Capture for closure
+            breaker.OnStateTransition = (prev, next) => PublishCircuitBreakerEvent(capturedProvider, prev, next);
+            _circuitBreakers[providerName] = breaker;
             _latencyStats[providerName] = new LatencyStats();
         }
 
@@ -885,6 +893,48 @@ internal class HybridLlmService : ILlmService
                 ? stats.GetSummary()
                 : "No data";
         }
+    }
+
+    /// <summary>
+    /// ISSUE-5086: Fire-and-forget circuit breaker state change notification.
+    /// Uses a new DI scope so notifications survive request completion.
+    /// </summary>
+    private void PublishCircuitBreakerEvent(string providerName, CircuitState previousState, CircuitState newState)
+    {
+        if (_scopeFactory is null)
+            return;
+
+        var reason = (previousState, newState) switch
+        {
+            (CircuitState.Closed, CircuitState.Open) =>
+                $"{providerName} circuit breaker OPENED: consecutive failure threshold reached. Falling back to alternative provider.",
+            (CircuitState.HalfOpen, CircuitState.Open) =>
+                $"{providerName} circuit breaker REOPENED: recovery attempt failed.",
+            (CircuitState.HalfOpen, CircuitState.Closed) =>
+                $"{providerName} circuit breaker CLOSED: service recovered successfully.",
+            (CircuitState.Open, CircuitState.HalfOpen) =>
+                $"{providerName} circuit breaker HALF-OPEN: testing recovery.",
+            _ => $"{providerName} circuit breaker transitioned {previousState} → {newState}."
+        };
+
+        var evt = new CircuitBreakerStateChangedEvent(providerName, previousState, newState, reason, DateTime.UtcNow);
+        var scopeFactory = _scopeFactory;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+                await publisher.Publish(evt, CancellationToken.None).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to publish CircuitBreakerStateChangedEvent for {Provider}", providerName);
+            }
+#pragma warning restore CA1031
+        });
     }
 
     /// <summary>

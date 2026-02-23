@@ -35,11 +35,18 @@ internal sealed class CircuitBreakerState
     public DateTime? LastAttemptAt { get; private set; }
 
     /// <summary>
+    /// ISSUE-5086: Callback invoked when the circuit transitions between states.
+    /// Parameters: (previousState, newState).
+    /// </summary>
+    public Action<CircuitState, CircuitState>? OnStateTransition { get; set; }
+
+    /// <summary>
     /// Record a successful request
     /// </summary>
     public void RecordSuccess()
     {
         LastAttemptAt = DateTime.UtcNow;
+        var previous = State;
         ConsecutiveFailures = 0;
         ConsecutiveSuccesses++;
 
@@ -50,6 +57,9 @@ internal sealed class CircuitBreakerState
             ConsecutiveSuccesses = 0;
             OpenedAt = null;
         }
+
+        if (State != previous)
+            OnStateTransition?.Invoke(previous, State);
     }
 
     /// <summary>
@@ -58,6 +68,7 @@ internal sealed class CircuitBreakerState
     public void RecordFailure()
     {
         LastAttemptAt = DateTime.UtcNow;
+        var previous = State;
         ConsecutiveSuccesses = 0;
         ConsecutiveFailures++;
 
@@ -74,6 +85,9 @@ internal sealed class CircuitBreakerState
             OpenedAt = DateTime.UtcNow;
             ConsecutiveFailures = FailureThreshold; // Already at threshold
         }
+
+        if (State != previous)
+            OnStateTransition?.Invoke(previous, State);
     }
 
     /// <summary>
@@ -92,9 +106,11 @@ internal sealed class CircuitBreakerState
             (DateTime.UtcNow - OpenedAt.Value).TotalSeconds >= OpenDurationSeconds)
         {
             // Timeout expired - try half-open
+            var previous = State;
             State = CircuitState.HalfOpen;
             ConsecutiveFailures = 0;
             ConsecutiveSuccesses = 0;
+            OnStateTransition?.Invoke(previous, CircuitState.HalfOpen);
             return true;
         }
 

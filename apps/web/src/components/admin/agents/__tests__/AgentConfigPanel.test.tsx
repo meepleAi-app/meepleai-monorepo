@@ -401,13 +401,11 @@ describe('AgentConfigPanel', () => {
       const advancedButton = screen.getByRole('button', { name: /advanced options/i });
       await user.click(advancedButton);
 
-      await waitFor(async () => {
-        const maxTokensInput = screen.getByLabelText(/max tokens/i);
-        await user.clear(maxTokensInput);
-        await user.type(maxTokensInput, '4096');
+      const maxTokensInput = await screen.findByLabelText(/max tokens/i);
+      await user.clear(maxTokensInput);
+      await user.type(maxTokensInput, '4096');
 
-        expect(maxTokensInput).toHaveValue(4096);
-      });
+      expect(maxTokensInput).toHaveValue(4096);
     });
 
     it('should validate temperature range (0.0-2.0)', async () => {
@@ -503,11 +501,9 @@ describe('AgentConfigPanel', () => {
       await user.click(advancedButton);
 
       // 4. Change max tokens
-      await waitFor(async () => {
-        const maxTokensInput = screen.getByLabelText(/max tokens/i);
-        await user.clear(maxTokensInput);
-        await user.type(maxTokensInput, '4096');
-      });
+      const maxTokensInput = await screen.findByLabelText(/max tokens/i);
+      await user.clear(maxTokensInput);
+      await user.type(maxTokensInput, '4096');
 
       // Config should be updated and saved
       await waitFor(() => {

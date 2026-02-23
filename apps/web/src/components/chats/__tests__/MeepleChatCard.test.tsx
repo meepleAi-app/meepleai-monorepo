@@ -90,7 +90,7 @@ describe('MeepleChatCard', () => {
     render(<MeepleChatCard session={mockArchivedSession} />);
     const button = screen.getByRole('button', { name: 'Chat archiviata' });
     expect(button).toBeInTheDocument();
-    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
   });
 
   // --------------------------------------------------------------------------
@@ -114,7 +114,7 @@ describe('MeepleChatCard', () => {
     render(<MeepleChatCard session={mockActiveSession} isOwner={true} hasGameChatSlot={false} />);
     const button = screen.getByRole('button', { name: 'Limite chat raggiunto' });
     expect(button).toBeInTheDocument();
-    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('Nuova Chat calls onNewChat with gameId when clicked', async () => {

@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="it" class="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MeepleAI — All Card Types Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --game:hsl(25,95%,45%);--game-l:hsl(25,95%,92%);
+  --agent:hsl(38,92%,50%);--agent-l:hsl(38,92%,92%);
+  --player:hsl(262,83%,58%);--player-l:hsl(262,83%,92%);
+  --session:hsl(240,60%,55%);--session-l:hsl(240,60%,92%);
+  --chat:hsl(220,80%,55%);--chat-l:hsl(220,80%,92%);
+  --kb:hsl(174,60%,40%);--kb-l:hsl(174,60%,92%);
+  --bg:#f7f3ee;--surface:#fff;--border:#e8e0d8;
+  --text:#1a110a;--muted:#7a6355;--subtle:#c9bfb5;
+  --shadow:rgba(180,130,80,0.12);--radius:12px;
+}
+.dark{--bg:#18120a;--surface:#231a10;--border:#3a2d20;--text:#f0e8dc;--muted:#9a8a78;--shadow:rgba(0,0,0,0.4)}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:.3s}
+h1,h2,h3{font-family:'Quicksand',sans-serif}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.topbar h1{font-size:17px;font-weight:700}
+.topbar small{font-size:12px;color:var(--muted);margin-left:8px}
+.btn-sm{padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer}
+.btn-sm:hover{background:var(--border)}
+
+/* Tabs */
+.tab-nav{display:flex;gap:4px;padding:12px 24px 0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto}
+.tab-btn{padding:8px 16px;border:none;background:transparent;font-family:'Quicksand',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);white-space:nowrap;transition:.2s;border-radius:6px 6px 0 0}
+.tab-btn.active{color:var(--accent,var(--text));border-bottom-color:var(--accent,var(--text))}
+.tab-btn:hover:not(.active){background:var(--bg)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Main */
+.main{padding:24px;max-width:1200px;margin:0 auto}
+.sec-label{font-family:'Quicksand',sans-serif;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Card Grid */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:32px}
+
+/* Flip card */
+.card-wrap{perspective:1000px;height:280px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:.55s cubic-bezier(.4,0,.2,1)}
+.card-wrap.flipped .card-inner{transform:rotateY(180deg)}
+.card-face{position:absolute;inset:0;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);box-shadow:0 4px 16px var(--shadow);-webkit-backface-visibility:hidden;backface-visibility:hidden;overflow:hidden;display:flex;flex-direction:column}
+.card-face:hover{box-shadow:0 8px 32px var(--shadow)}
+.card-back{transform:rotateY(180deg)}
+
+/* Card Front */
+.card-cover{height:110px;position:relative;flex-shrink:0}
+.entity-badge{position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:20px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif;letter-spacing:.06em;text-transform:uppercase;backdrop-filter:blur(4px)}
+.flip-btn{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.flip-btn:hover{background:rgba(0,0,0,.7)}
+.card-body{padding:10px 12px 6px;flex:1;display:flex;flex-direction:column;gap:3px}
+.card-title{font-family:'Quicksand',sans-serif;font-weight:700;font-size:13px;line-height:1.3;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-sub{font-size:11px;color:var(--muted)}
+.card-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px;flex:1;align-content:flex-start}
+.badge{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.badge.ac{background:var(--ac-l);border-color:var(--ac);color:var(--ac)}
+
+/* Card Links */
+.card-links{display:flex;gap:5px;flex-wrap:wrap;padding:0 12px 6px}
+.card-link{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:.2s;white-space:nowrap}
+.card-link:hover{background:var(--bg);color:var(--text)}
+
+/* Card Actions */
+.card-actions{display:flex;gap:4px;padding:6px 10px 8px;border-top:1px solid var(--border);flex-shrink:0}
+.ca{flex:1;padding:5px;border:none;border-radius:8px;background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;transition:.2s;font-family:'Nunito',sans-serif}
+.ca:hover{background:var(--bg);color:var(--text)}
+.ca.pri{background:var(--ac-l);color:var(--ac)}
+.ca.pri:hover{filter:brightness(.95)}
+.ca:disabled{opacity:.4;cursor:not-allowed}
+
+/* More Menu */
+.more-wrap{position:relative}
+.more-menu{position:absolute;bottom:110%;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px var(--shadow);min-width:168px;padding:4px;z-index:50;display:none}
+.more-wrap.open .more-menu{display:block}
+.mi{padding:7px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:8px;transition:.15s;white-space:nowrap}
+.mi:hover{background:var(--bg)}
+.mi.danger{color:#dc2626}
+.mi.off{opacity:.4;cursor:not-allowed;pointer-events:none}
+.mi-hr{height:1px;background:var(--border);margin:3px 0}
+
+/* Card Back */
+.back-hdr{height:60px;position:relative;display:flex;align-items:center;padding:0 14px;flex-shrink:0;overflow:hidden}
+.back-hdr::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 8px,rgba(255,255,255,.05) 8px,rgba(255,255,255,.05) 9px)}
+.back-hdr-info{position:relative;z-index:1}
+.back-entity{font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.07em}
+.back-title{font-size:13px;font-weight:700;font-family:'Quicksand',sans-serif;color:#fff}
+.back-content{flex:1;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:0}
+.b-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.b-row:last-child{border-bottom:none}
+.b-key{color:var(--muted);font-weight:600}
+.b-val{font-weight:700;color:var(--text)}
+.b-desc{font-size:11px;color:var(--muted);line-height:1.5;padding-top:6px}
+
+/* List Card */
+.list-card{display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 2px 8px var(--shadow);overflow:hidden;margin-bottom:8px;cursor:pointer;border-left:4px solid var(--ac)}
+.list-card:hover{box-shadow:0 4px 16px var(--shadow)}
+.list-thumb{width:64px;height:64px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px}
+.list-body{flex:1;padding:10px 12px;min-width:0}
+.list-title{font-family:'Quicksand',sans-serif;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.list-badges{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.list-actions{display:flex;gap:4px;padding:0 12px;flex-shrink:0}
+.la{padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap}
+.la:hover{background:var(--border);color:var(--text)}
+.la.pri{background:var(--ac-l);border-color:var(--ac);color:var(--ac)}
+
+/* Drawer */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;justify-content:flex-end}
+.drawer-overlay.open{display:flex}
+.drawer{width:360px;height:100%;background:var(--surface);display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.2);animation:dIn .25s ease}
+@keyframes dIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.d-hdr{height:160px;position:relative;flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 16px;overflow:hidden}
+.d-hdr::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 10px,rgba(255,255,255,.04) 10px,rgba(255,255,255,.04) 11px);z-index:0}
+.d-badge{position:absolute;top:12px;left:12px;padding:3px 10px;border-radius:20px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;font-weight:700;font-family:'Quicksand',sans-serif;text-transform:uppercase;letter-spacing:.06em;backdrop-filter:blur(6px);z-index:1}
+.d-close-btn{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.45);border:none;color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:1}
+.d-title{font-family:'Quicksand',sans-serif;font-size:16px;font-weight:700;color:#fff;position:relative;z-index:1;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.d-sub{font-size:12px;color:rgba(255,255,255,.75);position:relative;z-index:1;margin-top:2px}
+.d-status-bar{padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.d-pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:'Quicksand',sans-serif;text-transform:uppercase;letter-spacing:.06em}
+.d-meta{font-size:12px;color:var(--muted)}
+.d-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.d-tab{padding:9px 14px;border:none;background:transparent;font-family:'Quicksand',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:.2s;white-space:nowrap}
+.d-tab.active{color:var(--text);border-bottom-color:var(--dac,var(--text))}
+.d-content{flex:1;overflow-y:auto;padding:16px}
+.d-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.d-cta{flex:1;padding:9px;border-radius:10px;border:none;font-family:'Quicksand',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
+.d-cta.sec{background:var(--bg);border:1px solid var(--border);color:var(--text)}
+.d-cta.sec:hover{background:var(--border)}
+
+/* Drawer content helpers */
+.ds-title{font-family:'Quicksand',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;margin-top:12px}
+.ds-title:first-child{margin-top:0}
+.d-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.d-row:last-child{border-bottom:none}
+.d-key{color:var(--muted);font-weight:600}
+.d-val{font-weight:700;color:var(--text)}
+.d-msg{background:var(--bg);border-radius:8px;padding:8px;font-size:12px;color:var(--muted);margin:4px 0}
+.chat-bubble{border-radius:8px;padding:8px;font-size:12px;margin:4px 0}
+.chat-me{background:var(--bg)}
+.chat-ai{background:var(--agent-l)}
+.green{color:#16a34a}.red{color:#dc2626}.blue{color:#3b6fe8}.orange{color:#e06f0a}
+
+/* Dashboard */
+.dash-greeting{padding:20px 0 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.dash-greeting h2{font-size:20px;font-weight:700;font-family:'Quicksand',sans-serif;margin-bottom:8px}
+.dash-stats{display:flex;gap:8px;flex-wrap:wrap}
+.ds-stat{display:flex;flex-direction:column;align-items:center;padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-width:72px}
+.ds-val{font-size:18px;font-weight:700;font-family:'Quicksand',sans-serif;color:var(--text)}
+.ds-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px}
+.dash-hero{display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,var(--session),hsl(240,60%,38%));border-radius:14px;padding:20px 24px;margin-bottom:28px;cursor:pointer;position:relative;overflow:hidden;transition:.2s}
+.dash-hero::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 12px,rgba(255,255,255,.04) 12px,rgba(255,255,255,.04) 13px)}
+.dash-hero:hover{filter:brightness(1.04)}
+.dh-dot{width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 4px rgba(74,222,128,.3);flex-shrink:0;position:relative;z-index:1}
+.dh-content{flex:1;position:relative;z-index:1}
+.dh-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.dh-title{font-size:18px;font-weight:700;font-family:'Quicksand',sans-serif;color:#fff}
+.dh-meta{font-size:12px;color:rgba(255,255,255,.7);margin-top:3px}
+.dh-cta{padding:9px 18px;border-radius:10px;border:none;background:#fff;color:var(--session);font-weight:700;font-size:13px;font-family:'Quicksand',sans-serif;cursor:pointer;white-space:nowrap;position:relative;z-index:1;flex-shrink:0;transition:.15s}
+.dh-cta:hover{background:rgba(255,255,255,.9);transform:translateY(-1px)}
+.dash-section{margin-bottom:32px}
+.dash-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.dash-sh-title{font-family:'Quicksand',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
+.see-all{font-size:12px;font-weight:600;color:var(--muted);background:transparent;border:none;cursor:pointer;font-family:'Nunito',sans-serif;padding:0}
+.see-all:hover{color:var(--text)}
+.cta-card{border:2px dashed var(--border);border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px 12px;cursor:pointer;color:var(--muted);transition:.2s;background:transparent;width:100%}
+.cta-card:hover{border-color:var(--ac,var(--muted));background:var(--bg);color:var(--ac,var(--text))}
+.cta-card-icon{font-size:26px}
+.cta-card-text{font-size:12px;font-weight:700;font-family:'Quicksand',sans-serif;text-align:center}
+.hero-state-toggle{padding:5px 12px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;transition:.2s}
+.hero-state-toggle:hover{background:var(--bg);color:var(--text)}
+.dash-hero-empty{background:var(--surface);border:2px dashed var(--border);cursor:default}
+.dash-hero-empty::before{display:none}
+.dash-hero-empty:hover{filter:none}
+.dh-empty-icon{font-size:36px;flex-shrink:0;position:relative;z-index:1;opacity:.5}
+.dh-cta-pri{background:var(--session);color:#fff}
+.dh-cta-pri:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.dh-cta-sec{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.dh-cta-sec:hover{background:var(--border);color:var(--text)}
+.dh-empty-actions{display:flex;gap:8px;flex-shrink:0;position:relative;z-index:1}
+
+@media(max-width:600px){.drawer{width:100%}.card-grid{grid-template-columns:1fr 1fr}.dash-hero{flex-wrap:wrap}.dh-cta{width:100%}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center">
+    <h1>MeepleAI</h1><small>All Card Types Demo</small>
+  </div>
+  <button class="btn-sm" onclick="document.documentElement.classList.toggle('dark')">🌙 Dark</button>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="dashboard" style="--accent:var(--session)" onclick="switchTab(this)">🏠 Dashboard</button>
+  <button class="tab-btn" data-tab="game" style="--accent:var(--game)" onclick="switchTab(this)">🎲 Giochi</button>
+  <button class="tab-btn" data-tab="agent" style="--accent:var(--agent)" onclick="switchTab(this)">🤖 Agenti</button>
+  <button class="tab-btn" data-tab="player" style="--accent:var(--player)" onclick="switchTab(this)">👤 Giocatori</button>
+  <button class="tab-btn" data-tab="session" style="--accent:var(--session)" onclick="switchTab(this)">🎯 Sessioni</button>
+  <button class="tab-btn" data-tab="chat" style="--accent:var(--chat)" onclick="switchTab(this)">💬 Chat</button>
+  <button class="tab-btn" data-tab="kb" style="--accent:var(--kb)" onclick="switchTab(this)">📚 KB Docs</button>
+</div>
+
+<div class="main">
+
+<!-- ═══ DASHBOARD ═══ -->
+<div class="tab-panel active" id="tab-dashboard">
+
+  <!-- Greeting & Quick Stats -->
+  <div class="dash-greeting">
+    <div>
+      <h2>Ciao, Marco! 👋</h2>
+      <div class="dash-stats">
+        <div class="ds-stat"><span class="ds-val">47</span><span class="ds-lbl">Partite</span></div>
+        <div class="ds-stat"><span class="ds-val">12</span><span class="ds-lbl">Giochi</span></div>
+        <div class="ds-stat"><span class="ds-val">3</span><span class="ds-lbl">Agenti</span></div>
+        <div class="ds-stat"><span class="ds-val">8</span><span class="ds-lbl">Chat</span></div>
+      </div>
+    </div>
+    <button class="hero-state-toggle" onclick="toggleHeroState(this)" id="heroToggleBtn">⚪ Simula: nessuna sessione</button>
+  </div>
+
+  <!-- Hero: Sessione ATTIVA -->
+  <div id="hero-active" class="dash-hero" data-drawer-key="session-s1" style="--ac:var(--session);--ac-l:var(--session-l)">
+    <div class="dh-dot"></div>
+    <div class="dh-content">
+      <div class="dh-label">🟢 Sessione attiva</div>
+      <div class="dh-title">Serata Catan</div>
+      <div class="dh-meta">4 giocatori &bull; Turno 18 &bull; Da 2h 15min</div>
+    </div>
+    <button class="dh-cta" onclick="openDrawer('session-s1');event.stopPropagation()">Riprendi →</button>
+  </div>
+
+  <!-- Hero: NESSUNA SESSIONE (stato vuoto) -->
+  <div id="hero-empty" class="dash-hero dash-hero-empty" style="display:none">
+    <div class="dh-empty-icon">🎲</div>
+    <div class="dh-content">
+      <div class="dh-label" style="color:var(--muted)">Nessuna sessione in corso</div>
+      <div class="dh-title" style="color:var(--text)">Pronto a giocare?</div>
+      <div class="dh-meta" style="color:var(--muted)">Ultima sessione: Serata Catan, 3 giorni fa</div>
+    </div>
+    <div class="dh-empty-actions">
+      <button class="dh-cta dh-cta-pri">▶ Nuova sessione</button>
+      <button class="dh-cta dh-cta-sec">↩ Riprendi ultima</button>
+    </div>
+  </div>
+
+  <!-- Giochi recenti -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <span class="dash-sh-title">🎲 Giochi recenti</span>
+      <button class="see-all" onclick="switchTab(document.querySelector('[data-tab=game]'))">Vedi tutti →</button>
+    </div>
+    <div class="list-card" data-drawer-key="game-catan" style="--ac:var(--game);--ac-l:var(--game-l)">
+      <div class="list-thumb" style="background:var(--game-l)">🏝️</div>
+      <div class="list-body">
+        <div class="list-title">I Coloni di Catan</div>
+        <div class="list-meta">Ultima partita 3 giorni fa &bull; 47 partite totali</div>
+        <div class="list-badges"><span class="badge ac">Nella libreria</span><span class="badge">⭐ 8.2</span></div>
+      </div>
+      <div class="list-actions">
+        <button class="la pri" onclick="openDrawer('game-catan');event.stopPropagation()">Apri</button>
+      </div>
+    </div>
+    <div class="list-card" data-drawer-key="game-wing" style="--ac:var(--game);--ac-l:var(--game-l)">
+      <div class="list-thumb" style="background:var(--game-l)">🦅</div>
+      <div class="list-body">
+        <div class="list-title">Wingspan</div>
+        <div class="list-meta">Ultima partita 1 settimana fa &bull; 12 partite totali</div>
+        <div class="list-badges"><span class="badge ac">Nella libreria</span><span class="badge">⭐ 9.0</span></div>
+      </div>
+      <div class="list-actions">
+        <button class="la pri" onclick="openDrawer('game-wing');event.stopPropagation()">Apri</button>
+      </div>
+    </div>
+    <div class="list-card" data-drawer-key="game-azul" style="--ac:var(--game);--ac-l:var(--game-l)">
+      <div class="list-thumb" style="background:var(--game-l)">🎨</div>
+      <div class="list-body">
+        <div class="list-title">Azul</div>
+        <div class="list-meta">Ultima partita 2 settimane fa &bull; 8 partite totali</div>
+        <div class="list-badges"><span class="badge">Nella wishlist</span><span class="badge">⭐ 8.5</span></div>
+      </div>
+      <div class="list-actions">
+        <button class="la pri" onclick="openDrawer('game-azul');event.stopPropagation()">Apri</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- I tuoi agenti -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <span class="dash-sh-title">🤖 I tuoi agenti</span>
+      <button class="see-all" onclick="switchTab(document.querySelector('[data-tab=agent]'))">Vedi tutti →</button>
+    </div>
+    <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+      <!-- Agent 1: Rules Master -->
+      <div class="card-wrap" data-drawer-key="agent-rm" style="--ac:var(--agent);--ac-l:var(--agent-l)">
+        <div class="card-inner">
+          <div class="card-face">
+            <div class="card-cover" style="background:linear-gradient(135deg,hsl(38,92%,50%),hsl(38,92%,32%));display:flex;align-items:center;justify-content:center;font-size:44px">🤖</div>
+            <div class="card-body">
+              <div class="card-title">Rules Master</div>
+              <div class="card-sub">Agente regolamenti</div>
+              <div class="card-meta">
+                <span class="badge ac">Attivo</span>
+                <span class="badge">Catan · Wing</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="ca pri" onclick="openDrawer('agent-rm','chat');event.stopPropagation()">💬 Chatta</button>
+              <div class="more-wrap">
+                <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+                <div class="more-menu">
+                  <div class="mi" onclick="closeMore()">⚙️ Configura</div>
+                  <div class="mi-hr"></div>
+                  <div class="mi danger" onclick="closeMore()">🗑️ Elimina</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Agent 2: Strategy Bot -->
+      <div class="card-wrap" data-drawer-key="agent-rm" style="--ac:var(--agent);--ac-l:var(--agent-l)">
+        <div class="card-inner">
+          <div class="card-face">
+            <div class="card-cover" style="background:linear-gradient(135deg,hsl(38,92%,50%),hsl(38,92%,32%));display:flex;align-items:center;justify-content:center;font-size:44px">🧠</div>
+            <div class="card-body">
+              <div class="card-title">Strategy Bot</div>
+              <div class="card-sub">Consigli strategici</div>
+              <div class="card-meta">
+                <span class="badge">Inattivo</span>
+                <span class="badge">Azul</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="ca" onclick="openDrawer('agent-rm','chat');event.stopPropagation()">💬 Chatta</button>
+              <div class="more-wrap">
+                <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+                <div class="more-menu">
+                  <div class="mi" onclick="closeMore()">⚙️ Configura</div>
+                  <div class="mi-hr"></div>
+                  <div class="mi danger" onclick="closeMore()">🗑️ Elimina</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- CTA: Crea agente -->
+      <div style="height:280px">
+        <button class="cta-card" style="--ac:var(--agent);height:100%">
+          <div class="cta-card-icon">➕</div>
+          <div class="cta-card-text">Crea nuovo agente</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat recenti -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <span class="dash-sh-title">💬 Chat recenti</span>
+      <button class="see-all" onclick="switchTab(document.querySelector('[data-tab=chat]'))">Vedi tutti →</button>
+    </div>
+    <div class="list-card" data-drawer-key="chat-c1" style="--ac:var(--chat);--ac-l:var(--chat-l)">
+      <div class="list-thumb" style="background:var(--chat-l)">💬</div>
+      <div class="list-body">
+        <div class="list-title">Regole avanzate di Catan</div>
+        <div class="list-meta">Rules Master &bull; 5 messaggi &bull; 2h fa</div>
+        <div class="list-badges"><span class="badge">I Coloni di Catan</span></div>
+      </div>
+      <div class="list-actions">
+        <button class="la pri" onclick="openDrawer('chat-c1');event.stopPropagation()">Apri</button>
+      </div>
+    </div>
+    <div class="list-card" data-drawer-key="chat-c1" style="--ac:var(--chat);--ac-l:var(--chat-l)">
+      <div class="list-thumb" style="background:var(--chat-l)">💬</div>
+      <div class="list-body">
+        <div class="list-title">Come si vince a Wingspan?</div>
+        <div class="list-meta">Rules Master &bull; 8 messaggi &bull; ieri</div>
+        <div class="list-badges"><span class="badge">Wingspan</span></div>
+      </div>
+      <div class="list-actions">
+        <button class="la pri" onclick="openDrawer('chat-c1');event.stopPropagation()">Apri</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-dashboard -->
+
+<!-- ═══ GIOCHI ═══ -->
+<div class="tab-panel" id="tab-game">
+  <div class="sec-label">Grid</div>
+  <div class="card-grid">
+
+    <!-- Catan (in libreria) -->
+    <div class="card-wrap" id="cw-catan" data-drawer-key="game-catan" style="--ac:var(--game);--ac-l:var(--game-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(25,95%,45%),hsl(25,95%,28%))">
+            <span class="entity-badge">Gioco</span>
+            <button class="flip-btn" onclick="flip(event,'cw-catan')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">I Coloni di Catan</div>
+            <div class="card-sub">Klaus Teuber · 1995</div>
+            <div class="card-meta">
+              <span class="badge ac">Nella libreria</span>
+              <span class="badge">3-4 giocatori</span>
+              <span class="badge">⭐ 8.2</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link" onclick="openDrawer('game-catan','kb')">📚 KB (3)</span>
+            <span class="card-link" onclick="openDrawer('game-catan','chat')">💬 Chat</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca" onclick="openDrawer('game-catan','chat')">💬 Chat</button>
+            <button class="ca" onclick="openDrawer('game-catan','kb')">📚 Docs</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi off">✅ Nella libreria</div>
+                <div class="mi-hr"></div>
+                <div class="mi" onclick="closeMore()">✏️ Proponi modifica</div>
+                <div class="mi" onclick="closeMore()">🚩 Segnala errore</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(25,95%,45%),hsl(25,95%,28%))">
+            <div class="back-hdr-info">
+              <div class="back-entity">Gioco</div>
+              <div class="back-title">I Coloni di Catan</div>
+            </div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-catan')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Complessità</span><span class="b-val">Media ★★★☆☆</span></div>
+            <div class="b-row"><span class="b-key">Durata</span><span class="b-val">60–120 min</span></div>
+            <div class="b-row"><span class="b-key">Età</span><span class="b-val">10+</span></div>
+            <div class="b-row"><span class="b-key">Vittorie</span><span class="b-val green">7 / 12</span></div>
+            <p class="b-desc">Gioco di strategia e negoziazione su un'isola da colonizzare con risorse, strade e insediamenti.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wingspan (non in libreria) -->
+    <div class="card-wrap" id="cw-wing" data-drawer-key="game-wing" style="--ac:var(--game);--ac-l:var(--game-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(200,65%,40%),hsl(25,80%,38%))">
+            <span class="entity-badge">Gioco</span>
+            <button class="flip-btn" onclick="flip(event,'cw-wing')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Wingspan</div>
+            <div class="card-sub">Elizabeth Hargrave · 2019</div>
+            <div class="card-meta">
+              <span class="badge">1-5 giocatori</span>
+              <span class="badge">⭐ 8.8</span>
+              <span class="badge">Engine-building</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">📚 KB (0)</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('game-wing','info')">+ Libreria</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">+ Aggiungi alla libreria</div>
+                <div class="mi-hr"></div>
+                <div class="mi" onclick="closeMore()">✏️ Proponi modifica</div>
+                <div class="mi" onclick="closeMore()">🚩 Segnala errore</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(200,65%,40%),hsl(25,80%,28%))">
+            <div class="back-hdr-info">
+              <div class="back-entity">Gioco</div>
+              <div class="back-title">Wingspan</div>
+            </div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-wing')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Complessità</span><span class="b-val">Alta ★★★★☆</span></div>
+            <div class="b-row"><span class="b-key">Durata</span><span class="b-val">40–70 min</span></div>
+            <div class="b-row"><span class="b-key">BGG Rank</span><span class="b-val">#12 all time</span></div>
+            <p class="b-desc">Gioco di raccolta carte sugli uccelli con motore di produzione. Componenti eccezionali.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Azul -->
+    <div class="card-wrap" id="cw-azul" data-drawer-key="game-azul" style="--ac:var(--game);--ac-l:var(--game-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(200,70%,40%),hsl(25,95%,40%))">
+            <span class="entity-badge">Gioco</span>
+            <button class="flip-btn" onclick="flip(event,'cw-azul')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Azul</div>
+            <div class="card-sub">Michael Kiesling · 2017</div>
+            <div class="card-meta">
+              <span class="badge ac">Nella libreria</span>
+              <span class="badge">2-4 giocatori</span>
+              <span class="badge">⭐ 8.0</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link" onclick="openDrawer('game-azul','kb')">📚 KB (1)</span>
+            <span class="card-link">🎯 Sessioni (2)</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca" onclick="openDrawer('game-azul','chat')">💬 Chat</button>
+            <button class="ca" onclick="openDrawer('game-azul','kb')">📚 Docs</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi off">✅ Nella libreria</div>
+                <div class="mi-hr"></div>
+                <div class="mi" onclick="closeMore()">✏️ Proponi modifica</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(200,70%,40%),hsl(25,95%,28%))">
+            <div class="back-hdr-info">
+              <div class="back-entity">Gioco</div>
+              <div class="back-title">Azul</div>
+            </div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-azul')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Complessità</span><span class="b-val">Bassa ★★☆☆☆</span></div>
+            <div class="b-row"><span class="b-key">Durata</span><span class="b-val">30–45 min</span></div>
+            <div class="b-row"><span class="b-key">Punteggio medio</span><span class="b-val">67 pt</span></div>
+            <div class="b-row"><span class="b-key">Vittorie</span><span class="b-val green">3 / 5</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">List</div>
+  <div class="list-card" style="--ac:var(--game);--ac-l:var(--game-l)" onclick="openDrawer('game-catan','info')">
+    <div class="list-thumb" style="background:hsl(25,95%,88%)">🎲</div>
+    <div class="list-body">
+      <div class="list-title">I Coloni di Catan</div>
+      <div class="list-meta">Klaus Teuber · 3-4 giocatori</div>
+      <div class="list-badges">
+        <span class="badge ac">Nella libreria</span>
+        <span class="badge">⭐ 8.2</span><span class="badge">📚 KB (3)</span>
+      </div>
+    </div>
+    <div class="list-actions">
+      <button class="la pri" onclick="event.stopPropagation();openDrawer('game-catan','chat')">💬</button>
+      <button class="la" onclick="event.stopPropagation()">⋯</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AGENTI ═══ -->
+<div class="tab-panel" id="tab-agent">
+  <div class="sec-label">Grid</div>
+  <div class="card-grid">
+
+    <div class="card-wrap" id="cw-rm" data-drawer-key="agent-rm" style="--ac:var(--agent);--ac-l:var(--agent-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(38,92%,50%),hsl(38,92%,28%))">
+            <span class="entity-badge">Agente</span>
+            <button class="flip-btn" onclick="flip(event,'cw-rm')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">RuleMaster AI</div>
+            <div class="card-sub">Assistente regole universale</div>
+            <div class="card-meta">
+              <span class="badge ac">🟢 Attivo</span>
+              <span class="badge">Regole</span>
+              <span class="badge">💬 42</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🎲 Catan</span>
+            <span class="card-link">🎲 Azul</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('agent-rm','chat')">💬 Chat</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">⚙️ Configura</div>
+                <div class="mi-hr"></div>
+                <div class="mi danger" onclick="closeMore()">🗑 Elimina</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(38,92%,50%),hsl(38,92%,28%))">
+            <div class="back-hdr-info"><div class="back-entity">Agente</div><div class="back-title">RuleMaster AI</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-rm')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Modello</span><span class="b-val">GPT-4o</span></div>
+            <div class="b-row"><span class="b-key">Temperatura</span><span class="b-val">0.3</span></div>
+            <div class="b-row"><span class="b-key">KB collegati</span><span class="b-val">3</span></div>
+            <div class="b-row"><span class="b-key">Quota</span><span class="b-val orange">80 / 100</span></div>
+            <p class="b-desc">Risponde a domande sulle regole usando i KB come fonte primaria con citazioni precise.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-wrap" id="cw-sb" data-drawer-key="agent-rm" style="--ac:var(--agent);--ac-l:var(--agent-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(38,50%,55%),hsl(38,80%,28%))">
+            <span class="entity-badge">Agente</span>
+            <button class="flip-btn" onclick="flip(event,'cw-sb')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">ScoreBot</div>
+            <div class="card-sub">Calcolo punteggi automatico</div>
+            <div class="card-meta">
+              <span class="badge">🔴 Inattivo</span>
+              <span class="badge">Punteggi</span>
+              <span class="badge">💬 7</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🎲 Azul</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca" disabled>💬 Chat</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">⚙️ Configura</div>
+                <div class="mi" onclick="closeMore()">▶️ Attiva</div>
+                <div class="mi-hr"></div>
+                <div class="mi danger" onclick="closeMore()">🗑 Elimina</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(38,50%,55%),hsl(38,80%,28%))">
+            <div class="back-hdr-info"><div class="back-entity">Agente</div><div class="back-title">ScoreBot</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-sb')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Modello</span><span class="b-val">Claude 3.5</span></div>
+            <div class="b-row"><span class="b-key">Stato</span><span class="b-val red">Inattivo</span></div>
+            <div class="b-row"><span class="b-key">Ultima chat</span><span class="b-val">15 gg fa</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">List</div>
+  <div class="list-card" style="--ac:var(--agent);--ac-l:var(--agent-l)" onclick="openDrawer('agent-rm','info')">
+    <div class="list-thumb" style="background:hsl(38,92%,88%)">🤖</div>
+    <div class="list-body">
+      <div class="list-title">RuleMaster AI</div>
+      <div class="list-meta">Assistente regole · GPT-4o</div>
+      <div class="list-badges">
+        <span class="badge ac">🟢 Attivo</span>
+        <span class="badge">💬 42</span><span class="badge">KB: 3</span>
+      </div>
+    </div>
+    <div class="list-actions">
+      <button class="la pri" onclick="event.stopPropagation();openDrawer('agent-rm','chat')">💬 Chat</button>
+      <button class="la" onclick="event.stopPropagation()">⋯</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GIOCATORI ═══ -->
+<div class="tab-panel" id="tab-player">
+  <div class="sec-label">Grid</div>
+  <div class="card-grid">
+
+    <div class="card-wrap" id="cw-marco" data-drawer-key="player-marco" style="--ac:var(--player);--ac-l:var(--player-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,35%))">
+            <span class="entity-badge">Giocatore</span>
+            <button class="flip-btn" onclick="flip(event,'cw-marco')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Marco Rossi</div>
+            <div class="card-sub">Membro dal 2024</div>
+            <div class="card-meta">
+              <span class="badge ac">🎯 Sessione attiva</span>
+              <span class="badge">42 partite</span>
+              <span class="badge">⭐ Avanzato</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🎯 Catan</span>
+            <span class="card-link">🎲 7 giochi</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('player-marco','profilo')">👤 Profilo</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">🎯 Invita a Sessione</div>
+                <div class="mi" onclick="closeMore()">⚙️ Configura</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(262,83%,58%),hsl(262,83%,30%))">
+            <div class="back-hdr-info"><div class="back-entity">Giocatore</div><div class="back-title">Marco Rossi</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-marco')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Partite</span><span class="b-val">42</span></div>
+            <div class="b-row"><span class="b-key">Vittorie</span><span class="b-val green">58%</span></div>
+            <div class="b-row"><span class="b-key">Gioco preferito</span><span class="b-val">Catan</span></div>
+            <div class="b-row"><span class="b-key">Ultima partita</span><span class="b-val">Ieri</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-wrap" id="cw-sara" data-drawer-key="player-sara" style="--ac:var(--player);--ac-l:var(--player-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(262,60%,65%),hsl(280,70%,35%))">
+            <span class="entity-badge">Giocatore</span>
+            <button class="flip-btn" onclick="flip(event,'cw-sara')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Sara Bianchi</div>
+            <div class="card-sub">Membro dal 2025</div>
+            <div class="card-meta">
+              <span class="badge">11 partite</span>
+              <span class="badge">⭐ Intermedio</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🎲 3 giochi</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('player-sara','profilo')">👤 Profilo</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi off" title="Nessuna sessione attiva">🎯 Invita a Sessione</div>
+                <div class="mi" onclick="closeMore()">⚙️ Configura</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(262,60%,65%),hsl(280,70%,30%))">
+            <div class="back-hdr-info"><div class="back-entity">Giocatore</div><div class="back-title">Sara Bianchi</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-sara')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Partite</span><span class="b-val">11</span></div>
+            <div class="b-row"><span class="b-key">Vittorie</span><span class="b-val green">45%</span></div>
+            <div class="b-row"><span class="b-key">Gioco preferito</span><span class="b-val">Wingspan</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">List</div>
+  <div class="list-card" style="--ac:var(--player);--ac-l:var(--player-l)" onclick="openDrawer('player-marco','profilo')">
+    <div class="list-thumb" style="background:hsl(262,83%,90%)">👤</div>
+    <div class="list-body">
+      <div class="list-title">Marco Rossi</div>
+      <div class="list-meta">Avanzato · 42 partite</div>
+      <div class="list-badges">
+        <span class="badge ac">🎯 Sessione attiva</span>
+        <span class="badge">58% win</span>
+      </div>
+    </div>
+    <div class="list-actions">
+      <button class="la pri" onclick="event.stopPropagation()">🎯 Invita</button>
+      <button class="la" onclick="event.stopPropagation()">⋯</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SESSIONI ═══ -->
+<div class="tab-panel" id="tab-session">
+  <div class="sec-label">Grid</div>
+  <div class="card-grid">
+
+    <div class="card-wrap" id="cw-s1" data-drawer-key="session-s1" style="--ac:var(--session);--ac-l:var(--session-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(240,60%,55%),hsl(240,60%,30%))">
+            <span class="entity-badge">Sessione</span>
+            <button class="flip-btn" onclick="flip(event,'cw-s1')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Serata Catan — Venerdì</div>
+            <div class="card-sub">I Coloni di Catan · 4 giocatori</div>
+            <div class="card-meta">
+              <span class="badge ac">▶ In corso</span>
+              <span class="badge">⏱ 1h 23m</span>
+              <span class="badge">Turno 7</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">👤 Marco +3</span>
+            <span class="card-link">🎲 Catan</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('session-s1','dettagli')">Partecipa</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">⚙️ Configura</div>
+                <div class="mi" onclick="closeMore()">⏸ Pausa</div>
+                <div class="mi" onclick="closeMore()">🚪 Lascia</div>
+                <div class="mi-hr"></div>
+                <div class="mi off">📥 Esporta (al termine)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(240,60%,55%),hsl(240,60%,28%))">
+            <div class="back-hdr-info"><div class="back-entity">Sessione</div><div class="back-title">Serata Catan</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-s1')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Turno</span><span class="b-val">7</span></div>
+            <div class="b-row"><span class="b-key">Leader</span><span class="b-val green">Marco (8 PV)</span></div>
+            <div class="b-row"><span class="b-key">Obiettivo</span><span class="b-val">10 PV</span></div>
+            <div class="b-row"><span class="b-key">Timer turno</span><span class="b-val">Attivo</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-wrap" id="cw-s2" data-drawer-key="session-s2" style="--ac:var(--session);--ac-l:var(--session-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(240,40%,60%),hsl(240,60%,28%))">
+            <span class="entity-badge">Sessione</span>
+            <button class="flip-btn" onclick="flip(event,'cw-s2')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Azul Weekend</div>
+            <div class="card-sub">Azul · 3 giocatori</div>
+            <div class="card-meta">
+              <span class="badge">✅ Completata</span>
+              <span class="badge">⏱ 42 min</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">👤 Marco +2</span>
+            <span class="card-link">🎲 Azul</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('session-s2','punteggi')">📊 Risultati</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">📥 Esporta</div>
+                <div class="mi" onclick="closeMore()">🔄 Rivincita</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(240,40%,60%),hsl(240,60%,28%))">
+            <div class="back-hdr-info"><div class="back-entity">Sessione</div><div class="back-title">Azul Weekend</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-s2')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Vincitore</span><span class="b-val green">Sara (78 pt)</span></div>
+            <div class="b-row"><span class="b-key">2° posto</span><span class="b-val">Marco (65 pt)</span></div>
+            <div class="b-row"><span class="b-key">Durata</span><span class="b-val">42 min</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">List</div>
+  <div class="list-card" style="--ac:var(--session);--ac-l:var(--session-l)" onclick="openDrawer('session-s1','dettagli')">
+    <div class="list-thumb" style="background:hsl(240,60%,90%)">🎯</div>
+    <div class="list-body">
+      <div class="list-title">Serata Catan — Venerdì</div>
+      <div class="list-meta">I Coloni di Catan · 4 giocatori</div>
+      <div class="list-badges">
+        <span class="badge ac">▶ In corso</span>
+        <span class="badge">Turno 7</span>
+      </div>
+    </div>
+    <div class="list-actions">
+      <button class="la pri" onclick="event.stopPropagation()">Partecipa</button>
+      <button class="la" onclick="event.stopPropagation()">⋯</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHAT ═══ -->
+<div class="tab-panel" id="tab-chat">
+  <div class="sec-label">Grid</div>
+  <div class="card-grid">
+
+    <div class="card-wrap" id="cw-c1" data-drawer-key="chat-c1" style="--ac:var(--chat);--ac-l:var(--chat-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(220,80%,55%),hsl(220,80%,30%))">
+            <span class="entity-badge">Chat</span>
+            <button class="flip-btn" onclick="flip(event,'cw-c1')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Regole Catan: Maritime Trade</div>
+            <div class="card-sub">RuleMaster AI · 3 giorni fa</div>
+            <div class="card-meta">
+              <span class="badge ac">Attiva</span>
+              <span class="badge">💬 12</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🤖 RuleMaster</span>
+            <span class="card-link">🎲 Catan</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('chat-c1','conversazione')">▶ Continua</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">➕ Nuova Chat</div>
+                <div class="mi" onclick="closeMore()">📁 Archivia</div>
+                <div class="mi-hr"></div>
+                <div class="mi danger" onclick="closeMore()">🗑 Elimina</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(220,80%,55%),hsl(220,80%,28%))">
+            <div class="back-hdr-info"><div class="back-entity">Chat</div><div class="back-title">Maritime Trade</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-c1')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Agente</span><span class="b-val">RuleMaster AI</span></div>
+            <div class="b-row"><span class="b-key">Messaggi</span><span class="b-val">12</span></div>
+            <div class="b-row"><span class="b-key">Fonti KB</span><span class="b-val">2 chunks</span></div>
+            <p class="b-desc">Discussione sulle regole del commercio marittimo in Catan con citazioni dirette dal regolamento.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-wrap" id="cw-c2" data-drawer-key="chat-c1" style="--ac:var(--chat);--ac-l:var(--chat-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(220,60%,60%),hsl(250,70%,30%))">
+            <span class="entity-badge">Chat</span>
+            <button class="flip-btn" onclick="flip(event,'cw-c2')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Strategie iniziali Azul</div>
+            <div class="card-sub">RuleMaster AI · 1 sett fa</div>
+            <div class="card-meta">
+              <span class="badge">📁 Archiviata</span>
+              <span class="badge">💬 8</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🤖 RuleMaster</span>
+            <span class="card-link">🎲 Azul</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca" disabled>▶ Continua</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">📂 Riattiva</div>
+                <div class="mi" onclick="closeMore()">➕ Nuova Chat</div>
+                <div class="mi-hr"></div>
+                <div class="mi danger" onclick="closeMore()">🗑 Elimina</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(220,60%,60%),hsl(250,70%,28%))">
+            <div class="back-hdr-info"><div class="back-entity">Chat</div><div class="back-title">Strategie Azul</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-c2')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Stato</span><span class="b-val">📁 Archiviata</span></div>
+            <div class="b-row"><span class="b-key">Messaggi</span><span class="b-val">8</span></div>
+            <div class="b-row"><span class="b-key">Creata</span><span class="b-val">1 settimana fa</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">List</div>
+  <div class="list-card" style="--ac:var(--chat);--ac-l:var(--chat-l)" onclick="openDrawer('chat-c1','conversazione')">
+    <div class="list-thumb" style="background:hsl(220,80%,90%)">💬</div>
+    <div class="list-body">
+      <div class="list-title">Regole Catan: Maritime Trade</div>
+      <div class="list-meta">RuleMaster AI · 3 giorni fa</div>
+      <div class="list-badges">
+        <span class="badge ac">Attiva</span><span class="badge">💬 12</span>
+      </div>
+    </div>
+    <div class="list-actions">
+      <button class="la pri" onclick="event.stopPropagation()">▶ Apri</button>
+      <button class="la" onclick="event.stopPropagation()">⋯</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ KB ═══ -->
+<div class="tab-panel" id="tab-kb">
+  <div class="sec-label">Grid</div>
+  <div class="card-grid">
+
+    <div class="card-wrap" id="cw-k1" data-drawer-key="kb-k1" style="--ac:var(--kb);--ac-l:var(--kb-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(174,60%,40%),hsl(174,60%,20%))">
+            <span class="entity-badge">KB Doc</span>
+            <button class="flip-btn" onclick="flip(event,'cw-k1')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Catan — Regolamento Completo</div>
+            <div class="card-sub">PDF · 48 pagine · Italiano</div>
+            <div class="card-meta">
+              <span class="badge ac">✅ Indicizzato</span>
+              <span class="badge">🎲 Catan</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🤖 RuleMaster</span>
+            <span class="card-link">💬 Chat (3)</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca pri" onclick="openDrawer('kb-k1','info')">💬 Chat Doc</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">🔄 Re-indicizza</div>
+                <div class="mi" onclick="closeMore()">📥 Scarica</div>
+                <div class="mi-hr"></div>
+                <div class="mi danger" onclick="closeMore()">🗑 Elimina</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(174,60%,40%),hsl(174,60%,18%))">
+            <div class="back-hdr-info"><div class="back-entity">KB Doc</div><div class="back-title">Catan Regolamento</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-k1')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Pagine</span><span class="b-val">48</span></div>
+            <div class="b-row"><span class="b-key">Chunks</span><span class="b-val">312</span></div>
+            <div class="b-row"><span class="b-key">Indicizzato</span><span class="b-val">5 feb 2026</span></div>
+            <div class="b-row"><span class="b-key">Usato in chat</span><span class="b-val">3 volte</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-wrap" id="cw-k2" data-drawer-key="kb-k1" style="--ac:var(--kb);--ac-l:var(--kb-l)">
+      <div class="card-inner">
+        <div class="card-face">
+          <div class="card-cover" style="background:linear-gradient(135deg,hsl(174,40%,50%),hsl(174,60%,20%))">
+            <span class="entity-badge">KB Doc</span>
+            <button class="flip-btn" onclick="flip(event,'cw-k2')">↺</button>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Wingspan — Guida Strategie</div>
+            <div class="card-sub">PDF · 12 pagine · Inglese</div>
+            <div class="card-meta">
+              <span class="badge">⏳ In indicizzazione</span>
+            </div>
+          </div>
+          <div class="card-links">
+            <span class="card-link">🎲 Wingspan</span>
+          </div>
+          <div class="card-actions">
+            <button class="ca" disabled>💬 Chat Doc</button>
+            <div class="more-wrap">
+              <button class="ca" onclick="toggleMore(event,this)">⋯</button>
+              <div class="more-menu">
+                <div class="mi" onclick="closeMore()">📥 Scarica</div>
+                <div class="mi-hr"></div>
+                <div class="mi danger" onclick="closeMore()">🗑 Elimina</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-face card-back">
+          <div class="back-hdr" style="background:linear-gradient(135deg,hsl(174,40%,50%),hsl(174,60%,18%))">
+            <div class="back-hdr-info"><div class="back-entity">KB Doc</div><div class="back-title">Wingspan Strategie</div></div>
+            <button class="flip-btn" style="position:absolute;top:8px;right:8px" onclick="flip(event,'cw-k2')">↺</button>
+          </div>
+          <div class="back-content">
+            <div class="b-row"><span class="b-key">Stato</span><span class="b-val orange">⏳ In elaborazione</span></div>
+            <div class="b-row"><span class="b-key">Pagine</span><span class="b-val">12</span></div>
+            <p class="b-desc">Guida comunitaria alle strategie avanzate. Sarà disponibile per le chat a breve.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">List</div>
+  <div class="list-card" style="--ac:var(--kb);--ac-l:var(--kb-l)" onclick="openDrawer('kb-k1','info')">
+    <div class="list-thumb" style="background:hsl(174,60%,85%)">📚</div>
+    <div class="list-body">
+      <div class="list-title">Catan — Regolamento Completo</div>
+      <div class="list-meta">PDF · 48 pagine · 5 feb 2026</div>
+      <div class="list-badges">
+        <span class="badge ac">✅ Indicizzato</span>
+        <span class="badge">312 chunks</span>
+      </div>
+    </div>
+    <div class="list-actions">
+      <button class="la pri" onclick="event.stopPropagation()">💬 Chat</button>
+      <button class="la" onclick="event.stopPropagation()">⋯</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ═══ DRAWER ═══ -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="onOverlayClick(event)">
+  <div class="drawer">
+    <div class="d-hdr" id="dHdr">
+      <span class="d-badge" id="dBadge">—</span>
+      <button class="d-close-btn" onclick="closeDrawer()">✕</button>
+      <div class="d-title" id="dTitle"></div>
+      <div class="d-sub" id="dSub"></div>
+    </div>
+    <div class="d-status-bar">
+      <span class="d-pill" id="dPill"></span>
+      <span class="d-meta" id="dMeta"></span>
+    </div>
+    <div class="d-tabs" id="dTabs"></div>
+    <div class="d-content" id="dContent"></div>
+    <div class="d-footer" id="dFooter"></div>
+  </div>
+</div>
+
+<!-- ═══ DRAWER CONTENT TEMPLATES ═══ -->
+<template id="t-game-catan-info">
+  <p class="ds-title">Dettagli</p>
+  <div class="d-row"><span class="d-key">Anno</span><span class="d-val">1995</span></div>
+  <div class="d-row"><span class="d-key">Complessità</span><span class="d-val">Media ★★★☆☆</span></div>
+  <div class="d-row"><span class="d-key">Durata</span><span class="d-val">60–120 min</span></div>
+  <div class="d-row"><span class="d-key">Età</span><span class="d-val">10+</span></div>
+  <p class="ds-title">Le tue statistiche</p>
+  <div class="d-row"><span class="d-key">Partite giocate</span><span class="d-val">12</span></div>
+  <div class="d-row"><span class="d-key">Vittorie</span><span class="d-val green">58%</span></div>
+  <div class="d-row"><span class="d-key">Ultima partita</span><span class="d-val">Ieri</span></div>
+</template>
+<template id="t-game-catan-chat">
+  <p class="ds-title">Chat recenti</p>
+  <div class="d-row"><span class="d-key">Maritime Trade</span><span class="d-val blue">→ Apri</span></div>
+  <div class="d-row"><span class="d-key">Strategia apertura</span><span class="d-val blue">→ Apri</span></div>
+  <div class="d-msg">💬 Fai una domanda a RuleMaster su I Coloni di Catan...</div>
+</template>
+<template id="t-game-catan-kb">
+  <p class="ds-title">Documenti KB (3)</p>
+  <div class="d-row"><span class="d-key">📄 Regolamento base</span><span class="d-val green">✅ Indicizzato</span></div>
+  <div class="d-row"><span class="d-key">📄 Mare e Monti</span><span class="d-val green">✅ Indicizzato</span></div>
+  <div class="d-row"><span class="d-key">📄 Guida strategie</span><span class="d-val green">✅ Indicizzato</span></div>
+</template>
+<template id="t-game-wing-info">
+  <p class="ds-title">Dettagli</p>
+  <div class="d-row"><span class="d-key">Anno</span><span class="d-val">2019</span></div>
+  <div class="d-row"><span class="d-key">Complessità</span><span class="d-val">Alta ★★★★☆</span></div>
+  <div class="d-row"><span class="d-key">Durata</span><span class="d-val">40–70 min</span></div>
+  <div class="d-row"><span class="d-key">BGG Rank</span><span class="d-val">#12 all time</span></div>
+  <div class="d-msg">Non è ancora nella tua libreria. Aggiungila per tenere traccia delle partite.</div>
+</template>
+<template id="t-game-azul-info">
+  <p class="ds-title">Dettagli</p>
+  <div class="d-row"><span class="d-key">Anno</span><span class="d-val">2017</span></div>
+  <div class="d-row"><span class="d-key">Complessità</span><span class="d-val">Bassa ★★☆☆☆</span></div>
+  <div class="d-row"><span class="d-key">Durata</span><span class="d-val">30–45 min</span></div>
+  <div class="d-row"><span class="d-key">Punteggio medio</span><span class="d-val">67 pt</span></div>
+  <div class="d-row"><span class="d-key">Vittorie</span><span class="d-val green">60%</span></div>
+</template>
+<template id="t-game-azul-chat">
+  <div class="d-msg">💬 Fai una domanda a RuleMaster su Azul...</div>
+</template>
+<template id="t-game-azul-kb">
+  <div class="d-row"><span class="d-key">📄 Regolamento Azul</span><span class="d-val green">✅ Indicizzato</span></div>
+</template>
+<template id="t-agent-rm-info">
+  <p class="ds-title">Configurazione</p>
+  <div class="d-row"><span class="d-key">Modello</span><span class="d-val">GPT-4o</span></div>
+  <div class="d-row"><span class="d-key">Temperatura</span><span class="d-val">0.3</span></div>
+  <div class="d-row"><span class="d-key">KB collegati</span><span class="d-val">3</span></div>
+  <div class="d-row"><span class="d-key">Quota giornaliera</span><span class="d-val orange">80 / 100</span></div>
+  <p class="ds-title">KB Abilitati</p>
+  <div class="d-row"><span class="d-key">Catan Regolamento</span><span class="d-val green">✅</span></div>
+  <div class="d-row"><span class="d-key">Mare e Monti</span><span class="d-val green">✅</span></div>
+</template>
+<template id="t-agent-rm-chat">
+  <div class="d-msg">Avvia una nuova conversazione con RuleMaster AI su qualunque gioco nella tua libreria.</div>
+  <p class="ds-title">Chat recenti</p>
+  <div class="d-row"><span class="d-key">Maritime Trade</span><span class="d-val">3 gg fa</span></div>
+  <div class="d-row"><span class="d-key">Strategie apertura</span><span class="d-val">5 gg fa</span></div>
+</template>
+<template id="t-agent-rm-configurazione">
+  <p class="ds-title">Prompt di sistema</p>
+  <div class="d-msg">Sei un esperto di regole di giochi da tavolo. Rispondi citando sempre le pagine del regolamento.</div>
+  <p class="ds-title">Impostazioni</p>
+  <div class="d-row"><span class="d-key">Max token risposta</span><span class="d-val">1024</span></div>
+  <div class="d-row"><span class="d-key">Lingua output</span><span class="d-val">Italiano</span></div>
+</template>
+<template id="t-player-marco-profilo">
+  <p class="ds-title">Profilo</p>
+  <div class="d-row"><span class="d-key">Partite totali</span><span class="d-val">42</span></div>
+  <div class="d-row"><span class="d-key">Vittorie</span><span class="d-val green">58%</span></div>
+  <div class="d-row"><span class="d-key">Gioco preferito</span><span class="d-val">Catan</span></div>
+  <div class="d-row"><span class="d-key">Livello</span><span class="d-val">⭐ Avanzato</span></div>
+  <div class="d-row"><span class="d-key">Membro dal</span><span class="d-val">2024</span></div>
+</template>
+<template id="t-player-marco-risultati">
+  <p class="ds-title">Migliori risultati</p>
+  <div class="d-row"><span class="d-key">Catan — max PV</span><span class="d-val">10 PV</span></div>
+  <div class="d-row"><span class="d-key">Azul — max punti</span><span class="d-val">78 pt</span></div>
+  <div class="d-row"><span class="d-key">Streak vittorie</span><span class="d-val">4 di fila</span></div>
+</template>
+<template id="t-player-marco-sessioni">
+  <div class="d-row"><span class="d-key">Serata Catan</span><span class="d-val blue">▶ In corso</span></div>
+  <div class="d-row"><span class="d-key">Azul Weekend</span><span class="d-val">✅ Completata</span></div>
+  <div class="d-row"><span class="d-key">Catan Sabato</span><span class="d-val">✅ Completata</span></div>
+</template>
+<template id="t-player-sara-profilo">
+  <p class="ds-title">Profilo</p>
+  <div class="d-row"><span class="d-key">Partite totali</span><span class="d-val">11</span></div>
+  <div class="d-row"><span class="d-key">Vittorie</span><span class="d-val green">45%</span></div>
+  <div class="d-row"><span class="d-key">Gioco preferito</span><span class="d-val">Wingspan</span></div>
+  <div class="d-row"><span class="d-key">Livello</span><span class="d-val">⭐ Intermedio</span></div>
+</template>
+<template id="t-player-sara-risultati">
+  <div class="d-row"><span class="d-key">Azul — max punti</span><span class="d-val green">78 pt 🏆</span></div>
+  <div class="d-row"><span class="d-key">Catan — max PV</span><span class="d-val">6 PV</span></div>
+</template>
+<template id="t-session-s1-dettagli">
+  <p class="ds-title">Info sessione</p>
+  <div class="d-row"><span class="d-key">Gioco</span><span class="d-val">I Coloni di Catan</span></div>
+  <div class="d-row"><span class="d-key">Giocatori</span><span class="d-val">Marco, Sara, Luigi, Anna</span></div>
+  <div class="d-row"><span class="d-key">Turno corrente</span><span class="d-val">7</span></div>
+  <div class="d-row"><span class="d-key">Durata</span><span class="d-val">1h 23m</span></div>
+  <div class="d-row"><span class="d-key">Timer turno</span><span class="d-val">3 min rimanenti</span></div>
+</template>
+<template id="t-session-s1-punteggi">
+  <p class="ds-title">Classifica attuale</p>
+  <div class="d-row"><span class="d-key">🥇 Marco</span><span class="d-val green">8 PV</span></div>
+  <div class="d-row"><span class="d-key">🥈 Luigi</span><span class="d-val">6 PV</span></div>
+  <div class="d-row"><span class="d-key">🥉 Sara</span><span class="d-val">5 PV</span></div>
+  <div class="d-row"><span class="d-key">4. Anna</span><span class="d-val">4 PV</span></div>
+</template>
+<template id="t-session-s1-cronologia">
+  <p class="ds-title">Eventi recenti</p>
+  <div class="d-row"><span class="d-key">T7</span><span class="d-val">Marco — Città costruita</span></div>
+  <div class="d-row"><span class="d-key">T6</span><span class="d-val">Sara — Carta sviluppo</span></div>
+  <div class="d-row"><span class="d-key">T5</span><span class="d-val">Luigi — Porto 2:1</span></div>
+</template>
+<template id="t-session-s2-dettagli">
+  <div class="d-row"><span class="d-key">Gioco</span><span class="d-val">Azul</span></div>
+  <div class="d-row"><span class="d-key">Giocatori</span><span class="d-val">Marco, Sara, Luigi</span></div>
+  <div class="d-row"><span class="d-key">Data</span><span class="d-val">Sabato scorso</span></div>
+  <div class="d-row"><span class="d-key">Durata</span><span class="d-val">42 minuti</span></div>
+</template>
+<template id="t-session-s2-punteggi">
+  <p class="ds-title">Risultati finali</p>
+  <div class="d-row"><span class="d-key">🥇 Sara</span><span class="d-val green">78 pt</span></div>
+  <div class="d-row"><span class="d-key">🥈 Marco</span><span class="d-val">65 pt</span></div>
+  <div class="d-row"><span class="d-key">🥉 Luigi</span><span class="d-val">47 pt</span></div>
+</template>
+<template id="t-chat-c1-conversazione">
+  <div class="chat-bubble chat-me"><strong>Tu:</strong> Come funziona il commercio marittimo in Catan?</div>
+  <div class="chat-bubble chat-ai"><strong>RuleMaster:</strong> Il porto commerciale ti permette di scambiare risorse a tassi favorevoli. Un porto generico offre 3:1, i porti specializzati 2:1 per un tipo specifico di risorsa. (Reg. p.12)</div>
+  <div class="chat-bubble chat-me"><strong>Tu:</strong> Posso usare più porti nella stessa partita?</div>
+  <div class="chat-bubble chat-ai"><strong>RuleMaster:</strong> Sì, puoi usare tutti i porti adiacenti ai tuoi insediamenti, anche più porti nello stesso turno.</div>
+</template>
+<template id="t-chat-c1-fonti-kb">
+  <p class="ds-title">Fonti usate in questa chat</p>
+  <div class="d-row"><span class="d-key">Regolamento base — p.12</span><span class="d-val green">Alta rilevanza</span></div>
+  <div class="d-row"><span class="d-key">Mare e Monti — p.4</span><span class="d-val orange">Media</span></div>
+</template>
+<template id="t-kb-k1-info">
+  <p class="ds-title">Dettagli documento</p>
+  <div class="d-row"><span class="d-key">Pagine</span><span class="d-val">48</span></div>
+  <div class="d-row"><span class="d-key">Chunks vettoriali</span><span class="d-val">312</span></div>
+  <div class="d-row"><span class="d-key">Modello embedding</span><span class="d-val">text-embedding-3</span></div>
+  <div class="d-row"><span class="d-key">Lingua</span><span class="d-val">Italiano</span></div>
+  <div class="d-row"><span class="d-key">Indicizzato il</span><span class="d-val">5 feb 2026</span></div>
+</template>
+<template id="t-kb-k1-contenuto">
+  <p class="ds-title">Struttura</p>
+  <div class="d-row"><span class="d-key">Cap. 1</span><span class="d-val">Preparazione</span></div>
+  <div class="d-row"><span class="d-key">Cap. 2</span><span class="d-val">Il turno</span></div>
+  <div class="d-row"><span class="d-key">Cap. 3</span><span class="d-val">Costruzione</span></div>
+  <div class="d-row"><span class="d-key">Cap. 4</span><span class="d-val">Commercio</span></div>
+  <div class="d-row"><span class="d-key">Cap. 5</span><span class="d-val">Carte sviluppo</span></div>
+  <div class="d-row"><span class="d-key">Cap. 6</span><span class="d-val">Bandito</span></div>
+  <div class="d-row"><span class="d-key">Cap. 7</span><span class="d-val">Fine partita</span></div>
+</template>
+<template id="t-kb-k1-utilizzo">
+  <div class="d-row"><span class="d-key">Chat che lo usano</span><span class="d-val">3</span></div>
+  <div class="d-row"><span class="d-key">Agenti con accesso</span><span class="d-val">RuleMaster AI</span></div>
+  <div class="d-row"><span class="d-key">Ultima consultazione</span><span class="d-val">3 giorni fa</span></div>
+</template>
+
+<!-- ═══ DRAWER CONFIG DATA ═══ -->
+<script>
+const DRAWERS = {
+  'game-catan': {
+    badge:'Gioco', color:'hsl(25,95%,45%)', title:'I Coloni di Catan', sub:'Klaus Teuber · 1995',
+    status:'Nella libreria', meta:'⭐ 8.2 · 3-4 giocatori',
+    tabs:['info','chat','kb'], defTab:'info',
+    cta1:'💬 Chat AI', cta2:'🎯 Nuova Sessione'
+  },
+  'game-wing': {
+    badge:'Gioco', color:'hsl(25,95%,45%)', title:'Wingspan', sub:'Elizabeth Hargrave · 2019',
+    status:'Non in libreria', meta:'⭐ 8.8 · 1-5 giocatori',
+    tabs:['info'], defTab:'info',
+    cta1:'+ Aggiungi alla libreria', cta2:'Chiudi'
+  },
+  'game-azul': {
+    badge:'Gioco', color:'hsl(25,95%,45%)', title:'Azul', sub:'Michael Kiesling · 2017',
+    status:'Nella libreria', meta:'⭐ 8.0 · 2-4 giocatori',
+    tabs:['info','chat','kb'], defTab:'info',
+    cta1:'💬 Chat AI', cta2:'🎯 Nuova Sessione'
+  },
+  'agent-rm': {
+    badge:'Agente', color:'hsl(38,92%,50%)', title:'RuleMaster AI', sub:'Assistente regole universale',
+    status:'🟢 Attivo', meta:'42 chat · GPT-4o',
+    tabs:['info','chat','configurazione'], defTab:'info',
+    cta1:'💬 Nuova Chat', cta2:'⚙️ Configura'
+  },
+  'player-marco': {
+    badge:'Giocatore', color:'hsl(262,83%,58%)', title:'Marco Rossi', sub:'Membro dal 2024',
+    status:'🎯 Sessione attiva', meta:'Catan · In corso',
+    tabs:['profilo','risultati','sessioni'], defTab:'profilo',
+    cta1:'🎯 Invita a Sessione', cta2:'👤 Profilo completo'
+  },
+  'player-sara': {
+    badge:'Giocatore', color:'hsl(262,83%,58%)', title:'Sara Bianchi', sub:'Membro dal 2025',
+    status:'Disponibile', meta:'11 partite',
+    tabs:['profilo','risultati'], defTab:'profilo',
+    cta1:'🎯 Invita a Sessione', cta2:'👤 Profilo'
+  },
+  'session-s1': {
+    badge:'Sessione', color:'hsl(240,60%,55%)', title:'Serata Catan — Venerdì', sub:'I Coloni di Catan · 4 giocatori',
+    status:'▶ In corso', meta:'Turno 7 · 1h 23m',
+    tabs:['dettagli','punteggi','cronologia'], defTab:'dettagli',
+    cta1:'▶ Partecipa', cta2:'⏸ Pausa'
+  },
+  'session-s2': {
+    badge:'Sessione', color:'hsl(240,60%,55%)', title:'Azul Weekend', sub:'Azul · 3 giocatori',
+    status:'✅ Completata', meta:'42 min',
+    tabs:['dettagli','punteggi'], defTab:'punteggi',
+    cta1:'📥 Esporta risultati', cta2:'🔄 Rivincita'
+  },
+  'chat-c1': {
+    badge:'Chat', color:'hsl(220,80%,55%)', title:'Maritime Trade Rules', sub:'RuleMaster AI · 3 giorni fa',
+    status:'Attiva', meta:'12 messaggi · 2 fonti KB',
+    tabs:['conversazione','fonti-kb'], defTab:'conversazione',
+    cta1:'▶ Continua Chat', cta2:'➕ Nuova Chat'
+  },
+  'kb-k1': {
+    badge:'KB Doc', color:'hsl(174,60%,40%)', title:'Catan — Regolamento Completo', sub:'PDF · 48 pagine · Italiano',
+    status:'✅ Indicizzato', meta:'312 chunks · 5 feb 2026',
+    tabs:['info','contenuto','utilizzo'], defTab:'info',
+    cta1:'💬 Chat con documento', cta2:'🔄 Re-indicizza'
+  }
+};
+
+/* ── Hero state toggle (demo only) ── */
+function toggleHeroState(btn) {
+  const active = document.getElementById('hero-active');
+  const empty  = document.getElementById('hero-empty');
+  const showEmpty = active.style.display !== 'none';
+  active.style.display = showEmpty ? 'none' : '';
+  empty.style.display  = showEmpty ? ''     : 'none';
+  btn.textContent = showEmpty ? '🟢 Simula: sessione attiva' : '⚪ Simula: nessuna sessione';
+}
+
+/* ── Tab switch ── */
+function switchTab(btn) {
+  const type = btn.dataset.tab;
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + type).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Flip ── */
+function flip(e, id) {
+  e.stopPropagation();
+  document.getElementById(id).classList.toggle('flipped');
+}
+
+/* ── More menu ── */
+function toggleMore(e, btn) {
+  e.stopPropagation();
+  const wrap = btn.closest('.more-wrap');
+  const wasOpen = wrap.classList.contains('open');
+  closeMore();
+  if (!wasOpen) wrap.classList.add('open');
+}
+function closeMore() {
+  document.querySelectorAll('.more-wrap.open').forEach(w => w.classList.remove('open'));
+}
+document.addEventListener('click', closeMore);
+
+/* ── Drawer ── */
+let currentDrawerCfg = null;
+
+function openDrawer(key, tab) {
+  const cfg = DRAWERS[key];
+  if (!cfg) return;
+  currentDrawerCfg = cfg;
+
+  // Inject accent CSS var on drawer
+  const drawer = document.querySelector('.drawer');
+  drawer.style.setProperty('--dac', cfg.color);
+
+  // Header bg
+  document.getElementById('dHdr').style.background =
+    'linear-gradient(160deg,' + cfg.color + ',color-mix(in srgb,' + cfg.color + ' 60%,black))';
+
+  // Header text
+  document.getElementById('dBadge').textContent = cfg.badge;
+  document.getElementById('dTitle').textContent = cfg.title;
+  document.getElementById('dSub').textContent = cfg.sub;
+
+  // Status bar
+  const pill = document.getElementById('dPill');
+  pill.textContent = cfg.status;
+  pill.style.cssText = 'background:' + cfg.color + '22;color:' + cfg.color + ';border:1px solid ' + cfg.color + '44';
+  document.getElementById('dMeta').textContent = cfg.meta;
+
+  // Build tabs
+  const tabsEl = document.getElementById('dTabs');
+  tabsEl.textContent = '';
+  cfg.tabs.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'd-tab' + (t === (tab || cfg.defTab) ? ' active' : '');
+    b.textContent = t.replace(/-/g, ' ');
+    b.dataset.tab = t;
+    b.onclick = () => {
+      tabsEl.querySelectorAll('.d-tab').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      loadTabContent(key, t);
+    };
+    tabsEl.appendChild(b);
+  });
+
+  // Load content
+  loadTabContent(key, tab || cfg.defTab);
+
+  // Footer
+  const footer = document.getElementById('dFooter');
+  footer.textContent = '';
+  const s = document.createElement('button');
+  s.className = 'd-cta sec';
+  s.textContent = cfg.cta2;
+  s.onclick = closeDrawer;
+  const p = document.createElement('button');
+  p.className = 'd-cta';
+  p.textContent = cfg.cta1;
+  p.style.cssText = 'background:' + cfg.color + ';color:#fff';
+  footer.appendChild(s);
+  footer.appendChild(p);
+
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+
+function loadTabContent(key, tab) {
+  const tmplId = 't-' + key + '-' + tab;
+  const tmpl = document.getElementById(tmplId);
+  const content = document.getElementById('dContent');
+  // Clear content safely
+  while (content.firstChild) content.removeChild(content.firstChild);
+  if (tmpl) {
+    content.appendChild(tmpl.content.cloneNode(true));
+  } else {
+    const msg = document.createElement('p');
+    msg.style.cssText = 'color:var(--muted);font-size:13px';
+    msg.textContent = 'Contenuto non disponibile.';
+    content.appendChild(msg);
+  }
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+function onOverlayClick(e) {
+  if (e.target === document.getElementById('drawerOverlay')) closeDrawer();
+}
+
+/* ── Delegated card click → open drawer ── */
+document.addEventListener('click', function(e) {
+  if (e.target.closest('button, .card-link, .more-wrap')) return;
+  // Flip card front face
+  const face = e.target.closest('.card-face:not(.card-back)');
+  if (face) {
+    const wrap = face.closest('[data-drawer-key]');
+    if (wrap) { openDrawer(wrap.dataset.drawerKey); return; }
+  }
+  // List card or dash-hero
+  const clickable = e.target.closest('.list-card[data-drawer-key], .dash-hero[data-drawer-key]');
+  if (clickable) openDrawer(clickable.dataset.drawerKey);
+});
+</script>
+</body>
+</html>

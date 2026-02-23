@@ -102,7 +102,7 @@ describe('MeepleAgentCard', () => {
 
     const chatButton = screen.getByRole('button', { name: 'Agente non attivo' });
     expect(chatButton).toBeInTheDocument();
-    expect(chatButton).toBeDisabled();
+    expect(chatButton).toHaveAttribute('aria-disabled', 'true');
   });
 
   // --------------------------------------------------------------------------

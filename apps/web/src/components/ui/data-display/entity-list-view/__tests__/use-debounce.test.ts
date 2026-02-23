@@ -2,7 +2,8 @@
  * Tests for useDebounce hook
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useDebounce } from '../hooks/use-debounce';
 
 describe('useDebounce', () => {
@@ -33,26 +34,28 @@ describe('useDebounce', () => {
   });
 
   it('should cancel previous timeout on rapid updates', async () => {
-    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 50), {
-      initialProps: { value: 'initial' },
-    });
+    vi.useFakeTimers();
+    try {
+      const { result, rerender } = renderHook(({ value }) => useDebounce(value, 50), {
+        initialProps: { value: 'initial' },
+      });
 
-    // Rapid updates (should only apply last one)
-    rerender({ value: 'update1' });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+      // Rapid updates (should only apply last one)
+      rerender({ value: 'update1' });
+      await act(async () => { vi.advanceTimersByTime(20); });
 
-    rerender({ value: 'update2' });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+      rerender({ value: 'update2' });
+      await act(async () => { vi.advanceTimersByTime(20); });
 
-    rerender({ value: 'final' });
+      rerender({ value: 'final' });
 
-    // Wait for final debounce
-    await waitFor(
-      () => {
-        expect(result.current).toBe('final');
-      },
-      { timeout: 200 }
-    );
+      // Advance past the debounce delay to trigger the final update
+      await act(async () => { vi.advanceTimersByTime(60); });
+
+      expect(result.current).toBe('final');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('should cleanup timeout on unmount', async () => {

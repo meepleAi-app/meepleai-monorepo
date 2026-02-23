@@ -141,7 +141,7 @@ describe('MeepleKbCard', () => {
     render(<MeepleKbCard document={mockProcessingDocument} isAdmin={true} />);
     const button = screen.getByRole('button', { name: 'Indicizzazione già in corso' });
     expect(button).toBeInTheDocument();
-    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('Re-indicizza calls onReindex with document id when clicked', async () => {

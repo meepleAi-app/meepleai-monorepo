@@ -151,8 +151,8 @@ describe('ViewModeSwitcher', () => {
 
       await user.keyboard('{ArrowLeft}');
 
-      // Should wrap to last mode
-      expect(mockOnChange).toHaveBeenCalledWith('table');
+      // Should wrap to last mode ('carousel' is last in availableModes=['grid','list','carousel'])
+      expect(mockOnChange).toHaveBeenCalledWith('carousel');
     });
 
     it('should navigate with ArrowDown (alternative)', async () => {

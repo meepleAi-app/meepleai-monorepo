@@ -26,9 +26,9 @@ export function LibraryEmptyState({ className }: LibraryEmptyStateProps) {
   return (
     <div
       role="region"
-      aria-label={t('privateGames.emptyCollectionTitle')}
+      aria-label={t('privateGames.noGamesYet')}
       className={`flex flex-col items-center justify-center py-16 ${className ?? ''}`}
-      data-testid="library-empty-state"
+      data-testid="empty-state"
     >
       {/* Decorative meeple cluster */}
       <div className="flex items-end gap-2 mb-8 opacity-25 select-none" aria-hidden="true">
@@ -49,12 +49,12 @@ export function LibraryEmptyState({ className }: LibraryEmptyStateProps) {
       >
         {/* Title */}
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {t('privateGames.emptyCollectionTitle')}
+          {t('privateGames.noGamesYet')}
         </h2>
 
         {/* Description */}
         <p className="text-muted-foreground text-sm leading-relaxed">
-          {t('privateGames.emptyCollectionDescription')}
+          {t('privateGames.emptyStateDescription')}
         </p>
 
         {/* Primary CTA */}
@@ -65,7 +65,7 @@ export function LibraryEmptyState({ className }: LibraryEmptyStateProps) {
             data-testid="empty-state-primary-cta"
           >
             <Link href="/library/private/add">
-              <span className="mr-1 font-bold">+</span> {t('privateGames.createFirstGame')}
+              <span className="mr-1 font-bold">+</span> {t('privateGames.addFirstGame')}
             </Link>
           </Button>
 

@@ -205,3 +205,114 @@ export const OpenRouterStatusDtoSchema = z.object({
 });
 
 export type OpenRouterStatusDto = z.infer<typeof OpenRouterStatusDtoSchema>;
+
+// ─── Free Tier Quota (Issue #5082) ───────────────────────────────────────────
+
+export const FreeModelUsageDtoSchema = z.object({
+  modelId: z.string(),
+  requestsToday: z.number(),
+  dailyLimit: z.number(),
+  percentUsed: z.number(),
+  isExhausted: z.boolean(),
+  nextResetUtc: z.string().nullable(),
+});
+
+export const FreeQuotaDtoSchema = z.object({
+  models: z.array(FreeModelUsageDtoSchema),
+  totalFreeRequestsToday: z.number(),
+  generatedAt: z.string(),
+});
+
+export type FreeModelUsageDto = z.infer<typeof FreeModelUsageDtoSchema>;
+export type FreeQuotaDto = z.infer<typeof FreeQuotaDtoSchema>;
+
+// ─── Usage Timeline (Issue #5078) ────────────────────────────────────────────
+
+export const TimelineBucketDtoSchema = z.object({
+  bucket: z.string(),
+  manual: z.number(),
+  ragPipeline: z.number(),
+  eventDriven: z.number(),
+  automatedTest: z.number(),
+  agentTask: z.number(),
+  adminOperation: z.number(),
+  totalCostUsd: z.number(),
+});
+
+export const UsageTimelineDtoSchema = z.object({
+  buckets: z.array(TimelineBucketDtoSchema),
+  period: z.string(),
+  groupedByHour: z.boolean(),
+  totalRequests: z.number(),
+  totalCostUsd: z.number(),
+});
+
+export type TimelineBucketDto = z.infer<typeof TimelineBucketDtoSchema>;
+export type UsageTimelineDto = z.infer<typeof UsageTimelineDtoSchema>;
+
+// ─── Usage Costs (Issue #5080) ───────────────────────────────────────────────
+
+export const ModelCostDtoSchema = z.object({
+  modelId: z.string(),
+  costUsd: z.number(),
+  requests: z.number(),
+  totalTokens: z.number(),
+});
+
+export const SourceCostDtoSchema = z.object({
+  source: z.string(),
+  costUsd: z.number(),
+  requests: z.number(),
+});
+
+export const TierCostDtoSchema = z.object({
+  tier: z.string(),
+  costUsd: z.number(),
+  requests: z.number(),
+});
+
+export const UsageCostsDtoSchema = z.object({
+  byModel: z.array(ModelCostDtoSchema),
+  bySource: z.array(SourceCostDtoSchema),
+  byTier: z.array(TierCostDtoSchema),
+  totalCostUsd: z.number(),
+  totalRequests: z.number(),
+  period: z.string(),
+});
+
+export type ModelCostDto = z.infer<typeof ModelCostDtoSchema>;
+export type SourceCostDto = z.infer<typeof SourceCostDtoSchema>;
+export type TierCostDto = z.infer<typeof TierCostDtoSchema>;
+export type UsageCostsDto = z.infer<typeof UsageCostsDtoSchema>;
+
+// ─── Recent LLM Requests (Issue #5083) ───────────────────────────────────────
+
+export const LlmRequestSummaryDtoSchema = z.object({
+  id: z.string(),
+  requestedAt: z.string(),
+  modelId: z.string(),
+  provider: z.string(),
+  source: z.string(),
+  userId: z.string().nullable(),
+  userRole: z.string().nullable(),
+  promptTokens: z.number(),
+  completionTokens: z.number(),
+  totalTokens: z.number(),
+  costUsd: z.number(),
+  latencyMs: z.number(),
+  success: z.boolean(),
+  errorMessage: z.string().nullable(),
+  isStreaming: z.boolean(),
+  isFreeModel: z.boolean(),
+});
+
+export const RecentLlmRequestsDtoSchema = z.object({
+  items: z.array(LlmRequestSummaryDtoSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  totalPages: z.number(),
+});
+
+export type LlmRequestSummaryDto = z.infer<typeof LlmRequestSummaryDtoSchema>;
+export type RecentLlmRequestsDto = z.infer<typeof RecentLlmRequestsDtoSchema>;

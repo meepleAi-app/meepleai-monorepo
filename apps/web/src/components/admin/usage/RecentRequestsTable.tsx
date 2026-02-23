@@ -219,7 +219,7 @@ export function RecentRequestsTable({
                         ) : (
                           <XCircle
                             className="h-3.5 w-3.5 text-destructive mx-auto"
-                            title={req.errorMessage ?? 'Error'}
+                            aria-label={req.errorMessage ?? 'Error'}
                           />
                         )}
                       </td>

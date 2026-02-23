@@ -8,7 +8,7 @@
 
 'use client';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { BarChart2, History, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -17,24 +17,27 @@ import { useSetNavConfig } from '@/context/NavigationContext';
 
 export default function PlayRecordsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const setNavConfig = useSetNavConfig();
 
-  useSetNavConfig({
-    miniNav: [
-      { id: 'records', label: 'Partite', href: '/play-records', icon: History },
-      { id: 'stats', label: 'Statistiche', href: '/play-records?tab=stats', icon: BarChart2 },
-    ],
-    actionBar: [
-      {
-        id: 'new-record',
-        label: 'Nuova Partita',
-        icon: Plus,
-        variant: 'primary',
-        onClick: () => {
-          router.push('/play-records/new');
+  useEffect(() => {
+    setNavConfig({
+      miniNav: [
+        { id: 'records', label: 'Partite', href: '/play-records', icon: History },
+        { id: 'stats', label: 'Statistiche', href: '/play-records?tab=stats', icon: BarChart2 },
+      ],
+      actionBar: [
+        {
+          id: 'new-record',
+          label: 'Nuova Partita',
+          icon: Plus,
+          variant: 'primary',
+          onClick: () => {
+            router.push('/play-records/new');
+          },
         },
-      },
-    ],
-  });
+      ],
+    });
+  }, [setNavConfig, router]);
 
   return <>{children}</>;
 }

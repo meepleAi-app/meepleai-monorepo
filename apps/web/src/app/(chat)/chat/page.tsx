@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
+import { ChatNavConfig } from './NavConfig';
 
 // ─── Agent Group ─────────────────────────────────────────────────────────────
 

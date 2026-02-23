@@ -4,8 +4,6 @@
 #pragma warning disable MA0004 // Use ConfigureAwait(false)
 #pragma warning disable MA0011 // Use IFormatProvider
 #pragma warning disable S1244 // Floating point equality
-#pragma warning disable MA0026 // TODO comment
-#pragma warning disable S1135 // Complete TODO
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;

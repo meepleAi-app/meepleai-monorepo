@@ -3,11 +3,13 @@
 /**
  * AddGameDrawer — Right-side Sheet for adding a game to the personal library
  * Issue #5168 — AddGameDrawer wizard with Step 0 (method choice) + Step 1a (manual form)
+ * Issue #5169 — Step 1b: CatalogSearchStep (search shared catalog + add to library)
  *
  * Flow:
  *   Step 0: Choose method — "Manually" or "From Catalog"
- *   Step 1a (Manual): Embed UserWizardClient (3-step: game → PDF → agent)
- *   Step 1b (Catalog): Issue #5169 (CatalogSearchStep — not yet implemented)
+ *   Step 1a (Manual):  Embed UserWizardClient (3-step: game → PDF → agent)
+ *   Step 1b (Catalog): CatalogSearchStep → select game → add to library → advance to PDF step
+ *   Step 2  (Catalog PDF): UserWizardClient starting at PDF upload (gameId pre-set)
  *
  * URL integration:
  *   ?action=add     → drawer opens
@@ -20,7 +22,7 @@ import { BookOpen, PenLine } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { UserWizardClient } from '@/app/(authenticated)/library/private/add/client';
-import { Button } from '@/components/ui/primitives/button';
+import { CatalogSearchStep } from '@/app/(authenticated)/library/CatalogSearchStep';
 import {
   Sheet,
   SheetContent,
@@ -30,7 +32,12 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type DrawerStep = 'choice' | 'manual' | 'catalog';
+type DrawerStep = 'choice' | 'manual' | 'catalog' | 'catalog-pdf';
+
+interface CatalogSelection {
+  gameId: string;
+  gameName: string;
+}
 
 // ─── Step 0: Choice cards ─────────────────────────────────────────────────────
 
@@ -66,22 +73,6 @@ function ChoiceCard({ icon, title, description, onClick, 'data-testid': testId }
   );
 }
 
-// ─── Step 1b placeholder ──────────────────────────────────────────────────────
-
-function CatalogSearchStep({ onBack }: { onBack: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4">
-      <BookOpen className="h-12 w-12 text-muted-foreground/40" />
-      <p className="text-muted-foreground text-sm">
-        Catalog search — coming in Issue #5169.
-      </p>
-      <Button variant="outline" size="sm" onClick={onBack}>
-        Back
-      </Button>
-    </div>
-  );
-}
-
 // ─── Main drawer ──────────────────────────────────────────────────────────────
 
 interface AddGameDrawerProps {
@@ -91,23 +82,32 @@ interface AddGameDrawerProps {
 
 export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
   const [step, setStep] = useState<DrawerStep>('choice');
+  const [catalogSelection, setCatalogSelection] = useState<CatalogSelection | null>(null);
 
-  // Reset to choice step whenever the drawer opens
+  // Reset to choice step after close animation finishes
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       if (!isOpen) {
         onClose();
-        // Reset step after close animation finishes
-        setTimeout(() => setStep('choice'), 300);
+        setTimeout(() => {
+          setStep('choice');
+          setCatalogSelection(null);
+        }, 300);
       }
     },
     [onClose],
   );
 
+  // Called by CatalogSearchStep after game is successfully added to library
+  const handleCatalogSelect = useCallback((gameId: string, gameName: string) => {
+    setCatalogSelection({ gameId, gameName });
+    setStep('catalog-pdf');
+  }, []);
+
   const drawerTitle =
     step === 'manual'
       ? 'Add game manually'
-      : step === 'catalog'
+      : step === 'catalog' || step === 'catalog-pdf'
         ? 'Add from catalog'
         : 'Add a game';
 
@@ -155,9 +155,27 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
             </div>
           )}
 
-          {/* Step 1b: Catalog search (Issue #5169) */}
+          {/* Step 1b: Catalog search */}
           {step === 'catalog' && (
-            <CatalogSearchStep onBack={() => setStep('choice')} />
+            <div data-testid="add-game-step-catalog">
+              <CatalogSearchStep
+                onSelect={handleCatalogSelect}
+                onBack={() => setStep('choice')}
+              />
+            </div>
+          )}
+
+          {/* Step 2 (after catalog select): PDF upload wizard */}
+          {step === 'catalog-pdf' && catalogSelection && (
+            <div data-testid="add-game-step-catalog-pdf">
+              <UserWizardClient
+                gameId={catalogSelection.gameId}
+                gameName={catalogSelection.gameName}
+                startAtPdf
+                onComplete={onClose}
+                onCancel={() => setStep('catalog')}
+              />
+            </div>
           )}
         </div>
       </SheetContent>

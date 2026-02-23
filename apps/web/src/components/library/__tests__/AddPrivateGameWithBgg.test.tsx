@@ -92,20 +92,6 @@ vi.mock('sonner', () => ({
   },
 }));
 
-// Mock useTranslation to avoid IntlProvider dependency
-vi.mock('@/hooks/useTranslation', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const map: Record<string, string> = {
-        'common.cancel': 'Cancel',
-        'privateGameForm.addFromBgg': 'Add from BGG',
-        'privateGameForm.addPrivateGame': 'Add Private Game',
-      };
-      return map[key] ?? key;
-    },
-  }),
-}));
-
 const mockBggDetails = {
   bggId: 13,
   name: 'Catan',

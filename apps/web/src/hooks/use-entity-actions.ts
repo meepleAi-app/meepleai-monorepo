@@ -432,6 +432,7 @@ export function useEntityActions({
     id,
     router,
     data,
+    userId,
     gameCollection,
     genericStatus,
     addToGenericCollection,

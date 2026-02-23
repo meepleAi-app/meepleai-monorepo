@@ -810,7 +810,8 @@ describe('CommentItem', () => {
 
     it('disables cancel button while saving', async () => {
       const user = userEvent.setup();
-      mockOnEdit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      // Use never-resolving promise so isSubmitting stays true during assertions
+      mockOnEdit.mockImplementation(() => new Promise(() => {}));
 
       render(
         <CommentItem
@@ -835,8 +836,10 @@ describe('CommentItem', () => {
       const saveButton = screen.getByRole('button', { name: 'Salva' });
       await user.click(saveButton);
 
-      const cancelButton = screen.getByRole('button', { name: 'Annulla' });
-      expect(cancelButton).toBeDisabled();
+      await waitFor(() => {
+        const cancelButton = screen.getByRole('button', { name: 'Annulla' });
+        expect(cancelButton).toBeDisabled();
+      });
     });
 
     it('shows error alert when edit fails', async () => {
@@ -1566,7 +1569,8 @@ describe('CommentItem', () => {
 
     it('disables buttons during submission', async () => {
       const user = userEvent.setup();
-      mockOnEdit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      // Use never-resolving promise so isSubmitting stays true during assertions
+      mockOnEdit.mockImplementation(() => new Promise(() => {}));
 
       render(
         <CommentItem

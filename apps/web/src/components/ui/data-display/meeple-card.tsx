@@ -78,6 +78,7 @@ import { ChatGameContext, type ChatGame } from './meeple-card-features/ChatGameC
 import { ChatStatsDisplay, type ChatStats } from './meeple-card-features/ChatStatsDisplay';
 import { ChatStatusBadge, type ChatStatus } from './meeple-card-features/ChatStatusBadge';
 import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
+import { DocumentStatusBadge } from './meeple-card-features/DocumentStatusBadge';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
 import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
@@ -984,6 +985,8 @@ export const MeepleCard = React.memo(function MeepleCard({
   onSnapshotSelect,
   isTimeTravelMode,
   onTimeTravelToggle,
+  // Issue #5001: Document / KB entity features
+  documentStatus,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1399,6 +1402,13 @@ export const MeepleCard = React.memo(function MeepleCard({
                 actions={sessionActions}
               />
             )}
+          </div>
+        )}
+
+        {/* Document-specific info (Issue #5001) */}
+        {entity === 'document' && documentStatus && variant !== 'compact' && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <DocumentStatusBadge status={documentStatus} size="sm" />
           </div>
         )}
 

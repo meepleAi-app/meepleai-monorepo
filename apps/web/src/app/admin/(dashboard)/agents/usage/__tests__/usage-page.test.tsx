@@ -126,7 +126,8 @@ describe('UsagePage', () => {
     renderWithQuery(<UsagePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Throttled')).toBeInTheDocument();
+      // Multiple components (KpiCards, RateLimitGauge) render "Throttled" — check at least one
+      expect(screen.getAllByText('Throttled')[0]).toBeInTheDocument();
     });
   });
 
@@ -161,18 +162,18 @@ describe('UsagePage', () => {
     expect(screen.getByText(/Redis unavailable/i)).toBeInTheDocument();
   });
 
-  it('shows placeholder text for charts section', async () => {
+  it('shows charts section component headings', async () => {
     mockGetOpenRouterStatus.mockResolvedValue(mockStatus);
 
     renderWithQuery(<UsagePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Timeline chart/i)).toBeInTheDocument();
+      expect(screen.getByText('Request Timeline')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Cost breakdown chart/i)).toBeInTheDocument();
-    expect(screen.getByText(/Rate gauge/i)).toBeInTheDocument();
-    expect(screen.getByText(/Quota display/i)).toBeInTheDocument();
-    expect(screen.getByText(/Requests table/i)).toBeInTheDocument();
+    expect(screen.getByText('Cost Breakdown')).toBeInTheDocument();
+    expect(screen.getByText('Rate-Limit Utilization')).toBeInTheDocument();
+    expect(screen.getByText('Free Tier Quota')).toBeInTheDocument();
+    expect(screen.getAllByText('Recent Requests')[0]).toBeInTheDocument();
   });
 });

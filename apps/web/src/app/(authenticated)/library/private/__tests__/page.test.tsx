@@ -37,6 +37,18 @@ vi.mock('@/components/library/LibraryNavTabs', () => ({
   LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 
+// Mock LibraryNavConfig — returns null in production (sets nav config via useEffect)
+// Expose a testid so tests can verify the component is mounted (Issue #5054)
+vi.mock('../NavConfig', () => ({
+  LibraryNavConfig: () => <div data-testid="library-nav-config" />,
+}));
+
+// Mock LibraryNavConfig — returns null in production (only sets nav context via useEffect)
+// Provide a visible element so the test can assert it is rendered (Issue #5054)
+vi.mock('../../NavConfig', () => ({
+  LibraryNavConfig: () => <div data-testid="library-nav-config" />,
+}));
+
 const mockGetCurrentUser = getCurrentUser as Mock;
 const mockUseRouter = useRouter as Mock;
 

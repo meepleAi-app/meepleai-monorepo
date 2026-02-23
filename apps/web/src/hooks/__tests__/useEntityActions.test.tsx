@@ -101,7 +101,7 @@ describe('useEntityActions', () => {
 
     it('navigates to new session when Avvia Sessione is clicked', () => {
       const { result } = renderHook(() =>
-        useEntityActions({ entity: 'game', id: 'game-123' }),
+        useEntityActions({ entity: 'game', id: 'game-123', userId: 'user-123' }),
         { wrapper: QueryClientWrapper }
       );
 

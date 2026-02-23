@@ -12,7 +12,7 @@
  * so this is non-breaking for pages that don't set nav config.
  */
 
-import { type ReactNode } from 'react';
+import { type ReactNode, Suspense } from 'react';
 
 import { MiniNav } from '@/components/layout/MiniNav/MiniNav';
 import { NavActionBar } from '@/components/layout/ActionBar/NavActionBar';
@@ -23,7 +23,9 @@ function ChatLayoutInner({ children }: { children: ReactNode }) {
     <div className="flex flex-col min-h-0 flex-1">
       {/* MiniNav (L2) — sticky at top. Renders null when no tabs configured. */}
       <div className="sticky top-12 md:top-0 z-30">
-        <MiniNav />
+        <Suspense>
+          <MiniNav />
+        </Suspense>
       </div>
 
       {/* Page content */}

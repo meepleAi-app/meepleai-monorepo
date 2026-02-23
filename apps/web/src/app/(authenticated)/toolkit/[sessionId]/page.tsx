@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 
 import { Hash, Loader2 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -106,7 +106,7 @@ function CustomToolPlaceholder({ label }: { label: string }) {
 
 // ── ActiveSessionPage ─────────────────────────────────────────────────────────
 
-export default function ActiveSessionPage() {
+function ActiveSessionPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -395,5 +395,13 @@ export default function ActiveSessionPage() {
     >
       {toolContent}
     </SessionToolLayout>
+  );
+}
+
+export default function ActiveSessionPage() {
+  return (
+    <Suspense>
+      <ActiveSessionPageContent />
+    </Suspense>
   );
 }

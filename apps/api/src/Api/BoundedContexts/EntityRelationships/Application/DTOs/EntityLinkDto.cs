@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.EntityRelationships.Application.DTOs;
 
 /// <summary>
 /// DTO representing an EntityLink returned from commands and queries.
+/// IsOwner is populated by query handlers when a RequestingUserId is available.
 /// </summary>
 public sealed record EntityLinkDto(
     Guid Id,
@@ -22,6 +23,12 @@ public sealed record EntityLinkDto(
     DateTime CreatedAt,
     DateTime UpdatedAt)
 {
+    /// <summary>
+    /// True when the requesting user is the owner of this link.
+    /// Defaults to false; set by query handlers via <c>with { IsOwner = ... }</c>.
+    /// </summary>
+    public bool IsOwner { get; init; }
+
     /// <summary>Maps an EntityLink aggregate to its DTO representation.</summary>
     public static EntityLinkDto FromEntity(EntityLink link) => new(
         link.Id,

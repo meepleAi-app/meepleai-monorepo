@@ -36,6 +36,18 @@ public interface IEntityLinkRepository
         EntityLinkType linkType,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Gets all links where the given entity appears as source,
+    /// OR as target in a bidirectional link (IsBidirectional=true).
+    /// Supports optional filtering by Scope and LinkType (Issue #5135).
+    /// </summary>
+    Task<IReadOnlyList<EntityLink>> GetForEntityAsync(
+        MeepleEntityType entityType,
+        Guid entityId,
+        EntityLinkScope? scope = null,
+        EntityLinkType? linkType = null,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Adds a new EntityLink to the repository.</summary>
     Task AddAsync(EntityLink entityLink, CancellationToken cancellationToken = default);
 

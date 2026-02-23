@@ -2,10 +2,10 @@
  * Admin Dashboard Navigation Config Tests - Issue #4844
  *
  * Covers:
- * - isSectionActive: baseRoute and additionalRoutes matching
- * - getActiveSection: /admin/pdfs maps to knowledge-base
+ * - isSectionActive: baseRoute matching
+ * - getActiveSection: route-to-section mapping
  * - isSidebarItemActive: activePattern and prefix matching
- * - DASHBOARD_SECTIONS: PDFs item present in knowledge-base
+ * - DASHBOARD_SECTIONS: Documents item present in knowledge-base
  */
 
 import { describe, it, expect } from 'vitest';
@@ -59,23 +59,13 @@ describe('isSectionActive', () => {
       expect(isSectionActive(kb, '/admin/knowledge-base/settings')).toBe(true);
     });
 
+    it('matches documents sub-route under baseRoute', () => {
+      expect(isSectionActive(kb, '/admin/knowledge-base/documents')).toBe(true);
+    });
+
     it('does not match unrelated routes', () => {
       expect(isSectionActive(kb, '/admin/users')).toBe(false);
       expect(isSectionActive(kb, '/admin/agents')).toBe(false);
-    });
-  });
-
-  describe('additionalRoutes matching (issue #4844)', () => {
-    it('matches /admin/pdfs exactly', () => {
-      expect(isSectionActive(kb, '/admin/pdfs')).toBe(true);
-    });
-
-    it('matches sub-paths of /admin/pdfs', () => {
-      expect(isSectionActive(kb, '/admin/pdfs/123')).toBe(true);
-    });
-
-    it('does not falsely match /admin/pdfstuff', () => {
-      expect(isSectionActive(kb, '/admin/pdfstuff')).toBe(false);
     });
   });
 
@@ -84,8 +74,8 @@ describe('isSectionActive', () => {
       expect(isSectionActive(overview, '/admin/overview')).toBe(true);
     });
 
-    it('overview section is not active for /admin/pdfs', () => {
-      expect(isSectionActive(overview, '/admin/pdfs')).toBe(false);
+    it('overview section is not active for /admin/knowledge-base', () => {
+      expect(isSectionActive(overview, '/admin/knowledge-base')).toBe(false);
     });
   });
 });
@@ -105,12 +95,8 @@ describe('getActiveSection', () => {
     expect(getActiveSection('/admin/knowledge-base/vectors')?.id).toBe('knowledge-base');
   });
 
-  it('returns knowledge-base for /admin/pdfs (additionalRoutes, issue #4844)', () => {
-    expect(getActiveSection('/admin/pdfs')?.id).toBe('knowledge-base');
-  });
-
-  it('returns knowledge-base for /admin/pdfs/some-doc-id', () => {
-    expect(getActiveSection('/admin/pdfs/some-doc-id')?.id).toBe('knowledge-base');
+  it('returns knowledge-base for /admin/knowledge-base/documents', () => {
+    expect(getActiveSection('/admin/knowledge-base/documents')?.id).toBe('knowledge-base');
   });
 
   it('returns agents for /admin/agents', () => {
@@ -130,24 +116,24 @@ describe('getActiveSection', () => {
 
 describe('isSidebarItemActive', () => {
   const kbItems = getSidebarItems('knowledge-base');
-  const pdfsItem = kbItems.find((i) => i.href === '/admin/pdfs');
+  const documentsItem = kbItems.find((i) => i.href === '/admin/knowledge-base/documents');
   const overviewItem = kbItems.find((i) => i.href === '/admin/knowledge-base');
 
-  it('pdfs item exists in knowledge-base sidebar (issue #4844)', () => {
-    expect(pdfsItem).toBeDefined();
-    expect(pdfsItem?.label).toBe('Documents');
+  it('documents item exists in knowledge-base sidebar', () => {
+    expect(documentsItem).toBeDefined();
+    expect(documentsItem?.label).toBe('Documents');
   });
 
-  it('pdfs item is active on /admin/pdfs', () => {
-    expect(isSidebarItemActive(pdfsItem!, '/admin/pdfs')).toBe(true);
+  it('documents item is active on /admin/knowledge-base/documents', () => {
+    expect(isSidebarItemActive(documentsItem!, '/admin/knowledge-base/documents')).toBe(true);
   });
 
-  it('pdfs item is active on sub-path /admin/pdfs/abc (prefix matching)', () => {
-    expect(isSidebarItemActive(pdfsItem!, '/admin/pdfs/abc')).toBe(true);
+  it('documents item is active on sub-path /admin/knowledge-base/documents/abc (prefix matching)', () => {
+    expect(isSidebarItemActive(documentsItem!, '/admin/knowledge-base/documents/abc')).toBe(true);
   });
 
-  it('pdfs item is NOT active on /admin/knowledge-base', () => {
-    expect(isSidebarItemActive(pdfsItem!, '/admin/knowledge-base')).toBe(false);
+  it('documents item is NOT active on /admin/knowledge-base', () => {
+    expect(isSidebarItemActive(documentsItem!, '/admin/knowledge-base')).toBe(false);
   });
 
   it('overview item is active on /admin/knowledge-base', () => {
@@ -166,15 +152,15 @@ describe('DASHBOARD_SECTIONS structure', () => {
     expect(DASHBOARD_SECTIONS).toHaveLength(5);
   });
 
-  it('knowledge-base section has additionalRoutes with /admin/pdfs', () => {
+  it('knowledge-base section has no additionalRoutes', () => {
     const kb = DASHBOARD_SECTIONS.find((s) => s.id === 'knowledge-base')!;
-    expect(kb.additionalRoutes).toContain('/admin/pdfs');
+    expect(kb.additionalRoutes).toBeUndefined();
   });
 
-  it('knowledge-base sidebar contains Documents item pointing to /admin/pdfs', () => {
+  it('knowledge-base sidebar contains Documents item pointing to /admin/knowledge-base/documents', () => {
     const kb = DASHBOARD_SECTIONS.find((s) => s.id === 'knowledge-base')!;
-    const pdfsItem = kb.sidebarItems.find((i) => i.href === '/admin/pdfs');
-    expect(pdfsItem).toBeDefined();
-    expect(pdfsItem?.label).toBe('Documents');
+    const documentsItem = kb.sidebarItems.find((i) => i.href === '/admin/knowledge-base/documents');
+    expect(documentsItem).toBeDefined();
+    expect(documentsItem?.label).toBe('Documents');
   });
 });

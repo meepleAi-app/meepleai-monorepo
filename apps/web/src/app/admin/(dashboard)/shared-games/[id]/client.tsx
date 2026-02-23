@@ -464,7 +464,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                   <p className="text-sm font-medium">No agent linked</p>
                   <p className="text-xs mt-1">Select an agent below to enable AI chat for this game.</p>
                   <Link
-                    href="/admin/agent-definitions/create"
+                    href="/admin/agents/definitions/create"
                     className="text-xs text-primary underline underline-offset-2 mt-2 inline-block hover:text-primary/80"
                   >
                     Create a new agent →

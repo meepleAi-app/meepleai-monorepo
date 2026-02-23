@@ -149,6 +149,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Categories',
         icon: TagIcon,
       },
+      {
+        href: '/admin/shared-games/import',
+        label: 'Import Wizard',
+        icon: UploadIcon,
+      },
     ],
   },
   {
@@ -164,6 +169,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'All Agents',
         icon: BotIcon,
         activePattern: /^\/admin\/agents$/,
+      },
+      {
+        href: '/admin/agents/definitions',
+        label: 'Agent Definitions',
+        icon: ListIcon,
+        activePattern: /^\/admin\/agents\/definitions/,
       },
       {
         href: '/admin/agents/builder',
@@ -222,7 +233,6 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Knowledge Base',
     icon: BookOpenIcon,
     baseRoute: '/admin/knowledge-base',
-    additionalRoutes: ['/admin/pdfs'],
     description: 'Documents, vectors, and RAG pipeline',
     group: 'ai',
     sidebarItems: [
@@ -233,7 +243,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         activePattern: /^\/admin\/knowledge-base$/,
       },
       {
-        href: '/admin/pdfs',
+        href: '/admin/knowledge-base/documents',
         label: 'Documents',
         icon: ListOrderedIcon,
       },

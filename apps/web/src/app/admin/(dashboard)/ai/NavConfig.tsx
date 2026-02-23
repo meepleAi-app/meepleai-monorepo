@@ -37,7 +37,7 @@ export function AdminAiNavConfig() {
           id: 'new-definition',
           label: 'New Definition',
           icon: FileText,
-          onClick: () => router.push('/admin/agent-definitions/new'),
+          onClick: () => router.push('/admin/agents/definitions/create'),
         },
         {
           id: 'new-prompt',

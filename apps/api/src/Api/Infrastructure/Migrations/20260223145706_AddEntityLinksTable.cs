@@ -46,21 +46,21 @@ namespace Api.Infrastructure.Migrations
                 schema: "entity_relationships",
                 table: "entity_links",
                 columns: new[] { "OwnerUserId", "IsDeleted" },
-                filter: "is_deleted = false");
+                filter: "\"IsDeleted\" = false");
 
             migrationBuilder.CreateIndex(
                 name: "ix_entity_links_source",
                 schema: "entity_relationships",
                 table: "entity_links",
                 columns: new[] { "SourceEntityType", "SourceEntityId", "IsDeleted" },
-                filter: "is_deleted = false");
+                filter: "\"IsDeleted\" = false");
 
             migrationBuilder.CreateIndex(
                 name: "ix_entity_links_target",
                 schema: "entity_relationships",
                 table: "entity_links",
                 columns: new[] { "TargetEntityType", "TargetEntityId", "IsDeleted" },
-                filter: "is_deleted = false");
+                filter: "\"IsDeleted\" = false");
 
             migrationBuilder.CreateIndex(
                 name: "uq_entity_links_source_target_type",
@@ -68,7 +68,7 @@ namespace Api.Infrastructure.Migrations
                 table: "entity_links",
                 columns: new[] { "SourceEntityType", "SourceEntityId", "TargetEntityType", "TargetEntityId", "LinkType" },
                 unique: true,
-                filter: "is_deleted = false");
+                filter: "\"IsDeleted\" = false");
         }
 
         /// <inheritdoc />

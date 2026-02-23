@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Chat Route Group Layout
  * Issue #5044 — Chat MiniNav + ActionBar

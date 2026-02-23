@@ -772,6 +772,7 @@ services:
       start_period: 20s
     networks:
       - meepleai
+      - meepleai-shared  # Also join the shared 'meepleai' network for embedding-service and HyperDX
     deploy:
       resources:
         limits:
@@ -849,6 +850,11 @@ volumes:
 networks:
   meepleai:
     driver: bridge
+  meepleai-shared:
+    # External network shared with docker-compose.hyperdx.yml and other stacks
+    # Gives the API container access to: meepleai-hyperdx (OTLP/logs), embedding-service
+    external: true
+    name: meepleai
 
 # SEC-708: Docker Secrets for sensitive credentials
 # Secret files are stored in ./secrets/ directory (gitignored)

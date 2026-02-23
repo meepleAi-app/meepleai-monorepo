@@ -308,8 +308,8 @@ internal static class ApplicationServiceExtensions
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.GameToolkit.Application.Validators.CreateToolkitCommandValidator>(
             includeInternalTypes: true);
 
-        // Issue #5130: Register validators from EntityRelationships bounded context
-        services.AddValidatorsFromAssemblyContaining<BoundedContexts.EntityRelationships.Application.Validators.CreateEntityLinkCommandPlaceholderValidator>(
+        // Issue #5133: Register validators from EntityRelationships bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.EntityRelationships.Application.Validators.CreateEntityLinkCommandValidator>(
             includeInternalTypes: true);
 
         return services;

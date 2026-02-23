@@ -1,3 +1,5 @@
+using Api.BoundedContexts.EntityRelationships.Domain.Enums;
+
 namespace Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
 
 /// <summary>
@@ -6,7 +8,12 @@ namespace Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
 /// </summary>
 public sealed class DuplicateEntityLinkException : Exception
 {
-    public DuplicateEntityLinkException(string sourceType, Guid sourceId, string targetType, Guid targetId, string linkType)
+    public DuplicateEntityLinkException(
+        MeepleEntityType sourceType,
+        Guid sourceId,
+        MeepleEntityType targetType,
+        Guid targetId,
+        EntityLinkType linkType)
         : base($"An EntityLink from {sourceType}/{sourceId} to {targetType}/{targetId} of type '{linkType}' already exists.")
     {
     }

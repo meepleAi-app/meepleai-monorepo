@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -13,6 +15,12 @@ namespace Api.Routing;
 /// </summary>
 internal static class RagDashboardEndpoints
 {
+    private static readonly JsonSerializerOptions JsonCamelCaseOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
     public static RouteGroupBuilder MapRagDashboardEndpoints(this RouteGroupBuilder group)
     {
         var ragGroup = group.MapGroup("/rag-dashboard")
@@ -84,6 +92,12 @@ internal static class RagDashboardEndpoints
             .WithDescription("Returns a comparison of multiple RAG strategies with rankings and recommendations.")
             .Produces<StrategyComparisonDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized);
+
+        // ========================================
+        // Admin Live Testing Endpoint
+        // ========================================
+
+        MapAdminQueryStreamEndpoint(ragGroup);
 
         return group;
     }
@@ -254,6 +268,83 @@ internal static class RagDashboardEndpoints
         return Results.Ok(result);
     }
 
+    // ========================================
+    // Admin Live Testing
+    // ========================================
+
+    private static void MapAdminQueryStreamEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/query/stream", async (
+            [FromBody] AdminLiveQueryRequest request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            if (string.IsNullOrWhiteSpace(request.Query))
+                return Results.BadRequest(new { error = "Query is required" });
+
+            if (string.IsNullOrWhiteSpace(request.GameContext))
+                return Results.BadRequest(new { error = "GameContext is required" });
+
+            var searchResults = await mediator.Send(
+                new SearchGamesQuery(request.GameContext, session!.User!.Id, 5), ct)
+                .ConfigureAwait(false);
+            var gameId = searchResults?.FirstOrDefault()?.Id;
+
+            if (gameId == null)
+            {
+                return Results.BadRequest(new
+                {
+                    error = $"Game '{request.GameContext}' not found in catalog"
+                });
+            }
+
+            context.Response.Headers.Append("Content-Type", "text/event-stream");
+            context.Response.Headers.Append("Cache-Control", "no-cache");
+            context.Response.Headers.Append("Connection", "keep-alive");
+            context.Response.Headers.Append("X-Accel-Buffering", "no");
+
+            logger.LogInformation(
+                "Admin {AdminId} running live RAG test for game {GameId}: '{Query}'",
+                session!.User!.Id, gameId, request.Query);
+
+            var streamQuery = new StreamQaQuery(GameId: gameId.Value.ToString(), Query: request.Query);
+
+            try
+            {
+                await foreach (var evt in mediator.CreateStream(streamQuery, ct).ConfigureAwait(false))
+                {
+                    var json = JsonSerializer.Serialize(evt, JsonCamelCaseOptions);
+                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException oce)
+            {
+                logger.LogInformation(oce, "Admin live RAG test stream cancelled for game {GameId}", gameId);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in admin live RAG test stream for game {GameId}", gameId);
+            }
+#pragma warning restore CA1031
+
+            return Results.Empty;
+        })
+        .WithName("AdminRagLiveQueryStream")
+        .WithSummary("Live test RAG query with SSE streaming (Admin)")
+        .WithDescription("Streams RAG Q&A results in real-time using Server-Sent Events. Requires admin session.")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+    }
+
     private static async Task<IResult> HandleGetStrategyComparison(
         HttpContext context,
         IMediator mediator,
@@ -282,3 +373,8 @@ internal static class RagDashboardEndpoints
         return Results.Ok(result);
     }
 }
+
+/// <summary>
+/// Request body for admin live RAG query streaming endpoint.
+/// </summary>
+internal sealed record AdminLiveQueryRequest(string Query, string GameContext);

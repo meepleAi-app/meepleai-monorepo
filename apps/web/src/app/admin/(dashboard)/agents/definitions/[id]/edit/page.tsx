@@ -19,7 +19,7 @@ export default function EditAgentDefinitionPage({ params }: { params: { id: stri
 
   const updateMutation = useMutation({
     mutationFn: (data: CreateAgentDefinition) => agentDefinitionsApi.update(params.id, data),
-    onSuccess: (result) => {
+    onSuccess: result => {
       toast.success(`Agent "${result.name}" updated successfully`);
       queryClient.invalidateQueries({ queryKey: ['admin', 'agent-definitions'] });
       router.push('/admin/agents/definitions');
@@ -55,7 +55,7 @@ export default function EditAgentDefinitionPage({ params }: { params: { id: stri
             prompts: agent.prompts,
             tools: agent.tools,
           }}
-          onSubmit={(data) => updateMutation.mutate(data)}
+          onSubmit={data => updateMutation.mutate(data)}
           isLoading={updateMutation.isPending}
         />
       </div>

@@ -52,7 +52,8 @@ function getMatchBadgeVariant(score: number): 'default' | 'secondary' | 'destruc
 }
 
 export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
-  const { extractedMetadata, selectedBggId, bggGameData, setSelectedBggId } = useGameImportWizardStore();
+  const { extractedMetadata, selectedBggId, bggGameData, setSelectedBggId } =
+    useGameImportWizardStore();
 
   // Search state
   const [query, setQuery] = useState(extractedMetadata?.title || '');
@@ -65,7 +66,11 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
   const [manualPreview, setManualPreview] = useState<BggGameData | null>(null);
 
   // BGG Search with React Query
-  const { data: searchData, isLoading: isSearching, error: searchError } = useSearchBggGames({
+  const {
+    data: searchData,
+    isLoading: isSearching,
+    error: searchError,
+  } = useSearchBggGames({
     query: debouncedQuery,
     exact: false,
   });
@@ -141,9 +146,7 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
 
       setManualPreview(gameData);
     } catch (err) {
-      setManualError(
-        err instanceof Error ? err.message : `Game with BGG ID ${id} not found`
-      );
+      setManualError(err instanceof Error ? err.message : `Game with BGG ID ${id} not found`);
     } finally {
       setManualLoading(false);
     }
@@ -200,7 +203,9 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Search Failed</AlertTitle>
               <AlertDescription className="text-sm">
-                {searchError instanceof Error ? searchError.message : 'An error occurred during BGG search'}
+                {searchError instanceof Error
+                  ? searchError.message
+                  : 'An error occurred during BGG search'}
               </AlertDescription>
             </Alert>
           )}
@@ -215,7 +220,10 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
                 <p className="text-xs text-muted-foreground">Click to select</p>
               </div>
 
-              <div className="max-h-96 space-y-2 overflow-y-auto rounded-md border p-2" data-testid="bgg-search-results">
+              <div
+                className="max-h-96 space-y-2 overflow-y-auto rounded-md border p-2"
+                data-testid="bgg-search-results"
+              >
                 {resultsWithScores.map(result => {
                   const isSelected = result.bggId === selectedBggId;
 
@@ -227,7 +235,8 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
                       className={cn(
                         'flex w-full items-center gap-3 rounded-md border p-3 text-left transition-all',
                         'hover:border-primary hover:bg-accent',
-                        isSelected && 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2'
+                        isSelected &&
+                          'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2'
                       )}
                       data-testid={`bgg-result-${result.bggId}`}
                     >
@@ -249,7 +258,9 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="font-medium leading-tight">{result.name}</h4>
-                          {isSelected && <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-primary" />}
+                          {isSelected && (
+                            <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-primary" />
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -266,7 +277,10 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
                           </Badge>
 
                           {/* Match Score Badge */}
-                          <Badge variant={getMatchBadgeVariant(result.matchScore)} className="text-xs font-semibold">
+                          <Badge
+                            variant={getMatchBadgeVariant(result.matchScore)}
+                            className="text-xs font-semibold"
+                          >
                             {result.matchScore}% match
                           </Badge>
 
@@ -294,13 +308,17 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
           )}
 
           {/* Empty State */}
-          {!isSearching && debouncedQuery.length >= 2 && resultsWithScores.length === 0 && !searchError && (
-            <div className="rounded-md border-2 border-dashed p-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                No games found for &quot;{debouncedQuery}&quot;. Try a different search term or use manual BGG ID below.
-              </p>
-            </div>
-          )}
+          {!isSearching &&
+            debouncedQuery.length >= 2 &&
+            resultsWithScores.length === 0 &&
+            !searchError && (
+              <div className="rounded-md border-2 border-dashed p-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No games found for &quot;{debouncedQuery}&quot;. Try a different search term or
+                  use manual BGG ID below.
+                </p>
+              </div>
+            )}
         </div>
       </Card>
 
@@ -401,7 +419,11 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
                     </div>
                   </div>
 
-                  <Button onClick={handleConfirmManual} className="w-full" data-testid="confirm-manual-bgg-btn">
+                  <Button
+                    onClick={handleConfirmManual}
+                    className="w-full"
+                    data-testid="confirm-manual-bgg-btn"
+                  >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Use This Game
                   </Button>
@@ -418,8 +440,8 @@ export function Step3BggMatch({ onComplete }: Step3BggMatchProps): JSX.Element {
           <CheckCircle2 className="h-4 w-4 text-green-500" />
           <AlertTitle>Game Selected</AlertTitle>
           <AlertDescription className="text-sm">
-            Selected: <strong>{bggGameData.name}</strong> (BGG #{selectedBggId}). Click &quot;Next&quot; to
-            continue.
+            Selected: <strong>{bggGameData.name}</strong> (BGG #{selectedBggId}). Click
+            &quot;Next&quot; to continue.
           </AlertDescription>
         </Alert>
       )}

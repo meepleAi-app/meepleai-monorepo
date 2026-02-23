@@ -30,7 +30,13 @@ import { useRouter } from 'next/navigation';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
@@ -55,7 +61,10 @@ import { getAgentDefinitions } from '@/lib/api/admin-agent-client';
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+  const map: Record<
+    string,
+    { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }
+  > = {
     Draft: { variant: 'secondary', label: 'Draft' },
     Published: { variant: 'default', label: 'Published' },
     Archived: { variant: 'outline', label: 'Archived' },
@@ -100,7 +109,9 @@ function DocumentItem({
               <DocTypeBadge documentType={document.documentType} />
               <span className="text-sm text-muted-foreground">v{document.version}</span>
               {document.isActive && (
-                <Badge variant="outline" className="text-xs">Active</Badge>
+                <Badge variant="outline" className="text-xs">
+                  Active
+                </Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -195,7 +206,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
   const linkAgentMutation = useMutation({
     mutationFn: (agentId: string) => api.sharedGames.linkAgent(gameId, agentId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId, 'linked-agent'] });
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
+      });
       setSelectedAgentId('');
     },
   });
@@ -203,7 +216,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
   const unlinkAgentMutation = useMutation({
     mutationFn: () => api.sharedGames.unlinkAgent(gameId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId, 'linked-agent'] });
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
+      });
     },
   });
 
@@ -292,9 +307,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           <TabsTrigger value="documents">
             Documents{documents && documents.length > 0 ? ` (${documents.length})` : ''}
           </TabsTrigger>
-          <TabsTrigger value="agent">
-            Agent{linkedAgent ? ' ✓' : ''}
-          </TabsTrigger>
+          <TabsTrigger value="agent">Agent{linkedAgent ? ' ✓' : ''}</TabsTrigger>
         </TabsList>
 
         {/* ── Details Tab ─────────────────────────────────────────────────── */}
@@ -354,14 +367,18 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                     {game.publishers && game.publishers.length > 0 && (
                       <>
                         <dt className="text-muted-foreground">Publisher</dt>
-                        <dd className="font-medium">{game.publishers.map((p) => p.name).join(', ')}</dd>
+                        <dd className="font-medium">
+                          {game.publishers.map(p => p.name).join(', ')}
+                        </dd>
                       </>
                     )}
 
                     {game.designers && game.designers.length > 0 && (
                       <>
                         <dt className="text-muted-foreground">Designer</dt>
-                        <dd className="font-medium">{game.designers.map((d) => d.name).join(', ')}</dd>
+                        <dd className="font-medium">
+                          {game.designers.map(d => d.name).join(', ')}
+                        </dd>
                       </>
                     )}
                   </dl>
@@ -462,7 +479,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                 <div className="text-center py-8 text-muted-foreground">
                   <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
                   <p className="text-sm font-medium">No agent linked</p>
-                  <p className="text-xs mt-1">Select an agent below to enable AI chat for this game.</p>
+                  <p className="text-xs mt-1">
+                    Select an agent below to enable AI chat for this game.
+                  </p>
                   <Link
                     href="/admin/agents/definitions/create"
                     className="text-xs text-primary underline underline-offset-2 mt-2 inline-block hover:text-primary/80"
@@ -502,7 +521,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                     disabled={agentsLoading || linkAgentMutation.isPending}
                   >
                     <SelectTrigger className="flex-1 h-9 text-sm">
-                      <SelectValue placeholder={agentsLoading ? 'Loading agents…' : 'Select agent definition'} />
+                      <SelectValue
+                        placeholder={agentsLoading ? 'Loading agents…' : 'Select agent definition'}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {agentDefinitions?.map(agent => (
@@ -512,7 +533,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                         </SelectItem>
                       ))}
                       {agentDefinitions?.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">No active agents found.</div>
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No active agents found.
+                        </div>
                       )}
                     </SelectContent>
                   </Select>
@@ -551,20 +574,23 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription>
-                Documents indexed and available for RAG retrieval.
-              </CardDescription>
+              <CardDescription>Documents indexed and available for RAG retrieval.</CardDescription>
             </CardHeader>
             <CardContent>
               {kbTotalCount === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">No KB cards yet. Upload and process documents in the Documents tab.</p>
+                  <p className="text-sm">
+                    No KB cards yet. Upload and process documents in the Documents tab.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {kbCards?.map(card => (
-                    <div key={card.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                    <div
+                      key={card.id}
+                      className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                    >
                       <div className="flex items-center gap-2 min-w-0">
                         <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                         <span className="truncate text-xs">{card.fileName}</span>
@@ -580,7 +606,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                           {card.indexingStatus}
                         </Badge>
                         {card.chunkCount > 0 && (
-                          <span className="text-xs text-muted-foreground">{card.chunkCount} chunks</span>
+                          <span className="text-xs text-muted-foreground">
+                            {card.chunkCount} chunks
+                          </span>
                         )}
                       </div>
                     </div>
@@ -602,10 +630,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PdfUploadSection
-                gameId={gameId}
-                onPdfUploaded={() => refetchDocuments()}
-              />
+              <PdfUploadSection gameId={gameId} onPdfUploaded={() => refetchDocuments()} />
             </CardContent>
           </Card>
 
@@ -622,12 +647,14 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
             <CardContent>
               {documents && documents.length > 0 ? (
                 <div className="space-y-3">
-                  {documents.map((doc) => (
+                  {documents.map(doc => (
                     <DocumentItem
                       key={doc.id}
                       document={doc}
-                      onDelete={(id) => deleteDocMutation.mutate(id)}
-                      isDeleting={deleteDocMutation.isPending && deleteDocMutation.variables === doc.id}
+                      onDelete={id => deleteDocMutation.mutate(id)}
+                      isDeleting={
+                        deleteDocMutation.isPending && deleteDocMutation.variables === doc.id
+                      }
                     />
                   ))}
                   <div className="pt-2">

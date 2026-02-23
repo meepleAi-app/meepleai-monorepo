@@ -38,7 +38,7 @@ public class SessionTests
         var userId = Guid.NewGuid();
 
         // Act
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
 
         // Assert
         session.SessionCode.Should().HaveLength(6);
@@ -56,7 +56,7 @@ public class SessionTests
         var userId = Guid.NewGuid();
 
         // Act
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
 
         // Assert
         session.Participants.Should().HaveCount(1);
@@ -69,7 +69,7 @@ public class SessionTests
     public void Create_WithEmptyUserId_ShouldThrow()
     {
         // Act
-        var act = () => Session.Create(Guid.Empty, null, SessionType.Generic);
+        var act = () => Session.Create(Guid.Empty, Guid.NewGuid(), SessionType.Generic);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -77,24 +77,24 @@ public class SessionTests
     }
 
     [Fact]
-    public void Create_GameSpecificWithoutGameId_ShouldThrow()
+    public void Create_EmptyGameId_ShouldThrow()
     {
         // Arrange
         var userId = Guid.NewGuid();
 
         // Act
-        var act = () => Session.Create(userId, null, SessionType.GameSpecific);
+        var act = () => Session.Create(userId, Guid.Empty, SessionType.GameSpecific);
 
         // Assert
         act.Should().Throw<ArgumentException>()
-            .WithMessage("*Game ID required for GameSpecific sessions*");
+            .WithMessage("*Game ID cannot be empty*");
     }
 
     [Fact]
     public void AddParticipant_WithValidInfo_ShouldSucceed()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         var participantInfo = ParticipantInfo.Create("Player 2", false, 2);
 
         // Act
@@ -112,7 +112,7 @@ public class SessionTests
     public void AddParticipant_WhenFinalized_ShouldThrow()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         session.Finalize();
         var participantInfo = ParticipantInfo.Create("Player 2", false, 2);
 
@@ -128,7 +128,7 @@ public class SessionTests
     public void AddParticipant_WithNullInfo_ShouldThrow()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
 
         // Act
         var act = () => session.AddParticipant(null!);
@@ -141,7 +141,7 @@ public class SessionTests
     public void Pause_WhenActive_ShouldUpdateStatus()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
 
         // Act
         session.Pause();
@@ -155,7 +155,7 @@ public class SessionTests
     public void Pause_WhenNotActive_ShouldThrow()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         session.Pause(); // First pause
 
         // Act
@@ -170,7 +170,7 @@ public class SessionTests
     public void Resume_WhenPaused_ShouldUpdateStatus()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         session.Pause();
 
         // Act
@@ -185,7 +185,7 @@ public class SessionTests
     public void Resume_WhenNotPaused_ShouldThrow()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
 
         // Act
         var act = () => session.Resume();
@@ -199,7 +199,7 @@ public class SessionTests
     public void Finalize_WhenActive_ShouldUpdateStatus()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
 
         // Act
         session.Finalize();
@@ -214,7 +214,7 @@ public class SessionTests
     public void Finalize_WithWinnerId_ShouldSetWinnerRank()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         var participantInfo = ParticipantInfo.Create("Player 2", false, 2);
         session.AddParticipant(participantInfo);
         var winnerId = session.Participants.Last().Id;
@@ -231,7 +231,7 @@ public class SessionTests
     public void Finalize_WithInvalidWinnerId_ShouldThrow()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         var invalidWinnerId = Guid.NewGuid();
 
         // Act
@@ -246,7 +246,7 @@ public class SessionTests
     public void Finalize_WhenAlreadyFinalized_ShouldThrow()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         session.Finalize();
 
         // Act
@@ -261,7 +261,7 @@ public class SessionTests
     public void SoftDelete_ShouldSetDeletedFlags()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
 
         // Act
         session.SoftDelete();
@@ -275,7 +275,7 @@ public class SessionTests
     public void UpdateAudit_ShouldSetTimestampAndUser()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), null, SessionType.Generic);
+        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
         var updaterId = Guid.NewGuid();
 
         // Act

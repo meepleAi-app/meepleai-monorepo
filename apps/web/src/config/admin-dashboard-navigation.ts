@@ -285,30 +285,24 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
 
 /** Get section by ID */
 export function getSection(id: string): DashboardSection | undefined {
-  return DASHBOARD_SECTIONS.find((s) => s.id === id);
+  return DASHBOARD_SECTIONS.find(s => s.id === id);
 }
 
 /** Get active section based on current pathname */
 export function getActiveSection(pathname: string): DashboardSection | undefined {
   // First try exact baseRoute match
-  const exact = DASHBOARD_SECTIONS.find((s) => pathname === s.baseRoute);
+  const exact = DASHBOARD_SECTIONS.find(s => pathname === s.baseRoute);
   if (exact) return exact;
 
   // Check additionalRoutes (exact or prefix match)
-  const byAdditional = DASHBOARD_SECTIONS.find((s) =>
-    s.additionalRoutes?.some(
-      (r) => pathname === r || pathname.startsWith(r + '/')
-    )
+  const byAdditional = DASHBOARD_SECTIONS.find(s =>
+    s.additionalRoutes?.some(r => pathname === r || pathname.startsWith(r + '/'))
   );
   if (byAdditional) return byAdditional;
 
   // Then try prefix match on baseRoute (longest match wins)
-  const sorted = [...DASHBOARD_SECTIONS].sort(
-    (a, b) => b.baseRoute.length - a.baseRoute.length
-  );
-  return sorted.find(
-    (s) => pathname === s.baseRoute || pathname.startsWith(s.baseRoute + '/')
-  );
+  const sorted = [...DASHBOARD_SECTIONS].sort((a, b) => b.baseRoute.length - a.baseRoute.length);
+  return sorted.find(s => pathname === s.baseRoute || pathname.startsWith(s.baseRoute + '/'));
 }
 
 /** Get sidebar items for a section */
@@ -317,10 +311,7 @@ export function getSidebarItems(sectionId: string): DashboardSidebarItem[] {
 }
 
 /** Check if a sidebar item is active */
-export function isSidebarItemActive(
-  item: DashboardSidebarItem,
-  pathname: string
-): boolean {
+export function isSidebarItemActive(item: DashboardSidebarItem, pathname: string): boolean {
   if (item.activePattern) {
     return item.activePattern.test(pathname);
   }
@@ -328,16 +319,13 @@ export function isSidebarItemActive(
 }
 
 /** Check if a section is active */
-export function isSectionActive(
-  section: DashboardSection,
-  pathname: string
-): boolean {
+export function isSectionActive(section: DashboardSection, pathname: string): boolean {
   if (pathname === section.baseRoute || pathname.startsWith(section.baseRoute + '/')) {
     return true;
   }
-  return section.additionalRoutes?.some(
-    (r) => pathname === r || pathname.startsWith(r + '/')
-  ) ?? false;
+  return (
+    section.additionalRoutes?.some(r => pathname === r || pathname.startsWith(r + '/')) ?? false
+  );
 }
 
 /** Storage key for sidebar collapsed state */

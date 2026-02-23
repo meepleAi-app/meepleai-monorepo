@@ -82,7 +82,7 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-   
+
   return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
 }
 
@@ -92,7 +92,12 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const { mutate: uploadPdf, isPending: isUploading, progress, error: uploadError } = useUploadPdf();
+  const {
+    mutate: uploadPdf,
+    isPending: isUploading,
+    progress,
+    error: uploadError,
+  } = useUploadPdf();
 
   // Handle file selection
   const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
@@ -162,9 +167,7 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
               disabled={isUploading || uploadSuccess}
               className="cursor-pointer file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
             />
-            <p className="text-xs text-muted-foreground">
-              Supported format: PDF | Max size: 50 MB
-            </p>
+            <p className="text-xs text-muted-foreground">Supported format: PDF | Max size: 50 MB</p>
           </div>
 
           {/* Validation Errors */}
@@ -188,7 +191,9 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Upload Failed</AlertTitle>
               <AlertDescription className="text-sm">
-                {uploadError instanceof Error ? uploadError.message : 'An error occurred during upload'}
+                {uploadError instanceof Error
+                  ? uploadError.message
+                  : 'An error occurred during upload'}
               </AlertDescription>
             </Alert>
           )}
@@ -202,9 +207,7 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
                   <p className="text-sm font-medium">{file.name}</p>
                   <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                 </div>
-                {uploadSuccess && (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                )}
+                {uploadSuccess && <CheckCircle className="h-5 w-5 text-green-500" />}
               </div>
             </div>
           )}
@@ -233,11 +236,7 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
 
           {/* Upload Button */}
           {!uploadSuccess && (
-            <Button
-              onClick={handleUpload}
-              disabled={!canUpload || validating}
-              className="w-full"
-            >
+            <Button onClick={handleUpload} disabled={!canUpload || validating} className="w-full">
               {isUploading ? (
                 <>Uploading...</>
               ) : validating ? (

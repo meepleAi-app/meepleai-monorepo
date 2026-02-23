@@ -1,42 +1,91 @@
 /**
  * Admin Content Hub
  * Issue #5040 — Consolidate Admin Routes
+ * Issue #5049 — Admin Page Migrations
  *
  * Canonical entry for all content management admin pages.
  * Tabs: games · shared · faqs · kb · sessions
- *
- * TODO (Issue #5049): Migrate full content with tab-based layout + ActionBar.
  */
+
+import { Suspense } from 'react';
 
 import Link from 'next/link';
 
+import { KnowledgeBaseTab } from './KnowledgeBaseTab';
 import { AdminContentNavConfig } from './NavConfig';
+import { SharedGamesTab } from './SharedGamesTab';
 
 interface AdminContentPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
 }
 
 const TABS = [
-  { id: 'games',    label: 'Games',          href: '/admin/content?tab=games' },
-  { id: 'shared',   label: 'Shared Games',   href: '/admin/content?tab=shared' },
-  { id: 'faqs',     label: 'FAQs',           href: '/admin/content?tab=faqs' },
-  { id: 'kb',       label: 'Knowledge Base', href: '/admin/content?tab=kb' },
-  { id: 'sessions', label: 'Sessions',       href: '/admin/content?tab=sessions' },
+  { id: 'games', label: 'Games', href: '/admin/content?tab=games' },
+  { id: 'shared', label: 'Shared Games', href: '/admin/content?tab=shared' },
+  { id: 'faqs', label: 'FAQs', href: '/admin/content?tab=faqs' },
+  { id: 'kb', label: 'Knowledge Base', href: '/admin/content?tab=kb' },
+  { id: 'sessions', label: 'Sessions', href: '/admin/content?tab=sessions' },
 ] as const;
 
-const SUB_PAGES = [
-  { label: 'Games',                   href: '/admin/games' },
-  { label: 'Shared Games',            href: '/admin/shared-games' },
-  { label: 'Shared Games Approvals',  href: '/admin/shared-games/approval-queue' },
-  { label: 'FAQs',                    href: '/admin/faqs' },
-  { label: 'PDFs / KB',               href: '/admin/knowledge-base/documents' },
-  { label: 'Game Sessions',           href: '/admin/game-sessions' },
-  { label: 'Share Requests',          href: '/admin/share-requests' },
-];
+type TabId = (typeof TABS)[number]['id'];
+
+function TabSkeleton() {
+  return (
+    <div className="h-[600px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
+  );
+}
+
+function ComingSoonTab({ label, description }: { label: string; description: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border/60 p-16 text-center">
+      <p className="text-base font-semibold text-foreground">{label}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function renderTabContent(tab: TabId) {
+  switch (tab) {
+    case 'games':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <SharedGamesTab showCategories />
+        </Suspense>
+      );
+    case 'shared':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <SharedGamesTab />
+        </Suspense>
+      );
+    case 'kb':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <KnowledgeBaseTab />
+        </Suspense>
+      );
+    case 'faqs':
+      return (
+        <ComingSoonTab
+          label="FAQs"
+          description="Manage frequently asked questions for games and the platform."
+        />
+      );
+    case 'sessions':
+      return (
+        <ComingSoonTab
+          label="Game Sessions"
+          description="Browse and manage recorded game sessions."
+        />
+      );
+    default:
+      return null;
+  }
+}
 
 export default async function AdminContentPage({ searchParams }: AdminContentPageProps) {
   const params = await searchParams;
-  const tab = params.tab ?? 'games';
+  const tab = (params.tab ?? 'shared') as TabId;
 
   return (
     <div className="space-y-6">
@@ -52,7 +101,7 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
 
       {/* Tab bar */}
       <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map((t) => (
+        {TABS.map(t => (
           <Link
             key={t.id}
             href={t.href}
@@ -67,26 +116,8 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
         ))}
       </div>
 
-      {/* Placeholder — full content migrated in Issue #5049 */}
-      <div className="rounded-lg border border-dashed border-border/60 p-8 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Tab: <span className="font-mono">{tab}</span>
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Full tab content will be available after Issue #5049 (Admin Page Migrations).
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {SUB_PAGES.map((p) => (
-            <Link
-              key={p.href}
-              href={p.href}
-              className="rounded-md border border-border/60 px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-            >
-              {p.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+      {/* Tab content */}
+      {renderTabContent(tab)}
     </div>
   );
 }

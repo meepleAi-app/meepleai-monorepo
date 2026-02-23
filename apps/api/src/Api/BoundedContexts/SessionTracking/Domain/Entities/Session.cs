@@ -23,9 +23,9 @@ public class Session
     public Guid UserId { get; private set; }
 
     /// <summary>
-    /// Game reference (nullable for generic sessions).
+    /// Game reference. Required for all sessions (BR: min 1 game per session).
     /// </summary>
-    public Guid? GameId { get; private set; }
+    public Guid GameId { get; private set; }
 
     /// <summary>
     /// Unique 6-character session code for easy sharing.
@@ -122,14 +122,14 @@ public class Session
     /// Factory method to create a new session.
     /// </summary>
     /// <param name="userId">User creating the session.</param>
-    /// <param name="gameId">Optional game reference.</param>
+    /// <param name="gameId">Required game reference (BR: min 1 game per session).</param>
     /// <param name="sessionType">Session type.</param>
     /// <param name="location">Optional location.</param>
     /// <param name="sessionDate">Optional session date (defaults to now).</param>
     /// <returns>New session instance.</returns>
     public static Session Create(
         Guid userId,
-        Guid? gameId,
+        Guid gameId,
         SessionType sessionType,
         string? location = null,
         DateTime? sessionDate = null)
@@ -137,8 +137,8 @@ public class Session
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID cannot be empty.", nameof(userId));
 
-        if (sessionType == SessionType.GameSpecific && gameId == null)
-            throw new ArgumentException("Game ID required for GameSpecific sessions.", nameof(gameId));
+        if (gameId == Guid.Empty)
+            throw new ArgumentException("Game ID cannot be empty.", nameof(gameId));
 
         var session = new Session
         {

@@ -12,8 +12,20 @@ import { DebugPanel } from '@/components/playground/DebugPanel';
 import { RagContextViewer } from '@/components/playground/RagContextViewer';
 import { ScenarioManager } from '@/components/playground/ScenarioManager';
 import {
-  Button, Label, RadioGroup, RadioGroupItem, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Tabs, TabsContent, TabsList, TabsTrigger, Textarea,
+  Button,
+  Label,
+  RadioGroup,
+  RadioGroupItem,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Textarea,
 } from '@/components/ui';
 import { parsePlaygroundSSEChunk } from '@/lib/agent/playground-sse-parser';
 import type { PlaygroundSSEHandlers } from '@/lib/agent/playground-sse-parser';
@@ -44,13 +56,25 @@ const STRATEGY_OPTIONS: { value: PlaygroundStrategy; label: string; description:
 // Available models per provider
 const PROVIDER_MODELS: Record<string, { value: string; label: string; description?: string }[]> = {
   OpenRouter: [
-    { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet', description: 'Best quality' },
+    {
+      value: 'anthropic/claude-3.5-sonnet',
+      label: 'Claude 3.5 Sonnet',
+      description: 'Best quality',
+    },
     { value: 'anthropic/claude-3-opus', label: 'Claude 3 Opus', description: 'Most capable' },
     { value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku', description: 'Fastest' },
     { value: 'openai/gpt-4o', label: 'GPT-4o', description: 'Latest OpenAI' },
     { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast & cheap' },
-    { value: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B', description: 'Paid tier' },
-    { value: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B Free', description: 'Rate limited' },
+    {
+      value: 'meta-llama/llama-3.3-70b-instruct',
+      label: 'Llama 3.3 70B',
+      description: 'Paid tier',
+    },
+    {
+      value: 'meta-llama/llama-3.3-70b-instruct:free',
+      label: 'Llama 3.3 70B Free',
+      description: 'Rate limited',
+    },
     { value: 'google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash Free' },
     { value: 'deepseek/deepseek-chat', label: 'DeepSeek Chat', description: 'Good value' },
   ],
@@ -76,14 +100,28 @@ export default function AgentPlaygroundPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const {
-    clearMessages, setCurrentAgent, addMessage, appendToLastMessage,
-    updateMessageMetadata, setStreaming, addCitations, addStateUpdate,
-    setFollowUpQuestions, setCompletionMetadata, setLatencyMs, clearResponseState,
-    systemMessage, setSystemMessage,
-    currentGameId, setCurrentGameId,
-    strategy, setStrategy,
-    modelOverride, setModelOverride,
-    providerOverride, setProviderOverride,
+    clearMessages,
+    setCurrentAgent,
+    addMessage,
+    appendToLastMessage,
+    updateMessageMetadata,
+    setStreaming,
+    addCitations,
+    addStateUpdate,
+    setFollowUpQuestions,
+    setCompletionMetadata,
+    setLatencyMs,
+    clearResponseState,
+    systemMessage,
+    setSystemMessage,
+    currentGameId,
+    setCurrentGameId,
+    strategy,
+    setStrategy,
+    modelOverride,
+    setModelOverride,
+    providerOverride,
+    setProviderOverride,
     resetOverrides,
   } = usePlaygroundStore();
 
@@ -118,18 +156,21 @@ export default function AgentPlaygroundPage() {
     const requestStartTime = Date.now();
 
     try {
-      const response = await fetch(`/api/v1/admin/agent-definitions/${selectedAgentId}/playground/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message,
-          ...(systemMessage ? { systemMessage } : {}),
-          ...(currentGameId ? { gameId: currentGameId } : {}),
-          strategy,
-          ...(modelOverride ? { modelOverride } : {}),
-          ...(providerOverride ? { providerOverride } : {}),
-        }),
-      });
+      const response = await fetch(
+        `/api/v1/admin/agent-definitions/${selectedAgentId}/playground/chat`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            ...(systemMessage ? { systemMessage } : {}),
+            ...(currentGameId ? { gameId: currentGameId } : {}),
+            strategy,
+            ...(modelOverride ? { modelOverride } : {}),
+            ...(providerOverride ? { providerOverride } : {}),
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -142,11 +183,11 @@ export default function AgentPlaygroundPage() {
       addMessage({ role: 'assistant', content: '' });
 
       const handlers: PlaygroundSSEHandlers = {
-        onToken: (token) => appendToLastMessage(token),
-        onStateUpdate: (msg) => addStateUpdate(msg),
-        onCitations: (citations) => addCitations(citations),
-        onFollowUpQuestions: (questions) => setFollowUpQuestions(questions),
-        onComplete: (metadata) => {
+        onToken: token => appendToLastMessage(token),
+        onStateUpdate: msg => addStateUpdate(msg),
+        onCitations: citations => addCitations(citations),
+        onFollowUpQuestions: questions => setFollowUpQuestions(questions),
+        onComplete: metadata => {
           setCompletionMetadata(metadata);
           setLatencyMs(Date.now() - requestStartTime);
           const lastMsg = usePlaygroundStore.getState().messages.slice(-1)[0];
@@ -157,7 +198,7 @@ export default function AgentPlaygroundPage() {
             });
           }
         },
-        onError: (error) => {
+        onError: error => {
           toast.error(error.errorMessage || 'Stream error');
         },
         onHeartbeat: () => {
@@ -173,7 +214,9 @@ export default function AgentPlaygroundPage() {
         parsePlaygroundSSEChunk(chunk, handlers);
       }
     } catch (error) {
-      toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(
+        `Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setStreaming(false);
     }
@@ -210,9 +253,7 @@ export default function AgentPlaygroundPage() {
 
   const handleExportMarkdown = () => {
     const { messages } = usePlaygroundStore.getState();
-    const md = messages
-      .map((msg) => `**${msg.role}**: ${msg.content}`)
-      .join('\n\n');
+    const md = messages.map(msg => `**${msg.role}**: ${msg.content}`).join('\n\n');
     const blob = new Blob([md], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -258,20 +299,21 @@ export default function AgentPlaygroundPage() {
               </span>
             )}
           </label>
-          <Select value={selectedAgentId} onValueChange={(value) => {
-            setSelectedAgentId(value);
-            setCurrentAgent(value);
-          }}>
+          <Select
+            value={selectedAgentId}
+            onValueChange={value => {
+              setSelectedAgentId(value);
+              setCurrentAgent(value);
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Choose an agent to test..." />
             </SelectTrigger>
             <SelectContent>
-              {agents.map((agent) => (
+              {agents.map(agent => (
                 <SelectItem key={agent.id} value={agent.id}>
                   {agent.name}
-                  <span className="text-xs text-muted-foreground ml-2">
-                    ({agent.config.model})
-                  </span>
+                  <span className="text-xs text-muted-foreground ml-2">({agent.config.model})</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -289,7 +331,7 @@ export default function AgentPlaygroundPage() {
           </label>
           <Select
             value={currentGameId ?? '__none__'}
-            onValueChange={(value) => setCurrentGameId(value === '__none__' ? null : value)}
+            onValueChange={value => setCurrentGameId(value === '__none__' ? null : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="No game (pure LLM)" />
@@ -304,7 +346,7 @@ export default function AgentPlaygroundPage() {
                   No games available. Upload rulebooks in Admin → Shared Games.
                 </div>
               )}
-              {games.map((game) => (
+              {games.map(game => (
                 <SelectItem key={game.id} value={game.id}>
                   <div className="flex items-center justify-between w-full gap-2">
                     <div className="flex flex-col flex-1 min-w-0">
@@ -330,12 +372,16 @@ export default function AgentPlaygroundPage() {
         <label className="text-sm font-medium mb-3 block">Execution Strategy</label>
         <RadioGroup
           value={strategy}
-          onValueChange={(value) => setStrategy(value as PlaygroundStrategy)}
+          onValueChange={value => setStrategy(value as PlaygroundStrategy)}
           className="flex gap-4"
         >
-          {STRATEGY_OPTIONS.map((option) => (
+          {STRATEGY_OPTIONS.map(option => (
             <div key={option.value} className="flex items-start gap-2">
-              <RadioGroupItem value={option.value} id={`strategy-${option.value}`} className="mt-0.5" />
+              <RadioGroupItem
+                value={option.value}
+                id={`strategy-${option.value}`}
+                className="mt-0.5"
+              />
               <Label htmlFor={`strategy-${option.value}`} className="cursor-pointer">
                 <span className="text-sm font-medium">{option.label}</span>
                 <p className="text-xs text-muted-foreground mt-0.5">{option.description}</p>
@@ -352,20 +398,26 @@ export default function AgentPlaygroundPage() {
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-0' : '-rotate-90'}`} />
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-0' : '-rotate-90'}`}
+          />
           Advanced Options
           {(modelOverride || providerOverride) && (
-            <span className="ml-1.5 text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Override active</span>
+            <span className="ml-1.5 text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+              Override active
+            </span>
           )}
         </button>
         {showAdvanced && (
           <div className="mt-3 space-y-3 pl-6 border-l-2 border-muted">
             <div className="flex gap-4 items-end">
               <div className="w-48">
-                <Label htmlFor="provider-override" className="text-sm">Provider</Label>
+                <Label htmlFor="provider-override" className="text-sm">
+                  Provider
+                </Label>
                 <Select
                   value={providerOverride ?? '__none__'}
-                  onValueChange={(value) => {
+                  onValueChange={value => {
                     const newProvider = value === '__none__' ? null : value;
                     setProviderOverride(newProvider);
                     // Clear model override when provider changes
@@ -390,23 +442,28 @@ export default function AgentPlaygroundPage() {
                 </Select>
               </div>
               <div className="flex-1">
-                <Label htmlFor="model-override" className="text-sm">Model Override</Label>
+                <Label htmlFor="model-override" className="text-sm">
+                  Model Override
+                </Label>
                 <Select
                   value={modelOverride ?? '__none__'}
-                  onValueChange={(value) => setModelOverride(value === '__none__' ? null : value)}
+                  onValueChange={value => setModelOverride(value === '__none__' ? null : value)}
                   disabled={!providerOverride}
                 >
                   <SelectTrigger id="model-override" className="mt-1">
-                    <SelectValue placeholder={providerOverride ? "Select model..." : "Select provider first"} />
+                    <SelectValue
+                      placeholder={providerOverride ? 'Select model...' : 'Select provider first'}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Agent default model</SelectItem>
-                    {providerOverride && PROVIDER_MODELS[providerOverride]?.map((model) => (
-                      <SelectItem key={model.value} value={model.value}>
-                        {model.label}
-                        {model.description && ` - ${model.description}`}
-                      </SelectItem>
-                    ))}
+                    {providerOverride &&
+                      PROVIDER_MODELS[providerOverride]?.map(model => (
+                        <SelectItem key={model.value} value={model.value}>
+                          {model.label}
+                          {model.description && ` - ${model.description}`}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -422,7 +479,8 @@ export default function AgentPlaygroundPage() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Override the agent&apos;s configured model/provider for this request. Leave empty to use agent defaults.
+              Override the agent&apos;s configured model/provider for this request. Leave empty to
+              use agent defaults.
             </p>
           </div>
         )}
@@ -434,7 +492,7 @@ export default function AgentPlaygroundPage() {
         <Textarea
           placeholder="Override the agent's system prompt for this session..."
           value={systemMessage}
-          onChange={(e) => setSystemMessage(e.target.value)}
+          onChange={e => setSystemMessage(e.target.value)}
           rows={2}
           className="resize-none text-sm"
         />

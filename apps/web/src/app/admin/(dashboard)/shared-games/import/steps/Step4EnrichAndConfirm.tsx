@@ -66,7 +66,10 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
   } = useGameImportWizardStore();
 
   // Duplicate check
-  const { data: duplicateCheck } = useCheckDuplicate({ bggId: selectedBggId, enabled: !!selectedBggId });
+  const { data: duplicateCheck } = useCheckDuplicate({
+    bggId: selectedBggId,
+    enabled: !!selectedBggId,
+  });
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [forceCreate, setForceCreate] = useState(false);
 
@@ -95,7 +98,10 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       extractedMetadata.yearPublished &&
       bggGameData.yearPublished !== extractedMetadata.yearPublished
     ) {
-      detected.yearPublished = { bgg: bggGameData.yearPublished, pdf: extractedMetadata.yearPublished };
+      detected.yearPublished = {
+        bgg: bggGameData.yearPublished,
+        pdf: extractedMetadata.yearPublished,
+      };
     }
 
     // Min players conflict
@@ -128,7 +134,11 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     }
 
     // Min age conflict
-    if (bggGameData.minAge && extractedMetadata.minAge && bggGameData.minAge !== extractedMetadata.minAge) {
+    if (
+      bggGameData.minAge &&
+      extractedMetadata.minAge &&
+      bggGameData.minAge !== extractedMetadata.minAge
+    ) {
       detected.minAge = { bgg: bggGameData.minAge, pdf: extractedMetadata.minAge };
     }
 
@@ -184,35 +194,82 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
     // Build enriched object
     const enriched: EnrichedGameData = {
       // Title (REQUIRED) - ensure string
-      title: String(getResolvedValue('title', bggGameData?.name, extractedMetadata?.title) || 'Untitled Game'),
+      title: String(
+        getResolvedValue('title', bggGameData?.name, extractedMetadata?.title) || 'Untitled Game'
+      ),
 
       // Year - ensure number or undefined
-      yearPublished: typeof getResolvedValue('yearPublished', bggGameData?.yearPublished, extractedMetadata?.yearPublished) === 'number'
-        ? Number(getResolvedValue('yearPublished', bggGameData?.yearPublished, extractedMetadata?.yearPublished))
-        : undefined,
+      yearPublished:
+        typeof getResolvedValue(
+          'yearPublished',
+          bggGameData?.yearPublished,
+          extractedMetadata?.yearPublished
+        ) === 'number'
+          ? Number(
+              getResolvedValue(
+                'yearPublished',
+                bggGameData?.yearPublished,
+                extractedMetadata?.yearPublished
+              )
+            )
+          : undefined,
 
       // Players - ensure number or undefined
-      minPlayers: typeof getResolvedValue('minPlayers', bggGameData?.minPlayers, extractedMetadata?.minPlayers) === 'number'
-        ? Number(getResolvedValue('minPlayers', bggGameData?.minPlayers, extractedMetadata?.minPlayers))
-        : undefined,
-      maxPlayers: typeof getResolvedValue('maxPlayers', bggGameData?.maxPlayers, extractedMetadata?.maxPlayers) === 'number'
-        ? Number(getResolvedValue('maxPlayers', bggGameData?.maxPlayers, extractedMetadata?.maxPlayers))
-        : undefined,
+      minPlayers:
+        typeof getResolvedValue(
+          'minPlayers',
+          bggGameData?.minPlayers,
+          extractedMetadata?.minPlayers
+        ) === 'number'
+          ? Number(
+              getResolvedValue('minPlayers', bggGameData?.minPlayers, extractedMetadata?.minPlayers)
+            )
+          : undefined,
+      maxPlayers:
+        typeof getResolvedValue(
+          'maxPlayers',
+          bggGameData?.maxPlayers,
+          extractedMetadata?.maxPlayers
+        ) === 'number'
+          ? Number(
+              getResolvedValue('maxPlayers', bggGameData?.maxPlayers, extractedMetadata?.maxPlayers)
+            )
+          : undefined,
 
       // Play time - ensure number or undefined
-      playTime: typeof getResolvedValue('playTime', bggGameData?.playingTime, extractedMetadata?.playTime) === 'number'
-        ? Number(getResolvedValue('playTime', bggGameData?.playingTime, extractedMetadata?.playTime))
-        : undefined,
+      playTime:
+        typeof getResolvedValue(
+          'playTime',
+          bggGameData?.playingTime,
+          extractedMetadata?.playTime
+        ) === 'number'
+          ? Number(
+              getResolvedValue('playTime', bggGameData?.playingTime, extractedMetadata?.playTime)
+            )
+          : undefined,
 
       // Age - ensure number or undefined
-      minAge: typeof getResolvedValue('minAge', bggGameData?.minAge, extractedMetadata?.minAge) === 'number'
-        ? Number(getResolvedValue('minAge', bggGameData?.minAge, extractedMetadata?.minAge))
-        : undefined,
+      minAge:
+        typeof getResolvedValue('minAge', bggGameData?.minAge, extractedMetadata?.minAge) ===
+        'number'
+          ? Number(getResolvedValue('minAge', bggGameData?.minAge, extractedMetadata?.minAge))
+          : undefined,
 
       // Description - ensure string or undefined
-      description: typeof getResolvedValue('description', bggGameData?.description, extractedMetadata?.description) === 'string'
-        ? String(getResolvedValue('description', bggGameData?.description, extractedMetadata?.description))
-        : undefined,
+      description:
+        typeof getResolvedValue(
+          'description',
+          bggGameData?.description,
+          extractedMetadata?.description
+        ) === 'string'
+          ? String(
+              getResolvedValue(
+                'description',
+                bggGameData?.description,
+                extractedMetadata?.description
+              )
+            )
+          : undefined,
 
       // Complexity (only in PDF)
       complexity: extractedMetadata?.complexity,
@@ -228,12 +285,15 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
   }, [extractedMetadata, bggGameData, selectedBggId, conflictResolutions]);
 
   // Update conflict resolution
-  const handleConflictChange = useCallback((field: string, source: ConflictSource) => {
-    setConflictResolutions(prev => ({
-      ...prev,
-      [field]: { source, customValue: source === 'custom' ? customValues[field] : undefined },
-    }));
-  }, [customValues]);
+  const handleConflictChange = useCallback(
+    (field: string, source: ConflictSource) => {
+      setConflictResolutions(prev => ({
+        ...prev,
+        [field]: { source, customValue: source === 'custom' ? customValues[field] : undefined },
+      }));
+    },
+    [customValues]
+  );
 
   // Update custom value
   const handleCustomValueChange = useCallback((field: string, value: string) => {
@@ -241,7 +301,9 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
 
     // Numeric fields need type coercion
     const numericFields = ['yearPublished', 'minPlayers', 'maxPlayers', 'playTime', 'minAge'];
-    const coercedValue: string | number = numericFields.includes(field) ? Number(value) || 0 : value;
+    const coercedValue: string | number = numericFields.includes(field)
+      ? Number(value) || 0
+      : value;
 
     // If custom source is selected, update resolution with coerced value
     setConflictResolutions(prev => {
@@ -284,7 +346,15 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       // Error handled by store (toast + state)
       console.error('Failed to submit wizard:', err);
     }
-  }, [enrichedData, resolveConflicts, submitWizard, onComplete, selectedBggId, forceCreate, duplicateCheck]);
+  }, [
+    enrichedData,
+    resolveConflicts,
+    submitWizard,
+    onComplete,
+    selectedBggId,
+    forceCreate,
+    duplicateCheck,
+  ]);
 
   // Handle duplicate dialog actions
   const handleDuplicateCancel = useCallback(() => {
@@ -388,7 +458,8 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
       <div>
         <h3 className="text-lg font-semibold">Review & Confirm</h3>
         <p className="text-sm text-muted-foreground">
-          Resolve any conflicts between PDF and BGG data, then review the final game details before importing.
+          Resolve any conflicts between PDF and BGG data, then review the final game details before
+          importing.
         </p>
       </div>
 
@@ -398,8 +469,8 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
           <div>
             <h4 className="text-sm font-semibold">Resolve Conflicts</h4>
             <p className="text-xs text-muted-foreground">
-              {Object.keys(conflicts).length} conflict{Object.keys(conflicts).length !== 1 ? 's' : ''} detected
-              between BGG and PDF data.
+              {Object.keys(conflicts).length} conflict
+              {Object.keys(conflicts).length !== 1 ? 's' : ''} detected between BGG and PDF data.
             </p>
           </div>
 
@@ -448,7 +519,9 @@ export function Step4EnrichAndConfirm({ onComplete }: Step4EnrichAndConfirmProps
                 : []),
               ...(enrichedData.playTime ? [{ label: `${enrichedData.playTime} min` }] : []),
               ...(enrichedData.minAge ? [{ label: `Age ${enrichedData.minAge}+` }] : []),
-              ...(enrichedData.complexity ? [{ label: `Complexity ${enrichedData.complexity.toFixed(1)}` }] : []),
+              ...(enrichedData.complexity
+                ? [{ label: `Complexity ${enrichedData.complexity.toFixed(1)}` }]
+                : []),
             ]}
             showPreview={!!enrichedData.description}
             previewData={{

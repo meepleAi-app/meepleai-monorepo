@@ -184,9 +184,7 @@ export default function AdminAgentViewPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Auth Key
-                    </label>
+                    <label className="text-sm font-medium text-muted-foreground">Auth Key</label>
                     <p className="text-xs text-muted-foreground mt-1">
                       Session-based (not persisted)
                     </p>
@@ -226,9 +224,7 @@ export default function AdminAgentViewPage() {
                   Agent chat has been migrated to the unified chat system.
                 </p>
                 <Button asChild variant="outline" size="sm">
-                  <Link href="/chat/new">
-                    Open Unified Chat
-                  </Link>
+                  <Link href="/chat/new">Open Unified Chat</Link>
                 </Button>
               </div>
             </CardContent>

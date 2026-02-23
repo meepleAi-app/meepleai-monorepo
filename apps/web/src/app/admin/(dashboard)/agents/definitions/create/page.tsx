@@ -13,7 +13,7 @@ export default function CreateAgentDefinitionPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: CreateAgentDefinition) => agentDefinitionsApi.create(data),
-    onSuccess: (result) => {
+    onSuccess: result => {
       toast.success(`Agent "${result.name}" created successfully`);
       router.push('/admin/agents/definitions');
     },
@@ -31,7 +31,7 @@ export default function CreateAgentDefinitionPage() {
 
       <div className="bg-card p-6 rounded-lg border">
         <AgentBuilderForm
-          onSubmit={(data) => createMutation.mutate(data)}
+          onSubmit={data => createMutation.mutate(data)}
           isLoading={createMutation.isPending}
         />
       </div>

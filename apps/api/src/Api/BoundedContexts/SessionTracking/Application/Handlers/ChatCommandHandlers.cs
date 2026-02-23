@@ -134,7 +134,7 @@ public class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentComm
         // STUB: In production, this will call the KnowledgeBase RAG pipeline (Issue #4761+).
         // Currently returns a placeholder response to establish the integration contract.
         var agentType = "tutor"; // Default session agent type
-        var answer = $"[Stub] RAG agent integration pending. Session game: {session.GameId?.ToString() ?? "N/A"}. " +
+        var answer = $"[Stub] RAG agent integration pending. Session game: {session.GameId}. " +
                      $"Question received: {request.Question}";
         var confidence = (float?)null; // Null confidence signals stub response
 

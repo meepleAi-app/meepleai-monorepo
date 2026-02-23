@@ -25,7 +25,8 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
             .IsRequired();
 
         builder.Property(s => s.GameId)
-            .HasColumnName("game_id");
+            .HasColumnName("game_id")
+            .IsRequired();
 
         builder.Property(s => s.SessionCode)
             .HasColumnName("session_code")

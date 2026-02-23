@@ -25,7 +25,10 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useExtractMetadata } from '@/hooks/queries/useExtractMetadata';
-import { useGameImportWizardStore, type ExtractedMetadata } from '@/stores/useGameImportWizardStore';
+import {
+  useGameImportWizardStore,
+  type ExtractedMetadata,
+} from '@/stores/useGameImportWizardStore';
 
 export interface Step2MetadataExtractionProps {
   /** Callback when extraction and editing are complete */
@@ -35,7 +38,11 @@ export interface Step2MetadataExtractionProps {
 export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionProps): JSX.Element {
   const { uploadedPdf, extractedMetadata, setExtractedMetadata } = useGameImportWizardStore();
 
-  const { mutate: extractMetadata, isPending: isExtracting, error: extractionError } = useExtractMetadata();
+  const {
+    mutate: extractMetadata,
+    isPending: isExtracting,
+    error: extractionError,
+  } = useExtractMetadata();
 
   // Local state for editable fields
   const [formData, setFormData] = useState<ExtractedMetadata>(
@@ -72,13 +79,16 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
   }, [uploadedPdf, hasExtracted, extractMetadata, setExtractedMetadata, onComplete]);
 
   // Handle field changes
-  const handleFieldChange = useCallback((field: keyof ExtractedMetadata, value: string | number | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-    setHasChanges(true);
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof ExtractedMetadata, value: string | number | undefined) => {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+      }));
+      setHasChanges(true);
+    },
+    []
+  );
 
   // Save edited metadata
   const handleSave = useCallback(() => {
@@ -132,7 +142,9 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Extraction Failed</AlertTitle>
           <AlertDescription className="text-sm">
-            {extractionError instanceof Error ? extractionError.message : 'An error occurred during metadata extraction'}
+            {extractionError instanceof Error
+              ? extractionError.message
+              : 'An error occurred during metadata extraction'}
           </AlertDescription>
         </Alert>
 
@@ -194,7 +206,12 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
                 min="1900"
                 max="2100"
                 value={formData.yearPublished || ''}
-                onChange={e => handleFieldChange('yearPublished', e.target.value ? Number(e.target.value) : undefined)}
+                onChange={e =>
+                  handleFieldChange(
+                    'yearPublished',
+                    e.target.value ? Number(e.target.value) : undefined
+                  )
+                }
                 placeholder="e.g., 2024"
               />
             </div>
@@ -208,7 +225,9 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
                   min="0"
                   max="99"
                   value={formData.minAge || ''}
-                  onChange={e => handleFieldChange('minAge', e.target.value ? Number(e.target.value) : undefined)}
+                  onChange={e =>
+                    handleFieldChange('minAge', e.target.value ? Number(e.target.value) : undefined)
+                  }
                   placeholder="e.g., 12"
                 />
                 <span className="text-sm text-muted-foreground">+</span>
@@ -226,7 +245,12 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
                 min="1"
                 max="99"
                 value={formData.minPlayers || ''}
-                onChange={e => handleFieldChange('minPlayers', e.target.value ? Number(e.target.value) : undefined)}
+                onChange={e =>
+                  handleFieldChange(
+                    'minPlayers',
+                    e.target.value ? Number(e.target.value) : undefined
+                  )
+                }
                 placeholder="e.g., 2"
               />
             </div>
@@ -239,7 +263,12 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
                 min="1"
                 max="99"
                 value={formData.maxPlayers || ''}
-                onChange={e => handleFieldChange('maxPlayers', e.target.value ? Number(e.target.value) : undefined)}
+                onChange={e =>
+                  handleFieldChange(
+                    'maxPlayers',
+                    e.target.value ? Number(e.target.value) : undefined
+                  )
+                }
                 placeholder="e.g., 4"
               />
             </div>
@@ -254,7 +283,9 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
               min="1"
               max="9999"
               value={formData.playTime || ''}
-              onChange={e => handleFieldChange('playTime', e.target.value ? Number(e.target.value) : undefined)}
+              onChange={e =>
+                handleFieldChange('playTime', e.target.value ? Number(e.target.value) : undefined)
+              }
               placeholder="e.g., 60"
             />
           </div>
@@ -294,8 +325,8 @@ export function Step2MetadataExtraction({ onComplete }: Step2MetadataExtractionP
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Low Confidence Extraction</AlertTitle>
           <AlertDescription className="text-sm">
-            The AI extraction has low confidence ({formData.confidence}%). Please review all fields carefully and make
-            corrections as needed.
+            The AI extraction has low confidence ({formData.confidence}%). Please review all fields
+            carefully and make corrections as needed.
           </AlertDescription>
         </Alert>
       )}

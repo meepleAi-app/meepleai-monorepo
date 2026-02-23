@@ -34,9 +34,7 @@ describe('AdminAgentViewPage', () => {
       temperature: 0.7,
       maxTokens: 2048,
     },
-    prompts: [
-      { role: 'system', content: 'You are a helpful assistant' },
-    ],
+    prompts: [{ role: 'system', content: 'You are a helpful assistant' }],
     tools: [],
   };
 

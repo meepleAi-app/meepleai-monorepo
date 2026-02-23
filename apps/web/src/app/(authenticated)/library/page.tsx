@@ -27,11 +27,10 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 import { LibraryNavConfig } from './NavConfig';
 
-// Dynamically import the client component with SSR disabled
-// This prevents framer-motion from being evaluated during SSG
-const LibraryPageClient = dynamic(() => import('./LibraryPageClient'), {
-  ssr: false,
-  loading: () => (
+// ── Loading skeleton ──────────────────────────────────────────────────────────
+
+function LibraryLoadingSkeleton() {
+  return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       <Skeleton className="h-24 w-full" />
       <Skeleton className="h-16 w-full" />
@@ -80,7 +79,9 @@ export default function LibraryPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
       <LibraryNavConfig />
-      <LibraryPageClient />
+      <Suspense fallback={<LibraryLoadingSkeleton />}>
+        <LibraryContent />
+      </Suspense>
     </RequireRole>
   );
 }

@@ -198,9 +198,13 @@ internal static class KnowledgeBaseServiceExtensions
         });
 
         // Issue #5074: OpenRouter usage cache — polls /auth/key every 60s, accumulates daily spend
-        services.AddHostedService<OpenRouterUsageService>();
-        services.AddSingleton<IOpenRouterUsageService>(sp =>
-            sp.GetServices<IHostedService>().OfType<OpenRouterUsageService>().First());
+        // Register as concrete singleton first so IOpenRouterUsageService can be resolved directly
+        // without going through GetServices<IHostedService>() which causes a circular DI deadlock
+        // (OpenRouterRpmAlertBackgroundService → IOpenRouterRateLimitTracker → IOpenRouterUsageService
+        //  → GetServices<IHostedService>() → OpenRouterRpmAlertBackgroundService → deadlock).
+        services.AddSingleton<OpenRouterUsageService>();
+        services.AddHostedService(sp => sp.GetRequiredService<OpenRouterUsageService>());
+        services.AddSingleton<IOpenRouterUsageService>(sp => sp.GetRequiredService<OpenRouterUsageService>());
 
         // Issue #5075: RPM/TPM rate limit tracker using Redis sliding window (Singleton - stateless HTTP-independent)
         services.AddSingleton<IOpenRouterRateLimitTracker, OpenRouterRateLimitTracker>();

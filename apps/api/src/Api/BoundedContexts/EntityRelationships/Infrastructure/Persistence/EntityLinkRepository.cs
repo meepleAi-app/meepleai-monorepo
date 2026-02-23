@@ -80,6 +80,30 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<EntityLink>> GetForEntityAsync(
+        MeepleEntityType entityType,
+        Guid entityId,
+        EntityLinkScope? scope = null,
+        EntityLinkType? linkType = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Bidirectional query: entity as source OR as target of a bilateral link
+        var query = _db.EntityLinks.Where(x =>
+            (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
+            (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId));
+
+        if (scope.HasValue)
+            query = query.Where(x => x.Scope == scope.Value);
+
+        if (linkType.HasValue)
+            query = query.Where(x => x.LinkType == linkType.Value);
+
+        return await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task AddAsync(EntityLink entityLink, CancellationToken cancellationToken = default)
     {
         await _db.EntityLinks

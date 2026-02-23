@@ -10,13 +10,43 @@ import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import UsagePage from '../page';
 
+// ─── Recharts mock (avoids canvas/SVG issues in jsdom) ────────────────────────
+
+vi.mock('recharts', () => ({
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="responsive-container">{children}</div>
+  ),
+  ComposedChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="composed-chart">{children}</div>
+  ),
+  PieChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="pie-chart">{children}</div>
+  ),
+  Area:          () => <div data-testid="area" />,
+  Pie:           () => <div data-testid="pie" />,
+  Cell:          () => <div data-testid="cell" />,
+  XAxis:         () => <div data-testid="x-axis" />,
+  YAxis:         () => <div data-testid="y-axis" />,
+  CartesianGrid: () => <div data-testid="cartesian-grid" />,
+  Tooltip:       () => <div data-testid="tooltip" />,
+  Legend:        () => <div data-testid="legend" />,
+}));
+
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
-const mockGetOpenRouterStatus = vi.hoisted(() => vi.fn());
+const mockGetOpenRouterStatus  = vi.hoisted(() => vi.fn());
+const mockGetUsageTimeline     = vi.hoisted(() => vi.fn());
+const mockGetUsageCosts        = vi.hoisted(() => vi.fn());
+const mockGetUsageFreeQuota    = vi.hoisted(() => vi.fn());
+const mockGetRecentRequests    = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/clients/adminClient', () => ({
   createAdminClient: () => ({
     getOpenRouterStatus: mockGetOpenRouterStatus,
+    getUsageTimeline:    mockGetUsageTimeline,
+    getUsageCosts:       mockGetUsageCosts,
+    getUsageFreeQuota:   mockGetUsageFreeQuota,
+    getRecentRequests:   mockGetRecentRequests,
   }),
   HttpClient: vi.fn(),
 }));
@@ -32,16 +62,47 @@ vi.mock('@/hooks/useSetNavConfig', () => ({
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 const mockStatus = {
-  balanceUsd: 4.5,
-  dailySpendUsd: 0.0025,
-  todayRequestCount: 42,
-  currentRpm: 80,
-  limitRpm: 200,
+  balanceUsd:         4.5,
+  dailySpendUsd:      0.0025,
+  todayRequestCount:  42,
+  currentRpm:         80,
+  limitRpm:           200,
   utilizationPercent: 0.4,
-  isThrottled: false,
-  isFreeTier: false,
-  rateLimitInterval: 'minute',
-  lastUpdated: '2026-02-22T10:00:00Z',
+  isThrottled:        false,
+  isFreeTier:         false,
+  rateLimitInterval:  'minute',
+  lastUpdated:        '2026-02-22T10:00:00Z',
+};
+
+const mockTimeline = {
+  buckets:       [],
+  period:        '24h',
+  groupedByHour: true,
+  totalRequests: 0,
+  totalCostUsd:  0,
+};
+
+const mockCosts = {
+  byModel:       [],
+  bySource:      [],
+  byTier:        [],
+  totalCostUsd:  0,
+  totalRequests: 0,
+  period:        '7d',
+};
+
+const mockFreeQuota = {
+  models:                 [],
+  totalFreeRequestsToday: 0,
+  generatedAt:            '2026-02-22T10:00:00Z',
+};
+
+const mockRequests = {
+  items:      [],
+  total:      0,
+  page:       1,
+  pageSize:   20,
+  totalPages: 0,
 };
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -49,6 +110,10 @@ const mockStatus = {
 describe('UsagePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUsageTimeline.mockResolvedValue(mockTimeline);
+    mockGetUsageCosts.mockResolvedValue(mockCosts);
+    mockGetUsageFreeQuota.mockResolvedValue(mockFreeQuota);
+    mockGetRecentRequests.mockResolvedValue(mockRequests);
   });
 
   it('renders page heading', async () => {
@@ -101,8 +166,9 @@ describe('UsagePage', () => {
 
     renderWithQuery(<UsagePage />);
 
+    // '80' appears in both the KPI card and the RateLimitGauge — either is fine
     await waitFor(() => {
-      expect(screen.getByText('80')).toBeInTheDocument();
+      expect(screen.getAllByText('80').length).toBeGreaterThan(0);
     });
 
     expect(screen.getByText('/ 200')).toBeInTheDocument();
@@ -125,6 +191,7 @@ describe('UsagePage', () => {
 
     renderWithQuery(<UsagePage />);
 
+    // Both the KPI card badge and the RateLimitGauge badge render "Throttled"
     await waitFor(() => {
       // Multiple components (KpiCards, RateLimitGauge) render "Throttled" — check at least one
       expect(screen.getAllByText('Throttled')[0]).toBeInTheDocument();

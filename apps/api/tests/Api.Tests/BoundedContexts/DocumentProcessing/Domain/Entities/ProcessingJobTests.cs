@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -530,7 +531,7 @@ public sealed class ProcessingJobTests
         var action = () => job.Retry(_timeProvider);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*exceeded maximum retries*");
     }
 
@@ -544,7 +545,7 @@ public sealed class ProcessingJobTests
         var action = () => job.Retry(_timeProvider);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot retry job*");
     }
 

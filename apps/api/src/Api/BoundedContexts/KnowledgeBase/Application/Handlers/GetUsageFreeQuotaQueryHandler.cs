@@ -15,9 +15,9 @@ internal sealed class GetUsageFreeQuotaQueryHandler
 {
     /// <summary>
     /// Default daily request limit for free OpenRouter models.
-    /// OpenRouter free tier typically allows ~50 requests/day per model.
+    /// Issue #5087: OpenRouter free models with $10+ credits have 1000 RPD limit.
     /// </summary>
-    private const int DefaultDailyLimit = 50;
+    private const int DefaultDailyLimit = 1000;
 
     private readonly ILlmRequestLogRepository _repository;
 

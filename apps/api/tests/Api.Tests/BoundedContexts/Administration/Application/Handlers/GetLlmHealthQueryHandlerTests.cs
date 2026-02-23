@@ -57,6 +57,11 @@ public class GetLlmHealthQueryHandlerTests
             modelConfigRepositoryMock.Object,
             publisherMock.Object,
             healthCheckServiceMock.Object,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
             null!);
     }
     [Fact]

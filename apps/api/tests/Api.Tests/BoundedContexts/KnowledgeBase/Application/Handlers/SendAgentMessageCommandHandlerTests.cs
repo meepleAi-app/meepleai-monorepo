@@ -218,7 +218,8 @@ public sealed class SendAgentMessageCommandHandlerTests
         Assert.Equal(StreamingEventType.Complete, completeEvent.Type);
 
         var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.confidence > 0);
+        // No vector results returned → retrievalConfidence is null
+        Assert.Null(complete.confidence);
     }
 
     [Fact]

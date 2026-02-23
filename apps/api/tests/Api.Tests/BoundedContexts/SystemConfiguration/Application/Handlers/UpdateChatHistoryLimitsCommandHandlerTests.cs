@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
@@ -27,6 +28,14 @@ public class UpdateChatHistoryLimitsCommandHandlerTests
     {
         _mockMediator = new Mock<IMediator>();
         _mockConfigRepository = new Mock<IConfigurationRepository>();
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateConfigurationCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigurationDto)null!);
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<UpdateConfigValueCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConfigurationDto)null!);
+
         _handler = new UpdateChatHistoryLimitsCommandHandler(
             _mockMediator.Object,
             _mockConfigRepository.Object
@@ -43,11 +52,6 @@ public class UpdateChatHistoryLimitsCommandHandlerTests
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationEntity?)null);
-
-        _mockMediator.Setup(m => m.Send(
-                It.IsAny<IRequest<object>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new object());
 
         var adminId = Guid.NewGuid();
         var command = new UpdateChatHistoryLimitsCommand(
@@ -87,10 +91,6 @@ public class UpdateChatHistoryLimitsCommandHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateConfigEntity("10"));
 
-        _mockMediator.Setup(m => m.Send(
-                It.IsAny<IRequest<object>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new object());
 
         var adminId = Guid.NewGuid();
         var command = new UpdateChatHistoryLimitsCommand(
@@ -139,10 +139,6 @@ public class UpdateChatHistoryLimitsCommandHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationEntity?)null);
 
-        _mockMediator.Setup(m => m.Send(
-                It.IsAny<IRequest<object>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new object());
 
         var command = new UpdateChatHistoryLimitsCommand(10, 100, 1000, Guid.NewGuid());
 
@@ -170,10 +166,6 @@ public class UpdateChatHistoryLimitsCommandHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationEntity?)null);
 
-        _mockMediator.Setup(m => m.Send(
-                It.IsAny<IRequest<object>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new object());
 
         var before = DateTime.UtcNow;
         var command = new UpdateChatHistoryLimitsCommand(10, 100, 1000, Guid.NewGuid());
@@ -198,10 +190,6 @@ public class UpdateChatHistoryLimitsCommandHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((SystemConfigurationEntity?)null);
 
-        _mockMediator.Setup(m => m.Send(
-                It.IsAny<IRequest<object>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new object());
 
         var adminId = Guid.NewGuid();
         var command = new UpdateChatHistoryLimitsCommand(10, 100, 1000, adminId);

@@ -582,7 +582,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
 
         _blobStorageServiceMock
             .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((_, _, _, ct) =>
+            .Callback<string, string, CancellationToken>((_, _, ct) =>
             {
                 tokenPassed = ct == cts.Token;
             })

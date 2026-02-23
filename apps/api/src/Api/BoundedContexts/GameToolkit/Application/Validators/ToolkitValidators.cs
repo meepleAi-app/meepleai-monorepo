@@ -9,7 +9,7 @@ internal class CreateToolkitCommandValidator : AbstractValidator<CreateToolkitCo
 {
     public CreateToolkitCommandValidator()
     {
-        RuleFor(x => x.GameId).NotEmpty().WithMessage("GameId is required");
+        RuleFor(x => x.GameId).Must(id => id.HasValue && id.Value != Guid.Empty).WithMessage("GameId is required");
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200).WithMessage("Name is required (max 200 chars)");
         RuleFor(x => x.CreatedByUserId).NotEmpty().WithMessage("CreatedByUserId is required");
     }

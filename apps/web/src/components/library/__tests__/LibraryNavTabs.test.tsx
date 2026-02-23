@@ -2,9 +2,10 @@
  * Tests for LibraryNavTabs component
  * Issue #4055: Library section navigation tabs
  * Updated for Issue #5039: query-param based tab routes
+ * Updated for Issue #5167: Tab rename — Games (personal) / Collection (shared catalog)
  *
  * Coverage:
- * - Rendering (4 tabs with correct labels and icons)
+ * - Rendering (3 tabs with correct labels and icons)
  * - Active state logic (query-param based matching)
  * - Accessibility (ARIA roles, keyboard navigation)
  * - Responsive behavior
@@ -38,29 +39,27 @@ describe('LibraryNavTabs', () => {
       expect(screen.getByTestId('library-nav-tabs')).toBeInTheDocument();
     });
 
-    it('should render 4 tabs with correct labels', () => {
+    it('should render 3 tabs with correct labels', () => {
       render(<LibraryNavTabs />);
 
-      expect(screen.getByText('Collezione')).toBeInTheDocument();
+      expect(screen.getByText('Games')).toBeInTheDocument();
+      expect(screen.getByText('Collection')).toBeInTheDocument();
       expect(screen.getByText('Wishlist')).toBeInTheDocument();
-      expect(screen.getByText('Giochi Privati')).toBeInTheDocument();
-      expect(screen.getByText('Le Mie Proposte')).toBeInTheDocument();
     });
 
     it('should render tabs as links with correct hrefs', () => {
       render(<LibraryNavTabs />);
 
-      expect(screen.getByTestId('library-tab-collection')).toHaveAttribute('href', '/library');
+      expect(screen.getByTestId('library-tab-games')).toHaveAttribute('href', '/library');
+      expect(screen.getByTestId('library-tab-collection')).toHaveAttribute('href', '/library?tab=collection');
       expect(screen.getByTestId('library-tab-wishlist')).toHaveAttribute('href', '/library?tab=wishlist');
-      expect(screen.getByTestId('library-tab-private')).toHaveAttribute('href', '/library?tab=private');
-      expect(screen.getByTestId('library-tab-proposals')).toHaveAttribute('href', '/discover?tab=proposals');
     });
 
     it('should render icons as aria-hidden', () => {
       const { container } = render(<LibraryNavTabs />);
 
       const icons = container.querySelectorAll('svg');
-      expect(icons.length).toBe(4); // collection, private, proposals, wishlist
+      expect(icons.length).toBe(3); // games, collection, wishlist
       icons.forEach(icon => {
         expect(icon).toHaveAttribute('aria-hidden', 'true');
       });
@@ -68,14 +67,14 @@ describe('LibraryNavTabs', () => {
   });
 
   describe('Active State Logic', () => {
-    it('should mark collection as active for /library route', () => {
+    it('should mark games as active for /library route', () => {
       mockUsePathname.mockReturnValue('/library');
       mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
       render(<LibraryNavTabs />);
 
-      const collectionTab = screen.getByTestId('library-tab-collection');
-      expect(collectionTab).toHaveAttribute('aria-selected', 'true');
-      expect(collectionTab).toHaveClass('border-amber-500');
+      const gamesTab = screen.getByTestId('library-tab-games');
+      expect(gamesTab).toHaveAttribute('aria-selected', 'true');
+      expect(gamesTab).toHaveClass('border-amber-500');
     });
 
     it('should mark wishlist as active for /library?tab=wishlist', () => {
@@ -87,45 +86,35 @@ describe('LibraryNavTabs', () => {
       expect(wishlistTab).toHaveAttribute('aria-selected', 'true');
       expect(wishlistTab).toHaveClass('border-amber-500');
 
-      expect(screen.getByTestId('library-tab-collection')).toHaveAttribute('aria-selected', 'false');
+      expect(screen.getByTestId('library-tab-games')).toHaveAttribute('aria-selected', 'false');
     });
 
-    it('should mark private as active for /library?tab=private', () => {
+    it('should mark collection as active for /library?tab=collection', () => {
       mockUsePathname.mockReturnValue('/library');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=private'));
-      render(<LibraryNavTabs />);
-
-      const privateTab = screen.getByTestId('library-tab-private');
-      expect(privateTab).toHaveAttribute('aria-selected', 'true');
-      expect(privateTab).toHaveClass('border-amber-500');
-
-      // Others should NOT be active
-      expect(screen.getByTestId('library-tab-collection')).toHaveAttribute('aria-selected', 'false');
-      expect(screen.getByTestId('library-tab-proposals')).toHaveAttribute('aria-selected', 'false');
-    });
-
-    it('should mark proposals as active for /discover?tab=proposals', () => {
-      mockUsePathname.mockReturnValue('/discover');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=proposals'));
-      render(<LibraryNavTabs />);
-
-      const proposalsTab = screen.getByTestId('library-tab-proposals');
-      expect(proposalsTab).toHaveAttribute('aria-selected', 'true');
-      expect(proposalsTab).toHaveClass('border-amber-500');
-    });
-
-    it('should default to collection for game detail routes', () => {
-      mockUsePathname.mockReturnValue('/library/abc-123');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
+      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=collection'));
       render(<LibraryNavTabs />);
 
       const collectionTab = screen.getByTestId('library-tab-collection');
       expect(collectionTab).toHaveAttribute('aria-selected', 'true');
+      expect(collectionTab).toHaveClass('border-amber-500');
+
+      // Others should NOT be active
+      expect(screen.getByTestId('library-tab-games')).toHaveAttribute('aria-selected', 'false');
+      expect(screen.getByTestId('library-tab-wishlist')).toHaveAttribute('aria-selected', 'false');
+    });
+
+    it('should default to games for game detail routes', () => {
+      mockUsePathname.mockReturnValue('/library/abc-123');
+      mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
+      render(<LibraryNavTabs />);
+
+      const gamesTab = screen.getByTestId('library-tab-games');
+      expect(gamesTab).toHaveAttribute('aria-selected', 'true');
     });
 
     it('should only have one active tab at a time', () => {
       mockUsePathname.mockReturnValue('/library');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=private'));
+      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=collection'));
       render(<LibraryNavTabs />);
 
       const tabs = screen.getAllByRole('tab');
@@ -138,9 +127,9 @@ describe('LibraryNavTabs', () => {
       mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
       render(<LibraryNavTabs />);
 
-      const privateTab = screen.getByTestId('library-tab-private');
-      expect(privateTab).toHaveClass('border-transparent');
-      expect(privateTab).toHaveClass('hover:text-zinc-700');
+      const collectionTab = screen.getByTestId('library-tab-collection');
+      expect(collectionTab).toHaveClass('border-transparent');
+      expect(collectionTab).toHaveClass('hover:text-zinc-700');
     });
   });
 
@@ -157,30 +146,30 @@ describe('LibraryNavTabs', () => {
       render(<LibraryNavTabs />);
 
       const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(4); // collection, private, proposals, wishlist
+      expect(tabs).toHaveLength(3); // games, collection, wishlist
     });
 
     it('should set tabIndex 0 for active tab and -1 for inactive', () => {
       mockUsePathname.mockReturnValue('/library');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=private'));
+      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=collection'));
       render(<LibraryNavTabs />);
 
-      expect(screen.getByTestId('library-tab-collection')).toHaveAttribute('tabIndex', '-1');
-      expect(screen.getByTestId('library-tab-private')).toHaveAttribute('tabIndex', '0');
-      expect(screen.getByTestId('library-tab-proposals')).toHaveAttribute('tabIndex', '-1');
+      expect(screen.getByTestId('library-tab-games')).toHaveAttribute('tabIndex', '-1');
+      expect(screen.getByTestId('library-tab-collection')).toHaveAttribute('tabIndex', '0');
+      expect(screen.getByTestId('library-tab-wishlist')).toHaveAttribute('tabIndex', '-1');
     });
 
     it('should have aria-controls pointing to tabpanel ID', () => {
       render(<LibraryNavTabs />);
 
+      expect(screen.getByTestId('library-tab-games')).toHaveAttribute(
+        'aria-controls', 'library-tabpanel-games'
+      );
       expect(screen.getByTestId('library-tab-collection')).toHaveAttribute(
         'aria-controls', 'library-tabpanel-collection'
       );
-      expect(screen.getByTestId('library-tab-private')).toHaveAttribute(
-        'aria-controls', 'library-tabpanel-private'
-      );
-      expect(screen.getByTestId('library-tab-proposals')).toHaveAttribute(
-        'aria-controls', 'library-tabpanel-proposals'
+      expect(screen.getByTestId('library-tab-wishlist')).toHaveAttribute(
+        'aria-controls', 'library-tabpanel-wishlist'
       );
     });
 
@@ -201,27 +190,27 @@ describe('LibraryNavTabs', () => {
       mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
       render(<LibraryNavTabs />);
 
-      const collectionTab = screen.getByTestId('library-tab-collection');
-      collectionTab.focus();
+      const gamesTab = screen.getByTestId('library-tab-games');
+      gamesTab.focus();
 
       await userEvent.keyboard('{ArrowRight}');
 
-      // The focus should move to wishlist tab (via DOM querySelector in component)
+      // The focus should move to collection tab (via DOM querySelector in component)
       // We can verify the keyDown handler doesn't throw
-      expect(collectionTab).toBeInTheDocument();
+      expect(gamesTab).toBeInTheDocument();
     });
 
     it('should wrap around on ArrowRight from last tab', async () => {
-      mockUsePathname.mockReturnValue('/discover');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=proposals'));
+      mockUsePathname.mockReturnValue('/library');
+      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=wishlist'));
       render(<LibraryNavTabs />);
 
-      const proposalsTab = screen.getByTestId('library-tab-proposals');
-      proposalsTab.focus();
+      const wishlistTab = screen.getByTestId('library-tab-wishlist');
+      wishlistTab.focus();
 
       await userEvent.keyboard('{ArrowRight}');
 
-      expect(proposalsTab).toBeInTheDocument();
+      expect(wishlistTab).toBeInTheDocument();
     });
 
     it('should wrap around on ArrowLeft from first tab', async () => {
@@ -229,25 +218,25 @@ describe('LibraryNavTabs', () => {
       mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
       render(<LibraryNavTabs />);
 
-      const collectionTab = screen.getByTestId('library-tab-collection');
-      collectionTab.focus();
+      const gamesTab = screen.getByTestId('library-tab-games');
+      gamesTab.focus();
 
       await userEvent.keyboard('{ArrowLeft}');
 
-      expect(collectionTab).toBeInTheDocument();
+      expect(gamesTab).toBeInTheDocument();
     });
 
     it('should move to first tab on Home key', async () => {
-      mockUsePathname.mockReturnValue('/discover');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=proposals'));
+      mockUsePathname.mockReturnValue('/library');
+      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=wishlist'));
       render(<LibraryNavTabs />);
 
-      const proposalsTab = screen.getByTestId('library-tab-proposals');
-      proposalsTab.focus();
+      const wishlistTab = screen.getByTestId('library-tab-wishlist');
+      wishlistTab.focus();
 
       await userEvent.keyboard('{Home}');
 
-      expect(proposalsTab).toBeInTheDocument();
+      expect(wishlistTab).toBeInTheDocument();
     });
 
     it('should move to last tab on End key', async () => {
@@ -255,12 +244,12 @@ describe('LibraryNavTabs', () => {
       mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
       render(<LibraryNavTabs />);
 
-      const collectionTab = screen.getByTestId('library-tab-collection');
-      collectionTab.focus();
+      const gamesTab = screen.getByTestId('library-tab-games');
+      gamesTab.focus();
 
       await userEvent.keyboard('{End}');
 
-      expect(collectionTab).toBeInTheDocument();
+      expect(gamesTab).toBeInTheDocument();
     });
   });
 

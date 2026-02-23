@@ -15,9 +15,12 @@ export interface NavigationLinks {
 
   // ── Library ───────────────────────────────────────────────────────────────
   library: string;
-  libraryCollection: string;
+  libraryGames: string;       // personal games (default, was libraryPrivate)
+  libraryCollection: string;  // shared catalog games
   libraryWishlist: string;
+  /** @deprecated use libraryGames instead */
   libraryPrivate: string;
+  /** @deprecated use /library?action=add instead */
   libraryPrivateAdd: string;
   libraryProposals: string;
   libraryPropose: string;
@@ -95,10 +98,11 @@ export function getNavigationLinks(): NavigationLinks {
 
     // ── Library ─────────────────────────────────────────────────────────────
     library: '/library',
-    libraryCollection: '/library',
+    libraryGames: '/library',                     // personal games (default, Issue #5167)
+    libraryCollection: '/library?tab=collection', // shared catalog games (Issue #5167)
     libraryWishlist: '/library?tab=wishlist',
-    libraryPrivate: '/library?tab=private',
-    libraryPrivateAdd: '/library/private/add',
+    libraryPrivate: '/library',                   // @deprecated → use libraryGames
+    libraryPrivateAdd: '/library?action=add',     // @deprecated → use ?action=add drawer
     libraryProposals: '/discover?tab=proposals',
     libraryPropose: '/discover/propose',
     libraryGame: (gameId: string) => `/library/${gameId}`,

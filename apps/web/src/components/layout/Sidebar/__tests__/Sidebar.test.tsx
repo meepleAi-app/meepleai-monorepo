@@ -225,9 +225,8 @@ describe('Sidebar', () => {
 
       await user.click(screen.getByTestId('sidebar-library-toggle'));
 
+      expect(screen.getByTestId('sidebar-library-games')).toBeInTheDocument();
       expect(screen.getByTestId('sidebar-library-collection')).toBeInTheDocument();
-      expect(screen.getByTestId('sidebar-library-private')).toBeInTheDocument();
-      expect(screen.getByTestId('sidebar-library-proposals')).toBeInTheDocument();
       expect(screen.getByTestId('sidebar-library-wishlist')).toBeInTheDocument();
     });
   });

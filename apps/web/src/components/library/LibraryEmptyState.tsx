@@ -64,7 +64,7 @@ export function LibraryEmptyState({ className }: LibraryEmptyStateProps) {
             className="bg-orange-500 hover:bg-orange-600 text-white font-medium w-full sm:w-auto"
             data-testid="empty-state-primary-cta"
           >
-            <Link href="/library/private/add">
+            <Link href="/library?action=add">
               <span className="mr-1 font-bold">+</span> {t('privateGames.addFirstGame')}
             </Link>
           </Button>
@@ -76,7 +76,7 @@ export function LibraryEmptyState({ className }: LibraryEmptyStateProps) {
             className="w-full sm:w-auto"
             data-testid="empty-state-secondary-cta"
           >
-            <Link href="/library">
+            <Link href="/library?tab=collection">
               <Search className="h-4 w-4 mr-2" />
               {t('privateGames.browseCatalog')}
             </Link>

@@ -35,13 +35,13 @@
 
 'use client';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, Suspense } from 'react';
 
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
-import { useImpersonationStore } from '@/store/impersonation';
 import { cn } from '@/lib/utils';
+import { useImpersonationStore } from '@/store/impersonation';
 
 import { FloatingActionBar } from '../FloatingActionBar';
 import { MiniNav } from '../MiniNav';
@@ -76,11 +76,7 @@ export function LayoutShell({ children, fullWidth = false, className }: LayoutSh
 
 // ─── Inner shell (needs NavigationProvider in scope) ─────────────────────────
 
-function LayoutShellInner({
-  children,
-  fullWidth,
-  className,
-}: LayoutShellProps) {
+function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) {
   const { isImpersonating, impersonatedUser, isLoading, endImpersonation } =
     useImpersonationStore();
 
@@ -98,7 +94,9 @@ function LayoutShellInner({
       <TopNavbar />
 
       {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────────── */}
-      <MiniNav />
+      <Suspense>
+        <MiniNav />
+      </Suspense>
 
       {/* ── Main content ───────────────────────────────────────────────────── */}
       <main

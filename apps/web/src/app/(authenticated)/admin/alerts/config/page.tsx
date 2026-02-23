@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import { AlertConfigPageClient } from './client';
 
 /**
@@ -10,5 +12,9 @@ export const metadata = {
 };
 
 export default function AlertConfigPage() {
-  return <AlertConfigPageClient />;
+  return (
+    <Suspense>
+      <AlertConfigPageClient />
+    </Suspense>
+  );
 }

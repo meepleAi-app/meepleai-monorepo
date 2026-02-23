@@ -15,24 +15,24 @@ public interface IEntityLinkRepository
     /// Gets all links where the given entity is source or (for bilateral links) target.
     /// </summary>
     Task<IReadOnlyList<EntityLink>> GetBySourceAsync(
-        MeepleEntityType sourceType,
-        Guid sourceId,
-        Guid? userId = null,
+        MeepleEntityType sourceEntityType,
+        Guid sourceEntityId,
+        Guid? ownerUserId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Returns the total count of links for a given source entity.</summary>
     Task<int> GetCountBySourceAsync(
-        MeepleEntityType sourceType,
-        Guid sourceId,
-        Guid? userId = null,
+        MeepleEntityType sourceEntityType,
+        Guid sourceEntityId,
+        Guid? ownerUserId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Checks whether an identical link already exists (BR-08).</summary>
     Task<bool> ExistsAsync(
-        MeepleEntityType sourceType,
-        Guid sourceId,
-        MeepleEntityType targetType,
-        Guid targetId,
+        MeepleEntityType sourceEntityType,
+        Guid sourceEntityId,
+        MeepleEntityType targetEntityType,
+        Guid targetEntityId,
         EntityLinkType linkType,
         CancellationToken cancellationToken = default);
 

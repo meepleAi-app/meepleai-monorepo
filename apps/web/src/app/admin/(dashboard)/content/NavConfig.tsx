@@ -31,19 +31,19 @@ export function AdminContentNavConfig() {
           label: 'Add Game',
           icon: Plus,
           variant: 'primary',
-          onClick: () => router.push('/admin/games/new'),
+          onClick: () => router.push('/admin/shared-games/new'),
         },
         {
           id: 'new-faq',
           label: 'New FAQ',
           icon: HelpCircle,
-          onClick: () => router.push('/admin/faqs/new'),
+          onClick: () => router.push('/admin/faqs'),
         },
         {
           id: 'approve',
           label: 'Approve Submissions',
           icon: CheckCircle,
-          onClick: () => router.push('/admin/shared-games/approval-queue'),
+          onClick: () => router.push('/admin/shared-games'),
         },
       ],
     });

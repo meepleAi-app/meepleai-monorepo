@@ -82,4 +82,13 @@ internal interface IVectorDocumentRepository
     Task<VectorDocumentIndexingInfo?> GetIndexingInfoByGameIdAsync(
         Guid gameId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns true if at least one of the given VectorDocument IDs belongs to the specified game.
+    /// Used by AgentDefinition validators (Issue #5140) to enforce KB card game ownership.
+    /// </summary>
+    Task<bool> AnyBelongsToGameAsync(
+        IEnumerable<Guid> ids,
+        Guid gameId,
+        CancellationToken cancellationToken = default);
 }

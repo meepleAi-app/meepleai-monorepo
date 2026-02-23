@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using FluentValidation;
 
@@ -8,13 +9,14 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Validators.AgentDefiniti
 /// Validator for UpdateAgentDefinitionCommand.
 /// Issue #3808 (Epic #3687)
 /// Issue #3708: Extended with Type field validation.
+/// Issue #5140: KbCardIds game-ownership validation.
 /// </summary>
 internal sealed class UpdateAgentDefinitionCommandValidator : AbstractValidator<UpdateAgentDefinitionCommand>
 {
     private static readonly string[] s_allowedRoles = { "system", "user", "assistant", "function" };
     private static readonly string[] s_allowedTypes = { "RAG", "Citation", "Confidence", "RulesInterpreter", "Conversation" };
 
-    public UpdateAgentDefinitionCommandValidator()
+    public UpdateAgentDefinitionCommandValidator(IVectorDocumentRepository vectorDocumentRepository)
     {
         RuleFor(x => x.Id)
             .NotEmpty().WithMessage("Id is required");
@@ -75,5 +77,15 @@ internal sealed class UpdateAgentDefinitionCommandValidator : AbstractValidator<
                     .NotEmpty().WithMessage("Tool name is required")
                     .MaximumLength(100).WithMessage("Tool name must not exceed 100 characters");
             });
+
+        // Issue #5140: When GameId and KbCardIds are both provided, at least 1 KbCard must belong to the game.
+        When(x => x.KbCardIds != null && x.KbCardIds.Count > 0 && x.GameId.HasValue, () =>
+        {
+            RuleFor(x => x.KbCardIds!)
+                .MustAsync(async (cmd, kbCardIds, ct) =>
+                    await vectorDocumentRepository.AnyBelongsToGameAsync(kbCardIds, cmd.GameId!.Value, ct)
+                        .ConfigureAwait(false))
+                .WithMessage("L'agent deve avere almeno 1 KB card del game associato.");
+        });
     }
 }

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.EntityRelationships.Domain.Repositories;
 using Api.BoundedContexts.EntityRelationships.Infrastructure.Persistence;
+using Api.BoundedContexts.EntityRelationships.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
@@ -17,6 +18,7 @@ internal static class EntityRelationshipsServiceExtensions
     public static IServiceCollection AddEntityRelationshipsContext(this IServiceCollection services)
     {
         services.AddScoped<IEntityLinkRepository, EntityLinkRepository>();
+        services.AddScoped<IBggExpansionImporter, BggExpansionImporter>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

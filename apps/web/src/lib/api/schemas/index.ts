@@ -98,3 +98,6 @@ export * from './model-performance.schemas';
 
 // Admin Knowledge Base schemas (Issue #4784)
 export * from './admin-knowledge-base.schemas';
+
+// EntityLink schemas (Issue #5142 — Epic A EntityRelationships)
+export * from './entity-link.schemas';

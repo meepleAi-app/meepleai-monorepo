@@ -17,9 +17,12 @@ import {
   type UpdateAgentConfigRequest,
 } from '../schemas/agent-config.schemas';
 import {
-  GamePdfDtoSchema,
-  type GamePdfDto,
-} from '../schemas/pdf.schemas';
+  EntityLinkDtoSchema,
+  EntityLinkCountResponseSchema,
+  type EntityLinkDto,
+  type CreateEntityLinkRequest,
+  type GetEntityLinksParams,
+} from '../schemas/entity-link.schemas';
 import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
@@ -56,6 +59,7 @@ import {
   type MigrationChoiceRequest,
   type MigrationChoiceResponse,
 } from '../schemas/migrations.schemas';
+import { GamePdfDtoSchema, type GamePdfDto } from '../schemas/pdf.schemas';
 import {
   PrivateGameDtoSchema,
   PaginatedPrivateGamesResponseSchema,
@@ -67,7 +71,6 @@ import {
   type PaginatedPrivateGamesResponse,
   type GetPrivateGamesParams,
 } from '../schemas/private-games.schemas';
-
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -92,11 +95,17 @@ export interface LibraryClient {
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
-  saveAgentConfig(gameId: string, request: { typologyId: string; modelName: string; costEstimate: number }): Promise<{ success: boolean; configId: string; message: string }>;
+  saveAgentConfig(
+    gameId: string,
+    request: { typologyId: string; modelName: string; costEstimate: number }
+  ): Promise<{ success: boolean; configId: string; message: string }>;
   // Library Sharing (Issue #2614)
   getShareLink(): Promise<LibraryShareLink | null>;
   createShareLink(request: CreateLibraryShareLinkRequest): Promise<LibraryShareLink>;
-  updateShareLink(shareToken: string, request: UpdateLibraryShareLinkRequest): Promise<LibraryShareLink>;
+  updateShareLink(
+    shareToken: string,
+    request: UpdateLibraryShareLinkRequest
+  ): Promise<LibraryShareLink>;
   revokeShareLink(shareToken: string): Promise<void>;
   getSharedLibrary(shareToken: string): Promise<SharedLibrary | null>;
   // Game Labels (Issue #3512)
@@ -116,9 +125,17 @@ export interface LibraryClient {
   getPdfProcessingStatus(gameId: string): Promise<PdfIndexingStatus>;
   // Proposal Migrations (Issue #3669)
   getPendingMigrations(): Promise<PendingMigrationDto[]>;
-  chooseMigration(migrationId: string, request: MigrationChoiceRequest): Promise<MigrationChoiceResponse>;
+  chooseMigration(
+    migrationId: string,
+    request: MigrationChoiceRequest
+  ): Promise<MigrationChoiceResponse>;
   // Game PDFs (Issue #4915)
   getGamePdfs(gameId: string): Promise<GamePdfDto[]>;
+  // EntityLinks (Issue #5142 — Epic A)
+  getEntityLinks(params: GetEntityLinksParams): Promise<EntityLinkDto[]>;
+  getEntityLinkCount(entityType: string, entityId: string): Promise<number>;
+  createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto>;
+  deleteEntityLink(linkId: string): Promise<void>;
 }
 
 /**
@@ -609,7 +626,10 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      * @param request - Updated game data
      * @returns Updated private game
      */
-    async updatePrivateGame(id: string, request: UpdatePrivateGameRequest): Promise<PrivateGameDto> {
+    async updatePrivateGame(
+      id: string,
+      request: UpdatePrivateGameRequest
+    ): Promise<PrivateGameDto> {
       const data = await httpClient.put<PrivateGameDto>(
         `/api/v1/private-games/${id}`,
         request,
@@ -704,6 +724,59 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         z.array(GamePdfDtoSchema)
       );
       return data ?? [];
+    },
+
+    // ========== EntityLink User Methods (Issue #5142 — Epic A) ==========
+
+    /**
+     * Get entity links for an entity (user scope — own + approved shared)
+     * GET /api/v1/library/entity-links?entityType=...&entityId=...&linkType=...
+     */
+    async getEntityLinks(params: GetEntityLinksParams): Promise<EntityLinkDto[]> {
+      const qs = new URLSearchParams();
+      qs.set('entityType', params.entityType);
+      qs.set('entityId', params.entityId);
+      if (params.linkType) qs.set('linkType', params.linkType);
+      const data = await httpClient.get<EntityLinkDto[]>(
+        `/api/v1/library/entity-links?${qs.toString()}`,
+        z.array(EntityLinkDtoSchema)
+      );
+      return data ?? [];
+    },
+
+    /**
+     * Get count of entity links for an entity
+     * GET /api/v1/library/entity-links/count?entityType=...&entityId=...
+     */
+    async getEntityLinkCount(entityType: string, entityId: string): Promise<number> {
+      const qs = new URLSearchParams({ entityType, entityId });
+      const data = await httpClient.get(
+        `/api/v1/library/entity-links/count?${qs.toString()}`,
+        EntityLinkCountResponseSchema
+      );
+      return data?.count ?? 0;
+    },
+
+    /**
+     * Create a user-scoped entity link
+     * POST /api/v1/library/entity-links
+     */
+    async createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto> {
+      const result = await httpClient.post<EntityLinkDto>(
+        '/api/v1/library/entity-links',
+        request,
+        EntityLinkDtoSchema
+      );
+      if (!result) throw new Error('Failed to create entity link');
+      return result;
+    },
+
+    /**
+     * Delete a user-scoped entity link (owner only)
+     * DELETE /api/v1/library/entity-links/{linkId}
+     */
+    async deleteEntityLink(linkId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/library/entity-links/${linkId}`);
     },
   };
 }

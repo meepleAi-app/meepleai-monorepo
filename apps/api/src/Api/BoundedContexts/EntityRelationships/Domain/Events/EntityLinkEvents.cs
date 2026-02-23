@@ -6,14 +6,14 @@ namespace Api.BoundedContexts.EntityRelationships.Domain.Events;
 /// <summary>Domain event raised when a new EntityLink is created.</summary>
 public sealed record EntityLinkCreatedEvent(
     Guid EntityLinkId,
-    MeepleEntityType SourceType,
-    Guid SourceId,
-    MeepleEntityType TargetType,
-    Guid TargetId,
+    MeepleEntityType SourceEntityType,
+    Guid SourceEntityId,
+    MeepleEntityType TargetEntityType,
+    Guid TargetEntityId,
     EntityLinkType LinkType,
-    Guid? CreatedByUserId) : INotification;
+    Guid OwnerUserId) : INotification;
 
 /// <summary>Domain event raised when an EntityLink is deleted.</summary>
 public sealed record EntityLinkDeletedEvent(
     Guid EntityLinkId,
-    Guid? DeletedByUserId) : INotification;
+    Guid DeletedByUserId) : INotification;

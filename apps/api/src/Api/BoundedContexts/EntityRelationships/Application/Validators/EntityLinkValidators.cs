@@ -1,24 +1,54 @@
+using Api.BoundedContexts.EntityRelationships.Application.Commands;
+using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using FluentValidation;
 
 namespace Api.BoundedContexts.EntityRelationships.Application.Validators;
 
 /// <summary>
-/// Placeholder validator for EntityRelationships BC — commands validators added in Issue #5133+.
-/// Required for assembly scanning in AddFluentValidation.
+/// Validator for CreateEntityLinkCommand (Issue #5133).
+///
+/// Enforces:
+/// - OwnerUserId must be non-empty
+/// - Source and target entity IDs must be non-empty
+/// - Metadata length ≤ EntityRelationshipsConstants.MetadataMaxLength (enforced also in aggregate)
+/// Source != Target identity check is delegated to EntityLink.Create (domain rule).
 /// </summary>
-internal sealed class CreateEntityLinkCommandPlaceholderValidator : AbstractValidator<CreateEntityLinkCommandPlaceholder>
+internal sealed class CreateEntityLinkCommandValidator : AbstractValidator<CreateEntityLinkCommand>
 {
-    public CreateEntityLinkCommandPlaceholderValidator()
+    public CreateEntityLinkCommandValidator()
     {
-        // Full validation implemented in Issue #5133 (CreateEntityLinkCommand)
-    }
-}
+        RuleFor(x => x.OwnerUserId)
+            .NotEmpty()
+            .WithMessage("OwnerUserId is required.");
 
-/// <summary>
-/// Placeholder command record — replaced by full command in Issue #5133.
-/// </summary>
-internal sealed record CreateEntityLinkCommandPlaceholder
-{
-    // Replaced by CreateEntityLinkCommand in Issue #5133
-    public string Placeholder { get; init; } = string.Empty;
+        RuleFor(x => x.SourceEntityId)
+            .NotEmpty()
+            .WithMessage("SourceEntityId must not be empty.");
+
+        RuleFor(x => x.TargetEntityId)
+            .NotEmpty()
+            .WithMessage("TargetEntityId must not be empty.");
+
+        // Prevent self-link at validation level (belt-and-suspenders alongside domain check)
+        RuleFor(x => x)
+            .Must(x => !(x.SourceEntityType == x.TargetEntityType && x.SourceEntityId == x.TargetEntityId))
+            .WithName("TargetEntityId")
+            .WithMessage("Source and target entity cannot be the same.");
+
+        RuleFor(x => x.Scope)
+            .IsInEnum()
+            .WithMessage("Scope must be a valid EntityLinkScope value.");
+
+        RuleFor(x => x.LinkType)
+            .IsInEnum()
+            .WithMessage("LinkType must be a valid EntityLinkType value.");
+
+        RuleFor(x => x.SourceEntityType)
+            .IsInEnum()
+            .WithMessage("SourceEntityType must be a valid MeepleEntityType value.");
+
+        RuleFor(x => x.TargetEntityType)
+            .IsInEnum()
+            .WithMessage("TargetEntityType must be a valid MeepleEntityType value.");
+    }
 }

@@ -30,7 +30,7 @@ const TABS = [
 /** Old sub-page links available while full migration is pending */
 const SUB_PAGES = [
   { label: 'Agent Catalog',       href: '/admin/agents' },
-  { label: 'Agent Definitions',   href: '/admin/agent-definitions' },
+  { label: 'Agent Definitions',   href: '/admin/agents/definitions' },
   { label: 'Agent Typologies',    href: '/admin/agent-typologies' },
   { label: 'AI Lab',              href: '/admin/ai-lab' },
   { label: 'Prompts',             href: '/admin/prompts' },

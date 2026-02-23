@@ -29,7 +29,7 @@ const SUB_PAGES = [
   { label: 'Shared Games',            href: '/admin/shared-games' },
   { label: 'Shared Games Approvals',  href: '/admin/shared-games/approval-queue' },
   { label: 'FAQs',                    href: '/admin/faqs' },
-  { label: 'PDFs / KB',               href: '/admin/pdfs' },
+  { label: 'PDFs / KB',               href: '/admin/knowledge-base/documents' },
   { label: 'Game Sessions',           href: '/admin/game-sessions' },
   { label: 'Share Requests',          href: '/admin/share-requests' },
 ];

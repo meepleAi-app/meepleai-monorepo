@@ -60,7 +60,7 @@ export function BuilderTable({ data, onDelete }: BuilderTableProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/admin/agent-definitions/${agent.id}/edit`}>
+                <Link href={`/admin/agents/definitions/${agent.id}/edit`}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
                 </Link>

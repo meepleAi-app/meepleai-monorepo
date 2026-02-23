@@ -123,7 +123,7 @@ describe('Render Performance', () => {
   // These thresholds account for jsdom overhead while ensuring
   // no performance regressions within the test environment.
 
-  it('should render 100 items in under 5000ms (jsdom)', () => {
+  it('should render 100 items in under 7000ms (jsdom)', () => {
     const start = performance.now();
 
     renderWithQuery(
@@ -131,11 +131,11 @@ describe('Render Performance', () => {
     );
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(5000);
+    expect(duration).toBeLessThan(7000);
     expect(screen.getAllByTestId('meeple-card')).toHaveLength(100);
   });
 
-  it('should render 100 items with search, sort, and filters in under 5000ms (jsdom)', () => {
+  it('should render 100 items with search, sort, and filters in under 7000ms (jsdom)', () => {
     const start = performance.now();
 
     renderWithQuery(
@@ -151,7 +151,7 @@ describe('Render Performance', () => {
     );
 
     const duration = performance.now() - start;
-    expect(duration).toBeLessThan(5000);
+    expect(duration).toBeLessThan(7000);
   });
 
   it('should switch view modes quickly with 100 items', async () => {

@@ -1,5 +1,5 @@
 /**
- * AddGameDrawer Component Tests — Issue #5168
+ * AddGameDrawer Component Tests — Issue #5168 / #5169
  *
  * Tests for the right-side Sheet drawer with method-choice wizard.
  * Covers:
@@ -7,6 +7,8 @@
  * - Opening via ?action=add URL param (AddGameDrawerController)
  * - Step 0: choice cards (manual + catalog)
  * - Step 1a: manual wizard embed
+ * - Step 1b: catalog search (CatalogSearchStep)
+ * - Step 2 (catalog-pdf): PDF wizard after catalog game selection
  * - Closing clears ?action=add from URL
  * - Direct prop-driven open/close (AddGameDrawer)
  */
@@ -25,21 +27,55 @@ vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(),
 }));
 
-// Mock UserWizardClient — it's a heavyweight component with API calls
+// Mock UserWizardClient — heavyweight component with API calls
 vi.mock('@/app/(authenticated)/library/private/add/client', () => ({
   UserWizardClient: ({
     onComplete,
     onCancel,
+    startAtPdf,
+    gameId,
+    gameName,
   }: {
     onComplete?: () => void;
     onCancel?: () => void;
+    startAtPdf?: boolean;
+    gameId?: string;
+    gameName?: string;
   }) => (
-    <div data-testid="user-wizard-client">
+    <div
+      data-testid="user-wizard-client"
+      data-start-at-pdf={startAtPdf ? 'true' : 'false'}
+      data-game-id={gameId ?? ''}
+      data-game-name={gameName ?? ''}
+    >
       <button data-testid="wizard-complete" onClick={onComplete}>
         Complete wizard
       </button>
       <button data-testid="wizard-cancel" onClick={onCancel}>
         Cancel wizard
+      </button>
+    </div>
+  ),
+}));
+
+// Mock CatalogSearchStep — contains React Query hooks
+vi.mock('@/app/(authenticated)/library/CatalogSearchStep', () => ({
+  CatalogSearchStep: ({
+    onSelect,
+    onBack,
+  }: {
+    onSelect: (gameId: string, gameName: string) => void;
+    onBack: () => void;
+  }) => (
+    <div data-testid="catalog-search-step">
+      <button
+        data-testid="catalog-select-game"
+        onClick={() => onSelect('game-123', 'Catan')}
+      >
+        Select Catan
+      </button>
+      <button data-testid="catalog-back" onClick={onBack}>
+        Back
       </button>
     </div>
   ),
@@ -106,9 +142,10 @@ describe('AddGameDrawer', () => {
       expect(screen.getByText('From shared catalog')).toBeInTheDocument();
     });
 
-    it('does not show wizard yet on Step 0', () => {
+    it('does not show wizard or catalog step on Step 0', () => {
       renderDrawer({ open: true });
       expect(screen.queryByTestId('user-wizard-client')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('catalog-search-step')).not.toBeInTheDocument();
     });
   });
 
@@ -158,14 +195,15 @@ describe('AddGameDrawer', () => {
     });
   });
 
-  describe('Step 1b: Catalog placeholder', () => {
-    it('shows catalog placeholder after clicking catalog choice', async () => {
+  describe('Step 1b: Catalog search', () => {
+    it('shows catalog search step after clicking catalog choice', async () => {
       const user = userEvent.setup();
       renderDrawer({ open: true });
 
       await user.click(screen.getByTestId('add-game-choice-catalog'));
 
-      expect(screen.getByText(/coming in Issue #5169/i)).toBeInTheDocument();
+      expect(screen.getByTestId('add-game-step-catalog')).toBeInTheDocument();
+      expect(screen.getByTestId('catalog-search-step')).toBeInTheDocument();
     });
 
     it('updates title to "Add from catalog" in catalog step', async () => {
@@ -179,14 +217,74 @@ describe('AddGameDrawer', () => {
       );
     });
 
-    it('goes back to choice step from catalog placeholder', async () => {
+    it('goes back to choice step when catalog back is clicked', async () => {
       const user = userEvent.setup();
       renderDrawer({ open: true });
 
       await user.click(screen.getByTestId('add-game-choice-catalog'));
-      await user.click(screen.getByRole('button', { name: /back/i }));
+      await user.click(screen.getByTestId('catalog-back'));
 
       expect(screen.getByTestId('add-game-step-choice')).toBeInTheDocument();
+    });
+
+    it('advances to catalog-pdf step after selecting a game from catalog', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-select-game'));
+
+      expect(screen.getByTestId('add-game-step-catalog-pdf')).toBeInTheDocument();
+      expect(screen.getByTestId('user-wizard-client')).toBeInTheDocument();
+    });
+
+    it('passes startAtPdf and game info to wizard after catalog selection', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-select-game'));
+
+      const wizard = screen.getByTestId('user-wizard-client');
+      expect(wizard).toHaveAttribute('data-start-at-pdf', 'true');
+      expect(wizard).toHaveAttribute('data-game-id', 'game-123');
+      expect(wizard).toHaveAttribute('data-game-name', 'Catan');
+    });
+
+    it('keeps title as "Add from catalog" in catalog-pdf step', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-select-game'));
+
+      expect(screen.getByTestId('add-game-drawer-title')).toHaveTextContent(
+        'Add from catalog',
+      );
+    });
+
+    it('calls onClose when catalog-pdf wizard completes', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      renderDrawer({ open: true, onClose });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-select-game'));
+      await user.click(screen.getByTestId('wizard-complete'));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('goes back to catalog search when catalog-pdf wizard cancel is clicked', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ open: true });
+
+      await user.click(screen.getByTestId('add-game-choice-catalog'));
+      await user.click(screen.getByTestId('catalog-select-game'));
+      await user.click(screen.getByTestId('wizard-cancel'));
+
+      expect(screen.getByTestId('add-game-step-catalog')).toBeInTheDocument();
+      expect(screen.getByTestId('catalog-search-step')).toBeInTheDocument();
     });
   });
 

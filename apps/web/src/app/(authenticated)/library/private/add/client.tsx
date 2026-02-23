@@ -52,9 +52,30 @@ interface UserWizardClientProps {
    * Used by AddGameDrawer to go back to Step 0 (choice).
    */
   onCancel?: () => void;
+  /**
+   * Pre-set game ID when starting from a catalog selection (Issue #5169).
+   * Combined with `startAtPdf` to skip the game creation step.
+   */
+  gameId?: string;
+  /**
+   * Pre-set game name when starting from a catalog selection (Issue #5169).
+   */
+  gameName?: string;
+  /**
+   * When true, wizard starts at the PDF upload step instead of game creation.
+   * Requires `gameId` and `gameName` to be provided.
+   * Used by AddGameDrawer after a successful catalog selection.
+   */
+  startAtPdf?: boolean;
 }
 
-export function UserWizardClient({ onComplete, onCancel }: UserWizardClientProps = {}) {
+export function UserWizardClient({
+  onComplete,
+  onCancel,
+  gameId: initialGameId,
+  gameName: initialGameName,
+  startAtPdf = false,
+}: UserWizardClientProps = {}) {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -65,9 +86,9 @@ export function UserWizardClient({ onComplete, onCancel }: UserWizardClientProps
   ];
 
   const [state, setState] = useState<UserWizardState>({
-    currentStep: 'game',
-    gameId: null,
-    gameName: null,
+    currentStep: startAtPdf && initialGameId ? 'pdf' : 'game',
+    gameId: initialGameId ?? null,
+    gameName: initialGameName ?? null,
     pdfId: null,
     pdfFileName: null,
   });
@@ -118,12 +139,17 @@ export function UserWizardClient({ onComplete, onCancel }: UserWizardClientProps
 
   // Back navigation
   const goBack = useCallback(() => {
+    // If started at PDF (catalog flow) and on pdf step, back goes to catalog
+    if (startAtPdf && state.currentStep === 'pdf' && onCancel) {
+      onCancel();
+      return;
+    }
     const stepOrder: WizardStep[] = ['game', 'pdf', 'agent'];
     const currentIndex = stepOrder.indexOf(state.currentStep);
     if (currentIndex > 0) {
       setState(prev => ({ ...prev, currentStep: stepOrder[currentIndex - 1] }));
     }
-  }, [state.currentStep]);
+  }, [startAtPdf, state.currentStep, onCancel]);
 
   const currentStepIndex = STEPS.findIndex(s => s.id === state.currentStep);
 

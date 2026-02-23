@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 namespace Api.Routing;
 
@@ -44,6 +45,27 @@ Sources:
 
 Daily limit is 1000 RPD for accounts with $10+ credits.
 ");
+
+        // GET /api/v1/admin/openrouter/usage/timeline?period=
+        // Issue #5078: Admin usage page — request timeline chart.
+        group.MapGet("/usage/timeline", GetUsageTimeline)
+            .WithName("GetUsageTimeline")
+            .WithSummary("Get LLM request timeline grouped by source")
+            .WithDescription("Returns hourly or daily request counts stacked by RequestSource. Period: 24h | 7d | 30d.");
+
+        // GET /api/v1/admin/openrouter/usage/costs?period=
+        // Issue #5080: Admin usage page — cost breakdown panel.
+        group.MapGet("/usage/costs", GetUsageCosts)
+            .WithName("GetUsageCosts")
+            .WithSummary("Get LLM cost breakdown by model, source, and tier")
+            .WithDescription("Returns aggregated cost data for the given period. Period: 1d | 7d | 30d.");
+
+        // GET /api/v1/admin/openrouter/requests
+        // Issue #5083: Admin usage page — recent requests table.
+        group.MapGet("/requests", GetRecentRequests)
+            .WithName("GetRecentLlmRequests")
+            .WithSummary("Get paginated list of recent LLM request log entries")
+            .WithDescription("Supports filtering by source, model, successOnly, and date range. Paginated.");
     }
 
     private static async Task<IResult> GetStatus(
@@ -60,5 +82,40 @@ Daily limit is 1000 RPD for accounts with $10+ credits.
     {
         var quota = await mediator.Send(new GetUsageFreeQuotaQuery(), ct).ConfigureAwait(false);
         return Results.Ok(quota);
+    }
+
+    private static async Task<IResult> GetUsageTimeline(
+        [FromServices] IMediator mediator,
+        [FromQuery] string period = "24h",
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetUsageTimelineQuery(period), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetUsageCosts(
+        [FromServices] IMediator mediator,
+        [FromQuery] string period = "7d",
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetUsageCostsQuery(period), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetRecentRequests(
+        [FromServices] IMediator mediator,
+        [FromQuery] string? source = null,
+        [FromQuery] string? model = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] bool? successOnly = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(
+            new GetRecentLlmRequestsQuery(source, model, from, to, successOnly, page, pageSize),
+            ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 }

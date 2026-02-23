@@ -136,6 +136,14 @@ import {
   type PdfListResult,
   OpenRouterStatusDtoSchema,
   type OpenRouterStatusDto,
+  FreeQuotaDtoSchema,
+  type FreeQuotaDto,
+  UsageTimelineDtoSchema,
+  type UsageTimelineDto,
+  UsageCostsDtoSchema,
+  type UsageCostsDto,
+  RecentLlmRequestsDtoSchema,
+  type RecentLlmRequestsDto,
 } from '../schemas/admin-knowledge-base.schemas';
 import {
   AgentCostEstimationResultSchema,
@@ -1106,6 +1114,71 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const result = await httpClient.get(
         '/api/v1/admin/openrouter/status',
         OpenRouterStatusDtoSchema
+      );
+      return result ?? null;
+    },
+
+    /**
+     * Get free-tier quota usage per model.
+     * GET /api/v1/admin/openrouter/free-quota
+     * Issue #5082: Admin usage page — free quota indicator.
+     */
+    async getUsageFreeQuota(): Promise<FreeQuotaDto | null> {
+      const result = await httpClient.get(
+        '/api/v1/admin/openrouter/free-quota',
+        FreeQuotaDtoSchema
+      );
+      return result ?? null;
+    },
+
+    /**
+     * Get LLM request timeline grouped by source.
+     * GET /api/v1/admin/openrouter/usage/timeline?period=
+     * Issue #5078: Admin usage page — request timeline chart.
+     */
+    async getUsageTimeline(period: string = '24h'): Promise<UsageTimelineDto | null> {
+      const result = await httpClient.get(
+        `/api/v1/admin/openrouter/usage/timeline?period=${encodeURIComponent(period)}`,
+        UsageTimelineDtoSchema
+      );
+      return result ?? null;
+    },
+
+    /**
+     * Get LLM cost breakdown by model, source, and tier.
+     * GET /api/v1/admin/openrouter/usage/costs?period=
+     * Issue #5080: Admin usage page — cost breakdown panel.
+     */
+    async getUsageCosts(period: string = '7d'): Promise<UsageCostsDto | null> {
+      const result = await httpClient.get(
+        `/api/v1/admin/openrouter/usage/costs?period=${encodeURIComponent(period)}`,
+        UsageCostsDtoSchema
+      );
+      return result ?? null;
+    },
+
+    /**
+     * Get paginated list of recent LLM request log entries.
+     * GET /api/v1/admin/openrouter/requests
+     * Issue #5083: Admin usage page — recent requests table.
+     */
+    async getRecentRequests(params: {
+      source?: string;
+      model?: string;
+      successOnly?: boolean;
+      page?: number;
+      pageSize?: number;
+    } = {}): Promise<RecentLlmRequestsDto | null> {
+      const query = new URLSearchParams();
+      if (params.source) query.append('source', params.source);
+      if (params.model) query.append('model', params.model);
+      if (params.successOnly !== undefined) query.append('successOnly', String(params.successOnly));
+      if (params.page) query.append('page', String(params.page));
+      if (params.pageSize) query.append('pageSize', String(params.pageSize));
+      const qs = query.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/openrouter/requests${qs ? `?${qs}` : ''}`,
+        RecentLlmRequestsDtoSchema
       );
       return result ?? null;
     },

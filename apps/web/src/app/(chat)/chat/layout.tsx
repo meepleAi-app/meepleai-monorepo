@@ -12,29 +12,33 @@
 
 'use client';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { MessageSquare, Plus } from 'lucide-react';
 
 import { useSetNavConfig } from '@/context/NavigationContext';
 
 export default function ChatLayout({ children }: { children: ReactNode }) {
-  useSetNavConfig({
-    miniNav: [
-      { id: 'chats', label: 'Chat', href: '/chat', icon: MessageSquare },
-    ],
-    actionBar: [
-      {
-        id: 'new-chat',
-        label: 'Nuova Chat',
-        icon: Plus,
-        variant: 'primary',
-        onClick: () => {
-          window.location.href = '/chat/new';
+  const setNavConfig = useSetNavConfig();
+
+  useEffect(() => {
+    setNavConfig({
+      miniNav: [
+        { id: 'chats', label: 'Chat', href: '/chat', icon: MessageSquare },
+      ],
+      actionBar: [
+        {
+          id: 'new-chat',
+          label: 'Nuova Chat',
+          icon: Plus,
+          variant: 'primary',
+          onClick: () => {
+            window.location.href = '/chat/new';
+          },
         },
-      },
-    ],
-  });
+      ],
+    });
+  }, [setNavConfig]);
 
   return <>{children}</>;
 }

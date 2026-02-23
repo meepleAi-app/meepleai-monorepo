@@ -39,7 +39,7 @@ export interface NavAction {
   /** Click handler */
   onClick: () => void;
   /** Visual variant — primary is highlighted, secondary/ghost are neutral */
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
   /** Badge count or label (optional) */
   badge?: number | string;
   /** Hide this action (not rendered but tracked for potential re-show) */

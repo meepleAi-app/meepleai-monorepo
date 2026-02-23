@@ -27,17 +27,6 @@ export type { CounterToolProps } from './CounterTool';
 export { WhiteboardTool } from './WhiteboardTool';
 export type { WhiteboardToolProps } from './WhiteboardTool';
 
-// ── Epic #4968: Session Tool Layout ──────────────────────────────────────────
-export { ToolRail } from './ToolRail';
-export { SessionToolLayout } from './SessionToolLayout';
-export { TurnIndicatorBar } from './TurnIndicatorBar';
-export { TurnOrderTool } from './TurnOrderTool';
-export { WhiteboardTool } from './WhiteboardTool';
-export { CounterTool } from './CounterTool';
-
-export type { ToolItem } from './ToolRail';
-export type { CounterToolConfig } from './CounterTool';
-
 export type {
   Participant,
   ScoreEntry,

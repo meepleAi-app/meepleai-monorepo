@@ -2,8 +2,12 @@
  * LayoutShell Tests
  * Issue #5035 — LayoutShell Component
  *
- * Tests: rendering, slot integration, impersonation banner, CardStackPanel,
- * desktop/mobile layout structure, NavigationProvider wrapping.
+ * Tests: rendering, composition (TopNavbar/MiniNav/FloatingActionBar),
+ * impersonation banner, CardStackPanel, NavigationProvider wrapping,
+ * fullWidth prop, accessibility.
+ *
+ * Updated: slot-based API replaced with self-contained composition
+ * (TopNavbar/MiniNav/FloatingActionBar are rendered internally, not via props).
  */
 
 import { render, screen } from '@testing-library/react';
@@ -32,6 +36,19 @@ vi.mock('@/components/ui/feedback/impersonation-banner', () => ({
 
 vi.mock('@/components/ui/navigation/card-stack-panel', () => ({
   CardStackPanel: () => <div data-testid="card-stack-panel" />,
+}));
+
+// Mock internal nav layers to avoid QueryClient / NavigationContext dependencies
+vi.mock('@/components/layout/TopNavbar', () => ({
+  TopNavbar: () => <header role="banner" data-testid="top-navbar">TopNavbar</header>,
+}));
+
+vi.mock('@/components/layout/MiniNav', () => ({
+  MiniNav: () => <div data-testid="mini-nav" />,
+}));
+
+vi.mock('@/components/layout/FloatingActionBar', () => ({
+  FloatingActionBar: () => <div data-testid="floating-action-bar" />,
 }));
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -73,63 +90,29 @@ describe('LayoutShell', () => {
     expect(main.id).toBe('main-content');
   });
 
+  it('renders TopNavbar', () => {
+    renderShell();
+    expect(screen.getByTestId('top-navbar')).toBeInTheDocument();
+  });
+
+  it('renders MiniNav', () => {
+    renderShell();
+    expect(screen.getByTestId('mini-nav')).toBeInTheDocument();
+  });
+
+  it('renders FloatingActionBar', () => {
+    renderShell();
+    expect(screen.getByTestId('floating-action-bar')).toBeInTheDocument();
+  });
+
   it('does NOT render ImpersonationBanner when not impersonating', () => {
     renderShell();
     expect(screen.queryByTestId('impersonation-banner')).not.toBeInTheDocument();
   });
 
-  it('renders navbar slot when provided', () => {
-    renderShell({
-      navbar: <nav data-testid="navbar">Navbar</nav>,
-    });
-    expect(screen.getByTestId('navbar')).toBeInTheDocument();
-  });
-
-  it('renders miniNav slot when provided', () => {
-    renderShell({
-      miniNav: <div data-testid="mini-nav">MiniNav</div>,
-    });
-    expect(screen.getByTestId('mini-nav')).toBeInTheDocument();
-  });
-
-  it('does NOT render miniNav section when miniNav prop is absent', () => {
-    renderShell();
-    // No aria-label="Section navigation" element should exist
-    expect(screen.queryByLabelText('Section navigation')).not.toBeInTheDocument();
-  });
-
-  it('renders actionBar slot when provided', () => {
-    renderShell({
-      actionBar: <div data-testid="action-bar">ActionBar</div>,
-    });
-    // Should appear twice: once in sticky desktop, once in fixed mobile
-    const bars = screen.getAllByTestId('action-bar');
-    expect(bars).toHaveLength(2);
-  });
-
-  it('does NOT render actionBar elements when actionBar prop is absent', () => {
-    renderShell();
-    // toolbar roles should not exist when no actionBar
-    expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
-  });
-
-  it('renders all three slots together', () => {
-    renderShell({
-      navbar: <nav data-testid="navbar">Navbar</nav>,
-      miniNav: <div data-testid="mini-nav">MiniNav</div>,
-      actionBar: <div data-testid="action-bar">Actions</div>,
-    });
-
-    expect(screen.getByTestId('navbar')).toBeInTheDocument();
-    expect(screen.getByTestId('mini-nav')).toBeInTheDocument();
-    expect(screen.getAllByTestId('action-bar')).toHaveLength(2);
-    expect(screen.getByTestId('content')).toBeInTheDocument();
-  });
-
   it('header has role="banner"', () => {
-    renderShell({ navbar: <nav>Nav</nav> });
-    const header = screen.getByRole('banner');
-    expect(header).toBeInTheDocument();
+    renderShell();
+    expect(screen.getByRole('banner')).toBeInTheDocument();
   });
 
   it('main content has tabIndex=-1 for skip-link accessibility', () => {
@@ -141,7 +124,6 @@ describe('LayoutShell', () => {
 
 describe('LayoutShell with impersonation', () => {
   it('renders ImpersonationBanner when impersonating', () => {
-    // Override mock to simulate impersonation
     mockImpersonationStore.mockReturnValueOnce({
       isImpersonating: true,
       impersonatedUser: { id: '1', displayName: 'Test User', email: 'test@test.com' },
@@ -161,8 +143,6 @@ describe('LayoutShell with impersonation', () => {
 
 describe('LayoutShell NavigationProvider integration', () => {
   it('wraps children with NavigationProvider (consumer renders without error)', () => {
-    // Verify the shell mounts correctly with children that use navigation context
-    // NavigationProvider is provided internally by LayoutShell
     let rendered = false;
 
     const TestChild = () => {
@@ -182,18 +162,15 @@ describe('LayoutShell NavigationProvider integration', () => {
 });
 
 describe('LayoutShell fullWidth prop', () => {
-  it('applies fullWidth class when prop is true', () => {
+  it('removes horizontal padding when fullWidth=true', () => {
     renderShell({ fullWidth: true });
     const main = screen.getByRole('main');
-    // When fullWidth, the inner div should NOT have max-w container classes
-    const innerDiv = main.querySelector('div');
-    expect(innerDiv?.className).not.toContain('max-w-screen-xl');
+    expect(main.className).not.toContain('px-4');
   });
 
-  it('applies container by default (fullWidth=false)', () => {
+  it('applies horizontal padding by default (fullWidth=false)', () => {
     renderShell({ fullWidth: false });
     const main = screen.getByRole('main');
-    const innerDiv = main.querySelector('div');
-    expect(innerDiv?.className).toContain('max-w-screen-xl');
+    expect(main.className).toContain('px-4');
   });
 });

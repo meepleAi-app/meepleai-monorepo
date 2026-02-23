@@ -210,16 +210,16 @@ describe('MobileNavDrawer', () => {
 
     it('highlights active library sub-item', async () => {
       mockUsePathname.mockReturnValue('/library');
-      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=private'));
+      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=collection'));
       const user = userEvent.setup();
       renderDrawer();
 
       await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
       // Library should auto-expand since /library is active
 
-      const privateLink = screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('private'));
-      expect(privateLink).toHaveClass('text-[hsl(262_83%_62%)]');
-      expect(privateLink).toHaveAttribute('aria-current', 'page');
+      const collectionLink = screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'));
+      expect(collectionLink).toHaveClass('text-[hsl(262_83%_62%)]');
+      expect(collectionLink).toHaveAttribute('aria-current', 'page');
     });
   });
 

@@ -3,8 +3,9 @@
 /**
  * LibraryNavConfig — Registers MiniNav tabs + ActionBar actions for /library
  * Issue #5042 — Library + Game Detail MiniNav + ActionBar
+ * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
  *
- * Tabs: Games · Wishlist · Private · History
+ * Tabs: Games · Collection · Wishlist · History
  * ActionBar: Add Game (primary) · Import BGG · Import PDF · Filter
  *
  * Include in library/page.tsx or library/layout.tsx:
@@ -25,10 +26,9 @@ export function LibraryNavConfig() {
   useEffect(() => {
     setNavConfig({
       miniNav: [
-        { id: 'games',    label: 'Games',    href: '/library' },
-        { id: 'wishlist', label: 'Wishlist', href: '/library?tab=wishlist' },
-        { id: 'private',  label: 'Private',  href: '/library?tab=private' },
-        { id: 'history',  label: 'History',  href: '/library?tab=history' },
+        { id: 'games',      label: 'Games',      href: '/library' },
+        { id: 'collection', label: 'Collection', href: '/library?tab=collection' },
+        { id: 'wishlist',   label: 'Wishlist',   href: '/library?tab=wishlist' },
       ],
       actionBar: [
         {

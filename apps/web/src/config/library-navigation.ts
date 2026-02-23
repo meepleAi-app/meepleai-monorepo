@@ -1,14 +1,14 @@
 /**
  * Library Section Navigation Configuration
+ * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
  * Defines the library section sub-navigation tabs.
  */
 
 import {
   type LucideIcon,
   BookOpenIcon,
+  Gamepad2,
   Heart,
-  LockIcon,
-  SendIcon,
 } from 'lucide-react';
 
 /**
@@ -27,16 +27,23 @@ export interface LibraryTab {
 
 /**
  * Library section tabs — query-param based navigation (Issue #5039)
+ * Issue #5167 — renamed: Games (personal, default) / Collection (shared catalog)
  *
- * Tabs now use ?tab= query params on /library instead of sub-routes.
+ * Tabs use ?tab= query params on /library instead of sub-routes.
  * "Proposte" moved to /discover?tab=proposals (community section).
  */
 export const LIBRARY_TABS: LibraryTab[] = [
   {
-    id: 'collection',
-    label: 'Collezione',
-    icon: BookOpenIcon,
+    id: 'games',
+    label: 'Games',
+    icon: Gamepad2,
     href: '/library',
+  },
+  {
+    id: 'collection',
+    label: 'Collection',
+    icon: BookOpenIcon,
+    href: '/library?tab=collection',
   },
   {
     id: 'wishlist',
@@ -44,22 +51,11 @@ export const LIBRARY_TABS: LibraryTab[] = [
     icon: Heart,
     href: '/library?tab=wishlist',
   },
-  {
-    id: 'private',
-    label: 'Giochi Privati',
-    icon: LockIcon,
-    href: '/library?tab=private',
-  },
-  {
-    id: 'proposals',
-    label: 'Le Mie Proposte',
-    icon: SendIcon,
-    href: '/discover?tab=proposals',
-  },
 ];
 
 /**
  * Check if a pathname+search matches a library tab (Issue #5039)
+ * Issue #5167 — updated for new tab structure (games/collection/wishlist)
  *
  * Accepts full URL (pathname + search) or just pathname.
  */
@@ -68,10 +64,8 @@ export function getActiveLibraryTab(pathname: string, search?: string): string {
     ? new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab')
     : null;
 
+  if (tab === 'collection') return 'collection';
   if (tab === 'wishlist') return 'wishlist';
-  if (tab === 'private') return 'private';
-  // proposals live under /discover
-  if (pathname.startsWith('/discover') && tab === 'proposals') return 'proposals';
-  if (pathname === '/library') return 'collection';
-  return 'collection';
+  if (pathname === '/library') return 'games';
+  return 'games';
 }

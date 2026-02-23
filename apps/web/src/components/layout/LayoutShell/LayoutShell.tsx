@@ -81,7 +81,7 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
     useImpersonationStore();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background" data-testid="layout-shell">
       {/* Impersonation Banner (fixed at top when active) */}
       <ImpersonationBanner
         isImpersonating={isImpersonating}

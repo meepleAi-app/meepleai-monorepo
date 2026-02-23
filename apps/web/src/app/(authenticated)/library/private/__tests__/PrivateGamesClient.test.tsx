@@ -555,8 +555,9 @@ describe('PrivateGamesClient', () => {
       });
 
       // LibraryEmptyState renders the CTA as a <Link> (→ <a href>), not router.push
+      // Issue #5167: CTA now opens the AddGameDrawer via ?action=add query param
       const addLink = screen.getByText(testI18nT('privateGames.addFirstGame')).closest('a');
-      expect(addLink).toHaveAttribute('href', '/library/private/add');
+      expect(addLink).toHaveAttribute('href', '/library?action=add');
     });
   });
 

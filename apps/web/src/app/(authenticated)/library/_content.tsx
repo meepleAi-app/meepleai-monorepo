@@ -4,6 +4,12 @@
  * Library Page Client Content
  * Issue #2464, #2613, #2618 — Library management
  * Issue #5042 — Tab-based routing
+ * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
+ *
+ * Tab routing:
+ *   (default)           → Games tab   → GamesPageClient    (personal private games)
+ *   ?tab=collection     → Collection  → CollectionPageClient (shared catalog games)
+ *   ?tab=wishlist       → Wishlist    → WishlistPageClient
  *
  * Note: Uses dynamicImport (renamed from 'dynamic') to avoid Turbopack
  * naming collision with the server→client boundary stub identifier.
@@ -33,7 +39,14 @@ export function LibraryLoadingSkeleton() {
 
 // ── Dynamic imports (ssr: false avoids DOMMatrix / framer-motion issues) ─────
 
-const LibraryPageClient = dynamicImport(() => import('./LibraryPageClient'), {
+// Default tab: personal games (Issue #5167 — was PrivateGamesClient)
+const GamesPageClient = dynamicImport(() => import('./private/PrivateGamesClient'), {
+  ssr: false,
+  loading: () => <LibraryLoadingSkeleton />,
+});
+
+// Collection tab: shared catalog games (Issue #5167 — was LibraryPageClient)
+const CollectionPageClient = dynamicImport(() => import('./CollectionPageClient'), {
   ssr: false,
   loading: () => <LibraryLoadingSkeleton />,
 });
@@ -44,19 +57,13 @@ const WishlistPageClient = dynamicImport(() => import('./wishlist/page'), {
   loading: () => <LibraryLoadingSkeleton />,
 });
 
-// Import PrivateGamesClient directly — private/page.tsx wraps LibraryNavTabs (deprecated)
-const PrivateGamesClient = dynamicImport(() => import('./private/PrivateGamesClient'), {
-  ssr: false,
-  loading: () => <LibraryLoadingSkeleton />,
-});
-
 // ── Tab switcher (reads ?tab= search param) ───────────────────────────────────
 
 export function LibraryContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
 
+  if (tab === 'collection') return <CollectionPageClient />;
   if (tab === 'wishlist') return <WishlistPageClient />;
-  if (tab === 'private') return <PrivateGamesClient />;
-  return <LibraryPageClient />;
+  return <GamesPageClient />;
 }

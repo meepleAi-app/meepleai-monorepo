@@ -68,6 +68,10 @@ internal sealed class CreateAgentDefinitionCommandHandler
             prompts,
             tools);
 
+        // Issue #5140: Apply KbCardIds if provided in the command
+        if (request.KbCardIds is { Count: > 0 })
+            agentDefinition.UpdateKbCardIds(request.KbCardIds);
+
         // Persist
         await _repository.AddAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
 
@@ -105,6 +109,7 @@ internal sealed class CreateAgentDefinitionCommandHandler
                 Name = t.Name,
                 Settings = t.GetSettings() as Dictionary<string, object> ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             }).ToList(),
+            KbCardIds = agent.KbCardIds.ToList(),
             IsActive = agent.IsActive,
             CreatedAt = agent.CreatedAt,
             UpdatedAt = agent.UpdatedAt

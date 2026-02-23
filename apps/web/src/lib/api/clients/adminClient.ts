@@ -157,9 +157,13 @@ import {
   type GetCostScenariosParams,
 } from '../schemas/cost-calculator.schemas';
 import {
-  type TierStrategyMatrixDto,
-  type StrategyModelMappingDto,
-} from '../schemas/tier-strategy.schemas';
+  EntityLinkDtoSchema,
+  ImportBggExpansionsResponseSchema,
+  type EntityLinkDto,
+  type CreateEntityLinkRequest,
+  type GetEntityLinksParams,
+  type ImportBggExpansionsResponse,
+} from '../schemas/entity-link.schemas';
 import {
   LedgerEntriesResponseSchema,
   LedgerSummarySchema,
@@ -188,6 +192,10 @@ import {
   type SaveResourceForecastRequest,
   type GetResourceForecastsParams,
 } from '../schemas/resource-forecast.schemas';
+import {
+  type TierStrategyMatrixDto,
+  type StrategyModelMappingDto,
+} from '../schemas/tier-strategy.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -574,7 +582,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       search?: string;
       role?: string;
       status?: string;
-      tier?: string;              // Issue #3698: Filter by tier
+      tier?: string; // Issue #3698: Filter by tier
     }): Promise<PagedResult<AdminUser>> {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.set('page', params.page.toString());
@@ -1034,7 +1042,9 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       }
 
       const queryString = queryParams.toString();
-      const url = queryString ? `/api/v1/admin/ai-models?${queryString}` : '/api/v1/admin/ai-models';
+      const url = queryString
+        ? `/api/v1/admin/ai-models?${queryString}`
+        : '/api/v1/admin/ai-models';
 
       const result = await httpClient.get(url, PagedAiModelsSchema);
       return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
@@ -1059,10 +1069,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Update AI model configuration (admin only)
      * PUT /api/v1/admin/ai-models/{modelId}/configure
      */
-    async updateModelConfig(
-      modelId: string,
-      request: ConfigureModelRequest
-    ): Promise<AiModelDto> {
+    async updateModelConfig(modelId: string, request: ConfigureModelRequest): Promise<AiModelDto> {
       const result = await httpClient.put(
         `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/configure`,
         request,
@@ -1323,7 +1330,8 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     }) {
       const queryParams = new URLSearchParams();
       if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
-      if (params?.createdBy && params.createdBy !== 'All') queryParams.set('createdBy', params.createdBy);
+      if (params?.createdBy && params.createdBy !== 'All')
+        queryParams.set('createdBy', params.createdBy);
       if (params?.search) queryParams.set('search', params.search);
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
@@ -1402,10 +1410,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         minAge?: number;
         description?: string;
         confidenceScore: number; // 0.0-1.0
-      }>(
-        '/api/v1/admin/games/wizard/extract-metadata',
-        { filePath }
-      );
+      }>('/api/v1/admin/games/wizard/extract-metadata', { filePath });
     },
 
     // ========== Audit Log (Issue #3691) ==========
@@ -1437,7 +1442,12 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const url = `/api/v1/admin/audit-log${qs ? `?${qs}` : ''}`;
       const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
       if (!result) {
-        return { entries: [], totalCount: 0, limit: params?.limit ?? 50, offset: params?.offset ?? 0 };
+        return {
+          entries: [],
+          totalCount: 0,
+          limit: params?.limit ?? 50,
+          offset: params?.offset ?? 0,
+        };
       }
       return result;
     },
@@ -1475,7 +1485,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/resources/tokens
      */
     async getTokenBalance(): Promise<TokenBalance> {
-      const result = await httpClient.get<TokenBalance>('/api/v1/admin/resources/tokens', TokenBalanceSchema);
+      const result = await httpClient.get<TokenBalance>(
+        '/api/v1/admin/resources/tokens',
+        TokenBalanceSchema
+      );
       if (!result) throw new Error('No token balance data returned');
       return result;
     },
@@ -1498,7 +1511,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/resources/tokens/tiers
      */
     async getTokenTierUsage(): Promise<TierUsageList> {
-      const result = await httpClient.get<TierUsageList>('/api/v1/admin/resources/tokens/tiers', TierUsageListSchema);
+      const result = await httpClient.get<TierUsageList>(
+        '/api/v1/admin/resources/tokens/tiers',
+        TierUsageListSchema
+      );
       if (!result) throw new Error('No tier usage data returned');
       return result;
     },
@@ -1533,11 +1549,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/resources/tokens/add-credits
      */
     async addTokenCredits(request: AddCreditsRequest): Promise<void> {
-      await httpClient.post(
-        '/api/v1/admin/resources/tokens/add-credits',
-        request,
-        z.any()
-      );
+      await httpClient.post('/api/v1/admin/resources/tokens/add-credits', request, z.any());
     },
 
     // ========== Batch Jobs (Issue #3693) ==========
@@ -1582,11 +1594,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/batch-jobs
      */
     async createBatchJob(request: CreateBatchJobRequest): Promise<{ id: string }> {
-      return httpClient.post(
-        '/api/v1/admin/batch-jobs',
-        request,
-        CreateBatchJobResponseSchema
-      );
+      return httpClient.post('/api/v1/admin/batch-jobs', request, CreateBatchJobResponseSchema);
     },
 
     /**
@@ -1623,9 +1631,12 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const searchParams = new URLSearchParams();
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
-      if (params?.type !== undefined && params?.type !== null) searchParams.set('type', params.type.toString());
-      if (params?.category !== undefined && params?.category !== null) searchParams.set('category', params.category.toString());
-      if (params?.source !== undefined && params?.source !== null) searchParams.set('source', params.source.toString());
+      if (params?.type !== undefined && params?.type !== null)
+        searchParams.set('type', params.type.toString());
+      if (params?.category !== undefined && params?.category !== null)
+        searchParams.set('category', params.category.toString());
+      if (params?.source !== undefined && params?.source !== null)
+        searchParams.set('source', params.source.toString());
       if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
       if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
 
@@ -1640,7 +1651,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/financial-ledger/{id}
      */
     async getLedgerEntryById(id: string): Promise<LedgerEntryDto> {
-      const result = await httpClient.get(`/api/v1/admin/financial-ledger/${id}`, LedgerEntryDtoSchema);
+      const result = await httpClient.get(
+        `/api/v1/admin/financial-ledger/${id}`,
+        LedgerEntryDtoSchema
+      );
       if (!result) throw new Error('Ledger entry not found');
       return result;
     },
@@ -1654,8 +1668,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         dateFrom: params.dateFrom,
         dateTo: params.dateTo,
       }).toString();
-      const result = await httpClient.get(`/api/v1/admin/financial-ledger/summary?${qs}`, LedgerSummarySchema);
-      return result || { totalIncome: 0, totalExpense: 0, netBalance: 0, from: params.dateFrom, to: params.dateTo };
+      const result = await httpClient.get(
+        `/api/v1/admin/financial-ledger/summary?${qs}`,
+        LedgerSummarySchema
+      );
+      return (
+        result || {
+          totalIncome: 0,
+          totalExpense: 0,
+          netBalance: 0,
+          from: params.dateFrom,
+          to: params.dateTo,
+        }
+      );
     },
 
     /**
@@ -1663,7 +1688,11 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/financial-ledger
      */
     async createLedgerEntry(request: CreateLedgerEntryRequest): Promise<CreateLedgerEntryResponse> {
-      return httpClient.post('/api/v1/admin/financial-ledger', request, CreateLedgerEntryResponseSchema);
+      return httpClient.post(
+        '/api/v1/admin/financial-ledger',
+        request,
+        CreateLedgerEntryResponseSchema
+      );
     },
 
     /**
@@ -1687,7 +1716,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/financial-ledger/dashboard
      */
     async getLedgerDashboard(): Promise<LedgerDashboardData> {
-      const result = await httpClient.get('/api/v1/admin/financial-ledger/dashboard', LedgerDashboardDataSchema);
+      const result = await httpClient.get(
+        '/api/v1/admin/financial-ledger/dashboard',
+        LedgerDashboardDataSchema
+      );
       if (!result) throw new Error('Failed to load ledger dashboard data');
       return result;
     },
@@ -1718,7 +1750,11 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/cost-calculator/estimate
      */
     async estimateAgentCost(request: EstimateAgentCostRequest): Promise<AgentCostEstimationResult> {
-      return httpClient.post('/api/v1/admin/cost-calculator/estimate', request, AgentCostEstimationResultSchema);
+      return httpClient.post(
+        '/api/v1/admin/cost-calculator/estimate',
+        request,
+        AgentCostEstimationResultSchema
+      );
     },
 
     /**
@@ -1726,7 +1762,11 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/cost-calculator/scenarios
      */
     async saveCostScenario(request: SaveCostScenarioRequest): Promise<SaveScenarioResponse> {
-      return httpClient.post('/api/v1/admin/cost-calculator/scenarios', request, SaveScenarioResponseSchema);
+      return httpClient.post(
+        '/api/v1/admin/cost-calculator/scenarios',
+        request,
+        SaveScenarioResponseSchema
+      );
     },
 
     /**
@@ -1758,12 +1798,12 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/resource-forecast/estimate
      */
     async estimateResourceForecast(
-      request: EstimateResourceForecastRequest,
+      request: EstimateResourceForecastRequest
     ): Promise<ResourceForecastEstimationResult> {
       return httpClient.post(
         '/api/v1/admin/resource-forecast/estimate',
         request,
-        ResourceForecastEstimationResultSchema,
+        ResourceForecastEstimationResultSchema
       );
     },
 
@@ -1771,11 +1811,13 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Save a resource forecast scenario
      * POST /api/v1/admin/resource-forecast/scenarios
      */
-    async saveResourceForecast(request: SaveResourceForecastRequest): Promise<SaveForecastResponse> {
+    async saveResourceForecast(
+      request: SaveResourceForecastRequest
+    ): Promise<SaveForecastResponse> {
       return httpClient.post(
         '/api/v1/admin/resource-forecast/scenarios',
         request,
-        SaveForecastResponseSchema,
+        SaveForecastResponseSchema
       );
     },
 
@@ -1784,7 +1826,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/resource-forecast/scenarios
      */
     async getResourceForecasts(
-      params?: GetResourceForecastsParams,
+      params?: GetResourceForecastsParams
     ): Promise<ResourceForecastsResponse> {
       const searchParams = new URLSearchParams();
       if (params?.page) searchParams.set('page', params.page.toString());
@@ -1809,9 +1851,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Get app usage statistics (DAU/MAU, retention, feature adoption, geo)
      * GET /api/v1/admin/usage-stats
      */
-    async getUsageStats(params?: {
-      period?: '7d' | '30d' | '90d';
-    }): Promise<AppUsageStats | null> {
+    async getUsageStats(params?: { period?: '7d' | '30d' | '90d' }): Promise<AppUsageStats | null> {
       const queryParams = new URLSearchParams();
       if (params?.period) queryParams.set('period', params.period);
 
@@ -1897,7 +1937,14 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const url = `/api/v1/admin/rag-executions/stats${qs ? `?${qs}` : ''}`;
       const result = await httpClient.get<RagExecutionStatsResult>(url);
       if (!result) {
-        return { totalExecutions: 0, avgLatencyMs: 0, errorRate: 0, cacheHitRate: 0, totalCost: 0, avgConfidence: 0 };
+        return {
+          totalExecutions: 0,
+          avgLatencyMs: 0,
+          errorRate: 0,
+          cacheHitRate: 0,
+          totalCost: 0,
+          avgConfidence: 0,
+        };
       }
       return result;
     },
@@ -1954,10 +2001,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Issue #3715: Aggregated PDF processing metrics
      */
     async getPdfAnalytics(days: number = 30): Promise<PdfAnalyticsDto | null> {
-      return httpClient.get(
-        `/api/v1/admin/pdf-analytics?days=${days}`,
-        PdfAnalyticsDtoSchema
-      );
+      return httpClient.get(`/api/v1/admin/pdf-analytics?days=${days}`, PdfAnalyticsDtoSchema);
     },
 
     /**
@@ -1967,10 +2011,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Issue #3714: Aggregated chat thread metrics
      */
     async getChatAnalytics(days: number = 30): Promise<ChatAnalyticsDto | null> {
-      return httpClient.get(
-        `/api/v1/admin/chat-analytics?days=${days}`,
-        ChatAnalyticsDtoSchema
-      );
+      return httpClient.get(`/api/v1/admin/chat-analytics?days=${days}`, ChatAnalyticsDtoSchema);
     },
 
     /**
@@ -2323,10 +2364,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Issue #5082: Admin usage page — free quota indicator.
      */
     async getUsageFreeQuota(): Promise<FreeQuotaDto | null> {
-      return httpClient.get(
-        '/api/v1/admin/openrouter/free-quota',
-        FreeQuotaDtoSchema
-      );
+      return httpClient.get('/api/v1/admin/openrouter/free-quota', FreeQuotaDtoSchema);
     },
 
     /**
@@ -2352,6 +2390,60 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         `/api/v1/admin/openrouter/usage/requests${query ? `?${query}` : ''}`,
         RecentLlmRequestsDtoSchema
       );
+    },
+
+    // ========== EntityLink Admin Methods (Issue #5142 — Epic A) ==========
+
+    /**
+     * Get entity links (admin — all scopes)
+     * GET /api/v1/admin/entity-links?sourceType=...&sourceId=...&linkType=...
+     */
+    async getAdminEntityLinks(params: GetEntityLinksParams): Promise<EntityLinkDto[]> {
+      const qs = new URLSearchParams();
+      qs.set('sourceType', params.entityType);
+      qs.set('sourceId', params.entityId);
+      if (params.linkType) qs.set('linkType', params.linkType);
+      const data = await httpClient.get<EntityLinkDto[]>(
+        `/api/v1/admin/entity-links?${qs.toString()}`,
+        z.array(EntityLinkDtoSchema)
+      );
+      return data ?? [];
+    },
+
+    /**
+     * Create entity link (admin — shared scope)
+     * POST /api/v1/admin/entity-links
+     */
+    async createAdminEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto> {
+      const result = await httpClient.post<EntityLinkDto>(
+        '/api/v1/admin/entity-links',
+        request,
+        EntityLinkDtoSchema
+      );
+      if (!result) throw new Error('Failed to create entity link');
+      return result;
+    },
+
+    /**
+     * Delete entity link (admin — any scope)
+     * DELETE /api/v1/admin/entity-links/{linkId}
+     */
+    async deleteAdminEntityLink(linkId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/entity-links/${linkId}`);
+    },
+
+    /**
+     * Import BGG expansion/reimplements links for a SharedGame (admin)
+     * POST /api/v1/admin/entity-links/import-bgg/{sharedGameId}
+     */
+    async importBggExpansions(sharedGameId: string): Promise<ImportBggExpansionsResponse> {
+      const result = await httpClient.post<ImportBggExpansionsResponse>(
+        `/api/v1/admin/entity-links/import-bgg/${sharedGameId}`,
+        {},
+        ImportBggExpansionsResponseSchema
+      );
+      if (!result) throw new Error('Failed to import BGG expansions');
+      return result;
     },
   };
 }
@@ -2417,7 +2509,10 @@ export interface EmbeddingServiceMetrics {
 }
 
 // Re-export tier-strategy types for convenience
-export type { TierStrategyMatrixDto, StrategyModelMappingDto } from '../schemas/tier-strategy.schemas';
+export type {
+  TierStrategyMatrixDto,
+  StrategyModelMappingDto,
+} from '../schemas/tier-strategy.schemas';
 
 // ========== Agent Typology Types (Issue #3179) ==========
 

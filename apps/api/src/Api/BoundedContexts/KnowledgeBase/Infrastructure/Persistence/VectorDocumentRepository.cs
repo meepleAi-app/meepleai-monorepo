@@ -127,4 +127,18 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         var status = Enum.Parse<VectorDocumentIndexingStatus>(info.IndexingStatus, ignoreCase: true);
         return new VectorDocumentIndexingInfo(status, info.ChunkCount, info.IndexingError);
     }
+
+    public async Task<bool> AnyBelongsToGameAsync(
+        IEnumerable<Guid> ids,
+        Guid gameId,
+        CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+            return false;
+
+        return await DbContext.VectorDocuments
+            .AnyAsync(vd => idList.Contains(vd.Id) && vd.GameId == gameId, cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

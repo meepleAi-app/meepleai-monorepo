@@ -6,6 +6,7 @@ using Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Api.Middleware.Exceptions;
 
 namespace Api.Routing;
 
@@ -20,6 +21,7 @@ internal static class EntityLinkAdminEndpoints
         MapAdminGetEntityLinksEndpoint(group);
         MapAdminCreateEntityLinkEndpoint(group);
         MapAdminDeleteEntityLinkEndpoint(group);
+        MapAdminImportBggExpansionsEndpoint(group);
         return group;
     }
 
@@ -155,6 +157,40 @@ internal static class EntityLinkAdminEndpoints
         .WithTags("EntityLinks", "Admin")
         .WithSummary("Delete entity link (admin)")
         .WithDescription("Admin soft-deletes any entity link including BGG-imported ones. Issue #5138.")
+        .WithOpenApi();
+    }
+
+    // POST /admin/entity-links/import-bgg/{sharedGameId}
+    private static void MapAdminImportBggExpansionsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/admin/entity-links/import-bgg/{sharedGameId:guid}", async (
+            Guid sharedGameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var adminUserId = session!.User!.Id;
+
+            var command = new ImportBggExpansionsCommand(
+                SharedGameId: sharedGameId,
+                AdminUserId: adminUserId);
+
+            var created = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(new { created });
+        })
+        .Produces<object>(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("EntityLinks", "Admin")
+        .WithSummary("Import BGG expansion/reimplements links (admin)")
+        .WithDescription(
+            "Fetches the BGG XML API for a SharedGame and creates EntityLinks " +
+            "for boardgameexpansion and boardgameimplementation relationships. " +
+            "Idempotent — skips already-existing links. Issue #5141.")
         .WithOpenApi();
     }
 }

@@ -18,6 +18,7 @@ import type {
 } from '../meeple-card-features/session-types';
 import type { LucideIcon } from 'lucide-react';
 import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // Re-export session types for convenience
 export type {
@@ -262,6 +263,8 @@ export interface GameDetailData {
   rulesDocumentCount?: number;
   /** KB documents indexed for this game (Issue #5029) */
   kbDocuments?: KbDocumentPreview[];
+  /** Full PDF document data with processing state (Issue #5195) */
+  pdfDocuments?: PdfDocumentDto[];
   /** Agent configured for this game (Issue #5029) */
   agent?: GameAgentPreview;
 }

@@ -51,6 +51,8 @@ import { AgentStatsDisplay } from '@/components/ui/data-display/meeple-card-feat
 import { AgentModelInfo } from '@/components/ui/data-display/meeple-card-features/AgentModelInfo';
 import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import { ChatStatusBadge } from '@/components/ui/data-display/meeple-card-features/ChatStatusBadge';
+import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
+import { EntityLinkBadge } from '@/components/ui/data-display/entity-link-badge';
 import type {
   GameDetailData,
   GameAgentPreview,
@@ -98,6 +100,11 @@ const KB_STATUS_ORDER: Record<'indexed' | 'processing' | 'failed' | 'none', numb
   indexed: 0, processing: 1, failed: 2, none: 3,
 };
 
+/** Sort order for full PdfDocumentDto by processingState (failed first for visibility, Issue #5195) */
+const KB_PDF_STATE_ORDER: Record<string, number> = {
+  Failed: 0, Extracting: 1, Chunking: 1, Embedding: 1, Indexing: 1, Uploading: 1, Pending: 2, Ready: 3,
+};
+
 export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
   data,
   loading,
@@ -114,6 +121,13 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
   const sortedKbDocs = [...(data.kbDocuments ?? [])].sort(
     (a, b) => KB_STATUS_ORDER[a.status] - KB_STATUS_ORDER[b.status]
   );
+  // Sort full PdfDocumentDto data: failed first so user can act on errors (Issue #5195)
+  const sortedPdfDocs = [...(data.pdfDocuments ?? [])].sort((a, b) => {
+    const aOrder = KB_PDF_STATE_ORDER[a.processingState] ?? 4;
+    const bOrder = KB_PDF_STATE_ORDER[b.processingState] ?? 4;
+    return aOrder - bOrder;
+  });
+  const kbDocCount = sortedPdfDocs.length || sortedKbDocs.length;
   const indexedCount = (data.kbDocuments ?? []).filter(d => d.status === 'indexed').length;
   const agentStatus = data.agent?.isActive ? 'active' : undefined;
 
@@ -211,7 +225,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
 
           {/* ── KB Tab ────────────────────────────────────────────── */}
           <TabsContent value="kb" className="mt-0">
-            {sortedKbDocs.length === 0 ? (
+            {kbDocCount === 0 ? (
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <FileText className="h-8 w-8 text-slate-300" aria-hidden="true" />
                 <div>
@@ -230,23 +244,43 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                 </a>
               </div>
             ) : (
-              <div className="space-y-2" data-testid="game-kb-documents-list">
-                {sortedKbDocs.map(doc => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center gap-3 rounded-lg border border-slate-200/60 bg-slate-50/50 p-2.5"
-                    data-testid={`game-kb-doc-${doc.id}`}
-                  >
-                    <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-nunito text-xs font-medium text-slate-700 truncate">{doc.fileName}</p>
-                      <p className="font-nunito text-[10px] text-slate-400">
-                        {new Date(doc.uploadedAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                      </p>
-                    </div>
-                    <DocumentStatusBadge status={doc.status} size="sm" />
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {/* Section header — EntityLinkBadge (Issue #5195) */}
+                <div className="flex items-center justify-between">
+                  <EntityLinkBadge
+                    linkType="PartOf"
+                    sourceEntityType="KbCard"
+                    count={kbDocCount}
+                    size="md"
+                  />
+                </div>
+                {/* Document rows — KbCardStatusRow when full data available (Issue #5195) */}
+                <div className="space-y-1.5" data-testid="game-kb-documents-list">
+                  {sortedPdfDocs.length > 0
+                    ? sortedPdfDocs.map(pdf => (
+                        <KbCardStatusRow
+                          key={pdf.id}
+                          document={pdf}
+                        />
+                      ))
+                    : sortedKbDocs.map(doc => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center gap-3 rounded-lg border border-slate-200/60 bg-slate-50/50 p-2.5"
+                          data-testid={`game-kb-doc-${doc.id}`}
+                        >
+                          <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-nunito text-xs font-medium text-slate-700 truncate">{doc.fileName}</p>
+                            <p className="font-nunito text-[10px] text-slate-400">
+                              {new Date(doc.uploadedAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                            </p>
+                          </div>
+                          <DocumentStatusBadge status={doc.status} size="sm" />
+                        </div>
+                      ))
+                  }
+                </div>
               </div>
             )}
           </TabsContent>

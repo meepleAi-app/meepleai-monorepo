@@ -24,13 +24,14 @@ internal static class EntityLinkUserEndpoints
         return group;
     }
 
-    // GET /library/entity-links?entityType=Game&entityId={}&linkType=expansion_of
+    // GET /library/entity-links?entityType=Game&entityId={}&linkType=expansion_of&targetEntityType=KbCard
     private static void MapGetEntityLinksEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/library/entity-links", async (
             [FromQuery] string entityType,
             [FromQuery] Guid entityId,
             [FromQuery] string? linkType,
+            [FromQuery] string? targetEntityType,
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
@@ -50,12 +51,22 @@ internal static class EntityLinkUserEndpoints
                 parsedLinkType = lt;
             }
 
+            // Issue #5188: optional TargetEntityType filter (e.g. KbCard for KB document links)
+            MeepleEntityType? parsedTargetEntityType = null;
+            if (!string.IsNullOrEmpty(targetEntityType))
+            {
+                if (!Enum.TryParse<MeepleEntityType>(targetEntityType, ignoreCase: true, out var tet))
+                    return Results.BadRequest(new { error = $"Invalid targetEntityType: {targetEntityType}" });
+                parsedTargetEntityType = tet;
+            }
+
             var query = new GetEntityLinksQuery(
                 EntityType: parsedEntityType,
                 EntityId: entityId,
                 RequestingUserId: userId,
                 Scope: EntityLinkScope.User,
-                LinkType: parsedLinkType);
+                LinkType: parsedLinkType,
+                TargetEntityType: parsedTargetEntityType);
 
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
@@ -66,7 +77,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(401)
         .WithTags("EntityLinks")
         .WithSummary("Get entity links (user scope)")
-        .WithDescription("Returns all user-scope links where the entity appears as source or target of a bidirectional link. Issue #5137.")
+        .WithDescription("Returns all user-scope links where the entity appears as source or target of a bidirectional link. Supports optional targetEntityType filter (Issue #5188). Issue #5137.")
         .WithOpenApi();
     }
 

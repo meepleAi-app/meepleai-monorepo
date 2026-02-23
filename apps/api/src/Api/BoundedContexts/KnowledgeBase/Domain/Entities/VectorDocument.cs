@@ -19,6 +19,9 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
     public DateTime? LastSearchedAt { get; private set; }
     public int SearchCount { get; private set; }
 
+    // Cross-BC reference to SharedGameCatalog (Issue #5185, aligned with infra entity Issue #4921)
+    public Guid? SharedGameId { get; private set; }
+
     // Metadata
     public string? Metadata { get; private set; }
 
@@ -39,7 +42,8 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         Guid gameId,
         Guid pdfDocumentId,
         string language,
-        int totalChunks) : base(id)
+        int totalChunks,
+        Guid? sharedGameId = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(language))
             throw new ArgumentException("Language cannot be empty", nameof(language));
@@ -53,6 +57,7 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
         TotalChunks = totalChunks;
         IndexedAt = DateTime.UtcNow;
         SearchCount = 0;
+        SharedGameId = sharedGameId;
 
         AddDomainEvent(new VectorDocumentIndexedEvent(id, gameId, totalChunks));
     }
@@ -83,5 +88,13 @@ internal sealed class VectorDocument : AggregateRoot<Guid>
     internal void SetMetadata(string? metadata)
     {
         Metadata = metadata;
+    }
+
+    /// <summary>
+    /// Sets shared game ID (internal for mapper use only).
+    /// </summary>
+    internal void SetSharedGameId(Guid? sharedGameId)
+    {
+        SharedGameId = sharedGameId;
     }
 }

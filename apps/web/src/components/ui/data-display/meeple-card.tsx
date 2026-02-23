@@ -122,7 +122,7 @@ import type { LucideIcon } from 'lucide-react';
  * Supported entity types with semantic colors
  * Issue #4030: Extended from 5 to 7 types (removed collection, added session/agent/document/chatSession)
  */
-export type MeepleEntityType = 'game' | 'player' | 'session' | 'agent' | 'document' | 'chatSession' | 'event' | 'custom';
+export type MeepleEntityType = 'game' | 'player' | 'session' | 'agent' | 'document' | 'chatSession' | 'event' | 'custom' | 'kb_card';
 
 /**
  * Layout variant options
@@ -329,6 +329,15 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   /** KB document indexing status (drives DocumentStatusBadge) */
   documentStatus?: import('./meeple-card-features/DocumentStatusBadge').DocumentIndexingStatus;
 
+  // ========== KB CARDS BADGE (Issue #5193) ==========
+
+  /**
+   * KB documents linked to this game entity.
+   * Shows a worst-status badge (failed > processing > indexed > none) + count.
+   * Only rendered when entity='game' and kbCards.length > 0.
+   */
+  kbCards?: { status: import('./meeple-card-features/DocumentStatusBadge').DocumentIndexingStatus }[];
+
   // ========== SESSION ENTITY FEATURES (Issue #4751) ==========
 
   /** Session lifecycle status */
@@ -381,6 +390,7 @@ const entityColors: Record<MeepleEntityType, { hsl: string; name: string }> = {
   chatSession: { hsl: '220 80% 55%', name: 'Chat' }, // Blue
   event: { hsl: '350 89% 60%', name: 'Event' },      // Rose
   custom: { hsl: '220 70% 50%', name: 'Custom' },    // Blue (default)
+  kb_card: { hsl: '174 60% 40%', name: 'KB Card' },  // Teal (Issue #5191)
 };
 
 // Map MeepleEntityType → DrawerEntityType for ExtraMeepleCardDrawer (Issue #5025)
@@ -390,6 +400,7 @@ const DRAWER_ENTITY_TYPE_MAP: Partial<Record<MeepleEntityType, DrawerEntityType>
   agent: 'agent',
   chatSession: 'chat',
   document: 'kb',
+  kb_card: 'kb',
 };
 
 // ============================================================================
@@ -654,6 +665,7 @@ function CoverImage({
     event: 'linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%))',
     document: 'linear-gradient(135deg, hsl(210,30%,85%), hsl(210,40%,70%))',
     custom: 'linear-gradient(135deg, hsl(220,30%,85%), hsl(220,40%,70%))',
+    kb_card: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
   };
 
   // Entity emoji fallbacks (when no image)
@@ -666,6 +678,7 @@ function CoverImage({
     event: '🏆',
     document: '📄',
     custom: '🎲',
+    kb_card: '📋',
   };
 
   return (
@@ -987,6 +1000,8 @@ export const MeepleCard = React.memo(function MeepleCard({
   onTimeTravelToggle,
   // Issue #5001: Document / KB entity features
   documentStatus,
+  // Issue #5193: KB Cards worst-status badge
+  kbCards,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -1001,6 +1016,18 @@ export const MeepleCard = React.memo(function MeepleCard({
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = quickActions && quickActions.length > 0;
   const showWishlistBtn = showWishlist && !hasQuickActions; // Priority: quickActions > wishlist
+
+  // KB cards worst-status (Issue #5193): failed > processing > indexed > none
+  const worstKbStatus =
+    kbCards && kbCards.length > 0
+      ? kbCards.some(k => k.status === 'failed')
+        ? 'failed' as const
+        : kbCards.some(k => k.status === 'processing')
+        ? 'processing' as const
+        : kbCards.some(k => k.status === 'indexed')
+        ? 'indexed' as const
+        : 'none' as const
+      : null;
 
   // Drawer state (Issue #5025)
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1409,6 +1436,16 @@ export const MeepleCard = React.memo(function MeepleCard({
         {entity === 'document' && documentStatus && variant !== 'compact' && (
           <div className="flex items-center gap-1.5 mb-2">
             <DocumentStatusBadge status={documentStatus} size="sm" />
+          </div>
+        )}
+
+        {/* KB Cards worst-status badge (Issue #5193) */}
+        {entity === 'game' && worstKbStatus && variant !== 'compact' && (
+          <div className="flex items-center gap-1.5 mb-2" data-testid="meeple-card-kb-badge">
+            <DocumentStatusBadge status={worstKbStatus} size="sm" />
+            <span className="text-[10px] text-muted-foreground font-medium">
+              {kbCards!.length} KB
+            </span>
           </div>
         )}
 

@@ -12,5 +12,10 @@ public enum MeepleEntityType
     Document = 5,
     ChatSession = 6,
     Event = 7,
-    Toolkit = 8
+    Toolkit = 8,
+
+    /// <summary>
+    /// A Knowledge Base card — a PDF document indexed in the vector store (Issue #5184).
+    /// </summary>
+    KbCard = 9
 }

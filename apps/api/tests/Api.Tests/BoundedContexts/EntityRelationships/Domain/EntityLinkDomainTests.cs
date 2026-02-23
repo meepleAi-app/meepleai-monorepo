@@ -238,4 +238,31 @@ public class EntityLinkDomainTests
 
         Assert.Equal(newMetadata, link.Metadata);
     }
+
+    // ── KbCard entity type (Issue #5184) ──────────────────────────────────────
+
+    [Fact]
+    public void MeepleEntityType_KbCard_HasValue9()
+    {
+        Assert.Equal(9, (int)MeepleEntityType.KbCard);
+    }
+
+    [Fact]
+    public void Create_KbCardToGame_CreatesLink()
+    {
+        var pdfId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        var link = EntityLink.Create(
+            MeepleEntityType.KbCard, pdfId,
+            MeepleEntityType.Game, gameId,
+            EntityLinkType.PartOf,
+            EntityLinkScope.User, _ownerId);
+
+        Assert.Equal(MeepleEntityType.KbCard, link.SourceEntityType);
+        Assert.Equal(pdfId, link.SourceEntityId);
+        Assert.Equal(MeepleEntityType.Game, link.TargetEntityType);
+        Assert.Equal(gameId, link.TargetEntityId);
+        Assert.Equal(EntityLinkType.PartOf, link.LinkType);
+    }
 }

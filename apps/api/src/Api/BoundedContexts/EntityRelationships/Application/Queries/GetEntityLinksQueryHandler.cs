@@ -31,6 +31,7 @@ internal sealed class GetEntityLinksQueryHandler
             query.EntityId,
             query.Scope,
             query.LinkType,
+            query.TargetEntityType,
             cancellationToken).ConfigureAwait(false);
 
         return links

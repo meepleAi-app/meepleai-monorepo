@@ -84,6 +84,7 @@ export const ENTITY_NAV_ICONS: Record<MeepleEntityType, React.ComponentType<Icon
   session: SessionIcon,
   player: PlayerIcon,
   chatSession: ChatIcon,
-  event: GameIcon,   // fallback
-  custom: GameIcon,  // fallback
+  event: GameIcon,    // fallback
+  custom: GameIcon,   // fallback
+  kb_card: DocumentIcon, // KB card uses document icon
 };

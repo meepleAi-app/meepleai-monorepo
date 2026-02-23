@@ -49,7 +49,7 @@ public class GetEntityLinksQueryHandlerTests
         _repoMock
             .Setup(r => r.GetForEntityAsync(
                 MeepleEntityType.Game, _gameId,
-                null, null, It.IsAny<CancellationToken>()))
+                null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([link1, link2]);
 
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId);
@@ -68,7 +68,7 @@ public class GetEntityLinksQueryHandlerTests
         _repoMock
             .Setup(r => r.GetForEntityAsync(
                 MeepleEntityType.Game, _gameId,
-                null, null, It.IsAny<CancellationToken>()))
+                null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([myLink, otherLink]);
 
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId, RequestingUserId: _ownerId);
@@ -89,7 +89,7 @@ public class GetEntityLinksQueryHandlerTests
         _repoMock
             .Setup(r => r.GetForEntityAsync(
                 MeepleEntityType.Game, _gameId,
-                null, null, It.IsAny<CancellationToken>()))
+                null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([link]);
 
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId);
@@ -104,7 +104,7 @@ public class GetEntityLinksQueryHandlerTests
         _repoMock
             .Setup(r => r.GetForEntityAsync(
                 MeepleEntityType.Game, _gameId,
-                EntityLinkScope.User, null, It.IsAny<CancellationToken>()))
+                EntityLinkScope.User, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId, Scope: EntityLinkScope.User);
@@ -112,7 +112,7 @@ public class GetEntityLinksQueryHandlerTests
 
         _repoMock.Verify(r => r.GetForEntityAsync(
             MeepleEntityType.Game, _gameId,
-            EntityLinkScope.User, null, It.IsAny<CancellationToken>()), Times.Once);
+            EntityLinkScope.User, null, null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class GetEntityLinksQueryHandlerTests
         _repoMock
             .Setup(r => r.GetForEntityAsync(
                 MeepleEntityType.Game, _gameId,
-                null, EntityLinkType.ExpansionOf, It.IsAny<CancellationToken>()))
+                null, EntityLinkType.ExpansionOf, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId, LinkType: EntityLinkType.ExpansionOf);
@@ -129,7 +129,24 @@ public class GetEntityLinksQueryHandlerTests
 
         _repoMock.Verify(r => r.GetForEntityAsync(
             MeepleEntityType.Game, _gameId,
-            null, EntityLinkType.ExpansionOf, It.IsAny<CancellationToken>()), Times.Once);
+            null, EntityLinkType.ExpansionOf, null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_PassesTargetEntityTypeFilter_ToRepository()
+    {
+        _repoMock
+            .Setup(r => r.GetForEntityAsync(
+                MeepleEntityType.Game, _gameId,
+                null, null, MeepleEntityType.KbCard, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId, TargetEntityType: MeepleEntityType.KbCard);
+        await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        _repoMock.Verify(r => r.GetForEntityAsync(
+            MeepleEntityType.Game, _gameId,
+            null, null, MeepleEntityType.KbCard, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -139,7 +156,7 @@ public class GetEntityLinksQueryHandlerTests
             .Setup(r => r.GetForEntityAsync(
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<EntityLinkScope?>(), It.IsAny<EntityLinkType?>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<MeepleEntityType?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var query = new GetEntityLinksQuery(MeepleEntityType.Game, _gameId);

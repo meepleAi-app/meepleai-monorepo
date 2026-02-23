@@ -206,29 +206,9 @@ export const OpenRouterStatusDtoSchema = z.object({
 
 export type OpenRouterStatusDto = z.infer<typeof OpenRouterStatusDtoSchema>;
 
-// ─── Free Tier Quota (Issue #5082) ───────────────────────────────────────────
-
-export const FreeModelUsageDtoSchema = z.object({
-  modelId: z.string(),
-  requestsToday: z.number(),
-  dailyLimit: z.number(),
-  percentUsed: z.number(),
-  isExhausted: z.boolean(),
-  nextResetUtc: z.string().nullable(),
-});
-
-export const FreeQuotaDtoSchema = z.object({
-  models: z.array(FreeModelUsageDtoSchema),
-  totalFreeRequestsToday: z.number(),
-  generatedAt: z.string(),
-});
-
-export type FreeModelUsageDto = z.infer<typeof FreeModelUsageDtoSchema>;
-export type FreeQuotaDto = z.infer<typeof FreeQuotaDtoSchema>;
-
 // ─── Usage Timeline (Issue #5078) ────────────────────────────────────────────
 
-export const TimelineBucketDtoSchema = z.object({
+export const TimelineBucketSchema = z.object({
   bucket: z.string(),
   manual: z.number(),
   ragPipeline: z.number(),
@@ -240,54 +220,69 @@ export const TimelineBucketDtoSchema = z.object({
 });
 
 export const UsageTimelineDtoSchema = z.object({
-  buckets: z.array(TimelineBucketDtoSchema),
+  buckets: z.array(TimelineBucketSchema),
   period: z.string(),
   groupedByHour: z.boolean(),
   totalRequests: z.number(),
   totalCostUsd: z.number(),
 });
 
-export type TimelineBucketDto = z.infer<typeof TimelineBucketDtoSchema>;
 export type UsageTimelineDto = z.infer<typeof UsageTimelineDtoSchema>;
 
 // ─── Usage Costs (Issue #5080) ───────────────────────────────────────────────
 
-export const ModelCostDtoSchema = z.object({
+export const UsageModelCostSchema = z.object({
   modelId: z.string(),
   costUsd: z.number(),
   requests: z.number(),
   totalTokens: z.number(),
 });
 
-export const SourceCostDtoSchema = z.object({
+export const UsageSourceCostSchema = z.object({
   source: z.string(),
   costUsd: z.number(),
   requests: z.number(),
 });
 
-export const TierCostDtoSchema = z.object({
+export const UsageTierCostSchema = z.object({
   tier: z.string(),
   costUsd: z.number(),
   requests: z.number(),
 });
 
 export const UsageCostsDtoSchema = z.object({
-  byModel: z.array(ModelCostDtoSchema),
-  bySource: z.array(SourceCostDtoSchema),
-  byTier: z.array(TierCostDtoSchema),
+  byModel: z.array(UsageModelCostSchema),
+  bySource: z.array(UsageSourceCostSchema),
+  byTier: z.array(UsageTierCostSchema),
   totalCostUsd: z.number(),
   totalRequests: z.number(),
   period: z.string(),
 });
 
-export type ModelCostDto = z.infer<typeof ModelCostDtoSchema>;
-export type SourceCostDto = z.infer<typeof SourceCostDtoSchema>;
-export type TierCostDto = z.infer<typeof TierCostDtoSchema>;
 export type UsageCostsDto = z.infer<typeof UsageCostsDtoSchema>;
+
+// ─── Free Quota (Issue #5082) ─────────────────────────────────────────────────
+
+export const FreeModelUsageSchema = z.object({
+  modelId: z.string(),
+  requestsToday: z.number(),
+  dailyLimit: z.number(),
+  percentUsed: z.number(),
+  isExhausted: z.boolean(),
+  nextResetUtc: z.string().nullable(),
+});
+
+export const FreeQuotaDtoSchema = z.object({
+  models: z.array(FreeModelUsageSchema),
+  totalFreeRequestsToday: z.number(),
+  generatedAt: z.string(),
+});
+
+export type FreeQuotaDto = z.infer<typeof FreeQuotaDtoSchema>;
 
 // ─── Recent LLM Requests (Issue #5083) ───────────────────────────────────────
 
-export const LlmRequestSummaryDtoSchema = z.object({
+export const LlmRequestSummarySchema = z.object({
   id: z.string(),
   requestedAt: z.string(),
   modelId: z.string(),
@@ -307,12 +302,11 @@ export const LlmRequestSummaryDtoSchema = z.object({
 });
 
 export const RecentLlmRequestsDtoSchema = z.object({
-  items: z.array(LlmRequestSummaryDtoSchema),
+  items: z.array(LlmRequestSummarySchema),
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),
   totalPages: z.number(),
 });
 
-export type LlmRequestSummaryDto = z.infer<typeof LlmRequestSummaryDtoSchema>;
 export type RecentLlmRequestsDto = z.infer<typeof RecentLlmRequestsDtoSchema>;

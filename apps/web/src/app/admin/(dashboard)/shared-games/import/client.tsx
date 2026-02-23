@@ -149,7 +149,8 @@ export function AdminGameImportWizardClient() {
             </div>
             <h2 className="mb-2 text-2xl font-bold text-destructive">Wizard Error</h2>
             <p className="mb-6 text-muted-foreground">
-              An error occurred in the game import wizard. You can try starting over or contact support if the problem persists.
+              An error occurred in the game import wizard. You can try starting over or contact
+              support if the problem persists.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button onClick={reset} variant="default">
@@ -164,200 +165,201 @@ export function AdminGameImportWizardClient() {
       )}
     >
       <div className="container mx-auto max-w-5xl py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Game Import Wizard</h1>
-          <Button variant="outline" size="sm" onClick={reset}>
-            Reset
-          </Button>
+        {/* Header */}
+        <div className="mb-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Game Import Wizard</h1>
+            <Button variant="outline" size="sm" onClick={reset}>
+              Reset
+            </Button>
+          </div>
+          <p className="text-muted-foreground">
+            Import a game from PDF by uploading, reviewing metadata, matching with BGG, and
+            finalizing.
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          Import a game from PDF by uploading, reviewing metadata, matching with BGG, and finalizing.
-        </p>
-      </div>
 
-      {/* Progress Bar */}
-      <div className="mb-4">
-        <div className="mb-2 flex justify-between text-sm text-muted-foreground">
-          <span>
-            Step {currentStep} of {STEPS.length}
-          </span>
-          <span>{Math.round(progress)}%</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progress}%` }}
-            aria-valuenow={progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            role="progressbar"
-          />
-        </div>
-      </div>
-
-      {/* Wizard Steps with Breadcrumb Navigation */}
-      <WizardSteps
-        steps={wizardSteps}
-        currentStep={currentStep.toString()}
-        onStepClick={handleStepClick}
-        allowSkip={true}
-      />
-
-      {/* Error Display */}
-      {error && (
-        <div className="mb-6 rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
-          <p className="font-medium">Error</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Main Content Card */}
-      <Card className="mb-6 p-6">
+        {/* Progress Bar */}
         <div className="mb-4">
-          <h2 className="text-xl font-semibold">
-            {currentStepConfig?.icon} {currentStepConfig?.label}
-          </h2>
-          <p className="text-sm text-muted-foreground">{currentStepConfig?.description}</p>
-        </div>
-
-        <div className="rounded-md border bg-muted/50 p-8">
-          {/* Step 1: Upload PDF */}
-          {currentStep === 1 && (
-            <Step1UploadPdf
-              onUploadComplete={pdf => {
-                setUploadedPdf(pdf);
-              }}
+          <div className="mb-2 flex justify-between text-sm text-muted-foreground">
+            <span>
+              Step {currentStep} of {STEPS.length}
+            </span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${progress}%` }}
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              role="progressbar"
             />
-          )}
-
-          {/* Step 2: Review Extracted Metadata */}
-          {currentStep === 2 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Review Extracted Metadata</h3>
-              <p className="text-sm text-muted-foreground">
-                Review the metadata automatically extracted from the PDF.
-              </p>
-              {extractedMetadata ? (
-                <div className="rounded-md border bg-background p-4">
-                  <p className="text-sm">
-                    <strong>Title:</strong> {extractedMetadata.title || 'N/A'}
-                  </p>
-                  <p className="text-sm">
-                    <strong>Players:</strong> {extractedMetadata.minPlayers || '?'}-
-                    {extractedMetadata.maxPlayers || '?'}
-                  </p>
-                  <p className="text-sm">
-                    <strong>Play Time:</strong> {extractedMetadata.playTime || 'N/A'} min
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-md border-2 border-dashed p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Metadata review component will be implemented in a separate issue
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: BGG Selection */}
-          {currentStep === 3 && (
-            <Step3BggMatch
-              onComplete={(bggId, data) => {
-                setSelectedBggId(bggId, data);
-              }}
-            />
-          )}
-
-          {/* Step 4: Resolve Conflicts */}
-          {currentStep === 4 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Resolve Conflicts & Finalize</h3>
-              <p className="text-sm text-muted-foreground">
-                Review and resolve any conflicts between extracted metadata and BGG data.
-              </p>
-              {enrichedData ? (
-                <div className="rounded-md border bg-background p-4">
-                  <p className="text-sm">
-                    <strong>Final Title:</strong> {enrichedData.title}
-                  </p>
-                  <p className="text-sm">
-                    <strong>Players:</strong> {enrichedData.minPlayers || '?'}-
-                    {enrichedData.maxPlayers || '?'}
-                  </p>
-                  <p className="text-sm">
-                    <strong>BGG ID:</strong> {enrichedData.bggId || 'N/A'}
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-md border-2 border-dashed p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Conflict resolution component will be implemented in a separate issue
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </div>
-      </Card>
 
-      {/* Status Summary */}
-      <Card className="mb-6 p-4">
-        <h3 className="mb-2 text-sm font-medium">Wizard State</h3>
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <p>
-            <strong>Step:</strong> {currentStep}/4
-          </p>
-          <p>
-            <strong>PDF:</strong> {uploadedPdf ? `✓ ${uploadedPdf.fileName}` : '✗ Not uploaded'}
-          </p>
-          <p>
-            <strong>Metadata:</strong> {extractedMetadata ? '✓ Extracted' : '✗ Not extracted'}
-          </p>
-          <p>
-            <strong>BGG:</strong> {selectedBggId ? `✓ ID ${selectedBggId}` : '✗ Not selected'}
-          </p>
-          <p>
-            <strong>Enriched:</strong> {enrichedData ? '✓ Ready' : '✗ Not ready'}
-          </p>
-        </div>
-      </Card>
+        {/* Wizard Steps with Breadcrumb Navigation */}
+        <WizardSteps
+          steps={wizardSteps}
+          currentStep={currentStep.toString()}
+          onStepClick={handleStepClick}
+          allowSkip={true}
+        />
 
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={goBack} disabled={!canGoBack() || isProcessing}>
-          ← Previous
-        </Button>
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
+            <p className="font-medium">Error</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
 
-        <div className="flex gap-2">
-          {currentStep < 4 ? (
-            <Button onClick={goNext} disabled={!canGoNext() || isProcessing}>
-              {isProcessing ? (
-                <>
-                  <Spinner size="sm" className="mr-2" />
-                  Processing...
-                </>
-              ) : (
-                'Next →'
-              )}
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={!enrichedData || isProcessing}>
-              {isProcessing ? (
-                <>
-                  <Spinner size="sm" className="mr-2" />
-                  Submitting...
-                </>
-              ) : (
-                '✓ Submit & Import'
-              )}
-            </Button>
-          )}
+        {/* Main Content Card */}
+        <Card className="mb-6 p-6">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">
+              {currentStepConfig?.icon} {currentStepConfig?.label}
+            </h2>
+            <p className="text-sm text-muted-foreground">{currentStepConfig?.description}</p>
+          </div>
+
+          <div className="rounded-md border bg-muted/50 p-8">
+            {/* Step 1: Upload PDF */}
+            {currentStep === 1 && (
+              <Step1UploadPdf
+                onUploadComplete={pdf => {
+                  setUploadedPdf(pdf);
+                }}
+              />
+            )}
+
+            {/* Step 2: Review Extracted Metadata */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Review Extracted Metadata</h3>
+                <p className="text-sm text-muted-foreground">
+                  Review the metadata automatically extracted from the PDF.
+                </p>
+                {extractedMetadata ? (
+                  <div className="rounded-md border bg-background p-4">
+                    <p className="text-sm">
+                      <strong>Title:</strong> {extractedMetadata.title || 'N/A'}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Players:</strong> {extractedMetadata.minPlayers || '?'}-
+                      {extractedMetadata.maxPlayers || '?'}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Play Time:</strong> {extractedMetadata.playTime || 'N/A'} min
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border-2 border-dashed p-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Metadata review component will be implemented in a separate issue
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: BGG Selection */}
+            {currentStep === 3 && (
+              <Step3BggMatch
+                onComplete={(bggId, data) => {
+                  setSelectedBggId(bggId, data);
+                }}
+              />
+            )}
+
+            {/* Step 4: Resolve Conflicts */}
+            {currentStep === 4 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Resolve Conflicts & Finalize</h3>
+                <p className="text-sm text-muted-foreground">
+                  Review and resolve any conflicts between extracted metadata and BGG data.
+                </p>
+                {enrichedData ? (
+                  <div className="rounded-md border bg-background p-4">
+                    <p className="text-sm">
+                      <strong>Final Title:</strong> {enrichedData.title}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Players:</strong> {enrichedData.minPlayers || '?'}-
+                      {enrichedData.maxPlayers || '?'}
+                    </p>
+                    <p className="text-sm">
+                      <strong>BGG ID:</strong> {enrichedData.bggId || 'N/A'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border-2 border-dashed p-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Conflict resolution component will be implemented in a separate issue
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Status Summary */}
+        <Card className="mb-6 p-4">
+          <h3 className="mb-2 text-sm font-medium">Wizard State</h3>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <p>
+              <strong>Step:</strong> {currentStep}/4
+            </p>
+            <p>
+              <strong>PDF:</strong> {uploadedPdf ? `✓ ${uploadedPdf.fileName}` : '✗ Not uploaded'}
+            </p>
+            <p>
+              <strong>Metadata:</strong> {extractedMetadata ? '✓ Extracted' : '✗ Not extracted'}
+            </p>
+            <p>
+              <strong>BGG:</strong> {selectedBggId ? `✓ ID ${selectedBggId}` : '✗ Not selected'}
+            </p>
+            <p>
+              <strong>Enriched:</strong> {enrichedData ? '✓ Ready' : '✗ Not ready'}
+            </p>
+          </div>
+        </Card>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between">
+          <Button variant="outline" onClick={goBack} disabled={!canGoBack() || isProcessing}>
+            ← Previous
+          </Button>
+
+          <div className="flex gap-2">
+            {currentStep < 4 ? (
+              <Button onClick={goNext} disabled={!canGoNext() || isProcessing}>
+                {isProcessing ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  'Next →'
+                )}
+              </Button>
+            ) : (
+              <Button onClick={handleSubmit} disabled={!enrichedData || isProcessing}>
+                {isProcessing ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  '✓ Submit & Import'
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </ErrorBoundary>
   );
 }

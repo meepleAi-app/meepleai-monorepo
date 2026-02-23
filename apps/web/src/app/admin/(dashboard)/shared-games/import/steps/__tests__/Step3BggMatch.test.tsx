@@ -312,9 +312,7 @@ describe('Step3BggMatch', () => {
 
       render(<Step3BggMatch />);
 
-      expect(
-        screen.getByText(/no games found.*try a different search term/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/no games found.*try a different search term/i)).toBeInTheDocument();
     });
   });
 
@@ -473,7 +471,9 @@ describe('Step3BggMatch', () => {
 
       // Wait for error alert to appear
       await waitFor(() => {
-        expect(screen.getByText('Please enter a valid BGG ID (positive number)')).toBeInTheDocument();
+        expect(
+          screen.getByText('Please enter a valid BGG ID (positive number)')
+        ).toBeInTheDocument();
       });
     });
   });

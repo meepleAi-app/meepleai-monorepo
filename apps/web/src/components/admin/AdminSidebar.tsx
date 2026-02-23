@@ -1,4 +1,3 @@
- 
 /**
  * AdminSidebar Component - Issue #881
  *
@@ -43,7 +42,12 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/overlays/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 

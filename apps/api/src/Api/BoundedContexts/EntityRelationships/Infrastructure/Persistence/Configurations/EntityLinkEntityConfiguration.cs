@@ -20,65 +20,81 @@ internal sealed class EntityLinkEntityConfiguration : IEntityTypeConfiguration<E
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Id)
+            .HasColumnName("id")
             .IsRequired()
             .ValueGeneratedNever();
 
         builder.Property(x => x.SourceEntityType)
+            .HasColumnName("source_entity_type")
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(50);
 
         builder.Property(x => x.SourceEntityId)
+            .HasColumnName("source_entity_id")
             .IsRequired();
 
         builder.Property(x => x.TargetEntityType)
+            .HasColumnName("target_entity_type")
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(50);
 
         builder.Property(x => x.TargetEntityId)
+            .HasColumnName("target_entity_id")
             .IsRequired();
 
         builder.Property(x => x.LinkType)
+            .HasColumnName("link_type")
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(50);
 
         builder.Property(x => x.IsBidirectional)
+            .HasColumnName("is_bidirectional")
             .IsRequired()
             .HasDefaultValue(false);
 
         builder.Property(x => x.Scope)
+            .HasColumnName("scope")
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(20);
 
         builder.Property(x => x.OwnerUserId)
+            .HasColumnName("owner_user_id")
             .IsRequired();
 
         builder.Property(x => x.Metadata)
+            .HasColumnName("metadata")
             .IsRequired(false)
             .HasColumnType("jsonb");
 
         builder.Property(x => x.IsAdminApproved)
+            .HasColumnName("is_admin_approved")
             .IsRequired()
             .HasDefaultValue(false);
 
         builder.Property(x => x.IsBggImported)
+            .HasColumnName("is_bgg_imported")
             .IsRequired()
             .HasDefaultValue(false);
 
         builder.Property(x => x.IsDeleted)
+            .HasColumnName("is_deleted")
             .IsRequired()
             .HasDefaultValue(false);
 
         builder.Property(x => x.DeletedAt)
+            .HasColumnName("deleted_at")
             .IsRequired(false);
 
         builder.Property(x => x.CreatedAt)
+            .HasColumnName("created_at")
             .IsRequired();
 
         builder.Property(x => x.UpdatedAt)
+            .HasColumnName("updated_at")
             .IsRequired();
 
         // BR-08: Unique per (sourceEntityType, sourceEntityId, targetEntityType, targetEntityId, linkType)

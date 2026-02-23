@@ -46,8 +46,8 @@ describe('getSidebarItems', () => {
 // ─── isSectionActive ─────────────────────────────────────────────────────────
 
 describe('isSectionActive', () => {
-  const kb = DASHBOARD_SECTIONS.find((s) => s.id === 'knowledge-base')!;
-  const overview = DASHBOARD_SECTIONS.find((s) => s.id === 'overview')!;
+  const kb = DASHBOARD_SECTIONS.find(s => s.id === 'knowledge-base')!;
+  const overview = DASHBOARD_SECTIONS.find(s => s.id === 'overview')!;
 
   describe('baseRoute matching', () => {
     it('matches exact baseRoute', () => {
@@ -116,8 +116,8 @@ describe('getActiveSection', () => {
 
 describe('isSidebarItemActive', () => {
   const kbItems = getSidebarItems('knowledge-base');
-  const documentsItem = kbItems.find((i) => i.href === '/admin/knowledge-base/documents');
-  const overviewItem = kbItems.find((i) => i.href === '/admin/knowledge-base');
+  const documentsItem = kbItems.find(i => i.href === '/admin/knowledge-base/documents');
+  const overviewItem = kbItems.find(i => i.href === '/admin/knowledge-base');
 
   it('documents item exists in knowledge-base sidebar', () => {
     expect(documentsItem).toBeDefined();
@@ -153,13 +153,13 @@ describe('DASHBOARD_SECTIONS structure', () => {
   });
 
   it('knowledge-base section has no additionalRoutes', () => {
-    const kb = DASHBOARD_SECTIONS.find((s) => s.id === 'knowledge-base')!;
+    const kb = DASHBOARD_SECTIONS.find(s => s.id === 'knowledge-base')!;
     expect(kb.additionalRoutes).toBeUndefined();
   });
 
   it('knowledge-base sidebar contains Documents item pointing to /admin/knowledge-base/documents', () => {
-    const kb = DASHBOARD_SECTIONS.find((s) => s.id === 'knowledge-base')!;
-    const documentsItem = kb.sidebarItems.find((i) => i.href === '/admin/knowledge-base/documents');
+    const kb = DASHBOARD_SECTIONS.find(s => s.id === 'knowledge-base')!;
+    const documentsItem = kb.sidebarItems.find(i => i.href === '/admin/knowledge-base/documents');
     expect(documentsItem).toBeDefined();
     expect(documentsItem?.label).toBe('Documents');
   });

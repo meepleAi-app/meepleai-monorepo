@@ -52,7 +52,7 @@ export default function AgentDefinitionsPage() {
       {isLoading ? (
         <div className="text-center py-12">Loading...</div>
       ) : (
-        <BuilderTable data={agents} onDelete={(id) => deleteMutation.mutate(id)} />
+        <BuilderTable data={agents} onDelete={id => deleteMutation.mutate(id)} />
       )}
     </div>
   );

@@ -637,68 +637,84 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<bool>("IsAdminApproved")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_admin_approved");
 
                     b.Property<bool>("IsBggImported")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_bgg_imported");
 
                     b.Property<bool>("IsBidirectional")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_bidirectional");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("LinkType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("link_type");
 
                     b.Property<string>("Metadata")
-                        .HasColumnType("jsonb");
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metadata");
 
                     b.Property<Guid>("OwnerUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
 
                     b.Property<string>("Scope")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
 
                     b.Property<Guid>("SourceEntityId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_entity_id");
 
                     b.Property<string>("SourceEntityType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_entity_type");
 
                     b.Property<Guid>("TargetEntityId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_entity_id");
 
                     b.Property<string>("TargetEntityType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("target_entity_type");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
@@ -1052,7 +1068,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("admin_reports");
+                    b.ToTable("admin_reports", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Administration.AlertConfigurationEntity", b =>
@@ -1938,7 +1954,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BggImportQueue");
+                    b.ToTable("BggImportQueue", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.CacheStatEntity", b =>
@@ -2161,7 +2177,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ChatThreads");
+                    b.ToTable("ChatThreads", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChunkedUploadSessionEntity", b =>
@@ -5498,7 +5514,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("ReportId");
 
-                    b.ToTable("admin_report_executions");
+                    b.ToTable("admin_report_executions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.RuleAtomEntity", b =>
@@ -6199,7 +6215,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("finalized_at");
 
-                    b.Property<Guid?>("GameId")
+                    b.Property<Guid>("GameId")
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");
 
@@ -9458,7 +9474,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("TokenTierId");
 
-                            b1.ToTable("token_tiers");
+                            b1.ToTable("token_tiers", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TokenTierId");
@@ -9487,7 +9503,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("TokenTierId");
 
-                            b1.ToTable("token_tiers");
+                            b1.ToTable("token_tiers", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("TokenTierId");
@@ -9520,7 +9536,7 @@ namespace Api.Infrastructure.Migrations
 
                             b1.HasKey("LedgerEntryId");
 
-                            b1.ToTable("ledger_entries");
+                            b1.ToTable("ledger_entries", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("LedgerEntryId");
@@ -10573,7 +10589,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasOne("Api.Infrastructure.Entities.GameEntity", null)
                         .WithMany()
                         .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
                         .WithMany()

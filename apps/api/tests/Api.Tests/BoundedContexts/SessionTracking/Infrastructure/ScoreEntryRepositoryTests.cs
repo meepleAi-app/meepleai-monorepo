@@ -44,10 +44,24 @@ public class ScoreEntryRepositoryTests : SharedDatabaseTestBase<ScoreEntryReposi
         return userId;
     }
 
+    private async Task<Guid> CreateTestGameAsync()
+    {
+        var gameId = Guid.NewGuid();
+        DbContext.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        {
+            Id = gameId,
+            Name = $"Test Game {gameId:N}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return gameId;
+    }
+
     private async Task<(Session Session, Participant Participant)> CreateTestSessionAsync()
     {
         var userId = await CreateTestUserAsync($"session-{Guid.NewGuid():N}@example.com");
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(userId, gameId, SessionType.Generic);
         var participantInfo = ParticipantInfo.Create("Test Player", false, 2);
         session.AddParticipant(participantInfo);
 

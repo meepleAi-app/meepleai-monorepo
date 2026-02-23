@@ -57,7 +57,7 @@ export function GamingHubClient() {
 
   useEffect(() => {
     fetchStats();
-    fetchRecentSessions(1);           // used as "last session" fallback in hero
+    fetchRecentSessions(1); // used as "last session" fallback in hero
     fetchGames();
   }, [fetchStats, fetchRecentSessions, fetchGames]);
 
@@ -65,7 +65,6 @@ export function GamingHubClient() {
 
   return (
     <div className="py-6 space-y-8 max-w-4xl">
-
       {/* ── 1. Greeting + QuickStats ────────────────────────────── */}
       <motion.section {...fadeUp(0)}>
         <p className="font-quicksand text-2xl font-bold text-foreground mb-4">
@@ -93,7 +92,6 @@ export function GamingHubClient() {
       <motion.section {...fadeUp(4)}>
         <RecentChatsDashboardSection />
       </motion.section>
-
     </div>
   );
 }

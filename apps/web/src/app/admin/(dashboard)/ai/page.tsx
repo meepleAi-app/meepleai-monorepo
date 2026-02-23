@@ -17,28 +17,28 @@ interface AdminAiPageProps {
 }
 
 const TABS = [
-  { id: 'agents',      label: 'Agents',      href: '/admin/ai?tab=agents' },
-  { id: 'typologies',  label: 'Typologies',  href: '/admin/ai?tab=typologies' },
+  { id: 'agents', label: 'Agents', href: '/admin/ai?tab=agents' },
+  { id: 'typologies', label: 'Typologies', href: '/admin/ai?tab=typologies' },
   { id: 'definitions', label: 'Definitions', href: '/admin/ai?tab=definitions' },
-  { id: 'lab',         label: 'AI Lab',      href: '/admin/ai?tab=lab' },
-  { id: 'prompts',     label: 'Prompts',     href: '/admin/ai?tab=prompts' },
-  { id: 'models',      label: 'Models',      href: '/admin/ai?tab=models' },
-  { id: 'requests',    label: 'Requests',    href: '/admin/ai?tab=requests' },
-  { id: 'rag',         label: 'RAG',         href: '/admin/ai?tab=rag' },
+  { id: 'lab', label: 'AI Lab', href: '/admin/ai?tab=lab' },
+  { id: 'prompts', label: 'Prompts', href: '/admin/ai?tab=prompts' },
+  { id: 'models', label: 'Models', href: '/admin/ai?tab=models' },
+  { id: 'requests', label: 'Requests', href: '/admin/ai?tab=requests' },
+  { id: 'rag', label: 'RAG', href: '/admin/ai?tab=rag' },
 ] as const;
 
 /** Old sub-page links available while full migration is pending */
 const SUB_PAGES = [
-  { label: 'Agent Catalog',       href: '/admin/agents' },
-  { label: 'Agent Definitions',   href: '/admin/agents/definitions' },
-  { label: 'Agent Typologies',    href: '/admin/agent-typologies' },
-  { label: 'AI Lab',              href: '/admin/ai-lab' },
-  { label: 'Prompts',             href: '/admin/prompts' },
-  { label: 'AI Models',           href: '/admin/ai-models' },
-  { label: 'AI Requests',         href: '/admin/ai-requests' },
-  { label: 'RAG',                 href: '/admin/rag' },
-  { label: 'RAG Executions',      href: '/admin/rag-executions' },
-  { label: 'Strategies',          href: '/admin/strategies' },
+  { label: 'Agent Catalog', href: '/admin/agents' },
+  { label: 'Agent Definitions', href: '/admin/agents/definitions' },
+  { label: 'Agent Typologies', href: '/admin/agent-typologies' },
+  { label: 'AI Lab', href: '/admin/ai-lab' },
+  { label: 'Prompts', href: '/admin/prompts' },
+  { label: 'AI Models', href: '/admin/ai-models' },
+  { label: 'AI Requests', href: '/admin/ai-requests' },
+  { label: 'RAG', href: '/admin/rag' },
+  { label: 'RAG Executions', href: '/admin/rag-executions' },
+  { label: 'Strategies', href: '/admin/strategies' },
 ];
 
 export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
@@ -59,7 +59,7 @@ export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
 
       {/* Tab bar */}
       <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map((t) => (
+        {TABS.map(t => (
           <Link
             key={t.id}
             href={t.href}
@@ -86,7 +86,7 @@ export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
           Access via individual pages below until migration is complete:
         </p>
         <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {SUB_PAGES.map((p) => (
+          {SUB_PAGES.map(p => (
             <Link
               key={p.href}
               href={p.href}

@@ -173,6 +173,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<LlmProviderFactory>();
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
+        // ISSUE-5086: IServiceScopeFactory is auto-injected by the DI container (built-in singleton)
+        // enabling fire-and-forget circuit breaker notifications without coupling to request scope
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
@@ -202,6 +204,12 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Issue #5075: RPM/TPM rate limit tracker using Redis sliding window (Singleton - stateless HTTP-independent)
         services.AddSingleton<IOpenRouterRateLimitTracker, OpenRouterRateLimitTracker>();
+
+        // ISSUE-5084: Background service that polls OpenRouter RPM utilization and alerts admins
+        services.AddHostedService<OpenRouterRpmAlertBackgroundService>();
+
+        // ISSUE-5085: Background service that monitors daily OpenRouter budget and alerts admins at thresholds
+        services.AddHostedService<OpenRouterBudgetAlertBackgroundService>();
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)
@@ -372,6 +380,20 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithIdentity("llm-request-log-cleanup-trigger", "knowledge-base")
                 .WithCronSchedule("0 0 4 * * ?")
                 .WithDescription("Runs daily at 4 AM UTC to delete LLM request logs older than 30 days"));
+        });
+
+        // ISSUE-5085: Daily OpenRouter usage digest sent to all admins at 08:00 UTC
+        services.AddQuartz(q =>
+        {
+            q.AddJob<OpenRouterDailySummaryJob>(opts => opts
+                .WithIdentity("openrouter-daily-summary-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("openrouter-daily-summary-job", "knowledge-base")
+                .WithIdentity("openrouter-daily-summary-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 8 * * ?")
+                .WithDescription("Runs daily at 8 AM UTC to send yesterday's OpenRouter usage digest to all admins"));
         });
     }
 }

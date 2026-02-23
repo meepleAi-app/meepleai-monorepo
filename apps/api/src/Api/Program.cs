@@ -543,6 +543,7 @@ v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue 
 v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapEntityLinkUserEndpoints();    // Entity link user endpoints (Issue #5137)
+v1Api.MapEntityLinkAdminEndpoints();   // Entity link admin endpoints (Issue #5138)
 v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
 v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)

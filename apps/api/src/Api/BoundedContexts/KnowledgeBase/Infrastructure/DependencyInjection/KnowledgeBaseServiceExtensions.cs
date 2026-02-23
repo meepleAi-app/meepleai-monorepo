@@ -210,6 +210,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-5085: Background service that monitors daily OpenRouter budget and alerts admins at thresholds
         services.AddHostedService<OpenRouterBudgetAlertBackgroundService>();
+
+        // Issue #5087: Free model quota tracker — Redis-backed RPD exhaustion state (Singleton - stateless)
+        services.AddSingleton<IFreeModelQuotaTracker, FreeModelQuotaTracker>();
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)

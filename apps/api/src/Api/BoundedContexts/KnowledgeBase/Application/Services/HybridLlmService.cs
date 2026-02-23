@@ -66,6 +66,7 @@ internal class HybridLlmService : ILlmService
     private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
     private readonly IServiceScopeFactory? _scopeFactory; // Issue #5086: for fire-and-forget circuit breaker notifications
+    private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker; // Issue #5087: RPD exhaustion state
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -97,7 +98,8 @@ internal class HybridLlmService : ILlmService
         IOpenRouterFileLogger? openRouterFileLogger = null,
         IOpenRouterUsageService? openRouterUsageService = null,
         IOpenRouterRateLimitTracker? rateLimitTracker = null,
-        IServiceScopeFactory? scopeFactory = null)
+        IServiceScopeFactory? scopeFactory = null,
+        IFreeModelQuotaTracker? freeModelQuotaTracker = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -112,6 +114,7 @@ internal class HybridLlmService : ILlmService
         _openRouterUsageService = openRouterUsageService; // Issue #5074: Optional - Redis usage cache
         _rateLimitTracker = rateLimitTracker; // Issue #5075: Optional - RPM/TPM sliding window
         _scopeFactory = scopeFactory; // Issue #5086: Optional - for circuit breaker notifications
+        _freeModelQuotaTracker = freeModelQuotaTracker; // Issue #5087: Optional - RPD exhaustion state
 
         if (_clients.Count == 0)
         {
@@ -171,10 +174,41 @@ internal class HybridLlmService : ILlmService
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
-        // ISSUE-962: Route with circuit breaker awareness and support fallback retries
-        // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
-        var decision = _routingStrategy.SelectProvider(user, strategy);
-        var client = GetClientWithCircuitBreaker(decision.ProviderName);
+        // Issue #5089: AutomatedTest requests must never consume free OpenRouter quota
+        // Issue #5089: If OpenRouter selected but RPD quota exhausted, route directly to Ollama
+        LlmRoutingDecision decision;
+        ILlmClient? client;
+
+        if (source == RequestSource.AutomatedTest)
+        {
+            var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
+            decision = LlmRoutingDecision.Ollama(ollamaModelId, "AutomatedTest source: always routed to Ollama (free quota bypass)");
+            client = GetClientWithCircuitBreaker("Ollama");
+        }
+        else
+        {
+            // ISSUE-962: Route with circuit breaker awareness and support fallback retries
+            // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
+            decision = _routingStrategy.SelectProvider(user, strategy);
+
+            // Issue #5089: Proactively skip OpenRouter when RPD quota is known-exhausted
+            if (string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal)
+                && _freeModelQuotaTracker != null)
+            {
+                var isExhausted = await _freeModelQuotaTracker
+                    .IsRpdExhaustedAsync(decision.ModelId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (isExhausted)
+                {
+                    _logger.LogWarning(
+                        "Free model {Model} RPD quota exhausted — proactively routing to Ollama", decision.ModelId);
+                    var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
+                    decision = LlmRoutingDecision.Ollama(ollamaModelId, $"RPD quota exhausted for {decision.ModelId}");
+                }
+            }
+
+            client = GetClientWithCircuitBreaker(decision.ProviderName);
+        }
 
         if (client == null)
         {
@@ -255,6 +289,21 @@ internal class HybridLlmService : ILlmService
                 }
 
                 RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+
+                // Issue #5087/#5088: Record rate limit events from OpenRouter for future routing avoidance
+                if (string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal)
+                    && _freeModelQuotaTracker != null
+                    && result.Metadata.TryGetValue("rate_limit_type", out var rlTypeStr)
+                    && Enum.TryParse<RateLimitErrorType>(rlTypeStr, ignoreCase: true, out var rlErrorType))
+                {
+                    result.Metadata.TryGetValue("rate_limit_reset_ms", out var resetMsStr);
+                    long? resetMs = long.TryParse(resetMsStr, NumberStyles.None, CultureInfo.InvariantCulture, out var resetMsVal)
+                        ? resetMsVal : null;
+                    result.Metadata.TryGetValue("rate_limit_model", out var rlModel);
+                    var modelForTracking = string.IsNullOrEmpty(rlModel) ? decision.ModelId : rlModel;
+                    _ = _freeModelQuotaTracker.RecordRateLimitErrorAsync(modelForTracking, rlErrorType, resetMs, cancellationToken);
+                }
+
                 await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }

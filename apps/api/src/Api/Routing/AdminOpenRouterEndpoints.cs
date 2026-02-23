@@ -29,6 +29,21 @@ Returns a real-time snapshot aggregated from three sources:
 
 Suitable for admin usage dashboard KPI cards.
 ");
+
+        // GET /api/v1/admin/openrouter/free-quota
+        // Issue #5087: Free model quota tracking — RPM vs RPD distinction.
+        group.MapGet("/free-quota", GetFreeQuota)
+            .WithName("GetOpenRouterFreeQuota")
+            .WithSummary("Get today's free-tier model usage vs daily limits (RPD tracking)")
+            .WithDescription(@"
+Returns per-model RPD (requests-per-day) usage for free OpenRouter models.
+Sources:
+- Request counts from PostgreSQL LlmRequestLog (IsFreeModel = true)
+- Last rate-limit error type from Redis (RPM or RPD)
+- RPD reset timestamp from Redis (set when daily quota is exhausted)
+
+Daily limit is 1000 RPD for accounts with $10+ credits.
+");
     }
 
     private static async Task<IResult> GetStatus(
@@ -37,5 +52,13 @@ Suitable for admin usage dashboard KPI cards.
     {
         var status = await mediator.Send(new GetOpenRouterStatusQuery(), ct).ConfigureAwait(false);
         return Results.Ok(status);
+    }
+
+    private static async Task<IResult> GetFreeQuota(
+        [FromServices] IMediator mediator,
+        CancellationToken ct)
+    {
+        var quota = await mediator.Send(new GetUsageFreeQuotaQuery(), ct).ConfigureAwait(false);
+        return Results.Ok(quota);
     }
 }

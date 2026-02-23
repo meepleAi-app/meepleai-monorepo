@@ -37,6 +37,16 @@ public interface IEntityLinkRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the total count of links where the entity appears as source
+    /// OR as target of a bidirectional link.
+    /// Optimised: COUNT(*) only, no data loading (Issue #5136).
+    /// </summary>
+    Task<int> GetCountForEntityAsync(
+        MeepleEntityType entityType,
+        Guid entityId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all links where the given entity appears as source,
     /// OR as target in a bidirectional link (IsBidirectional=true).
     /// Supports optional filtering by Scope and LinkType (Issue #5135).

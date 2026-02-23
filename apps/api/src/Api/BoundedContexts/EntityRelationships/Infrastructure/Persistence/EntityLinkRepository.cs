@@ -80,6 +80,19 @@ internal sealed class EntityLinkRepository : IEntityLinkRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<int> GetCountForEntityAsync(
+        MeepleEntityType entityType,
+        Guid entityId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _db.EntityLinks
+            .CountAsync(x =>
+                (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
+                (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<EntityLink>> GetForEntityAsync(
         MeepleEntityType entityType,
         Guid entityId,

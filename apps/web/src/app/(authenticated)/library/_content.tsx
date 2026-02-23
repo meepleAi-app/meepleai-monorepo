@@ -5,11 +5,15 @@
  * Issue #2464, #2613, #2618 — Library management
  * Issue #5042 — Tab-based routing
  * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
+ * Issue #5168 — AddGameDrawer (right-side Sheet for adding games)
  *
  * Tab routing:
  *   (default)           → Games tab   → GamesPageClient    (personal private games)
  *   ?tab=collection     → Collection  → CollectionPageClient (shared catalog games)
  *   ?tab=wishlist       → Wishlist    → WishlistPageClient
+ *
+ * Action routing:
+ *   ?action=add         → AddGameDrawer opens (wizard: manual or from catalog)
  *
  * Note: Uses dynamicImport (renamed from 'dynamic') to avoid Turbopack
  * naming collision with the server→client boundary stub identifier.
@@ -20,6 +24,7 @@ import dynamicImport from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { AddGameDrawerController } from './AddGameDrawer';
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 
@@ -57,13 +62,25 @@ const WishlistPageClient = dynamicImport(() => import('./wishlist/page'), {
   loading: () => <LibraryLoadingSkeleton />,
 });
 
-// ── Tab switcher (reads ?tab= search param) ───────────────────────────────────
+// ── Tab switcher + drawer controller ──────────────────────────────────────────
 
 export function LibraryContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
 
-  if (tab === 'collection') return <CollectionPageClient />;
-  if (tab === 'wishlist') return <WishlistPageClient />;
-  return <GamesPageClient />;
+  return (
+    <>
+      {/* Tab content */}
+      {tab === 'collection' ? (
+        <CollectionPageClient />
+      ) : tab === 'wishlist' ? (
+        <WishlistPageClient />
+      ) : (
+        <GamesPageClient />
+      )}
+
+      {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}
+      <AddGameDrawerController />
+    </>
+  );
 }

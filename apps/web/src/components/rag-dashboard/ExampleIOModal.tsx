@@ -14,7 +14,7 @@
 
 import React, { useState } from 'react';
 
-import { X, Play, Loader2, AlertCircle } from 'lucide-react';
+import { X, Play, Loader2, AlertCircle, Square } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 
+import { useLiveTestStream } from './use-live-test-stream';
 import { STRATEGIES } from './rag-data';
 
 import type { RagStrategy, UserTier } from './types';
@@ -220,15 +221,22 @@ const STRATEGY_EXAMPLES: Record<RagStrategy, StrategyExample[]> = {
 // =============================================================================
 
 export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }: ExampleIOModalProps) {
-  const [isLiveTesting, setIsLiveTesting] = useState(false);
   const [activeTab, setActiveTab] = useState('examples');
+  const [liveQuery, setLiveQuery] = useState('');
+  const [liveGameContext, setLiveGameContext] = useState('Catan');
+  const [liveTestState, liveTestControls] = useLiveTestStream();
 
   const strategyData = STRATEGIES[strategy];
   const examples = STRATEGY_EXAMPLES[strategy] || [];
   const isAdmin = userTier === 'Admin' || userTier === 'Premium';
 
+  const handleClose = () => {
+    liveTestControls.cancelTest();
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={open => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-4">
@@ -242,7 +250,7 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
               </p>
             </div>
 
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -360,14 +368,13 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
           {/* Live Test Tab (Admin Only) */}
           {isAdmin && (
             <TabsContent value="live" className="space-y-4 mt-6">
-              <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-4">
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Admin Feature</h4>
+                    <h4 className="font-semibold text-sm mb-1">Admin Live Testing</h4>
                     <p className="text-xs text-muted-foreground">
-                      Il test live chiama il backend RAG reale e mostra l'esecuzione in tempo reale.
-                      Questa funzionalità sarà disponibile dopo l'implementazione dell'Epic #3434.
+                      Calls the real RAG backend and streams results in real-time.
                     </p>
                   </div>
                 </div>
@@ -378,7 +385,9 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
                   <label className="text-sm font-medium mb-2 block">Test Query</label>
                   <Input
                     placeholder="Es: Quanti giocatori supporta?"
-                    disabled={isLiveTesting}
+                    value={liveQuery}
+                    onChange={e => setLiveQuery(e.target.value)}
+                    disabled={liveTestState.isStreaming}
                   />
                 </div>
 
@@ -386,7 +395,9 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
                   <label className="text-sm font-medium mb-2 block">Game Context</label>
                   <select
                     className="w-full p-2 rounded-md border border-border bg-background"
-                    disabled={isLiveTesting}
+                    value={liveGameContext}
+                    onChange={e => setLiveGameContext(e.target.value)}
+                    disabled={liveTestState.isStreaming}
                   >
                     <option>Catan</option>
                     <option>Ticket to Ride</option>
@@ -394,51 +405,112 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
                   </select>
                 </div>
 
-                <Button
-                  className="w-full"
-                  disabled={isLiveTesting}
-                  onClick={() => {
-                    setIsLiveTesting(true);
-                    // TODO: Implement SSE streaming
-                    setTimeout(() => setIsLiveTesting(false), 3000);
-                  }}
-                >
-                  {isLiveTesting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Testing in Progress...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Run Live Test
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    disabled={liveTestState.isStreaming || !liveQuery.trim()}
+                    onClick={() => {
+                      liveTestControls.reset();
+                      liveTestControls.startTest(liveQuery, liveGameContext);
+                    }}
+                  >
+                    {liveTestState.isStreaming ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4 mr-2" />
+                        Run Live Test
+                      </>
+                    )}
+                  </Button>
 
-                {/* Live Progress (Future Implementation) */}
-                {isLiveTesting && (
-                  <div className="space-y-2 p-4 rounded-lg bg-muted/30 border border-border">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      <span>L1: Routing...</span>
-                      <span className="ml-auto text-muted-foreground">45ms</span>
+                  {liveTestState.isStreaming && (
+                    <Button variant="outline" size="icon" onClick={liveTestControls.cancelTest}>
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  {(liveTestState.isComplete || liveTestState.error) && (
+                    <Button variant="outline" onClick={liveTestControls.reset}>
+                      Reset
+                    </Button>
+                  )}
+                </div>
+
+                {/* Status message */}
+                {liveTestState.statusMessage && liveTestState.isStreaming && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 rounded-lg bg-muted/30">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary flex-shrink-0" />
+                    <span>{liveTestState.statusMessage}</span>
+                  </div>
+                )}
+
+                {/* Error state */}
+                {liveTestState.error && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+                    {liveTestState.error}
+                  </div>
+                )}
+
+                {/* Citations */}
+                {liveTestState.citations.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Sources ({liveTestState.citations.length})
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="h-4 w-4" />
-                      <span>L2: Cache check...</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="h-4 w-4" />
-                      <span>L3: Retrieval...</span>
+                    <div className="space-y-1">
+                      {liveTestState.citations.map((c, i) => (
+                        <div key={i} className="text-xs text-muted-foreground flex items-start gap-1">
+                          <span className="flex-shrink-0">•</span>
+                          <span>
+                            {c.page != null ? `Page ${c.page}: ` : ''}
+                            {c.text.length > 100 ? `${c.text.slice(0, 100)}…` : c.text}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {/* Placeholder for future results */}
-                <div className="text-center text-sm text-muted-foreground">
-                  <p>⚙️ Live testing API will be available after Epic #3434 backend implementation</p>
-                </div>
+                {/* Streaming answer */}
+                {liveTestState.currentAnswer && (
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Answer
+                    </div>
+                    <div className="p-3 rounded-md bg-primary/5 border border-primary/20 text-sm leading-relaxed">
+                      {liveTestState.currentAnswer}
+                      {liveTestState.isStreaming && (
+                        <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 animate-pulse" />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Completion metrics */}
+                {liveTestState.isComplete && !liveTestState.error && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {liveTestState.confidence != null && (
+                      <div className="text-center p-2 rounded bg-muted/30">
+                        <div className="text-xs text-muted-foreground">Confidence</div>
+                        <div className="text-sm font-bold text-blue-600">
+                          {(liveTestState.confidence * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    )}
+                    {liveTestState.totalTokens != null && (
+                      <div className="text-center p-2 rounded bg-muted/30">
+                        <div className="text-xs text-muted-foreground">Tokens</div>
+                        <div className="text-sm font-bold text-purple-600">
+                          {liveTestState.totalTokens.toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </TabsContent>
           )}

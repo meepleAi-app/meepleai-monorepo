@@ -39,7 +39,22 @@ interface UserWizardState {
   pdfFileName: string | null;
 }
 
-export function UserWizardClient() {
+interface UserWizardClientProps {
+  /**
+   * Called when the wizard completes successfully (any completion path).
+   * When provided the wizard does NOT push to /library/private.
+   * Used by AddGameDrawer to close the sheet after completion.
+   */
+  onComplete?: () => void;
+  /**
+   * Called when the user cancels (Cancel button or back-to-start action).
+   * When provided the internal header cancel button is hidden (drawer owns that).
+   * Used by AddGameDrawer to go back to Step 0 (choice).
+   */
+  onCancel?: () => void;
+}
+
+export function UserWizardClient({ onComplete, onCancel }: UserWizardClientProps = {}) {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -68,8 +83,8 @@ export function UserWizardClient() {
   // Step 1: Skip PDF (go directly to complete)
   const handleSkipPdf = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto alla tua libreria!`);
-    router.push('/library/private');
-  }, [router, state.gameName]);
+    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+  }, [onComplete, router, state.gameName]);
 
   // Step 2: PDF uploaded — show processing status (user can continue to agent any time)
   const handlePdfUploaded = useCallback((pdfId: string, fileName: string) => {
@@ -86,20 +101,20 @@ export function UserWizardClient() {
   // Step 2: Skip PDF from upload step
   const _handleSkipPdfStep = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto senza PDF!`);
-    router.push('/library/private');
-  }, [router, state.gameName]);
+    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+  }, [onComplete, router, state.gameName]);
 
   // Step 3: Agent configured
   const handleAgentConfigured = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto con agente RAG!`);
-    router.push('/library/private');
-  }, [router, state.gameName]);
+    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+  }, [onComplete, router, state.gameName]);
 
   // Step 3: Skip agent
   const handleSkipAgent = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto con PDF!`);
-    router.push('/library/private');
-  }, [router, state.gameName]);
+    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+  }, [onComplete, router, state.gameName]);
 
   // Back navigation
   const goBack = useCallback(() => {
@@ -113,25 +128,27 @@ export function UserWizardClient() {
   const currentStepIndex = STEPS.findIndex(s => s.id === state.currentStep);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              {t('privateGames.addToLibrary')}
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              {t('privateGames.addToLibrarySubtitle')}
-            </p>
+    <div className={onCancel ? 'px-4 py-4' : 'min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'}>
+      <div className={onCancel ? '' : 'max-w-4xl mx-auto px-4 py-8'}>
+        {/* Header — hidden when embedded in drawer (drawer owns header) */}
+        {!onCancel && (
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                {t('privateGames.addToLibrary')}
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400">
+                {t('privateGames.addToLibrarySubtitle')}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/library/private')}
+            >
+              {t('privateGames.cancelWizard')}
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => router.push('/library/private')}
-          >
-            {t('privateGames.cancelWizard')}
-          </Button>
-        </div>
+        )}
 
         {/* Step Indicator */}
         <div className="mb-8">
@@ -191,7 +208,7 @@ export function UserWizardClient() {
               allowSkipPdf={true}
               onComplete={handleGameCreated}
               onSkipPdf={handleSkipPdf}
-              onBack={() => router.push('/library/private')}
+              onBack={onCancel ?? (() => router.push('/library/private'))}
             />
           )}
 

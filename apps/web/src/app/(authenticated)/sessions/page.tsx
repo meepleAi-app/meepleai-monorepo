@@ -11,11 +11,13 @@
 
 'use client';
 
+import { Suspense } from 'react';
+
 import { useSearchParams } from 'next/navigation';
 
 import { Clock, History } from 'lucide-react';
 
-export default function SessionsPage() {
+function SessionsContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') ?? 'active';
 
@@ -46,5 +48,13 @@ export default function SessionsPage() {
         <p className="mt-2 text-xs">Contenuto in migrazione — issue #5053</p>
       </div>
     </div>
+  );
+}
+
+export default function SessionsPage() {
+  return (
+    <Suspense>
+      <SessionsContent />
+    </Suspense>
   );
 }

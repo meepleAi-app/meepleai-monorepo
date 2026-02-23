@@ -70,7 +70,6 @@ internal static class EntityLinkUserEndpoints
         .WithOpenApi();
     }
 
-    // GET /library/entity-links/count?entityType=Game&entityId={}
     private static void MapGetEntityLinkCountEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/library/entity-links/count", async (

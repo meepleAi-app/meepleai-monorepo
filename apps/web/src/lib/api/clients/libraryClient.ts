@@ -24,6 +24,12 @@ import {
   type GetEntityLinksParams,
 } from '../schemas/entity-link.schemas';
 import {
+  ToolkitDashboardDtoSchema,
+  type ToolkitDashboardDto,
+  type OverrideToolkitRequest,
+  type UpdateWidgetRequest,
+} from '../schemas/toolkit.schemas';
+import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
@@ -136,6 +142,14 @@ export interface LibraryClient {
   getEntityLinkCount(entityType: string, entityId: string): Promise<number>;
   createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto>;
   deleteEntityLink(linkId: string): Promise<void>;
+  // Toolkit Dashboard (Issue #5147 — Epic B4)
+  getActiveToolkit(gameId: string): Promise<ToolkitDashboardDto | null>;
+  overrideToolkit(gameId: string, request?: OverrideToolkitRequest): Promise<ToolkitDashboardDto>;
+  updateToolkitWidget(
+    gameId: string,
+    widgetType: string,
+    request: UpdateWidgetRequest
+  ): Promise<ToolkitDashboardDto>;
 }
 
 /**
@@ -777,6 +791,55 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async deleteEntityLink(linkId: string): Promise<void> {
       await httpClient.delete(`/api/v1/library/entity-links/${linkId}`);
+    },
+
+    // ========== Toolkit Dashboard (Issue #5147 — Epic B4) ==========
+
+    /**
+     * Get the active toolkit for a game (user override or shared default).
+     * Returns null when no toolkit exists yet (204 from API).
+     * GET /api/v1/library/games/{gameId}/toolkit
+     */
+    async getActiveToolkit(gameId: string): Promise<ToolkitDashboardDto | null> {
+      return httpClient.get<ToolkitDashboardDto>(
+        `/api/v1/library/games/${gameId}/toolkit`,
+        ToolkitDashboardDtoSchema
+      );
+    },
+
+    /**
+     * Create or update the user's toolkit override for a game.
+     * PUT /api/v1/library/games/{gameId}/toolkit
+     */
+    async overrideToolkit(
+      gameId: string,
+      request: OverrideToolkitRequest = {}
+    ): Promise<ToolkitDashboardDto> {
+      const data = await httpClient.put<ToolkitDashboardDto>(
+        `/api/v1/library/games/${gameId}/toolkit`,
+        request,
+        ToolkitDashboardDtoSchema
+      );
+      if (!data) throw new Error('Failed to create toolkit override');
+      return data;
+    },
+
+    /**
+     * Enable/disable or reconfigure a single widget in the active toolkit.
+     * PATCH /api/v1/library/games/{gameId}/toolkit/widgets/{widgetType}
+     */
+    async updateToolkitWidget(
+      gameId: string,
+      widgetType: string,
+      request: UpdateWidgetRequest
+    ): Promise<ToolkitDashboardDto> {
+      const data = await httpClient.patch<ToolkitDashboardDto>(
+        `/api/v1/library/games/${gameId}/toolkit/widgets/${widgetType}`,
+        request,
+        ToolkitDashboardDtoSchema
+      );
+      if (!data) throw new Error('Failed to update toolkit widget');
+      return data;
     },
   };
 }

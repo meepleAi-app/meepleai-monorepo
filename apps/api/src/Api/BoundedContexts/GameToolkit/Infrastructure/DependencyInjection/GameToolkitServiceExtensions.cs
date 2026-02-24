@@ -17,6 +17,7 @@ internal static class GameToolkitServiceExtensions
     {
         // Register repositories
         services.AddScoped<IGameToolkitRepository, GameToolkitRepository>();
+        services.AddScoped<IToolkitRepository, ToolkitRepository>();
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

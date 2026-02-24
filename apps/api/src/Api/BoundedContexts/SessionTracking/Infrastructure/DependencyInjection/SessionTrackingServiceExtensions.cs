@@ -27,6 +27,7 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<ISessionNoteRepository, SessionNoteRepository>();
         services.AddScoped<ISessionMediaRepository, SessionMediaRepository>(); // ISSUE-4760
         services.AddScoped<ISessionChatRepository, SessionChatRepository>(); // ISSUE-4760
+        services.AddScoped<IToolkitSessionStateRepository, ToolkitSessionStateRepository>(); // ISSUE-5148: Epic B5
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

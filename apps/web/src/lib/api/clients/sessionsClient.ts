@@ -13,6 +13,11 @@ import {
   type PaginatedSessionsResponse,
   type SessionQuotaResponse,
 } from '../schemas';
+import {
+  ToolkitSessionStateDtoSchema,
+  type ToolkitSessionStateDto,
+  type UpdateWidgetStateRequest,
+} from '../schemas/toolkit.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -296,6 +301,39 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
       }
 
       return response;
+    },
+
+    // ========== Toolkit Session State (Issue #5148 — Epic B5) ==========
+
+    /**
+     * Get the current widget runtime states for a session's toolkit.
+     * Returns null if no state has been saved yet (204 from API).
+     * GET /api/v1/game-sessions/{sessionId}/toolkit-state
+     */
+    async getToolkitSessionState(sessionId: string): Promise<ToolkitSessionStateDto | null> {
+      return httpClient.get<ToolkitSessionStateDto>(
+        `/api/v1/game-sessions/${sessionId}/toolkit-state`,
+        ToolkitSessionStateDtoSchema
+      );
+    },
+
+    /**
+     * Update the runtime state for a single widget in a session.
+     * PATCH /api/v1/game-sessions/{sessionId}/toolkit-state/{widgetType}?toolkitId={toolkitId}
+     */
+    async updateToolkitWidgetState(
+      sessionId: string,
+      widgetType: string,
+      toolkitId: string,
+      request: UpdateWidgetStateRequest
+    ): Promise<ToolkitSessionStateDto> {
+      const data = await httpClient.patch<ToolkitSessionStateDto>(
+        `/api/v1/game-sessions/${sessionId}/toolkit-state/${widgetType}?toolkitId=${toolkitId}`,
+        request,
+        ToolkitSessionStateDtoSchema
+      );
+      if (!data) throw new Error('Failed to update widget state');
+      return data;
     },
   };
 }

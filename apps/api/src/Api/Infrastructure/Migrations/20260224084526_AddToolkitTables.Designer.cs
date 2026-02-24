@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260224084526_AddToolkitTables")]
+    partial class AddToolkitTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1101,48 +1104,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_rag_executions_strategy");
 
                     b.ToTable("rag_executions", "knowledge_base");
-                });
-
-            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("session_id");
-
-                    b.Property<Guid>("ToolkitId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("toolkit_id");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<string>("_widgetStatesJson")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("jsonb")
-                        .HasDefaultValue("{}")
-                        .HasColumnName("widget_states");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SessionId")
-                        .HasDatabaseName("ix_toolkit_session_states_session_id");
-
-                    b.HasIndex("SessionId", "ToolkitId")
-                        .IsUnique()
-                        .HasDatabaseName("uq_toolkit_session_states_session_toolkit");
-
-                    b.ToTable("toolkit_session_states", "session_tracking");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>

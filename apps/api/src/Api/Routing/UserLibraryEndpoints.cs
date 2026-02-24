@@ -2,6 +2,10 @@ using System.Security.Claims;
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.GameToolkit.Application.Commands;
+using Api.BoundedContexts.GameToolkit.Application.DTOs;
+using Api.BoundedContexts.GameToolkit.Application.Queries;
+using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -85,6 +89,11 @@ internal static class UserLibraryEndpoints
         MapBulkAddToCollectionEndpoint(group);
         MapBulkRemoveFromCollectionEndpoint(group);
         MapBulkGetCollectionAssociatedDataEndpoint(group);
+
+        // Toolkit dashboard endpoints (Issue #5147 — Epic B4)
+        MapGetActiveToolkitEndpoint(group);
+        MapOverrideToolkitEndpoint(group);
+        MapUpdateToolkitWidgetEndpoint(group);
 
         return group;
     }
@@ -1754,6 +1763,134 @@ internal static class UserLibraryEndpoints
         .WithTags("Collections", "Bulk")
         .WithSummary("Bulk remove entities from collection")
         .WithDescription("Removes multiple entities from user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.")
+        .WithOpenApi();
+    }
+
+    // ============================================================================
+    // Toolkit Dashboard endpoints (Issue #5147 — Epic B4)
+    // ============================================================================
+
+    /// <summary>
+    /// GET active Toolkit for a game (default or user override).
+    /// Returns null (204) when no toolkit has been created yet.
+    /// Issue #5147 — Epic B4.
+    /// </summary>
+    private static void MapGetActiveToolkitEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}/toolkit", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            var result = await mediator
+                .Send(new GetActiveToolkitQuery(gameId, userId), ct)
+                .ConfigureAwait(false);
+
+            return result is null ? Results.NoContent() : Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<ToolkitDashboardDto>(200)
+        .Produces(204)
+        .Produces<ProblemDetails>(401)
+        .WithTags("Toolkit")
+        .WithSummary("Get active toolkit for a game")
+        .WithDescription("Returns the user-specific toolkit override, or the shared default. Returns 204 when no toolkit exists. Issue #5147.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// PUT — creates a user override of the default toolkit, or renames an existing override.
+    /// Idempotent: safe to call multiple times.
+    /// Issue #5147 — Epic B4.
+    /// </summary>
+    private static void MapOverrideToolkitEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/library/games/{gameId:guid}/toolkit", async (
+            Guid gameId,
+            [FromBody] OverrideToolkitRequest? request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            var command = new OverrideToolkitCommand(gameId, userId, request?.DisplayName);
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<ToolkitDashboardDto>(200)
+        .Produces<ProblemDetails>(401)
+        .Produces<ProblemDetails>(404)
+        .WithTags("Toolkit")
+        .WithSummary("Create or update user toolkit override")
+        .WithDescription("Clones the default toolkit into a user-specific override (BR-02). Idempotent — renames if override already exists. Issue #5147.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// PATCH — enables/disables a widget or updates its config JSON.
+    /// Auto-clones the default toolkit if needed (BR-02).
+    /// Issue #5147 — Epic B4.
+    /// </summary>
+    private static void MapUpdateToolkitWidgetEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/library/games/{gameId:guid}/toolkit/widgets/{widgetType}", async (
+            Guid gameId,
+            string widgetType,
+            [FromBody] UpdateWidgetRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            if (!Enum.TryParse<WidgetType>(widgetType, ignoreCase: true, out var parsedWidgetType))
+                return Results.BadRequest(new { error = $"Invalid widget type: {widgetType}" });
+
+            var command = new UpdateWidgetCommand(gameId, userId, parsedWidgetType, request.IsEnabled, request.ConfigJson);
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<ToolkitDashboardDto>(200)
+        .Produces<ProblemDetails>(400)
+        .Produces<ProblemDetails>(401)
+        .Produces<ProblemDetails>(404)
+        .WithTags("Toolkit")
+        .WithSummary("Update a toolkit widget")
+        .WithDescription("Enables/disables a widget or updates its config JSON. Auto-creates a user override if the active toolkit is the default (BR-02). Issue #5147.")
         .WithOpenApi();
     }
 

@@ -240,6 +240,7 @@ export function UserWizardClient({
 
           {state.currentStep === 'pdf' && state.gameId && !showProcessing && (
             <PdfUploadStep
+              gameId={state.gameId}
               onComplete={handlePdfUploaded}
             />
           )}

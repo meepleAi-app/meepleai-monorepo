@@ -52,6 +52,10 @@ describe('createDocumentsClient', () => {
           pageCount: 10,
           documentType: 'base',
           isPublic: false,
+          processingState: 'Pending',
+          progressPercentage: 0,
+          retryCount: 0,
+          maxRetries: 3,
         },
       ];
 

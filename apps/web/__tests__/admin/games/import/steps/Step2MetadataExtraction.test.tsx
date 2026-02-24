@@ -16,7 +16,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { Step2MetadataExtraction } from '@/app/(authenticated)/admin/games/import/wizard/steps/Step2MetadataExtraction';
+import { Step2MetadataExtraction } from '@/app/admin/(dashboard)/shared-games/import/steps/Step2MetadataExtraction';
 import type { ExtractedMetadata } from '@/stores/useGameImportWizardStore';
 
 // Mock useGameImportWizardStore

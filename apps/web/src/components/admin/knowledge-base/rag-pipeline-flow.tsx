@@ -1,10 +1,14 @@
 'use client';
 
+import { useState } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircleIcon,
   ArrowRightIcon,
   CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   ClockIcon,
   DatabaseIcon,
   FileTextIcon,
@@ -65,6 +69,8 @@ function formatRelativeTime(dateStr: string | null): string {
 }
 
 export function RAGPipelineFlow() {
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
+
   const {
     data: pipeline,
     isLoading,
@@ -116,30 +122,85 @@ export function RAGPipelineFlow() {
         </div>
 
         {/* Pipeline Visualization */}
-        <div className="flex items-center justify-between gap-4 mb-8 overflow-x-auto pb-4">
-          {stages.map((stage, index) => (
-            <div key={stage.name} className="flex items-center gap-4">
-              <div className="flex flex-col items-center">
-                <div className={`bg-slate-50 dark:bg-zinc-900 rounded-lg p-4 border-2 ${statusBorder(stage.status)} min-w-[100px]`}>
-                  <div className="text-center">
-                    <div className="font-semibold text-slate-900 dark:text-zinc-100 text-sm mb-2">
-                      {stage.name}
-                    </div>
-                    <div className={`w-3 h-3 rounded-full mx-auto ${statusColor(stage.status)} animate-pulse`} />
-                    {stage.metrics && Object.keys(stage.metrics).length > 0 && (
-                      <div className="mt-2 text-[10px] text-gray-500 dark:text-zinc-500 leading-tight">
-                        {renderStageMetric(stage.name, stage.metrics)}
+        <div className="flex items-center justify-between gap-4 mb-6 overflow-x-auto pb-4">
+          {stages.map((stage, index) => {
+            const isExpanded = expandedStage === stage.name;
+            return (
+              <div key={stage.name} className="flex items-center gap-4">
+                <div className="flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedStage(isExpanded ? null : stage.name)}
+                    className={`bg-slate-50 dark:bg-zinc-900 rounded-lg p-4 border-2 ${statusBorder(stage.status)} min-w-[110px] transition-all hover:shadow-md hover:-translate-y-0.5 ${isExpanded ? 'ring-2 ring-blue-400/60' : ''}`}
+                  >
+                    <div className="text-center">
+                      <div className="font-semibold text-slate-900 dark:text-zinc-100 text-sm mb-2">
+                        {stage.name}
                       </div>
-                    )}
-                  </div>
+                      <div className={`w-3 h-3 rounded-full mx-auto ${statusColor(stage.status)} animate-pulse`} />
+                      {stage.metrics && Object.keys(stage.metrics).length > 0 && (
+                        <div className="mt-2 text-[10px] text-gray-500 dark:text-zinc-500 leading-tight">
+                          {renderStageMetric(stage.name, stage.metrics)}
+                        </div>
+                      )}
+                      <div className="mt-2 flex justify-center">
+                        {isExpanded
+                          ? <ChevronUpIcon className="h-3 w-3 text-muted-foreground" />
+                          : <ChevronDownIcon className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                    </div>
+                  </button>
                 </div>
+                {index < stages.length - 1 && (
+                  <ArrowRightIcon className="w-6 h-6 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                )}
               </div>
-              {index < stages.length - 1 && (
-                <ArrowRightIcon className="w-6 h-6 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+            );
+          })}
+        </div>
+
+        {/* Stage Drill-Down Panel */}
+        {expandedStage && (() => {
+          const stage = stages.find((s) => s.name === expandedStage);
+          if (!stage) return null;
+          const metricsEntries = stage.metrics ? Object.entries(stage.metrics) : [];
+          return (
+            <div className="mb-6 bg-slate-50/80 dark:bg-zinc-900/60 rounded-xl border border-slate-200/50 dark:border-zinc-700/50 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${statusColor(stage.status)}`} />
+                  {stage.name} — Stage Details
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setExpandedStage(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+              {metricsEntries.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {metricsEntries.map(([key, value]) => (
+                    <div
+                      key={key}
+                      className="bg-white/70 dark:bg-zinc-800/70 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-zinc-700/40"
+                    >
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
+                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      </div>
+                      <div className="text-sm font-semibold text-foreground truncate">
+                        {value !== null && value !== undefined ? String(value) : '—'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No detailed metrics available for this stage.</p>
               )}
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         {/* Health Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

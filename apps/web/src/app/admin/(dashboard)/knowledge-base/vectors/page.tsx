@@ -3,11 +3,26 @@
 import { useCallback, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircleIcon, RefreshCwIcon } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  XCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from 'lucide-react';
 
 import { VectorCollectionCard } from '@/components/admin/knowledge-base/vector-collection-card';
 import { Button } from '@/components/ui/primitives/button';
-import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { Input } from '@/components/ui/primitives/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
+import { createAdminClient, type QdrantSearchResultItem } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
 const httpClient = new HttpClient();
@@ -32,6 +47,15 @@ export default function VectorCollectionsPage() {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // ── Semantic Search state ──
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCollection, setSearchCollection] = useState('');
+  const [searchLimit, setSearchLimit] = useState('10');
+  const [searchResults, setSearchResults] = useState<QdrantSearchResultItem[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [expandedResult, setExpandedResult] = useState<number | null>(null);
 
   const {
     data,
@@ -83,6 +107,26 @@ export default function VectorCollectionsPage() {
     setActionMessage(null);
     rebuildMutation.mutate(name);
   }, [rebuildMutation]);
+
+  const handleSearch = useCallback(async () => {
+    if (!searchQuery.trim() || !searchCollection) return;
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchResults(null);
+    setExpandedResult(null);
+    try {
+      const result = await adminClient.searchQdrantCollection(
+        searchCollection,
+        searchQuery.trim(),
+        Number(searchLimit)
+      );
+      setSearchResults(result.results);
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : 'Search failed');
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [searchQuery, searchCollection, searchLimit]);
 
   const collections = data?.collections ?? [];
   const totalVectors = collections.reduce((sum, c) => sum + c.vectorCount, 0);
@@ -211,6 +255,141 @@ export default function VectorCollectionsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Semantic Search Panel ── */}
+      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-6 space-y-4">
+        <h2 className="font-quicksand font-semibold text-lg text-foreground flex items-center gap-2">
+          <SearchIcon className="h-5 w-5 text-blue-500" />
+          Semantic Search
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Run a semantic similarity search against any vector collection using the embedding model.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Collection selector */}
+          <Select
+            value={searchCollection}
+            onValueChange={setSearchCollection}
+          >
+            <SelectTrigger className="w-full sm:w-[200px] bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md">
+              <SelectValue placeholder="Select collection" />
+            </SelectTrigger>
+            <SelectContent>
+              {collections.map((c) => (
+                <SelectItem key={c.name} value={c.name}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Query input */}
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Enter a query to search vectors..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+              className="pl-9 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md"
+            />
+          </div>
+
+          {/* Limit selector */}
+          <Select value={searchLimit} onValueChange={setSearchLimit}>
+            <SelectTrigger className="w-[100px] bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {['5', '10', '20', '50'].map((v) => (
+                <SelectItem key={v} value={v}>Top {v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button
+            onClick={handleSearch}
+            disabled={searchLoading || !searchQuery.trim() || !searchCollection}
+            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {searchLoading ? (
+              <RefreshCwIcon className="h-4 w-4 animate-spin" />
+            ) : (
+              <SearchIcon className="h-4 w-4" />
+            )}
+            Search
+          </Button>
+        </div>
+
+        {/* Search Error */}
+        {searchError && (
+          <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2 border border-red-200 dark:border-red-800/40">
+            <XCircleIcon className="h-4 w-4 shrink-0" />
+            {searchError}
+          </div>
+        )}
+
+        {/* Search Results */}
+        {searchResults !== null && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-foreground">
+              {searchResults.length > 0
+                ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} found`
+                : 'No results found for this query.'}
+            </div>
+            {searchResults.map((item) => (
+              <div
+                key={item.id}
+                className="bg-slate-50/70 dark:bg-zinc-900/50 rounded-lg border border-slate-200/50 dark:border-zinc-700/50 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedResult(expandedResult === item.id ? null : item.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-100/60 dark:hover:bg-zinc-800/60 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-mono text-muted-foreground shrink-0">#{item.id}</span>
+                    <span className="text-sm text-foreground truncate">
+                      {item.payload?.text ?? item.payload?.content ?? item.payload?.chunk ?? 'No text payload'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      item.score >= 0.8
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                        : item.score >= 0.5
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                    }`}>
+                      {(item.score * 100).toFixed(1)}%
+                    </span>
+                    {expandedResult === item.id
+                      ? <ChevronUpIcon className="h-4 w-4 text-muted-foreground" />
+                      : <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                </button>
+
+                {expandedResult === item.id && item.payload && (
+                  <div className="px-4 py-3 border-t border-slate-200/50 dark:border-zinc-700/50 bg-white/50 dark:bg-zinc-900/30">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      Payload
+                    </div>
+                    <div className="space-y-1">
+                      {Object.entries(item.payload).map(([key, value]) => (
+                        <div key={key} className="flex gap-2 text-xs">
+                          <span className="text-muted-foreground font-mono shrink-0">{key}:</span>
+                          <span className="text-foreground break-all">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Collections */}
       {isLoading ? (

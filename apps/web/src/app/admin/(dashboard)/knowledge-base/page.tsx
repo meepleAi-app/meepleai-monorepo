@@ -9,6 +9,7 @@ import {
   SettingsIcon,
   ListOrderedIcon,
   ArrowRightIcon,
+  CpuIcon,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -66,6 +67,14 @@ const sections = [
     href: '/admin/knowledge-base/settings',
     color: 'from-slate-500 to-zinc-600',
     stats: 'Configure',
+  },
+  {
+    title: 'Embedding Service',
+    description: 'Monitor the multilingual embedding model, throughput metrics, and service health',
+    icon: CpuIcon,
+    href: '/admin/knowledge-base/embedding',
+    color: 'from-violet-500 to-purple-600',
+    stats: 'View metrics',
   },
 ];
 
@@ -143,6 +152,12 @@ export default function KnowledgeBasePage() {
             className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
           >
             KB Settings
+          </Link>
+          <Link
+            href="/admin/agents/usage"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
+          >
+            Usage &amp; Costs
           </Link>
         </div>
       </div>

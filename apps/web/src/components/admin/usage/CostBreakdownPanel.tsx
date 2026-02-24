@@ -9,14 +9,7 @@
 
 import { useState } from 'react';
 
-import {
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -99,18 +92,18 @@ export function CostBreakdownPanel({
 
   const tableRows: { label: string; costUsd: number; requests: number }[] =
     activeTab === 'model'
-      ? (data?.byModel ?? []).map((m) => ({
+      ? (data?.byModel ?? []).map(m => ({
           label: shortModelId(m.modelId),
           costUsd: m.costUsd,
           requests: m.requests,
         }))
       : activeTab === 'source'
-        ? (data?.bySource ?? []).map((s) => ({
+        ? (data?.bySource ?? []).map(s => ({
             label: s.source,
             costUsd: s.costUsd,
             requests: s.requests,
           }))
-        : (data?.byTier ?? []).map((t) => ({
+        : (data?.byTier ?? []).map(t => ({
             label: t.tier,
             costUsd: t.costUsd,
             requests: t.requests,
@@ -166,7 +159,7 @@ export function CostBreakdownPanel({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number) => [formatUsd(val), 'Cost']}
+                  formatter={(val: number | undefined) => [formatUsd(val ?? 0), 'Cost']}
                   contentStyle={{
                     fontSize: 12,
                     borderRadius: 8,
@@ -175,18 +168,14 @@ export function CostBreakdownPanel({
                     color: 'hsl(var(--popover-foreground))',
                   }}
                 />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: 10 }}
-                />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10 }} />
               </PieChart>
             </ResponsiveContainer>
 
             {/* Table */}
             <div className="flex flex-col gap-2">
               <div className="flex gap-1">
-                {(['model', 'source', 'tier'] as const).map((tab) => (
+                {(['model', 'source', 'tier'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -201,7 +190,7 @@ export function CostBreakdownPanel({
                 ))}
               </div>
               <div className="overflow-y-auto max-h-36 text-xs space-y-1">
-                {tableRows.map((row) => (
+                {tableRows.map(row => (
                   <div
                     key={row.label}
                     className="flex items-center justify-between rounded px-2 py-1 hover:bg-muted/50"

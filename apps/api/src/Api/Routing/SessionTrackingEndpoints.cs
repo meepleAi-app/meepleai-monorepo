@@ -1,9 +1,11 @@
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing;
 
@@ -99,6 +101,10 @@ internal static class SessionTrackingEndpoints
         // Session join + role management endpoints (Issue #4766)
         MapJoinSessionByCodeEndpoint(group);
         MapAssignParticipantRoleEndpoint(group);
+
+        // Toolkit session state endpoints (Issue #5148 — Epic B5)
+        MapGetToolkitSessionStateEndpoint(group);
+        MapUpdateToolkitWidgetStateEndpoint(group);
 
         return group;
     }
@@ -1797,6 +1803,78 @@ internal static class SessionTrackingEndpoints
         .Produces(401)
         .Produces(403)
         .Produces(404);
+    }
+
+    // ============================================================================
+    // Toolkit session state endpoints (Issue #5148 — Epic B5)
+    // ============================================================================
+
+    /// <summary>
+    /// Returns the current toolkit widget states for a session.
+    /// Returns 204 if no state has been saved yet.
+    /// </summary>
+    private static void MapGetToolkitSessionStateEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/toolkit-state", async (
+            Guid sessionId,
+            [FromQuery] Guid toolkitId,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userIdStr = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Results.Unauthorized();
+
+            var result = await mediator
+                .Send(new GetToolkitSessionStateQuery(sessionId, toolkitId, userId), ct)
+                .ConfigureAwait(false);
+
+            return result is null ? Results.NoContent() : Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<ToolkitSessionStateDto>(200)
+        .Produces(204)
+        .Produces(401)
+        .WithName("GetToolkitSessionState")
+        .WithTags("Toolkit")
+        .WithSummary("Get toolkit widget states for a session")
+        .WithDescription("Returns the persisted widget states for the session's active toolkit. Returns 204 if no state saved yet. Issue #5148.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Updates the runtime state of a single widget within a session.
+    /// Auto-creates the ToolkitSessionState record on first call.
+    /// </summary>
+    private static void MapUpdateToolkitWidgetStateEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/game-sessions/{sessionId:guid}/toolkit-state/{widgetType}", async (
+            Guid sessionId,
+            string widgetType,
+            [FromQuery] Guid toolkitId,
+            [FromBody] UpdateWidgetStateRequest request,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userIdStr = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Results.Unauthorized();
+
+            var command = new UpdateWidgetStateCommand(sessionId, toolkitId, widgetType, request.StateJson, userId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<ToolkitSessionStateDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .WithName("UpdateToolkitWidgetState")
+        .WithTags("Toolkit")
+        .WithSummary("Update a widget's runtime state in a session")
+        .WithDescription("Persists the runtime state for a single widget (turn count, scores, resources etc.). Auto-creates the state record on first save. Issue #5148.")
+        .WithOpenApi();
     }
 }
 

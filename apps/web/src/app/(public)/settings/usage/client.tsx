@@ -52,12 +52,12 @@ const MODEL_COLORS: string[] = [
 ];
 
 const OPERATION_COLORS: Record<string, string> = {
-  'chat': '#d2691e',
-  'rag_query': '#8b5cf6',
-  'embedding': '#16a34a',
-  'explain': '#2563eb',
-  'qa': '#ec4899',
-  'unknown': '#666666',
+  chat: '#d2691e',
+  rag_query: '#8b5cf6',
+  embedding: '#16a34a',
+  explain: '#2563eb',
+  qa: '#ec4899',
+  unknown: '#666666',
 };
 
 function UsageStat({
@@ -155,7 +155,10 @@ export function PersonalUsagePageClient() {
   if (error) {
     return (
       <div className="container max-w-4xl py-8">
-        <Link href="/settings" className="mb-6 flex items-center gap-2 text-muted-foreground hover:text-foreground">
+        <Link
+          href="/settings"
+          className="mb-6 flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back to Settings
         </Link>
@@ -170,15 +173,16 @@ export function PersonalUsagePageClient() {
     <div className="container max-w-4xl py-8">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/settings" className="mb-4 flex items-center gap-2 text-muted-foreground hover:text-foreground">
+        <Link
+          href="/settings"
+          className="mb-4 flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back to Settings
         </Link>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-['Quicksand',sans-serif] text-2xl font-bold">
-              Your AI Usage
-            </h1>
+            <h1 className="font-['Quicksand',sans-serif] text-2xl font-bold">Your AI Usage</h1>
             <p className="text-muted-foreground">
               Track your AI usage and costs across different providers
             </p>
@@ -198,11 +202,7 @@ export function PersonalUsagePageClient() {
               </SelectContent>
             </Select>
 
-            <LoadingButton
-              onClick={() => refetch()}
-              isLoading={isLoading}
-              variant="outline"
-            >
+            <LoadingButton onClick={() => refetch()} isLoading={isLoading} variant="outline">
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </LoadingButton>
@@ -266,13 +266,13 @@ export function PersonalUsagePageClient() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(value) => value.slice(-5)} // Show MM-DD
+                    tickFormatter={value => value.slice(-5)} // Show MM-DD
                     fontSize={12}
                   />
-                  <YAxis tickFormatter={(value) => formatTokens(value)} fontSize={12} />
+                  <YAxis tickFormatter={value => formatTokens(value)} fontSize={12} />
                   <Tooltip
-                    formatter={(value: number) => [formatTokens(value), 'Tokens']}
-                    labelFormatter={(label) => `Date: ${label}`}
+                    formatter={(value: number | undefined) => [formatTokens(value ?? 0), 'Tokens']}
+                    labelFormatter={label => `Date: ${label}`}
                   />
                   <Area
                     type="monotone"
@@ -311,7 +311,10 @@ export function PersonalUsagePageClient() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => [formatTokens(value), 'Tokens']}
+                      formatter={(value: number | undefined) => [
+                        formatTokens(value ?? 0),
+                        'Tokens',
+                      ]}
                     />
                     <Legend />
                   </PieChart>
@@ -321,9 +324,9 @@ export function PersonalUsagePageClient() {
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={modelChartData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" tickFormatter={(value) => formatTokens(value)} />
+                    <XAxis type="number" tickFormatter={value => formatTokens(value)} />
                     <YAxis type="category" dataKey="name" width={80} fontSize={12} />
-                    <Tooltip formatter={(value: number) => formatTokens(value)} />
+                    <Tooltip formatter={(value: number | undefined) => formatTokens(value ?? 0)} />
                     <Bar dataKey="tokens" fill="#d2691e" radius={[0, 4, 4, 0]}>
                       {modelChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -343,19 +346,17 @@ export function PersonalUsagePageClient() {
               </h3>
               <div className="space-y-3">
                 {operationChartData.map(({ name, count, tokens, color }) => (
-                  <div key={name} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
+                  <div
+                    key={name}
+                    className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
+                  >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="h-4 w-4 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
+                      <div className="h-4 w-4 rounded-full" style={{ backgroundColor: color }} />
                       <span className="font-medium capitalize">{name.replace('_', ' ')}</span>
                     </div>
                     <div className="text-right">
                       <p className="font-bold">{count} requests</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatTokens(tokens)} tokens
-                      </p>
+                      <p className="text-xs text-muted-foreground">{formatTokens(tokens)} tokens</p>
                     </div>
                   </div>
                 ))}
@@ -371,12 +372,12 @@ export function PersonalUsagePageClient() {
               </h3>
               <div className="space-y-3">
                 {modelChartData.map(({ name, fullName, tokens, cost, color }) => (
-                  <div key={fullName} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
+                  <div
+                    key={fullName}
+                    className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
+                  >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="h-4 w-4 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
+                      <div className="h-4 w-4 rounded-full" style={{ backgroundColor: color }} />
                       <div>
                         <span className="font-medium">{name}</span>
                         <p className="text-xs text-muted-foreground">{fullName}</p>
@@ -384,9 +385,7 @@ export function PersonalUsagePageClient() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold">{formatTokens(tokens)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCost(cost)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{formatCost(cost)}</p>
                     </div>
                   </div>
                 ))}

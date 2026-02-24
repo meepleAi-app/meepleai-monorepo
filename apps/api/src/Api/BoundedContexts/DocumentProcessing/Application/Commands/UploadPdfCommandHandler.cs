@@ -560,8 +560,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             PageCount: pdfDoc.PageCount,
             ProcessingState: pdfDoc.ProcessingState,
             ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
-            RetryCount: pdfDoc.RetryCount,
-            MaxRetries: pdfDoc.MaxRetries
+            RetryCount: pdfDoc.RetryCount
         ));
     }
 
@@ -1445,8 +1444,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             PageCount: pdfDoc.PageCount,
             ProcessingState: pdfDoc.ProcessingState,
             ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
-            RetryCount: pdfDoc.RetryCount,
-            MaxRetries: pdfDoc.MaxRetries
+            RetryCount: pdfDoc.RetryCount
         );
 
         return new PdfUploadResult(true, "PDF upload started successfully", documentDto);

@@ -16,9 +16,11 @@ import { Label } from '@/components/ui/primitives/label';
 
 interface PdfUploadStepProps {
   onComplete: (pdfId: string, fileName: string, isPublic: boolean) => void;
+  /** Required when the game already exists (game-first wizard flows). */
+  gameId?: string;
 }
 
-export function PdfUploadStep({ onComplete }: PdfUploadStepProps) {
+export function PdfUploadStep({ onComplete, gameId }: PdfUploadStepProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isPublic, setIsPublic] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -74,6 +76,7 @@ export function PdfUploadStep({ onComplete }: PdfUploadStepProps) {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (gameId) formData.append('gameId', gameId);
       formData.append('language', 'it'); // Default to Italian
 
       // Use XHR for progress tracking
@@ -108,8 +111,6 @@ export function PdfUploadStep({ onComplete }: PdfUploadStepProps) {
           reject(new Error('Errore di rete durante upload'));
         });
 
-        // Note: We upload to a temporary game ID, then associate with the real game in step 2
-        // For now, we use a placeholder approach - upload without gameId
         xhr.open('POST', '/api/v1/ingest/pdf');
         xhr.withCredentials = true;
         xhr.send(formData);

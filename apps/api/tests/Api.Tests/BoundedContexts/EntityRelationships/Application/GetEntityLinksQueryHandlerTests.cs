@@ -3,6 +3,7 @@ using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Domain.Repositories;
 using Api.Tests.Constants;
+using MediatR;
 using Moq;
 using Xunit;
 
@@ -18,12 +19,14 @@ public class GetEntityLinksQueryHandlerTests
     private static readonly Guid _targetId2 = Guid.NewGuid();
 
     private readonly Mock<IEntityLinkRepository> _repoMock;
+    private readonly Mock<IMediator> _mediatorMock;
     private readonly GetEntityLinksQueryHandler _handler;
 
     public GetEntityLinksQueryHandlerTests()
     {
         _repoMock = new Mock<IEntityLinkRepository>();
-        _handler = new GetEntityLinksQueryHandler(_repoMock.Object);
+        _mediatorMock = new Mock<IMediator>();
+        _handler = new GetEntityLinksQueryHandler(_repoMock.Object, _mediatorMock.Object);
     }
 
     private static EntityLink BuildLink(

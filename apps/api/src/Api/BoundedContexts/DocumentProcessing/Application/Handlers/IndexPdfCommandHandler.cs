@@ -176,6 +176,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             {
                 Id = Guid.NewGuid(),
                 GameId = pdf.GameId,
+                SharedGameId = pdf.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "processing",
                 EmbeddingModel = _embeddingService.GetModelName(),

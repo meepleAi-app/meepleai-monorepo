@@ -43,6 +43,7 @@ const ENTITY_ICONS: Record<LinkEntityType, React.ComponentType<{ className?: str
   ChatSession: MessageCircle,
   Event: Calendar,
   Toolkit: Wrench,
+  KbCard: FileText,
 };
 
 // ============================================================================

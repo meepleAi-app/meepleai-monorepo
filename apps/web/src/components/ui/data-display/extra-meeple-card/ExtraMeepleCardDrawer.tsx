@@ -424,6 +424,10 @@ function mapRawToPdfDocumentDto(raw: Record<string, unknown>): PdfDocumentDto {
     progressPercentage: Number(raw.progressPercentage ?? 0),
     retryCount: Number(raw.retryCount ?? 0),
     maxRetries: Number(raw.maxRetries ?? 3),
+    // Issue #5183: retry eligibility + error categorization
+    canRetry: Boolean(raw.canRetry ?? false),
+    errorCategory: raw.errorCategory != null ? String(raw.errorCategory) : null,
+    processingError: raw.processingError != null ? String(raw.processingError) : null,
   };
 }
 

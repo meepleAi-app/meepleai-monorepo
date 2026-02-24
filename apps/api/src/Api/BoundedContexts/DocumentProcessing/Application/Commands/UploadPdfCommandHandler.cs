@@ -545,7 +545,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         RecordUploadMetricSafely("success", file.Length);
 
-        // Issue #5187: Auto-create EntityLink KbCard → Game for PDF-KB association
+        // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association
         await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.GameId, userId, cancellationToken).ConfigureAwait(false);
 
         return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto(
@@ -1136,6 +1136,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             {
                 Id = Guid.NewGuid(),
                 GameId = pdfDoc.GameId,
+                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "completed",
                 ChunkCount = indexedCount,
@@ -1454,7 +1455,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     /// BGAI-043: Records PDF upload metrics in fire-and-forget pattern
     /// </summary>
     /// <summary>
-    /// Auto-creates an EntityLink (KbCard → Game) for the uploaded PDF.
+    /// Auto-creates an EntityLink (Game → KbCard) for the uploaded PDF.
     /// Issue #5187: Idempotent — silently swallows DuplicateEntityLinkException on retry uploads.
     /// Only creates the link for regular game uploads (not private games, identified by gameId != Guid.Empty).
     /// </summary>
@@ -1470,11 +1471,11 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         try
         {
             var cmd = new CreateEntityLinkCommand(
-                SourceEntityType: MeepleEntityType.KbCard,
-                SourceEntityId: pdfDocumentId,
-                TargetEntityType: MeepleEntityType.Game,
-                TargetEntityId: gameId,
-                LinkType: EntityLinkType.PartOf,
+                SourceEntityType: MeepleEntityType.Game,
+                SourceEntityId: gameId,
+                TargetEntityType: MeepleEntityType.KbCard,
+                TargetEntityId: pdfDocumentId,
+                LinkType: EntityLinkType.RelatedTo,
                 Scope: EntityLinkScope.User,
                 OwnerUserId: ownerUserId
             );
@@ -1482,16 +1483,16 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             await _mediator.Send(cmd, cancellationToken).ConfigureAwait(false);
 
             _logger.LogDebug(
-                "EntityLink KbCard/{PdfId} → Game/{GameId} created for user {UserId}",
-                pdfDocumentId, gameId, ownerUserId);
+                "EntityLink Game/{GameId} → KbCard/{PdfId} created for user {UserId}",
+                gameId, pdfDocumentId, ownerUserId);
         }
         catch (DuplicateEntityLinkException ex)
         {
             // Idempotent: link already exists (e.g., retry upload). This is expected.
             _logger.LogDebug(
                 ex,
-                "EntityLink KbCard/{PdfId} → Game/{GameId} already exists — skipping",
-                pdfDocumentId, gameId);
+                "EntityLink Game/{GameId} → KbCard/{PdfId} already exists — skipping",
+                gameId, pdfDocumentId);
         }
         catch (Exception ex)
         {

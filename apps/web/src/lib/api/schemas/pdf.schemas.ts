@@ -26,6 +26,10 @@ export const PdfDocumentDtoSchema = z.object({
   progressPercentage: z.number().int().min(0).max(100).default(0),
   retryCount: z.number().int().nonnegative().default(0),
   maxRetries: z.number().int().positive().default(3),
+  // Issue #5183: retry eligibility + error categorization
+  canRetry: z.boolean().default(false),
+  errorCategory: z.string().nullable().default(null),
+  processingError: z.string().nullable().default(null),
 });
 
 export type PdfDocumentDto = z.infer<typeof PdfDocumentDtoSchema>;

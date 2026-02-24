@@ -35,6 +35,7 @@ export const LinkEntityTypeSchema = z.enum([
   'ChatSession',
   'Event',
   'Toolkit',
+  'KbCard', // Issue #5191: KbCard entity type for PDF document links
 ]);
 
 export type LinkEntityType = z.infer<typeof LinkEntityTypeSchema>;
@@ -63,6 +64,19 @@ export const EntityLinkDtoSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   isOwner: z.boolean().default(false),
+  // Issue #5188: KbCard status enrichment (only present when targetEntityType=KbCard)
+  kbCardStatus: z
+    .object({
+      fileName: z.string(),
+      fileSizeBytes: z.number().nonnegative(),
+      processingState: z.string(),
+      progressPercentage: z.number().int().min(0).max(100),
+      canRetry: z.boolean(),
+      errorCategory: z.string().nullable(),
+      processingError: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export type EntityLinkDto = z.infer<typeof EntityLinkDtoSchema>;

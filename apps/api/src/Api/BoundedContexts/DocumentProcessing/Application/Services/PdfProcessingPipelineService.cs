@@ -344,6 +344,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 Id = Guid.NewGuid(),
                 GameId = pdfDoc.GameId,
+                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfDoc.Id,
                 IndexingStatus = "completed",
                 ChunkCount = indexResult.IndexedCount,

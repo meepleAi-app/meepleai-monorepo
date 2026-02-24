@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/overlays/dialog';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 import { EntityLinkChip } from './entity-link-chip';
@@ -114,25 +115,14 @@ export function AddEntityLinkModal({
     setError(null);
 
     try {
-      const body = {
+      await api.entityLinks.createEntityLink({
         sourceEntityType,
         sourceEntityId,
         targetEntityType,
         targetEntityId: targetEntityId.trim(),
         linkType: selectedLinkType,
         ...(note.trim() ? { metadata: JSON.stringify({ note: note.trim() }) } : {}),
-      };
-
-      const res = await fetch('/api/v1/library/entity-links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
       });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(text || `HTTP ${res.status}`);
-      }
 
       onLinkCreated?.();
       handleOpenChange(false);

@@ -1,5 +1,5 @@
 /**
- * AddEntityLinkModal — C6
+ * AddEntityLinkModal - C6
  * Tests for Issue #5162 / #5165
  */
 
@@ -9,9 +9,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { AddEntityLinkModal } from '../add-entity-link-modal';
 
-// Mock global fetch
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
+// Mock the api module so createEntityLink is controllable
+const { mockCreateEntityLink } = vi.hoisted(() => ({
+  mockCreateEntityLink: vi.fn(),
+}));
+vi.mock('@/lib/api', () => ({
+  api: {
+    entityLinks: {
+      createEntityLink: mockCreateEntityLink,
+    },
+  },
+}));
 
 const DEFAULT_PROPS = {
   open: true,
@@ -22,7 +30,7 @@ const DEFAULT_PROPS = {
 
 describe('AddEntityLinkModal', () => {
   beforeEach(() => {
-    mockFetch.mockReset();
+    mockCreateEntityLink.mockReset();
     vi.clearAllMocks();
   });
 
@@ -77,11 +85,8 @@ describe('AddEntityLinkModal', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('calls POST /api/v1/library/entity-links on submit', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ id: 'new-link-id' }),
-    });
+  it('calls api.entityLinks.createEntityLink on submit', async () => {
+    mockCreateEntityLink.mockResolvedValueOnce({ id: 'new-link-id' });
 
     const onLinkCreated = vi.fn();
     render(<AddEntityLinkModal {...DEFAULT_PROPS} onLinkCreated={onLinkCreated} />);
@@ -106,11 +111,13 @@ describe('AddEntityLinkModal', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/v1/library/entity-links',
+      expect(mockCreateEntityLink).toHaveBeenCalledWith(
         expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          sourceEntityType: 'Game',
+          sourceEntityId: 'game-source-id',
+          targetEntityType: 'Game',
+          targetEntityId: 'target-game-uuid',
+          linkType: 'ExpansionOf',
         })
       );
     });
@@ -121,10 +128,7 @@ describe('AddEntityLinkModal', () => {
   });
 
   it('shows error message on submit failure', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      text: () => Promise.resolve('Conflict: link already exists'),
-    });
+    mockCreateEntityLink.mockRejectedValueOnce(new Error('Conflict: link already exists'));
 
     render(<AddEntityLinkModal {...DEFAULT_PROPS} />);
 

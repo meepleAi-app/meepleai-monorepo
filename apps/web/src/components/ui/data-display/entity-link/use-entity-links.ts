@@ -9,7 +9,9 @@
  * Issue #5129 — Epic C
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+import { api } from '@/lib/api';
 
 import type { EntityLinkDto, LinkEntityType } from './entity-link-types';
 
@@ -24,38 +26,39 @@ export function useEntityLinks(entityType: LinkEntityType, entityId: string): Us
   const [links, setLinks] = useState<EntityLinkDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const fetchLinks = useCallback(
-    async (signal: AbortSignal) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams({ entityType, entityId });
-        const res = await fetch(`/api/v1/library/entity-links?${params.toString()}`, { signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as EntityLinkDto[];
-        setLinks(Array.isArray(data) ? data : []);
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-        setError(err instanceof Error ? err.message : 'Failed to load links');
-      } finally {
+  const fetchLinks = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.entityLinks.getEntityLinks(entityType, entityId);
+      if (!controller.signal.aborted) {
+        setLinks(data);
+      }
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      setError(err instanceof Error ? err.message : 'Failed to load links');
+    } finally {
+      if (!controller.signal.aborted) {
         setLoading(false);
       }
-    },
-    [entityType, entityId]
-  );
+    }
+  }, [entityType, entityId]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void fetchLinks(controller.signal);
+    void fetchLinks();
     return () => {
-      controller.abort();
+      abortRef.current?.abort();
     };
   }, [fetchLinks]);
 
   const refresh = useCallback(() => {
-    const controller = new AbortController();
-    void fetchLinks(controller.signal);
+    void fetchLinks();
   }, [fetchLinks]);
 
   return { links, loading, error, refresh };

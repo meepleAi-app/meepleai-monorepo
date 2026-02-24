@@ -16,34 +16,48 @@
  */
 
 import React from 'react';
+
 import {
   AlertCircle,
   Bot,
   FileText,
   Gamepad2,
+  Link as LinkIcon,
   MessageCircle,
   RefreshCw,
   Wrench,
   X,
 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetTitle,
-} from '@/components/ui/navigation/sheet';
-import { DRAWER_TEST_IDS } from './drawer-test-ids';
-import { GameExtraMeepleCard, AgentExtraMeepleCard, ChatExtraMeepleCard, KbExtraMeepleCard } from './EntityExtraMeepleCard';
-import type { GameDetailData, AgentDetailData, ChatDetailData, ChatDetailMessage, KbDetailData, KbDocumentPreview, GameAgentPreview } from './types';
+import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { cn } from '@/lib/utils';
+
+import { DRAWER_TEST_IDS } from './drawer-test-ids';
+import {
+  GameExtraMeepleCard,
+  AgentExtraMeepleCard,
+  ChatExtraMeepleCard,
+  KbExtraMeepleCard,
+} from './EntityExtraMeepleCard';
+import { RelatedEntitiesSection } from '../entity-link/related-entities-section';
+
+import type {
+  GameDetailData,
+  AgentDetailData,
+  ChatDetailData,
+  ChatDetailMessage,
+  KbDetailData,
+  KbDocumentPreview,
+  GameAgentPreview,
+} from './types';
+import type { LinkEntityType } from '../entity-link/entity-link-types';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type DrawerEntityType = 'game' | 'agent' | 'chat' | 'kb';
+export type DrawerEntityType = 'game' | 'agent' | 'chat' | 'kb' | 'links';
 
 export interface ExtraMeepleCardDrawerProps {
   /** Type of entity to display */
@@ -54,6 +68,11 @@ export interface ExtraMeepleCardDrawerProps {
   open: boolean;
   /** Called when the drawer requests to close */
   onClose: () => void;
+  /**
+   * Required when entityType='links'.
+   * Maps the MeepleEntityType to the LinkEntityType for the API call.
+   */
+  linkEntityType?: LinkEntityType;
   className?: string;
   'data-testid'?: string;
 }
@@ -71,10 +90,11 @@ const ENTITY_CONFIG: Record<
     Icon: React.ComponentType<{ className?: string }>;
   }
 > = {
-  game:  { label: 'Dettaglio Gioco',   color: '25 95% 45%',   Icon: Gamepad2      },
-  agent: { label: 'Dettaglio Agente',  color: '220 70% 55%',  Icon: Bot           },
-  chat:  { label: 'Dettaglio Chat',    color: '262 83% 58%',  Icon: MessageCircle },
-  kb:    { label: 'Documento KB',      color: '174 60% 40%',  Icon: FileText      },
+  game: { label: 'Dettaglio Gioco', color: '25 95% 45%', Icon: Gamepad2 },
+  agent: { label: 'Dettaglio Agente', color: '220 70% 55%', Icon: Bot },
+  chat: { label: 'Dettaglio Chat', color: '262 83% 58%', Icon: MessageCircle },
+  kb: { label: 'Documento KB', color: '174 60% 40%', Icon: FileText },
+  links: { label: 'Connections', color: '210 40% 55%', Icon: LinkIcon },
 };
 
 // ============================================================================
@@ -86,6 +106,7 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
   entityId,
   open,
   onClose,
+  linkEntityType,
   className,
   'data-testid': testId,
 }: ExtraMeepleCardDrawerProps) {
@@ -93,7 +114,12 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
   const { Icon } = config;
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+    <Sheet
+      open={open}
+      onOpenChange={isOpen => {
+        if (!isOpen) onClose();
+      }}
+    >
       <SheetContent
         side="right"
         className={cn(
@@ -103,14 +129,12 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
           'w-full sm:w-[600px] sm:max-w-[600px]',
           // Hide the built-in close button (we render our own in the colored header)
           '[&>button:first-child]:hidden',
-          className,
+          className
         )}
         data-testid={testId}
       >
         {/* Screen-reader title (required by Radix Dialog for accessibility) */}
-        <SheetTitle className="sr-only">
-          {config.label}
-        </SheetTitle>
+        <SheetTitle className="sr-only">{config.label}</SheetTitle>
 
         {/* Entity-colored header */}
         <div
@@ -131,7 +155,7 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
               'absolute right-4 top-1/2 -translate-y-1/2',
               'flex h-7 w-7 items-center justify-center rounded-full',
               'bg-white/20 text-white transition-colors duration-150',
-              'hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/50',
+              'hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/50'
             )}
             aria-label="Chiudi pannello"
           >
@@ -141,7 +165,11 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
 
         {/* Scrollable entity content */}
         <div className="flex flex-1 flex-col overflow-y-auto">
-          <DrawerEntityRouter entityType={entityType} entityId={entityId} />
+          <DrawerEntityRouter
+            entityType={entityType}
+            entityId={entityId}
+            linkEntityType={linkEntityType}
+          />
         </div>
       </SheetContent>
     </Sheet>
@@ -155,9 +183,11 @@ export const ExtraMeepleCardDrawer = React.memo(function ExtraMeepleCardDrawer({
 function DrawerEntityRouter({
   entityType,
   entityId,
+  linkEntityType,
 }: {
   entityType: DrawerEntityType;
   entityId: string;
+  linkEntityType?: LinkEntityType;
 }) {
   switch (entityType) {
     case 'game':
@@ -168,9 +198,25 @@ function DrawerEntityRouter({
       return <ChatDrawerContent entityId={entityId} />;
     case 'kb':
       return <KbDrawerContent entityId={entityId} />;
+    case 'links':
+      return <LinksDrawerContent entityType={linkEntityType ?? 'Game'} entityId={entityId} />;
     default:
       return <DrawerErrorState error="Tipo entità non supportato" />;
   }
+}
+
+// ============================================================================
+// Links Drawer Content
+// ============================================================================
+
+function LinksDrawerContent({
+  entityType,
+  entityId,
+}: {
+  entityType: LinkEntityType;
+  entityId: string;
+}) {
+  return <RelatedEntitiesSection entityType={entityType} entityId={entityId} />;
 }
 
 // ============================================================================
@@ -182,8 +228,8 @@ function GameDrawerContent({ entityId }: { entityId: string }) {
   const { data, loading, error, retry } = useGameDetail(entityId);
 
   if (loading) return <DrawerLoadingSkeleton />;
-  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
-  if (!data)   return <DrawerLoadingSkeleton />;
+  if (error) return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data) return <DrawerLoadingSkeleton />;
 
   return (
     <GameExtraMeepleCard
@@ -202,8 +248,8 @@ function AgentDrawerContent({ entityId }: { entityId: string }) {
   const { data, loading, error, retry } = useAgentDetail(entityId);
 
   if (loading) return <DrawerLoadingSkeleton />;
-  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
-  if (!data)   return <DrawerLoadingSkeleton />;
+  if (error) return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data) return <DrawerLoadingSkeleton />;
 
   return (
     <AgentExtraMeepleCard
@@ -217,8 +263,8 @@ function ChatDrawerContent({ entityId }: { entityId: string }) {
   const { data, loading, error, retry } = useChatDetail(entityId);
 
   if (loading) return <DrawerLoadingSkeleton />;
-  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
-  if (!data)   return <DrawerLoadingSkeleton />;
+  if (error) return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data) return <DrawerLoadingSkeleton />;
 
   return (
     <ChatExtraMeepleCard
@@ -232,8 +278,8 @@ function KbDrawerContent({ entityId }: { entityId: string }) {
   const { data, loading, error, retry } = useKbDetail(entityId);
 
   if (loading) return <DrawerLoadingSkeleton />;
-  if (error)   return <DrawerErrorState error={error} onRetry={retry} />;
-  if (!data)   return <DrawerLoadingSkeleton />;
+  if (error) return <DrawerErrorState error={error} onRetry={retry} />;
+  if (!data) return <DrawerLoadingSkeleton />;
 
   // v1: delete and retry are omitted in the drawer (read-only preview);
   // consumers needing these actions should use KbExtraMeepleCard standalone.
@@ -250,11 +296,7 @@ function KbDrawerContent({ entityId }: { entityId: string }) {
 // ============================================================================
 
 /** Animated skeleton shown while entity content loads */
-export function DrawerLoadingSkeleton({
-  'data-testid': testId,
-}: {
-  'data-testid'?: string;
-}) {
+export function DrawerLoadingSkeleton({ 'data-testid': testId }: { 'data-testid'?: string }) {
   return (
     <div
       className="flex flex-col gap-3 p-5"
@@ -266,17 +308,13 @@ export function DrawerLoadingSkeleton({
       <div className="h-[140px] w-full animate-pulse rounded-xl bg-slate-200" />
       {/* Fake tab strip */}
       <div className="flex gap-2">
-        {[80, 110, 70].map((w) => (
-          <div
-            key={w}
-            className="h-8 animate-pulse rounded-lg bg-slate-200"
-            style={{ width: w }}
-          />
+        {[80, 110, 70].map(w => (
+          <div key={w} className="h-8 animate-pulse rounded-lg bg-slate-200" style={{ width: w }} />
         ))}
       </div>
       {/* Fake stat cards */}
       <div className="grid grid-cols-3 gap-2">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3].map(i => (
           <div key={i} className="h-16 animate-pulse rounded-lg bg-slate-200" />
         ))}
       </div>
@@ -317,7 +355,7 @@ export function DrawerErrorState({
             'bg-slate-100 px-3 py-1.5',
             'font-nunito text-xs font-medium text-slate-700',
             'transition-colors duration-150 hover:bg-slate-200',
-            'focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1',
+            'focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1'
           )}
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -329,13 +367,7 @@ export function DrawerErrorState({
 }
 
 /** Placeholder shown for entity types not yet implemented */
-function DrawerComingSoon({
-  label,
-  issueNumber,
-}: {
-  label: string;
-  issueNumber: number;
-}) {
+function DrawerComingSoon({ label, issueNumber }: { label: string; issueNumber: number }) {
   return (
     <div
       className="flex flex-col items-center justify-center gap-3 p-8 text-center"
@@ -345,12 +377,8 @@ function DrawerComingSoon({
         <Wrench className="h-5 w-5 text-slate-400" aria-hidden="true" />
       </div>
       <div className="space-y-1">
-        <p className="font-quicksand text-sm font-semibold text-slate-600">
-          {label}
-        </p>
-        <p className="font-nunito text-xs text-slate-400">
-          In arrivo — Issue #{issueNumber}
-        </p>
+        <p className="font-quicksand text-sm font-semibold text-slate-600">{label}</p>
+        <p className="font-nunito text-xs text-slate-400">In arrivo — Issue #{issueNumber}</p>
       </div>
     </div>
   );
@@ -363,35 +391,39 @@ function DrawerComingSoon({
 /** Map PdfProcessingState string → KbDocumentPreview status */
 function mapProcessingStateToStatus(state: string): 'processing' | 'indexed' | 'failed' | 'none' {
   switch (state) {
-    case 'Ready':     return 'indexed';
-    case 'Failed':    return 'failed';
+    case 'Ready':
+      return 'indexed';
+    case 'Failed':
+      return 'failed';
     case 'Extracting':
     case 'Chunking':
     case 'Embedding':
     case 'Indexing':
-    case 'Uploading': return 'processing';
-    default:          return 'none';
+    case 'Uploading':
+      return 'processing';
+    default:
+      return 'none';
   }
 }
 
 /** Map raw JSON object from /api/v1/games/{id}/pdfs → PdfDocumentDto */
 function mapRawToPdfDocumentDto(raw: Record<string, unknown>): PdfDocumentDto {
   return {
-    id:               String(raw.id ?? ''),
-    gameId:           String(raw.gameId ?? ''),
-    fileName:         String(raw.fileName ?? raw.name ?? ''),
-    filePath:         String(raw.filePath ?? ''),
-    fileSizeBytes:    Number(raw.fileSizeBytes ?? 0),
+    id: String(raw.id ?? ''),
+    gameId: String(raw.gameId ?? ''),
+    fileName: String(raw.fileName ?? raw.name ?? ''),
+    filePath: String(raw.filePath ?? ''),
+    fileSizeBytes: Number(raw.fileSizeBytes ?? 0),
     processingStatus: String(raw.processingStatus ?? 'Pending'),
-    uploadedAt:       String(raw.uploadedAt ?? new Date().toISOString()),
-    processedAt:      raw.processedAt != null ? String(raw.processedAt) : null,
-    pageCount:        raw.pageCount != null ? Number(raw.pageCount) : null,
-    documentType:     (raw.documentType as 'base' | 'expansion' | 'errata' | 'homerule') ?? 'base',
-    isPublic:         Boolean(raw.isPublic ?? false),
-    processingState:  String(raw.processingState ?? 'Pending'),
+    uploadedAt: String(raw.uploadedAt ?? new Date().toISOString()),
+    processedAt: raw.processedAt != null ? String(raw.processedAt) : null,
+    pageCount: raw.pageCount != null ? Number(raw.pageCount) : null,
+    documentType: (raw.documentType as 'base' | 'expansion' | 'errata' | 'homerule') ?? 'base',
+    isPublic: Boolean(raw.isPublic ?? false),
+    processingState: String(raw.processingState ?? 'Pending'),
     progressPercentage: Number(raw.progressPercentage ?? 0),
-    retryCount:       Number(raw.retryCount ?? 0),
-    maxRetries:       Number(raw.maxRetries ?? 3),
+    retryCount: Number(raw.retryCount ?? 0),
+    maxRetries: Number(raw.maxRetries ?? 3),
   };
 }
 
@@ -411,52 +443,54 @@ function useGameDetail(gameId: string): UseGameDetailResult {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchData = React.useCallback(async (signal: AbortSignal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Fetch game details, full PDF list (with processing state), and agent config in parallel.
-      // KB: /api/v1/games/{id}/pdfs returns { pdfs: PdfDocumentDto[] } with processingState.
-      // Agent: /agent-config returns AgentConfigDto? (null when not configured).
-      // Both handled gracefully on non-200. (Issue #5029, #5195)
-      const [gameRes, kbRes, agentRes] = await Promise.all([
-        fetch(`/api/v1/library/games/${gameId}`, { signal }),
-        fetch(`/api/v1/games/${gameId}/pdfs`, { signal }),
-        fetch(`/api/v1/library/games/${gameId}/agent-config`, { signal }),
-      ]);
+  const fetchData = React.useCallback(
+    async (signal: AbortSignal) => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch game details, full PDF list (with processing state), and agent config in parallel.
+        // KB: /api/v1/games/{id}/pdfs returns { pdfs: PdfDocumentDto[] } with processingState.
+        // Agent: /agent-config returns AgentConfigDto? (null when not configured).
+        // Both handled gracefully on non-200. (Issue #5029, #5195)
+        const [gameRes, kbRes, agentRes] = await Promise.all([
+          fetch(`/api/v1/library/games/${gameId}`, { signal }),
+          fetch(`/api/v1/games/${gameId}/pdfs`, { signal }),
+          fetch(`/api/v1/library/games/${gameId}/agent-config`, { signal }),
+        ]);
 
-      if (!gameRes.ok) {
-        throw new Error(`Errore ${gameRes.status}: gioco non trovato`);
+        if (!gameRes.ok) {
+          throw new Error(`Errore ${gameRes.status}: gioco non trovato`);
+        }
+
+        const json = (await gameRes.json()) as Record<string, unknown>;
+        const kbRawJson = kbRes.ok ? ((await kbRes.json()) as unknown) : null;
+        // /api/v1/games/{id}/pdfs returns { pdfs: [...] } shape
+        const kbPdfsRaw: unknown[] =
+          kbRawJson != null
+            ? Array.isArray(kbRawJson)
+              ? kbRawJson
+              : ((kbRawJson as { pdfs?: unknown[] }).pdfs ?? [])
+            : [];
+        const agentJson = agentRes.ok ? ((await agentRes.json()) as Record<string, unknown>) : null;
+
+        setData(mapToGameDetailData(json, kbPdfsRaw, agentJson));
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Impossibile caricare i dati del gioco');
+      } finally {
+        setLoading(false);
       }
-
-      const json = (await gameRes.json()) as Record<string, unknown>;
-      const kbRawJson = kbRes.ok ? (await kbRes.json()) as unknown : null;
-      // /api/v1/games/{id}/pdfs returns { pdfs: [...] } shape
-      const kbPdfsRaw: unknown[] = kbRawJson != null
-        ? Array.isArray(kbRawJson)
-          ? kbRawJson
-          : ((kbRawJson as { pdfs?: unknown[] }).pdfs ?? [])
-        : [];
-      const agentJson = agentRes.ok ? (await agentRes.json()) as Record<string, unknown> : null;
-
-      setData(mapToGameDetailData(json, kbPdfsRaw, agentJson));
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return;
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Impossibile caricare i dati del gioco',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [gameId]);
+    },
+    [gameId]
+  );
 
   React.useEffect(() => {
     if (!gameId) return;
     const controller = new AbortController();
     void fetchData(controller.signal);
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [gameId, fetchData]);
 
   // retry creates a fresh controller each time
@@ -471,46 +505,50 @@ function useGameDetail(gameId: string): UseGameDetailResult {
 function mapToGameDetailData(
   json: Record<string, unknown>,
   kbRaw: unknown[] = [],
-  agentRaw: Record<string, unknown> | null = null,
+  agentRaw: Record<string, unknown> | null = null
 ): GameDetailData {
   // Map full PdfDocumentDto data (Issue #5195: from /api/v1/games/{gameId}/pdfs)
-  const pdfDocuments: PdfDocumentDto[] = kbRaw.map((item) =>
+  const pdfDocuments: PdfDocumentDto[] = kbRaw.map(item =>
     mapRawToPdfDocumentDto(item as Record<string, unknown>)
   );
 
   // KbDocumentPreview for simpler consumers — derive status from processingState
-  const kbDocuments: KbDocumentPreview[] = pdfDocuments.map((pdf) => ({
-    id:         pdf.id,
-    fileName:   pdf.fileName,
+  const kbDocuments: KbDocumentPreview[] = pdfDocuments.map(pdf => ({
+    id: pdf.id,
+    fileName: pdf.fileName,
     uploadedAt: pdf.uploadedAt,
-    status:     mapProcessingStateToStatus(pdf.processingState),
+    status: mapProcessingStateToStatus(pdf.processingState),
   }));
 
   // AgentConfigDto shape: { llmModel, temperature, maxTokens, personality, detailLevel, personalNotes }
   // No identity fields (id/name/isActive) — use placeholder values when config exists.
-  const agent: GameAgentPreview | undefined = agentRaw != null ? {
-    id:       '',
-    name:     'Agente AI',
-    model:    agentRaw.llmModel != null ? String(agentRaw.llmModel) : undefined,
-    isActive: true,
-  } : undefined;
+  const agent: GameAgentPreview | undefined =
+    agentRaw != null
+      ? {
+          id: '',
+          name: 'Agente AI',
+          model: agentRaw.llmModel != null ? String(agentRaw.llmModel) : undefined,
+          isActive: true,
+        }
+      : undefined;
 
   return {
-    id:                 String(json.id ?? ''),
-    title:              String(json.title ?? json.name ?? ''),
-    imageUrl:           json.imageUrl          != null ? String(json.imageUrl)          : undefined,
-    publisher:          json.publisher         != null ? String(json.publisher)         : undefined,
-    yearPublished:      json.yearPublished      != null ? Number(json.yearPublished)     : undefined,
-    minPlayers:         json.minPlayers         != null ? Number(json.minPlayers)        : undefined,
-    maxPlayers:         json.maxPlayers         != null ? Number(json.maxPlayers)        : undefined,
-    playTimeMinutes:    json.playTimeMinutes    != null ? Number(json.playTimeMinutes)   : undefined,
-    description:        json.description        != null ? String(json.description)       : undefined,
-    averageRating:      json.averageRating      != null ? Number(json.averageRating)     : undefined,
-    totalPlays:         json.totalPlays         != null ? Number(json.totalPlays)        : undefined,
-    faqCount:           json.faqCount           != null ? Number(json.faqCount)          : undefined,
-    rulesDocumentCount: json.rulesDocumentCount != null ? Number(json.rulesDocumentCount): undefined,
-    kbDocuments:        kbDocuments.length > 0 ? kbDocuments : undefined,
-    pdfDocuments:       pdfDocuments.length > 0 ? pdfDocuments : undefined,
+    id: String(json.id ?? ''),
+    title: String(json.title ?? json.name ?? ''),
+    imageUrl: json.imageUrl != null ? String(json.imageUrl) : undefined,
+    publisher: json.publisher != null ? String(json.publisher) : undefined,
+    yearPublished: json.yearPublished != null ? Number(json.yearPublished) : undefined,
+    minPlayers: json.minPlayers != null ? Number(json.minPlayers) : undefined,
+    maxPlayers: json.maxPlayers != null ? Number(json.maxPlayers) : undefined,
+    playTimeMinutes: json.playTimeMinutes != null ? Number(json.playTimeMinutes) : undefined,
+    description: json.description != null ? String(json.description) : undefined,
+    averageRating: json.averageRating != null ? Number(json.averageRating) : undefined,
+    totalPlays: json.totalPlays != null ? Number(json.totalPlays) : undefined,
+    faqCount: json.faqCount != null ? Number(json.faqCount) : undefined,
+    rulesDocumentCount:
+      json.rulesDocumentCount != null ? Number(json.rulesDocumentCount) : undefined,
+    kbDocuments: kbDocuments.length > 0 ? kbDocuments : undefined,
+    pdfDocuments: pdfDocuments.length > 0 ? pdfDocuments : undefined,
     agent,
   };
 }
@@ -531,33 +569,34 @@ function useAgentDetail(agentId: string): UseAgentDetailResult {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchData = React.useCallback(async (signal: AbortSignal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/v1/agents/${agentId}`, { signal });
-      if (!res.ok) {
-        throw new Error(`Errore ${res.status}: agente non trovato`);
+  const fetchData = React.useCallback(
+    async (signal: AbortSignal) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/v1/agents/${agentId}`, { signal });
+        if (!res.ok) {
+          throw new Error(`Errore ${res.status}: agente non trovato`);
+        }
+        const json = (await res.json()) as Record<string, unknown>;
+        setData(mapToAgentDetailData(json));
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : "Impossibile caricare i dati dell'agente");
+      } finally {
+        setLoading(false);
       }
-      const json = (await res.json()) as Record<string, unknown>;
-      setData(mapToAgentDetailData(json));
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return;
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Impossibile caricare i dati dell\'agente',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [agentId]);
+    },
+    [agentId]
+  );
 
   React.useEffect(() => {
     if (!agentId) return;
     const controller = new AbortController();
     void fetchData(controller.signal);
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [agentId, fetchData]);
 
   const retry = React.useCallback(() => {
@@ -569,22 +608,23 @@ function useAgentDetail(agentId: string): UseAgentDetailResult {
 }
 
 function mapToAgentDetailData(json: Record<string, unknown>): AgentDetailData {
-  const params = (json.strategyParameters != null && typeof json.strategyParameters === 'object')
-    ? (json.strategyParameters as Record<string, unknown>)
-    : {};
+  const params =
+    json.strategyParameters != null && typeof json.strategyParameters === 'object'
+      ? (json.strategyParameters as Record<string, unknown>)
+      : {};
   return {
-    id:                 String(json.id ?? ''),
-    name:               String(json.name ?? ''),
-    type:               String(json.type ?? ''),
-    strategyName:       String(json.strategyName ?? ''),
+    id: String(json.id ?? ''),
+    name: String(json.name ?? ''),
+    type: String(json.type ?? ''),
+    strategyName: String(json.strategyName ?? ''),
     strategyParameters: params,
-    isActive:           Boolean(json.isActive ?? false),
-    isIdle:             Boolean(json.isIdle ?? true),
-    invocationCount:    json.invocationCount != null ? Number(json.invocationCount) : 0,
-    lastInvokedAt:      json.lastInvokedAt   != null ? String(json.lastInvokedAt)  : null,
-    createdAt:          String(json.createdAt ?? new Date().toISOString()),
-    gameId:             json.gameId   != null ? String(json.gameId)   : undefined,
-    gameName:           json.gameName != null ? String(json.gameName) : undefined,
+    isActive: Boolean(json.isActive ?? false),
+    isIdle: Boolean(json.isIdle ?? true),
+    invocationCount: json.invocationCount != null ? Number(json.invocationCount) : 0,
+    lastInvokedAt: json.lastInvokedAt != null ? String(json.lastInvokedAt) : null,
+    createdAt: String(json.createdAt ?? new Date().toISOString()),
+    gameId: json.gameId != null ? String(json.gameId) : undefined,
+    gameName: json.gameName != null ? String(json.gameName) : undefined,
   };
 }
 
@@ -604,37 +644,38 @@ function useChatDetail(threadId: string): UseChatDetailResult {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchData = React.useCallback(async (signal: AbortSignal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [threadRes, msgsRes] = await Promise.all([
-        fetch(`/api/v1/chat/threads/${threadId}`, { signal }),
-        fetch(`/api/v1/chat/threads/${threadId}/messages?limit=10`, { signal }),
-      ]);
-      if (!threadRes.ok) {
-        throw new Error(`Errore ${threadRes.status}: thread non trovato`);
+  const fetchData = React.useCallback(
+    async (signal: AbortSignal) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [threadRes, msgsRes] = await Promise.all([
+          fetch(`/api/v1/chat/threads/${threadId}`, { signal }),
+          fetch(`/api/v1/chat/threads/${threadId}/messages?limit=10`, { signal }),
+        ]);
+        if (!threadRes.ok) {
+          throw new Error(`Errore ${threadRes.status}: thread non trovato`);
+        }
+        const thread = (await threadRes.json()) as Record<string, unknown>;
+        const msgs = msgsRes.ok ? ((await msgsRes.json()) as unknown[]) : [];
+        setData(mapToChatDetailData(thread, msgs));
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Impossibile caricare i dati della chat');
+      } finally {
+        setLoading(false);
       }
-      const thread = (await threadRes.json()) as Record<string, unknown>;
-      const msgs = msgsRes.ok ? ((await msgsRes.json()) as unknown[]) : [];
-      setData(mapToChatDetailData(thread, msgs));
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return;
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Impossibile caricare i dati della chat',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [threadId]);
+    },
+    [threadId]
+  );
 
   React.useEffect(() => {
     if (!threadId) return;
     const controller = new AbortController();
     void fetchData(controller.signal);
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [threadId, fetchData]);
 
   const retry = React.useCallback(() => {
@@ -645,40 +686,40 @@ function useChatDetail(threadId: string): UseChatDetailResult {
   return { data, loading, error, retry };
 }
 
-function mapToChatDetailData(
-  thread: Record<string, unknown>,
-  msgs: unknown[],
-): ChatDetailData {
+function mapToChatDetailData(thread: Record<string, unknown>, msgs: unknown[]): ChatDetailData {
   const statusMap: Record<string, ChatDetailData['status']> = {
-    active: 'active', waiting: 'waiting', archived: 'archived', closed: 'closed',
+    active: 'active',
+    waiting: 'waiting',
+    archived: 'archived',
+    closed: 'closed',
   };
   const rawStatus = String(thread.status ?? 'closed').toLowerCase();
   return {
-    id:               String(thread.id ?? ''),
-    status:           statusMap[rawStatus] ?? 'closed',
-    agentId:          thread.agentId          != null ? String(thread.agentId)          : undefined,
-    agentName:        thread.agentName        != null ? String(thread.agentName)        : undefined,
-    agentModel:       thread.agentModel       != null ? String(thread.agentModel)       : undefined,
-    gameId:           thread.gameId           != null ? String(thread.gameId)           : undefined,
-    gameName:         thread.gameName         != null ? String(thread.gameName)         : undefined,
+    id: String(thread.id ?? ''),
+    status: statusMap[rawStatus] ?? 'closed',
+    agentId: thread.agentId != null ? String(thread.agentId) : undefined,
+    agentName: thread.agentName != null ? String(thread.agentName) : undefined,
+    agentModel: thread.agentModel != null ? String(thread.agentModel) : undefined,
+    gameId: thread.gameId != null ? String(thread.gameId) : undefined,
+    gameName: thread.gameName != null ? String(thread.gameName) : undefined,
     gameThumbnailUrl: thread.gameThumbnailUrl != null ? String(thread.gameThumbnailUrl) : undefined,
-    startedAt:        String(thread.startedAt ?? thread.createdAt ?? new Date().toISOString()),
-    durationMinutes:  thread.durationMinutes  != null ? Number(thread.durationMinutes)  : undefined,
-    messageCount:     thread.messageCount     != null ? Number(thread.messageCount)     : msgs.length,
-    messages:         mapChatMessages(msgs),
-    temperature:      thread.temperature      != null ? Number(thread.temperature)      : undefined,
-    maxTokens:        thread.maxTokens        != null ? Number(thread.maxTokens)        : undefined,
-    systemPrompt:     thread.systemPrompt     != null ? String(thread.systemPrompt)     : undefined,
+    startedAt: String(thread.startedAt ?? thread.createdAt ?? new Date().toISOString()),
+    durationMinutes: thread.durationMinutes != null ? Number(thread.durationMinutes) : undefined,
+    messageCount: thread.messageCount != null ? Number(thread.messageCount) : msgs.length,
+    messages: mapChatMessages(msgs),
+    temperature: thread.temperature != null ? Number(thread.temperature) : undefined,
+    maxTokens: thread.maxTokens != null ? Number(thread.maxTokens) : undefined,
+    systemPrompt: thread.systemPrompt != null ? String(thread.systemPrompt) : undefined,
   };
 }
 
 function mapChatMessages(json: unknown[]): ChatDetailMessage[] {
-  return json.map((raw) => {
+  return json.map(raw => {
     const m = raw as Record<string, unknown>;
     return {
-      id:        String(m.id ?? ''),
-      role:      m.role === 'user' ? 'user' : 'assistant',
-      content:   String(m.content ?? ''),
+      id: String(m.id ?? ''),
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: String(m.content ?? ''),
       createdAt: String(m.createdAt ?? m.timestamp ?? new Date().toISOString()),
     };
   });
@@ -736,32 +777,30 @@ function useKbDetail(pdfId: string): UseKbDetailResult {
 function mapToKbDetailData(doc: Record<string, unknown>): KbDetailData {
   const rawStatus = String(doc.processingStatus ?? 'none').toLowerCase();
   const statusMap: Record<string, KbDetailData['status']> = {
-    uploaded:   'processing',
+    uploaded: 'processing',
     extracting: 'processing',
-    indexing:   'processing',
-    indexed:    'indexed',
-    failed:     'failed',
-    none:       'none',
+    indexing: 'processing',
+    indexed: 'indexed',
+    failed: 'failed',
+    none: 'none',
   };
   const status = statusMap[rawStatus] ?? 'none';
 
   const extractedText = doc.extractedText != null ? String(doc.extractedText) : undefined;
   const MAX_CHARS = 2000; // ~500 words
-  const extractedContent = extractedText
-    ? extractedText.slice(0, MAX_CHARS)
-    : undefined;
+  const extractedContent = extractedText ? extractedText.slice(0, MAX_CHARS) : undefined;
   const hasMoreContent = extractedText ? extractedText.length > MAX_CHARS : false;
 
   return {
-    id:               String(doc.id ?? ''),
-    fileName:         String(doc.fileName ?? 'Documento'),
-    fileSize:         doc.fileSize    != null ? Number(doc.fileSize)    : undefined,
-    pageCount:        doc.pageCount   != null ? Number(doc.pageCount)   : undefined,
-    characterCount:   doc.characterCount != null ? Number(doc.characterCount) : undefined,
-    uploadedAt:       doc.uploadedAt  != null ? String(doc.uploadedAt)  : undefined,
-    processedAt:      doc.processedAt != null ? String(doc.processedAt) : undefined,
+    id: String(doc.id ?? ''),
+    fileName: String(doc.fileName ?? 'Documento'),
+    fileSize: doc.fileSize != null ? Number(doc.fileSize) : undefined,
+    pageCount: doc.pageCount != null ? Number(doc.pageCount) : undefined,
+    characterCount: doc.characterCount != null ? Number(doc.characterCount) : undefined,
+    uploadedAt: doc.uploadedAt != null ? String(doc.uploadedAt) : undefined,
+    processedAt: doc.processedAt != null ? String(doc.processedAt) : undefined,
     status,
-    errorMessage:     doc.processingError != null ? String(doc.processingError) : undefined,
+    errorMessage: doc.processingError != null ? String(doc.processingError) : undefined,
     extractedContent,
     hasMoreContent,
   };

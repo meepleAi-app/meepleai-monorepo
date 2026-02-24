@@ -15,17 +15,15 @@
 
 import React, { useMemo, useState } from 'react';
 
-import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { Star } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import type { MeepleCardProps, MeepleEntityType } from '../../meeple-card';
-import {
-  DataTable,
-  SortableHeader,
-} from '../../data-table';
 
+import { DataTable, SortableHeader } from '../../data-table';
+
+import type { MeepleCardProps, MeepleEntityType } from '../../meeple-card';
 import type { TableColumnConfig } from '../entity-list-view.types';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 // ============================================================================
 // Entity color map for row accents
@@ -39,6 +37,7 @@ const ENTITY_BORDER_COLORS: Record<MeepleEntityType, string> = {
   document: 'border-l-[hsl(210,40%,55%)]',
   chatSession: 'border-l-[hsl(220,80%,55%)]',
   event: 'border-l-[hsl(350,89%,60%)]',
+  toolkit: 'border-l-[hsl(142,70%,45%)]',
   custom: 'border-l-[hsl(30,15%,50%)]',
   kb_card: 'border-l-[hsl(174,60%,40%)]',
 };
@@ -143,17 +142,21 @@ function createDefaultColumns(entity: MeepleEntityType): ColumnDef<TableRowData,
   ];
 }
 
-function createColumnsFromConfig(
-  configs: TableColumnConfig[]
-): ColumnDef<TableRowData, unknown>[] {
-  return configs.map((config) => ({
+function createColumnsFromConfig(configs: TableColumnConfig[]): ColumnDef<TableRowData, unknown>[] {
+  return configs.map(config => ({
     id: config.id,
     accessorKey: config.accessorKey || config.id,
-    header: config.sortable !== false
-      ? ({ column }: { column: { getIsSorted: () => false | 'asc' | 'desc'; toggleSorting: (desc?: boolean) => void } }) => (
-          <SortableHeader column={column}>{config.header}</SortableHeader>
-        )
-      : () => <span>{config.header}</span>,
+    header:
+      config.sortable !== false
+        ? ({
+            column,
+          }: {
+            column: {
+              getIsSorted: () => false | 'asc' | 'desc';
+              toggleSorting: (desc?: boolean) => void;
+            };
+          }) => <SortableHeader column={column}>{config.header}</SortableHeader>
+        : () => <span>{config.header}</span>,
     cell: config.cell
       ? ({ row }: { row: { original: TableRowData } }) => {
           const key = config.accessorKey || config.id;
@@ -162,11 +165,7 @@ function createColumnsFromConfig(
       : ({ row }: { row: { original: TableRowData } }) => {
           const key = config.accessorKey || config.id;
           const val = row.original[key];
-          return (
-            <span className="font-nunito text-sm">
-              {val != null ? String(val) : '—'}
-            </span>
-          );
+          return <span className="font-nunito text-sm">{val != null ? String(val) : '—'}</span>;
         },
     size: config.width ? undefined : undefined,
   }));
@@ -202,10 +201,13 @@ export function EntityTableView<T>({
         badge: cardProps.badge,
         imageUrl: cardProps.imageUrl,
         // Spread any metadata values for custom columns
-        ...(cardProps.metadata?.reduce((acc, m, i) => {
-          acc[`meta_${i}`] = m.value;
-          return acc;
-        }, {} as Record<string, unknown>) ?? {}),
+        ...(cardProps.metadata?.reduce(
+          (acc, m, i) => {
+            acc[`meta_${i}`] = m.value;
+            return acc;
+          },
+          {} as Record<string, unknown>
+        ) ?? {}),
       };
     });
   }, [displayItems, renderItem]);
@@ -233,11 +235,7 @@ export function EntityTableView<T>({
   return (
     <div
       data-testid={testId || 'table-layout'}
-      className={cn(
-        '[&_tbody_tr]:border-l-4',
-        borderClass,
-        'font-nunito'
-      )}
+      className={cn('[&_tbody_tr]:border-l-4', borderClass, 'font-nunito')}
     >
       <DataTable
         columns={columns}
@@ -246,7 +244,7 @@ export function EntityTableView<T>({
         onSortingChange={setSorting}
         onRowClick={handleRowClick}
         emptyMessage={emptyMessage}
-        getRowId={(row) => row.id}
+        getRowId={row => row.id}
       />
     </div>
   );

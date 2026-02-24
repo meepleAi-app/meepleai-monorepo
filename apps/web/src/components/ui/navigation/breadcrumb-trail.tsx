@@ -19,15 +19,14 @@
 
 import { useCallback } from 'react';
 
-import Link from 'next/link';
 import { ChevronRight, Home, X } from 'lucide-react';
+import Link from 'next/link';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { ENTITY_NAV_ICONS } from '@/components/ui/data-display/meeple-card-features/navigation-icons';
-import { cn } from '@/lib/utils';
-
 import type { BreadcrumbStep } from '@/hooks/use-navigation-trail';
 import { useNavigationTrail } from '@/hooks/use-navigation-trail';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Entity HSL colours (duplicated from CardNavigationFooter to avoid circular)
@@ -41,6 +40,7 @@ const ENTITY_HSL: Record<MeepleEntityType, string> = {
   document: '210 40% 55%',
   chatSession: '220 80% 55%',
   event: '350 89% 60%',
+  toolkit: '142 70% 45%',
   custom: '220 70% 50%',
   kb_card: '174 60% 40%',
 };
@@ -60,9 +60,8 @@ function BreadcrumbStep({
   isLast: boolean;
   onNavigate: (index: number) => void;
 }) {
-  // eslint-disable-next-line security/detect-object-injection -- entity from typed union
   const Icon = ENTITY_NAV_ICONS[step.entity] ?? ENTITY_NAV_ICONS.game;
-  // eslint-disable-next-line security/detect-object-injection -- entity from typed union
+
   const hsl = ENTITY_HSL[step.entity] ?? ENTITY_HSL.custom;
 
   const handleClick = useCallback(
@@ -72,7 +71,7 @@ function BreadcrumbStep({
         onNavigate(index);
       }
     },
-    [index, isLast, onNavigate],
+    [index, isLast, onNavigate]
   );
 
   return (
@@ -86,7 +85,7 @@ function BreadcrumbStep({
           'no-underline whitespace-nowrap',
           isLast
             ? 'bg-[hsl(var(--step-hsl)/0.12)] font-semibold'
-            : 'hover:bg-[hsl(var(--step-hsl)/0.08)]',
+            : 'hover:bg-[hsl(var(--step-hsl)/0.08)]'
         )}
         style={{ '--step-hsl': hsl } as React.CSSProperties}
         title={step.label}
@@ -96,7 +95,7 @@ function BreadcrumbStep({
             'w-3.5 h-3.5 shrink-0 transition-colors duration-200',
             isLast
               ? 'text-[hsl(var(--step-hsl))]'
-              : 'text-muted-foreground group-hover/step:text-[hsl(var(--step-hsl))]',
+              : 'text-muted-foreground group-hover/step:text-[hsl(var(--step-hsl))]'
           )}
         />
         <span
@@ -104,16 +103,14 @@ function BreadcrumbStep({
             'text-xs font-nunito transition-colors duration-200',
             isLast
               ? 'text-[hsl(var(--step-hsl))]'
-              : 'text-muted-foreground group-hover/step:text-foreground',
+              : 'text-muted-foreground group-hover/step:text-foreground'
           )}
         >
           {step.label}
         </span>
       </Link>
 
-      {!isLast && (
-        <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-      )}
+      {!isLast && <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />}
     </>
   );
 }
@@ -145,7 +142,7 @@ export function BreadcrumbTrail({ className }: BreadcrumbTrailProps) {
         'rounded-xl',
         'shadow-sm',
         'animate-in fade-in slide-in-from-top-2 duration-300',
-        className,
+        className
       )}
       aria-label="Navigation trail"
       data-testid="breadcrumb-trail"
@@ -165,18 +162,11 @@ export function BreadcrumbTrail({ className }: BreadcrumbTrailProps) {
       {showCollapsed ? (
         <>
           {/* First step always visible */}
-          <BreadcrumbStep
-            step={trail[0]}
-            index={0}
-            isLast={false}
-            onNavigate={navigateTo}
-          />
+          <BreadcrumbStep step={trail[0]} index={0} isLast={false} onNavigate={navigateTo} />
 
           {/* Collapsed middle */}
           {trail.length > 3 && (
-            <span className="text-xs text-muted-foreground/50 px-1">
-              &hellip;
-            </span>
+            <span className="text-xs text-muted-foreground/50 px-1">&hellip;</span>
           )}
 
           {/* Second-to-last (if 3+ steps) */}

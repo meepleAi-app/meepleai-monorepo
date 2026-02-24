@@ -17,10 +17,16 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
-import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // ========== Types ==========
@@ -82,9 +88,9 @@ export function PdfUploadSection({
       try {
         const res = await fetch(`/api/v1/games/${gameId}/pdfs`, { credentials: 'include' });
         if (!res.ok) return;
-        const json = await res.json() as { pdfs?: PdfDocumentDto[] } | PdfDocumentDto[];
+        const json = (await res.json()) as { pdfs?: PdfDocumentDto[] } | PdfDocumentDto[];
         const pdfs: PdfDocumentDto[] = Array.isArray(json) ? json : (json.pdfs ?? []);
-        const doc = pdfs.find((p) => p.id === processingDoc.id);
+        const doc = pdfs.find(p => p.id === processingDoc.id);
         if (doc) {
           setProcessingDoc(doc);
           if (TERMINAL_STATES.has(doc.processingState)) {
@@ -102,14 +108,16 @@ export function PdfUploadSection({
       }
     };
 
-    pollingRef.current = setInterval(() => { void poll(); }, 3000);
+    pollingRef.current = setInterval(() => {
+      void poll();
+    }, 3000);
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processingDoc?.id, processingDoc?.processingState, gameId]);
 
   // Validate file selection
@@ -166,25 +174,31 @@ export function PdfUploadSection({
   }, []);
 
   // Link PDF to SharedGame
-  const linkPdfToGame = useCallback(async (targetGameId: string, pdfId: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/shared-games/${targetGameId}/documents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ documentId: pdfId, setAsActive: true }),
-      });
+  const linkPdfToGame = useCallback(
+    async (targetGameId: string, pdfId: string) => {
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/v1/admin/shared-games/${targetGameId}/documents`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ documentId: pdfId, setAsActive: true }),
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error('Errore nel collegamento del PDF al gioco');
+        if (!response.ok) {
+          throw new Error('Errore nel collegamento del PDF al gioco');
+        }
+
+        toast.success('PDF collegato al gioco');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Errore sconosciuto';
+        toast.error(`Collegamento fallito: ${message}`);
       }
-
-      toast.success('PDF collegato al gioco');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Errore sconosciuto';
-      toast.error(`Collegamento fallito: ${message}`);
-    }
-  }, [API_BASE]);
+    },
+    [API_BASE]
+  );
 
   // Upload PDF
   const handleUpload = useCallback(async () => {
@@ -205,39 +219,41 @@ export function PdfUploadSection({
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ documentId: string; fileName: string }>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', e => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        });
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch {
-              reject(new Error('Risposta server non valida'));
+      const uploadPromise = new Promise<{ documentId: string; fileName: string }>(
+        (resolve, reject) => {
+          xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable) {
+              setUploadProgress(Math.round((e.loaded / e.total) * 100));
             }
-          } else {
-            try {
-              const errorResponse = JSON.parse(xhr.responseText);
-              reject(new Error(errorResponse.error || 'Upload fallito'));
-            } catch {
-              reject(new Error(`Upload fallito: ${xhr.statusText}`));
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response);
+              } catch {
+                reject(new Error('Risposta server non valida'));
+              }
+            } else {
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                reject(new Error(errorResponse.error || 'Upload fallito'));
+              } catch {
+                reject(new Error(`Upload fallito: ${xhr.statusText}`));
+              }
             }
-          }
-        });
+          });
 
-        xhr.addEventListener('error', () => {
-          reject(new Error('Errore di rete durante l\'upload'));
-        });
+          xhr.addEventListener('error', () => {
+            reject(new Error("Errore di rete durante l'upload"));
+          });
 
-        xhr.open('POST', '/api/v1/ingest/pdf');
-        xhr.withCredentials = true;
-        xhr.send(formData);
-      });
+          xhr.open('POST', '/api/v1/ingest/pdf');
+          xhr.withCredentials = true;
+          xhr.send(formData);
+        }
+      );
 
       const result = await uploadPromise;
 

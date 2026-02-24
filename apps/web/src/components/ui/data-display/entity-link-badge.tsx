@@ -25,10 +25,11 @@
 'use client';
 
 import { memo } from 'react';
+
 import { FileText, Link2, BookOpen } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import type { EntityLinkType, MeepleEntityType } from '@/lib/api/schemas/entity-link.schemas';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
@@ -87,21 +88,17 @@ export const EntityLinkBadge = memo(function EntityLinkBadge({
       <span
         className={cn(
           'inline-flex items-center gap-1.5 rounded-md border font-semibold',
-          size === 'sm'
-            ? 'px-2 py-0.5 text-[10px]'
-            : 'px-2.5 py-1 text-xs',
+          size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
           'bg-teal-50 border-teal-200 text-teal-700',
           'dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-300',
-          className,
+          className
         )}
         data-testid="entity-link-badge-kb"
         aria-label={`Documenti KB: ${count ?? 0} collegate`}
       >
         <FileText aria-hidden="true" className={cn(size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5')} />
         {label ?? 'Documenti KB'}
-        {count !== undefined && (
-          <span className="ml-0.5 font-bold">{count}</span>
-        )}
+        {count !== undefined && <span className="ml-0.5 font-bold">{count}</span>}
       </span>
     );
   }
@@ -114,20 +111,16 @@ export const EntityLinkBadge = memo(function EntityLinkBadge({
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-md border font-semibold',
-        size === 'sm'
-          ? 'px-2 py-0.5 text-[10px]'
-          : 'px-2.5 py-1 text-xs',
+        size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
         'bg-muted/50 border-border/60 text-muted-foreground',
-        className,
+        className
       )}
       data-testid="entity-link-badge-generic"
       aria-label={`${genericLabel}${count !== undefined ? `: ${count}` : ''}`}
     >
       <Icon aria-hidden="true" className={cn(size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5')} />
       {genericLabel}
-      {count !== undefined && (
-        <span className="ml-0.5 font-bold">{count}</span>
-      )}
+      {count !== undefined && <span className="ml-0.5 font-bold">{count}</span>}
     </span>
   );
 });

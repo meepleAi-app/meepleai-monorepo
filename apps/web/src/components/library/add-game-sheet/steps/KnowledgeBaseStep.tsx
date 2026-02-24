@@ -10,22 +10,23 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+
 import { BookOpen, Upload } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { RagReadyIndicator } from '@/components/pdf/RagReadyIndicator';
 import { api } from '@/lib/api';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
-import { RagReadyIndicator } from '@/components/pdf/RagReadyIndicator';
 import { useAddGameWizardStore } from '@/lib/stores/add-game-wizard-store';
+import { cn } from '@/lib/utils';
 
 import { PdfList } from './PdfList';
 import { PdfUploadZone } from './PdfUploadZone';
 
 export function KnowledgeBaseStep() {
-  const selectedGame = useAddGameWizardStore((s) => s.selectedGame);
-  const setDocuments = useAddGameWizardStore((s) => s.setDocuments);
-  const setCustomPdfUploaded = useAddGameWizardStore((s) => s.setCustomPdfUploaded);
-  const customPdfUploaded = useAddGameWizardStore((s) => s.customPdfUploaded);
+  const selectedGame = useAddGameWizardStore(s => s.selectedGame);
+  const setDocuments = useAddGameWizardStore(s => s.setDocuments);
+  const setCustomPdfUploaded = useAddGameWizardStore(s => s.setCustomPdfUploaded);
+  const customPdfUploaded = useAddGameWizardStore(s => s.customPdfUploaded);
 
   const [existingDocs, setExistingDocs] = useState<PdfDocumentDto[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
@@ -43,17 +44,17 @@ export function KnowledgeBaseStep() {
 
     api.documents
       .getDocumentsByGame(gameId)
-      .then((docs) => {
+      .then(docs => {
         if (!cancelled) {
           setExistingDocs(docs);
           setDocuments(
-            docs.map((d) => ({
+            docs.map(d => ({
               id: d.id,
               fileName: d.fileName,
               pageCount: d.pageCount ?? undefined,
               status: d.processingStatus,
               documentType: d.documentType,
-            })),
+            }))
           );
         }
       })
@@ -75,7 +76,7 @@ export function KnowledgeBaseStep() {
       if (!gameId) throw new Error('Nessun gioco selezionato');
       return api.pdf.uploadPdf(gameId, file, onProgress);
     },
-    [gameId],
+    [gameId]
   );
 
   const handleUploadComplete = useCallback(
@@ -85,7 +86,7 @@ export function KnowledgeBaseStep() {
       setShowUpload(false);
 
       // Add to existing docs list
-      setExistingDocs((prev) => [
+      setExistingDocs(prev => [
         ...prev,
         {
           id: documentId,
@@ -106,7 +107,7 @@ export function KnowledgeBaseStep() {
         },
       ]);
     },
-    [gameId, setCustomPdfUploaded],
+    [gameId, setCustomPdfUploaded]
   );
 
   const hasDocuments = existingDocs.length > 0;
@@ -121,7 +122,8 @@ export function KnowledgeBaseStep() {
           <h3 className="text-base font-semibold text-slate-100">Knowledge Base</h3>
         </div>
         <p className="text-sm text-slate-400">
-          I PDF del regolamento vengono usati dall&apos;AI per rispondere alle tue domande sul gioco.
+          I PDF del regolamento vengono usati dall&apos;AI per rispondere alle tue domande sul
+          gioco.
           {!hasDocuments && !loadingDocs && ' Puoi caricare un PDF o saltare questo passaggio.'}
         </p>
       </div>
@@ -156,16 +158,14 @@ export function KnowledgeBaseStep() {
             onClick={() => setShowUpload(true)}
             className={cn(
               'flex w-full items-center gap-3 rounded-lg border border-dashed border-slate-700 px-4 py-3',
-              'text-left transition-colors hover:border-teal-500/50 hover:bg-slate-800/30',
+              'text-left transition-colors hover:border-teal-500/50 hover:bg-slate-800/30'
             )}
             data-testid="show-upload-button"
           >
             <Upload className="h-5 w-5 text-slate-500" />
             <div>
               <p className="text-sm font-medium text-slate-300">Carica un PDF personalizzato</p>
-              <p className="text-xs text-slate-500">
-                Aggiungi il regolamento o un manuale privato
-              </p>
+              <p className="text-xs text-slate-500">Aggiungi il regolamento o un manuale privato</p>
             </div>
           </button>
         ) : customPdfUploaded && !showUpload ? (
@@ -179,10 +179,7 @@ export function KnowledgeBaseStep() {
         ) : null}
 
         {showUpload && (
-          <PdfUploadZone
-            onUpload={handleUpload}
-            onUploadComplete={handleUploadComplete}
-          />
+          <PdfUploadZone onUpload={handleUpload} onUploadComplete={handleUploadComplete} />
         )}
       </div>
 

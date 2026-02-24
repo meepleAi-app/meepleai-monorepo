@@ -74,17 +74,29 @@ describe('KbCardStatusRow - Issue #5197', () => {
   });
 
   it('shows processing badge for Extracting state', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Extracting', progressPercentage: 30 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Extracting', progressPercentage: 30 })}
+      />
+    );
     expect(screen.getByTestId('kb-card-status-row-progress')).toBeInTheDocument();
   });
 
   it('shows processing badge for Uploading state', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Uploading', progressPercentage: 10 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Uploading', progressPercentage: 10 })}
+      />
+    );
     expect(screen.getByTestId('kb-card-status-row-progress')).toBeInTheDocument();
   });
 
   it('shows failed badge for Failed state', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Failed', retryCount: 0, maxRetries: 3 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Failed', retryCount: 0, maxRetries: 3 })}
+      />
+    );
     // Should show retry button since retries remain
     expect(screen.getByTestId('kb-card-status-row-retry')).toBeInTheDocument();
   });
@@ -94,7 +106,11 @@ describe('KbCardStatusRow - Issue #5197', () => {
   // --------------------------------------------------------------------------
 
   it('shows progress bar when processing', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Indexing', progressPercentage: 55 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Indexing', progressPercentage: 55 })}
+      />
+    );
     const bar = screen.getByTestId('kb-card-status-row-progress');
     expect(bar).toBeInTheDocument();
     expect(bar).toHaveAttribute('aria-valuenow', '55');
@@ -103,12 +119,16 @@ describe('KbCardStatusRow - Issue #5197', () => {
   });
 
   it('hides progress bar when Ready', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Ready', progressPercentage: 100 })} />);
+    render(
+      <KbCardStatusRow document={makeDoc({ processingState: 'Ready', progressPercentage: 100 })} />
+    );
     expect(screen.queryByTestId('kb-card-status-row-progress')).not.toBeInTheDocument();
   });
 
   it('hides progress bar when Failed', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Failed', progressPercentage: 42 })} />);
+    render(
+      <KbCardStatusRow document={makeDoc({ processingState: 'Failed', progressPercentage: 42 })} />
+    );
     expect(screen.queryByTestId('kb-card-status-row-progress')).not.toBeInTheDocument();
   });
 
@@ -122,17 +142,29 @@ describe('KbCardStatusRow - Issue #5197', () => {
   // --------------------------------------------------------------------------
 
   it('shows retry button when failed and retries remain', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Failed', retryCount: 1, maxRetries: 3 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Failed', retryCount: 1, maxRetries: 3 })}
+      />
+    );
     expect(screen.getByTestId('kb-card-status-row-retry')).toBeInTheDocument();
   });
 
   it('hides retry button when retries exhausted', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Failed', retryCount: 3, maxRetries: 3 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Failed', retryCount: 3, maxRetries: 3 })}
+      />
+    );
     expect(screen.queryByTestId('kb-card-status-row-retry')).not.toBeInTheDocument();
   });
 
   it('hides retry button when not failed', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Ready', retryCount: 0, maxRetries: 3 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Ready', retryCount: 0, maxRetries: 3 })}
+      />
+    );
     expect(screen.queryByTestId('kb-card-status-row-retry')).not.toBeInTheDocument();
   });
 
@@ -141,7 +173,12 @@ describe('KbCardStatusRow - Issue #5197', () => {
     const onRetry = vi.fn();
     render(
       <KbCardStatusRow
-        document={makeDoc({ id: 'doc-retry', processingState: 'Failed', retryCount: 0, maxRetries: 3 })}
+        document={makeDoc({
+          id: 'doc-retry',
+          processingState: 'Failed',
+          retryCount: 0,
+          maxRetries: 3,
+        })}
         onRetry={onRetry}
       />
     );
@@ -165,7 +202,11 @@ describe('KbCardStatusRow - Issue #5197', () => {
   // --------------------------------------------------------------------------
 
   it('shows retry count when retryCount > 0', () => {
-    render(<KbCardStatusRow document={makeDoc({ processingState: 'Failed', retryCount: 2, maxRetries: 3 })} />);
+    render(
+      <KbCardStatusRow
+        document={makeDoc({ processingState: 'Failed', retryCount: 2, maxRetries: 3 })}
+      />
+    );
     expect(screen.getByTestId('kb-card-status-row-retry-count')).toHaveTextContent('Tentativo 2/3');
   });
 

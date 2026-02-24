@@ -22,7 +22,7 @@ export const PdfDocumentDtoSchema = z.object({
   documentType: z.enum(['base', 'expansion', 'errata', 'homerule']).default('base'), // Issue #2051
   isPublic: z.boolean().default(false), // Admin Wizard: Public library visibility
   // Issue #5186: granular state + progress for KbCardStatusRow
-  processingState: z.string().default('Pending'),  // PdfProcessingState enum value
+  processingState: z.string().default('Pending'), // PdfProcessingState enum value
   progressPercentage: z.number().int().min(0).max(100).default(0),
   retryCount: z.number().int().nonnegative().default(0),
   maxRetries: z.number().int().positive().default(3),

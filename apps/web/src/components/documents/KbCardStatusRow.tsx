@@ -23,12 +23,13 @@
 'use client';
 
 import { memo } from 'react';
+
 import { RefreshCw, FileText } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { DocumentStatusBadge } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import type { DocumentIndexingStatus } from '@/components/ui/data-display/meeple-card-features/DocumentStatusBadge';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
@@ -89,16 +90,13 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
     <div
       className={cn(
         'flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card/50 px-3 py-2.5',
-        className,
+        className
       )}
       data-testid={`kb-card-status-row-${document.id}`}
     >
       {/* Top row: icon + filename + badge */}
       <div className="flex items-center gap-2 min-w-0">
-        <FileText
-          aria-hidden="true"
-          className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70"
-        />
+        <FileText aria-hidden="true" className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
 
         <span
           className="flex-1 truncate text-xs font-medium text-foreground/90"
@@ -108,10 +106,7 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
           {document.fileName}
         </span>
 
-        <DocumentStatusBadge
-          status={status}
-          size="sm"
-        />
+        <DocumentStatusBadge status={status} size="sm" />
 
         {/* Retry button */}
         {canRetry && (
@@ -124,7 +119,7 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
               'ml-1 shrink-0 inline-flex items-center gap-1 rounded px-1.5 py-0.5',
               'text-[10px] font-semibold text-destructive border border-destructive/40',
               'hover:bg-destructive/10 transition-colors',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'disabled:opacity-50 disabled:cursor-not-allowed'
             )}
             data-testid="kb-card-status-row-retry"
           >

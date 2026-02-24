@@ -70,129 +70,156 @@ export interface ResolvedNavigationLink {
  * - Chat lists → /chat (was /games/[gameId]/chats)
  * - Session lists → /sessions (was /games/[gameId]/sessions)
  */
-export const ENTITY_NAVIGATION_GRAPH: Partial<
-  Record<MeepleEntityType, EntityNavigationTarget[]>
-> = {
-  game: [
-    {
-      entity: 'document',
-      label: 'KB',
-      buildHref: (id) => `/library/${id}?tab=agent`,
-    },
-    {
-      entity: 'agent',
-      label: 'Agents',
-      buildHref: (id) => `/library/${id}?tab=agent`,
-    },
-    {
-      entity: 'chatSession',
-      label: 'Chats',
-      buildHref: (_id) => `/chat`,
-    },
-    {
-      entity: 'session',
-      label: 'Sessions',
-      buildHref: (_id) => `/sessions`,
-    },
-  ],
+export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNavigationTarget[]>> =
+  {
+    game: [
+      {
+        entity: 'document',
+        label: 'KB',
+        buildHref: id => `/library/${id}?tab=agent`,
+      },
+      {
+        entity: 'agent',
+        label: 'Agents',
+        buildHref: id => `/library/${id}?tab=agent`,
+      },
+      {
+        entity: 'chatSession',
+        label: 'Chats',
+        buildHref: _id => `/chat`,
+      },
+      {
+        entity: 'session',
+        label: 'Sessions',
+        buildHref: _id => `/sessions`,
+      },
+    ],
 
-  agent: [
-    {
-      entity: 'game',
-      label: 'Library',
-      buildHref: (_id) => `/library`,
-    },
-    {
-      entity: 'document',
-      label: 'KB',
-      buildHref: (_id) => `/library`,
-    },
-    {
-      entity: 'chatSession',
-      label: 'Chats',
-      buildHref: (_id) => `/chat`,
-    },
-    {
-      entity: 'session',
-      label: 'Sessions',
-      buildHref: (_id) => `/sessions`,
-    },
-  ],
+    agent: [
+      {
+        entity: 'game',
+        label: 'Library',
+        buildHref: _id => `/library`,
+      },
+      {
+        entity: 'document',
+        label: 'KB',
+        buildHref: _id => `/library`,
+      },
+      {
+        entity: 'chatSession',
+        label: 'Chats',
+        buildHref: _id => `/chat`,
+      },
+      {
+        entity: 'session',
+        label: 'Sessions',
+        buildHref: _id => `/sessions`,
+      },
+    ],
 
-  document: [
-    {
-      entity: 'game',
-      label: 'Game',
-      idKey: 'gameId',
-      buildHref: (id) => `/library/${id}`,
-    },
-    {
-      entity: 'agent',
-      label: 'Agent',
-      idKey: 'agentId',
-      buildHref: (id) => `/agents/${id}`,
-    },
-  ],
+    document: [
+      {
+        entity: 'game',
+        label: 'Game',
+        idKey: 'gameId',
+        buildHref: id => `/library/${id}`,
+      },
+      {
+        entity: 'agent',
+        label: 'Agent',
+        idKey: 'agentId',
+        buildHref: id => `/agents/${id}`,
+      },
+    ],
 
-  session: [
-    {
-      entity: 'game',
-      label: 'Game',
-      idKey: 'gameId',
-      buildHref: (id) => `/library/${id}`,
-    },
-    {
-      entity: 'player',
-      label: 'Players',
-      buildHref: (id) => `/sessions/${id}/players`,
-    },
-    {
-      entity: 'agent',
-      label: 'Agent',
-      idKey: 'agentId',
-      buildHref: (id) => `/agents/${id}`,
-    },
-    {
-      entity: 'chatSession',
-      label: 'Chats',
-      buildHref: (id) => `/sessions/${id}/chats`,
-    },
-  ],
+    session: [
+      {
+        entity: 'game',
+        label: 'Game',
+        idKey: 'gameId',
+        buildHref: id => `/library/${id}`,
+      },
+      {
+        entity: 'player',
+        label: 'Players',
+        buildHref: id => `/sessions/${id}/players`,
+      },
+      {
+        entity: 'agent',
+        label: 'Agent',
+        idKey: 'agentId',
+        buildHref: id => `/agents/${id}`,
+      },
+      {
+        entity: 'chatSession',
+        label: 'Chats',
+        buildHref: id => `/sessions/${id}/chats`,
+      },
+    ],
 
-  player: [
-    {
-      entity: 'session',
-      label: 'Sessions',
-      buildHref: (id) => `/players/${id}/sessions`,
-    },
-    {
-      entity: 'game',
-      label: 'Library',
-      buildHref: (_id) => `/library`,
-    },
-  ],
+    player: [
+      {
+        entity: 'session',
+        label: 'Sessions',
+        buildHref: id => `/players/${id}/sessions`,
+      },
+      {
+        entity: 'game',
+        label: 'Library',
+        buildHref: _id => `/library`,
+      },
+    ],
 
-  chatSession: [
-    {
-      entity: 'game',
-      label: 'Game',
-      idKey: 'gameId',
-      buildHref: (id) => `/library/${id}`,
-    },
-    {
-      entity: 'agent',
-      label: 'Agent',
-      idKey: 'agentId',
-      buildHref: (id) => `/agents/${id}`,
-    },
-    {
-      entity: 'session',
-      label: 'Session',
-      idKey: 'sessionId',
-      buildHref: (id) => `/sessions/${id}`,
-    },
-  ],
-} as const;
+    chatSession: [
+      {
+        entity: 'game',
+        label: 'Game',
+        idKey: 'gameId',
+        buildHref: id => `/library/${id}`,
+      },
+      {
+        entity: 'agent',
+        label: 'Agent',
+        idKey: 'agentId',
+        buildHref: id => `/agents/${id}`,
+      },
+      {
+        entity: 'session',
+        label: 'Session',
+        idKey: 'sessionId',
+        buildHref: id => `/sessions/${id}`,
+      },
+    ],
+
+    event: [
+      {
+        entity: 'game',
+        label: 'Games',
+        buildHref: _id => `/library`,
+      },
+      {
+        entity: 'session',
+        label: 'Sessions',
+        buildHref: _id => `/sessions`,
+      },
+    ],
+
+    toolkit: [
+      {
+        entity: 'game',
+        label: 'Game',
+        idKey: 'gameId',
+        buildHref: id => `/library/${id}`,
+      },
+      {
+        entity: 'agent',
+        label: 'Agent',
+        idKey: 'agentId',
+        buildHref: id => `/agents/${id}`,
+      },
+    ],
+  } as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -209,7 +236,7 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<
  */
 export function getNavigationLinks(
   entity: MeepleEntityType,
-  entityData: EntityIdBag,
+  entityData: EntityIdBag
 ): ResolvedNavigationLink[] {
   // eslint-disable-next-line security/detect-object-injection -- entity comes from typed union
   const targets = ENTITY_NAVIGATION_GRAPH[entity];
@@ -236,6 +263,4 @@ export function getNavigationLinks(
 /**
  * All navigable entity types (those that have entries in the graph).
  */
-export const NAVIGABLE_ENTITIES = Object.keys(
-  ENTITY_NAVIGATION_GRAPH,
-) as MeepleEntityType[];
+export const NAVIGABLE_ENTITIES = Object.keys(ENTITY_NAVIGATION_GRAPH) as MeepleEntityType[];

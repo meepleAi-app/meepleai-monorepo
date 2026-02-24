@@ -38,6 +38,9 @@ function makeDoc(overrides: Partial<PdfDocumentDto> = {}): PdfDocumentDto {
     progressPercentage: 0,
     retryCount: 0,
     maxRetries: 3,
+    canRetry: false,
+    errorCategory: null,
+    processingError: null,
     ...overrides,
   };
 }
@@ -94,7 +97,12 @@ describe('KbCardStatusRow - Issue #5197', () => {
   it('shows failed badge for Failed state', () => {
     render(
       <KbCardStatusRow
-        document={makeDoc({ processingState: 'Failed', retryCount: 0, maxRetries: 3 })}
+        document={makeDoc({
+          processingState: 'Failed',
+          retryCount: 0,
+          maxRetries: 3,
+          canRetry: true,
+        })}
       />
     );
     // Should show retry button since retries remain
@@ -144,7 +152,12 @@ describe('KbCardStatusRow - Issue #5197', () => {
   it('shows retry button when failed and retries remain', () => {
     render(
       <KbCardStatusRow
-        document={makeDoc({ processingState: 'Failed', retryCount: 1, maxRetries: 3 })}
+        document={makeDoc({
+          processingState: 'Failed',
+          retryCount: 1,
+          maxRetries: 3,
+          canRetry: true,
+        })}
       />
     );
     expect(screen.getByTestId('kb-card-status-row-retry')).toBeInTheDocument();
@@ -178,6 +191,7 @@ describe('KbCardStatusRow - Issue #5197', () => {
           processingState: 'Failed',
           retryCount: 0,
           maxRetries: 3,
+          canRetry: true,
         })}
         onRetry={onRetry}
       />
@@ -190,7 +204,12 @@ describe('KbCardStatusRow - Issue #5197', () => {
   it('disables retry button when isRetrying=true', () => {
     render(
       <KbCardStatusRow
-        document={makeDoc({ processingState: 'Failed', retryCount: 0, maxRetries: 3 })}
+        document={makeDoc({
+          processingState: 'Failed',
+          retryCount: 0,
+          maxRetries: 3,
+          canRetry: true,
+        })}
         isRetrying={true}
       />
     );

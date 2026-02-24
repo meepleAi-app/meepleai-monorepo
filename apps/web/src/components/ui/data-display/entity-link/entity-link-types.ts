@@ -59,6 +59,8 @@ export const LINK_ENTITY_CONFIG: Record<LinkEntityType, LinkEntityConfig> = {
   ChatSession: { label: 'Chat', color: '220 80% 55%', iconName: 'MessageCircle' },
   Event: { label: 'Event', color: '350 89% 60%', iconName: 'Calendar' },
   Toolkit: { label: 'Toolkit', color: '142 70% 45%', iconName: 'Wrench' },
+  // Issue #5191: KbCard — PDF document linked to a game via Upload flow
+  KbCard: { label: 'Documento KB', color: '174 60% 40%', iconName: 'FileText' },
 };
 
 // ============================================================================
@@ -70,7 +72,7 @@ export const LINK_TYPE_TARGET_ENTITIES: Record<EntityLinkType, LinkEntityType[]>
   SequelOf: ['Game'],
   Reimplements: ['Game'],
   CompanionTo: ['Game'],
-  RelatedTo: ['Game', 'Agent', 'Document', 'Session', 'Event'],
+  RelatedTo: ['Game', 'Agent', 'Document', 'Session', 'Event', 'KbCard'],
   PartOf: ['Event'],
   CollaboratesWith: ['Agent'],
   SpecializedBy: ['Agent'],

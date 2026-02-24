@@ -6,6 +6,7 @@ namespace Api.BoundedContexts.EntityRelationships.Application.DTOs;
 /// <summary>
 /// DTO representing an EntityLink returned from commands and queries.
 /// IsOwner is populated by query handlers when a RequestingUserId is available.
+/// KbCardStatus is populated when TargetEntityType = KbCard (Issue #5188).
 /// </summary>
 public sealed record EntityLinkDto(
     Guid Id,
@@ -28,6 +29,12 @@ public sealed record EntityLinkDto(
     /// Defaults to false; set by query handlers via <c>with { IsOwner = ... }</c>.
     /// </summary>
     public bool IsOwner { get; init; }
+
+    /// <summary>
+    /// Status of the KB card document linked by this EntityLink.
+    /// Only populated when TargetEntityType = KbCard (Issue #5188).
+    /// </summary>
+    public KbCardStatusDto? KbCardStatus { get; init; }
 
     /// <summary>Maps an EntityLink aggregate to its DTO representation.</summary>
     public static EntityLinkDto FromEntity(EntityLink link) => new(

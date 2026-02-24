@@ -104,6 +104,9 @@ export function KnowledgeBaseStep() {
           progressPercentage: 0,
           retryCount: 0,
           maxRetries: 3,
+          canRetry: false,
+          errorCategory: null,
+          processingError: null,
         },
       ]);
     },

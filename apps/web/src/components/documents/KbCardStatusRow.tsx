@@ -82,9 +82,9 @@ export const KbCardStatusRow = memo(function KbCardStatusRow({
   className,
 }: KbCardStatusRowProps) {
   const status = mapProcessingState(document.processingState);
-  const isFailed = status === 'failed';
   const isProcessing = status === 'processing';
-  const canRetry = isFailed && document.retryCount < document.maxRetries;
+  // Issue #5183: use backend-computed canRetry field (authoritative) when available
+  const canRetry = document.canRetry;
 
   return (
     <div

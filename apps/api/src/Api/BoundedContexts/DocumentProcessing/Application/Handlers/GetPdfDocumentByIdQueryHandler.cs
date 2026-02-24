@@ -38,7 +38,10 @@ internal class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentById
             ProcessingState: doc.ProcessingState.ToString(),
             ProgressPercentage: doc.ProgressPercentage,
             RetryCount: doc.RetryCount,
-            MaxRetries: doc.MaxRetries
+            MaxRetries: doc.MaxRetries,
+            CanRetry: doc.CanRetry(),
+            ErrorCategory: doc.ErrorCategory?.ToString(),
+            ProcessingError: doc.ProcessingError
         );
     }
 }

@@ -161,13 +161,13 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path
-          d="M12 6v6l4 2"
-        />
         <circle
           cx="12"
           cy="12"
           r="10"
+        />
+        <path
+          d="M12 6v6l4 2"
         />
       </svg>
       <span
@@ -1099,13 +1099,13 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for fe
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M12 6v6l4 2"
-          />
           <circle
             cx="12"
             cy="12"
             r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
           />
         </svg>
         <span>
@@ -1287,13 +1287,13 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path
-          d="M12 6v6l4 2"
-        />
         <circle
           cx="12"
           cy="12"
           r="10"
+        />
+        <path
+          d="M12 6v6l4 2"
         />
       </svg>
       <span
@@ -1444,13 +1444,13 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for he
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M12 6v6l4 2"
-          />
           <circle
             cx="12"
             cy="12"
             r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
           />
         </svg>
         <span>
@@ -1607,13 +1607,13 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for li
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M12 6v6l4 2"
-          />
           <circle
             cx="12"
             cy="12"
             r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
           />
         </svg>
         <span>

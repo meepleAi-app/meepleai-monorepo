@@ -13,8 +13,8 @@
 
 import Link from 'next/link';
 
-import { cn } from '@/lib/utils';
 import type { ResolvedNavigationLink } from '@/config/entity-navigation';
+import { cn } from '@/lib/utils';
 
 import { ENTITY_NAV_ICONS } from './navigation-icons';
 
@@ -28,6 +28,7 @@ const NAV_ENTITY_HSL: Record<string, string> = {
   document: '210 40% 55%',
   chatSession: '220 80% 55%',
   event: '350 89% 60%',
+  toolkit: '142 70% 45%',
   custom: '220 70% 50%',
 };
 
@@ -47,7 +48,7 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
         'border-t border-border/60',
         'bg-muted/[0.28] dark:bg-muted/20',
         'rounded-b-2xl',
-        className,
+        className
       )}
       aria-label="Navigate to related entities"
       data-testid="card-navigation-footer"
@@ -63,15 +64,14 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
 
       {/* Navigation icon row */}
       <div className="flex justify-center gap-3">
-        {links.map((link) => {
-          // eslint-disable-next-line security/detect-object-injection -- entity from typed config
+        {links.map(link => {
           const Icon = ENTITY_NAV_ICONS[link.entity] ?? ENTITY_NAV_ICONS.game;
-          // eslint-disable-next-line security/detect-object-injection -- entity from typed config
+
           const hsl = NAV_ENTITY_HSL[link.entity] ?? NAV_ENTITY_HSL.custom;
           const key = `${link.entity}-${link.label}`;
           const sharedClassName = cn(
             'group/nav flex flex-col items-center gap-0.5',
-            'no-underline transition-all duration-200',
+            'no-underline transition-all duration-200'
           );
           const iconContent = (
             <>
@@ -83,7 +83,7 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
                   'border border-border/30',
                   'backdrop-blur-sm',
                   'transition-all duration-200',
-                  'group-hover/nav:scale-110',
+                  'group-hover/nav:scale-110'
                 )}
                 style={{ '--nav-hsl': hsl } as React.CSSProperties}
                 data-entity={link.entity}
@@ -103,7 +103,10 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
                 type="button"
                 className={cn(sharedClassName, 'cursor-pointer bg-transparent border-0 p-0')}
                 title={link.label}
-                onClick={(e) => { e.stopPropagation(); link.onClick!(); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  link.onClick!();
+                }}
               >
                 {iconContent}
               </button>
@@ -116,7 +119,7 @@ export function CardNavigationFooter({ links, className }: CardNavigationFooterP
               href={link.href!}
               className={sharedClassName}
               title={link.label}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
             >
               {iconContent}
             </Link>

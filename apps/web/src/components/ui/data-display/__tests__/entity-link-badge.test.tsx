@@ -99,20 +99,32 @@ describe('EntityLinkBadge - Issue #5197', () => {
 
     it('has correct aria-label without count', () => {
       render(<EntityLinkBadge linkType="RelatedTo" />);
-      expect(screen.getByTestId('entity-link-badge-generic')).toHaveAttribute('aria-label', 'Correlato');
+      expect(screen.getByTestId('entity-link-badge-generic')).toHaveAttribute(
+        'aria-label',
+        'Correlato'
+      );
     });
 
     it('has correct aria-label with count', () => {
       render(<EntityLinkBadge linkType="RelatedTo" count={4} />);
-      expect(screen.getByTestId('entity-link-badge-generic')).toHaveAttribute('aria-label', 'Correlato: 4');
+      expect(screen.getByTestId('entity-link-badge-generic')).toHaveAttribute(
+        'aria-label',
+        'Correlato: 4'
+      );
     });
 
     it('renders all defined link types without error', () => {
       const types = [
-        'ExpansionOf', 'SequelOf', 'Reimplements', 'CompanionTo',
-        'RelatedTo', 'CollaboratesWith', 'PartOf', 'SpecializedBy',
+        'ExpansionOf',
+        'SequelOf',
+        'Reimplements',
+        'CompanionTo',
+        'RelatedTo',
+        'CollaboratesWith',
+        'PartOf',
+        'SpecializedBy',
       ] as const;
-      types.forEach((linkType) => {
+      types.forEach(linkType => {
         const { unmount } = render(<EntityLinkBadge linkType={linkType} />);
         expect(screen.getByTestId('entity-link-badge-generic')).toBeInTheDocument();
         unmount();

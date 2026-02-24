@@ -18,15 +18,14 @@
 
 import { useCallback, useState } from 'react';
 
-import Link from 'next/link';
 import { Layers, X, ChevronRight, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import { ENTITY_NAV_ICONS } from '@/components/ui/data-display/meeple-card-features/navigation-icons';
-import { cn } from '@/lib/utils';
-
 import type { BreadcrumbStep } from '@/hooks/use-navigation-trail';
 import { useNavigationTrail } from '@/hooks/use-navigation-trail';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Entity colours (matching breadcrumb-trail.tsx)
@@ -40,6 +39,7 @@ const ENTITY_HSL: Record<MeepleEntityType, string> = {
   document: '210 40% 55%',
   chatSession: '220 80% 55%',
   event: '350 89% 60%',
+  toolkit: '142 70% 45%',
   custom: '220 70% 50%',
   kb_card: '174 60% 40%',
 };
@@ -52,6 +52,7 @@ const ENTITY_LABELS: Record<MeepleEntityType, string> = {
   document: 'Document',
   chatSession: 'Chat',
   event: 'Event',
+  toolkit: 'Toolkit',
   custom: 'Item',
   kb_card: 'KB Card',
 };
@@ -82,7 +83,7 @@ function CardStackItem({
         onNavigate(index);
       }
     },
-    [index, isLast, onNavigate],
+    [index, isLast, onNavigate]
   );
 
   return (
@@ -95,7 +96,7 @@ function CardStackItem({
         'border',
         isLast
           ? 'bg-[hsl(var(--card-hsl)/0.1)] border-[hsl(var(--card-hsl)/0.25)] shadow-sm'
-          : 'bg-card/50 border-border/30 hover:bg-[hsl(var(--card-hsl)/0.06)] hover:border-[hsl(var(--card-hsl)/0.2)]',
+          : 'bg-card/50 border-border/30 hover:bg-[hsl(var(--card-hsl)/0.06)] hover:border-[hsl(var(--card-hsl)/0.2)]'
       )}
       style={{ '--card-hsl': hsl } as React.CSSProperties}
     >
@@ -103,7 +104,7 @@ function CardStackItem({
       <div
         className={cn(
           'flex items-center justify-center w-8 h-8 rounded-md shrink-0',
-          'bg-[hsl(var(--card-hsl)/0.12)]',
+          'bg-[hsl(var(--card-hsl)/0.12)]'
         )}
       >
         <Icon className="w-4 h-4 text-[hsl(var(--card-hsl))]" />
@@ -114,7 +115,7 @@ function CardStackItem({
         <p
           className={cn(
             'text-sm font-medium truncate',
-            isLast ? 'text-[hsl(var(--card-hsl))]' : 'text-foreground',
+            isLast ? 'text-[hsl(var(--card-hsl))]' : 'text-foreground'
           )}
         >
           {step.label}
@@ -125,9 +126,7 @@ function CardStackItem({
       </div>
 
       {/* Arrow indicator */}
-      {isLast && (
-        <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--card-hsl)/0.5)] shrink-0" />
-      )}
+      {isLast && <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--card-hsl)/0.5)] shrink-0" />}
 
       {/* Step number */}
       <span className="text-[10px] text-muted-foreground/50 tabular-nums shrink-0 font-mono">
@@ -153,7 +152,7 @@ export function CardStackPanel() {
     <>
       {/* FAB Toggle Button */}
       <button
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setIsOpen(prev => !prev)}
         className={cn(
           'fixed z-40',
           'bottom-20 md:bottom-6 right-4',
@@ -163,7 +162,7 @@ export function CardStackPanel() {
           'shadow-lg hover:shadow-xl',
           'transition-all duration-200',
           'hover:scale-105 active:scale-95',
-          isOpen && 'rotate-45',
+          isOpen && 'rotate-45'
         )}
         title={isOpen ? 'Chiudi carte' : `${count} carte in mano`}
         aria-label={isOpen ? 'Close card stack panel' : `Open card stack panel (${count} cards)`}
@@ -181,7 +180,7 @@ export function CardStackPanel() {
                 'min-w-[18px] h-[18px] px-1',
                 'text-[10px] font-bold',
                 'bg-destructive text-destructive-foreground',
-                'rounded-full',
+                'rounded-full'
               )}
             >
               {count}
@@ -216,16 +215,14 @@ export function CardStackPanel() {
           'transition-transform duration-300 ease-out',
           isOpen
             ? 'translate-x-0 max-md:translate-y-0'
-            : 'md:translate-x-full max-md:translate-y-full',
+            : 'md:translate-x-full max-md:translate-y-full'
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold font-quicksand text-foreground">
-              Carte in Mano
-            </h3>
+            <h3 className="text-sm font-semibold font-quicksand text-foreground">Carte in Mano</h3>
             <span className="text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">
               {count}
             </span>

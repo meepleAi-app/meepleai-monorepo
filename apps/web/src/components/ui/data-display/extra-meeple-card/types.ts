@@ -6,6 +6,9 @@
  * ~600×900px card with 4-tab system (Overview, Toolkit, Scoreboard, History).
  */
 
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+
+import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
 import type {
   SessionStatus,
   SessionPlayerInfo,
@@ -17,8 +20,6 @@ import type {
   SessionActionHandlers,
 } from '../meeple-card-features/session-types';
 import type { LucideIcon } from 'lucide-react';
-import type { ChatStatus } from '../meeple-card-features/ChatStatusBadge';
-import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // Re-export session types for convenience
 export type {
@@ -480,7 +481,15 @@ export interface TimerActions {
 // ============================================================================
 
 /** Extended event types for timeline filtering */
-export type SessionEventType = 'system' | 'turn' | 'score' | 'action' | 'media' | 'phase' | 'snapshot' | 'chat';
+export type SessionEventType =
+  | 'system'
+  | 'turn'
+  | 'score'
+  | 'action'
+  | 'media'
+  | 'phase'
+  | 'snapshot'
+  | 'chat';
 
 /** Enhanced timeline event with expanded details */
 export interface EnhancedTimelineEvent {

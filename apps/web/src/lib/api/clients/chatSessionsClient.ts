@@ -6,10 +6,13 @@
  */
 
 import {
+  AddChatSessionMessageResponseSchema,
+  ChatSessionArraySchema,
   ChatSessionDtoSchema,
   ChatSessionListResponseSchema,
   ChatSessionTierLimitSchema,
   type AddChatSessionMessageRequest,
+  type AddChatSessionMessageResponse,
   type ChatSessionDto,
   type ChatSessionSummaryDto,
   type ChatSessionTierLimit,
@@ -52,8 +55,9 @@ export interface ChatSessionsClient {
 
   /**
    * Add a message to a chat session
+   * Backend returns { messageId } — use getById to fetch the updated session if needed
    */
-  addMessage(sessionId: string, request: Omit<AddChatSessionMessageRequest, 'sessionId'>): Promise<ChatSessionDto>;
+  addMessage(sessionId: string, request: Omit<AddChatSessionMessageRequest, 'sessionId'>): Promise<AddChatSessionMessageResponse>;
 
   /**
    * Get the user's chat session tier limit and current usage
@@ -75,12 +79,12 @@ export function createChatSessionsClient({
 }: CreateChatSessionsClientParams): ChatSessionsClient {
   const client: ChatSessionsClient = {
     async create(request: CreateChatSessionRequest): Promise<ChatSessionDto> {
-      return httpClient.post('/api/v1/chat-sessions', request, ChatSessionDtoSchema);
+      return httpClient.post('/api/v1/chat/sessions', request, ChatSessionDtoSchema);
     },
 
     async getById(sessionId: string): Promise<ChatSessionDto | null> {
       return httpClient.get(
-        `/api/v1/chat-sessions/${encodeURIComponent(sessionId)}`,
+        `/api/v1/chat/sessions/${encodeURIComponent(sessionId)}`,
         ChatSessionDtoSchema
       );
     },
@@ -91,11 +95,14 @@ export function createChatSessionsClient({
       options?: { page?: number; pageSize?: number }
     ): Promise<{ sessions: ChatSessionSummaryDto[]; totalCount: number }> {
       const params = new URLSearchParams();
-      if (options?.page !== undefined) params.append('page', String(options.page));
-      if (options?.pageSize !== undefined) params.append('pageSize', String(options.pageSize));
+      // Backend uses skip/take; convert from 0-based page/pageSize
+      const pageSize = options?.pageSize ?? 20;
+      const skip = (options?.page ?? 0) * pageSize;
+      if (skip > 0) params.append('skip', String(skip));
+      if (options?.pageSize !== undefined) params.append('take', String(pageSize));
 
       const query = params.toString();
-      const url = `/api/v1/chat-sessions/user/${encodeURIComponent(userId)}/game/${encodeURIComponent(gameId)}${query ? `?${query}` : ''}`;
+      const url = `/api/v1/users/${encodeURIComponent(userId)}/games/${encodeURIComponent(gameId)}/chat-sessions${query ? `?${query}` : ''}`;
 
       const response = await httpClient.get(url, ChatSessionListResponseSchema);
       return response ?? { sessions: [], totalCount: 0 };
@@ -109,20 +116,22 @@ export function createChatSessionsClient({
       if (options?.limit !== undefined) params.append('limit', String(options.limit));
 
       const query = params.toString();
-      const url = `/api/v1/chat-sessions/user/${encodeURIComponent(userId)}/recent${query ? `?${query}` : ''}`;
+      const url = `/api/v1/users/${encodeURIComponent(userId)}/chat-sessions/recent${query ? `?${query}` : ''}`;
 
-      const response = await httpClient.get(url, ChatSessionListResponseSchema);
-      return response ?? { sessions: [], totalCount: 0 };
+      // Backend returns IReadOnlyList<ChatSessionSummaryDto> as a plain JSON array
+      const sessions = await httpClient.get(url, ChatSessionArraySchema);
+      const result = sessions ?? [];
+      return { sessions: result, totalCount: result.length };
     },
 
     async addMessage(
       sessionId: string,
       request: Omit<AddChatSessionMessageRequest, 'sessionId'>
-    ): Promise<ChatSessionDto> {
+    ): Promise<AddChatSessionMessageResponse> {
       return httpClient.post(
-        `/api/v1/chat-sessions/${encodeURIComponent(sessionId)}/messages`,
+        `/api/v1/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
         request,
-        ChatSessionDtoSchema
+        AddChatSessionMessageResponseSchema
       );
     },
 
@@ -134,7 +143,7 @@ export function createChatSessionsClient({
     },
 
     async delete(sessionId: string): Promise<void> {
-      return httpClient.delete(`/api/v1/chat-sessions/${encodeURIComponent(sessionId)}`);
+      return httpClient.delete(`/api/v1/chat/sessions/${encodeURIComponent(sessionId)}`);
     },
   };
 

@@ -58,10 +58,14 @@ export type ChatSessionSummaryDto = z.infer<typeof ChatSessionSummaryDtoSchema>;
 
 // ========== API Responses ==========
 
+// Used by getByUserAndGame (backend returns ChatSessionListDto with Sessions+TotalCount)
 export const ChatSessionListResponseSchema = z.object({
   sessions: z.array(ChatSessionSummaryDtoSchema),
   totalCount: z.number().int().nonnegative(),
 });
+
+// Used by getRecent (backend returns IReadOnlyList<ChatSessionSummaryDto> as plain array)
+export const ChatSessionArraySchema = z.array(ChatSessionSummaryDtoSchema);
 
 export type ChatSessionListResponse = z.infer<typeof ChatSessionListResponseSchema>;
 
@@ -74,6 +78,15 @@ export const ChatSessionTierLimitSchema = z.object({
 });
 
 export type ChatSessionTierLimit = z.infer<typeof ChatSessionTierLimitSchema>;
+
+// ========== Add Message Response ==========
+
+// Backend returns AddChatSessionMessageResponse(Guid MessageId) — NOT a full ChatSessionDto
+export const AddChatSessionMessageResponseSchema = z.object({
+  messageId: z.string().uuid(),
+});
+
+export type AddChatSessionMessageResponse = z.infer<typeof AddChatSessionMessageResponseSchema>;
 
 // ========== Request Types ==========
 

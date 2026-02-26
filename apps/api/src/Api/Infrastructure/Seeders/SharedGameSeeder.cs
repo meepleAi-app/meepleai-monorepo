@@ -118,6 +118,9 @@ internal static class SharedGameSeeder
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "⚠️  Failed to seed SharedGame for {PdfFile}, continuing with others", pdfFileName);
+                // Clear the change tracker so any failed "Added" entity does not
+                // leak into subsequent SaveChangesAsync calls (e.g. from StrategyPatternSeeder).
+                db.ChangeTracker.Clear();
                 skippedCount++;
             }
         }

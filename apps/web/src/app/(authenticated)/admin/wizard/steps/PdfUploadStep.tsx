@@ -16,8 +16,14 @@ import { Label } from '@/components/ui/primitives/label';
 
 interface PdfUploadStepProps {
   onComplete: (pdfId: string, fileName: string, isPublic: boolean) => void;
-  /** Required when the game already exists (game-first wizard flows). */
+  /** Shared catalog game ID — sends 'gameId' form field to the backend. */
   gameId?: string;
+  /**
+   * Manually-created private game ID — sends 'privateGameId' form field.
+   * Use this (instead of gameId) when the game was created via the manual
+   * private-game flow (PrivateGame entity). Never combine with gameId.
+   */
+  privateGameId?: string;
   /**
    * When true, hides the "Add to Public Library" checkbox.
    * Use for user wizard where PDFs are always private.
@@ -30,7 +36,7 @@ interface PdfUploadStepProps {
   onSkip?: () => void;
 }
 
-export function PdfUploadStep({ onComplete, gameId, isPrivate = false, onSkip }: PdfUploadStepProps) {
+export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = false, onSkip }: PdfUploadStepProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isPublic, setIsPublic] = useState(!isPrivate);
   const [uploading, setUploading] = useState(false);
@@ -84,11 +90,12 @@ export function PdfUploadStep({ onComplete, gameId, isPrivate = false, onSkip }:
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (gameId) {
-        // Private games must be sent as 'privateGameId' so the backend routes
-        // through HandlePrivateGamePdfUploadAsync (validates ownership correctly).
-        // Admin/shared games use 'gameId' (legacy path).
-        formData.append(isPrivate ? 'privateGameId' : 'gameId', gameId);
+      // privateGameId → manually-created private game (routes to HandlePrivateGamePdfUploadAsync)
+      // gameId        → shared catalog game or admin upload (standard path)
+      if (privateGameId) {
+        formData.append('privateGameId', privateGameId);
+      } else if (gameId) {
+        formData.append('gameId', gameId);
       }
       formData.append('language', 'it'); // Default to Italian
 

@@ -84,7 +84,12 @@ export function PdfUploadStep({ onComplete, gameId, isPrivate = false, onSkip }:
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (gameId) formData.append('gameId', gameId);
+      if (gameId) {
+        // Private games must be sent as 'privateGameId' so the backend routes
+        // through HandlePrivateGamePdfUploadAsync (validates ownership correctly).
+        // Admin/shared games use 'gameId' (legacy path).
+        formData.append(isPrivate ? 'privateGameId' : 'gameId', gameId);
+      }
       formData.append('language', 'it'); // Default to Italian
 
       // Use XHR for progress tracking

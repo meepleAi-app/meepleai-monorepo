@@ -401,14 +401,30 @@ internal static class PdfEndpoints
             return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided" } });
         }
 
-        var (gameId, metadata, validationError) = ParseUploadMetadata(form);
-        if (validationError != null)
+        // Private game upload: frontend sends 'privateGameId' field to route through
+        // HandlePrivateGamePdfUploadAsync (ownership validation, correct DB link).
+        Guid? privateGameId = null;
+        var privateGameIdStr = form["privateGameId"].ToString();
+        if (!string.IsNullOrWhiteSpace(privateGameIdStr) && Guid.TryParse(privateGameIdStr, out var parsedPrivateGameId))
         {
-            return Results.BadRequest(new { error = validationError });
+            privateGameId = parsedPrivateGameId;
+        }
+
+        string? gameId = null;
+        PdfUploadMetadata? metadata = null;
+        if (!privateGameId.HasValue)
+        {
+            var (parsedGameId, parsedMetadata, validationError) = ParseUploadMetadata(form);
+            if (validationError != null)
+            {
+                return Results.BadRequest(new { error = validationError });
+            }
+            gameId = parsedGameId;
+            metadata = parsedMetadata;
         }
 
         var userId = session!.User!.Id;
-        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, null, userId, file!), ct).ConfigureAwait(false);
+        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, privateGameId, userId, file!), ct).ConfigureAwait(false);
 
         if (!result.Success)
         {

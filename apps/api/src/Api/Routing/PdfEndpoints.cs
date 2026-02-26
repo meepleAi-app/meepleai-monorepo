@@ -466,7 +466,7 @@ internal static class PdfEndpoints
             "User {UserId} initializing chunked upload for game {GameId}, file {FileName} ({FileSize} bytes)",
             userId, request.GameId, request.FileName, request.TotalFileSize);
 
-        var command = new InitChunkedUploadCommand(request.GameId, userId, request.FileName, request.TotalFileSize);
+        var command = new InitChunkedUploadCommand(request.GameId, userId, request.FileName, request.TotalFileSize, request.PrivateGameId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         if (!result.Success)
@@ -1219,7 +1219,7 @@ internal static class PdfEndpoints
     }
 }
 
-internal record InitChunkedUploadRequest(Guid GameId, string FileName, long TotalFileSize);
+internal record InitChunkedUploadRequest(Guid? GameId, string FileName, long TotalFileSize, Guid? PrivateGameId = null);
 internal record CompleteChunkedUploadRequest(Guid SessionId);
 internal record SetPdfVisibilityRequest(bool IsPublic);
 internal record ExtractBggGamesRequest(string PdfFilePath); // ISSUE-2513

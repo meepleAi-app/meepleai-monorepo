@@ -7,7 +7,8 @@ namespace Api.Infrastructure.Entities;
 public class ChunkedUploadSessionEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid GameId { get; set; }
+    public Guid? GameId { get; set; }
+    public Guid? PrivateGameId { get; set; }
     public Guid UserId { get; set; }
     public string FileName { get; set; } = default!;
     public long TotalFileSize { get; set; }
@@ -26,6 +27,6 @@ public class ChunkedUploadSessionEntity
     public string ReceivedChunkIndices { get; set; } = "[]";
 
     // Navigation properties
-    public GameEntity Game { get; set; } = default!;
+    public GameEntity? Game { get; set; }
     public UserEntity User { get; set; } = default!;
 }

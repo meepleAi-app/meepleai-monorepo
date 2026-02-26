@@ -636,7 +636,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             })
             .ToList();
 
-        var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
+        var indexResult = await qdrantService.IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks).ConfigureAwait(false);
         indexingStopwatch.Stop();
 
         if (!indexResult.Success)

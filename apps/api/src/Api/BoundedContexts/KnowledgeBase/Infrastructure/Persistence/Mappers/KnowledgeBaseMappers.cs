@@ -43,7 +43,7 @@ internal static class KnowledgeBaseMappers
         ArgumentNullException.ThrowIfNull(entity);
         var domain = new VectorDocument(
             id: entity.Id,
-            gameId: entity.GameId,
+            gameId: entity.GameId ?? Guid.Empty,
             pdfDocumentId: entity.PdfDocumentId,
             language: "en", // Default language (not stored in entity)
             totalChunks: entity.ChunkCount,

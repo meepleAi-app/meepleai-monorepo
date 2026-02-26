@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 /// </summary>
 internal record PdfDocumentDto(
     Guid Id,
-    Guid GameId,
+    Guid? GameId,
     string FileName,
     string FilePath,
     long FileSizeBytes,

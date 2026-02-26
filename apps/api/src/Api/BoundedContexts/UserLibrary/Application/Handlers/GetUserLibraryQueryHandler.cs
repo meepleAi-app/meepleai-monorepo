@@ -74,7 +74,7 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
         // into two dictionaries without a second round-trip.
         // ProcessingState is stored as string (HasConversion<string>()), so group in memory.
         var pdfDocumentsRaw = await _dbContext.PdfDocuments
-            .Where(p => sharedGameIds.Contains(p.GameId) ||
+            .Where(p => (p.GameId.HasValue && sharedGameIds.Contains(p.GameId.Value)) ||
                         (p.PrivateGameId.HasValue && privateGameIds.Contains(p.PrivateGameId.Value)))
             .Select(p => new { p.GameId, p.PrivateGameId, p.ProcessingState })
             .ToListAsync(cancellationToken)
@@ -84,8 +84,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
         // because PdfDocumentEntity.ProcessingState is a string property (HasConversion<string>()).
         // Shared game PDFs: PrivateGameId IS NULL.
         var kbStatsByGame = pdfDocumentsRaw
-            .Where(p => !p.PrivateGameId.HasValue)
-            .GroupBy(p => p.GameId)
+            .Where(p => !p.PrivateGameId.HasValue && p.GameId.HasValue)
+            .GroupBy(p => p.GameId!.Value)
             .ToDictionary(
                 g => g.Key,
                 g => new

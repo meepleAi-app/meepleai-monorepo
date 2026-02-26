@@ -75,14 +75,14 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
             // Step 3: Index in Qdrant and update VectorDocument
             var indexingSuccess = await IndexChunksInVectorStoreAsync(
-                pdfId, pdf.GameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
+                pdfId, (pdf.GameId ?? Guid.Empty).ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
                 return await MarkIndexingFailedAsync(vectorDoc!, "Qdrant indexing failed", PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             // Step 4: Save text chunks to PostgreSQL for hybrid search
-            await SaveTextChunksToPostgresAsync(pdfId, pdf.GameId, documentChunks!, cancellationToken).ConfigureAwait(false);
+            await SaveTextChunksToPostgresAsync(pdfId, pdf.GameId ?? Guid.Empty, documentChunks!, cancellationToken).ConfigureAwait(false);
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

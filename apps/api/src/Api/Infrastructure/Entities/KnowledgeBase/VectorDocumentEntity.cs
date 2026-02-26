@@ -8,7 +8,7 @@ public class VectorDocumentEntity
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
     // DDD-PHASE2: Converted to Guid for domain alignment
-    public Guid GameId { get; set; }
+    public Guid? GameId { get; set; }
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid PdfDocumentId { get; set; } // FK to PdfDocumentEntity
 

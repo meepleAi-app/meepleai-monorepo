@@ -37,6 +37,8 @@ interface UserWizardState {
   gameName: string | null;
   pdfId: string | null;
   pdfFileName: string | null;
+  /** True when the game was selected from the shared catalog (gameId = shared catalog ID). */
+  isCatalogGame: boolean;
 }
 
 interface UserWizardClientProps {
@@ -91,14 +93,17 @@ export function UserWizardClient({
     gameName: initialGameName ?? null,
     pdfId: null,
     pdfFileName: null,
+    // When startAtPdf is true the wizard was entered from the catalog: gameId is a
+    // shared catalog ID, NOT a PrivateGame ID — upload must use 'gameId' form field.
+    isCatalogGame: !!(startAtPdf && initialGameId),
   });
 
   // Track whether to show PdfProcessingStatus after upload (stays on 'pdf' step)
   const [showProcessing, setShowProcessing] = useState(false);
 
-  // Step 1: Game created
+  // Step 1: Game created (manual flow — gameId is a PrivateGame ID)
   const handleGameCreated = useCallback((gameId: string, gameName: string) => {
-    setState(prev => ({ ...prev, gameId, gameName, currentStep: 'pdf' }));
+    setState(prev => ({ ...prev, gameId, gameName, currentStep: 'pdf', isCatalogGame: false }));
   }, []);
 
   // Step 1: Skip PDF (go directly to complete)
@@ -241,7 +246,10 @@ export function UserWizardClient({
 
           {state.currentStep === 'pdf' && state.gameId && !showProcessing && (
             <PdfUploadStep
-              gameId={state.gameId}
+              {...(state.isCatalogGame
+                ? { gameId: state.gameId }        // shared catalog game → 'gameId' field
+                : { privateGameId: state.gameId } // manually created PrivateGame → 'privateGameId' field
+              )}
               isPrivate
               onComplete={handlePdfUploaded}
               onSkip={handleSkipPdfStep}

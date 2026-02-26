@@ -228,7 +228,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             storageResult = await _blobStorageService.StoreAsync(
                 assembledStream,
                 sanitizedFileName,
-                session.GameId.ToString(),
+                (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty,
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -259,6 +259,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             Id = Guid.Parse(storageResult.FileId!),
             GameId = session.GameId,
+            PrivateGameId = session.PrivateGameId,
             FileName = sanitizedFileName,
             FilePath = storageResult.FilePath!,
             FileSizeBytes = storageResult.FileSizeBytes,
@@ -279,8 +280,8 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             "Chunked upload {SessionId} completed. Document {DocumentId} created.",
             sessionId, pdfDoc.Id);
 
-        // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association
-        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, session.GameId, session.UserId, cancellationToken).ConfigureAwait(false);
+        // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association (shared games only)
+        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, session.GameId ?? Guid.Empty, session.UserId, cancellationToken).ConfigureAwait(false);
 
         // Cleanup temp files (async, non-blocking) via background service
         var tempDirToClean = session.TempDirectory;

@@ -6,22 +6,28 @@ namespace Api.Extensions;
 /// <summary>
 /// ISSUE #2424: Rate Limiting Configuration for API Protection
 ///
-/// Implements sliding window rate limiting with per-user/per-IP partitioning.
-/// Protects API from abuse while allowing legitimate high-frequency usage.
+/// Design principle: Rate limiting targets only operations with genuine cost or abuse potential.
+/// Simple read-only DB queries (library, games list, etc.) are NOT rate limited globally —
+/// only expensive or abuse-prone operations have per-endpoint policies.
 ///
-/// Policies:
-/// - SharedGamesAdmin: 100 req/min (authenticated admin operations)
-/// - SharedGamesPublic: 300 req/min (public search operations)
-/// - FaqUpvote: 10 req/min (FAQ upvoting, prevents vote manipulation)
-/// - ShareRequestAdmin: 100 req/min (admin share request operations) - Issue #3098
-/// - ShareRequestCreation: 30 req/min (creating share requests) - Issue #3098
-/// - ShareRequestQuery: 100 req/min (querying share requests) - Issue #3098
-/// - ShareRequestUpdate: 50 req/min (updating share requests) - Issue #3098
-/// - UserDashboard: 100 req/min (user dashboard operations) - Issue #3098
-/// - BggSearch: 20 req/hour (BoardGameGeek search operations) - Issue #3120
-/// - ProposePrivateGame: 2 req/min (private game catalog proposals) - Issue #3665
-/// - BulkImportAdmin: 1 req/5min (bulk import operations, Admin only) - Issue #4354
-/// - Default: 60 req/min (general API protection)
+/// NO global rate limit is configured: only endpoints decorated with .RequireRateLimiting()
+/// are subject to throttling. This prevents the Next.js proxy (single IP) from exhausting
+/// a shared global quota that was never meant to protect read-only endpoints.
+///
+/// Per-endpoint policies (applied via .RequireRateLimiting("PolicyName")):
+/// - SharedGamesAdmin:    100 req/min  — authenticated admin write operations
+/// - SharedGamesPublic:   300 req/min  — public catalog search (IP-based)
+/// - FaqUpvote:            10 req/min  — prevents vote manipulation (IP-based)
+/// - ShareRequestAdmin:   100 req/min  — admin share request operations
+/// - ShareRequestCreation: 30 req/min  — creating share requests
+/// - ShareRequestQuery:   100 req/min  — querying share requests
+/// - ShareRequestUpdate:   50 req/min  — updating share requests
+/// - UserDashboard:       100 req/min  — user dashboard operations
+/// - BggSearch:            20 req/hour — respects BoardGameGeek external API quota
+/// - ProposePrivateGame:    2 req/min  — prevents catalog proposal spam
+/// - BulkImportAdmin:       1 req/5min — heavy admin batch operation
+/// - AgentQuery:           30 req/min  — AI query (expensive, per user)
+/// - AgentCreation:        10 req/min  — AI agent creation (per user)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -38,12 +44,9 @@ internal static class RateLimitingServiceExtensions
 
         if (!rateLimitingEnabled || disabledByEnvVar)
         {
-            // Register a permissive rate limiter that allows all requests
+            // Register a permissive rate limiter that allows all requests (used in tests)
             services.AddRateLimiter(options =>
             {
-                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
                 options.AddPolicy("SharedGamesAdmin", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
@@ -96,22 +99,9 @@ internal static class RateLimitingServiceExtensions
 
         services.AddRateLimiter(options =>
         {
-            // Default policy: 60 req/min per IP (general API protection)
-            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-            {
-                var ipAddress = GetClientIpAddress(httpContext);
-
-                return RateLimitPartition.GetSlidingWindowLimiter(
-                    partitionKey: ipAddress,
-                    factory: _ => new SlidingWindowRateLimiterOptions
-                    {
-                        Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 60,
-                        SegmentsPerWindow = 6, // 10-second segments
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                        QueueLimit = 0, // No queueing (fail fast)
-                    });
-            });
+            // No GlobalLimiter: only endpoints with .RequireRateLimiting() are throttled.
+            // Simple read-only DB queries have no rate limit — only costly/abuse-prone
+            // operations (AI queries, BGG search, catalog proposals, bulk imports) do.
 
             // Policy 1: SharedGamesAdmin - 100 req/min for authenticated admin operations
             options.AddPolicy("SharedGamesAdmin", httpContext =>
@@ -123,7 +113,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 100, // Higher limit for admin operations
+                        PermitLimit = 100,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -140,7 +130,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 300, // High limit for legitimate search traffic
+                        PermitLimit = 300,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -157,7 +147,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 10, // Low limit to prevent vote manipulation
+                        PermitLimit = 10,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -174,7 +164,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 100, // Same as SharedGamesAdmin
+                        PermitLimit = 100,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -191,7 +181,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 30, // Lower limit for create operations
+                        PermitLimit = 30,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -208,7 +198,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 100, // Similar to admin operations
+                        PermitLimit = 100,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -225,7 +215,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 50, // Moderate limit for update operations
+                        PermitLimit = 50,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -242,7 +232,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 100, // User-specific operations
+                        PermitLimit = 100,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -250,6 +240,7 @@ internal static class RateLimitingServiceExtensions
             });
 
             // Policy 9: BggSearch - 20 req/hour for BGG search operations (Issue #3120)
+            // Low limit to respect BoardGameGeek's external API quota and avoid being blocked.
             options.AddPolicy("BggSearch", httpContext =>
             {
                 var userId = GetUserId(httpContext);
@@ -258,9 +249,9 @@ internal static class RateLimitingServiceExtensions
                     partitionKey: $"bgg-search-{userId}",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
-                        Window = TimeSpan.FromHours(1), // 1 hour window
-                        PermitLimit = 20, // 20 searches per hour to respect BGG API
-                        SegmentsPerWindow = 6, // 10-minute segments
+                        Window = TimeSpan.FromHours(1),
+                        PermitLimit = 20,
+                        SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });
@@ -276,7 +267,7 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 2, // Low limit to prevent proposal spam
+                        PermitLimit = 2,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
@@ -293,14 +284,15 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(5),
-                        PermitLimit = 1, // Max 1 bulk import every 5 minutes
-                        SegmentsPerWindow = 5, // 1-minute segments
+                        PermitLimit = 1,
+                        SegmentsPerWindow = 5,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });
             });
 
-            // Policy 12: AgentQuery - 30 req/min for agent query operations (Issue #4338)
+            // Policy 12: AgentQuery - 30 req/min for AI agent query operations (Issue #4338)
+            // AI queries are expensive (LLM token cost); per-user limit prevents runaway usage.
             options.AddPolicy("AgentQuery", httpContext =>
             {
                 var userId = GetUserId(httpContext);
@@ -310,14 +302,14 @@ internal static class RateLimitingServiceExtensions
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 30, // 30 queries/min per user (AI queries are expensive)
-                        SegmentsPerWindow = 6, // 10-second segments
+                        PermitLimit = 30,
+                        SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });
             });
 
-            // Issue #4683: Agent creation rate limiting (10 creations/min per user)
+            // Policy 13: AgentCreation - 10 req/min for agent creation (Issue #4683)
             options.AddPolicy("AgentCreation", httpContext =>
             {
                 var userId = GetUserId(httpContext);
@@ -334,7 +326,7 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
-            // Rejection behavior: Return 429 Too Many Requests
+            // Rejection behavior: Return 429 Too Many Requests with retry-after info
             options.OnRejected = async (context, cancellationToken) =>
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -362,7 +354,7 @@ internal static class RateLimitingServiceExtensions
 
     /// <summary>
     /// Gets the client IP address from the HttpContext.
-    /// Checks X-Forwarded-For header first (for proxied requests), then RemoteIpAddress.
+    /// Checks X-Forwarded-For header first (for proxied requests via Traefik), then RemoteIpAddress.
     /// Defensive implementation with full null checks to prevent rate limiter crashes.
     /// </summary>
     private static string GetClientIpAddress(HttpContext? httpContext)
@@ -376,14 +368,12 @@ internal static class RateLimitingServiceExtensions
 
         try
         {
-            // Check X-Forwarded-For header (Traefik proxy sets this)
             var request = httpContext.Request;
             if (request is not null)
             {
                 var forwardedFor = request.Headers["X-Forwarded-For"].FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(forwardedFor))
                 {
-                    // Take first IP if multiple (client IP)
                     var firstIp = forwardedFor.Split(',')[0].Trim();
                     if (!string.IsNullOrWhiteSpace(firstIp))
                     {
@@ -392,7 +382,6 @@ internal static class RateLimitingServiceExtensions
                 }
             }
 
-            // Fallback to RemoteIpAddress with full null check
             var connection = httpContext.Connection;
             if (connection is not null)
             {
@@ -407,7 +396,6 @@ internal static class RateLimitingServiceExtensions
         }
         catch
         {
-            // Defensive: never let rate limiter partition key throw
             return fallback;
         }
     }
@@ -442,7 +430,6 @@ internal static class RateLimitingServiceExtensions
         }
         catch
         {
-            // Defensive: never let rate limiter partition key throw
             return GetClientIpAddress(httpContext);
         }
     }

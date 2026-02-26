@@ -146,7 +146,7 @@ export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = f
     } finally {
       setUploading(false);
     }
-  }, [file, isPublic, onComplete]);
+  }, [file, isPublic, onComplete, gameId, privateGameId]);
 
   return (
     <div className="space-y-6">

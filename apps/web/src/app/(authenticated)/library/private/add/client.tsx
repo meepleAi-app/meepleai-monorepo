@@ -112,11 +112,19 @@ export function UserWizardClient({
     if (onComplete) { onComplete(); } else { router.push('/library/private'); }
   }, [onComplete, router, state.gameName]);
 
-  // Step 2: PDF uploaded — show processing status (user can continue to agent any time)
+  // Step 2: PDF uploaded
+  // For catalog games (startAtPdf=true): the gameId is a shared catalog UUID, not a PrivateGame ID.
+  // PdfProcessingStatus polls /library/games/{gameId}/pdf-status which only works for PrivateGame IDs.
+  // For catalog games we complete the flow immediately after upload; the PDF indexes in the background.
   const handlePdfUploaded = useCallback((pdfId: string, fileName: string) => {
-    setState(prev => ({ ...prev, pdfId, pdfFileName: fileName }));
-    setShowProcessing(true);
-  }, []);
+    if (startAtPdf) {
+      toast.success(`PDF caricato con successo!`);
+      if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+    } else {
+      setState(prev => ({ ...prev, pdfId, pdfFileName: fileName }));
+      setShowProcessing(true);
+    }
+  }, [startAtPdf, onComplete, router]);
 
   // Step 2: User clicks "Continue to agent" from PdfProcessingStatus
   const handleContinueToAgent = useCallback(() => {

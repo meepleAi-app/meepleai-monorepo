@@ -128,7 +128,7 @@ function createMockGame(overrides?: Partial<PrivateGameDto>): PrivateGameDto {
   const id = overrides?.id ?? 'game-1';
   return {
     id,
-    userId: 'user-1',
+    ownerId: 'user-1',
     source: 'Manual',
     bggId: null,
     title: `Test Game ${id}`,

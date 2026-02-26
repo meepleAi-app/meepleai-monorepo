@@ -38,7 +38,7 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
 function createMockGame(overrides?: Partial<PrivateGameDto>): PrivateGameDto {
   return {
     id: 'game-1',
-    userId: 'user-1',
+    ownerId: 'user-1',
     source: 'Manual',
     bggId: null,
     title: 'Test Game',

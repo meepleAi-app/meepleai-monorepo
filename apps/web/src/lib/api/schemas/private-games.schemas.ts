@@ -14,7 +14,7 @@ export type PrivateGameSource = z.infer<typeof PrivateGameSourceSchema>;
 // Private game DTO from backend
 export const PrivateGameDtoSchema = z.object({
   id: z.string().uuid(),
-  userId: z.string().uuid(),
+  ownerId: z.string().uuid(),
   source: PrivateGameSourceSchema,
   bggId: z.number().int().positive().nullable().optional(),
   title: z.string(),
@@ -28,7 +28,9 @@ export const PrivateGameDtoSchema = z.object({
   imageUrl: z.string().url().nullable().optional(),
   thumbnailUrl: z.string().url().nullable().optional(),
   createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  updatedAt: z.string().datetime().nullable().optional(),
+  bggSyncedAt: z.string().datetime().nullable().optional(),
+  canProposeToCatalog: z.boolean().optional(),
 });
 
 export type PrivateGameDto = z.infer<typeof PrivateGameDtoSchema>;

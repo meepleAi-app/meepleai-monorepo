@@ -11,7 +11,7 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.ToTable("pdf_documents");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasMaxLength(64);
-        builder.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+        builder.Property(e => e.GameId).IsRequired(false).HasMaxLength(64);
         builder.Property(e => e.FileName).IsRequired().HasMaxLength(256);
         builder.Property(e => e.FilePath).IsRequired().HasMaxLength(1024);
         builder.Property(e => e.FileSizeBytes).IsRequired();
@@ -53,6 +53,7 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasOne(e => e.Game)
             .WithMany()
             .HasForeignKey(e => e.GameId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(e => e.UploadedBy)
             .WithMany()

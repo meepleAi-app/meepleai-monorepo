@@ -46,6 +46,7 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
             {
                 p.Id,
                 p.GameId,
+                p.PrivateGameId,
                 p.FileName,
                 p.FilePath,
                 p.ContentType,
@@ -72,7 +73,7 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
 
         // Step 3: Retrieve file stream from blob storage
         var fileStream = await _blobStorageService
-            .RetrieveAsync(pdf.Id.ToString("N"), pdf.GameId.ToString(), cancellationToken)
+            .RetrieveAsync(pdf.Id.ToString("N"), (pdf.PrivateGameId ?? pdf.GameId)?.ToString() ?? string.Empty, cancellationToken)
             .ConfigureAwait(false);
 
         if (fileStream == null)

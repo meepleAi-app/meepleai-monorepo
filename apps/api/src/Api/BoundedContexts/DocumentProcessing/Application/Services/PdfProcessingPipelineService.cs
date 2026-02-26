@@ -325,7 +325,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             .ToList();
 
         var indexResult = await _qdrantService
-            .IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks, cancellationToken)
+            .IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks, cancellationToken)
             .ConfigureAwait(false);
 
         if (!indexResult.Success)

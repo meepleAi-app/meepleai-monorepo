@@ -417,7 +417,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     private async Task<(bool Success, BlobStorageResult Result, PdfDocumentEntity? PdfDoc)> StoreFileAndCreateRecordAsync(
         IFormFile file,
         string fileName,
-        string gameId,
+        string? gameId,
         Guid userId,
         Guid? privateGameId,
         CancellationToken cancellationToken)
@@ -428,7 +428,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             BlobStorageResult storageResult;
             using (var stream = file.OpenReadStream())
             {
-                storageResult = await _blobStorageService.StoreAsync(stream, fileName, gameId, cancellationToken).ConfigureAwait(false);
+                storageResult = await _blobStorageService.StoreAsync(stream, fileName, gameId ?? privateGameId?.ToString() ?? string.Empty, cancellationToken).ConfigureAwait(false);
             }
 
             if (!storageResult.Success || string.IsNullOrWhiteSpace(storageResult.FileId))
@@ -443,7 +443,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var pdfDoc = new PdfDocumentEntity
             {
                 Id = Guid.Parse(storageResult.FileId!),
-                GameId = Guid.Parse(gameId),
+                GameId = !string.IsNullOrEmpty(gameId) ? Guid.Parse(gameId) : null,
                 FileName = fileName,
                 FilePath = storageResult.FilePath!,
                 FileSizeBytes = storageResult.FileSizeBytes,
@@ -545,8 +545,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         RecordUploadMetricSafely("success", file.Length);
 
-        // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association
-        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.GameId, userId, cancellationToken).ConfigureAwait(false);
+        // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association (shared games only)
+        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.GameId ?? Guid.Empty, userId, cancellationToken).ConfigureAwait(false);
 
         return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto(
             Id: pdfDoc.Id,
@@ -1094,7 +1094,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             })
             .ToList();
 
-        var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
+        // For private games GameId is null; use PrivateGameId as the Qdrant collection key
+        var qdrantGameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString()
+            ?? throw new InvalidOperationException($"PDF {pdfId} has neither GameId nor PrivateGameId");
+        var indexResult = await qdrantService.IndexDocumentChunksAsync(qdrantGameId, pdfId, documentChunks).ConfigureAwait(false);
         indexingStopwatch.Stop();
 
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
@@ -1218,7 +1221,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), "PDF processing", cancellationToken).ConfigureAwait(false);
+        var cacheKey = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
+        await InvalidateCacheSafelyAsync(cacheKey, "PDF processing", cancellationToken).ConfigureAwait(false);
 
         // Two-Phase Quota (#1743): Confirm quota (Phase 2)
         await quotaService.ConfirmQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
@@ -1412,12 +1416,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             return new PdfUploadResult(false, "You can only upload PDFs for your own private games", null);
         }
 
-        // Use a placeholder gameId for storage (private games don't have GameEntity)
-        var storageGameId = privateGameId.ToString();
-
-        // Store file and create database record with PrivateGameId
+        // Private games don't have a shared GameEntity — GameId is null, PrivateGameId is set
+        // Store file and create database record with PrivateGameId (GameId = null)
         var (storageSuccess, storageResult, pdfDoc) = await StoreFileAndCreateRecordAsync(
-            file, fileName, storageGameId, userId, privateGameId, cancellationToken).ConfigureAwait(false);
+            file, fileName, null, userId, privateGameId, cancellationToken).ConfigureAwait(false);
 
         if (!storageSuccess)
         {

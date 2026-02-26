@@ -95,7 +95,7 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
 
             // Create agent with defaults
             var command = new CreateGameAgentCommand(
-                GameId: pdfEntity.GameId,
+                GameId: pdfEntity.GameId ?? Guid.Empty,
                 TypologyId: defaultTypology.Id,
                 StrategyName: "Balanced",
                 StrategyParameters: null,

@@ -7,10 +7,11 @@
  * Uses TypologySelector + StrategySelector from Issue #3
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { TypologySelector, StrategySelector } from '@/components/agent/config';
 import { toast } from '@/components/layout';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
@@ -36,8 +37,14 @@ export function ConfigAgentStep({
   const [strategyName, setStrategyName] = useState<string>('Balanced');
   const [isCreating, setIsCreating] = useState(false);
 
-  // TODO Issue #9: Fetch from user profile
-  const userTier = 'Free'; // Hardcoded for MVP
+  const { data: currentUser } = useCurrentUser();
+
+  // Map auth role to StrategySelector tier (Issue #9: replaces hardcoded 'Free')
+  const userTier = useMemo((): 'Free' | 'Basic' | 'Pro' | 'Enterprise' => {
+    const role = currentUser?.role?.toLowerCase() ?? 'user';
+    if (role === 'superadmin' || role === 'admin' || role === 'editor') return 'Enterprise';
+    return 'Free';
+  }, [currentUser?.role]);
 
   const handleCreate = async () => {
     if (!typologyId) {

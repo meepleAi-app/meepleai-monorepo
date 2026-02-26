@@ -120,7 +120,7 @@ export function UserWizardClient({
   }, []);
 
   // Step 2: Skip PDF from upload step
-  const _handleSkipPdfStep = useCallback(() => {
+  const handleSkipPdfStep = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto senza PDF!`);
     if (onComplete) { onComplete(); } else { router.push('/library/private'); }
   }, [onComplete, router, state.gameName]);
@@ -232,6 +232,7 @@ export function UserWizardClient({
               pdfId={null}
               pdfFileName={null}
               allowSkipPdf={true}
+              mode="user"
               onComplete={handleGameCreated}
               onSkipPdf={handleSkipPdf}
               onBack={onCancel ?? (() => router.push('/library/private'))}
@@ -241,7 +242,9 @@ export function UserWizardClient({
           {state.currentStep === 'pdf' && state.gameId && !showProcessing && (
             <PdfUploadStep
               gameId={state.gameId}
+              isPrivate
               onComplete={handlePdfUploaded}
+              onSkip={handleSkipPdfStep}
             />
           )}
 

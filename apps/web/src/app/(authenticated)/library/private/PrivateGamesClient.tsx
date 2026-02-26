@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { AddGameDrawer } from '@/app/(authenticated)/library/AddGameDrawer';
 import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
 import { JourneyProgress } from '@/components/library/JourneyProgress';
 import { KbStatusBadge } from '@/components/library/KbStatusBadge';
@@ -87,6 +88,9 @@ export default function PrivateGamesClient() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortByOption>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Drawer state
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
 
   // Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -239,7 +243,7 @@ export default function PrivateGamesClient() {
           </p>
         </div>
         <Button
-          onClick={() => router.push('/library/private/add')}
+          onClick={() => setAddDrawerOpen(true)}
           data-testid="add-private-game-btn"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -441,6 +445,12 @@ export default function PrivateGamesClient() {
         }}
         game={selectedGame}
         onPropose={handlePropose}
+      />
+
+      {/* Add Game Drawer — local instance so close stays on /library/private */}
+      <AddGameDrawer
+        open={addDrawerOpen}
+        onClose={() => setAddDrawerOpen(false)}
       />
     </div>
   );

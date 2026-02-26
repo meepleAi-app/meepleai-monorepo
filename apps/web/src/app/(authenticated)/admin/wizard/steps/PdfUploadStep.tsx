@@ -18,16 +18,24 @@ interface PdfUploadStepProps {
   onComplete: (pdfId: string, fileName: string, isPublic: boolean) => void;
   /** Required when the game already exists (game-first wizard flows). */
   gameId?: string;
+  /**
+   * When true, hides the "Add to Public Library" checkbox.
+   * Use for user wizard where PDFs are always private.
+   */
+  isPrivate?: boolean;
+  /**
+   * When provided, shows a "Skip" button allowing the user to complete
+   * without uploading a PDF.
+   */
+  onSkip?: () => void;
 }
 
-export function PdfUploadStep({ onComplete, gameId }: PdfUploadStepProps) {
+export function PdfUploadStep({ onComplete, gameId, isPrivate = false, onSkip }: PdfUploadStepProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [isPublic, setIsPublic] = useState(true);
+  const [isPublic, setIsPublic] = useState(!isPrivate);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
-
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
   const handleFileSelect = useCallback((selectedFile: File) => {
     if (selectedFile.type !== 'application/pdf') {
@@ -126,7 +134,7 @@ export function PdfUploadStep({ onComplete, gameId }: PdfUploadStepProps) {
     } finally {
       setUploading(false);
     }
-  }, [file, isPublic, API_BASE, onComplete]);
+  }, [file, isPublic, onComplete]);
 
   return (
     <div className="space-y-6">
@@ -191,22 +199,24 @@ export function PdfUploadStep({ onComplete, gameId }: PdfUploadStepProps) {
         )}
       </div>
 
-      {/* Public checkbox */}
-      <div className="flex items-start space-x-3">
-        <Checkbox
-          id="is-public"
-          checked={isPublic}
-          onCheckedChange={checked => setIsPublic(checked === true)}
-        />
-        <div className="space-y-1">
-          <Label htmlFor="is-public" className="font-medium cursor-pointer">
-            Aggiungi alla Libreria Pubblica
-          </Label>
-          <p className="text-sm text-slate-500">
-            Il PDF sara' visibile a tutti gli utenti registrati nella libreria pubblica.
-          </p>
+      {/* Public checkbox — hidden for private game uploads */}
+      {!isPrivate && (
+        <div className="flex items-start space-x-3">
+          <Checkbox
+            id="is-public"
+            checked={isPublic}
+            onCheckedChange={checked => setIsPublic(checked === true)}
+          />
+          <div className="space-y-1">
+            <Label htmlFor="is-public" className="font-medium cursor-pointer">
+              Aggiungi alla Libreria Pubblica
+            </Label>
+            <p className="text-sm text-slate-500">
+              Il PDF sara' visibile a tutti gli utenti registrati nella libreria pubblica.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Progress bar */}
       {uploading && (
@@ -225,8 +235,13 @@ export function PdfUploadStep({ onComplete, gameId }: PdfUploadStepProps) {
       )}
 
       {/* Actions */}
-      <div className="flex justify-end gap-3">
-        <Button onClick={handleUpload} disabled={!file || uploading} className="min-w-32">
+      <div className="flex justify-between gap-3">
+        {onSkip && (
+          <Button variant="outline" onClick={onSkip} disabled={uploading}>
+            Salta PDF
+          </Button>
+        )}
+        <Button onClick={handleUpload} disabled={!file || uploading} className="min-w-32 ml-auto">
           {uploading ? (
             <>
               <Spinner size="sm" className="mr-2" />

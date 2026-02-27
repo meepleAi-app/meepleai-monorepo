@@ -154,17 +154,67 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (pdfProcessingState is null)
+        if (pdfProcessingState is not null)
+        {
+            var inferredStatus = pdfProcessingState.ToLowerInvariant() switch
+            {
+                "failed" => VectorDocumentIndexingStatus.Failed,
+                "ready" => VectorDocumentIndexingStatus.Completed,       // ProcessingState.Ready = fully indexed
+                "pending" => VectorDocumentIndexingStatus.Pending,
+                _ => VectorDocumentIndexingStatus.Processing             // uploading/extracting/chunking/embedding/indexing
+            };
+            return new VectorDocumentIndexingInfo(inferredStatus, 0, null);
+        }
+
+        // Fourth fallback: the caller passed a SharedGame.Id (catalog game ID), but
+        // UploadPdfCommandHandler.FindOrCreateGameAsync resolves it to an internal
+        // GameEntity.Id (games table) before saving PdfDocument.GameId.
+        // So PdfDocument.GameId = internalId != sharedGameId.
+        // Resolve via: GameEntity.SharedGameId == gameId → GameEntity.Id → PdfDocument.GameId.
+        var internalGameIds = await DbContext.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId == gameId)
+            .Select(g => g.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (internalGameIds.Count == 0)
             return null;
 
-        var inferredStatus = pdfProcessingState.ToLowerInvariant() switch
+        // Retry VectorDocument lookup with internal game IDs (post-indexing)
+        var infoViaInternal = await DbContext.VectorDocuments
+            .AsNoTracking()
+            .Where(vd => vd.GameId != null && internalGameIds.Contains(vd.GameId.Value))
+            .OrderByDescending(vd => vd.IndexedAt ?? DateTime.MaxValue)
+            .Select(vd => new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (infoViaInternal is not null)
+        {
+            var statusViaInternal = Enum.Parse<VectorDocumentIndexingStatus>(infoViaInternal.IndexingStatus, ignoreCase: true);
+            return new VectorDocumentIndexingInfo(statusViaInternal, infoViaInternal.ChunkCount, infoViaInternal.IndexingError);
+        }
+
+        // Retry PdfDocument ProcessingState lookup with internal game IDs (in-pipeline)
+        var pdfStateViaInternal = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(pdf => pdf.GameId != null && internalGameIds.Contains(pdf.GameId.Value))
+            .Select(pdf => pdf.ProcessingState)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (pdfStateViaInternal is null)
+            return null;
+
+        var inferredStatusViaInternal = pdfStateViaInternal.ToLowerInvariant() switch
         {
             "failed" => VectorDocumentIndexingStatus.Failed,
-            "ready" => VectorDocumentIndexingStatus.Completed,       // ProcessingState.Ready = fully indexed
+            "ready" => VectorDocumentIndexingStatus.Completed,
             "pending" => VectorDocumentIndexingStatus.Pending,
-            _ => VectorDocumentIndexingStatus.Processing             // uploading/extracting/chunking/embedding/indexing
+            _ => VectorDocumentIndexingStatus.Processing
         };
-        return new VectorDocumentIndexingInfo(inferredStatus, 0, null);
+        return new VectorDocumentIndexingInfo(inferredStatusViaInternal, 0, null);
     }
 
     public async Task<bool> AnyBelongsToGameAsync(

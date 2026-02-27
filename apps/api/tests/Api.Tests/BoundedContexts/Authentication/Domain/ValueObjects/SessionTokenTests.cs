@@ -100,6 +100,19 @@ public class SessionTokenTests
         Assert.Contains("Session token cannot be empty", exception.Message);
     }
 
+    [Theory]
+    [InlineData("invalid-token-format")]        // hyphens not in Base-64 alphabet
+    [InlineData("not!base64@value")]            // special characters
+    [InlineData("AAAA====BBBB")]                // invalid padding placement
+    public void FromStored_WithNonBase64Value_ThrowsValidationException(string invalidValue)
+    {
+        // Act & Assert
+        // A cookie that cannot be Base-64 decoded is a corrupted or foreign token;
+        // reject it at construction time rather than crashing later in ComputeHash().
+        var exception = Assert.Throws<ValidationException>(() => SessionToken.FromStored(invalidValue));
+        Assert.Contains("not a valid format", exception.Message);
+    }
+
     [Fact]
     public void ComputeHash_ReturnsSHA256Hash()
     {

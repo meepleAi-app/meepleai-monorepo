@@ -28,9 +28,21 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
     public async Task<SessionStatusDto> Handle(ValidateSessionQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        // Parse and hash the token
-        var sessionToken = SessionToken.FromStored(query.SessionToken);
-        var tokenHash = sessionToken.ComputeHash();
+
+        // Parse and hash the token.
+        // Guard: malformed cookies (non-Base-64, empty, oversized) must return an invalid
+        // session rather than propagating a raw exception. FromStored() validates the format
+        // and throws ValidationException; ComputeHash() is safe once the token is valid.
+        string tokenHash;
+        try
+        {
+            var sessionToken = SessionToken.FromStored(query.SessionToken);
+            tokenHash = sessionToken.ComputeHash();
+        }
+        catch
+        {
+            return new SessionStatusDto(IsValid: false, User: null, ExpiresAt: null, LastSeenAt: null);
+        }
 
         // Find session by token hash
         var session = await _sessionRepository.GetByTokenHashAsync(tokenHash, cancellationToken).ConfigureAwait(false);

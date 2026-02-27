@@ -8,5 +8,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Issue #4126: API Integration.
 /// </summary>
 internal record GetRecentAgentsQuery(
-    int Limit = 10
+    int Limit = 10,
+    Guid? UserId = null
 ) : IQuery<IReadOnlyList<AgentDto>>;

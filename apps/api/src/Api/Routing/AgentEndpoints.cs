@@ -446,9 +446,9 @@ internal static class AgentEndpoints
             CancellationToken cancellationToken) =>
         {
             // Session validated by RequireSessionFilter
-            _ = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
 
-            var query = new GetRecentAgentsQuery(limit ?? 10);
+            var query = new GetRecentAgentsQuery(limit ?? 10, session.User!.Id);
             var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
 
             return Results.Ok(result);

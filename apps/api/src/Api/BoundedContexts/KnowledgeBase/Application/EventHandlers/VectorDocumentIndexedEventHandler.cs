@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -10,6 +11,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.SharedKernel.Application.EventHandlers;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
@@ -21,6 +23,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 /// </summary>
 internal sealed class VectorDocumentIndexedEventHandler : DomainEventHandlerBase<VectorDocumentIndexedEvent>
 {
+    private readonly MeepleAiDbContext _dbContext;
     private readonly IVectorDocumentRepository _vectorDocRepo;
     private readonly IPdfDocumentRepository _pdfDocRepo;
     private readonly IUserRepository _userRepo;
@@ -41,6 +44,7 @@ internal sealed class VectorDocumentIndexedEventHandler : DomainEventHandlerBase
         IPushNotificationService pushService)
         : base(dbContext, logger)
     {
+        _dbContext = dbContext;
         _vectorDocRepo = vectorDocRepo;
         _pdfDocRepo = pdfDocRepo;
         _userRepo = userRepo;
@@ -73,6 +77,30 @@ internal sealed class VectorDocumentIndexedEventHandler : DomainEventHandlerBase
                 vectorDoc.PdfDocumentId,
                 domainEvent.DocumentId);
             return;
+        }
+
+        // Compensate: UploadPdfCommandHandler creates VectorDocument directly (bypassing Quartz pipeline)
+        // and never sets ProcessingState=Ready. The domain state machine forbids Pending→Ready via
+        // TransitionTo(), so we update the infrastructure entity directly — safe here because the
+        // event fires only after indexing is confirmed complete.
+        if (pdfDoc.ProcessingState != PdfProcessingState.Ready
+            && pdfDoc.ProcessingState != PdfProcessingState.Failed)
+        {
+            var pdfEntity = await _dbContext.PdfDocuments
+                .FirstOrDefaultAsync(p => p.Id == pdfDoc.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (pdfEntity != null)
+            {
+                pdfEntity.ProcessingState = "Ready";
+                pdfEntity.ProcessingStatus = "completed";
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                Logger.LogInformation(
+                    "Compensating update: set ProcessingState=Ready for PdfDocument {PdfId} (was {PrevState}) after vector indexing",
+                    pdfDoc.Id,
+                    pdfDoc.ProcessingState);
+            }
         }
 
         var userId = pdfDoc.UploadedByUserId;

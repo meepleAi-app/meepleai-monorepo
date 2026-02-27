@@ -31,6 +31,7 @@ export const PrivateGameDtoSchema = z.object({
   updatedAt: z.string().datetime().nullable().optional(),
   bggSyncedAt: z.string().datetime().nullable().optional(),
   canProposeToCatalog: z.boolean().optional(),
+  agentDefinitionId: z.string().uuid().nullable().optional(),
 });
 
 export type PrivateGameDto = z.infer<typeof PrivateGameDtoSchema>;

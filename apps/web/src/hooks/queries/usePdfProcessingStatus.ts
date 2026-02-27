@@ -32,17 +32,19 @@ export function usePdfProcessingStatus(
     queryKey: pdfStatusKeys.byGame(gameId ?? ''),
     queryFn: () => api.library.getPdfProcessingStatus(gameId!),
     enabled: !!gameId,
-    // Poll every 3 s; stop when terminal status is reached
+    // Poll every 3 s; stop only when a terminal status is reached.
+    // Keep polling on errors (e.g. transient 404 while the pipeline is starting up)
+    // so the status appears once the backend catches up — do NOT stop on !status.
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      if (!status || TERMINAL_STATUSES.has(status)) return false;
+      if (status && TERMINAL_STATUSES.has(status)) return false;
       return 3000;
     },
     // Don't auto-refetch on window focus — rely on polling only
     refetchOnWindowFocus: false,
     // Short stale time so polling stays fresh
     staleTime: 0,
-    // Don't retry on error (404 = no PDF for this game yet — polling will resume naturally)
-    retry: false,
+    // Retry a few times on error so transient failures don't kill the query permanently
+    retry: 2,
   });
 }

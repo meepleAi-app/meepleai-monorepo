@@ -231,8 +231,15 @@ export default function PrivateGamesClient() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      {/* Journey Progress Banner */}
-      <JourneyProgress />
+      {/* Journey Progress Banner — pass the most recently created private game so Steps 2-5 evaluate.
+          Sort by createdAt desc (independent of the user's display sort order) so the banner always
+          tracks the game the user most recently added, not whichever game is first in the current
+          display sort (Issue #5217). */}
+      <JourneyProgress gameId={
+        games.length > 0
+          ? [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.id
+          : undefined
+      } />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

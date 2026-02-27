@@ -11,26 +11,32 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handler for GetGamePdfIndexingStatusQuery.
 /// Issue #4943: Returns PDF indexing/processing status for a game owned by the user.
+/// Issue #5217: Extended to support shared catalog game IDs (not only private game IDs).
 /// </summary>
 /// <remarks>
-/// Authorization: throws ForbiddenException (403) if user doesn't own the game.
-/// Not found: throws NotFoundException (404) if no PDF has been associated with the game.
-/// Crosses BC boundary to check ownership via IPrivateGameRepository (acceptable for queries).
+/// Authorization strategy (two paths):
+/// - Private game: verifies via IPrivateGameRepository — user must be the game owner.
+/// - Shared catalog game: verifies via IUserLibraryRepository.IsGameInLibraryAsync — game must be in user's library.
+/// Not found: throws NotFoundException (404) if game is neither private-owned nor in shared library,
+/// or if no PDF has been indexed for the game yet.
 /// </remarks>
 internal sealed class GetGamePdfIndexingStatusQueryHandler
     : IQueryHandler<GetGamePdfIndexingStatusQuery, PdfIndexingStatusDto>
 {
     private readonly IVectorDocumentRepository _vectorDocumentRepository;
     private readonly IPrivateGameRepository _privateGameRepository;
+    private readonly IUserLibraryRepository _userLibraryRepository;
     private readonly ILogger<GetGamePdfIndexingStatusQueryHandler> _logger;
 
     public GetGamePdfIndexingStatusQueryHandler(
         IVectorDocumentRepository vectorDocumentRepository,
         IPrivateGameRepository privateGameRepository,
+        IUserLibraryRepository userLibraryRepository,
         ILogger<GetGamePdfIndexingStatusQueryHandler> logger)
     {
         _vectorDocumentRepository = vectorDocumentRepository ?? throw new ArgumentNullException(nameof(vectorDocumentRepository));
         _privateGameRepository = privateGameRepository ?? throw new ArgumentNullException(nameof(privateGameRepository));
+        _userLibraryRepository = userLibraryRepository ?? throw new ArgumentNullException(nameof(userLibraryRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -40,14 +46,29 @@ internal sealed class GetGamePdfIndexingStatusQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // 1. Verify game exists and user owns it
-        var game = await _privateGameRepository
+        // 1. Verify user is authorized to query this game's PDF status.
+        //    Path A: private game — user must be the owner.
+        //    Path B: shared catalog game — game must be in user's library (Issue #5217).
+        var privateGame = await _privateGameRepository
             .GetByIdAsync(request.GameId, cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new NotFoundException("PrivateGame", request.GameId.ToString());
+            .ConfigureAwait(false);
 
-        if (game.OwnerId != request.UserId)
-            throw new ForbiddenException("Access to this game's PDF status is not permitted.");
+        if (privateGame is not null)
+        {
+            // Path A: private game ownership check
+            if (privateGame.OwnerId != request.UserId)
+                throw new ForbiddenException("Access to this game's PDF status is not permitted.");
+        }
+        else
+        {
+            // Path B: shared catalog game — verify it is in user's library
+            var isInLibrary = await _userLibraryRepository
+                .IsGameInLibraryAsync(request.UserId, request.GameId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!isInLibrary)
+                throw new NotFoundException("Game", request.GameId.ToString());
+        }
 
         // 2. Fetch indexing info for this game
         var info = await _vectorDocumentRepository

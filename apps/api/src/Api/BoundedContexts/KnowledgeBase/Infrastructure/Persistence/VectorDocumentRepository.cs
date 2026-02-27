@@ -141,12 +141,15 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
             return new VectorDocumentIndexingInfo(status, info.ChunkCount, info.IndexingError);
         }
 
-        // Third fallback: VectorDocument not yet created (private game PDF still in pipeline).
+        // Third fallback: VectorDocument not yet created (PDF still in pipeline).
         // Read PdfDocumentEntity.ProcessingState (authoritative 7-state field) so polling
         // returns "processing" instead of 404 during extraction/chunking/embedding.
+        // Covers both:
+        //   - Private games (PrivateGameId == gameId)
+        //   - Shared catalog games (GameId == gameId, Issue #5217)
         var pdfProcessingState = await DbContext.PdfDocuments
             .AsNoTracking()
-            .Where(pdf => pdf.PrivateGameId == gameId)
+            .Where(pdf => pdf.PrivateGameId == gameId || pdf.GameId == gameId)
             .Select(pdf => pdf.ProcessingState)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);

@@ -84,7 +84,11 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-// AddPrivateGameWithBgg mock removed — Add flow now navigates to /library/private/add
+// Mock AddGameDrawer — the Add Game button now opens this drawer instead of navigating (Issue #5217)
+vi.mock('@/app/(authenticated)/library/AddGameDrawer', () => ({
+  AddGameDrawer: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
+    open ? <div data-testid="add-game-drawer"><button onClick={onClose}>Close</button></div> : null,
+}));
 
 // Keep AddPrivateGameForm mock for edit dialog
 vi.mock('@/components/library/AddPrivateGameForm', () => ({
@@ -528,7 +532,7 @@ describe('PrivateGamesClient', () => {
   });
 
   describe('Add Game Navigation', () => {
-    it('should navigate to add page when clicking Add Game button', async () => {
+    it('should open AddGameDrawer when clicking Add Game button (Issue #5217)', async () => {
       mockGetPrivateGames.mockResolvedValueOnce(
         createPaginatedResponse(mockGames)
       );
@@ -542,7 +546,9 @@ describe('PrivateGamesClient', () => {
 
       await user.click(screen.getByTestId(LIBRARY_TEST_IDS.addPrivateGameBtn));
 
-      expect(mockPush).toHaveBeenCalledWith('/library/private/add');
+      // Button now opens drawer in-place instead of navigating to /library/private/add
+      expect(screen.getByTestId('add-game-drawer')).toBeInTheDocument();
+      expect(mockPush).not.toHaveBeenCalledWith('/library/private/add');
     });
 
     it('should navigate to add page from empty state', async () => {
@@ -670,7 +676,7 @@ describe('PrivateGamesClient', () => {
       });
     });
 
-    it('should navigate to add page on Add Game click', async () => {
+    it('should open AddGameDrawer on Add Game click (Issue #5217)', async () => {
       mockGetPrivateGames.mockResolvedValue(
         createPaginatedResponse(mockGames)
       );
@@ -684,7 +690,9 @@ describe('PrivateGamesClient', () => {
 
       await user.click(screen.getByTestId(LIBRARY_TEST_IDS.addPrivateGameBtn));
 
-      expect(mockPush).toHaveBeenCalledWith('/library/private/add');
+      // Drawer opens in place — no navigation to /library/private/add
+      expect(screen.getByTestId('add-game-drawer')).toBeInTheDocument();
+      expect(mockPush).not.toHaveBeenCalledWith('/library/private/add');
     });
   });
 

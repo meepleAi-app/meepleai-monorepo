@@ -42,5 +42,7 @@ export function usePdfProcessingStatus(
     refetchOnWindowFocus: false,
     // Short stale time so polling stays fresh
     staleTime: 0,
+    // Don't retry on error (404 = no PDF for this game yet — polling will resume naturally)
+    retry: false,
   });
 }

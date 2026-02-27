@@ -55,6 +55,7 @@ internal static class UserLibraryEndpoints
         MapResetGamePdfEndpoint(group);
         MapGetGamePdfsEndpoint(group); // Issue #3152
         MapGetGamePdfIndexingStatusEndpoint(group); // Issue #4943
+        MapGetPrivateGamePdfIndexingStatusEndpoint(group); // Issue #5215 alias
         MapPrivatePdfProgressStreamEndpoint(group); // Issue #3653
         MapRemovePrivatePdfEndpoint(group); // Issue #3651
 
@@ -651,6 +652,45 @@ internal static class UserLibraryEndpoints
         .WithTags("Library", "PDF")
         .WithSummary("Get PDF indexing status")
         .WithDescription("Returns the PDF processing/indexing status for a game. Poll every 3s until status=indexed|failed. Issue #4943.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Issue #5215: Alias for /library/games/{gameId}/pdf-status under the private-games URL prefix.
+    /// Both endpoints accept ONLY private game IDs — authorization is enforced via
+    /// IPrivateGameRepository, which only knows about private games. Shared catalog game IDs
+    /// will return 404. The /library/ prefix is intentional to match the sibling endpoint
+    /// /library/games/{gameId}/pdf-status that this aliases.
+    /// </summary>
+    private static void MapGetPrivateGamePdfIndexingStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/private-games/{gameId:guid}/pdf-status", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<PdfIndexingStatusDto>(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Library", "PDF", "PrivateGames")
+        .WithSummary("Get PDF indexing status (private game)")
+        .WithDescription("Alias for /library/games/{gameId}/pdf-status under private-games URL. Accepts ONLY private game IDs — shared game IDs return 404. Issue #5215.")
         .WithOpenApi();
     }
 

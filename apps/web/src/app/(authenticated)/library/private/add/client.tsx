@@ -122,10 +122,18 @@ export function UserWizardClient({
   }, []);
 
   // Step 2: User clicks "Continue to agent" from PdfProcessingStatus
+  // For catalog games (isCatalogGame=true), advance to agent step.
+  // For manually-created private games, the agent creation endpoint requires a shared
+  // catalog game ID — skip directly to completion to avoid a confusing 404 error.
   const handleContinueToAgent = useCallback(() => {
     setShowProcessing(false);
-    setState(prev => ({ ...prev, currentStep: 'agent' }));
-  }, []);
+    if (state.isCatalogGame) {
+      setState(prev => ({ ...prev, currentStep: 'agent' }));
+    } else {
+      toast.success(`Gioco "${state.gameName}" aggiunto con PDF!`);
+      if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+    }
+  }, [state.isCatalogGame, state.gameName, onComplete, router]);
 
   // Step 2: Skip PDF from upload step
   const handleSkipPdfStep = useCallback(() => {

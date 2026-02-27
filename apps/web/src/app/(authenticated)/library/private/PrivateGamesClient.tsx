@@ -457,7 +457,7 @@ export default function PrivateGamesClient() {
       {/* Add Game Drawer — local instance so close stays on /library/private */}
       <AddGameDrawer
         open={addDrawerOpen}
-        onClose={() => setAddDrawerOpen(false)}
+        onClose={() => { setAddDrawerOpen(false); setPage(1); void loadGames({ page: 1 }); }}
       />
     </div>
   );

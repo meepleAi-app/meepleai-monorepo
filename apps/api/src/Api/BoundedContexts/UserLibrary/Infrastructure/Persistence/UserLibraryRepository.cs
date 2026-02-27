@@ -78,7 +78,9 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         var query = DbContext.UserLibraryEntries
             .AsNoTracking()
             .Include(e => e.SharedGame)
-            .Where(e => e.UserId == userId);
+            // Only catalog (shared) games — private game entries have null SharedGameId
+            // and are managed separately via the PrivateGames endpoints.
+            .Where(e => e.UserId == userId && e.SharedGameId != null);
 
         // Apply search filter (by game title)
         if (!string.IsNullOrWhiteSpace(search))

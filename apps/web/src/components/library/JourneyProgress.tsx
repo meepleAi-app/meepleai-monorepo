@@ -10,8 +10,9 @@
  *   - Hidden after user clicks ✕ (persisted in localStorage)
  *
  * Usage:
- *   - On /library/private: pass no gameId (shows step-1 status only)
+ *   - On /library/private: pass the most recently created private game's ID to enable Steps 2-5
  *   - On /library/games/{id}: pass gameId for full per-game tracking
+ *   - Pass no gameId to show only step-1 status (game not yet created)
  */
 
 'use client';

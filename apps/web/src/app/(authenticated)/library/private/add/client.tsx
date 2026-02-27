@@ -113,18 +113,13 @@ export function UserWizardClient({
   }, [onComplete, router, state.gameName]);
 
   // Step 2: PDF uploaded
-  // For catalog games (startAtPdf=true): the gameId is a shared catalog UUID, not a PrivateGame ID.
-  // PdfProcessingStatus polls /library/games/{gameId}/pdf-status which only works for PrivateGame IDs.
-  // For catalog games we complete the flow immediately after upload; the PDF indexes in the background.
+  // Issue #5217: For catalog games (startAtPdf=true) the backend endpoint now supports shared
+  // catalog game IDs via the library membership check. Show PdfProcessingStatus so the user
+  // can see KB creation progress before the drawer closes.
   const handlePdfUploaded = useCallback((pdfId: string, fileName: string) => {
-    if (startAtPdf) {
-      toast.success(`PDF caricato con successo!`);
-      if (onComplete) { onComplete(); } else { router.push('/library/private'); }
-    } else {
-      setState(prev => ({ ...prev, pdfId, pdfFileName: fileName }));
-      setShowProcessing(true);
-    }
-  }, [startAtPdf, onComplete, router]);
+    setState(prev => ({ ...prev, pdfId, pdfFileName: fileName }));
+    setShowProcessing(true);
+  }, []);
 
   // Step 2: User clicks "Continue to agent" from PdfProcessingStatus
   const handleContinueToAgent = useCallback(() => {

@@ -16,12 +16,14 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Unit tests for GetGamePdfIndexingStatusQueryHandler.
 /// Issue #4943: PDF indexing status polling endpoint.
+/// Issue #5217: Extended to support shared catalog game IDs.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class GetGamePdfIndexingStatusQueryHandlerTests
 {
     private readonly Mock<IVectorDocumentRepository> _vectorRepoMock;
     private readonly Mock<IPrivateGameRepository> _privateGameRepoMock;
+    private readonly Mock<IUserLibraryRepository> _userLibraryRepoMock;
     private readonly Mock<ILogger<GetGamePdfIndexingStatusQueryHandler>> _loggerMock;
     private readonly GetGamePdfIndexingStatusQueryHandler _handler;
 
@@ -29,11 +31,13 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
     {
         _vectorRepoMock = new Mock<IVectorDocumentRepository>();
         _privateGameRepoMock = new Mock<IPrivateGameRepository>();
+        _userLibraryRepoMock = new Mock<IUserLibraryRepository>();
         _loggerMock = new Mock<ILogger<GetGamePdfIndexingStatusQueryHandler>>();
 
         _handler = new GetGamePdfIndexingStatusQueryHandler(
             _vectorRepoMock.Object,
             _privateGameRepoMock.Object,
+            _userLibraryRepoMock.Object,
             _loggerMock.Object);
     }
 
@@ -51,6 +55,68 @@ public sealed class GetGamePdfIndexingStatusQueryHandlerTests
         _privateGameRepoMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((PrivateGame?)null);
+
+        // Not a private game AND not in user's shared library → 404
+        _userLibraryRepoMock
+            .Setup(r => r.IsGameInLibraryAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _handler.Handle(query, TestContext.Current.CancellationToken));
+    }
+
+    // ──────────────────────────────────────────────────
+    // Issue #5217: Shared catalog game path (Path B)
+    // ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_SharedCatalogGame_InLibrary_ReturnsStatus()
+    {
+        // Arrange — game is NOT a private game but IS in user's shared library
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var info = new VectorDocumentIndexingInfo(VectorDocumentIndexingStatus.Completed, 15, null);
+
+        _privateGameRepoMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PrivateGame?)null);
+
+        _userLibraryRepoMock
+            .Setup(r => r.IsGameInLibraryAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _vectorRepoMock
+            .Setup(r => r.GetIndexingInfoByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(info);
+
+        var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("indexed", result.Status);
+        Assert.Equal(100, result.Progress);
+        Assert.Equal(15, result.ChunkCount);
+    }
+
+    [Fact]
+    public async Task Handle_SharedCatalogGame_NotInLibrary_ThrowsNotFoundException()
+    {
+        // Arrange — game is NOT a private game and NOT in user's shared library
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        _privateGameRepoMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PrivateGame?)null);
+
+        _userLibraryRepoMock
+            .Setup(r => r.IsGameInLibraryAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         var query = new GetGamePdfIndexingStatusQuery(gameId, userId);
 

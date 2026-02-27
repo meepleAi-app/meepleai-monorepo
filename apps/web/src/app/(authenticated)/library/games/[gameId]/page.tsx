@@ -16,6 +16,8 @@ import { ArrowLeft, Clock, Gauge, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+import LibraryGameDetailLoading from './loading';
+
 import { JourneyProgress } from '@/components/library/JourneyProgress';
 import { UserActionSection } from '@/components/library/game-detail/UserActionSection';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
@@ -102,9 +104,10 @@ export default function LibraryGameDetailPage() {
     );
   }
 
-  // Loading state handled by loading.tsx, but fallback just in case
+  // React Query doesn't suspend, so loading.tsx won't catch isLoading:true.
+  // Show the full-page skeleton while data is in flight.
   if (isLoading || !gameDetail) {
-    return null;
+    return <LibraryGameDetailLoading />;
   }
 
   return (

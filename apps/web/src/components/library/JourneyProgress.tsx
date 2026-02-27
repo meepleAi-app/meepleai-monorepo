@@ -52,6 +52,13 @@ export interface JourneyProgressProps {
    * When absent, only step 1 is evaluated (no game selected yet).
    */
   gameId?: string;
+  /**
+   * AgentDefinitionId of the private game (from PrivateGameDto).
+   * When explicitly provided (even as null), the agent step is checked via this
+   * field instead of calling useGameAgents (which requires a shared catalog game ID).
+   * Pass `undefined` (default) to keep legacy behaviour for shared catalog games.
+   */
+  agentDefinitionId?: string | null;
   /** Optional CSS class for the container element */
   className?: string;
 }
@@ -66,7 +73,7 @@ const STORAGE_KEY = 'journey-progress-dismissed';
 // Component
 // ============================================================================
 
-export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
+export function JourneyProgress({ gameId, agentDefinitionId, className }: JourneyProgressProps) {
   // ── Dismissal / collapse state ──────────────────────────────────────────
   // Always start as false to avoid SSR hydration mismatch; read from
   // localStorage in useEffect (client-only) after the first render.
@@ -98,7 +105,14 @@ export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
     usePdfProcessingStatus(gameId ?? null);
 
   // Step 4 — agent created
-  const { data: agents } = useGameAgents({ gameId: gameId ?? null, enabled: !!gameId });
+  // When agentDefinitionId is explicitly provided (private game context), skip the
+  // shared-catalog /games/{id}/agents call (which returns 404 for private game UUIDs)
+  // and derive agent presence directly from the DTO field instead.
+  const useSharedGameAgents = agentDefinitionId === undefined;
+  const { data: agents } = useGameAgents({
+    gameId: gameId ?? null,
+    enabled: !!gameId && useSharedGameAgents,
+  });
 
   // Step 5 — chat threads for this game
   const { data: chatData } = useRecentChatSessions(50);
@@ -116,8 +130,14 @@ export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
     const pdfIsIndexed = pdfStatus?.status === 'indexed';
     const pdfIsProcessing = pdfStatus?.status === 'processing' || pdfStatus?.status === 'pending';
 
-    // Step 4: at least one agent exists for this game
-    const hasAgent = !!gameId && (agents?.length ?? 0) > 0;
+    // Step 4: agent configured
+    // For private games: agentDefinitionId prop is explicitly set → use it directly.
+    // For shared catalog games: fall back to agents list from useGameAgents.
+    const hasAgent = !!gameId && (
+      agentDefinitionId !== undefined
+        ? !!agentDefinitionId          // private game: truthy UUID = has agent
+        : (agents?.length ?? 0) > 0   // shared catalog game: check agents list
+    );
 
     // Step 5: at least one chat session exists for this game
     const hasChat = !!gameId && (chatData?.sessions ?? []).some(s => s.gameId === gameId);
@@ -189,6 +209,7 @@ export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
   }, [
     privateGamesData,
     gameId,
+    agentDefinitionId,
     pdfStatus,
     pdfLoading,
     pdfError,

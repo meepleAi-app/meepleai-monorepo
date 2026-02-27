@@ -84,6 +84,7 @@ internal sealed class GetPrivateGamesListQueryHandler
             CreatedAt: game.CreatedAt,
             UpdatedAt: game.UpdatedAt,
             BggSyncedAt: game.BggSyncedAt,
-            CanProposeToCatalog: game.BggId.HasValue
+            CanProposeToCatalog: game.BggId.HasValue,
+            AgentDefinitionId: game.AgentDefinitionId
         );
 }

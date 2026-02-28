@@ -150,6 +150,8 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         var pdfProcessingState = await DbContext.PdfDocuments
             .AsNoTracking()
             .Where(pdf => pdf.PrivateGameId == gameId || pdf.GameId == gameId)
+            // Order by most recently uploaded so multi-PDF games return the latest state.
+            .OrderByDescending(pdf => pdf.UploadedAt)
             .Select(pdf => pdf.ProcessingState)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);

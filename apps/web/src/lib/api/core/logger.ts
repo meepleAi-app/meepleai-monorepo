@@ -83,9 +83,15 @@ function createLogger(): Logger {
 export const logger: Logger = createLogger();
 
 /**
- * Log API error with full context
+ * Log API error with full context.
+ * 404 Not Found is intentionally suppressed — hooks treat it as expected
+ * "resource absent" state (e.g. no PDF uploaded, no agents configured)
+ * and the polling/retry strategy handles eventual consistency.
  */
 export function logApiError(error: ApiError, additionalContext?: LogContext): void {
+  // 404s are expected "not found" responses, not actionable errors
+  if (error.statusCode === 404) return;
+
   const context: LogContext = {
     correlationId: error.correlationId,
     endpoint: error.endpoint,

@@ -44,7 +44,8 @@ export function usePdfProcessingStatus(
     refetchOnWindowFocus: false,
     // Short stale time so polling stays fresh
     staleTime: 0,
-    // Retry a few times on error so transient failures don't kill the query permanently
-    retry: 2,
+    // Don't retry — polling every 3 s already handles transient failures.
+    // Retrying on 404 ("no PDF yet") would generate redundant network requests.
+    retry: false,
   });
 }

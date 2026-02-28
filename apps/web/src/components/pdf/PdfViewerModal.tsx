@@ -90,7 +90,7 @@ export function PdfViewerModal({
         )}
 
         <div ref={containerRef} className="flex-1 overflow-auto flex justify-center">
-          <Document file={{ url: pdfUrl, withCredentials: true }} onLoadSuccess={onDocumentLoadSuccess}>
+          <Document file={pdfUrl} options={{ withCredentials: true }} onLoadSuccess={onDocumentLoadSuccess}>
             <Page pageNumber={currentPage} width={800} />
           </Document>
         </div>

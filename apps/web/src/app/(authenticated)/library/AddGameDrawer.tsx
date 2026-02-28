@@ -81,6 +81,7 @@ interface AddGameDrawerProps {
 }
 
 export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
+  const router = useRouter();
   const [step, setStep] = useState<DrawerStep>('choice');
   const [catalogSelection, setCatalogSelection] = useState<CatalogSelection | null>(null);
 
@@ -172,7 +173,10 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
                 gameId={catalogSelection.gameId}
                 gameName={catalogSelection.gameName}
                 startAtPdf
-                onComplete={onClose}
+                onComplete={() => {
+                  onClose();
+                  router.push(`/library/games/${catalogSelection.gameId}`);
+                }}
                 onCancel={() => setStep('catalog')}
               />
             </div>

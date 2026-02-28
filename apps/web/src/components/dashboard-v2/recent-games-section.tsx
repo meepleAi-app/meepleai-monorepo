@@ -52,7 +52,7 @@ function GameListCard({ game }: { game: UserGameDto }) {
 
   return (
     <Link
-      href={`/games/${game.id}`}
+      href={`/library/${game.id}`}
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-surface hover:bg-accent/40 transition-colors group"
       style={{ borderLeftWidth: 3, borderLeftColor: 'hsl(25,95%,45%)' }}
     >

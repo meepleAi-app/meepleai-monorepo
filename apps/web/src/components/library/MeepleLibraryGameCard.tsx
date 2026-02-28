@@ -215,9 +215,8 @@ export function MeepleLibraryGameCard({
       onClick: () => {
         window.location.href = `/chat/new?game=${game.gameId}`;
       },
-      // Issue #4999: visible only if hasKb; disabled if no agent configured
+      // Show whenever hasKb is true; always clickable so the chat page can handle agent selection
       hidden: !game.hasKb,
-      disabled: game.hasKb && !agentConfigured,
     },
     {
       icon: Settings,

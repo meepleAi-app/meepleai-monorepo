@@ -19,6 +19,7 @@ import { useParams, useRouter } from 'next/navigation';
 import LibraryGameDetailLoading from './loading';
 
 import { JourneyProgress } from '@/components/library/JourneyProgress';
+import { CatalogDetailsSection } from '@/components/library/game-detail/CatalogDetailsSection';
 import { UserActionSection } from '@/components/library/game-detail/UserActionSection';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
@@ -186,6 +187,18 @@ export default function LibraryGameDetailPage() {
             recentSessions={gameDetail.recentSessions}
           />
         </section>
+
+        {/* Catalog Details: description, categories, mechanics, BGG link (catalog games only) */}
+        <div className="mb-8">
+          <CatalogDetailsSection
+            description={gameDetail.description}
+            categories={gameDetail.categories}
+            mechanics={gameDetail.mechanics}
+            designers={gameDetail.designers}
+            bggId={gameDetail.bggId}
+            gameTitle={gameDetail.gameTitle}
+          />
+        </div>
 
         {/* User Actions Section */}
         <UserActionSection gameDetail={gameDetail} />

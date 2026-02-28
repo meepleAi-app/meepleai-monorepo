@@ -7,3 +7,4 @@
 export { GameDetailHero, type GameDetailHeroProps } from './GameDetailHero';
 export { GameSideCard, type GameSideCardProps } from './GameSideCard';
 export { UserActionSection, type UserActionSectionProps } from './UserActionSection';
+export { CatalogDetailsSection, type CatalogDetailsSectionProps } from './CatalogDetailsSection';

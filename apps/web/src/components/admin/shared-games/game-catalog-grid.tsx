@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Sheet, SheetContent } from '@/components/ui/navigation/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
 import { sharedGamesKeys, useSharedGames } from '@/hooks/queries';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api';
@@ -233,6 +233,7 @@ export function GameCatalogGrid() {
       {/* ExtraCard Sheet */}
       <Sheet open={!!sheetGameId} onOpenChange={(open) => { if (!open) setSheetGameId(null); }}>
         <SheetContent side="right" className="w-[640px] sm:max-w-[640px] p-0 overflow-y-auto">
+          <SheetTitle className="sr-only">Dettaglio gioco</SheetTitle>
           {sheetGameId && (
             <AdminSharedGameCardContainer
               gameId={sheetGameId}

@@ -21,6 +21,7 @@ overrides:
   bn.js: '>=5.2.3'
   minimatch: '>=10.2.1'
   webpack: '>=5.104.1'
+  pdfjs-dist: 5.4.624
 
 importers:
 
@@ -2461,20 +2462,8 @@ packages:
     cpu: [arm64]
     os: [android]
 
-  '@napi-rs/canvas-android-arm64@0.1.94':
-    resolution: {integrity: sha512-YQ6K83RWNMQOtgpk1aIML97QTE3zxPmVCHTi5eA8Nss4+B9JZi5J7LHQr7B5oD7VwSfWd++xsPdUiJ1+frqsMg==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [android]
-
   '@napi-rs/canvas-darwin-arm64@0.1.92':
     resolution: {integrity: sha512-4PT6GRGCr7yMRehp42x0LJb1V0IEy1cDZDDayv7eKbFUIGbPFkV7CRC9Bee5MPkjg1EB4ZPXXUyy3gjQm7mR8Q==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@napi-rs/canvas-darwin-arm64@0.1.94':
-    resolution: {integrity: sha512-h1yl9XjqSrYZAbBUHCVLAhwd2knM8D8xt081Pv40KqNJXfeMmBrhG1SfroRymG2ak+pl42iQlWjFZ2Z8AWFdSw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
@@ -2485,20 +2474,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@napi-rs/canvas-darwin-x64@0.1.94':
-    resolution: {integrity: sha512-rkr/lrafbU0IIHebst+sQJf1HjdHvTMN0GGqWvw5OfaVS0K/sVxhNHtxi8oCfaRSvRE62aJZjWTcdc2ue/o6yw==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [darwin]
-
   '@napi-rs/canvas-linux-arm-gnueabihf@0.1.92':
     resolution: {integrity: sha512-j6KaLL9iir68lwpzzY+aBGag1PZp3+gJE2mQ3ar4VJVmyLRVOh+1qsdNK1gfWoAVy5w6U7OEYFrLzN2vOFUSng==}
-    engines: {node: '>= 10'}
-    cpu: [arm]
-    os: [linux]
-
-  '@napi-rs/canvas-linux-arm-gnueabihf@0.1.94':
-    resolution: {integrity: sha512-q95TDo32YkTKdi+Sp2yQ2Npm7pmfKEruNoJ3RUIw1KvQQ9EHKL3fii/iuU60tnzP0W+c8BKN7BFstNFcm2KXCQ==}
     engines: {node: '>= 10'}
     cpu: [arm]
     os: [linux]
@@ -2509,20 +2486,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@napi-rs/canvas-linux-arm64-gnu@0.1.94':
-    resolution: {integrity: sha512-Je5/gKVybWAoIGyDOcJF1zYgBTKWkPIkfOgvCzrQcl8h7DiDvRvEY70EapA+NicGe4X3DW9VsCT34KZJnerShA==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [linux]
-
   '@napi-rs/canvas-linux-arm64-musl@0.1.92':
     resolution: {integrity: sha512-xV0GQnukYq5qY+ebkAwHjnP2OrSGBxS3vSi1zQNQj0bkXU6Ou+Tw7JjCM7pZcQ28MUyEBS1yKfo7rc7ip2IPFQ==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@napi-rs/canvas-linux-arm64-musl@0.1.94':
-    resolution: {integrity: sha512-9YleDDauDEZNsFnfz3HyZvp1LK1ECu8N2gDUg1wtL7uWLQv8dUbfVeFtp5HOdxht1o7LsWRmQeqeIbnD4EqE2A==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
@@ -2533,20 +2498,8 @@ packages:
     cpu: [riscv64]
     os: [linux]
 
-  '@napi-rs/canvas-linux-riscv64-gnu@0.1.94':
-    resolution: {integrity: sha512-lQUy9Xvz7ch8+0AXq8RkioLD41iQ6EqdKFu5uV40BxkBDijB2SCm1jna/BRhqitQRSjwAk2KlLUxTjHChyfNGg==}
-    engines: {node: '>= 10'}
-    cpu: [riscv64]
-    os: [linux]
-
   '@napi-rs/canvas-linux-x64-gnu@0.1.92':
     resolution: {integrity: sha512-tFd6MwbEhZ1g64iVY2asV+dOJC+GT3Yd6UH4G3Hp0/VHQ6qikB+nvXEULskFYZ0+wFqlGPtXjG1Jmv7sJy+3Ww==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [linux]
-
-  '@napi-rs/canvas-linux-x64-gnu@0.1.94':
-    resolution: {integrity: sha512-0IYgyuUaugHdWxXRhDQUCMxTou8kAHHmpIBFtbmdRlciPlfK7AYQW5agvUU1PghPc5Ja3Zzp5qZfiiLu36vIWQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
@@ -2557,20 +2510,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@napi-rs/canvas-linux-x64-musl@0.1.94':
-    resolution: {integrity: sha512-xuetfzzcflCIiBw2HJlOU4/+zTqhdxoe1BEcwdBsHAd/5wAQ4Pp+FGPi5g74gDvtcXQmTdEU3fLQvHc/j3wbxQ==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [linux]
-
   '@napi-rs/canvas-win32-arm64-msvc@0.1.92':
     resolution: {integrity: sha512-20SK5AU/OUNz9ZuoAPj5ekWai45EIBDh/XsdrVZ8le/pJVlhjFU3olbumSQUXRFn7lBRS+qwM8kA//uLaDx6iQ==}
-    engines: {node: '>= 10'}
-    cpu: [arm64]
-    os: [win32]
-
-  '@napi-rs/canvas-win32-arm64-msvc@0.1.94':
-    resolution: {integrity: sha512-2F3p8wci4Q4vjbENlQtSibqFWxBdpzYk1c8Jh1mqqLE92rBKElG018dBJ6C8Dp49vE350Hmy5LrfdLgFKMG8sg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
@@ -2581,18 +2522,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@napi-rs/canvas-win32-x64-msvc@0.1.94':
-    resolution: {integrity: sha512-hjwaIKMrQLoNiu3724octSGhDVKkBwJtMeQ3qUXOi+y60h2q6Sxq3+MM2za3V88+XQzzwn0DgG0Xo6v6gzV8kQ==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [win32]
-
   '@napi-rs/canvas@0.1.92':
     resolution: {integrity: sha512-q7ZaUCJkEU5BeOdE7fBx1XWRd2T5Ady65nxq4brMf5L4cE1VV/ACq5w9Z5b/IVJs8CwSSIwc30nlthH0gFo4Ig==}
-    engines: {node: '>= 10'}
-
-  '@napi-rs/canvas@0.1.94':
-    resolution: {integrity: sha512-8jBkvqynXNdQPNZjLJxB/Rp9PdnnMSHFBLzPmMc615nlt/O6w0ergBbkEDEOr8EbjL8nRQDpEklPx4pzD7zrbg==}
     engines: {node: '>= 10'}
 
   '@napi-rs/wasm-runtime@0.2.12':
@@ -3057,7 +2988,7 @@ packages:
   '@pdf-viewer/react@1.19.0':
     resolution: {integrity: sha512-XHfcldDAqHfvaaDBz6m4niZ5nQKlvmxtc5yd4P3QQldrdbp9qMTwtmjsNHUddLrHQav3EANt35Y8VrbjB4DKfw==}
     peerDependencies:
-      pdfjs-dist: 4.10.38
+      pdfjs-dist: 5.4.624
       react: ^18.2.0 || ^19.0.0
       react-dom: ^18.2.0 || ^19.0.0
 
@@ -5726,6 +5657,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
+    deprecated: Security vulnerability fixed in 5.2.0, please upgrade
 
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
@@ -8925,10 +8857,6 @@ packages:
   pbkdf2@3.1.5:
     resolution: {integrity: sha512-Q3CG/cYvCO1ye4QKkuH7EXxs3VC/rI1/trd+qX2+PolbaKG0H+bgcZzrTt96mMyRtejk+JMCiLUn3y29W8qmFQ==}
     engines: {node: '>= 0.10'}
-
-  pdfjs-dist@5.4.296:
-    resolution: {integrity: sha512-DlOzet0HO7OEnmUmB6wWGJrrdvbyJKftI1bhMitK7O2N8W2gc757yyYBbINy9IDafXAV9wmKr9t7xsTaNKRG5Q==}
-    engines: {node: '>=20.16.0 || >=22.3.0'}
 
   pdfjs-dist@5.4.624:
     resolution: {integrity: sha512-sm6TxKTtWv1Oh6n3C6J6a8odejb5uO4A4zo/2dgkHuC0iu8ZMAXOezEODkVaoVp8nX1Xzr+0WxFJJmUr45hQzg==}
@@ -13204,67 +13132,34 @@ snapshots:
   '@napi-rs/canvas-android-arm64@0.1.92':
     optional: true
 
-  '@napi-rs/canvas-android-arm64@0.1.94':
-    optional: true
-
   '@napi-rs/canvas-darwin-arm64@0.1.92':
-    optional: true
-
-  '@napi-rs/canvas-darwin-arm64@0.1.94':
     optional: true
 
   '@napi-rs/canvas-darwin-x64@0.1.92':
     optional: true
 
-  '@napi-rs/canvas-darwin-x64@0.1.94':
-    optional: true
-
   '@napi-rs/canvas-linux-arm-gnueabihf@0.1.92':
-    optional: true
-
-  '@napi-rs/canvas-linux-arm-gnueabihf@0.1.94':
     optional: true
 
   '@napi-rs/canvas-linux-arm64-gnu@0.1.92':
     optional: true
 
-  '@napi-rs/canvas-linux-arm64-gnu@0.1.94':
-    optional: true
-
   '@napi-rs/canvas-linux-arm64-musl@0.1.92':
-    optional: true
-
-  '@napi-rs/canvas-linux-arm64-musl@0.1.94':
     optional: true
 
   '@napi-rs/canvas-linux-riscv64-gnu@0.1.92':
     optional: true
 
-  '@napi-rs/canvas-linux-riscv64-gnu@0.1.94':
-    optional: true
-
   '@napi-rs/canvas-linux-x64-gnu@0.1.92':
-    optional: true
-
-  '@napi-rs/canvas-linux-x64-gnu@0.1.94':
     optional: true
 
   '@napi-rs/canvas-linux-x64-musl@0.1.92':
     optional: true
 
-  '@napi-rs/canvas-linux-x64-musl@0.1.94':
-    optional: true
-
   '@napi-rs/canvas-win32-arm64-msvc@0.1.92':
     optional: true
 
-  '@napi-rs/canvas-win32-arm64-msvc@0.1.94':
-    optional: true
-
   '@napi-rs/canvas-win32-x64-msvc@0.1.92':
-    optional: true
-
-  '@napi-rs/canvas-win32-x64-msvc@0.1.94':
     optional: true
 
   '@napi-rs/canvas@0.1.92':
@@ -13280,21 +13175,6 @@ snapshots:
       '@napi-rs/canvas-linux-x64-musl': 0.1.92
       '@napi-rs/canvas-win32-arm64-msvc': 0.1.92
       '@napi-rs/canvas-win32-x64-msvc': 0.1.92
-    optional: true
-
-  '@napi-rs/canvas@0.1.94':
-    optionalDependencies:
-      '@napi-rs/canvas-android-arm64': 0.1.94
-      '@napi-rs/canvas-darwin-arm64': 0.1.94
-      '@napi-rs/canvas-darwin-x64': 0.1.94
-      '@napi-rs/canvas-linux-arm-gnueabihf': 0.1.94
-      '@napi-rs/canvas-linux-arm64-gnu': 0.1.94
-      '@napi-rs/canvas-linux-arm64-musl': 0.1.94
-      '@napi-rs/canvas-linux-riscv64-gnu': 0.1.94
-      '@napi-rs/canvas-linux-x64-gnu': 0.1.94
-      '@napi-rs/canvas-linux-x64-musl': 0.1.94
-      '@napi-rs/canvas-win32-arm64-msvc': 0.1.94
-      '@napi-rs/canvas-win32-x64-msvc': 0.1.94
     optional: true
 
   '@napi-rs/wasm-runtime@0.2.12':
@@ -20741,10 +20621,6 @@ snapshots:
       sha.js: 2.4.12
       to-buffer: 1.2.2
 
-  pdfjs-dist@5.4.296:
-    optionalDependencies:
-      '@napi-rs/canvas': 0.1.94
-
   pdfjs-dist@5.4.624:
     optionalDependencies:
       '@napi-rs/canvas': 0.1.92
@@ -21352,7 +21228,7 @@ snapshots:
       make-cancellable-promise: 2.0.0
       make-event-props: 2.0.0
       merge-refs: 2.0.0(@types/react@19.2.14)
-      pdfjs-dist: 5.4.296
+      pdfjs-dist: 5.4.624
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       tiny-invariant: 1.3.3

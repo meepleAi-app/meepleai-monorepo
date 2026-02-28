@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -57,6 +57,9 @@ export function PdfViewerModal({
     setCurrentPage(Math.max(1, Math.min(page, numPages)));
   }, [numPages]);
 
+  // Stable reference — prevents react-pdf from cancelling the load task on every render
+  const pdfOptions = useMemo(() => ({ withCredentials: true }), []);
+
   if (!open) return null;
 
   return (
@@ -90,7 +93,7 @@ export function PdfViewerModal({
         )}
 
         <div ref={containerRef} className="flex-1 overflow-auto flex justify-center">
-          <Document file={pdfUrl} options={{ withCredentials: true }} onLoadSuccess={onDocumentLoadSuccess}>
+          <Document file={pdfUrl} options={pdfOptions} onLoadSuccess={onDocumentLoadSuccess}>
             <Page pageNumber={currentPage} width={800} />
           </Document>
         </div>

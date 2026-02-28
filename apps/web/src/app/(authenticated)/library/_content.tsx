@@ -8,8 +8,8 @@
  * Issue #5168 — AddGameDrawer (right-side Sheet for adding games)
  *
  * Tab routing:
- *   (default)           → Games tab   → GamesPageClient    (personal private games)
- *   ?tab=collection     → Collection  → CollectionPageClient (shared catalog games)
+ *   (default)           → Collection  → CollectionPageClient (shared catalog games)
+ *   ?tab=private        → Games tab   → GamesPageClient    (personal private games)
  *   ?tab=wishlist       → Wishlist    → WishlistPageClient
  *
  * Action routing:
@@ -71,12 +71,12 @@ export function LibraryContent() {
   return (
     <>
       {/* Tab content */}
-      {tab === 'collection' ? (
-        <CollectionPageClient />
+      {tab === 'private' ? (
+        <GamesPageClient />
       ) : tab === 'wishlist' ? (
         <WishlistPageClient />
       ) : (
-        <GamesPageClient />
+        <CollectionPageClient />
       )}
 
       {/* AddGameDrawer — driven by ?action=add URL param (Issue #5168) */}

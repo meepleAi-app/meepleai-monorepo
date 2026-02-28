@@ -5,8 +5,8 @@
  * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
  *
  * Handles tabs via ?tab search param:
- *   (default)           → Games      → GamesPageClient      (personal private games)
- *   ?tab=collection     → Collection → CollectionPageClient (shared catalog games)
+ *   (default)           → Collection → CollectionPageClient (shared catalog games)
+ *   ?tab=private        → Games      → GamesPageClient      (personal private games)
  *   ?tab=wishlist       → Wishlist
  *
  * MiniNav tabs are registered by layout.tsx (overridden by LibraryNavConfig in page).

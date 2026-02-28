@@ -73,7 +73,7 @@ describe('RecentGamesSection', () => {
     );
   });
 
-  it('links each card to /games/{id}', () => {
+  it('links each card to /library/{id}', () => {
     render(
       <RecentGamesSection
         games={[makeGame({ id: 'game-42' })]}
@@ -83,7 +83,7 @@ describe('RecentGamesSection', () => {
 
     expect(screen.getByRole('link', { name: /I Coloni di Catan/ })).toHaveAttribute(
       'href',
-      '/games/game-42'
+      '/library/game-42'
     );
   });
 });

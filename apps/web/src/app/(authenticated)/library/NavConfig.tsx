@@ -26,8 +26,8 @@ export function LibraryNavConfig() {
   useEffect(() => {
     setNavConfig({
       miniNav: [
-        { id: 'games',      label: 'Games',      href: '/library' },
-        { id: 'collection', label: 'Collection', href: '/library?tab=collection' },
+        { id: 'collection', label: 'Collection', href: '/library' },
+        { id: 'private',    label: 'Games',      href: '/library?tab=private' },
         { id: 'wishlist',   label: 'Wishlist',   href: '/library?tab=wishlist' },
       ],
       actionBar: [

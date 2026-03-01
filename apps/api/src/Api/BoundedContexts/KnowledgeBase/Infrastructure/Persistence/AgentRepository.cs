@@ -156,22 +156,12 @@ internal class AgentRepository : RepositoryBase, IAgentRepository
 
     public async Task<Guid?> ResolveGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
-        // 1. Direct match: gameId is already a games.Id
-        var directMatch = await DbContext.Games
+        // Single query: match games.Id directly OR resolve via games.SharedGameId
+        return await DbContext.Games
             .AsNoTracking()
-            .AnyAsync(g => g.Id == gameId, cancellationToken).ConfigureAwait(false);
-
-        if (directMatch)
-            return gameId;
-
-        // 2. Resolve via shared catalog: shared_games.Id → games.SharedGameId → games.Id
-        var resolvedId = await DbContext.Games
-            .AsNoTracking()
-            .Where(g => g.SharedGameId == gameId)
+            .Where(g => g.Id == gameId || g.SharedGameId == gameId)
             .Select(g => (Guid?)g.Id)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-
-        return resolvedId;
     }
 }
 

@@ -516,7 +516,7 @@ export function NewChatView() {
       })
         .then(thread => {
           if (thread?.id) {
-            router.push(`/chat?threadId=${thread.id}`);
+            router.push(`/chat/${thread.id}`);
           }
         })
         .catch(() => {
@@ -587,7 +587,7 @@ export function NewChatView() {
         });
 
         if (thread?.id) {
-          router.push(`/chat?threadId=${thread.id}`);
+          router.push(`/chat/${thread.id}`);
         }
       } catch {
         setError('Errore nella creazione della conversazione');

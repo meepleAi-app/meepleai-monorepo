@@ -284,10 +284,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // Agent switching with confirmation (Issue #4465)
   const handleAgentChangeRequest = useCallback((newAgent: AgentType) => {
-    if (newAgent === (thread?.agentId as AgentType ?? 'auto')) return;
+    if (newAgent === (thread?.agentTypology as AgentType ?? 'auto')) return;
     setPendingAgent(newAgent);
     setShowAgentConfirm(true);
-  }, [thread?.agentId]);
+  }, [thread?.agentTypology]);
 
   const handleAgentChangeConfirm = useCallback(async () => {
     if (!pendingAgent || !thread) return;
@@ -360,7 +360,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <ChatThreadHeader
         title={thread?.title ?? 'Chat'}
         gameName={game?.title}
-        agentName={thread?.agentId ? AGENT_NAMES[(thread.agentId as AgentType) ?? 'auto'] : undefined}
+        agentName={thread?.agentTypology ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto'] : undefined}
         onTitleChange={handleTitleChange}
         onDelete={handleDelete}
       />
@@ -368,7 +368,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       {/* Agent Selector */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80">
         <AgentSelector
-          value={(thread?.agentId as AgentType) ?? 'auto'}
+          value={(thread?.agentTypology as AgentType) ?? 'auto'}
           onChange={handleAgentChangeRequest}
           disabled={isSending || streamState.isStreaming}
           className="flex-1"

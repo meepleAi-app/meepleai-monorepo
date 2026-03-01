@@ -103,9 +103,6 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
             createdByUserId: request.UserId
         );
 
-        // Persist
-        await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
-
         // Create default AgentConfiguration with optional document selection
         var documentIdsJson = request.DocumentIds is { Count: > 0 }
             ? JsonSerializer.Serialize(request.DocumentIds)
@@ -125,8 +122,14 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
             CreatedAt = DateTime.UtcNow,
             CreatedBy = request.UserId
         };
+
+        // Persist agent + config atomically — AddAsync calls SaveChangesAsync internally,
+        // so we wrap both writes in a transaction to prevent orphaned agents.
+        using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
         _db.Set<AgentConfigurationEntity>().Add(defaultConfig);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
         if (resolvedGameId.Value != request.GameId)
         {

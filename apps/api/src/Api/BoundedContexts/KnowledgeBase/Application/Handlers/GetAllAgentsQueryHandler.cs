@@ -47,7 +47,10 @@ internal class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, Lis
         }
         else if (resolvedGameId.HasValue)
         {
-            agents = await _agentRepository.GetByGameIdAsync(resolvedGameId.Value, cancellationToken).ConfigureAwait(false);
+            var byGame = await _agentRepository.GetByGameIdAsync(resolvedGameId.Value, cancellationToken).ConfigureAwait(false);
+            agents = request.ActiveOnly.GetValueOrDefault(false)
+                ? byGame.Where(a => a.IsActive).ToList()
+                : byGame;
         }
         else if (request.OwnedByUserId.HasValue)
         {

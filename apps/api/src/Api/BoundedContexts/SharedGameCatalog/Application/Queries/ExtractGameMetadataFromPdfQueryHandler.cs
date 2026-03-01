@@ -233,6 +233,7 @@ internal sealed class ExtractGameMetadataFromPdfQueryHandler : IQueryHandler<Ext
             var result = await _llmService.GenerateJsonAsync<GameMetadataDto>(
                 systemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result == null)

@@ -11,6 +11,8 @@ import { use } from 'react';
 
 import dynamic from 'next/dynamic';
 
+import { ChatNavigationContext } from '@/components/chat-unified/ChatNavigationContext';
+
 const ChatThreadView = dynamic(
   () =>
     import('@/components/chat-unified/ChatThreadView').then(mod => ({
@@ -36,5 +38,10 @@ export default function ChatThreadPage({
 }) {
   const { threadId } = use(params);
 
-  return <ChatThreadView threadId={threadId} />;
+  return (
+    <>
+      <ChatNavigationContext threadId={threadId} />
+      <ChatThreadView threadId={threadId} />
+    </>
+  );
 }

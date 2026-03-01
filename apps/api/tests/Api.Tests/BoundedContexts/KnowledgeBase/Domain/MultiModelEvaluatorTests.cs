@@ -156,7 +156,7 @@ public class MultiModelEvaluatorTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateFailure("API error"));
 
         // Act
@@ -210,7 +210,7 @@ public class MultiModelEvaluatorTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -228,7 +228,7 @@ public class MultiModelEvaluatorTests
                 "anthropic/claude-3.5-sonnet",
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Claude API down"));
         SetupModelResponse("deepseek/deepseek-chat", 0.80, "Solid move");
 
@@ -270,7 +270,7 @@ public class MultiModelEvaluatorTests
                 modelId,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(jsonResponse));
     }
 

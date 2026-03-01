@@ -21,10 +21,12 @@ public sealed class ArbitroBenchmarkTests
 {
     private readonly Xunit.Abstractions.ITestOutputHelper _output;
 
+#pragma warning disable xUnit1041 // ITestOutputHelper is a built-in xUnit injectable, not a fixture
     public ArbitroBenchmarkTests(Xunit.Abstractions.ITestOutputHelper output)
     {
         _output = output;
     }
+#pragma warning restore xUnit1041
 
     [Fact]
     public async Task ValidateMove_ColdStart_ShouldCompleteFast()

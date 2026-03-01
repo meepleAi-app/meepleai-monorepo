@@ -168,5 +168,14 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
             adminUser.Id,
             _logger,
             cancellationToken).ConfigureAwait(false);
+
+        // Seed PDF rulebooks from data/rulebook/ directory (idempotent)
+        _logger.LogInformation("Seeding PDF rulebooks...");
+        await PdfRulebookSeeder.SeedRulebooksAsync(
+            _dbContext,
+            adminUser.Id,
+            _logger,
+            _configuration["PDF_STORAGE_PATH"],
+            cancellationToken).ConfigureAwait(false);
     }
 }

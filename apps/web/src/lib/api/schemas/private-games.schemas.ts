@@ -14,7 +14,7 @@ export type PrivateGameSource = z.infer<typeof PrivateGameSourceSchema>;
 // Private game DTO from backend
 export const PrivateGameDtoSchema = z.object({
   id: z.string().uuid(),
-  userId: z.string().uuid(),
+  ownerId: z.string().uuid(),
   source: PrivateGameSourceSchema,
   bggId: z.number().int().positive().nullable().optional(),
   title: z.string(),
@@ -28,7 +28,10 @@ export const PrivateGameDtoSchema = z.object({
   imageUrl: z.string().url().nullable().optional(),
   thumbnailUrl: z.string().url().nullable().optional(),
   createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  updatedAt: z.string().datetime().nullable().optional(),
+  bggSyncedAt: z.string().datetime().nullable().optional(),
+  canProposeToCatalog: z.boolean().optional(),
+  agentDefinitionId: z.string().uuid().nullable().optional(),
 });
 
 export type PrivateGameDto = z.infer<typeof PrivateGameDtoSchema>;
@@ -93,3 +96,14 @@ export interface GetPrivateGamesParams {
   sortBy?: 'title' | 'createdAt' | 'updatedAt';
   sortDirection?: 'asc' | 'desc';
 }
+
+// PDF Indexing Status (Issue #4946 — depends on backend Issue #4943)
+// Maps to PdfIndexingStatusDto from the backend
+export const PdfIndexingStatusSchema = z.object({
+  status: z.enum(['pending', 'processing', 'indexed', 'failed']),
+  progress: z.number().int().min(0).max(100).nullable().optional(),
+  chunkCount: z.number().int().nonnegative().nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+});
+
+export type PdfIndexingStatus = z.infer<typeof PdfIndexingStatusSchema>;

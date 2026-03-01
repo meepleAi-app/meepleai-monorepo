@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.Infrastructure;
 using FluentAssertions;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -22,7 +23,6 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
     private readonly IMediator _mediator;
 
     // Test constants
-    private const string AgentName = "MeepleAssistant POC";
     private readonly Guid _agentId = Guid.Parse("49365068-d1db-4a66-aff5-f9fadca2763b");
     private readonly Guid _vectorDocId = Guid.Parse("8b78c72a-b5bc-454e-875b-22754a673c40"); // Azul
     private readonly Guid _testUserId = Guid.Parse("ce8ba2ac-bae5-4052-a6f7-6f71a6f5728e"); // Admin user
@@ -84,10 +84,10 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
     {
         // Arrange - Clear documents from config temporarily
         var config = await _dbContext.Set<Api.Infrastructure.Entities.KnowledgeBase.AgentConfigurationEntity>()
-            .FirstAsync(c => c.agent_id == _agentId);
+            .FirstAsync(c => c.AgentId == _agentId);
 
-        var originalDocs = config.selected_document_ids_json;
-        config.selected_document_ids_json = "[]"; // Remove RAG docs
+        var originalDocs = config.SelectedDocumentIdsJson;
+        config.SelectedDocumentIdsJson = "[]"; // Remove RAG docs
         await _dbContext.SaveChangesAsync();
 
         try
@@ -111,7 +111,7 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
 
             var answerEvent = events.LastOrDefault();
             answerEvent.Should().NotBeNull("Should have final event");
-            var response = answerEvent!.ToString();;
+            var response = answerEvent!.ToString();
 
             // Should indicate general knowledge mode
             response.Should().ContainAny(
@@ -124,7 +124,7 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
         finally
         {
             // Restore configuration
-            config.selected_document_ids_json = originalDocs;
+            config.SelectedDocumentIdsJson = originalDocs;
             await _dbContext.SaveChangesAsync();
         }
     }
@@ -152,7 +152,7 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
 
         var answerEvent = events.LastOrDefault();
         answerEvent.Should().NotBeNull("Should have response event");
-        var response = answerEvent!.ToString();;
+        var response = answerEvent!.ToString();
 
         // Professional characteristics
         response.Should().NotContainAny(
@@ -172,17 +172,17 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
     {
         // Arrange & Act
         var config = await _dbContext.Set<Api.Infrastructure.Entities.KnowledgeBase.AgentConfigurationEntity>()
-            .FirstAsync(c => c.agent_id == _agentId);
+            .FirstAsync(c => c.AgentId == _agentId);
 
         // Assert
-        config.system_prompt_override.Should().NotBeNullOrWhiteSpace();
-        config.system_prompt_override.Should().Contain(
+        config.SystemPromptOverride.Should().NotBeNullOrWhiteSpace();
+        config.SystemPromptOverride.Should().Contain(
             "{RAG_CONTEXT}",
             "System prompt must have RAG context placeholder for injection"
         );
 
         // Verify professional structure
-        config.system_prompt_override.Should().ContainAll(
+        config.SystemPromptOverride.Should().ContainAll(
             "ROLE & EXPERTISE",
             "KNOWLEDGE BASE INTEGRATION",
             "RESPONSE GUIDELINES",
@@ -195,13 +195,13 @@ internal sealed class DefaultAgentRagIntegrationTests : IClassFixture<Api.Tests.
     {
         // Arrange & Act
         var config = await _dbContext.Set<Api.Infrastructure.Entities.KnowledgeBase.AgentConfigurationEntity>()
-            .FirstAsync(c => c.agent_id == _agentId);
+            .FirstAsync(c => c.AgentId == _agentId);
 
         // Assert
-        config.selected_document_ids_json.Should().NotBeNullOrWhiteSpace();
-        config.selected_document_ids_json.Should().Contain(_vectorDocId.ToString());
+        config.SelectedDocumentIdsJson.Should().NotBeNullOrWhiteSpace();
+        config.SelectedDocumentIdsJson.Should().Contain(_vectorDocId.ToString());
 
         // Verify it's current config
-        config.is_current.Should().BeTrue("Agent should have active configuration");
+        config.IsCurrent.Should().BeTrue("Agent should have active configuration");
     }
 }

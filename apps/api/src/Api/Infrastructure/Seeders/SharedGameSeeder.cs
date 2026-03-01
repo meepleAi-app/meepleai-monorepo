@@ -62,10 +62,14 @@ internal static class SharedGameSeeder
         {
             try
             {
-                // Check if already exists (AsTracking needed: DbContext defaults to NoTracking)
+                // Check if already exists by title (case-insensitive) OR by BggId
+                // BGG API may return titles in different casing (e.g., "CATAN" vs "Catan")
                 var existing = await db.SharedGames
                     .AsTracking()
-                    .FirstOrDefaultAsync(g => g.Title == gameData.Name && !g.IsDeleted, cancellationToken)
+                    .FirstOrDefaultAsync(g =>
+                        (EF.Functions.ILike(g.Title, gameData.Name) ||
+                         (gameData.BggId.HasValue && g.BggId == gameData.BggId.Value))
+                        && !g.IsDeleted, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (existing != null)
@@ -114,6 +118,9 @@ internal static class SharedGameSeeder
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "⚠️  Failed to seed SharedGame for {PdfFile}, continuing with others", pdfFileName);
+                // Clear the change tracker so any failed "Added" entity does not
+                // leak into subsequent SaveChangesAsync calls (e.g. from StrategyPatternSeeder).
+                db.ChangeTracker.Clear();
                 skippedCount++;
             }
         }

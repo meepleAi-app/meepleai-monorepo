@@ -108,7 +108,7 @@ export function AgentConfigSheet({
           {view === 'config' && (
             <div className="space-y-6">
               {/* Game Selection - Issue #3239 */}
-              <GameSelector />
+              <GameSelector onChange={() => {}} />
 
               {/* Strategy Selection - Issue #3 */}
               <StrategySelector onChange={() => {}} />

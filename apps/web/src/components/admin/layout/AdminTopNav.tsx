@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 
+import { GlobalSearch } from '@/components/layout/GlobalSearch/GlobalSearch';
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   DropdownMenu,
@@ -156,6 +157,9 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
 
         {/* Right side actions */}
         <div className="flex items-center gap-2 ml-auto">
+          {/* Global Search */}
+          <GlobalSearch />
+
           {/* Theme toggle */}
           {mounted && (
             <Tooltip>

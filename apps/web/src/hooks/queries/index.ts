@@ -170,6 +170,25 @@ export type {
 } from '@/components/ui/data-display/game-carousel';
 export { CAROUSEL_SORT_OPTIONS } from '@/components/ui/data-display/game-carousel';
 
+// Agent Slots & Creation Flow (Issue #4771, #4772, #4773)
+export {
+  useAgentSlots,
+  useHasAvailableSlots,
+  useInvalidateAgentSlots,
+  agentSlotsKeys,
+  type AgentSlot,
+  type AgentSlotsData,
+} from './useAgentSlots';
+
+export {
+  useCreateAgentFlow,
+  type CreateAgentFlowInput,
+  type CreateAgentFlowResult,
+} from './useCreateAgentFlow';
+
+// PDF Processing Status (Issue #4946)
+export { usePdfProcessingStatus, pdfStatusKeys } from './usePdfProcessingStatus';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

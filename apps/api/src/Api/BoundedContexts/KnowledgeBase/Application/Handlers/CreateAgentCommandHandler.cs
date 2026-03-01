@@ -64,7 +64,7 @@ internal class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, A
         return ToDto(agent);
     }
 
-    private static AgentDto ToDto(Agent agent)
+    internal static AgentDto ToDto(Agent agent)
     {
         return new AgentDto(
             Id: agent.Id,
@@ -77,7 +77,9 @@ internal class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, A
             LastInvokedAt: agent.LastInvokedAt,
             InvocationCount: agent.InvocationCount,
             IsRecentlyUsed: agent.IsRecentlyUsed,
-            IsIdle: agent.IsIdle
+            IsIdle: agent.IsIdle,
+            GameId: agent.GameId,
+            CreatedByUserId: agent.CreatedByUserId
         );
     }
 }

@@ -25,8 +25,9 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
+import { getActiveLibraryTab } from '@/config/library-navigation';
 import {
   Sheet,
   SheetClose,
@@ -37,6 +38,7 @@ import {
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
 import { useNavigationItems } from '@/hooks/useNavigationItems';
+import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
 export interface MobileNavDrawerProps {
@@ -48,11 +50,14 @@ export function MobileNavDrawer({
   className,
 }: MobileNavDrawerProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { items: navItems, isItemActive } = useNavigationItems();
   const [isOpen, setIsOpen] = useState(false);
 
   // Check if any library route is active
   const isLibraryActive = pathname?.startsWith('/library') ?? false;
+  const search = searchParams?.toString() ? `?${searchParams.toString()}` : '';
+  const activeLibraryTabId = getActiveLibraryTab(pathname ?? '', search);
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(isLibraryActive);
 
   // Find the library item to get its children
@@ -76,7 +81,7 @@ export function MobileNavDrawer({
           size="icon"
           className={cn('md:hidden', className)}
           aria-label="Open navigation menu"
-          data-testid="mobile-nav-trigger"
+          data-testid={NAV_TEST_IDS.mobileNavTrigger}
         >
           <Menu className="h-5 w-5" />
         </Button>
@@ -84,7 +89,7 @@ export function MobileNavDrawer({
       <SheetContent
         side="left"
         className="w-[280px] sm:w-[320px]"
-        data-testid="mobile-nav-drawer"
+        data-testid={NAV_TEST_IDS.mobileNavDrawer}
       >
         <SheetHeader>
           <SheetTitle>Navigazione</SheetTitle>
@@ -110,7 +115,7 @@ export function MobileNavDrawer({
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
                 onClick={handleLinkClick}
-                data-testid={`mobile-nav-item-${item.href.split('/').filter(Boolean).join('-') || 'home'}`}
+                data-testid={NAV_TEST_IDS.mobileNavItem(item.href.split('/').filter(Boolean).join('-') || 'home')}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
                 <span>{item.label}</span>
@@ -133,7 +138,7 @@ export function MobileNavDrawer({
                     ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
-                data-testid="mobile-library-toggle"
+                data-testid={NAV_TEST_IDS.mobileLibraryToggle}
               >
                 <div className="flex items-center gap-3">
                   {(() => {
@@ -159,9 +164,7 @@ export function MobileNavDrawer({
                   aria-label="Library submenu"
                 >
                   {libraryChildren.map(child => {
-                    const active = child.href === '/library'
-                      ? pathname === '/library'
-                      : pathname?.startsWith(child.href) ?? false;
+                    const active = child.id === activeLibraryTabId;
                     return (
                       <Link
                         key={child.id}
@@ -177,7 +180,7 @@ export function MobileNavDrawer({
                             : 'text-muted-foreground hover:text-primary hover:bg-muted/50'
                         )}
                         onClick={handleLinkClick}
-                        data-testid={`mobile-library-item-${child.id}`}
+                        data-testid={NAV_TEST_IDS.mobileLibraryItem(child.id)}
                       >
                         <span>{child.label}</span>
                       </Link>
@@ -213,7 +216,7 @@ export function MobileNavDrawer({
                         : 'text-muted-foreground hover:text-primary hover:bg-muted'
                     )}
                     onClick={handleLinkClick}
-                    data-testid={`mobile-nav-item-${item.href.split('/').filter(Boolean).join('-') || item.id}`}
+                    data-testid={NAV_TEST_IDS.mobileNavItem(item.href.split('/').filter(Boolean).join('-') || item.id)}
                   >
                     <Icon className="h-5 w-5" aria-hidden="true" />
                     <span>{item.label}</span>
@@ -229,7 +232,7 @@ export function MobileNavDrawer({
           <Button
             variant="outline"
             className="absolute bottom-6 left-6 right-6"
-            data-testid="mobile-nav-close"
+            data-testid={NAV_TEST_IDS.mobileNavClose}
           >
             <X className="mr-2 h-4 w-4" />
             Chiudi

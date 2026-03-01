@@ -17,12 +17,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <param name="StrategyName">RAG strategy name (Fast, Balanced, etc.)</param>
 /// <param name="StrategyParameters">Optional strategy-specific parameters (JSON)</param>
 /// <param name="UserId">User creating the agent</param>
+/// <param name="UserTier">User subscription tier (Free/Normal/Premium/Enterprise). Used for quota enforcement. Issue #4944.</param>
+/// <param name="UserRole">User role (User/Admin/Editor). Admin/Editor bypass quota limits. Issue #4944.</param>
 public record CreateGameAgentCommand(
     Guid GameId,
     Guid TypologyId,
     string StrategyName,
     string? StrategyParameters,
-    Guid UserId
+    Guid UserId,
+    string UserTier,
+    string UserRole
 ) : IRequest<CreateGameAgentResult>;
 
 /// <summary>

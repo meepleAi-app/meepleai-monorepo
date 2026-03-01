@@ -3,10 +3,18 @@
  * Issue #4053: User-Facing BGG Search for Private Game Creation
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
+
+import { LIBRARY_TEST_IDS } from '@/lib/test-ids';
+import { t } from '@/test-utils/test-i18n';
 
 import { AddPrivateGameWithBgg } from '../AddPrivateGameWithBgg';
+
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t }),
+}));
 
 // Mock BggGameSearch
 vi.mock('../BggGameSearch', () => ({
@@ -122,15 +130,15 @@ describe('AddPrivateGameWithBgg', () => {
   // ===== Initial State (Choose Mode) =====
 
   it('renders choose mode initially', () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
     expect(screen.getByTestId('bgg-game-search')).toBeInTheDocument();
-    expect(screen.getByTestId('manual-entry-btn')).toBeInTheDocument();
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn)).toBeInTheDocument();
   });
 
   it('shows description text in choose mode', () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     expect(
       screen.getByText(/Cerca il gioco su BoardGameGeek/i)
@@ -138,9 +146,9 @@ describe('AddPrivateGameWithBgg', () => {
   });
 
   it('renders cancel button in choose mode', () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    const cancelBtn = screen.getByText('Cancel');
+    const cancelBtn = screen.getByText(t('common.cancel'));
     fireEvent.click(cancelBtn);
     expect(defaultProps.onCancel).toHaveBeenCalled();
   });
@@ -148,26 +156,26 @@ describe('AddPrivateGameWithBgg', () => {
   // ===== Manual Entry Flow =====
 
   it('switches to manual form when manual entry button is clicked', () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
 
-    expect(screen.getByTestId('add-game-manual-form')).toBeInTheDocument();
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameManualForm)).toBeInTheDocument();
     expect(screen.getByTestId('add-private-game-form')).toBeInTheDocument();
   });
 
   it('shows "Manuale" badge in manual mode', () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
 
     expect(screen.getByText('Manuale')).toBeInTheDocument();
   });
 
   it('submits with Manual source in manual mode', async () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
     fireEvent.click(screen.getByTestId('mock-form-submit'));
 
     await waitFor(() => {
@@ -179,40 +187,40 @@ describe('AddPrivateGameWithBgg', () => {
   });
 
   it('shows submit label "Add Private Game" in manual mode', () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
 
-    expect(screen.getByTestId('form-submit-label')).toHaveTextContent('Add Private Game');
+    expect(screen.getByTestId('form-submit-label')).toHaveTextContent(t('privateGameForm.addPrivateGame'));
   });
 
   // ===== BGG Search Flow =====
 
   it('shows loading state while fetching BGG details', async () => {
     mockGetGameDetails.mockImplementation(() => new Promise(() => {})); // Never resolves
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('loading-bgg-details')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.loadingBggDetails)).toBeInTheDocument();
     });
   });
 
   it('transitions to BGG form after loading details', async () => {
     mockGetGameDetails.mockResolvedValue(mockBggDetails);
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-bgg-form')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameBggForm)).toBeInTheDocument();
     });
   });
 
   it('shows "da BGG" badge in BGG mode', async () => {
     mockGetGameDetails.mockResolvedValue(mockBggDetails);
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
@@ -223,7 +231,7 @@ describe('AddPrivateGameWithBgg', () => {
 
   it('pre-populates form with BGG data', async () => {
     mockGetGameDetails.mockResolvedValue(mockBggDetails);
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
@@ -242,7 +250,7 @@ describe('AddPrivateGameWithBgg', () => {
 
   it('maps averageWeight to complexityRating rounded to 1 decimal', async () => {
     mockGetGameDetails.mockResolvedValue(mockBggDetails);
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
@@ -255,12 +263,12 @@ describe('AddPrivateGameWithBgg', () => {
 
   it('submits with Bgg source and bggId', async () => {
     mockGetGameDetails.mockResolvedValue(mockBggDetails);
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-bgg-form')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameBggForm)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('mock-form-submit'));
@@ -268,7 +276,7 @@ describe('AddPrivateGameWithBgg', () => {
     await waitFor(() => {
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Catan' }),
-        'Bgg',
+        'BoardGameGeek',
         13,
         'https://example.com/catan-thumb.jpg'
       );
@@ -277,51 +285,51 @@ describe('AddPrivateGameWithBgg', () => {
 
   it('shows submit label "Add from BGG" in BGG mode', async () => {
     mockGetGameDetails.mockResolvedValue(mockBggDetails);
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('form-submit-label')).toHaveTextContent('Add from BGG');
+      expect(screen.getByTestId('form-submit-label')).toHaveTextContent(t('privateGameForm.addFromBgg'));
     });
   });
 
   // ===== Back Navigation =====
 
   it('goes back to choose mode from manual form', () => {
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('manual-entry-btn'));
-    expect(screen.getByTestId('add-game-manual-form')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.manualEntryBtn));
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameManualForm)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('back-to-search-btn'));
-    expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.backToSearchBtn));
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
   });
 
   it('goes back to choose mode from BGG form', async () => {
     mockGetGameDetails.mockResolvedValue(mockBggDetails);
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-bgg-form')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameBggForm)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('back-to-search-btn'));
-    expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(LIBRARY_TEST_IDS.backToSearchBtn));
+    expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
   });
 
   // ===== Error Handling =====
 
   it('returns to choose mode on BGG details fetch failure', async () => {
     mockGetGameDetails.mockRejectedValue(new Error('API error'));
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('add-game-choose-mode')).toBeInTheDocument();
+      expect(screen.getByTestId(LIBRARY_TEST_IDS.addGameChooseMode)).toBeInTheDocument();
     });
   });
 
@@ -338,7 +346,7 @@ describe('AddPrivateGameWithBgg', () => {
       description: null,
       imageUrl: null,
     });
-    render(<AddPrivateGameWithBgg {...defaultProps} />);
+    renderWithQuery(<AddPrivateGameWithBgg {...defaultProps} />);
 
     fireEvent.click(screen.getByTestId('mock-bgg-select'));
 

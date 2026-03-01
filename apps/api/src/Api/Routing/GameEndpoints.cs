@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Models.Requests;
@@ -353,7 +354,8 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleGetGameAgents(
         Guid id,
         IMediator mediator,
-                CancellationToken ct)
+        HttpContext context,
+        CancellationToken ct)
     {
         // Validate game exists first
         var gameQuery = new GetGameByIdQuery(id);
@@ -364,11 +366,52 @@ internal static class GameEndpoints
             return Results.NotFound(new { error = $"Game {id} not found" });
         }
 
-        // Get all active agents (agents are game-agnostic in current design)
+        // Get all active system agents (game-agnostic in current design)
         var agentsQuery = new GetAllAgentsQuery(ActiveOnly: true);
         var agents = await mediator.Send(agentsQuery, ct).ConfigureAwait(false);
+        var agentList = agents.ToList();
 
-        return Results.Ok(agents);
+        // Also include user's custom agent if configured for this game.
+        // Custom agents are stored in user_library_entries.CustomAgentConfigJson,
+        // not in the agents table — so the journey step check (agents.length > 0) would
+        // otherwise never see them.
+        if (context.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
+            sessionObj is SessionStatusDto sessionForAgents &&
+            sessionForAgents.User != null)
+        {
+            var agentConfigQuery = new GetGameAgentConfigQuery(sessionForAgents.User.Id, id);
+            var agentConfig = await mediator.Send(agentConfigQuery, ct).ConfigureAwait(false);
+
+            if (agentConfig != null)
+            {
+                // Deterministic synthetic ID: XOR userId and gameId bytes so the same
+                // user+game pair always produces the same ID across requests. This prevents
+                // React Query from treating each response as a cache miss (agent.id is used
+                // as cache key in KnowledgeBaseTab via agentDocumentsKeys.byAgent(agent.id)).
+                var userBytes = sessionForAgents.User.Id.ToByteArray();
+                var gameBytes = id.ToByteArray();
+                var deterministicBytes = new byte[16];
+                for (var i = 0; i < 16; i++)
+                    deterministicBytes[i] = (byte)(userBytes[i] ^ gameBytes[i]);
+
+                agentList.Add(new AgentDto(
+                    Id: new Guid(deterministicBytes),
+                    Name: agentConfig.Personality ?? "Custom Agent",
+                    Type: "Custom",
+                    StrategyName: "custom",
+                    StrategyParameters: new Dictionary<string, object>(StringComparer.Ordinal),
+                    IsActive: true,
+                    CreatedAt: DateTime.UtcNow,
+                    LastInvokedAt: null,
+                    InvocationCount: 0,
+                    IsRecentlyUsed: false,
+                    IsIdle: false,
+                    GameId: id,
+                    CreatedByUserId: sessionForAgents.User.Id));
+            }
+        }
+
+        return Results.Ok(agentList);
     }
 
     private static async Task<IResult> HandleCreateGame(

@@ -15,9 +15,24 @@ export const adminDashboardClient = {
   getUserActivityLog: () => httpClient.get<any>('/api/v1/admin/users/activity-log'),
 
   /**
-   * Get agent chat history (#4653)
+   * Get agent chat history (#4653, #4917)
    */
-  getChatHistory: () => httpClient.get<any>('/api/v1/admin/agents/chat-history'),
+  getChatHistory: (params?: {
+    page?: number;
+    pageSize?: number;
+    agentType?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params?.agentType) qs.set('agentType', params.agentType);
+    if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) qs.set('dateTo', params.dateTo);
+    const query = qs.toString();
+    return httpClient.get<any>(`/api/v1/admin/agents/chat-history${query ? `?${query}` : ''}`);
+  },
 
   /**
    * Get AI models (#4653)

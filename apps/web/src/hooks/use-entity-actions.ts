@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import {
   BarChart3,
   Bookmark,
+  Bot,
   CheckCircle,
   Download,
   FileDown,
@@ -68,6 +69,10 @@ export interface UseEntityActionsProps {
   };
   /** Callback to show removal warning modal (Issue #4259) */
   onShowRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void;
+  /** Callback to open agent creation wizard (Issue #4777) */
+  onCreateAgent?: () => void;
+  /** Callback to open collection wizard instead of direct add (Issue #4822) */
+  onAddToCollection?: () => void;
 }
 
 export interface EntityActions {
@@ -96,6 +101,8 @@ export function useEntityActions({
   userRole = 'user',
   data,
   onShowRemovalWarning,
+  onCreateAgent,
+  onAddToCollection,
 }: UseEntityActionsProps): EntityActions {
   const router = useRouter();
 
@@ -105,9 +112,11 @@ export function useEntityActions({
 
   // Issue #4259: Collection actions for game entity (Phase 1)
   // Call hook unconditionally (hooks rules), but only use for entity='game'
+  // Pass userId so the hook skips the API call for unauthenticated users
   const gameCollection = useCollectionActions(
     entity === 'game' ? id : '',
-    onShowRemovalWarning
+    onShowRemovalWarning,
+    userId
   );
 
   // Issue #4263: Generic collection actions for other entities (Phase 2)
@@ -138,8 +147,16 @@ export function useEntityActions({
   return useMemo(() => {
     switch (entity) {
       case 'game': {
-        // Build collection action (conditional: Add or Remove)
-        const collectionAction: QuickAction = gameCollection.isInCollection
+        const isAuthenticated = !!userId;
+
+        // Build collection action — redirect to login if unauthenticated
+        const collectionAction: QuickAction = !isAuthenticated
+          ? {
+              icon: Plus,
+              label: 'Aggiungi a Collezione',
+              onClick: () => router.push('/login?reason=collection'),
+            }
+          : gameCollection.isInCollection
           ? {
               icon: Trash2,
               label: 'Rimuovi da Collezione',
@@ -148,14 +165,21 @@ export function useEntityActions({
           : {
               icon: Plus,
               label: 'Aggiungi a Collezione',
-              onClick: () => gameCollection.add(),
+              onClick: () => (onAddToCollection ? onAddToCollection() : gameCollection.add()),
             };
 
-        const hasRag = data?.hasPdfDocuments === true;
+        const hasRag = data?.hasKb === true;
+        const hasAgent = data?.hasAgent === true;
 
         return {
           quickActions: [
             collectionAction, // Issue #4259: First action
+            {
+              icon: Bot,
+              label: 'Crea Agente',
+              onClick: () => onCreateAgent?.(),
+              hidden: hasAgent || !onCreateAgent,
+            },
             {
               icon: MessageSquare,
               label: 'Chat con Agent',
@@ -165,13 +189,15 @@ export function useEntityActions({
             {
               icon: Play,
               label: 'Avvia Sessione',
-              onClick: () => router.push(`/sessions/new?gameId=${id}`),
+              onClick: () =>
+                isAuthenticated
+                  ? router.push(`/sessions/new?gameId=${id}`)
+                  : router.push('/login?reason=session'),
             },
             {
               icon: Share2,
               label: 'Condividi',
               onClick: () => {
-                // TODO: Share modal or copy link
                 navigator.clipboard?.writeText(`${window.location.origin}/games/${id}`);
               },
             },
@@ -406,9 +432,12 @@ export function useEntityActions({
     id,
     router,
     data,
+    userId,
     gameCollection,
     genericStatus,
     addToGenericCollection,
     removeFromGenericCollection,
+    onCreateAgent,
+    onAddToCollection,
   ]);
 }

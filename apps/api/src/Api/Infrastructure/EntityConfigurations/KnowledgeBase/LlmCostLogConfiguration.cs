@@ -118,6 +118,12 @@ internal class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEnti
         builder.Property(x => x.UserAgent)
             .HasColumnName("user_agent")
             .HasMaxLength(500);
+
+        builder.Property(x => x.RequestSource)
+            .HasColumnName("request_source")
+            .HasMaxLength(50)
+            .HasDefaultValue("Manual")
+            .IsRequired();
     }
 
     private static void ConfigureIndexes(EntityTypeBuilder<LlmCostLogEntity> builder)

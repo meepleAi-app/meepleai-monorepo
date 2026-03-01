@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="it" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeepleAI — Catalogo Giochi (UX Prototype)</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Quicksand + Nunito -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            heading: ['Quicksand', 'sans-serif'],
+            body:    ['Nunito', 'sans-serif'],
+          },
+          colors: {
+            game:  { DEFAULT: '#e06f0a', light: '#f59332', dark: '#b35408' },
+            agent: { DEFAULT: '#f59e0b' },
+            chat:  { DEFAULT: '#3b6fe8' },
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── Base ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #f7f3ee;
+      transition: background 0.3s, color 0.3s;
+    }
+    .dark body, .dark { background: #18120a; color: #f0e8dc; }
+
+    /* ── Glassmorphism ── */
+    .glass {
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+    .dark .glass {
+      background: rgba(30,20,10,0.82);
+      border: 1px solid rgba(255,200,100,0.12);
+    }
+
+    /* ── Typography ── */
+    h1, h2, h3, .font-heading { font-family: 'Quicksand', sans-serif; }
+
+    /* ── Game Card ── */
+    .game-card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(224,111,10,0.1);
+      border-radius: 1.25rem;
+      box-shadow: 0 2px 8px rgba(180,100,20,0.10);
+      transition: transform 0.22s cubic-bezier(.34,1.56,.64,1),
+                  box-shadow 0.22s ease,
+                  border-color 0.22s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .dark .game-card {
+      background: rgba(35,22,8,0.92);
+      border-color: rgba(224,111,10,0.18);
+    }
+    .game-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 0 0 2px rgba(224,111,10,0.38), 0 12px 36px rgba(224,111,10,0.18);
+      border-color: rgba(224,111,10,0.5);
+      z-index: 10;
+    }
+    .game-card .quick-actions { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+    .game-card:hover .quick-actions { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .quick-actions { transition: opacity 0.18s ease, transform 0.18s ease; }
+
+    /* ── Status Badges ── */
+    .badge-libreria { background: rgba(22,163,74,0.15); color: #15803d; border: 1px solid rgba(22,163,74,0.3); }
+    .badge-wishlist  { background: rgba(219,39,119,0.12); color: #be185d; border: 1px solid rgba(219,39,119,0.25); }
+    .badge-giocato   { background: rgba(59,130,246,0.12); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.25); }
+    .dark .badge-libreria { background: rgba(22,163,74,0.22); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+    .dark .badge-wishlist  { background: rgba(219,39,119,0.2); color: #f472b6; border-color: rgba(244,114,182,0.3); }
+    .dark .badge-giocato   { background: rgba(59,130,246,0.2); color: #93c5fd; border-color: rgba(147,197,253,0.3); }
+
+    /* ── Filter Chips ── */
+    .chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 13px; border-radius: 9999px; font-size: 0.82rem; font-weight: 600;
+      border: 1.5px solid #d1c4b0;
+      background: rgba(255,255,255,0.8);
+      color: #5a4a38;
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .dark .chip { background: rgba(50,30,10,0.7); border-color: #6b5030; color: #c8a878; }
+    .chip:hover { border-color: #e06f0a; color: #e06f0a; }
+    .chip.active {
+      background: rgba(224,111,10,0.12); border-color: #e06f0a; color: #e06f0a;
+    }
+    .dark .chip.active { background: rgba(224,111,10,0.2); }
+
+    /* ── Dots / Stars ── */
+    .dot-filled { color: #e06f0a; }
+    .dot-empty  { color: #d1c4b0; }
+    .dark .dot-empty { color: #4a3a28; }
+    .star-filled { color: #f59e0b; }
+    .star-empty  { color: #d1c4b0; }
+
+    /* ── View Toggle ── */
+    .view-btn {
+      padding: 7px 10px; border-radius: 0.6rem;
+      border: 1.5px solid #d1c4b0; background: rgba(255,255,255,0.7);
+      cursor: pointer; transition: all 0.15s; color: #5a4a38;
+    }
+    .view-btn.active { background: rgba(224,111,10,0.12); border-color: #e06f0a; color: #e06f0a; }
+    .dark .view-btn { background: rgba(40,25,8,0.7); border-color: #6b5030; color: #c8a878; }
+    .dark .view-btn.active { background: rgba(224,111,10,0.2); border-color: #e06f0a; color: #f59332; }
+
+    /* ── Skeleton ── */
+    @keyframes pulse-warm {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    .skeleton {
+      animation: pulse-warm 1.6s ease-in-out infinite;
+      background: #e8ddd0; border-radius: 0.5rem;
+    }
+    .dark .skeleton { background: #2a1a08; }
+
+    /* ── Drawer ── */
+    .drawer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(3px);
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+    .drawer-panel {
+      position: fixed; top: 0; right: 0; height: 100vh; width: 480px; max-width: 95vw;
+      background: #fff;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.18);
+      z-index: 101; transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(.32,1,.54,1);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .dark .drawer-panel { background: #1e1208; }
+    .drawer-panel.open { transform: translateX(0); }
+
+    /* ── Drawer Tabs ── */
+    .drawer-tab {
+      padding: 10px 16px; font-size: 0.85rem; font-weight: 600;
+      border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s;
+      color: #7c6a54; white-space: nowrap; background: transparent; border-top: none; border-left: none; border-right: none;
+    }
+    .drawer-tab.active { border-bottom-color: #e06f0a; color: #e06f0a; }
+    .dark .drawer-tab { color: #a08060; }
+    .dark .drawer-tab.active { color: #f59332; border-bottom-color: #f59332; }
+
+    /* ── Scrollbar styling ── */
+    .filter-scroll::-webkit-scrollbar { height: 4px; }
+    .filter-scroll::-webkit-scrollbar-track { background: transparent; }
+    .filter-scroll::-webkit-scrollbar-thumb { background: rgba(224,111,10,0.3); border-radius: 999px; }
+
+    /* ── Mobile frame ── */
+    .mobile-frame {
+      width: 375px; border-radius: 2rem;
+      border: 3px solid #2a1a08;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      overflow: hidden; background: #f7f3ee;
+    }
+    .dark .mobile-frame { border-color: #6b5030; background: #18120a; }
+
+    /* ── UX Annotation ── */
+    .ux-callout {
+      background: #dc2626; color: #fff;
+      font-size: 0.62rem; font-weight: 700;
+      font-family: 'Nunito', sans-serif;
+      padding: 2px 7px; border-radius: 9999px;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── List card ── */
+    .list-card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(224,111,10,0.1);
+      border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(180,100,20,0.08);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .dark .list-card { background: rgba(35,22,8,0.92); border-color: rgba(224,111,10,0.15); }
+    .list-card:hover { box-shadow: 0 4px 20px rgba(224,111,10,0.15); border-color: rgba(224,111,10,0.4); }
+
+    /* ── Search bar ── */
+    .search-bar {
+      background: rgba(255,255,255,0.95);
+      border: 2px solid rgba(224,111,10,0.15);
+      border-radius: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .dark .search-bar { background: rgba(35,22,8,0.95); border-color: rgba(224,111,10,0.2); }
+    .search-bar:focus-within { border-color: #e06f0a; box-shadow: 0 0 0 3px rgba(224,111,10,0.12); }
+
+    /* ── Cover wrap ── */
+    .cover-wrap { aspect-ratio: 7/10; width: 100%; overflow: hidden; border-radius: 0.75rem 0.75rem 0 0; position: relative; min-height: 150px; }
+    .cover-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+
+    /* ── Quick action button ── */
+    .qa-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.88); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.6);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      cursor: pointer; font-size: 0.95rem;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .qa-btn:hover { background: rgba(255,255,255,1); transform: scale(1.1); }
+    .qa-btn.amber { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); }
+    .qa-btn.active-wish { background: rgba(219,39,119,0.15); border-color: rgba(219,39,119,0.4); }
+
+    /* ── More-actions menu popover ── */
+    .more-menu-wrap { position: relative; }
+    .more-menu {
+      position: absolute; top: calc(100% + 5px); right: 0;
+      min-width: 196px; background: rgba(255,255,255,0.98);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(224,111,10,0.18); border-radius: 0.875rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(224,111,10,0.08);
+      padding: 5px 4px; z-index: 300;
+      opacity: 0; pointer-events: none;
+      transform: translateY(-6px) scale(0.95); transform-origin: top right;
+      transition: opacity 0.14s ease, transform 0.14s ease;
+    }
+    .dark .more-menu { background: rgba(26,16,4,0.97); border-color: rgba(224,111,10,0.28); }
+    .more-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+    .more-menu-item {
+      display: flex; align-items: center; gap: 9px; padding: 8px 12px;
+      border-radius: 0.6rem; font-size: 0.82rem; font-family: 'Nunito', sans-serif;
+      font-weight: 600; color: #5a4a38; cursor: pointer;
+      transition: background 0.12s; white-space: nowrap;
+      width: 100%; background: transparent; border: none; text-align: left;
+    }
+    .more-menu-item:hover { background: rgba(224,111,10,0.09); color: #c05c08; }
+    .dark .more-menu-item { color: #c8a878; }
+    .dark .more-menu-item:hover { background: rgba(224,111,10,0.16); color: #f59332; }
+    .more-menu-item.destructive { color: #dc2626; }
+    .more-menu-item.destructive:hover { background: rgba(220,38,38,0.08); color: #b91c1c; }
+    .more-menu-divider { height: 1px; margin: 4px 8px; background: rgba(224,111,10,0.12); }
+
+    /* ── Mobile drawer bottom sheet ── */
+    .mobile-drawer {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 60;
+      border-radius: 1.25rem 1.25rem 0 0;
+      background: #fff; max-height: 78%;
+      box-shadow: 0 -6px 30px rgba(0,0,0,0.22);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(.32,1,.54,1);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .mobile-drawer.open { transform: translateY(0); }
+
+    /* ── Info button ── */
+    .info-btn {
+      position: absolute; bottom: 10px; right: 10px;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,255,255,0.82); backdrop-filter: blur(6px);
+      border: 1px solid rgba(224,111,10,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; color: #e06f0a;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .info-btn:hover { background: #e06f0a; color: #fff; }
+
+    /* ── KB Badge ── */
+    .kb-badge {
+      background: rgba(245,158,11,0.15); color: #b45309;
+      border: 1px solid rgba(245,158,11,0.4);
+      font-size: 0.6rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 9999px; letter-spacing: 0.05em;
+    }
+    .dark .kb-badge { background: rgba(245,158,11,0.2); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+
+    /* ── Annotation panel ── */
+    .annotation-panel {
+      background: rgba(255,255,255,0.95);
+      border: 1px solid rgba(220,38,38,0.2);
+      border-radius: 0.75rem; padding: 12px 16px;
+    }
+    .dark .annotation-panel { background: rgba(35,10,10,0.92); }
+
+    /* ── Compact card ── */
+    .compact-card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(224,111,10,0.1);
+      border-radius: 0.75rem;
+      display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      box-shadow: 0 1px 4px rgba(180,100,20,0.08);
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+    .dark .compact-card { background: rgba(35,22,8,0.92); border-color: rgba(224,111,10,0.15); }
+    .compact-card:hover { border-color: rgba(224,111,10,0.4); }
+
+    /* ── Bottom sheet ── */
+    .bottom-sheet {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      border-radius: 1.25rem 1.25rem 0 0;
+      background: #fff; padding: 20px 16px;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.2);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(.32,1,.54,1);
+      z-index: 50;
+    }
+    .bottom-sheet.open { transform: translateY(0); }
+    .dark .bottom-sheet { background: #1e1208; }
+
+    /* ── Fade in ── */
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+    /* ── Page bg tint ── */
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(224,111,10,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 90%, rgba(245,158,11,0.05) 0%, transparent 60%);
+    }
+    body > * { position: relative; z-index: 1; }
+
+    /* Simulated hover on first card */
+    .card-hover-demo {
+      transform: translateY(-4px) !important;
+      box-shadow: 0 0 0 2px rgba(224,111,10,0.38), 0 12px 36px rgba(224,111,10,0.18) !important;
+      border-color: rgba(224,111,10,0.5) !important;
+      z-index: 10;
+    }
+    .card-hover-demo .quick-actions {
+      opacity: 1 !important; transform: translateY(0) !important; pointer-events: auto !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ═══════════════════════════════════════════════
+     DARK MODE TOGGLE
+═══════════════════════════════════════════════ -->
+<div class="fixed top-4 right-4 z-50 flex items-center gap-2">
+  <span class="text-xs font-body font-semibold opacity-60 text-amber-700 dark:text-amber-400">UX Prototype v1</span>
+  <button id="darkToggle" onclick="toggleDark()"
+    class="glass flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-heading font-semibold text-amber-700 dark:text-amber-300 hover:shadow-md transition-all">
+    <span id="darkIcon">🌙</span>
+    <span id="darkLabel">Dark</span>
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MAIN CATALOG PAGE
+═══════════════════════════════════════════════ -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 pb-28">
+
+  <!-- PAGE HEADER -->
+  <div class="mb-6">
+    <div class="flex items-baseline gap-3 mb-5">
+      <h1 class="font-heading text-3xl font-bold text-amber-900 dark:text-amber-100">Catalogo</h1>
+      <span class="text-sm font-heading font-semibold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 rounded-full">1.247 giochi</span>
+      <span class="text-xs text-amber-400 font-body hidden sm:inline">Community + Libreria personale</span>
+    </div>
+    <!-- Search + controls -->
+    <div class="flex flex-col sm:flex-row gap-3">
+      <div class="search-bar flex-1 flex items-center gap-3 px-4 py-3">
+        <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" placeholder="Cerca un gioco, editore, meccanica..."
+          class="flex-1 bg-transparent text-sm font-body text-amber-900 dark:text-amber-100 placeholder-amber-400 outline-none" />
+        <kbd class="hidden sm:inline text-xs font-body text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">Ctrl+K</kbd>
+      </div>
+      <!-- View toggle buttons -->
+      <div class="flex items-center gap-1.5 glass px-2 py-1.5 rounded-xl">
+        <button class="view-btn active" id="viewGrid" onclick="setView('grid')" title="Vista griglia">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+            <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+            <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+          </svg>
+        </button>
+        <button class="view-btn" id="viewList" onclick="setView('list')" title="Vista lista">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+            <rect x="1" y="2" width="14" height="3" rx="1"/>
+            <rect x="1" y="7" width="14" height="3" rx="1"/>
+            <rect x="1" y="12" width="14" height="3" rx="1"/>
+          </svg>
+        </button>
+        <button class="view-btn" id="viewCompact" onclick="setView('compact')" title="Vista compatta">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+            <rect x="1" y="2" width="14" height="2" rx="0.5"/>
+            <rect x="1" y="6" width="14" height="2" rx="0.5"/>
+            <rect x="1" y="10" width="14" height="2" rx="0.5"/>
+            <rect x="1" y="14" width="14" height="2" rx="0.5"/>
+          </svg>
+        </button>
+      </div>
+      <!-- Sort -->
+      <div class="relative">
+        <select class="glass px-4 py-2.5 rounded-xl text-sm font-heading font-semibold text-amber-800 dark:text-amber-200 outline-none cursor-pointer appearance-none pr-8 border-0">
+          <option>Rilevanza</option>
+          <option>Rating</option>
+          <option>A–Z</option>
+          <option>Recenti</option>
+        </select>
+        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-amber-500 pointer-events-none text-xs">&#9660;</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="mb-5">
+    <div class="filter-scroll overflow-x-auto pb-2 -mx-1 px-1">
+      <div class="flex items-center gap-2 min-w-max" id="filterBar">
+        <!-- Built by JS -->
+      </div>
+    </div>
+    <div id="activeFilterSummary" class="mt-1.5 text-xs font-body text-amber-600 dark:text-amber-400"></div>
+  </div>
+
+  <!-- UX annotation for filter bar -->
+  <div class="mb-4 flex items-center gap-2">
+    <span class="ux-callout">UX</span>
+    <p class="text-xs font-body text-amber-600 dark:text-amber-500 italic">
+      Chip attivi mostrano x per rimozione rapida. "Azzera filtri" visibile solo con filtri attivi.
+    </p>
+  </div>
+
+  <!-- GRID VIEW -->
+  <div id="viewGridContainer" class="fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-heading text-lg font-bold text-amber-800 dark:text-amber-200">
+        Risultati <span class="text-amber-400 font-medium text-base" id="gridCount"></span>
+      </h2>
+      <span class="text-xs font-body text-amber-500">Ordinati per Rilevanza</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" id="gameGrid"></div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div id="viewListContainer" class="hidden fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-heading text-lg font-bold text-amber-800 dark:text-amber-200">Lista giochi</h2>
+    </div>
+    <div class="mb-3 flex items-center gap-2">
+      <span class="ux-callout">UX 4</span>
+      <p class="text-xs font-body text-amber-600 dark:text-amber-500 italic">In lista: quick actions sempre visibili a destra — nessun hover richiesto.</p>
+    </div>
+    <div class="flex flex-col gap-3" id="gameList"></div>
+  </div>
+
+  <!-- COMPACT VIEW -->
+  <div id="viewCompactContainer" class="hidden fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-heading text-lg font-bold text-amber-800 dark:text-amber-200">Vista Compatta</h2>
+    </div>
+    <div class="flex flex-col gap-2" id="gameCompact"></div>
+  </div>
+
+  <!-- SKELETON LOADING -->
+  <div class="mt-12 mb-4">
+    <h2 class="font-heading text-lg font-bold text-amber-800 dark:text-amber-200 mb-1">Skeleton Loading State</h2>
+    <p class="text-xs font-body text-amber-500 mb-4">Mostrato durante il caricamento iniziale — pulsing blocks</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div class="game-card" style="pointer-events:none; overflow:hidden;">
+        <div class="skeleton" style="min-height:170px; border-radius:0.75rem 0.75rem 0 0;"></div>
+        <div class="p-3 space-y-2">
+          <div class="skeleton h-4" style="width:75%;"></div>
+          <div class="skeleton h-3" style="width:50%;"></div>
+          <div class="skeleton h-3" style="width:100%;"></div>
+        </div>
+      </div>
+      <div class="game-card" style="pointer-events:none; overflow:hidden;">
+        <div class="skeleton" style="min-height:170px; border-radius:0.75rem 0.75rem 0 0; animation-delay:0.3s;"></div>
+        <div class="p-3 space-y-2">
+          <div class="skeleton h-4" style="width:60%; animation-delay:0.3s;"></div>
+          <div class="skeleton h-3" style="width:40%; animation-delay:0.3s;"></div>
+          <div class="skeleton h-3" style="width:100%; animation-delay:0.3s;"></div>
+        </div>
+      </div>
+      <div class="game-card hidden sm:block" style="pointer-events:none; overflow:hidden;">
+        <div class="skeleton" style="min-height:170px; border-radius:0.75rem 0.75rem 0 0; animation-delay:0.6s;"></div>
+        <div class="p-3 space-y-2">
+          <div class="skeleton h-4" style="width:80%; animation-delay:0.6s;"></div>
+          <div class="skeleton h-3" style="width:45%; animation-delay:0.6s;"></div>
+          <div class="skeleton h-3" style="width:100%; animation-delay:0.6s;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UX DECISIONS PANEL -->
+  <div class="mt-12 mb-8">
+    <h2 class="font-heading text-xl font-bold text-amber-800 dark:text-amber-200 mb-4">UX Design Decisions</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="uxPanel"></div>
+  </div>
+
+</main>
+
+<!-- MOBILE FRAME BUTTON -->
+<div class="fixed bottom-6 right-6 z-40">
+  <button onclick="document.getElementById('mobileModal').classList.toggle('hidden')"
+    class="glass px-4 py-2.5 rounded-2xl shadow-lg text-sm font-heading font-bold text-amber-700 dark:text-amber-300 hover:shadow-xl transition-all flex items-center gap-2">
+    <span>&#128241;</span> Mobile View
+  </button>
+</div>
+
+<!-- MOBILE FRAME MODAL -->
+<div id="mobileModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+  style="background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);">
+  <div class="relative">
+    <button onclick="document.getElementById('mobileModal').classList.add('hidden')"
+      class="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-red-500 text-white text-base font-bold flex items-center justify-center shadow-lg hover:bg-red-600">
+      &#215;
+    </button>
+    <div class="mobile-frame" style="max-height:85vh; overflow-y:auto;">
+      <!-- Notch -->
+      <div class="flex justify-center py-2" style="background:#451a03;">
+        <div class="w-20 h-1.5 rounded-full" style="background:#92400e;"></div>
+      </div>
+      <!-- Mobile header -->
+      <div class="p-4 border-b" style="border-color: rgba(224,111,10,0.1); background: rgba(255,255,255,0.95);">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-heading font-bold text-lg text-amber-900">Catalogo</h2>
+          <span class="text-xs text-amber-500 bg-amber-100 px-2 py-0.5 rounded-full font-heading font-semibold">1.247</span>
+        </div>
+        <div class="search-bar flex items-center gap-2 px-3 py-2">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <span class="text-sm font-body text-amber-400">Cerca un gioco...</span>
+        </div>
+      </div>
+      <!-- Mobile filter chips -->
+      <div class="px-3 py-2 border-b" style="border-color: rgba(224,111,10,0.1); background: rgba(255,255,255,0.8);">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 filter-scroll">
+          <button class="chip active" style="font-size:0.7rem; padding:3px 10px;">&#9816; Strategia &#215;</button>
+          <button class="chip" style="font-size:0.7rem; padding:3px 10px;">&#129309; Coop</button>
+          <button class="chip" style="font-size:0.7rem; padding:3px 10px;">&#127881; Party</button>
+          <button class="chip" style="font-size:0.7rem; padding:3px 10px;">&#128101; 3&#8211;4</button>
+          <button onclick="document.getElementById('mobileBottomSheet').classList.toggle('open')"
+            class="chip flex-shrink-0" style="font-size:0.7rem; padding:3px 10px; border-color:#e06f0a; color:#e06f0a; margin-left:auto;">
+            Filtri &#9881;
+          </button>
+        </div>
+      </div>
+      <!-- Mobile grid -->
+      <div class="p-3 relative" style="background:#f7f3ee; min-height:400px;">
+        <div class="grid grid-cols-2 gap-2.5" id="mobileGrid"></div>
+        <!-- Mobile bottom sheet -->
+        <div class="bottom-sheet" id="mobileBottomSheet">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-heading font-bold text-base text-amber-900">Filtri</h3>
+            <button onclick="document.getElementById('mobileBottomSheet').classList.remove('open')"
+              class="text-amber-400 text-2xl font-light leading-none">&#215;</button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs font-heading font-bold text-amber-500 uppercase tracking-wider w-full">Genere</span>
+            <button class="chip active" style="font-size:0.75rem;">&#9816; Strategia &#215;</button>
+            <button class="chip" style="font-size:0.75rem;">&#129309; Cooperativo</button>
+            <button class="chip" style="font-size:0.75rem;">&#127881; Party</button>
+            <button class="chip" style="font-size:0.75rem;">&#9876;&#65039; Avventura</button>
+            <span class="text-xs font-heading font-bold text-amber-500 uppercase tracking-wider w-full mt-2">Complessita</span>
+            <button class="chip" style="font-size:0.75rem;">&#127807; Leggero</button>
+            <button class="chip" style="font-size:0.75rem;">&#9878; Medio</button>
+            <button class="chip" style="font-size:0.75rem;">&#127947;&#65039; Pesante</button>
+          </div>
+          <button onclick="document.getElementById('mobileBottomSheet').classList.remove('open')"
+            class="mt-4 w-full py-3 font-heading font-bold rounded-xl text-sm text-white"
+            style="background:#e06f0a;">
+            Applica filtri
+          </button>
+        </div>
+      </div>
+      <!-- Mobile drawer (bottom sheet inside the phone frame) -->
+      <div class="mobile-drawer" id="mobileDrawer">
+        <!-- Drag handle -->
+        <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div class="w-10 h-1 rounded-full" style="background:rgba(224,111,10,0.25);"></div>
+        </div>
+        <!-- Drawer header -->
+        <div class="px-4 pb-3 flex-shrink-0" id="mdHeader">
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-xl flex-shrink-0 flex items-center justify-center text-2xl" id="mdCover"></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h3 class="font-heading font-bold text-base text-amber-900 truncate" id="mdTitle"></h3>
+                <span class="text-xs font-heading font-bold px-1.5 py-0 rounded-full" style="background:rgba(224,111,10,0.12); color:#e06f0a; border:1px solid rgba(224,111,10,0.25); font-size:0.6rem;">GIOCO</span>
+              </div>
+              <p class="text-xs font-body text-amber-500" id="mdPub"></p>
+              <div id="mdBadges" class="flex items-center gap-1.5 mt-1 flex-wrap"></div>
+            </div>
+            <button onclick="closeMobileDrawer()" class="w-7 h-7 rounded-full flex items-center justify-center text-amber-400 hover:text-amber-600 flex-shrink-0" style="background:rgba(224,111,10,0.08);">✕</button>
+          </div>
+        </div>
+        <!-- Tabs -->
+        <div class="flex border-b overflow-x-auto filter-scroll flex-shrink-0" style="border-color:rgba(224,111,10,0.12);">
+          <button class="drawer-tab active text-xs" onclick="setMdTab(this,'md-overview')">Overview</button>
+          <button class="drawer-tab text-xs" onclick="setMdTab(this,'md-chat')">💬 Chat AI</button>
+          <button class="drawer-tab text-xs" onclick="setMdTab(this,'md-docs')">📖 Docs KB</button>
+        </div>
+        <!-- Tab content -->
+        <div class="flex-1 overflow-y-auto px-4 py-3 text-sm font-body text-amber-800">
+          <div id="md-overview">
+            <p class="leading-relaxed text-xs" id="mdDesc"></p>
+            <div class="grid grid-cols-2 gap-2 mt-3">
+              <div class="rounded-xl p-2.5" style="background:rgba(251,191,36,0.1);">
+                <p class="text-xs font-heading font-bold text-amber-500 uppercase mb-0.5" style="font-size:0.6rem;">Giocatori</p>
+                <p class="text-sm font-heading font-bold text-amber-900" id="mdPlayers"></p>
+              </div>
+              <div class="rounded-xl p-2.5" style="background:rgba(251,191,36,0.1);">
+                <p class="text-xs font-heading font-bold text-amber-500 uppercase mb-0.5" style="font-size:0.6rem;">Durata</p>
+                <p class="text-sm font-heading font-bold text-amber-900" id="mdTime"></p>
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-1" id="mdMechanics"></div>
+          </div>
+          <div id="md-chat" class="hidden">
+            <div class="rounded-xl p-3 space-y-2" style="background:rgba(251,191,36,0.08);">
+              <p class="text-xs font-heading font-bold text-amber-500">Sessione precedente</p>
+              <div class="flex gap-2 items-start">
+                <span class="text-xs font-semibold px-1.5 py-0.5 rounded-lg flex-shrink-0" style="background:rgba(251,191,36,0.2); color:#92400e;">Tu</span>
+                <p class="text-xs">Come funziona il setup iniziale?</p>
+              </div>
+              <div class="flex gap-2 items-start">
+                <span class="text-xs font-semibold px-1.5 py-0.5 rounded-lg flex-shrink-0" style="background:rgba(59,111,232,0.15); color:#1d4ed8;">AI</span>
+                <p class="text-xs">Ogni giocatore riceve carte azione e risorse iniziali...</p>
+              </div>
+            </div>
+            <button class="w-full mt-3 py-2.5 text-white font-heading font-bold rounded-xl text-sm" style="background:#3b6fe8;">💬 Inizia nuova chat</button>
+          </div>
+          <div id="md-docs" class="hidden space-y-2">
+            <div class="flex items-center justify-between p-3 rounded-xl" style="background:rgba(251,191,36,0.08);" id="mdDocsList"></div>
+            <button class="w-full py-2 font-heading font-semibold rounded-xl text-xs text-amber-500" style="border:2px dashed rgba(245,158,11,0.4);">+ Aggiungi documento</button>
+          </div>
+        </div>
+        <!-- Bottom CTA -->
+        <div class="px-4 py-3 flex gap-2 flex-shrink-0 border-t" style="border-color:rgba(224,111,10,0.12); background:#fff;">
+          <button class="flex-1 py-2.5 text-white font-heading font-bold rounded-xl text-sm" style="background:#e06f0a;">🎲 Sessione</button>
+          <button class="flex-1 py-2.5 font-heading font-bold rounded-xl text-sm border-2" style="border-color:#e06f0a; color:#e06f0a;">💬 Chat</button>
+        </div>
+      </div>
+
+      <!-- Mobile nav bar -->
+      <div class="border-t py-2 px-4 flex justify-around" style="border-color: rgba(224,111,10,0.1); background:#fff;">
+        <button class="flex flex-col items-center gap-0.5" style="color:#e06f0a;">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>
+          <span class="text-xs font-heading font-semibold">Catalogo</span>
+        </button>
+        <button class="flex flex-col items-center gap-0.5 text-amber-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          <span class="text-xs font-heading font-semibold">Libreria</span>
+        </button>
+        <button class="flex flex-col items-center gap-0.5 text-amber-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          <span class="text-xs font-heading font-semibold">Chat AI</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER OVERLAY + PANEL -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer-panel" id="drawerPanel">
+  <!-- Drawer cover header -->
+  <div class="relative flex-shrink-0 overflow-hidden" style="height:160px;" id="drawerHeader">
+    <div id="drawerCover" class="absolute inset-0"></div>
+    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);"></div>
+    <button onclick="closeDrawer()"
+      class="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-lg hover:opacity-80 transition-opacity"
+      style="background:rgba(0,0,0,0.4);">&#215;</button>
+    <div class="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full" style="background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);">
+      <span class="w-2 h-2 rounded-full inline-block" style="background:#e06f0a;"></span>
+      <span class="text-xs font-heading font-bold text-white">Gioco</span>
+    </div>
+    <div class="absolute bottom-3 left-4 right-4">
+      <h2 class="font-heading font-bold text-xl text-white leading-tight" id="drawerTitle"></h2>
+      <p class="text-sm text-white/70 font-body" id="drawerSubtitle"></p>
+    </div>
+  </div>
+  <!-- Status row -->
+  <div class="px-4 py-3 flex items-center gap-2 flex-wrap border-b border-amber-100 dark:border-amber-900" id="drawerStatusRow"></div>
+  <!-- Tabs -->
+  <div class="flex border-b border-amber-100 dark:border-amber-900 overflow-x-auto filter-scroll flex-shrink-0">
+    <button class="drawer-tab active" onclick="setDrawerTab(this, 'overview')">Overview</button>
+    <button class="drawer-tab" onclick="setDrawerTab(this, 'chat')">&#128172; Chat AI</button>
+    <button class="drawer-tab" onclick="setDrawerTab(this, 'docs')">&#128218; Documenti KB</button>
+    <button class="drawer-tab" onclick="setDrawerTab(this, 'sessions')">&#127918; Sessioni</button>
+  </div>
+  <!-- Tab content -->
+  <div class="flex-1 overflow-y-auto">
+    <div id="dtab-overview" class="p-4 space-y-4">
+      <div>
+        <h3 class="font-heading font-bold text-sm text-amber-700 dark:text-amber-300 mb-1.5">Descrizione</h3>
+        <p class="text-sm font-body text-amber-800 dark:text-amber-300 leading-relaxed" id="drawerDesc"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-xl p-3" style="background:rgba(251,191,36,0.1);">
+          <p class="text-xs font-heading font-bold text-amber-500 uppercase tracking-wider mb-1">Giocatori</p>
+          <p class="text-sm font-body font-semibold text-amber-900 dark:text-amber-100" id="drawerPlayers"></p>
+        </div>
+        <div class="rounded-xl p-3" style="background:rgba(251,191,36,0.1);">
+          <p class="text-xs font-heading font-bold text-amber-500 uppercase tracking-wider mb-1">Durata</p>
+          <p class="text-sm font-body font-semibold text-amber-900 dark:text-amber-100" id="drawerTime"></p>
+        </div>
+      </div>
+      <div>
+        <h3 class="font-heading font-bold text-sm text-amber-700 dark:text-amber-300 mb-2">Meccaniche</h3>
+        <div class="flex flex-wrap gap-1.5" id="drawerMechanics"></div>
+      </div>
+    </div>
+    <div id="dtab-chat" class="p-4 hidden">
+      <div class="rounded-xl p-3 space-y-2 mb-3" style="background:rgba(251,191,36,0.08);">
+        <p class="text-xs font-heading font-bold text-amber-500">Sessione chat precedente</p>
+        <div class="flex gap-2 items-start">
+          <span class="text-xs font-semibold px-2 py-1 rounded-lg" style="background:rgba(251,191,36,0.2); color:#92400e;">Tu</span>
+          <p class="text-xs font-body text-amber-800 dark:text-amber-300">Come funziona il setup iniziale?</p>
+        </div>
+        <div class="flex gap-2 items-start">
+          <span class="text-xs font-semibold px-2 py-1 rounded-lg" style="background:rgba(59,111,232,0.15); color:#1d4ed8;">AI</span>
+          <p class="text-xs font-body text-amber-800 dark:text-amber-300">Ogni giocatore riceve carte azione, risorse iniziali e sceglie il bonus di partenza...</p>
+        </div>
+      </div>
+      <button class="w-full py-3 text-white font-heading font-bold rounded-xl text-sm" style="background:#3b6fe8;">
+        &#128172; Inizia nuova chat
+      </button>
+    </div>
+    <div id="dtab-docs" class="p-4 hidden">
+      <div class="space-y-2">
+        <div class="flex items-center justify-between p-3 rounded-xl" style="background:rgba(251,191,36,0.08);">
+          <div>
+            <p class="text-sm font-heading font-bold text-amber-900 dark:text-amber-100">Rulebook-ITA.pdf</p>
+            <p class="text-xs font-body text-amber-500">48 pagine · Indicizzato 15 gen</p>
+          </div>
+          <span class="kb-badge">KB</span>
+        </div>
+        <div class="flex items-center justify-between p-3 rounded-xl" style="background:rgba(251,191,36,0.08);">
+          <div>
+            <p class="text-sm font-heading font-bold text-amber-900 dark:text-amber-100">FAQ-2024.pdf</p>
+            <p class="text-xs font-body text-amber-500">12 pagine · Indicizzato 2 feb</p>
+          </div>
+          <span class="kb-badge">KB</span>
+        </div>
+        <button class="w-full py-2.5 mt-2 font-heading font-semibold rounded-xl text-sm text-amber-500 hover:text-amber-600 transition-colors"
+          style="border: 2px dashed rgba(245,158,11,0.4);">
+          + Aggiungi documento
+        </button>
+      </div>
+    </div>
+    <div id="dtab-sessions" class="p-4 hidden">
+      <div class="space-y-2">
+        <div class="p-3 rounded-xl flex items-center justify-between" style="background:rgba(251,191,36,0.08);">
+          <div>
+            <p class="text-sm font-heading font-bold text-amber-900 dark:text-amber-100">Sessione #7 &mdash; 18 feb</p>
+            <p class="text-xs font-body text-amber-500">3 giocatori &middot; 65 min &middot; Vittoria</p>
+          </div>
+          <span class="text-xl">&#127942;</span>
+        </div>
+        <div class="p-3 rounded-xl flex items-center justify-between" style="background:rgba(251,191,36,0.08);">
+          <div>
+            <p class="text-sm font-heading font-bold text-amber-900 dark:text-amber-100">Sessione #6 &mdash; 10 feb</p>
+            <p class="text-xs font-body text-amber-500">4 giocatori &middot; 80 min &middot; 2&deg; posto</p>
+          </div>
+          <span class="text-xl">&#129352;</span>
+        </div>
+        <button class="w-full py-3 mt-2 text-white font-heading font-bold rounded-xl text-sm" style="background:#e06f0a;">
+          &#127918; Avvia nuova sessione
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Drawer bottom CTA -->
+  <div class="px-4 py-3 border-t border-amber-100 dark:border-amber-900 flex gap-2 flex-shrink-0 bg-white dark:bg-amber-950">
+    <button class="flex-1 py-3 text-white font-heading font-bold rounded-xl text-sm" style="background:#e06f0a;">
+      &#127918; Avvia Sessione
+    </button>
+    <button class="flex-1 py-3 font-heading font-bold rounded-xl text-sm border-2" style="border-color:#e06f0a; color:#e06f0a;">
+      &#128172; Inizia Chat
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     JAVASCRIPT — all DOM-based, no innerHTML with user data
+═══════════════════════════════════════════════ -->
+<script>
+// ── Static game data (hardcoded, not user-supplied) ───────────────────────────
+var GAMES = [
+  {
+    id: 1, title: 'Wingspan', pub: 'Stonemaier Games',
+    rating: 4.5, players: '1–5', time: '40–70 min', weight: 3,
+    status: 'libreria', hasKb: true,
+    grad: 'linear-gradient(135deg, #166534 0%, #4ade80 60%, #bbf7d0 100%)', emoji: '🦅',
+    desc: 'Costruisci il tuo habitat naturale attirando uccelli rari. Ogni uccello ha abilità uniche che si concatenano in combo potenti. Gioco competitivo per 1-5 giocatori.',
+    mechanics: ['Raccolta carte','Piazzamento lavoratori','Combo motore','Hand management']
+  },
+  {
+    id: 2, title: 'Catan', pub: 'Kosmos',
+    rating: 4.1, players: '3–4', time: '75–120 min', weight: 2,
+    status: 'giocato', hasKb: false,
+    grad: 'linear-gradient(135deg, #92400e 0%, #fbbf24 60%, #fde68a 100%)', emoji: '🏝',
+    desc: 'Il classico di commercio e costruzione. Esplora, costruisci e commercia sull\'isola di Catan. Il mercato cambia ad ogni turno.',
+    mechanics: ['Commercio','Piazzamento','Gestione risorse','Mercato variabile']
+  },
+  {
+    id: 3, title: 'Gloomhaven', pub: 'Cephalofair Games',
+    rating: 4.8, players: '1–4', time: '60–120 min', weight: 5,
+    status: 'libreria', hasKb: true,
+    grad: 'linear-gradient(135deg, #4c1d95 0%, #a855f7 60%, #ede9fe 100%)', emoji: '⚔️',
+    desc: 'Dungeon crawler cooperativo con campagna persistente e narrazione emergente. Ogni sessione modifica il mondo di gioco permanentemente.',
+    mechanics: ['Cooperativo','Campagna','Gestione mano','Deck building']
+  },
+  {
+    id: 4, title: 'Azul', pub: 'Plan B Games',
+    rating: 4.3, players: '2–4', time: '30–45 min', weight: 2,
+    status: 'wishlist', hasKb: false,
+    grad: 'linear-gradient(135deg, #0c4a6e 0%, #38bdf8 60%, #e0f2fe 100%)', emoji: '🔷',
+    desc: 'Seleziona piastrelle colorate dai factory e decora il pavimento del Palazzo Reale di Evora. Elegante gioco astratto di pattern building.',
+    mechanics: ['Astratto','Pattern building','Selezione limitata','Punteggio progressivo']
+  },
+  {
+    id: 5, title: 'Carcassonne', pub: 'Z-Man Games',
+    rating: 4.0, players: '2–5', time: '35–45 min', weight: 2,
+    status: 'giocato', hasKb: false,
+    grad: 'linear-gradient(135deg, #7c2d12 0%, #f97316 60%, #fed7aa 100%)', emoji: '🏰',
+    desc: 'Posiziona tessere paesaggio e piazza meeple per rivendicare citta, strade e monasteri nella campagna medievale francese.',
+    mechanics: ['Piazzamento tessere','Rivendicazione aree','Segnalini meeple','Punteggio condiviso']
+  },
+  {
+    id: 6, title: 'Pandemic', pub: 'Z-Man Games',
+    rating: 4.2, players: '2–4', time: '45–60 min', weight: 2,
+    status: null, hasKb: false,
+    grad: 'linear-gradient(135deg, #991b1b 0%, #f87171 60%, #fee2e2 100%)', emoji: '🦠',
+    desc: 'Lavora in squadra con ruoli specializzati per fermare quattro epidemie globali. La cooperazione e la gestione del rischio sono fondamentali.',
+    mechanics: ['Cooperativo','Gestione crisi','Ruoli asimmetrici','Pressione temporale']
+  },
+  {
+    id: 7, title: 'Ticket to Ride', pub: 'Days of Wonder',
+    rating: 4.1, players: '2–5', time: '45–75 min', weight: 2,
+    status: null, hasKb: false,
+    grad: 'linear-gradient(135deg, #134e4a 0%, #2dd4bf 60%, #ccfbf1 100%)', emoji: '🚂',
+    desc: 'Colleziona set di carte locomotiva e rivendica rotte ferroviarie per completare i tuoi biglietti di destinazione prima degli avversari.',
+    mechanics: ['Raccolta set','Rivendicazione rotte','Biglietti segreti','Pianificazione a lungo termine']
+  },
+  {
+    id: 8, title: '7 Wonders', pub: 'Repos Production',
+    rating: 4.4, players: '2–7', time: '30 min', weight: 2,
+    status: 'libreria', hasKb: false,
+    grad: 'linear-gradient(135deg, #7c2d12 0%, #fb923c 60%, #fed7aa 100%)', emoji: '🏛',
+    desc: 'Guida una civilta antica attraverso tre ere costruendo meraviglie, sviluppando scienze e commerciando con i vicini.',
+    mechanics: ['Drafting carte','Costruzione civilta','Tre ere','Interazione limitata']
+  }
+];
+
+var FILTER_GROUPS = [
+  { label: 'Genere', group: 'genre', chips: [
+    { val: 'strategia', text: '♟ Strategia', active: true },
+    { val: 'cooperativo', text: '🤝 Cooperativo' },
+    { val: 'party', text: '🎉 Party' },
+    { val: 'avventura', text: '⚔️ Avventura' },
+    { val: 'puzzle', text: '🧩 Puzzle' },
+    { val: 'astratto', text: '⬡ Astratto' }
+  ]},
+  { label: 'Giocatori', group: 'players', chips: [
+    { val: '1', text: '👤 1' },
+    { val: '2', text: '👥 2' },
+    { val: '3-4', text: '👥 3–4', active: true },
+    { val: '5+', text: '👥 5+' }
+  ]},
+  { label: 'Complessita', group: 'weight', chips: [
+    { val: 'leggero', text: '🌿 Leggero' },
+    { val: 'medio', text: '⚖️ Medio' },
+    { val: 'pesante', text: '🏋️ Pesante' }
+  ]},
+  { label: 'Personale', group: 'personal', chips: [
+    { val: 'libreria', text: '★ In libreria' },
+    { val: 'wishlist', text: '♥ Wishlist' },
+    { val: 'giocato', text: '✓ Giocato' }
+  ]}
+];
+
+var UX_NOTES = [
+  { num: '1', title: 'Status sempre visibile', body: 'Il badge In Libreria / Wishlist / Giocato e visibile senza hover. Riduce il costo cognitivo di scansione del catalogo.' },
+  { num: '2', title: 'KB Badge — discoverability', body: 'Il badge KB in amber indica documenti indicizzati nella Knowledge Base — feature discovery immediata senza aprire il drawer.' },
+  { num: '3', title: 'Rating comparativo', body: 'Rating in posizione fissa e uguale dimensione su tutte le card. Confronto visivo immediato per riga nella griglia.' },
+  { num: '4', title: 'List view: azioni sempre visibili', body: 'In lista orizzontale c\'e spazio per mostrare le quick action senza hover, riducendo il numero di interazioni necessarie.' },
+  { num: '5', title: '⋯ menu per azioni secondarie', body: 'Ogni tipo di card ha azioni diverse (da codice: GameCatalog, Agent, Chat, Session, KB, Player). Le 2 azioni core restano visibili; le secondarie vanno nel ⋯.' },
+  { num: '6', title: 'Hover glow arancione', body: 'Il glow entity-color sull\'hover comunica interattivita e rinforza il sistema cromatico game = orange del design system.' }
+];
+
+// ── DOM helpers ───────────────────────────────────────────────────────────────
+
+function el(tag, classes, text) {
+  var e = document.createElement(tag);
+  if (classes) e.className = classes;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function makeStars(rating) {
+  var wrap = el('div', 'flex text-xs leading-none');
+  var full = Math.floor(rating);
+  var half = (rating % 1) >= 0.5;
+  for (var i = 0; i < 5; i++) {
+    var s = el('span');
+    if (i < full) { s.textContent = '★'; s.className = 'star-filled'; }
+    else if (i === full && half) { s.textContent = '★'; s.className = 'star-filled'; s.style.opacity = '0.55'; }
+    else { s.textContent = '★'; s.className = 'star-empty'; }
+    wrap.appendChild(s);
+  }
+  return wrap;
+}
+
+function makeDots(weight) {
+  var wrap = el('span', 'flex items-center');
+  for (var i = 1; i <= 5; i++) {
+    var d = el('span');
+    d.textContent = '●';
+    d.className = (i <= weight ? 'dot-filled' : 'dot-empty');
+    d.style.fontSize = '0.65rem';
+    wrap.appendChild(d);
+  }
+  return wrap;
+}
+
+function makeStatusBadge(status) {
+  if (!status) return null;
+  var info = {
+    libreria: ['badge-libreria', '● In Libreria'],
+    wishlist:  ['badge-wishlist', '♥ Wishlist'],
+    giocato:   ['badge-giocato', '✓ Giocato']
+  };
+  var b = el('span', info[status][0] + ' absolute top-2 left-2 z-10 text-xs font-heading font-bold px-2 py-0.5 rounded-full flex items-center gap-1');
+  b.textContent = info[status][1];
+  b.style.cssText += 'font-size:0.7rem;';
+  return b;
+}
+
+function makeKbBadge() {
+  return el('span', 'kb-badge', 'KB');
+}
+
+function makeQaBtn(emoji, extraClass, title) {
+  var b = el('button', 'qa-btn' + (extraClass ? ' ' + extraClass : ''));
+  b.textContent = emoji;
+  b.title = title;
+  return b;
+}
+
+// ── Grid card ─────────────────────────────────────────────────────────────────
+function buildGridCard(g, isDemo) {
+  var card = el('div', 'game-card' + (isDemo ? ' card-hover-demo' : '') + ' cursor-pointer group');
+  card.addEventListener('click', function() { openDrawer(g.id); });
+
+  // Cover
+  var coverWrap = el('div', 'cover-wrap');
+  var coverInner = el('div', 'cover-inner');
+  coverInner.style.background = g.grad;
+  coverInner.textContent = g.emoji;
+  coverInner.style.minHeight = '160px';
+  coverWrap.appendChild(coverInner);
+
+  // Status badge (always visible — UX 1)
+  var badge = makeStatusBadge(g.status);
+  if (badge) coverWrap.appendChild(badge);
+
+  // Quick actions
+  var qa = el('div', 'quick-actions absolute top-2 right-2 flex flex-col gap-1.5');
+
+  var btnChat = makeQaBtn('💬', '', 'Chat AI');
+  btnChat.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  var btnDocs = makeQaBtn('📖', g.hasKb ? 'amber' : '', g.hasKb ? 'Documenti KB' : 'Nessun documento');
+  btnDocs.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  var moreWrap = buildMoreMenuWrap(g);
+
+  qa.appendChild(btnChat);
+  qa.appendChild(btnDocs);
+  qa.appendChild(moreWrap);
+  coverWrap.appendChild(qa);
+
+  // Info button
+  var infoBtn = el('button', 'info-btn', 'i');
+  infoBtn.addEventListener('click', function(e) { e.stopPropagation(); openDrawer(g.id); });
+  coverWrap.appendChild(infoBtn);
+
+  card.appendChild(coverWrap);
+
+  // Card body
+  var body = el('div', 'p-3');
+
+  var titleRow = el('div', 'flex items-start justify-between gap-1 mb-0.5');
+  var title = el('h3', 'font-heading font-bold text-sm text-amber-900 dark:text-amber-100 leading-tight', g.title);
+  title.style.overflow = 'hidden'; title.style.textOverflow = 'ellipsis'; title.style.whiteSpace = 'nowrap';
+  titleRow.appendChild(title);
+  if (g.hasKb) titleRow.appendChild(makeKbBadge());
+  body.appendChild(titleRow);
+
+  body.appendChild(el('p', 'text-xs font-body text-amber-500 mb-2', g.pub));
+
+  // Rating row (UX 3 — always visible, fixed position)
+  var ratingRow = el('div', 'flex items-center gap-1.5 mb-2');
+  ratingRow.appendChild(makeStars(g.rating));
+  ratingRow.appendChild(el('span', 'text-xs font-heading font-bold text-amber-700 dark:text-amber-300', String(g.rating)));
+  if (isDemo) {
+    // UX callout on demo card
+    var callout = el('span', 'ux-callout', 'UX 3');
+    callout.style.display = 'inline-block';
+    ratingRow.appendChild(callout);
+  }
+  body.appendChild(ratingRow);
+
+  // Metadata
+  var meta = el('div', 'flex items-center gap-2 text-xs font-body text-amber-500 flex-wrap');
+  var pSpan = el('span', 'flex items-center gap-0.5');
+  pSpan.textContent = '👥 ' + g.players;
+  var tSpan = el('span', 'flex items-center gap-0.5');
+  tSpan.textContent = '🕐 ' + g.time;
+  meta.appendChild(pSpan);
+  meta.appendChild(tSpan);
+  meta.appendChild(makeDots(g.weight));
+  body.appendChild(meta);
+
+  card.appendChild(body);
+  return card;
+}
+
+// ── List card ─────────────────────────────────────────────────────────────────
+function buildListCard(g) {
+  var card = el('div', 'list-card flex items-center gap-4 p-3 cursor-pointer');
+  card.addEventListener('click', function() { openDrawer(g.id); });
+
+  // Thumb
+  var thumb = el('div', 'w-20 h-20 rounded-xl flex-shrink-0 flex items-center justify-center text-3xl');
+  thumb.style.background = g.grad;
+  thumb.textContent = g.emoji;
+  card.appendChild(thumb);
+
+  // Info
+  var info = el('div', 'flex-1 min-w-0');
+  var nameRow = el('div', 'flex items-center gap-2 mb-0.5 flex-wrap');
+  nameRow.appendChild(el('h3', 'font-heading font-bold text-base text-amber-900 dark:text-amber-100 truncate', g.title));
+  if (g.status) {
+    var map = { libreria: ['badge-libreria', 'In Libreria'], wishlist: ['badge-wishlist', '♥ Wishlist'], giocato: ['badge-giocato', '✓ Giocato'] };
+    var b = el('span', map[g.status][0] + ' text-xs font-heading font-semibold px-2 py-0.5 rounded-full flex-shrink-0', map[g.status][1]);
+    nameRow.appendChild(b);
+  }
+  if (g.hasKb) nameRow.appendChild(makeKbBadge());
+  info.appendChild(nameRow);
+  info.appendChild(el('p', 'text-sm font-body text-amber-500 mb-1', g.pub));
+
+  var metaRow = el('div', 'flex items-center gap-3 text-xs font-body text-amber-500');
+  metaRow.appendChild(el('span', '', '👥 ' + g.players));
+  metaRow.appendChild(el('span', '', '🕐 ' + g.time));
+  metaRow.appendChild(makeDots(g.weight));
+  info.appendChild(metaRow);
+  card.appendChild(info);
+
+  // Rating (prominent number)
+  var ratingBox = el('div', 'flex-shrink-0 text-center px-3');
+  var ratingNum = el('div', 'text-2xl font-heading font-bold text-amber-600 dark:text-amber-400', String(g.rating));
+  var ratingLabel = el('div', 'text-xs text-amber-400', '/5');
+  ratingBox.appendChild(ratingNum);
+  ratingBox.appendChild(ratingLabel);
+  ratingBox.appendChild(makeStars(g.rating));
+  card.appendChild(ratingBox);
+
+  // Quick actions — always visible in list
+  var actions = el('div', 'flex-shrink-0 flex items-center gap-2');
+
+  var btnChat = makeQaBtn('💬', '', 'Chat AI');
+  btnChat.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  var btnDocs = makeQaBtn('📖', g.hasKb ? 'amber' : '', 'Documenti KB');
+  btnDocs.addEventListener('click', function(e) { e.stopPropagation(); });
+
+  var moreWrap = buildMoreMenuWrap(g);
+
+  var btnInfo = makeQaBtn('ℹ', '', 'Dettagli');
+  btnInfo.addEventListener('click', function(e) { e.stopPropagation(); openDrawer(g.id); });
+
+  actions.appendChild(btnChat);
+  actions.appendChild(btnDocs);
+  actions.appendChild(moreWrap);
+  actions.appendChild(btnInfo);
+  card.appendChild(actions);
+
+  return card;
+}
+
+// ── Compact card ──────────────────────────────────────────────────────────────
+function buildCompactCard(g) {
+  var card = el('div', 'compact-card');
+  card.addEventListener('click', function() { openDrawer(g.id); });
+
+  var thumb = el('div', 'w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-lg');
+  thumb.style.background = g.grad;
+  thumb.textContent = g.emoji;
+  card.appendChild(thumb);
+
+  var info = el('div', 'flex-1 min-w-0');
+  var nameRow = el('div', 'flex items-center gap-1.5');
+  nameRow.appendChild(el('span', 'font-heading font-bold text-sm text-amber-900 dark:text-amber-100 truncate', g.title));
+  if (g.status === 'libreria') {
+    var libB = el('span', 'badge-libreria text-xs px-1.5 py-0 rounded-full flex-shrink-0');
+    libB.textContent = '✓';
+    libB.style.fontSize = '0.6rem';
+    nameRow.appendChild(libB);
+  }
+  if (g.hasKb) nameRow.appendChild(makeKbBadge());
+  info.appendChild(nameRow);
+  info.appendChild(el('span', 'text-xs font-body text-amber-400', g.players + ' · ' + g.time));
+  card.appendChild(info);
+
+  var ratingMini = el('div', 'flex items-center gap-1 text-xs');
+  ratingMini.appendChild(el('span', 'font-heading font-bold text-amber-600 dark:text-amber-400', String(g.rating)));
+  ratingMini.appendChild(el('span', 'star-filled text-xs', '★'));
+  card.appendChild(ratingMini);
+
+  var btns = el('div', 'flex gap-1');
+  var bChat = el('button', 'w-7 h-7 rounded-full flex items-center justify-center text-xs font-body');
+  bChat.textContent = '💬';
+  bChat.style.background = 'rgba(251,191,36,0.15)';
+  bChat.addEventListener('click', function(e) { e.stopPropagation(); });
+  var bInfo = el('button', 'w-7 h-7 rounded-full flex items-center justify-center text-xs font-body');
+  bInfo.textContent = 'ℹ';
+  bInfo.style.background = 'rgba(251,191,36,0.15)';
+  bInfo.style.color = '#e06f0a';
+  bInfo.addEventListener('click', function(e) { e.stopPropagation(); openDrawer(g.id); });
+  btns.appendChild(bChat);
+  btns.appendChild(bInfo);
+  card.appendChild(btns);
+
+  return card;
+}
+
+// ── Mobile mini card ──────────────────────────────────────────────────────────
+function buildMobileCard(g) {
+  var card = el('div', 'game-card cursor-pointer');
+  card.addEventListener('click', function() { openMobileDrawer(g.id); });
+
+  var cover = el('div', 'relative flex items-center justify-center text-4xl');
+  cover.style.cssText = 'background:' + g.grad + '; border-radius:0.75rem 0.75rem 0 0; min-height:120px; aspect-ratio:7/10;';
+  cover.textContent = g.emoji;
+
+  if (g.status === 'libreria') {
+    var lb = el('span', 'absolute top-1.5 left-1.5 badge-libreria font-bold rounded-full');
+    lb.textContent = '● Lib';
+    lb.style.fontSize = '0.55rem';
+    lb.style.padding = '1px 5px';
+    cover.appendChild(lb);
+  }
+  if (g.hasKb) {
+    var kb = el('span', 'absolute top-1.5 right-1.5 kb-badge', 'KB');
+    cover.appendChild(kb);
+  }
+  card.appendChild(cover);
+
+  var body = el('div', 'p-2');
+  body.appendChild(el('p', 'font-heading font-bold text-xs text-amber-900 dark:text-amber-100 truncate', g.title));
+  var rRow = el('div', 'flex items-center gap-1 mt-0.5');
+  rRow.appendChild(el('span', 'star-filled text-xs', '★'));
+  rRow.appendChild(el('span', 'text-xs font-heading font-bold text-amber-600', String(g.rating)));
+  body.appendChild(rRow);
+
+  var btns = el('div', 'flex gap-1 mt-1.5');
+  var bChat = el('button', 'flex-1 py-1 text-xs font-heading font-bold rounded-lg text-amber-700');
+  bChat.textContent = '💬';
+  bChat.style.background = 'rgba(251,191,36,0.15)';
+  bChat.addEventListener('click', function(e) { e.stopPropagation(); });
+  var bInfo = el('button', 'flex-1 py-1 text-xs font-heading font-bold rounded-lg text-amber-700');
+  bInfo.textContent = 'ℹ';
+  bInfo.style.background = 'rgba(251,191,36,0.15)';
+  bInfo.addEventListener('click', function(e) { e.stopPropagation(); openMobileDrawer(g.id); });
+  btns.appendChild(bChat);
+  btns.appendChild(bInfo);
+  body.appendChild(btns);
+  card.appendChild(body);
+
+  return card;
+}
+
+// ── More-actions menu builder ────────────────────────────────────────────────
+// Actions sourced directly from adapter files (MeepleGameCatalogCard, MeepleAgentCard, etc.)
+// Each card type has its own action set based on auth state + entity state.
+
+// GAME CATALOG card (MeepleGameCatalogCard):
+//   - Aggiungi / Nella Libreria (disabled if inLibrary)
+//   - Chat AI  [via KB quick action — separate]
+//   - Documenti KB [via KB quick action — separate]
+// "⋯" menu for game card:
+var GAME_MORE_ACTIONS = [
+  { emoji: '📚', label: 'Aggiungi alla libreria' },
+  { divider: true },
+  { emoji: '🔗', label: 'Condividi' },
+  { emoji: '✏️', label: 'Proponi modifica' },
+  { divider: true },
+  { emoji: '🚩', label: 'Segnala errore', destructive: true }
+];
+
+// AGENT card (MeepleAgentCard):
+//   Quick actions: Info | Chat (disabled if !isActive) | Configura (owner/admin) | Elimina (owner/admin)
+// "⋯" would wrap: Configura + Elimina (owner-only, context-dependent)
+
+// CHAT SESSION card (MeepleChatCard):
+//   Quick actions: Apri/Continua (disabled if archived) | Nuova Chat (owner, disabled if no slot)
+//                 | Archivia (owner, !archived) | Riattiva (owner, archived) | Elimina (owner/admin)
+
+// SESSION card (MeepleSessionCard):
+//   Quick actions: Configura (owner/admin, disabled if completed) | Avvia (owner, setup only)
+//                | Pausa (owner, inProgress) | Riprendi (owner, paused)
+//                | Partecipa (non-participant, disabled if no slots) | Lascia (participant, !owner)
+//                | Esporta (completed only)
+
+// KB DOCUMENT card (MeepleKbCard):
+//   Quick actions: Chat con documento (disabled if !indexed) | Re-indicizza (admin only)
+//                | Scarica (editor/admin) | Elimina (admin)
+
+// PLAYER card (MeeplePlayerCard):
+//   Quick actions: Configura (owner, !meepleAiUser) | Invita a Sessione (authenticated, disabled if !hasActiveSession)
+
+function buildMoreMenuWrap(g) {
+  var wrap = el('div', 'more-menu-wrap');
+
+  var btn = makeQaBtn('⋯', '', 'Altre azioni');
+  btn.style.fontWeight = '800';
+  btn.style.fontSize = '1.1rem';
+
+  var menu = el('div', 'more-menu');
+
+  GAME_MORE_ACTIONS.forEach(function(item) {
+    if (item.divider) {
+      menu.appendChild(el('div', 'more-menu-divider'));
+      return;
+    }
+    var row = el('button', 'more-menu-item' + (item.destructive ? ' destructive' : ''));
+    var iconSpan = el('span', '', item.emoji);
+    iconSpan.style.width = '18px';
+    iconSpan.style.textAlign = 'center';
+    row.appendChild(iconSpan);
+    row.appendChild(el('span', '', item.label));
+    row.addEventListener('click', function(e) {
+      e.stopPropagation();
+      menu.classList.remove('open');
+    });
+    menu.appendChild(row);
+  });
+
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    // Close all other menus
+    document.querySelectorAll('.more-menu.open').forEach(function(m) {
+      if (m !== menu) m.classList.remove('open');
+    });
+    menu.classList.toggle('open');
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+  return wrap;
+}
+
+// Close menus on outside click
+document.addEventListener('click', function() {
+  document.querySelectorAll('.more-menu.open').forEach(function(m) {
+    m.classList.remove('open');
+  });
+});
+
+// ── Mobile drawer ─────────────────────────────────────────────────────────────
+function openMobileDrawer(gameId) {
+  var g = GAMES.find(function(x) { return x.id === gameId; });
+  if (!g) return;
+
+  // Cover
+  var cover = document.getElementById('mdCover');
+  cover.style.background = g.grad;
+  cover.textContent = g.emoji;
+
+  document.getElementById('mdTitle').textContent = g.title;
+  document.getElementById('mdPub').textContent = g.pub;
+  document.getElementById('mdDesc').textContent = g.desc;
+  document.getElementById('mdPlayers').textContent = g.players;
+  document.getElementById('mdTime').textContent = g.time;
+
+  // Badges
+  var badges = document.getElementById('mdBadges');
+  badges.textContent = '';
+  if (g.status) {
+    var map = { libreria: ['badge-libreria', '● In Libreria'], wishlist: ['badge-wishlist', '♥ Wishlist'], giocato: ['badge-giocato', '✓ Giocato'] };
+    badges.appendChild(el('span', map[g.status][0] + ' text-xs font-heading font-bold px-2 py-0.5 rounded-full', map[g.status][1]));
+  }
+  if (g.hasKb) badges.appendChild(makeKbBadge());
+
+  // Mechanics
+  var mech = document.getElementById('mdMechanics');
+  mech.textContent = '';
+  g.mechanics.forEach(function(m) {
+    var chip = el('span', 'text-xs font-heading font-semibold px-2.5 py-1 rounded-full', m);
+    chip.style.background = 'rgba(251,191,36,0.12)';
+    chip.style.color = '#92400e';
+    mech.appendChild(chip);
+  });
+
+  // Docs tab list
+  var docsList = document.getElementById('mdDocsList');
+  docsList.textContent = '';
+  if (g.hasKb) {
+    var dRow = el('div', 'w-full');
+    var dName = el('p', 'text-sm font-heading font-bold text-amber-900', 'Rulebook-ITA.pdf');
+    var dInfo = el('p', 'text-xs text-amber-500', '48 pagine · Indicizzato');
+    dRow.appendChild(dName);
+    dRow.appendChild(dInfo);
+    docsList.appendChild(dRow);
+    docsList.appendChild(makeKbBadge());
+  } else {
+    docsList.appendChild(el('p', 'text-xs text-amber-400 italic w-full', 'Nessun documento nella Knowledge Base'));
+  }
+
+  // Reset to overview
+  var firstTab = document.querySelector('[onclick*="md-overview"]');
+  if (firstTab) setMdTab(firstTab, 'md-overview');
+
+  document.getElementById('mobileDrawer').classList.add('open');
+}
+
+function closeMobileDrawer() {
+  document.getElementById('mobileDrawer').classList.remove('open');
+}
+
+function setMdTab(btn, tab) {
+  document.querySelectorAll('[onclick*="setMdTab"]').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  ['md-overview', 'md-chat', 'md-docs'].forEach(function(id) {
+    var el2 = document.getElementById(id);
+    if (el2) el2.classList.toggle('hidden', id !== tab);
+  });
+}
+
+// ── Filter bar ────────────────────────────────────────────────────────────────
+function buildFilterBar() {
+  var bar = document.getElementById('filterBar');
+  bar.textContent = '';
+
+  FILTER_GROUPS.forEach(function(group, gi) {
+    if (gi > 0) {
+      var sep = el('div');
+      sep.style.cssText = 'width:1px; height:20px; background:rgba(224,111,10,0.2); flex-shrink:0;';
+      bar.appendChild(sep);
+    }
+    var label = el('span', 'text-xs font-heading font-bold text-amber-500 uppercase tracking-wider flex-shrink-0 mr-1');
+    label.style.letterSpacing = '0.08em';
+    label.textContent = group.label;
+    bar.appendChild(label);
+
+    group.chips.forEach(function(chip) {
+      var btn = el('button', 'chip' + (chip.active ? ' active' : ''));
+      btn.dataset.group = group.group;
+      btn.dataset.val = chip.val;
+      btn.textContent = chip.text;
+
+      if (chip.active) {
+        var x = el('span', 'chip-x ml-1 font-bold');
+        x.textContent = '×';
+        x.style.color = '#e06f0a';
+        btn.appendChild(x);
+      }
+
+      btn.addEventListener('click', function() { toggleChip(btn); });
+      bar.appendChild(btn);
+    });
+  });
+
+  // Reset link
+  var reset = el('button', 'ml-3 text-xs font-heading font-bold text-red-500 hover:text-red-700 underline underline-offset-2 cursor-pointer whitespace-nowrap transition-colors flex-shrink-0');
+  reset.id = 'resetFilters';
+  reset.textContent = 'Azzera filtri';
+  reset.addEventListener('click', resetAllFilters);
+  bar.appendChild(reset);
+
+  updateSummary();
+}
+
+function toggleChip(btn) {
+  var wasActive = btn.classList.contains('active');
+  btn.classList.toggle('active', !wasActive);
+  var xSpan = btn.querySelector('.chip-x');
+  if (!wasActive) {
+    if (!xSpan) {
+      var x = el('span', 'chip-x ml-1 font-bold');
+      x.textContent = '×';
+      x.style.color = '#e06f0a';
+      btn.appendChild(x);
+    }
+  } else {
+    if (xSpan) xSpan.remove();
+  }
+  updateSummary();
+}
+
+function resetAllFilters() {
+  document.querySelectorAll('#filterBar .chip.active').forEach(function(c) {
+    c.classList.remove('active');
+    var x = c.querySelector('.chip-x');
+    if (x) x.remove();
+  });
+  updateSummary();
+}
+
+function updateSummary() {
+  var active = Array.from(document.querySelectorAll('#filterBar .chip.active'));
+  var names = active.map(function(c) { return c.dataset.val; }).filter(Boolean);
+  var el2 = document.getElementById('activeFilterSummary');
+  var reset = document.getElementById('resetFilters');
+  el2.textContent = '';
+  if (names.length === 0) {
+    el2.textContent = 'Nessun filtro attivo — tutti i giochi mostrati';
+    if (reset) reset.style.visibility = 'hidden';
+  } else {
+    el2.textContent = names.length + (names.length === 1 ? ' filtro attivo: ' : ' filtri attivi: ') + names.join(', ');
+    if (reset) reset.style.visibility = 'visible';
+  }
+}
+
+// ── Render all views ──────────────────────────────────────────────────────────
+function renderAll() {
+  var grid    = document.getElementById('gameGrid');
+  var list    = document.getElementById('gameList');
+  var compact = document.getElementById('gameCompact');
+  var mobile  = document.getElementById('mobileGrid');
+  var gridCount = document.getElementById('gridCount');
+
+  grid.textContent = '';
+  list.textContent = '';
+  compact.textContent = '';
+  mobile.textContent = '';
+
+  if (gridCount) gridCount.textContent = '— ' + GAMES.length + ' giochi';
+
+  GAMES.forEach(function(g, i) {
+    grid.appendChild(buildGridCard(g, i === 0));
+    list.appendChild(buildListCard(g));
+    compact.appendChild(buildCompactCard(g));
+  });
+
+  GAMES.slice(0, 4).forEach(function(g) {
+    mobile.appendChild(buildMobileCard(g));
+  });
+}
+
+// ── UX panel ─────────────────────────────────────────────────────────────────
+function renderUxPanel() {
+  var panel = document.getElementById('uxPanel');
+  panel.textContent = '';
+  UX_NOTES.forEach(function(note) {
+    var card = el('div', 'annotation-panel');
+    var inner = el('div', 'flex items-start gap-2');
+    var num = el('span', 'ux-callout flex-shrink-0', note.num);
+    num.style.display = 'inline-block';
+    var content = el('div');
+    content.appendChild(el('p', 'font-heading font-bold text-sm text-red-700 dark:text-red-400', note.title));
+    content.appendChild(el('p', 'text-xs font-body text-amber-700 dark:text-amber-400 mt-1 leading-relaxed', note.body));
+    inner.appendChild(num);
+    inner.appendChild(content);
+    card.appendChild(inner);
+    panel.appendChild(card);
+  });
+}
+
+// ── View toggle ───────────────────────────────────────────────────────────────
+function setView(view) {
+  var views = ['grid', 'list', 'compact'];
+  views.forEach(function(v) {
+    var cap = v.charAt(0).toUpperCase() + v.slice(1);
+    var btn = document.getElementById('view' + cap);
+    var container = document.getElementById('view' + cap + 'Container');
+    if (btn) btn.classList.toggle('active', v === view);
+    if (container) container.classList.toggle('hidden', v !== view);
+  });
+}
+
+// ── Drawer ────────────────────────────────────────────────────────────────────
+function openDrawer(gameId) {
+  var g = GAMES.find(function(x) { return x.id === gameId; });
+  if (!g) return;
+
+  document.getElementById('drawerTitle').textContent = g.title;
+  document.getElementById('drawerSubtitle').textContent = g.pub + ' · ' + (2015 + g.id);
+  document.getElementById('drawerCover').style.background = g.grad;
+  document.getElementById('drawerDesc').textContent = g.desc;
+  document.getElementById('drawerPlayers').textContent = g.players;
+  document.getElementById('drawerTime').textContent = g.time;
+
+  // Status row
+  var statusRow = document.getElementById('drawerStatusRow');
+  statusRow.textContent = '';
+  if (g.status) {
+    var map = { libreria: ['badge-libreria', '● In Libreria'], wishlist: ['badge-wishlist', '♥ Wishlist'], giocato: ['badge-giocato', '✓ Giocato'] };
+    var b = el('span', map[g.status][0] + ' text-xs font-heading font-bold px-2.5 py-1 rounded-full', map[g.status][1]);
+    statusRow.appendChild(b);
+  }
+  if (g.hasKb) statusRow.appendChild(makeKbBadge());
+  var ratingSpan = el('span', 'ml-auto text-sm font-heading font-bold text-amber-500', '★ ' + g.rating + ' / 5');
+  statusRow.appendChild(ratingSpan);
+
+  // Mechanics
+  var mechWrap = document.getElementById('drawerMechanics');
+  mechWrap.textContent = '';
+  g.mechanics.forEach(function(m) {
+    var chip = el('span', 'text-xs font-heading font-semibold px-2.5 py-1 rounded-full', m);
+    chip.style.background = 'rgba(251,191,36,0.12)';
+    chip.style.color = '#92400e';
+    mechWrap.appendChild(chip);
+  });
+
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('drawerPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Reset to overview tab
+  var firstTab = document.querySelector('.drawer-tab');
+  if (firstTab) setDrawerTab(firstTab, 'overview');
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('drawerPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function setDrawerTab(btn, tab) {
+  document.querySelectorAll('.drawer-tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('[id^="dtab-"]').forEach(function(e2) { e2.classList.add('hidden'); });
+  var tabEl = document.getElementById('dtab-' + tab);
+  if (tabEl) tabEl.classList.remove('hidden');
+}
+
+// ── Dark mode ─────────────────────────────────────────────────────────────────
+function toggleDark() {
+  var html = document.documentElement;
+  var isDark = html.classList.toggle('dark');
+  document.getElementById('darkIcon').textContent = isDark ? '☀️' : '🌙';
+  document.getElementById('darkLabel').textContent = isDark ? 'Light' : 'Dark';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildFilterBar();
+renderAll();
+renderUxPanel();
+</script>
+
+</body>
+</html>

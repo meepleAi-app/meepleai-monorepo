@@ -261,6 +261,12 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         activePattern: /^\/admin\/prompts$/,
       },
       {
+        href: '/admin/pdfs',
+        label: 'PDF Documents',
+        icon: FileTextIcon,
+        activePattern: /^\/admin\/pdfs/,
+      },
+      {
         href: '/rag',
         label: 'RAG Dashboard',
         icon: BrainCircuitIcon,

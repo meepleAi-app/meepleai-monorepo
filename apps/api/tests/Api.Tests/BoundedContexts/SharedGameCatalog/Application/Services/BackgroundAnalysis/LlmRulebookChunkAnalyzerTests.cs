@@ -48,7 +48,7 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmChunkResponse?)llmResponse);
 
         // Act
@@ -78,7 +78,7 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmChunkResponse?)null);
 
         // Act
@@ -101,7 +101,7 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("LLM service error"));
 
         // Act
@@ -134,7 +134,7 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResponse);
 
         // Act
@@ -165,7 +165,7 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResponse);
 
         var progressCallbacks = new List<(int processed, int total)>();
@@ -203,7 +203,7 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -235,7 +235,7 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmChunkResponse?)null); // All fail
 
         // Act
@@ -269,8 +269,8 @@ public class LlmRulebookChunkAnalyzerTests
             .Setup(x => x.GenerateJsonAsync<LlmChunkResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(async (string _, string _, CancellationToken _) =>
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Returns(async (string _, string _, RequestSource _, CancellationToken _) =>
             {
                 lock (lockObj)
                 {

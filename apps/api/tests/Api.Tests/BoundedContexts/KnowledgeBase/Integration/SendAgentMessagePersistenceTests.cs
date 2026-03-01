@@ -123,7 +123,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
     {
         _mockLlmService
             .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(ToAsyncEnumerable(chunks.Select(c => new StreamChunk(c))));
     }
 
@@ -293,7 +293,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         // Arrange - LLM returns only empty chunks
         _mockLlmService
             .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(ToAsyncEnumerable(new[]
             {
                 new StreamChunk(""),
@@ -323,7 +323,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         // Arrange - LLM stream that yields one chunk then delays (will be cancelled)
         _mockLlmService
             .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(SlowAsyncEnumerable());
 
         using var cts = new CancellationTokenSource();
@@ -388,7 +388,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         // Arrange - 5 total chunks, 3 non-empty
         _mockLlmService
             .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(ToAsyncEnumerable(new[]
             {
                 new StreamChunk("Hello"),

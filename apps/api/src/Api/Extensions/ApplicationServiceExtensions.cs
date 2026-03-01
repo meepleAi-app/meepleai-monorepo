@@ -3,7 +3,9 @@ using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
@@ -48,6 +50,12 @@ internal static class ApplicationServiceExtensions
         // DDD-PHASE2: GameManagement bounded context (repositories for CQRS handlers)
         services.AddGameManagementContext();
 
+        // Issue #4753: GameToolkit bounded context (toolkit configs, tools, templates)
+        services.AddGameToolkitContext();
+
+        // Issue #5130: EntityRelationships bounded context (entity links, relationships)
+        services.AddEntityRelationshipsContext();
+
         // DDD-PHASE3: KnowledgeBase bounded context
         services.AddKnowledgeBaseServices();
 
@@ -83,9 +91,6 @@ internal static class ApplicationServiceExtensions
         // ISSUE-2370: SharedGameCatalog bounded context
         // ISSUE-2454: Background processing configuration
         services.AddSharedGameCatalogContext(configuration);
-
-        // ISSUE-2371: SharedGameCatalog authorization policies
-        services.AddSharedGameCatalogPolicies();
 
         // ISSUE-2371: SharedGameCatalog authorization policies
         services.AddSharedGameCatalogPolicies();
@@ -297,6 +302,14 @@ internal static class ApplicationServiceExtensions
 
         // GST-003: Register validators from SessionTracking bounded context
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.SessionTracking.Application.Commands.CreateSessionCommandValidator>(
+            includeInternalTypes: true);
+
+        // Issue #4753: Register validators from GameToolkit bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.GameToolkit.Application.Validators.CreateToolkitCommandValidator>(
+            includeInternalTypes: true);
+
+        // Issue #5133: Register validators from EntityRelationships bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.EntityRelationships.Application.Validators.CreateEntityLinkCommandValidator>(
             includeInternalTypes: true);
 
         return services;

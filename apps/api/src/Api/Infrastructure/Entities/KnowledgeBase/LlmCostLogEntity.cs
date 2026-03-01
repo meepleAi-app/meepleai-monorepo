@@ -105,6 +105,12 @@ public class LlmCostLogEntity
     /// </summary>
     public DateOnly RequestDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
 
+    /// <summary>
+    /// Origin of the LLM request (Manual, RagPipeline, EventDriven, AutomatedTest, AgentTask, AdminOperation).
+    /// Issue #5071: RequestSource tagging for observability.
+    /// </summary>
+    public string RequestSource { get; set; } = "Manual";
+
     // Navigation properties
     public UserEntity? User { get; set; }
 }

@@ -3,6 +3,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.DTOs;
 /// <summary>
 /// DTO for a single library entry with game information.
 /// Issue #3663: Updated to support both SharedGame and PrivateGame references.
+/// Issue #4998: Replaced HasPdfDocuments with KB-aware fields (hasKb = at least 1 indexed PDF in RAG).
 /// </summary>
 internal record UserLibraryEntryDto(
     Guid Id,
@@ -21,8 +22,12 @@ internal record UserLibraryEntryDto(
     string? StateNotes = null,
     AgentConfigDto? CustomAgentConfig = null,
     CustomPdfDto? CustomPdf = null,
-    bool HasPdfDocuments = false,
-    Guid? PrivateGameId = null, // Issue #3663: Private game reference
-    bool IsPrivateGame = false,  // Issue #3663: Computed flag
-    bool CanProposeToCatalog = false // Issue #3663: Can propose private game to catalog
+    bool HasKb = false,              // Issue #4998: true if >= 1 PDF fully indexed in RAG (ProcessingState.Ready)
+    int KbCardCount = 0,             // Issue #4998: total PDF documents linked to this game
+    int KbIndexedCount = 0,          // Issue #4998: PDF documents with ProcessingState.Ready
+    int KbProcessingCount = 0,       // Issue #4998: PDF documents currently in pipeline (not Ready/Failed/Pending)
+    bool AgentIsOwned = true,        // Issue #4998: current user owns the agent for this game (always true in library context)
+    Guid? PrivateGameId = null,      // Issue #3663: Private game reference
+    bool IsPrivateGame = false,      // Issue #3663: Computed flag
+    bool CanProposeToCatalog = false  // Issue #3663: Can propose private game to catalog
 );

@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { useCollectionActions } from '../use-collection-actions';
@@ -28,7 +29,7 @@ const createTestQueryClient = () =>
 
 // Wrapper with QueryClientProvider
 function Wrapper({ children }: { children: ReactNode }) {
-  const queryClient = createTestQueryClient();
+  const [queryClient] = useState(() => createTestQueryClient());
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
@@ -47,7 +48,7 @@ describe('useCollectionActions', () => {
     } as Response);
 
     // Act
-    const { result } = renderHook(() => useCollectionActions(gameId), { wrapper: Wrapper });
+    const { result } = renderHook(() => useCollectionActions(gameId, undefined, 'user-123'), { wrapper: Wrapper });
 
     // Assert
     await waitFor(() => {
@@ -78,7 +79,7 @@ describe('useCollectionActions', () => {
     } as Response);
 
     // Act
-    const { result } = renderHook(() => useCollectionActions(gameId), { wrapper: Wrapper });
+    const { result } = renderHook(() => useCollectionActions(gameId, undefined, 'user-123'), { wrapper: Wrapper });
 
     // Assert
     await waitFor(() => {
@@ -107,7 +108,7 @@ describe('useCollectionActions', () => {
     } as Response);
 
     // Act
-    const { result } = renderHook(() => useCollectionActions(gameId), { wrapper: Wrapper });
+    const { result } = renderHook(() => useCollectionActions(gameId, undefined, 'user-123'), { wrapper: Wrapper });
 
     // Assert
     await waitFor(() => {
@@ -128,7 +129,7 @@ describe('useCollectionActions', () => {
       } as Response);
 
     // Act
-    const { result } = renderHook(() => useCollectionActions(gameId), { wrapper: Wrapper });
+    const { result } = renderHook(() => useCollectionActions(gameId, undefined, 'user-123'), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.isInCollection).toBe(false);
@@ -164,7 +165,7 @@ describe('useCollectionActions', () => {
 
     // Act
     const { result } = renderHook(
-      () => useCollectionActions(gameId, mockWarningCallback),
+      () => useCollectionActions(gameId, mockWarningCallback, 'user-123'),
       { wrapper: Wrapper }
     );
 
@@ -208,7 +209,7 @@ describe('useCollectionActions', () => {
       } as Response);
 
     // Act
-    const { result } = renderHook(() => useCollectionActions(gameId), { wrapper: Wrapper });
+    const { result } = renderHook(() => useCollectionActions(gameId, undefined, 'user-123'), { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(result.current.isInCollection).toBe(true);

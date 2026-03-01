@@ -220,7 +220,8 @@ describe('ScoreInput', () => {
     });
 
     it('shows loading state during submission', async () => {
-      mockOnSubmit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      // Use never-resolving promise so isSubmitting stays true during assertions
+      mockOnSubmit.mockImplementation(() => new Promise(() => {}));
       const user = userEvent.setup();
       render(<ScoreInput {...defaultProps} />);
 
@@ -230,7 +231,9 @@ describe('ScoreInput', () => {
       const submitButton = screen.getByRole('button', { name: /add score/i });
       await user.click(submitButton);
 
-      expect(screen.getByText(/saving/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/saving/i)).toBeInTheDocument();
+      });
     });
 
     it('disables submit button when score is empty', () => {
@@ -338,7 +341,8 @@ describe('ScoreInput', () => {
     });
 
     it('disables undo button during submission', async () => {
-      mockOnSubmit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      // Use never-resolving promise so isSubmitting stays true during assertions
+      mockOnSubmit.mockImplementation(() => new Promise(() => {}));
       const user = userEvent.setup();
       render(<ScoreInput {...defaultProps} onUndo={mockOnUndo} />);
 
@@ -347,7 +351,9 @@ describe('ScoreInput', () => {
 
       await user.click(screen.getByRole('button', { name: /add score/i }));
 
-      expect(screen.getByRole('button', { name: /undo/i })).toBeDisabled();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /undo/i })).toBeDisabled();
+      });
     });
   });
 

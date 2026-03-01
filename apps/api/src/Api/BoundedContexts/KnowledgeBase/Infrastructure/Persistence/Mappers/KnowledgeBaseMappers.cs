@@ -30,7 +30,8 @@ internal static class KnowledgeBaseMappers
             IndexingError = null,
             EmbeddingModel = "nomic-embed-text", // Default model
             EmbeddingDimensions = 768, // Default dimensions
-            Metadata = domain.Metadata // Map metadata field
+            Metadata = domain.Metadata, // Map metadata field
+            SharedGameId = domain.SharedGameId // Issue #5185: cross-BC reference
         };
     }
 
@@ -42,10 +43,11 @@ internal static class KnowledgeBaseMappers
         ArgumentNullException.ThrowIfNull(entity);
         var domain = new VectorDocument(
             id: entity.Id,
-            gameId: entity.GameId,
+            gameId: entity.GameId ?? Guid.Empty,
             pdfDocumentId: entity.PdfDocumentId,
             language: "en", // Default language (not stored in entity)
-            totalChunks: entity.ChunkCount
+            totalChunks: entity.ChunkCount,
+            sharedGameId: entity.SharedGameId // Issue #5185
         );
 
         // Restore metadata using internal method
@@ -151,7 +153,9 @@ internal static class KnowledgeBaseMappers
             name: entity.Name,
             type: agentType,
             strategy: strategy,
-            isActive: entity.IsActive
+            isActive: entity.IsActive,
+            gameId: entity.GameId,
+            createdByUserId: entity.CreatedByUserId
         );
 
         // Use reflection to set read-only properties (CreatedAt, LastInvokedAt, InvocationCount)
@@ -184,7 +188,9 @@ internal static class KnowledgeBaseMappers
             IsActive = agent.IsActive,
             CreatedAt = agent.CreatedAt,
             LastInvokedAt = agent.LastInvokedAt,
-            InvocationCount = agent.InvocationCount
+            InvocationCount = agent.InvocationCount,
+            GameId = agent.GameId,
+            CreatedByUserId = agent.CreatedByUserId
         };
     }
 

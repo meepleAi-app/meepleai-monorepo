@@ -543,6 +543,89 @@ public class ChunkedUploadSessionTests
 
     #endregion
 
+    #region PrivateGameId Tests (Issue #5207)
+
+    [Fact]
+    public void Constructor_WithPrivateGameId_SetsPrivateGameIdAndNullGameId()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var privateGameId = Guid.NewGuid();
+
+        // Act
+        var session = new ChunkedUploadSession(
+            id: id,
+            gameId: null,
+            userId: UserId,
+            fileName: FileName,
+            totalFileSize: 1024,
+            tempDirectory: TempDir,
+            privateGameId: privateGameId);
+
+        // Assert
+        session.GameId.Should().BeNull();
+        session.PrivateGameId.Should().Be(privateGameId);
+        session.Id.Should().Be(id);
+        session.Status.Should().Be("pending");
+    }
+
+    [Fact]
+    public void Constructor_SharedGame_DefaultsPrivateGameIdToNull()
+    {
+        // Act
+        var session = new ChunkedUploadSession(
+            id: Guid.NewGuid(),
+            gameId: GameId,
+            userId: UserId,
+            fileName: FileName,
+            totalFileSize: 1024,
+            tempDirectory: TempDir);
+
+        // Assert
+        session.GameId.Should().Be(GameId);
+        session.PrivateGameId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Constructor_BothNullGameIdAndPrivateGameId_ThrowsArgumentException()
+    {
+        // Arrange / Act
+        var act = () => new ChunkedUploadSession(
+            id: Guid.NewGuid(),
+            gameId: null,
+            userId: UserId,
+            fileName: FileName,
+            totalFileSize: 1024,
+            tempDirectory: TempDir,
+            privateGameId: null);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*Either GameId or PrivateGameId must be provided*");
+    }
+
+    [Fact]
+    public void Constructor_BothGameIdAndPrivateGameId_StoresBoth()
+    {
+        // Edge case: should not normally occur, but domain should not throw
+        var gameId = Guid.NewGuid();
+        var privateGameId = Guid.NewGuid();
+
+        var session = new ChunkedUploadSession(
+            id: Guid.NewGuid(),
+            gameId: gameId,
+            userId: UserId,
+            fileName: FileName,
+            totalFileSize: 1024,
+            tempDirectory: TempDir,
+            privateGameId: privateGameId);
+
+        session.GameId.Should().Be(gameId);
+        session.PrivateGameId.Should().Be(privateGameId);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static ChunkedUploadSession CreateSession(long totalFileSize)

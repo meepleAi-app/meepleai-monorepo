@@ -71,7 +71,11 @@ internal class GetCollectionByIdQueryHandler : IQueryHandler<GetCollectionByIdQu
                     ProcessingStatus: pdfDoc.ProcessingStatus,
                     UploadedAt: pdfDoc.UploadedAt,
                     ProcessedAt: pdfDoc.ProcessedAt,
-                    PageCount: pdfDoc.PageCount
+                    PageCount: pdfDoc.PageCount,
+                    ProcessingState: pdfDoc.ProcessingState.ToString(),
+                    ProgressPercentage: pdfDoc.ProgressPercentage,
+                    RetryCount: pdfDoc.RetryCount,
+                    MaxRetries: pdfDoc.MaxRetries
                 ) : null
             ));
         }

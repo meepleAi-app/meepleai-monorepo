@@ -289,7 +289,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -359,7 +359,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameMetadataDto?)null);
 
         // Act
@@ -384,7 +384,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new JsonException("Invalid JSON format"));
 
         // Act
@@ -417,7 +417,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("LLM service timeout"));
 
         // Act
@@ -515,8 +515,8 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((sys, user, ct) =>
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((sys, user, _, ct) =>
             {
                 capturedUserPrompt = user;
             })
@@ -549,8 +549,8 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((sys, user, ct) =>
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((sys, user, _, ct) =>
             {
                 capturedUserPrompt = user;
             })
@@ -684,7 +684,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(metadata);
     }
 

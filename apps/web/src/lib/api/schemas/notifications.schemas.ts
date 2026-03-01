@@ -14,6 +14,7 @@ export const NotificationTypeSchema = z.enum([
   'processing_failed',
   'new_comment',
   'shared_link_accessed',
+  'processing_job_completed', // KB indexing complete (Issue #4942)
 ]);
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
 

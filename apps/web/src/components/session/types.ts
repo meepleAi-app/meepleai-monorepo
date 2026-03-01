@@ -1,5 +1,23 @@
 // Session Toolkit - TypeScript Interfaces
 
+// Turn Order Types (Issue #4970 / #4975)
+export interface TurnOrderData {
+  id: string;
+  sessionId: string;
+  playerOrder: string[];
+  currentIndex: number;
+  currentPlayer: string | null;
+  nextPlayer: string | null;
+  roundNumber: number;
+}
+
+export interface TurnAdvancedPayload {
+  currentPlayerName: string;
+  previousPlayerName: string;
+  nextPlayerName: string;
+  roundNumber: number;
+}
+
 export interface Participant {
   id: string;
   displayName: string;
@@ -25,6 +43,8 @@ export interface Session {
   id: string;
   sessionCode: string;
   sessionType: 'Generic' | 'GameSpecific';
+  /** ID of the linked shared-game catalog entry (GameSpecific sessions only). Issue #4976. */
+  gameId?: string | null;
   gameName?: string;
   gameIcon?: string;
   sessionDate: Date;
@@ -170,6 +190,98 @@ export const DEFAULT_WHEEL_COLORS = [
   '#ec4899', // pink
   '#06b6d4', // cyan
 ];
+
+// Counter Tool Types (Issue #4979)
+export interface CounterToolConfig {
+  name: string;
+  minValue: number;
+  maxValue: number;
+  defaultValue: number;
+  isPerPlayer: boolean;
+  icon?: string | null;
+  color?: string | null;
+}
+
+export interface CounterState {
+  minValue: number;
+  maxValue: number;
+  defaultValue: number;
+  isPerPlayer: boolean;
+  currentValue: number;
+  playerValues: Record<string, number>;
+}
+
+// Whiteboard Tool Types (Issue #4977)
+export type WhiteboardMode = 'freehand' | 'structured' | 'both';
+export type GridSize = '4x4' | '6x6' | '8x8';
+export type DrawingThickness = 'thin' | 'medium' | 'thick';
+
+export const THICKNESS_VALUES: Record<DrawingThickness, number> = {
+  thin: 2,
+  medium: 4,
+  thick: 8,
+};
+
+export const WHITEBOARD_COLORS: string[] = [
+  '#000000',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#0ea5e9',
+  '#8b5cf6',
+  '#ec4899',
+  '#ffffff',
+];
+
+export const TOKEN_COLORS: string[] = [
+  '#ef4444',
+  '#22c55e',
+  '#0ea5e9',
+  '#eab308',
+  '#8b5cf6',
+  '#f97316',
+  '#ec4899',
+  '#06b6d4',
+];
+
+export interface StrokePoint {
+  x: number;
+  y: number;
+}
+
+export interface Stroke {
+  id: string;
+  points: StrokePoint[];
+  color: string;
+  thickness: number;
+  isEraser: boolean;
+}
+
+export interface WhiteboardToken {
+  id: string;
+  color: string;
+  label: string;
+  gridX: number;
+  gridY: number;
+}
+
+export interface WhiteboardState {
+  strokes: Stroke[];
+  tokens: WhiteboardToken[];
+  gridSize: GridSize;
+  showGrid: boolean;
+  mode: WhiteboardMode;
+}
+
+export interface WhiteboardSSEEvent {
+  type: 'stroke-added' | 'structured-updated' | 'whiteboard-cleared';
+  stroke?: Stroke;
+  tokens?: WhiteboardToken[];
+  gridSize?: GridSize;
+  showGrid?: boolean;
+  mode?: WhiteboardMode;
+}
 
 // Session Invite Types (Issue #3354)
 export interface InviteTokenResponse {

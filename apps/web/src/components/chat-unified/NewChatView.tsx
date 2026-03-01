@@ -1,9 +1,12 @@
 /**
  * NewChatView - Game + Agent selection for new conversations (Issue #4363)
  *
- * Welcome page showing selectable MeepleCard grids for:
- * 1. Games from user library + shared catalog
- * 2. AI agents (Auto, Tutor, Arbitro, Decisore)
+ * Two modes:
+ * 1. Full mode (no ?game param): Game grid → Agent grid → Start
+ * 2. Direct game mode (?game=id from MeepleCard chat button):
+ *    - 0 custom agents → redirect to agent creation
+ *    - 1 custom agent  → auto-create thread and redirect to chat
+ *    - 2+ custom agents → show agent picker only (no game grid)
  *
  * Features:
  * - Query params pre-selection (?game=id, ?agent=type)
@@ -14,16 +17,31 @@
 
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 
-import { Bot, Gamepad2, MessageSquarePlus, Search, Sparkles, Zap } from 'lucide-react';
+import { Bot, Gamepad2, MessageSquarePlus, Plus, Search, Sparkles, Zap } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { api } from '@/lib/api';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import type { PrivateGameDto } from '@/lib/api/schemas/private-games.schemas';
 import { cn } from '@/lib/utils';
 import type { Game } from '@/types';
+
+// ============================================================================
+// Type Adapters
+// ============================================================================
+
+function privateGameToGame(pg: PrivateGameDto): Game {
+  return { id: pg.id, title: pg.title, createdAt: pg.createdAt };
+}
+
+function libraryEntryToGame(entry: UserLibraryEntry): Game {
+  return { id: entry.gameId, title: entry.gameTitle, createdAt: entry.addedAt };
+}
 
 // ============================================================================
 // Types
@@ -36,6 +54,13 @@ interface AgentOption {
   type: string;
   description: string;
   icon: string;
+}
+
+/** Custom agent from backend — user-owned */
+interface CustomAgent {
+  id: string;
+  name: string;
+  type: string;
 }
 
 /** Quick start suggestion */
@@ -243,6 +268,83 @@ function AgentGrid({
   );
 }
 
+function CustomAgentGrid({
+  agents,
+  selectedCustomAgentId,
+  onSelect,
+  gameId,
+  isLoading,
+}: {
+  agents: CustomAgent[];
+  selectedCustomAgentId: string | null;
+  onSelect: (agentId: string) => void;
+  gameId: string;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex gap-3 mb-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="h-20 w-32 rounded-xl bg-muted/50 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (agents.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 font-nunito">
+          I tuoi agent
+        </p>
+        <Link
+          href={`/chat/agents/create?gameId=${gameId}`}
+          className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-nunito transition-colors"
+          data-testid="create-agent-link"
+        >
+          <Plus className="h-3 w-3" />
+          Crea nuovo agent
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {agents.map(agent => (
+          <button
+            key={agent.id}
+            onClick={() => onSelect(agent.id)}
+            className={cn(
+              'text-left rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40',
+              selectedCustomAgentId === agent.id
+                ? 'ring-2 ring-amber-500 scale-[1.02]'
+                : 'hover:scale-[1.01]'
+            )}
+            aria-pressed={selectedCustomAgentId === agent.id}
+            data-testid={`custom-agent-card-${agent.id}`}
+          >
+            <MeepleCard
+              entity="agent"
+              variant="compact"
+              title={agent.name}
+              subtitle={agent.type}
+              badge="🤖"
+              className={cn(
+                'border-amber-300/50',
+                selectedCustomAgentId === agent.id && 'border-amber-500'
+              )}
+            />
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 border-t border-border/30 pt-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground font-nunito">
+          Agent di sistema
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function QuickStartSection({
   suggestions,
   onSuggestionClick,
@@ -287,45 +389,163 @@ export function NewChatView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // State
-  const [games, setGames] = useState<Game[]>([]);
+  // Direct game mode: arrived from MeepleCard "Chat" button with ?gameId= or ?game=
+  const directGameId = searchParams?.get('gameId') ?? searchParams?.get('game') ?? null;
+  const isDirectGameMode = !!directGameId;
+
+  // State — tabbed game sources
+  const [activeTab, setActiveTab] = useState<'private' | 'shared'>('private');
+  const [privateGames, setPrivateGames] = useState<Game[]>([]);
+  const [sharedGames, setSharedGames] = useState<Game[]>([]);
+  const [isLoadingPrivateGames, setIsLoadingPrivateGames] = useState(true);
+  const [isLoadingSharedGames, setIsLoadingSharedGames] = useState(false);
+  const [sharedGamesLoaded, setSharedGamesLoaded] = useState(false);
+
   const [agents, setAgents] = useState<AgentDto[]>([]);
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [selectedAgentType, setSelectedAgentType] = useState<string | null>('auto');
-  const [isLoadingGames, setIsLoadingGames] = useState(true);
+  const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(directGameId);
+  const [selectedAgentType, setSelectedAgentType] = useState<string | null>(isDirectGameMode ? null : 'auto');
+  const [selectedCustomAgentId, setSelectedCustomAgentId] = useState<string | null>(null);
+  const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(isDirectGameMode);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pre-select from query params
-  useEffect(() => {
-    const gameParam = searchParams?.get('game');
-    const agentParam = searchParams?.get('agent');
+  // Derived state for active tab
+  const activeGames = activeTab === 'private' ? privateGames : sharedGames;
+  const isLoadingGames = activeTab === 'private' ? isLoadingPrivateGames : isLoadingSharedGames;
 
-    if (gameParam) setSelectedGameId(gameParam);
+  // Prevent double auto-start in direct game mode
+  const autoStartedRef = useRef(false);
+
+  // Pre-select from query params (non-direct mode uses agent param too)
+  useEffect(() => {
+    const agentParam = searchParams?.get('agent');
     if (agentParam) setSelectedAgentType(agentParam);
   }, [searchParams]);
 
-  // Load games + agents on mount
+  // Load private games + system agents on mount
   useEffect(() => {
     async function loadData() {
-      setIsLoadingGames(true);
+      setIsLoadingPrivateGames(true);
       try {
-        const [gamesResponse, agentsResponse] = await Promise.all([
-          api.games.getAll(),
+        const [privateResponse, agentsResponse] = await Promise.all([
+          api.library.getPrivateGames({ pageSize: 100 }),
           api.agents.getAvailable(),
         ]);
-        setGames(gamesResponse.games ?? []);
+        setPrivateGames((privateResponse.items ?? []).map(privateGameToGame));
         setAgents(agentsResponse ?? []);
       } catch {
         setError('Errore nel caricamento dei dati');
       } finally {
-        setIsLoadingGames(false);
+        setIsLoadingPrivateGames(false);
       }
     }
     void loadData();
   }, []);
 
-  // Resolve actual agent ID from backend agents list
+  // Lazy-load shared library games on first tab switch
+  useEffect(() => {
+    if (activeTab !== 'shared' || sharedGamesLoaded) return;
+
+    async function loadSharedGames() {
+      setIsLoadingSharedGames(true);
+      try {
+        const libraryResponse = await api.library.getLibrary({ pageSize: 100 });
+        const kbReady = (libraryResponse.items ?? []).filter(e => e.hasKb);
+        setSharedGames(kbReady.map(libraryEntryToGame));
+      } catch {
+        setError('Errore nel caricamento della libreria');
+      } finally {
+        setIsLoadingSharedGames(false);
+        setSharedGamesLoaded(true);
+      }
+    }
+    void loadSharedGames();
+  }, [activeTab, sharedGamesLoaded]);
+
+  // Issue #4914: load custom agents when game selected
+  useEffect(() => {
+    if (!selectedGameId) {
+      setCustomAgents([]);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingCustomAgents(true);
+
+    api.agents.getUserAgentsForGame(selectedGameId)
+      .then(result => {
+        if (!cancelled) {
+          setCustomAgents(result.map(a => ({ id: a.id, name: a.name, type: a.type })));
+        }
+      })
+      .catch(() => {
+        // In direct game mode, agent fetch failure is critical (drives redirect logic)
+        if (!cancelled && isDirectGameMode) {
+          setError('Errore nel caricamento degli agenti');
+        }
+      })
+      .finally(() => { if (!cancelled) setIsLoadingCustomAgents(false); });
+
+    return () => { cancelled = true; };
+  }, [selectedGameId, isDirectGameMode]);
+
+  // Direct game mode: auto-start or redirect based on agent count
+  useEffect(() => {
+    if (!isDirectGameMode || autoStartedRef.current) return;
+    if (isLoadingCustomAgents) return;
+    if (!selectedGameId) return;
+
+    if (customAgents.length === 0) {
+      // No agents → redirect to agent creation
+      autoStartedRef.current = true;
+      router.replace(`/chat/agents/create?gameId=${selectedGameId}`);
+    } else if (customAgents.length === 1) {
+      // Exactly 1 agent → auto-create thread
+      autoStartedRef.current = true;
+      setIsCreating(true);
+
+      const agent = customAgents[0];
+      const gameName = [...privateGames, ...sharedGames].find(g => g.id === selectedGameId)?.title;
+
+      api.chat.createThread({
+        gameId: selectedGameId,
+        agentId: agent.id,
+        title: gameName ? `Chat: ${gameName}` : 'Nuova conversazione',
+        initialMessage: null,
+      })
+        .then(thread => {
+          if (thread?.id) {
+            router.push(`/chat?threadId=${thread.id}`);
+          }
+        })
+        .catch(() => {
+          setError('Errore nella creazione della conversazione');
+          setIsCreating(false);
+        });
+    }
+    // 2+ agents: fall through to show agent selection UI
+  }, [isDirectGameMode, isLoadingCustomAgents, selectedGameId, customAgents, privateGames, sharedGames, router]);
+
+  // Handle game selection — reset custom agent selection
+  const handleGameSelect = useCallback((gameId: string) => {
+    setSelectedGameId(gameId);
+    setSelectedCustomAgentId(null);
+  }, []);
+
+  // Handle custom agent selection — clear system agent
+  const handleCustomAgentSelect = useCallback((agentId: string) => {
+    setSelectedCustomAgentId(agentId);
+    setSelectedAgentType(null);
+  }, []);
+
+  // Handle system agent selection — clear custom agent
+  const handleSystemAgentSelect = useCallback((agentType: string) => {
+    setSelectedAgentType(agentType);
+    setSelectedCustomAgentId(null);
+  }, []);
+
+  // Resolve actual agent ID from backend agents list (for system agents)
   const resolveAgentId = useCallback(
     (agentType: string | null): string | undefined => {
       if (!agentType || agentType === 'auto') return undefined;
@@ -335,10 +555,10 @@ export function NewChatView() {
     [agents]
   );
 
-  // Get selected game name for quick-start
+  // Get selected game name for quick-start (search both lists)
   const selectedGame = useMemo(
-    () => games.find(g => g.id === selectedGameId),
-    [games, selectedGameId]
+    () => [...privateGames, ...sharedGames].find(g => g.id === selectedGameId),
+    [privateGames, sharedGames, selectedGameId]
   );
 
   const suggestions = useMemo(
@@ -354,7 +574,8 @@ export function NewChatView() {
 
       try {
         const gameId = selectedGameId && selectedGameId !== '' ? selectedGameId : undefined;
-        const agentId = resolveAgentId(selectedAgentType);
+        // Issue #4914: custom agent → use UUID directly; system agent → resolve from list
+        const agentId = selectedCustomAgentId ?? resolveAgentId(selectedAgentType);
 
         const thread = await api.chat.createThread({
           gameId: gameId ?? null,
@@ -374,7 +595,7 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, selectedAgentType, resolveAgentId, router]
+    [selectedGameId, selectedGame?.title, selectedAgentType, selectedCustomAgentId, resolveAgentId, router]
   );
 
   const handleQuickStart = useCallback(
@@ -384,7 +605,29 @@ export function NewChatView() {
     [handleStartChat]
   );
 
-  const canStart = selectedAgentType !== null;
+  const canStart = selectedAgentType !== null || selectedCustomAgentId !== null;
+
+  // Direct game mode: show loading spinner while resolving agents (0 or 1 → auto-redirect)
+  if (isDirectGameMode && (isLoadingCustomAgents || isCreating || (customAgents.length <= 1 && !error))) {
+    return (
+      <div className="min-h-dvh bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 border-3 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground font-nunito">
+            {isCreating ? 'Avvio chat in corso...' : 'Preparazione...'}
+          </p>
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-200 dark:border-red-500/20"
+            >
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-background">
@@ -394,11 +637,14 @@ export function NewChatView() {
           <div className="inline-flex items-center gap-3 mb-4">
             <MessageSquarePlus className="h-8 w-8 text-amber-500" />
             <h1 className="text-2xl sm:text-3xl font-bold font-quicksand text-foreground">
-              Inizia una nuova conversazione
+              {isDirectGameMode ? 'Seleziona un agente' : 'Inizia una nuova conversazione'}
             </h1>
           </div>
           <p className="text-muted-foreground font-nunito max-w-lg mx-auto">
-            Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.
+            {isDirectGameMode && selectedGame
+              ? <>Scegli un agente per <span className="font-semibold text-foreground">{selectedGame.title}</span></>
+              : 'Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.'
+            }
           </p>
         </div>
 
@@ -415,19 +661,58 @@ export function NewChatView() {
 
         {/* Content */}
         <div className="space-y-8">
-          {/* Game Selection */}
-          <section
-            className="p-6 rounded-2xl bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
-            data-testid="game-selection-section"
-          >
-            <SectionTitle icon={Gamepad2} title="Seleziona un gioco" />
-            <GameGrid
-              games={games}
-              selectedGameId={selectedGameId}
-              onSelect={setSelectedGameId}
-              isLoading={isLoadingGames}
-            />
-          </section>
+          {/* Game Selection — hidden in direct game mode */}
+          {!isDirectGameMode && (
+            <section
+              className="p-6 rounded-2xl bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
+              data-testid="game-selection-section"
+            >
+              <SectionTitle icon={Gamepad2} title="Seleziona un gioco" />
+
+              {/* Game source tabs */}
+              <div
+                className="flex gap-1 mb-4 p-1 rounded-lg bg-muted/50"
+                data-testid="game-source-tabs"
+                role="tablist"
+              >
+                <button
+                  role="tab"
+                  aria-selected={activeTab === 'private'}
+                  onClick={() => setActiveTab('private')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-md text-sm font-nunito font-medium transition-all duration-200',
+                    activeTab === 'private'
+                      ? 'bg-white dark:bg-card shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  data-testid="tab-private-games"
+                >
+                  I miei giochi
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={activeTab === 'shared'}
+                  onClick={() => setActiveTab('shared')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-md text-sm font-nunito font-medium transition-all duration-200',
+                    activeTab === 'shared'
+                      ? 'bg-white dark:bg-card shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  data-testid="tab-shared-games"
+                >
+                  Libreria condivisa
+                </button>
+              </div>
+
+              <GameGrid
+                games={activeGames}
+                selectedGameId={selectedGameId}
+                onSelect={handleGameSelect}
+                isLoading={isLoadingGames}
+              />
+            </section>
+          )}
 
           {/* Agent Selection */}
           <section
@@ -435,10 +720,20 @@ export function NewChatView() {
             data-testid="agent-selection-section"
           >
             <SectionTitle icon={Bot} title="Seleziona un agente" />
+            {/* Custom agents (only when game selected) */}
+            {selectedGameId && selectedGameId !== '' && (
+              <CustomAgentGrid
+                agents={customAgents}
+                selectedCustomAgentId={selectedCustomAgentId}
+                onSelect={handleCustomAgentSelect}
+                gameId={selectedGameId}
+                isLoading={isLoadingCustomAgents}
+              />
+            )}
             <AgentGrid
               agents={DEFAULT_AGENTS}
               selectedAgentType={selectedAgentType}
-              onSelect={setSelectedAgentType}
+              onSelect={handleSystemAgentSelect}
             />
           </section>
 

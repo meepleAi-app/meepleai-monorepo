@@ -26,7 +26,11 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { AddGameDrawer } from '@/app/(authenticated)/library/AddGameDrawer';
 import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
+import { JourneyProgress } from '@/components/library/JourneyProgress';
+import { KbStatusBadge } from '@/components/library/KbStatusBadge';
+import { LibraryEmptyState } from '@/components/library/LibraryEmptyState';
 import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -84,6 +88,9 @@ export default function PrivateGamesClient() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortByOption>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Drawer state
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
 
   // Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -224,6 +231,24 @@ export default function PrivateGamesClient() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      {/* Journey Progress Banner — pass the most recently created private game so Steps 2-5 evaluate.
+          Sort by createdAt desc (independent of the user's display sort order) so the banner always
+          tracks the game the user most recently added, not whichever game is first in the current
+          display sort (Issue #5217).
+          agentDefinitionId is passed explicitly (even when null) so JourneyProgress skips the
+          shared-catalog /games/{id}/agents call that 404s for private game UUIDs. */}
+      {(() => {
+        const recentGame = games.length > 0
+          ? [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+          : undefined;
+        return (
+          <JourneyProgress
+            gameId={recentGame?.id}
+            agentDefinitionId={recentGame ? (recentGame.agentDefinitionId ?? null) : undefined}
+          />
+        );
+      })()}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -233,7 +258,7 @@ export default function PrivateGamesClient() {
           </p>
         </div>
         <Button
-          onClick={() => router.push('/library/private/add')}
+          onClick={() => setAddDrawerOpen(true)}
           data-testid="add-private-game-btn"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -298,29 +323,23 @@ export default function PrivateGamesClient() {
           </CardContent>
         </Card>
       ) : games.length === 0 ? (
-        <Card data-testid="empty-state">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-              <Gamepad2 className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <CardTitle>
-              {search ? t('privateGames.noGamesFound') : t('privateGames.noGamesYet')}
-            </CardTitle>
-            <CardDescription>
-              {search
-                ? t('privateGames.noGamesMatchSearch', { search })
-                : t('privateGames.emptyStateDescription')}
-            </CardDescription>
-          </CardHeader>
-          {!search && (
-            <CardContent className="text-center">
-              <Button onClick={() => router.push('/library/private/add')}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('privateGames.addFirstGame')}
-              </Button>
-            </CardContent>
-          )}
-        </Card>
+        search ? (
+          // Search returned no results — keep the simple "no results" card
+          <Card data-testid="empty-state">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4">
+                <Gamepad2 className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <CardTitle>{t('privateGames.noGamesFound')}</CardTitle>
+              <CardDescription>
+                {t('privateGames.noGamesMatchSearch', { search })}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          // True empty library — show the onboarding empty state (Issue #4945)
+          <LibraryEmptyState />
+        )
       ) : (
         <>
           {/* Games Grid */}
@@ -329,13 +348,16 @@ export default function PrivateGamesClient() {
             data-testid="games-grid"
           >
             {games.map((game) => (
-              <PrivateGameCard
-                key={game.id}
-                game={game}
-                onEdit={openEdit}
-                onDelete={openDelete}
-                onPropose={openPropose}
-              />
+              <div key={game.id} className="relative">
+                <PrivateGameCard
+                  game={game}
+                  onEdit={openEdit}
+                  onDelete={openDelete}
+                  onPropose={openPropose}
+                />
+                {/* KB indexing badge — overlays bottom of card (Issue #4946) */}
+                <KbStatusBadge gameId={game.id} />
+              </div>
             ))}
           </div>
 
@@ -438,6 +460,12 @@ export default function PrivateGamesClient() {
         }}
         game={selectedGame}
         onPropose={handlePropose}
+      />
+
+      {/* Add Game Drawer — local instance so close stays on /library/private */}
+      <AddGameDrawer
+        open={addDrawerOpen}
+        onClose={() => { setAddDrawerOpen(false); setPage(1); void loadGames({ page: 1 }); }}
       />
     </div>
   );

@@ -64,4 +64,33 @@ internal interface IQdrantClientAdapter
     Task<CollectionInfo> GetCollectionInfoAsync(
         string collectionName,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes an entire collection and all its data.
+    /// Issue #4877: Qdrant Admin Operations
+    /// </summary>
+    Task DeleteCollectionAsync(
+        string collectionName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Scrolls through points in a collection with optional filter and pagination.
+    /// Returns raw ScrollResponse for admin browsing.
+    /// Issue #4877: Qdrant Admin Operations
+    /// </summary>
+    Task<IReadOnlyList<RetrievedPoint>> ScrollPointsAsync(
+        string collectionName,
+        Filter? filter = null,
+        uint limit = 20,
+        PointId? offset = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts points in a collection with optional filter.
+    /// Issue #4877: Qdrant Admin Operations
+    /// </summary>
+    Task<ulong> CountAsync(
+        string collectionName,
+        Filter? filter = null,
+        CancellationToken cancellationToken = default);
 }

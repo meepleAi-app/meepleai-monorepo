@@ -31,13 +31,19 @@ import type { LucideIcon } from 'lucide-react';
 export interface QuickAction {
   /** Lucide icon component */
   icon: LucideIcon;
-  /** Action label (for tooltip) */
+  /** Action label (for tooltip on enabled state) */
   label: string;
   /** Click handler */
   onClick: () => void;
-  /** Disabled state */
+  /** Disabled state - button visible but not clickable */
   disabled?: boolean;
-  /** Hide action (conditional visibility) */
+  /**
+   * Tooltip shown when button is disabled.
+   * Required when disabled=true to explain why the action is unavailable.
+   * Example: "Login to add to library"
+   */
+  disabledTooltip?: string;
+  /** Hide action entirely (action not applicable in this context/state) */
   hidden?: boolean;
 }
 
@@ -92,12 +98,20 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
         return (
           <Tooltip key={index}>
             <TooltipTrigger asChild>
+              {/*
+               * Use aria-disabled instead of native disabled so that pointer events
+               * (mouseenter/focus) still fire and Radix Tooltip can open.
+               * This is required to show disabledTooltip on disabled actions.
+               * See: https://www.radix-ui.com/primitives/docs/components/tooltip#with-disabled-button
+               */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  action.onClick();
+                  if (!action.disabled) {
+                    action.onClick();
+                  }
                 }}
-                disabled={action.disabled}
+                aria-disabled={action.disabled}
                 className={cn(
                   // Base styles
                   buttonSize,
@@ -105,13 +119,13 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                   'border border-white/50',
                   'bg-white/80 backdrop-blur-[8px]',
                   'transition-all duration-300 ease-out',
-                  // Hover state
-                  'hover:bg-white hover:scale-110',
-                  'hover:shadow-md',
+                  // Hover state (suppressed when aria-disabled)
+                  !action.disabled && 'hover:bg-white hover:scale-110',
+                  !action.disabled && 'hover:shadow-md',
                   // Focus state
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
-                  // Disabled state
-                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+                  // Aria-disabled styling (mimics native disabled)
+                  action.disabled && 'opacity-50 cursor-not-allowed',
                   // Mobile: always visible. Desktop: fade in on card hover
                   'md:opacity-0 md:pointer-events-none',
                   'md:group-hover:opacity-100 md:group-hover:pointer-events-auto',
@@ -121,7 +135,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
                   // Entity-colored focus ring
                   ['--tw-ring-color' as string]: `hsl(${entityColor})`,
                 }}
-                aria-label={action.label}
+                aria-label={action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label}
               >
                 <Icon
                   className={cn(
@@ -146,7 +160,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={10}>
-              {action.label}
+              {action.disabled && action.disabledTooltip ? action.disabledTooltip : action.label}
             </TooltipContent>
           </Tooltip>
         );

@@ -74,7 +74,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<int>(),
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         return ValueTask.CompletedTask;
@@ -347,7 +347,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<int>(),
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -390,7 +390,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.IsAny<int>(),
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
     [Fact]
@@ -436,7 +436,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 It.Is<int>(ms => ms > 0),
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

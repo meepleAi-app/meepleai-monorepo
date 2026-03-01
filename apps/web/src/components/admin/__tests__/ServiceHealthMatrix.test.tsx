@@ -8,8 +8,22 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ServiceHealthMatrix } from '../ServiceHealthMatrix';
-import { createMockService } from '@/app/(authenticated)/admin/infrastructure/__tests__/helpers/test-utils';
 import type { ServiceHealthStatus } from '@/lib/api/schemas/admin.schemas';
+
+function createMockService(
+  serviceName: string,
+  state: string,
+  responseTimeMs: number,
+  errorMessage: string | null = null
+): ServiceHealthStatus {
+  return {
+    serviceName,
+    state: state as ServiceHealthStatus['state'],
+    errorMessage,
+    checkedAt: new Date().toISOString(),
+    responseTimeMs,
+  };
+}
 
 describe('ServiceHealthMatrix', () => {
   // ==================== Basic Rendering ====================

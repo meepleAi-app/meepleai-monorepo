@@ -62,18 +62,20 @@ export interface CollectionActions {
  *
  * @param gameId - The ID of the game
  * @param onRemovalWarning - Callback to show warning modal with associated data
+ * @param userId - Current user ID; if absent, skips the API call (unauthenticated)
  * @returns Collection actions and state
  */
 export function useCollectionActions(
   gameId: string,
-  onRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void
+  onRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void,
+  userId?: string
 ): CollectionActions {
   const queryClient = useQueryClient();
   const queryKey = ['library-status', gameId];
   // Cross-cache key used by useGameInLibraryStatus
   const libraryStatusKey = libraryKeys.gameStatus(gameId);
 
-  // Fetch library status
+  // Fetch library status — skip if user is not authenticated to avoid 401 spam
   const { data, isLoading } = useQuery<LibraryStatusResponse>({
     queryKey,
     queryFn: async () => {
@@ -87,8 +89,9 @@ export function useCollectionActions(
 
       return response.json();
     },
-    enabled: gameId.length > 0, // Issue #4259: Only fetch when gameId is valid
+    enabled: gameId.length > 0 && !!userId, // Only fetch when authenticated
     staleTime: 30000, // 30 seconds
+    retry: false, // Don't retry auth-protected endpoints
   });
 
   // Add to collection mutation

@@ -16,9 +16,9 @@ import {
   ActivityIcon,
   ServerIcon,
   ShieldIcon,
-  CheckSquareIcon,
   ListIcon,
   TagIcon,
+  PlusCircleIcon,
   BrainCircuitIcon,
   BarChartIcon,
   CpuIcon,
@@ -31,6 +31,9 @@ import {
   GitBranchIcon,
   TerminalIcon,
   Settings2Icon,
+  MessageSquareCodeIcon,
+  ListOrderedIcon,
+  TrendingUpIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -57,6 +60,8 @@ export interface DashboardSection {
   icon: LucideIcon;
   /** Base route prefix for matching */
   baseRoute: string;
+  /** Additional route prefixes that belong to this section (outside baseRoute) */
+  additionalRoutes?: string[];
   /** Short description */
   description: string;
   /** Sidebar items for this section */
@@ -103,6 +108,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     group: 'core',
     sidebarItems: [
       {
+        href: '/admin/users',
+        label: 'All Users',
+        icon: UsersIcon,
+        activePattern: /^\/admin\/users$/,
+      },
+      {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
         icon: ShieldIcon,
@@ -123,21 +134,25 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     group: 'core',
     sidebarItems: [
       {
-        href: '/admin/shared-games',
-        label: 'Approval Queue',
-        icon: CheckSquareIcon,
-        badgeKey: 'pending-approvals',
-        activePattern: /^\/admin\/shared-games$/,
-      },
-      {
         href: '/admin/shared-games/all',
         label: 'All Games',
         icon: ListIcon,
+        activePattern: /^\/admin\/shared-games(\/all)?$/,
+      },
+      {
+        href: '/admin/shared-games/new',
+        label: 'Add Game',
+        icon: PlusCircleIcon,
       },
       {
         href: '/admin/shared-games/categories',
         label: 'Categories',
         icon: TagIcon,
+      },
+      {
+        href: '/admin/shared-games/import',
+        label: 'Import Wizard',
+        icon: UploadIcon,
       },
     ],
   },
@@ -154,6 +169,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'All Agents',
         icon: BotIcon,
         activePattern: /^\/admin\/agents$/,
+      },
+      {
+        href: '/admin/agents/definitions',
+        label: 'Agent Definitions',
+        icon: ListIcon,
+        activePattern: /^\/admin\/agents\/definitions/,
       },
       {
         href: '/admin/agents/builder',
@@ -186,9 +207,24 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: TerminalIcon,
       },
       {
+        href: '/admin/agents/debug-chat',
+        label: 'Debug Chat',
+        icon: MessageSquareCodeIcon,
+      },
+      {
         href: '/admin/agents/strategy',
         label: 'Strategy Config',
         icon: Settings2Icon,
+      },
+      {
+        href: '/admin/agents/chat-limits',
+        label: 'Chat Limits',
+        icon: SettingsIcon,
+      },
+      {
+        href: '/admin/agents/usage',
+        label: 'Usage & Costs',
+        icon: TrendingUpIcon,
       },
     ],
   },
@@ -202,14 +238,29 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     sidebarItems: [
       {
         href: '/admin/knowledge-base',
-        label: 'Documents',
+        label: 'Overview',
         icon: FileTextIcon,
         activePattern: /^\/admin\/knowledge-base$/,
+      },
+      {
+        href: '/admin/knowledge-base/documents',
+        label: 'Documents',
+        icon: ListOrderedIcon,
+      },
+      {
+        href: '/admin/knowledge-base/queue',
+        label: 'Processing Queue',
+        icon: ActivityIcon,
       },
       {
         href: '/admin/knowledge-base/vectors',
         label: 'Vector Collections',
         icon: DatabaseIcon,
+      },
+      {
+        href: '/admin/knowledge-base/embedding',
+        label: 'Embedding Service',
+        icon: CpuIcon,
       },
       {
         href: '/admin/knowledge-base/upload',
@@ -234,20 +285,24 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
 
 /** Get section by ID */
 export function getSection(id: string): DashboardSection | undefined {
-  return DASHBOARD_SECTIONS.find((s) => s.id === id);
+  return DASHBOARD_SECTIONS.find(s => s.id === id);
 }
 
 /** Get active section based on current pathname */
 export function getActiveSection(pathname: string): DashboardSection | undefined {
   // First try exact baseRoute match
-  const exact = DASHBOARD_SECTIONS.find((s) => pathname === s.baseRoute);
+  const exact = DASHBOARD_SECTIONS.find(s => pathname === s.baseRoute);
   if (exact) return exact;
 
-  // Then try prefix match (longest match wins)
-  const sorted = [...DASHBOARD_SECTIONS].sort(
-    (a, b) => b.baseRoute.length - a.baseRoute.length
+  // Check additionalRoutes (exact or prefix match)
+  const byAdditional = DASHBOARD_SECTIONS.find(s =>
+    s.additionalRoutes?.some(r => pathname === r || pathname.startsWith(r + '/'))
   );
-  return sorted.find((s) => pathname.startsWith(s.baseRoute));
+  if (byAdditional) return byAdditional;
+
+  // Then try prefix match on baseRoute (longest match wins)
+  const sorted = [...DASHBOARD_SECTIONS].sort((a, b) => b.baseRoute.length - a.baseRoute.length);
+  return sorted.find(s => pathname === s.baseRoute || pathname.startsWith(s.baseRoute + '/'));
 }
 
 /** Get sidebar items for a section */
@@ -256,10 +311,7 @@ export function getSidebarItems(sectionId: string): DashboardSidebarItem[] {
 }
 
 /** Check if a sidebar item is active */
-export function isSidebarItemActive(
-  item: DashboardSidebarItem,
-  pathname: string
-): boolean {
+export function isSidebarItemActive(item: DashboardSidebarItem, pathname: string): boolean {
   if (item.activePattern) {
     return item.activePattern.test(pathname);
   }
@@ -267,11 +319,13 @@ export function isSidebarItemActive(
 }
 
 /** Check if a section is active */
-export function isSectionActive(
-  section: DashboardSection,
-  pathname: string
-): boolean {
-  return pathname === section.baseRoute || pathname.startsWith(section.baseRoute + '/');
+export function isSectionActive(section: DashboardSection, pathname: string): boolean {
+  if (pathname === section.baseRoute || pathname.startsWith(section.baseRoute + '/')) {
+    return true;
+  }
+  return (
+    section.additionalRoutes?.some(r => pathname === r || pathname.startsWith(r + '/')) ?? false
+  );
 }
 
 /** Storage key for sidebar collapsed state */

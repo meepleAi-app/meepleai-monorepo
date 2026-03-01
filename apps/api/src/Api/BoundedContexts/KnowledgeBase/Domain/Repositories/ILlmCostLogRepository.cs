@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.Services;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 
@@ -21,6 +22,7 @@ public interface ILlmCostLogRepository
         int latencyMs,
         string? ipAddress,
         string? userAgent,
+        RequestSource source = RequestSource.Manual,
         CancellationToken cancellationToken = default);
 
     /// <summary>

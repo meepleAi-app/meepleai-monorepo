@@ -258,7 +258,7 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
 
           // Navigate to admin games list
           if (typeof window !== 'undefined') {
-            window.location.href = '/admin/games';
+            window.location.href = '/admin/shared-games';
           }
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to import game';

@@ -1,0 +1,64 @@
+'use client';
+
+/**
+ * LibraryNavConfig — Registers MiniNav tabs + ActionBar actions for /library
+ * Issue #5042 — Library + Game Detail MiniNav + ActionBar
+ * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
+ *
+ * Tabs: Games · Collection · Wishlist · History
+ * ActionBar: Add Game (primary) · Import BGG · Import PDF · Filter
+ *
+ * Include in library/page.tsx or library/layout.tsx:
+ *   <LibraryNavConfig />
+ */
+
+import { useEffect } from 'react';
+
+import { Download, FileText, Filter, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { useSetNavConfig } from '@/hooks/useSetNavConfig';
+
+export function LibraryNavConfig() {
+  const setNavConfig = useSetNavConfig();
+  const router = useRouter();
+
+  useEffect(() => {
+    setNavConfig({
+      miniNav: [
+        { id: 'collection', label: 'Collection', href: '/library' },
+        { id: 'private',    label: 'Games',      href: '/library?tab=private' },
+        { id: 'wishlist',   label: 'Wishlist',   href: '/library?tab=wishlist' },
+      ],
+      actionBar: [
+        {
+          id: 'add-game',
+          label: 'Add Game',
+          icon: Plus,
+          variant: 'primary',
+          onClick: () => router.push('/library?action=add'),
+        },
+        {
+          id: 'import-bgg',
+          label: 'Import BGG',
+          icon: Download,
+          onClick: () => router.push('/library?action=import-bgg'),
+        },
+        {
+          id: 'import-pdf',
+          label: 'Import PDF',
+          icon: FileText,
+          onClick: () => router.push('/library?action=import-pdf'),
+        },
+        {
+          id: 'filter',
+          label: 'Filter',
+          icon: Filter,
+          onClick: () => router.push('/library?action=filter'),
+        },
+      ],
+    });
+  }, [setNavConfig, router]);
+
+  return null;
+}

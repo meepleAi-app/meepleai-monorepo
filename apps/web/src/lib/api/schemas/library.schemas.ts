@@ -28,6 +28,7 @@ export const GameStateTypeWithFallbackSchema = z
   });
 
 // User library entry DTO matching backend contract
+// Issue #4998: Replaced hasPdfDocuments with KB-aware fields
 export const UserLibraryEntrySchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
@@ -43,7 +44,11 @@ export const UserLibraryEntrySchema = z.object({
   currentState: GameStateTypeWithFallbackSchema,
   stateChangedAt: z.string().datetime().nullable().optional(),
   stateNotes: z.string().nullable().optional(),
-  hasPdfDocuments: z.boolean().default(false),
+  hasKb: z.boolean().default(false),              // true if >= 1 PDF fully indexed in RAG
+  kbCardCount: z.number().int().nonnegative().default(0),      // total PDF documents linked
+  kbIndexedCount: z.number().int().nonnegative().default(0),   // PDFs with ProcessingState.Ready
+  kbProcessingCount: z.number().int().nonnegative().default(0), // PDFs currently in pipeline
+  agentIsOwned: z.boolean().default(true),         // always true in library context
 });
 
 export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;

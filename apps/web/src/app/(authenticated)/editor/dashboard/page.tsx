@@ -9,6 +9,8 @@
  * - Session validated at middleware level
  */
 
+import { Suspense } from 'react';
+
 import { Metadata } from 'next';
 
 import { RequireRole } from '@/components/auth/RequireRole';
@@ -23,7 +25,9 @@ export const metadata: Metadata = {
 export default function EditorDashboardPage() {
   return (
     <RequireRole allowedRoles={['Admin', 'Editor']}>
-      <EditorDashboardClient />
+      <Suspense>
+        <EditorDashboardClient />
+      </Suspense>
     </RequireRole>
   );
 }

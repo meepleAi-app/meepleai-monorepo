@@ -85,7 +85,11 @@ internal class RemovePrivatePdfCommandHandler : ICommandHandler<RemovePrivatePdf
                     OriginalFileName: entry.CustomPdfMetadata.OriginalFileName
                 )
                 : null,
-            HasPdfDocuments: false // No longer has private PDF
+            HasKb: false,              // No longer has private PDF
+            KbCardCount: 0,
+            KbIndexedCount: 0,
+            KbProcessingCount: 0,
+            AgentIsOwned: true
         );
     }
 }

@@ -101,6 +101,7 @@ internal sealed class LlmRulebookAnalyzer : IRulebookAnalyzer
             var result = await _llmService.GenerateJsonAsync<LlmAnalysisResponse>(
                 AnalysisSystemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result is null)
@@ -182,6 +183,7 @@ internal sealed class LlmRulebookAnalyzer : IRulebookAnalyzer
             var result = await _llmService.GenerateJsonAsync<LlmSchemaResponse>(
                 systemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result is null || string.IsNullOrWhiteSpace(result.SchemaJson))
@@ -239,6 +241,7 @@ internal sealed class LlmRulebookAnalyzer : IRulebookAnalyzer
             var result = await _llmService.GenerateJsonAsync<LlmQuestionsResponse>(
                 systemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result?.Questions is null || result.Questions.Count == 0)
@@ -305,6 +308,7 @@ internal sealed class LlmRulebookAnalyzer : IRulebookAnalyzer
             var result = await _llmService.GenerateJsonAsync<LlmConceptsResponse>(
                 systemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result?.Concepts is null || result.Concepts.Count == 0)

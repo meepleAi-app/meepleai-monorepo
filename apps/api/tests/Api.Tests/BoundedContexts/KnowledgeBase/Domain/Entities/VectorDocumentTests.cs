@@ -192,6 +192,60 @@ public class VectorDocumentTests
         Assert.True(document.IndexedAt <= DateTime.UtcNow);
     }
 
+    // ── SharedGameId (Issue #5185) ────────────────────────────────────────────
+
+    [Fact]
+    public void Constructor_WithoutSharedGameId_DefaultsToNull()
+    {
+        var document = CreateTestDocument();
+
+        Assert.Null(document.SharedGameId);
+    }
+
+    [Fact]
+    public void Constructor_WithSharedGameId_SetsSharedGameId()
+    {
+        var sharedGameId = Guid.NewGuid();
+
+        var document = new VectorDocument(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(),
+            language: "en",
+            totalChunks: 10,
+            sharedGameId: sharedGameId);
+
+        Assert.Equal(sharedGameId, document.SharedGameId);
+    }
+
+    [Fact]
+    public void SetSharedGameId_UpdatesValue()
+    {
+        var document = CreateTestDocument();
+        var sharedGameId = Guid.NewGuid();
+
+        document.SetSharedGameId(sharedGameId);
+
+        Assert.Equal(sharedGameId, document.SharedGameId);
+    }
+
+    [Fact]
+    public void SetSharedGameId_WithNull_ClearsValue()
+    {
+        var sharedGameId = Guid.NewGuid();
+        var document = new VectorDocument(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            pdfDocumentId: Guid.NewGuid(),
+            language: "en",
+            totalChunks: 5,
+            sharedGameId: sharedGameId);
+
+        document.SetSharedGameId(null);
+
+        Assert.Null(document.SharedGameId);
+    }
+
     // Helper method
     private static VectorDocument CreateTestDocument(
         string language = "en",

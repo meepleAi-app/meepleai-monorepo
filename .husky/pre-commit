@@ -1,3 +1,4 @@
+#!/bin/sh
 # Pre-commit hook for MeepleAI
 # Runs checks based on current branch with progressive restrictions
 # frontend-dev: FE lint + typecheck

@@ -226,7 +226,8 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         var llmResult = await _llmService.GenerateCompletionAsync(
             systemPrompt: SystemPrompt,
             userPrompt: prompt,
-            cancellationToken).ConfigureAwait(false);
+            source: RequestSource.AgentTask,
+            ct: cancellationToken).ConfigureAwait(false);
         llmInferenceTime = stopwatch.ElapsedMilliseconds - llmInferenceStart;
 
         _logger.LogInformation(

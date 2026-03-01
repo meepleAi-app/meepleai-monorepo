@@ -60,12 +60,13 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             _logger.LogInformation("Deleted PDF document record {PdfId}", pdfId);
 
             // Delegate physical file deletion to BlobStorageService
-            await DeletePhysicalFileAsync(pdfId, gameId.ToString(), cancellationToken).ConfigureAwait(false);
+            var storageGameId = (pdfDoc.PrivateGameId ?? gameId)?.ToString() ?? string.Empty;
+            await DeletePhysicalFileAsync(pdfId, storageGameId, cancellationToken).ConfigureAwait(false);
 
             // Invalidate cache
-            await InvalidateCacheSafelyAsync(gameId.ToString(), "PDF deletion", cancellationToken).ConfigureAwait(false);
+            await InvalidateCacheSafelyAsync(storageGameId, "PDF deletion", cancellationToken).ConfigureAwait(false);
 
-            return new PdfDeleteResult(true, "PDF deleted successfully", gameId.ToString());
+            return new PdfDeleteResult(true, "PDF deleted successfully", storageGameId);
         }
         catch (OperationCanceledException)
         {

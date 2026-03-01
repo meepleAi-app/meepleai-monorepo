@@ -37,12 +37,19 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
             .Select(g => (Guid?)g.Id)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
+        // For private games, verify the requesting user owns the game
+        var ownedPrivateGameId = await _db.PrivateGames
+            .AsNoTracking()
+            .Where(pg => pg.Id == request.GameId && pg.OwnerId == request.UserId)
+            .Select(pg => (Guid?)pg.Id)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
         var entities = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p =>
                 (resolvedGameId != null && p.GameId == resolvedGameId) ||
                 p.SharedGameId == request.GameId ||
-                p.PrivateGameId == request.GameId)
+                (ownedPrivateGameId != null && p.PrivateGameId == ownedPrivateGameId))
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 

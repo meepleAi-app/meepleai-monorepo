@@ -7,7 +7,7 @@
  * 3. AgentNameAndKbStep    — give agent a name + pick KB PDFs
  * 4. AgentCreationReview   — summary + confirm creation
  *
- * On submit: POST /api/v1/agents/user → PUT /api/v1/agents/{id}/documents → redirect /chat/new
+ * On submit: POST /api/v1/agents/user (with documentIds) → redirect /chat/new
  */
 
 'use client';
@@ -588,7 +588,7 @@ export function AgentCreationWizard() {
         setIsSubmitting(false);
         return;
       }
-      const agent = await api.agents.createUserAgent({
+      await api.agents.createUserAgent({
         gameId: state.selectedGame.gameId,
         agentType: backendType,
         name: state.agentName.trim() || undefined,

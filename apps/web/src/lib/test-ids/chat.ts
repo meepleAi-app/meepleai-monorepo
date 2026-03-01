@@ -36,4 +36,9 @@ export const CHAT_TEST_IDS = {
   gameSearchInput: 'game-search-input',
   skipGameBtn: 'skip-game-btn',
   newChatError: 'new-chat-error',
+
+  // NewChatView game source tabs
+  gameSourceTabs: 'game-source-tabs',
+  tabPrivateGames: 'tab-private-games',
+  tabSharedGames: 'tab-shared-games',
 } as const;

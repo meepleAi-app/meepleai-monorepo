@@ -26,8 +26,22 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { api } from '@/lib/api';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import type { PrivateGameDto } from '@/lib/api/schemas/private-games.schemas';
 import { cn } from '@/lib/utils';
 import type { Game } from '@/types';
+
+// ============================================================================
+// Type Adapters
+// ============================================================================
+
+function privateGameToGame(pg: PrivateGameDto): Game {
+  return { id: pg.id, title: pg.title, createdAt: pg.createdAt };
+}
+
+function libraryEntryToGame(entry: UserLibraryEntry): Game {
+  return { id: entry.gameId, title: entry.gameTitle, createdAt: entry.addedAt };
+}
 
 // ============================================================================
 // Types
@@ -375,21 +389,30 @@ export function NewChatView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Direct game mode: arrived from MeepleCard "Chat" button with ?game=id
-  const directGameId = searchParams?.get('game') ?? null;
+  // Direct game mode: arrived from MeepleCard "Chat" button with ?gameId= or ?game=
+  const directGameId = searchParams?.get('gameId') ?? searchParams?.get('game') ?? null;
   const isDirectGameMode = !!directGameId;
 
-  // State
-  const [games, setGames] = useState<Game[]>([]);
+  // State — tabbed game sources
+  const [activeTab, setActiveTab] = useState<'private' | 'shared'>('private');
+  const [privateGames, setPrivateGames] = useState<Game[]>([]);
+  const [sharedGames, setSharedGames] = useState<Game[]>([]);
+  const [isLoadingPrivateGames, setIsLoadingPrivateGames] = useState(true);
+  const [isLoadingSharedGames, setIsLoadingSharedGames] = useState(false);
+  const [sharedGamesLoaded, setSharedGamesLoaded] = useState(false);
+
   const [agents, setAgents] = useState<AgentDto[]>([]);
   const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(directGameId);
   const [selectedAgentType, setSelectedAgentType] = useState<string | null>(isDirectGameMode ? null : 'auto');
   const [selectedCustomAgentId, setSelectedCustomAgentId] = useState<string | null>(null);
-  const [isLoadingGames, setIsLoadingGames] = useState(true);
   const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(isDirectGameMode);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Derived state for active tab
+  const activeGames = activeTab === 'private' ? privateGames : sharedGames;
+  const isLoadingGames = activeTab === 'private' ? isLoadingPrivateGames : isLoadingSharedGames;
 
   // Prevent double auto-start in direct game mode
   const autoStartedRef = useRef(false);
@@ -400,25 +423,45 @@ export function NewChatView() {
     if (agentParam) setSelectedAgentType(agentParam);
   }, [searchParams]);
 
-  // Load games + system agents on mount
+  // Load private games + system agents on mount
   useEffect(() => {
     async function loadData() {
-      setIsLoadingGames(true);
+      setIsLoadingPrivateGames(true);
       try {
-        const [gamesResponse, agentsResponse] = await Promise.all([
-          api.games.getAll(),
+        const [privateResponse, agentsResponse] = await Promise.all([
+          api.library.getPrivateGames({ pageSize: 100 }),
           api.agents.getAvailable(),
         ]);
-        setGames(gamesResponse.games ?? []);
+        setPrivateGames((privateResponse.items ?? []).map(privateGameToGame));
         setAgents(agentsResponse ?? []);
       } catch {
         setError('Errore nel caricamento dei dati');
       } finally {
-        setIsLoadingGames(false);
+        setIsLoadingPrivateGames(false);
       }
     }
     void loadData();
   }, []);
+
+  // Lazy-load shared library games on first tab switch
+  useEffect(() => {
+    if (activeTab !== 'shared' || sharedGamesLoaded) return;
+
+    async function loadSharedGames() {
+      setIsLoadingSharedGames(true);
+      try {
+        const libraryResponse = await api.library.getLibrary({ pageSize: 100 });
+        const kbReady = (libraryResponse.items ?? []).filter(e => e.hasKb);
+        setSharedGames(kbReady.map(libraryEntryToGame));
+      } catch {
+        setError('Errore nel caricamento della libreria');
+      } finally {
+        setIsLoadingSharedGames(false);
+        setSharedGamesLoaded(true);
+      }
+    }
+    void loadSharedGames();
+  }, [activeTab, sharedGamesLoaded]);
 
   // Issue #4914: load custom agents when game selected
   useEffect(() => {
@@ -436,11 +479,16 @@ export function NewChatView() {
           setCustomAgents(result.map(a => ({ id: a.id, name: a.name, type: a.type })));
         }
       })
-      .catch(() => { /* silent fail — custom agents not critical */ })
+      .catch(() => {
+        // In direct game mode, agent fetch failure is critical (drives redirect logic)
+        if (!cancelled && isDirectGameMode) {
+          setError('Errore nel caricamento degli agenti');
+        }
+      })
       .finally(() => { if (!cancelled) setIsLoadingCustomAgents(false); });
 
     return () => { cancelled = true; };
-  }, [selectedGameId]);
+  }, [selectedGameId, isDirectGameMode]);
 
   // Direct game mode: auto-start or redirect based on agent count
   useEffect(() => {
@@ -458,7 +506,7 @@ export function NewChatView() {
       setIsCreating(true);
 
       const agent = customAgents[0];
-      const gameName = games.find(g => g.id === selectedGameId)?.title;
+      const gameName = [...privateGames, ...sharedGames].find(g => g.id === selectedGameId)?.title;
 
       api.chat.createThread({
         gameId: selectedGameId,
@@ -477,7 +525,7 @@ export function NewChatView() {
         });
     }
     // 2+ agents: fall through to show agent selection UI
-  }, [isDirectGameMode, isLoadingCustomAgents, selectedGameId, customAgents, games, router]);
+  }, [isDirectGameMode, isLoadingCustomAgents, selectedGameId, customAgents, privateGames, sharedGames, router]);
 
   // Handle game selection — reset custom agent selection
   const handleGameSelect = useCallback((gameId: string) => {
@@ -507,10 +555,10 @@ export function NewChatView() {
     [agents]
   );
 
-  // Get selected game name for quick-start
+  // Get selected game name for quick-start (search both lists)
   const selectedGame = useMemo(
-    () => games.find(g => g.id === selectedGameId),
-    [games, selectedGameId]
+    () => [...privateGames, ...sharedGames].find(g => g.id === selectedGameId),
+    [privateGames, sharedGames, selectedGameId]
   );
 
   const suggestions = useMemo(
@@ -620,8 +668,45 @@ export function NewChatView() {
               data-testid="game-selection-section"
             >
               <SectionTitle icon={Gamepad2} title="Seleziona un gioco" />
+
+              {/* Game source tabs */}
+              <div
+                className="flex gap-1 mb-4 p-1 rounded-lg bg-muted/50"
+                data-testid="game-source-tabs"
+                role="tablist"
+              >
+                <button
+                  role="tab"
+                  aria-selected={activeTab === 'private'}
+                  onClick={() => setActiveTab('private')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-md text-sm font-nunito font-medium transition-all duration-200',
+                    activeTab === 'private'
+                      ? 'bg-white dark:bg-card shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  data-testid="tab-private-games"
+                >
+                  I miei giochi
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={activeTab === 'shared'}
+                  onClick={() => setActiveTab('shared')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-md text-sm font-nunito font-medium transition-all duration-200',
+                    activeTab === 'shared'
+                      ? 'bg-white dark:bg-card shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  data-testid="tab-shared-games"
+                >
+                  Libreria condivisa
+                </button>
+              </div>
+
               <GameGrid
-                games={games}
+                games={activeGames}
                 selectedGameId={selectedGameId}
                 onSelect={handleGameSelect}
                 isLoading={isLoadingGames}

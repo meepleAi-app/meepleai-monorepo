@@ -629,7 +629,8 @@ internal static class AgentEndpoints
                 AgentType: req.AgentType,
                 Name: req.Name,
                 StrategyName: req.StrategyName,
-                StrategyParameters: req.StrategyParameters
+                StrategyParameters: req.StrategyParameters,
+                DocumentIds: req.DocumentIds
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -920,7 +921,8 @@ internal record CreateUserAgentRequest(
     string AgentType,
     string? Name = null,
     string? StrategyName = null,
-    IDictionary<string, object>? StrategyParameters = null
+    IDictionary<string, object>? StrategyParameters = null,
+    IReadOnlyList<Guid>? DocumentIds = null
 );
 
 /// <summary>

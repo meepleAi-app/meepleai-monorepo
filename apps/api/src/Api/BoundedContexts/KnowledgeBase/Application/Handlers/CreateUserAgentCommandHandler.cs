@@ -1,9 +1,12 @@
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -20,13 +23,16 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
     private const int MaxAutoSuffixAttempts = 5;
 
     private readonly IAgentRepository _agentRepository;
+    private readonly MeepleAiDbContext _db;
     private readonly ILogger<CreateUserAgentCommandHandler> _logger;
 
     public CreateUserAgentCommandHandler(
         IAgentRepository agentRepository,
+        MeepleAiDbContext db,
         ILogger<CreateUserAgentCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -99,6 +105,28 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
 
         // Persist
         await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
+
+        // Create default AgentConfiguration with optional document selection
+        var documentIdsJson = request.DocumentIds is { Count: > 0 }
+            ? JsonSerializer.Serialize(request.DocumentIds)
+            : "[]";
+
+        var defaultConfig = new AgentConfigurationEntity
+        {
+            Id = Guid.NewGuid(),
+            AgentId = agent.Id,
+            LlmProvider = 0, // OpenRouter
+            LlmModel = "anthropic/claude-3-haiku",
+            AgentMode = 0, // Chat
+            SelectedDocumentIdsJson = documentIdsJson,
+            Temperature = 0.3m,
+            MaxTokens = 2048,
+            IsCurrent = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = request.UserId
+        };
+        _db.Set<AgentConfigurationEntity>().Add(defaultConfig);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         if (resolvedGameId.Value != request.GameId)
         {

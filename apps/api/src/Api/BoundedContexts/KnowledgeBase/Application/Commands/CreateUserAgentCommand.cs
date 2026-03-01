@@ -15,5 +15,6 @@ internal record CreateUserAgentCommand(
     string AgentType,
     string? Name,
     string? StrategyName,
-    IDictionary<string, object>? StrategyParameters
+    IDictionary<string, object>? StrategyParameters,
+    IReadOnlyList<Guid>? DocumentIds = null
 ) : IRequest<AgentDto>;

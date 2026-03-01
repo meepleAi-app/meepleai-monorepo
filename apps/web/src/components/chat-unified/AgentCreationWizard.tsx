@@ -592,11 +592,8 @@ export function AgentCreationWizard() {
         gameId: state.selectedGame.gameId,
         agentType: backendType,
         name: state.agentName.trim() || undefined,
+        documentIds: state.selectedPdfIds.length > 0 ? state.selectedPdfIds : undefined,
       });
-
-      if (state.selectedPdfIds.length > 0) {
-        await api.agents.updateDocuments(agent.id, state.selectedPdfIds);
-      }
 
       router.push(`/chat/new?game=${state.selectedGame.gameId}`);
     } catch (err) {

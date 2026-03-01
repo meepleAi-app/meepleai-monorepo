@@ -384,6 +384,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       name?: string;
       strategyName?: string;
       strategyParameters?: Record<string, unknown>;
+      documentIds?: string[];
     }): Promise<AgentDto> {
       const response = await httpClient.post<AgentDto>(
         '/api/v1/agents/user',

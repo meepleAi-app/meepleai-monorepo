@@ -1,12 +1,28 @@
 /**
  * BggGameCard Tests - Issue #4141
+ * Issue #4859: Updated for MeepleCard migration
  */
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import type { BggSearchResult } from '@/types/bgg';
 
 import { BggGameCard } from '../BggGameCard';
-import type { BggSearchResult } from '@/types/bgg';
+
+const mockMeepleCard = vi.fn(() => null);
+vi.mock('@/components/ui/data-display/meeple-card', () => ({
+  MeepleCard: (props: Record<string, unknown>) => {
+    mockMeepleCard(props);
+    return (
+      <div data-testid={props['data-testid'] as string}>
+        <span>{props.title as string}</span>
+        <button onClick={props.onClick as () => void}>select</button>
+      </div>
+    );
+  },
+}));
 
 const mockGame: BggSearchResult = {
   id: 13,
@@ -23,79 +39,94 @@ const mockGameNoThumbnail: BggSearchResult = {
 };
 
 describe('BggGameCard', () => {
-  it('should render game name and year', () => {
-    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
-
-    expect(screen.getByText('Catan')).toBeInTheDocument();
-    expect(screen.getByText('Published: 1995')).toBeInTheDocument();
+  beforeEach(() => {
+    mockMeepleCard.mockClear();
   });
 
-  it('should render thumbnail when available', () => {
+  it('renders with entity="game" and variant="compact"', () => {
     render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
 
-    const img = screen.getByAltText('Catan');
-    expect(img).toHaveAttribute('src', 'https://example.com/catan.jpg');
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity: 'game',
+        variant: 'compact',
+      })
+    );
   });
 
-  it('should show placeholder when thumbnail is null', () => {
+  it('passes game name as title', () => {
+    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Catan' })
+    );
+  });
+
+  it('passes year as subtitle', () => {
+    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ subtitle: '1995' })
+    );
+  });
+
+  it('passes thumbnail as imageUrl', () => {
+    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: 'https://example.com/catan.jpg' })
+    );
+  });
+
+  it('passes undefined imageUrl when thumbnail is null', () => {
     render(<BggGameCard game={mockGameNoThumbnail} onSelect={vi.fn()} />);
 
-    expect(screen.getByText('No image')).toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: undefined })
+    );
   });
 
-  it('should call onSelect with game ID when clicked', () => {
-    const mockOnSelect = vi.fn();
-    render(<BggGameCard game={mockGame} onSelect={mockOnSelect} />);
+  it('enables selectable mode', () => {
+    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
 
-    const button = screen.getByRole('button');
-    button.click();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ selectable: true })
+    );
+  });
+
+  it('passes selected state', () => {
+    render(<BggGameCard game={mockGame} selected={true} onSelect={vi.fn()} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ selected: true })
+    );
+  });
+
+  it('defaults selected to false', () => {
+    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
+
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({ selected: false })
+    );
+  });
+
+  it('calls onSelect with game ID on click', async () => {
+    const mockOnSelect = vi.fn();
+    const user = userEvent.setup();
+
+    render(<BggGameCard game={mockGame} onSelect={mockOnSelect} />);
+    await user.click(screen.getByText('select'));
 
     expect(mockOnSelect).toHaveBeenCalledWith(13);
   });
 
-  it('should show selected state with check icon', () => {
-    render(<BggGameCard game={mockGame} selected={true} onSelect={vi.fn()} />);
-
-    const button = screen.getByRole('button');
-    expect(button).toHaveAttribute('aria-pressed', 'true');
-    expect(button).toHaveClass('border-amber-500');
-  });
-
-  it('should not show check icon when not selected', () => {
-    render(<BggGameCard game={mockGame} selected={false} onSelect={vi.fn()} />);
-
-    const button = screen.getByRole('button');
-    expect(button).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  it('should have accessible label', () => {
+  it('sets correct data-testid', () => {
     render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
 
-    expect(screen.getByLabelText('Select Catan (1995)')).toBeInTheDocument();
+    expect(screen.getByTestId('bgg-game-card-13')).toBeInTheDocument();
   });
 
-  it('should apply glassmorphism styling', () => {
-    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
-
-    const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-white/70', 'backdrop-blur-md');
-  });
-
-  it('should have hover state', () => {
-    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
-
-    const button = screen.getByRole('button');
-    expect(button).toHaveClass('hover:bg-white/90');
-  });
-
-  it('should have focus ring for keyboard navigation', () => {
-    render(<BggGameCard game={mockGame} onSelect={vi.fn()} />);
-
-    const button = screen.getByRole('button');
-    expect(button).toHaveClass('focus:ring-2', 'focus:ring-amber-500');
-  });
-
-  it('should truncate long game names', () => {
+  it('handles long game names', () => {
     const longNameGame: BggSearchResult = {
       id: 999,
       name: 'Very Long Game Name That Should Be Truncated In The UI',
@@ -103,9 +134,12 @@ describe('BggGameCard', () => {
       thumbnail: null,
     };
 
-    const { container } = render(<BggGameCard game={longNameGame} onSelect={vi.fn()} />);
+    render(<BggGameCard game={longNameGame} onSelect={vi.fn()} />);
 
-    const title = container.querySelector('.truncate');
-    expect(title).toBeInTheDocument();
+    expect(mockMeepleCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Very Long Game Name That Should Be Truncated In The UI',
+      })
+    );
   });
 });

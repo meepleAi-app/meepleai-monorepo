@@ -80,6 +80,25 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     },
 
     /**
+     * Get user-owned agents for a specific game.
+     * Issue #4914: returns custom agents created by the current user for the given game.
+     * @param gameId Game UUID
+     */
+    async getUserAgentsForGame(gameId: string): Promise<AgentDto[]> {
+      const params = new URLSearchParams({
+        gameId,
+        userOwned: 'true',
+        activeOnly: 'true',
+      });
+      const response = await httpClient.get<{
+        success: boolean;
+        agents: AgentDto[];
+        count: number;
+      }>(`/api/v1/agents?${params.toString()}`, GetAllAgentsResponseSchema);
+      return response?.agents ?? [];
+    },
+
+    /**
      * Get agent by ID
      * Implements GetAgentByIdQuery from backend
      * @param id Agent ID (GUID format)
@@ -350,6 +369,174 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       }
 
       return response;
+    },
+
+    // ========== User-Owned Agent CRUD (Issue #4683, #4915) ==========
+
+    /**
+     * Create a user-owned agent with tier-aware configuration
+     * Issue #4683: User Agent CRUD Endpoints
+     * @param request Agent creation params (gameId, agentType, name, etc.)
+     */
+    async createUserAgent(request: {
+      gameId: string;
+      agentType: string;
+      name?: string;
+      strategyName?: string;
+      strategyParameters?: Record<string, unknown>;
+      documentIds?: string[];
+    }): Promise<AgentDto> {
+      const response = await httpClient.post<AgentDto>(
+        '/api/v1/agents/user',
+        request,
+        AgentDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to create user agent: no response from server');
+      }
+
+      return response;
+    },
+
+    // ========== Agent Slots & Creation Flow (Issue #4771, #4772) ==========
+
+    /**
+     * Get user's agent slot allocation and usage
+     * Issue #4771: Agent Slots Endpoint + Quota System
+     */
+    async getSlots(): Promise<{
+      total: number;
+      used: number;
+      available: number;
+      slots: Array<{
+        slotIndex: number;
+        agentId: string | null;
+        agentName: string | null;
+        gameId: string | null;
+        status: 'active' | 'available' | 'locked';
+      }>;
+    }> {
+      const response = await httpClient.get<{
+        total: number;
+        used: number;
+        available: number;
+        slots: Array<{
+          slotIndex: number;
+          agentId: string | null;
+          agentName: string | null;
+          gameId: string | null;
+          status: 'active' | 'available' | 'locked';
+        }>;
+      }>('/api/v1/user/agent-slots');
+
+      if (!response) {
+        throw new Error('Failed to get agent slots: no response from server');
+      }
+
+      return response;
+    },
+
+    /**
+     * Orchestrated agent creation with auto-setup
+     * Issue #4772: Agent Creation Orchestration Flow
+     */
+    async createWithSetup(request: {
+      gameId: string;
+      addToCollection: boolean;
+      agentType: string;
+      agentName?: string;
+      strategyName?: string;
+      strategyParameters?: Record<string, unknown>;
+    }): Promise<{
+      agentId: string;
+      agentName: string;
+      threadId: string;
+      slotUsed: number;
+      gameAddedToCollection: boolean;
+    }> {
+      const response = await httpClient.post<{
+        agentId: string;
+        agentName: string;
+        threadId: string;
+        slotUsed: number;
+        gameAddedToCollection: boolean;
+      }>('/api/v1/agents/create-with-setup', request);
+
+      if (!response) {
+        throw new Error('Failed to create agent: no response from server');
+      }
+
+      return response;
+    },
+
+    // ========== Admin Agent Testing (Issue #4962) ==========
+
+    /**
+     * Test an agent typology with a query (Admin/Editor only)
+     * POST /api/v1/agent-typologies/{id}/test
+     * Issue #4962: Wire agent test console to real backend API
+     */
+    async testTypology(typologyId: string, testQuery: string): Promise<{
+      success: boolean;
+      response: string;
+      confidenceScore: number;
+    }> {
+      const response = await httpClient.post<{
+        success: boolean;
+        response: string;
+        confidenceScore: number;
+      }>(
+        `/api/v1/agent-typologies/${encodeURIComponent(typologyId)}/test`,
+        { testQuery }
+      );
+
+      if (!response) {
+        throw new Error('Failed to test agent typology: no response from server');
+      }
+
+      return response;
+    },
+
+    /**
+     * Save a test result to history (Admin only)
+     * POST /api/v1/admin/test-results → 201 Created { id }
+     * Issue #4962: Wire agent test console to real backend API
+     */
+    async saveTestResult(result: {
+      typologyId: string;
+      query: string;
+      response: string;
+      modelUsed: string;
+      confidenceScore: number;
+      tokensUsed: number;
+      costEstimate: number;
+      latencyMs: number;
+      strategyOverride?: string;
+      citationsJson?: string;
+    }): Promise<{ id: string }> {
+      const saved = await httpClient.post<{ id: string }>(
+        '/api/v1/admin/test-results',
+        {
+          typologyId: result.typologyId,
+          query: result.query,
+          response: result.response,
+          modelUsed: result.modelUsed,
+          confidenceScore: result.confidenceScore,
+          tokensUsed: result.tokensUsed,
+          costEstimate: result.costEstimate,
+          latencyMs: result.latencyMs,
+          strategyOverride: result.strategyOverride,
+          citationsJson: result.citationsJson,
+        },
+        z.object({ id: z.string() })
+      );
+
+      if (!saved) {
+        throw new Error('Failed to save test result: no response from server');
+      }
+
+      return saved;
     },
 
     // ========== Agent Chat SSE (Issue #4126) ==========

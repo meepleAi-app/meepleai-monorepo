@@ -16,6 +16,9 @@ import { ArrowLeft, Clock, Gauge, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+import LibraryGameDetailLoading from './loading';
+
+import { CatalogDetailsSection } from '@/components/library/game-detail/CatalogDetailsSection';
 import { UserActionSection } from '@/components/library/game-detail/UserActionSection';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
@@ -101,9 +104,10 @@ export default function LibraryGameDetailPage() {
     );
   }
 
-  // Loading state handled by loading.tsx, but fallback just in case
+  // React Query doesn't suspend, so loading.tsx won't catch isLoading:true.
+  // Show the full-page skeleton while data is in flight.
   if (isLoading || !gameDetail) {
-    return null;
+    return <LibraryGameDetailLoading />;
   }
 
   return (
@@ -179,6 +183,18 @@ export default function LibraryGameDetailPage() {
             recentSessions={gameDetail.recentSessions}
           />
         </section>
+
+        {/* Catalog Details: description, categories, mechanics, BGG link (catalog games only) */}
+        <div className="mb-8">
+          <CatalogDetailsSection
+            description={gameDetail.description}
+            categories={gameDetail.categories}
+            mechanics={gameDetail.mechanics}
+            designers={gameDetail.designers}
+            bggId={gameDetail.bggId}
+            gameTitle={gameDetail.gameTitle}
+          />
+        </div>
 
         {/* User Actions Section */}
         <UserActionSection gameDetail={gameDetail} />

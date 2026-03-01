@@ -22,6 +22,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.DTOs;
 /// <param name="UpdatedAt">When the private game was last updated</param>
 /// <param name="BggSyncedAt">When BGG data was last synced (BGG-sourced games only)</param>
 /// <param name="CanProposeToCatalog">Whether this game can be proposed to the shared catalog</param>
+/// <param name="AgentDefinitionId">ID of the linked AgentDefinition, if any (Issue #4228)</param>
 internal record PrivateGameDto(
     Guid Id,
     Guid OwnerId,
@@ -40,5 +41,6 @@ internal record PrivateGameDto(
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     DateTime? BggSyncedAt,
-    bool CanProposeToCatalog
+    bool CanProposeToCatalog,
+    Guid? AgentDefinitionId = null
 );

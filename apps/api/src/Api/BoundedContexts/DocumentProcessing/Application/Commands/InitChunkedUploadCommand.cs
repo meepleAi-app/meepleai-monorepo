@@ -5,12 +5,14 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
 /// Command to initialize a chunked upload session for a large PDF file.
+/// Either GameId (shared game) or PrivateGameId (private game) must be provided.
 /// </summary>
 internal record InitChunkedUploadCommand(
-    Guid GameId,
+    Guid? GameId,
     Guid UserId,
     string FileName,
-    long TotalFileSize
+    long TotalFileSize,
+    Guid? PrivateGameId = null
 ) : ICommand<InitChunkedUploadResult>;
 
 /// <summary>

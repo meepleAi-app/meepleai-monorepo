@@ -111,7 +111,7 @@ public sealed class ArbitroValidationAccuracyTests
     /// Complete test scenario set for beta testing accuracy validation.
     /// Format: Game | Action | Context | Expected Decision | Expected Confidence Range | Notes
     /// </summary>
-    public static readonly List<TestScenario> BetaTestScenarios = new()
+    public static readonly IReadOnlyList<TestScenario> BetaTestScenarios = new List<TestScenario>()
     {
         // VALID Scenarios (20 cases)
         new("Catan", "roll dice", "Turn start, active player", "VALID", 0.95, 1.0, "Core mechanic"),

@@ -74,15 +74,18 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }
 
             // Step 3: Index in Qdrant and update VectorDocument
+            // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
+            // to the correct private game rather than collapsed under Guid.Empty.
+            var effectiveGameId = pdf.GameId ?? pdf.PrivateGameId ?? Guid.Empty;
             var indexingSuccess = await IndexChunksInVectorStoreAsync(
-                pdfId, pdf.GameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
+                pdfId, effectiveGameId.ToString(), pdf.ExtractedText!, documentChunks!, vectorDoc!, cancellationToken).ConfigureAwait(false);
             if (!indexingSuccess)
             {
                 return await MarkIndexingFailedAsync(vectorDoc!, "Qdrant indexing failed", PdfIndexingErrorCode.QdrantIndexingFailed, cancellationToken).ConfigureAwait(false);
             }
 
             // Step 4: Save text chunks to PostgreSQL for hybrid search
-            await SaveTextChunksToPostgresAsync(pdfId, pdf.GameId, documentChunks!, cancellationToken).ConfigureAwait(false);
+            await SaveTextChunksToPostgresAsync(pdfId, effectiveGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
 
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -176,6 +179,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             {
                 Id = Guid.NewGuid(),
                 GameId = pdf.GameId,
+                SharedGameId = pdf.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "processing",
                 EmbeddingModel = _embeddingService.GetModelName(),

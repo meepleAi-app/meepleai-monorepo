@@ -13,9 +13,9 @@
 
 import { Suspense } from 'react';
 
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 
-const NewChatView = dynamic(
+const NewChatView = dynamicImport(
   () => import('@/components/chat-unified/NewChatView').then(mod => ({ default: mod.NewChatView })),
   {
     ssr: false,

@@ -18,12 +18,18 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
-import { useAgentChatStream } from '@/hooks/useAgentChatStream';
+import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
+import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { isAdminOrAbove } from '@/types/auth';
 import type { Citation } from '@/types';
 
 import { ChatThreadHeader } from './ChatThreadHeader';
+import { CitationBadge } from './CitationBadge';
+import { DebugStepCard } from './DebugStepCard';
+import { DebugSummaryBar } from './DebugSummaryBar';
 
 // ============================================================================
 // Types
@@ -43,6 +49,7 @@ interface ThreadData {
   title: string;
   gameId?: string | null;
   agentId?: string | null;
+  agentTypology?: string | null;
   status: string;
   messages: ChatMessage[];
 }
@@ -59,6 +66,8 @@ export interface ChatThreadViewProps {
 export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const isAdmin = isAdminOrAbove(user);
 
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
@@ -67,6 +76,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'chat' | 'debug'>('chat');
 
   const [showAgentConfirm, setShowAgentConfirm] = useState(false);
   const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
@@ -133,18 +143,22 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           timestamp: m.timestamp,
         }));
 
+        const threadRecord = threadData as Record<string, unknown>;
+        const agentId = (threadRecord.agentId as string | null) ?? null;
+        const agentTypology = (threadRecord.agentTypology as string | null) ?? null;
+
         setThread({
           id: threadData.id,
           title: threadData.title ?? 'Chat',
           gameId: threadData.gameId,
-          agentId: (threadData as Record<string, unknown>).agentId as string | null ?? null,
+          agentId,
+          agentTypology,
           status: 'Active',
           messages: mappedMessages,
         });
 
-        setMessages(mappedMessages);
-
         // Load game info if available
+        let gameName: string | null = null;
         if (threadData.gameId) {
           try {
             const games = await api.games.getAll();
@@ -152,6 +166,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               (g: { id: string }) => g.id === threadData.gameId
             );
             if (found) {
+              gameName = found.title;
               setGame({
                 id: found.id,
                 title: found.title,
@@ -160,6 +175,22 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           } catch {
             // Non-critical: game info not found
           }
+        }
+
+        // Issue #4780: Inject welcome message when thread is new (empty) and has an agent
+        if (mappedMessages.length === 0 && agentId && gameName) {
+          const welcomeContent = buildWelcomeMessage(agentTypology, gameName);
+          const followUps = getWelcomeFollowUpQuestions(agentTypology, gameName);
+          const welcomeMessage: ChatMessage = {
+            id: 'welcome-message',
+            role: 'assistant',
+            content: welcomeContent,
+            timestamp: new Date().toISOString(),
+            followUpQuestions: followUps,
+          };
+          setMessages([welcomeMessage]);
+        } else {
+          setMessages(mappedMessages);
         }
       } catch {
         setError('Errore nel caricamento della conversazione');
@@ -192,7 +223,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
       // SSE path: stream via agent endpoint when agentId is available
       if (thread?.agentId) {
-        sendViaSSE(thread.agentId, messageContent, threadId);
+        // Issue #4780: Build proxy game context for OpenRouter proxy (if enabled)
+        const proxyCtx: ProxyGameContext | undefined =
+          game && thread.agentTypology
+            ? { gameName: game.title, agentTypology: thread.agentTypology }
+            : undefined;
+        sendViaSSE(thread.agentId, messageContent, threadId, proxyCtx);
         return; // onComplete/onError callbacks handle the rest
       }
 
@@ -221,7 +257,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         setIsSending(false);
       }
     },
-    [inputValue, isSending, threadId, thread?.agentId, sendViaSSE]
+    [inputValue, isSending, threadId, thread?.agentId, thread?.agentTypology, game, sendViaSSE]
   );
 
   // Title change
@@ -383,8 +419,79 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <div className="flex flex-1 min-h-0 relative">
         {/* Chat Area (left) */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Messages */}
+          {/* Chat / Debug tab bar (Issue #4916) */}
+          <div role="tablist" aria-label="Chat panels" className="flex items-center gap-1 px-4 pt-2 pb-0 border-b border-border/30">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'chat'}
+              aria-controls="panel-chat"
+              onClick={() => setActiveTab('chat')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors',
+                activeTab === 'chat'
+                  ? 'bg-background border border-b-background border-border/50 text-foreground -mb-px z-10'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              data-testid="tab-chat"
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'debug'}
+              aria-controls="panel-debug"
+              onClick={() => setActiveTab('debug')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors',
+                activeTab === 'debug'
+                  ? 'bg-background border border-b-background border-border/50 text-foreground -mb-px z-10'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+              data-testid="tab-debug"
+            >
+              Debug
+              {streamState.debugSteps.length > 0 && (
+                <span className="ml-1 text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-400 px-1 rounded">
+                  {streamState.debugSteps.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Debug panel (Issue #4916) */}
+          {activeTab === 'debug' && (
+            <div id="panel-debug" role="tabpanel" className="flex-1 overflow-y-auto px-4 py-4 space-y-3" data-testid="debug-panel">
+              {streamState.debugSteps.length === 0 ? (
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-sm text-muted-foreground font-nunito">
+                    Invia un messaggio per visualizzare il debug del pipeline RAG.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <DebugSummaryBar steps={streamState.debugSteps} />
+                  <div className="space-y-2">
+                    {streamState.debugSteps.map((step, i) => (
+                      <DebugStepCard
+                        key={`${step.type}-${i}`}
+                        step={step}
+                        index={i}
+                        showSystemPrompt={isAdmin}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Messages (only when chat tab is active) */}
+          {activeTab === 'chat' && (
           <div
+            id="panel-chat"
+            role="tabpanel"
             className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
             data-testid="messages-area"
           >
@@ -411,12 +518,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   {msg.citations && msg.citations.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {msg.citations.map((c, i) => (
-                        <span
+                        <CitationBadge
                           key={`${c.documentId}-${c.pageNumber}-${i}`}
-                          className="text-[10px] px-1.5 py-0.5 bg-orange-500/20 text-orange-700 dark:text-orange-300 rounded"
-                        >
-                          p.{c.pageNumber}
-                        </span>
+                          citation={c}
+                        />
                       ))}
                     </div>
                   )}
@@ -447,6 +552,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
             <div ref={messagesEndRef} />
           </div>
+          )}
 
           {/* Input */}
           <div
@@ -504,11 +610,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           {allCitations.length > 0 && (
             <div className="mb-4">
               <h4 className="text-sm font-semibold font-quicksand mb-2">Citazioni ({allCitations.length})</h4>
-              <div className="space-y-1">
-                {allCitations.slice(0, 10).map((c, i) => (
-                  <div key={`${c.documentId}-${c.pageNumber}-${i}`} className="text-xs px-2 py-1 bg-amber-50 dark:bg-amber-500/10 rounded">
-                    p.{c.pageNumber} - {c.documentId?.slice(0, 8)}
-                  </div>
+              <div className="flex flex-wrap gap-1">
+                {allCitations.slice(0, 20).map((c, i) => (
+                  <CitationBadge
+                    key={`panel-${c.documentId}-${c.pageNumber}-${i}`}
+                    citation={c}
+                  />
                 ))}
               </div>
             </div>

@@ -22,7 +22,9 @@ describe('ActivityTable', () => {
     // Check at least one user name is visible (Sarah Chen appears twice in mock data)
     const users = screen.getAllByText('Sarah Chen');
     expect(users.length).toBeGreaterThan(0);
-    expect(screen.getByText('sarah@meepleai.com')).toBeInTheDocument();
+    // Email appears multiple times in mock data, use getAllByText
+    const emails = screen.getAllByText('sarah@meepleai.com');
+    expect(emails.length).toBeGreaterThan(0);
   });
 
   it('shows action badges', () => {

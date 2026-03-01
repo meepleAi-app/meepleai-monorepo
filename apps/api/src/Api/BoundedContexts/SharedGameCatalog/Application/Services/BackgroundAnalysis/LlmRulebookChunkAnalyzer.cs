@@ -93,6 +93,7 @@ internal sealed class LlmRulebookChunkAnalyzer : IRulebookChunkAnalyzer
             var result = await _llmService.GenerateJsonAsync<LlmChunkResponse>(
                 SystemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result is null)

@@ -1,4 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
+using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
+using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
+using Api.BoundedContexts.GameManagement.Domain.Entities.WhiteboardState;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
@@ -24,6 +28,13 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
         services.AddScoped<IRuleConflictFaqRepository, RuleConflictFaqRepository>(); // ISSUE-3761: Conflict FAQ
+        services.AddSingleton<ILiveSessionRepository, LiveSessionRepository>(); // Issue #4749: Live session in-memory store
+        services.AddScoped<IToolStateRepository, ToolStateRepository>(); // Issue #4754: ToolState persistence
+        services.AddScoped<ISessionSnapshotRepository, SessionSnapshotRepository>(); // Issue #4755: SessionSnapshot persistence
+        services.AddScoped<IGameReviewRepository, GameReviewRepository>();
+        services.AddScoped<IGameStrategyRepository, GameStrategyRepository>();
+        services.AddScoped<ITurnOrderRepository, TurnOrderRepository>(); // Issue #4970: TurnOrder base toolkit
+        services.AddScoped<IWhiteboardStateRepository, WhiteboardStateRepository>(); // Issue #4971: Whiteboard base toolkit
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

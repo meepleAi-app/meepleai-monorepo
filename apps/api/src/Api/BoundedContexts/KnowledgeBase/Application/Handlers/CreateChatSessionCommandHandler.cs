@@ -38,6 +38,33 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
             request.UserId,
             request.GameId);
 
+        // Auto-archive: sliding window when tier limit is reached (TierLimit > 0 means enforced)
+        if (request.TierLimit > 0)
+        {
+            var currentCount = await _sessionRepository
+                .CountByUserIdAsync(request.UserId, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (currentCount >= request.TierLimit)
+            {
+                var oldest = await _sessionRepository
+                    .GetOldestActiveByUserIdAsync(request.UserId, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (oldest != null)
+                {
+                    oldest.Archive();
+                    await _sessionRepository.UpdateAsync(oldest, cancellationToken).ConfigureAwait(false);
+
+                    _logger.LogInformation(
+                        "Auto-archived oldest chat session {SessionId} for user {UserId} (tier limit={Limit})",
+                        oldest.Id,
+                        request.UserId,
+                        request.TierLimit);
+                }
+            }
+        }
+
         var sessionId = Guid.NewGuid();
 
         var session = new ChatSession(
@@ -47,7 +74,10 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
             title: request.Title,
             userLibraryEntryId: request.UserLibraryEntryId,
             agentSessionId: request.AgentSessionId,
-            agentConfigJson: request.AgentConfigJson);
+            agentConfigJson: request.AgentConfigJson,
+            agentId: request.AgentId,
+            agentType: request.AgentType,
+            agentName: request.AgentName);
 
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -55,8 +55,10 @@ describe('ModelsTable', () => {
   });
 
   it('displays usage counts', () => {
-    render(<ModelsTable />);
+    const { container } = render(<ModelsTable />);
 
-    expect(screen.getByText('8,420')).toBeInTheDocument(); // GPT-4 usage
+    // GPT-4 usage is 8420 - rendered via toLocaleString() (locale-dependent format)
+    // Check that the value appears in the rendered output regardless of separator
+    expect(container.textContent).toMatch(/8[.,\s]?420/);
   });
 });

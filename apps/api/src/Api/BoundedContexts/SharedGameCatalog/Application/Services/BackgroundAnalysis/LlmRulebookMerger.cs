@@ -72,6 +72,7 @@ internal sealed class LlmRulebookMerger : IRulebookMerger
             var result = await _llmService.GenerateJsonAsync<LlmMergedResponse>(
                 SystemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result is null)

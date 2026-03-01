@@ -5,7 +5,7 @@
 
 import React from 'react';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -373,9 +373,11 @@ describe('StrategyConfigPanel', () => {
   });
 
   it('shows saving spinner when save is in progress', async () => {
-    const user = userEvent.setup();
-    // Make onSave take some time
-    mockOnSave.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+    // Use a deferred promise so onSave stays pending while we check the spinner
+    let resolveOnSave!: () => void;
+    mockOnSave.mockImplementation(
+      () => new Promise<void>((resolve) => { resolveOnSave = resolve; })
+    );
 
     render(
       <StrategyConfigPanel
@@ -386,12 +388,17 @@ describe('StrategyConfigPanel', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /Save/ }));
+    // Use fireEvent (synchronous) to avoid user-event's act() consuming the intermediate state
+    fireEvent.click(screen.getByRole('button', { name: /Save/ }));
 
-    // Should show spinner while saving
+    // Should show spinner while saving (isSaving=true)
     await waitFor(() => {
       const spinners = document.querySelectorAll('.animate-spin');
       expect(spinners.length).toBeGreaterThanOrEqual(1);
     });
+
+    // Resolve save so the component can clean up
+    resolveOnSave();
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledTimes(1));
   });
 });

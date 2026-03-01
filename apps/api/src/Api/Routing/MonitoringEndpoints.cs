@@ -17,6 +17,8 @@ internal static class MonitoringEndpoints
         MapInfrastructureHealthEndpoints(group);
         // Issue #892: Individual service health endpoints
         MapServiceHealthEndpoints(group);
+        // Issue #901: Metrics time-series endpoint
+        MapMetricsTimeSeriesEndpoint(group);
 
         return group;
     }
@@ -127,6 +129,48 @@ internal static class MonitoringEndpoints
         MapGenericServiceHealthEndpoint(group, "/health/qdrant", "qdrant", "GetQdrantHealth", "Qdrant");
         MapGenericServiceHealthEndpoint(group, "/health/n8n", "n8n", "GetN8NHealth", "n8n");
         MapGenericServiceHealthEndpoint(group, "/health/hyperdx", "hyperdx", "GetHyperDxHealth", "HyperDX");
+    }
+
+    private static void MapMetricsTimeSeriesEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #901: Time-series data for infrastructure charts
+        group.MapGet("/admin/infrastructure/metrics/timeseries", async (
+            HttpContext context,
+            IMediator mediator,
+            [FromQuery] string range = "1h",
+            CancellationToken ct = default) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            MetricsTimeRange timeRange;
+            switch (range)
+            {
+                case "1h": timeRange = MetricsTimeRange.OneHour; break;
+                case "6h": timeRange = MetricsTimeRange.SixHours; break;
+                case "24h": timeRange = MetricsTimeRange.TwentyFourHours; break;
+                case "7d": timeRange = MetricsTimeRange.SevenDays; break;
+                default:
+                    return Results.BadRequest(new { error = $"Invalid range '{range}'. Allowed: 1h, 6h, 24h, 7d" });
+            }
+
+            var query = new GetMetricsTimeSeriesQuery { Range = timeRange };
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Json(new
+            {
+                cpu = result.Cpu.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
+                memory = result.Memory.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
+                requests = result.Requests.Select(p => new { timestamp = p.Timestamp, value = p.Value })
+            });
+        })
+        .WithName("GetMetricsTimeSeries")
+        .WithTags("Monitoring")
+        .WithSummary("Get time-series metrics for infrastructure charts")
+        .WithDescription("Issue #901: Returns CPU, memory, and request rate time-series data from Prometheus")
+        .Produces<object>(200)
+        .Produces(400)
+        .Produces(401);
     }
 
     private static void MapGenericServiceHealthEndpoint(

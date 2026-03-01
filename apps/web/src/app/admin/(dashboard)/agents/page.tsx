@@ -10,6 +10,8 @@
 import { useState, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
+
+import { AgentsNavConfig } from './NavConfig';
 import { format, subDays } from 'date-fns';
 import {
   Activity,
@@ -126,6 +128,7 @@ export default function AgentsPage() {
 
   return (
     <div className="space-y-6">
+      <AgentsNavConfig />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -163,14 +166,14 @@ export default function AgentsPage() {
             Agent Builder
           </Button>
         </Link>
-        <Link href="/admin/agent-definitions">
+        <Link href="/admin/agents/pipeline">
           <Button variant="outline" size="sm" className="gap-2">
-            Definitions
+            Pipeline Explorer
           </Button>
         </Link>
-        <Link href="/admin/agents/test">
+        <Link href="/admin/agents/debug">
           <Button variant="outline" size="sm" className="gap-2">
-            Testing
+            Debug Console
           </Button>
         </Link>
       </div>

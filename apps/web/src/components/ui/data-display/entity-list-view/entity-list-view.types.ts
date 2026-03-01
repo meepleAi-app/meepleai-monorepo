@@ -5,6 +5,7 @@
  */
 
 import type { MeepleCardProps, MeepleEntityType } from '../meeple-card';
+import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
@@ -14,7 +15,7 @@ import type { LucideIcon } from 'lucide-react';
 /**
  * Available view modes for entity lists
  */
-export type ViewMode = 'grid' | 'list' | 'carousel';
+export type ViewMode = 'grid' | 'list' | 'carousel' | 'table';
 
 // ============================================================================
 // Sort Configuration
@@ -153,6 +154,29 @@ export interface CarouselOptions {
   orientation?: 'horizontal' | 'vertical' | 'auto';
 }
 
+
+// ============================================================================
+// Table Configuration
+// ============================================================================
+
+/**
+ * Column definition for EntityListView table mode.
+ */
+export interface TableColumnConfig {
+  /** Unique column identifier */
+  id: string;
+  /** Column header label */
+  header: string;
+  /** Key from MeepleCardProps to display */
+  accessorKey?: string;
+  /** Enable sorting for this column (default: true) */
+  sortable?: boolean;
+  /** Column width class */
+  width?: string;
+  /** Custom cell renderer */
+  cell?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
+}
+
 // ============================================================================
 // Main Component Props
 // ============================================================================
@@ -215,6 +239,11 @@ export interface EntityListViewProps<T = any> {
 
   /** Carousel-specific options (passed to GameCarousel) */
   carouselOptions?: CarouselOptions;
+
+  // ========== TABLE CONFIGURATION ==========
+
+  /** Table column definitions (for table view mode) */
+  tableColumns?: TableColumnConfig[];
 
   // ========== SEARCH & FILTERS ==========
 

@@ -55,6 +55,13 @@ internal interface IChatSessionRepository
     Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the oldest active (non-archived) chat session for a user.
+    /// Used for sliding-window auto-archive when tier limit is reached.
+    /// Issue #4913.
+    /// </summary>
+    Task<ChatSession?> GetOldestActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Counts chat sessions for a user and game.
     /// </summary>
     Task<int> CountByUserAndGameAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default);

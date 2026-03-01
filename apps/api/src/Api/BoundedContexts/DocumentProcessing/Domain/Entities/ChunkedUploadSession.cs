@@ -19,7 +19,8 @@ internal sealed class ChunkedUploadSession : AggregateRoot<Guid>
     /// </summary>
     public const int SessionExpirationHours = 24;
 
-    public Guid GameId { get; private set; }
+    public Guid? GameId { get; private set; }
+    public Guid? PrivateGameId { get; private set; }
     public Guid UserId { get; private set; }
     public string FileName { get; private set; }
     public long TotalFileSize { get; private set; }
@@ -41,11 +42,12 @@ internal sealed class ChunkedUploadSession : AggregateRoot<Guid>
 
     public ChunkedUploadSession(
         Guid id,
-        Guid gameId,
+        Guid? gameId,
         Guid userId,
         string fileName,
         long totalFileSize,
-        string tempDirectory) : base(id)
+        string tempDirectory,
+        Guid? privateGameId = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             throw new ArgumentException("File name cannot be empty", nameof(fileName));
@@ -56,7 +58,11 @@ internal sealed class ChunkedUploadSession : AggregateRoot<Guid>
         if (string.IsNullOrWhiteSpace(tempDirectory))
             throw new ArgumentException("Temp directory cannot be empty", nameof(tempDirectory));
 
+        if (!gameId.HasValue && !privateGameId.HasValue)
+            throw new ArgumentException("Either GameId or PrivateGameId must be provided.", nameof(gameId));
+
         GameId = gameId;
+        PrivateGameId = privateGameId;
         UserId = userId;
         FileName = fileName;
         TotalFileSize = totalFileSize;

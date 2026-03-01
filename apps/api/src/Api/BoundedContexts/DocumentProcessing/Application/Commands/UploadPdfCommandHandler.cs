@@ -1,8 +1,13 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.EntityRelationships.Application.Commands;
+using Api.BoundedContexts.EntityRelationships.Domain.Enums;
+using Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
 using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -13,6 +18,7 @@ using Api.Services;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -35,6 +41,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     private readonly IPdfUploadQuotaService _quotaService;
     private readonly TimeProvider _timeProvider;
     private readonly long _maxFileSizeBytes;
+    private readonly IMediator _mediator;
     private readonly Api.BoundedContexts.UserLibrary.Domain.Repositories.IPrivateGameRepository? _privateGameRepository;
 
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.Ordinal) { "application/pdf" };
@@ -49,6 +56,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         IBlobStorageService blobStorageService,
         IPdfUploadQuotaService quotaService,
         IOptions<PdfProcessingOptions> pdfOptions,
+        IMediator mediator,
         Api.BoundedContexts.UserLibrary.Domain.Repositories.IPrivateGameRepository? privateGameRepository = null,
         TimeProvider? timeProvider = null)
     {
@@ -63,6 +71,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
         ArgumentNullException.ThrowIfNull(pdfOptions);
         _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _privateGameRepository = privateGameRepository;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -410,7 +419,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     private async Task<(bool Success, BlobStorageResult Result, PdfDocumentEntity? PdfDoc)> StoreFileAndCreateRecordAsync(
         IFormFile file,
         string fileName,
-        string gameId,
+        string? gameId,
         Guid userId,
         Guid? privateGameId,
         CancellationToken cancellationToken)
@@ -421,7 +430,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             BlobStorageResult storageResult;
             using (var stream = file.OpenReadStream())
             {
-                storageResult = await _blobStorageService.StoreAsync(stream, fileName, gameId, cancellationToken).ConfigureAwait(false);
+                storageResult = await _blobStorageService.StoreAsync(stream, fileName, gameId ?? privateGameId?.ToString() ?? string.Empty, cancellationToken).ConfigureAwait(false);
             }
 
             if (!storageResult.Success || string.IsNullOrWhiteSpace(storageResult.FileId))
@@ -436,7 +445,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             var pdfDoc = new PdfDocumentEntity
             {
                 Id = Guid.Parse(storageResult.FileId!),
-                GameId = Guid.Parse(gameId),
+                GameId = !string.IsNullOrEmpty(gameId) ? Guid.Parse(gameId) : null,
                 FileName = fileName,
                 FilePath = storageResult.FilePath!,
                 FileSizeBytes = storageResult.FileSizeBytes,
@@ -538,6 +547,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         RecordUploadMetricSafely("success", file.Length);
 
+        // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association (shared games only)
+        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.GameId ?? Guid.Empty, userId, cancellationToken).ConfigureAwait(false);
+
         return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto(
             Id: pdfDoc.Id,
             GameId: pdfDoc.GameId,
@@ -547,7 +559,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             ProcessingStatus: pdfDoc.ProcessingStatus,
             UploadedAt: pdfDoc.UploadedAt,
             ProcessedAt: pdfDoc.ProcessedAt,
-            PageCount: pdfDoc.PageCount
+            PageCount: pdfDoc.PageCount,
+            ProcessingState: pdfDoc.ProcessingState,
+            ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
+            RetryCount: pdfDoc.RetryCount
         ));
     }
 
@@ -1081,7 +1096,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             })
             .ToList();
 
-        var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
+        // For private games GameId is null; use PrivateGameId as the Qdrant collection key
+        var qdrantGameId = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString()
+            ?? throw new InvalidOperationException($"PDF {pdfId} has neither GameId nor PrivateGameId");
+        var indexResult = await qdrantService.IndexDocumentChunksAsync(qdrantGameId, pdfId, documentChunks).ConfigureAwait(false);
         indexingStopwatch.Stop();
 
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
@@ -1123,6 +1141,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             {
                 Id = Guid.NewGuid(),
                 GameId = pdfDoc.GameId,
+                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "completed",
                 ChunkCount = indexedCount,
@@ -1201,10 +1220,22 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
         pdfDoc.ProcessingStatus = "completed";
+        pdfDoc.ProcessingState = "Ready"; // Sync 7-state field with completion
         pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), "PDF processing", cancellationToken).ConfigureAwait(false);
+        // Publish PdfStateChangedEvent so downstream handlers fire:
+        // AutoCreateAgentOnPdfReadyHandler (admin PDFs), PdfNotificationEventHandler, PdfStateChangedMetricsEventHandler.
+        // Must be published after SaveChanges so handlers can query the updated entity.
+        if (Guid.TryParse(pdfId, out var pdfGuidForEvent))
+        {
+            await _mediator.Publish(
+                new PdfStateChangedEvent(pdfGuidForEvent, PdfProcessingState.Indexing, PdfProcessingState.Ready, userId),
+                CancellationToken.None).ConfigureAwait(false);
+        }
+
+        var cacheKey = (pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty;
+        await InvalidateCacheSafelyAsync(cacheKey, "PDF processing", cancellationToken).ConfigureAwait(false);
 
         // Two-Phase Quota (#1743): Confirm quota (Phase 2)
         await quotaService.ConfirmQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
@@ -1398,12 +1429,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             return new PdfUploadResult(false, "You can only upload PDFs for your own private games", null);
         }
 
-        // Use a placeholder gameId for storage (private games don't have GameEntity)
-        var storageGameId = privateGameId.ToString();
-
-        // Store file and create database record with PrivateGameId
+        // Private games don't have a shared GameEntity — GameId is null, PrivateGameId is set
+        // Store file and create database record with PrivateGameId (GameId = null)
         var (storageSuccess, storageResult, pdfDoc) = await StoreFileAndCreateRecordAsync(
-            file, fileName, storageGameId, userId, privateGameId, cancellationToken).ConfigureAwait(false);
+            file, fileName, null, userId, privateGameId, cancellationToken).ConfigureAwait(false);
 
         if (!storageSuccess)
         {
@@ -1428,7 +1457,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             ProcessingStatus: pdfDoc.ProcessingStatus,
             UploadedAt: pdfDoc.UploadedAt,
             ProcessedAt: pdfDoc.ProcessedAt,
-            PageCount: pdfDoc.PageCount
+            PageCount: pdfDoc.PageCount,
+            ProcessingState: pdfDoc.ProcessingState,
+            ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
+            RetryCount: pdfDoc.RetryCount
         );
 
         return new PdfUploadResult(true, "PDF upload started successfully", documentDto);
@@ -1437,6 +1469,71 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     /// <summary>
     /// BGAI-043: Records PDF upload metrics in fire-and-forget pattern
     /// </summary>
+    /// <summary>
+    /// Auto-creates an EntityLink (Game → KbCard) for the uploaded PDF.
+    /// Issue #5187: Idempotent — silently swallows DuplicateEntityLinkException on retry uploads.
+    /// Only creates the link for regular game uploads (not private games, identified by gameId != Guid.Empty).
+    /// </summary>
+    private async Task CreateKbCardEntityLinkSafelyAsync(
+        Guid pdfDocumentId,
+        Guid gameId,
+        Guid ownerUserId,
+        CancellationToken cancellationToken)
+    {
+        if (gameId == Guid.Empty)
+            return;
+
+        try
+        {
+            var cmd = new CreateEntityLinkCommand(
+                SourceEntityType: MeepleEntityType.Game,
+                SourceEntityId: gameId,
+                TargetEntityType: MeepleEntityType.KbCard,
+                TargetEntityId: pdfDocumentId,
+                LinkType: EntityLinkType.RelatedTo,
+                Scope: EntityLinkScope.User,
+                OwnerUserId: ownerUserId
+            );
+
+            await _mediator.Send(cmd, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogDebug(
+                "EntityLink Game/{GameId} → KbCard/{PdfId} created for user {UserId}",
+                gameId, pdfDocumentId, ownerUserId);
+        }
+        catch (DuplicateEntityLinkException ex)
+        {
+            // Idempotent: link already exists (e.g., retry upload). This is expected.
+            _logger.LogDebug(
+                ex,
+                "EntityLink Game/{GameId} → KbCard/{PdfId} already exists — skipping",
+                gameId, pdfDocumentId);
+        }
+        catch (Exception ex)
+        {
+            // Non-critical: log but do not fail the upload
+            _logger.LogWarning(
+                ex,
+                "Failed to create EntityLink for PDF {PdfId} → Game {GameId}. Upload still succeeded.",
+                pdfDocumentId, gameId);
+        }
+    }
+
+    /// <summary>
+    /// Maps a PdfProcessingState string value to a progress percentage (Issue #5186).
+    /// Mirrors PdfDocument.CalculateProgressPercentage() for entity-level mapping.
+    /// </summary>
+    private static int MapEntityStateToProgress(string state) => state switch
+    {
+        "Uploading" => 10,
+        "Extracting" => 30,
+        "Chunking" => 50,
+        "Embedding" => 70,
+        "Indexing" => 90,
+        "Ready" => 100,
+        _ => 0 // Pending, Failed
+    };
+
     private void RecordUploadMetricSafely(string status, long? fileSizeBytes)
     {
         _ = Task.Run(() =>

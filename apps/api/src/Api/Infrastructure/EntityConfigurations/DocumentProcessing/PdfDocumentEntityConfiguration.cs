@@ -11,7 +11,7 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.ToTable("pdf_documents");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasMaxLength(64);
-        builder.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+        builder.Property(e => e.GameId).IsRequired(false).HasMaxLength(64);
         builder.Property(e => e.FileName).IsRequired().HasMaxLength(256);
         builder.Property(e => e.FilePath).IsRequired().HasMaxLength(1024);
         builder.Property(e => e.FileSizeBytes).IsRequired();
@@ -53,6 +53,7 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasOne(e => e.Game)
             .WithMany()
             .HasForeignKey(e => e.GameId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(e => e.UploadedBy)
             .WithMany()
@@ -80,6 +81,13 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         // Issue #3664: Private game PDF support
         builder.Property(e => e.PrivateGameId).HasMaxLength(64).IsRequired(false);
         builder.HasIndex(e => e.PrivateGameId);
+
+        // Admin Wizard: Processing priority for admin queue
+        builder.Property(e => e.ProcessingPriority)
+            .IsRequired()
+            .HasMaxLength(16)
+            .HasColumnName("processing_priority")
+            .HasDefaultValue("Normal");
 
         // Issue #4219: Per-state timing fields for metrics and ETA
         builder.Property(e => e.UploadingStartedAt)

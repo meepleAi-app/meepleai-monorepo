@@ -57,7 +57,11 @@ const mockGameBase: UserLibraryEntry = {
   isFavorite: false,
   currentState: 'Owned',
   stateChangedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  hasPdfDocuments: true,
+  hasKb: true,
+  kbCardCount: 1,
+  kbIndexedCount: 1,
+  kbProcessingCount: 0,
+  agentIsOwned: true,
 };
 
 // ============================================================================

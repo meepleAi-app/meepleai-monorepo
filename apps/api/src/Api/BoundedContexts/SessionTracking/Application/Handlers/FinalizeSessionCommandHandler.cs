@@ -75,7 +75,7 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             .Key;
 
         // UserLibrary integration placeholder
-        if (session.GameId.HasValue)
+        if (session.GameId != Guid.Empty)
         {
             // CreateGamesPlayedCommand integration
         }

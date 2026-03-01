@@ -1,11 +1,12 @@
+using Amazon.S3.Model;
 using Api.Services.Pdf;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Api.Infrastructure.Health.Checks;
 
 /// <summary>
-/// Health check for S3-compatible object storage connectivity
-/// Verifies storage service initialization and availability
+/// Health check for S3-compatible object storage connectivity.
+/// Performs real S3 API call (ListObjectsV2) to verify bucket accessibility.
 /// </summary>
 internal sealed class S3StorageHealthCheck : IHealthCheck
 {
@@ -23,7 +24,7 @@ internal sealed class S3StorageHealthCheck : IHealthCheck
         _logger = logger;
     }
 
-    public Task<HealthCheckResult> CheckHealthAsync(
+    public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
@@ -32,39 +33,39 @@ internal sealed class S3StorageHealthCheck : IHealthCheck
         // Skip detailed check if using local storage
         if (!string.Equals(storageProvider, "s3", StringComparison.Ordinal))
         {
-            return Task.FromResult(HealthCheckResult.Healthy("Using local filesystem storage (S3 not configured)"));
+            return HealthCheckResult.Healthy("Using local filesystem storage (S3 not configured)");
         }
 
         try
         {
-            // Verify S3 configuration is present
-            var endpoint = _configuration["S3_ENDPOINT"];
-            var bucketName = _configuration["S3_BUCKET_NAME"];
-
-            if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(bucketName))
+            // Verify the DI resolved the correct service type
+            if (_storageService is not S3BlobStorageService s3Service)
             {
-                return Task.FromResult(HealthCheckResult.Unhealthy("S3 configuration incomplete (missing endpoint or bucket name)"));
+                var actualType = _storageService.GetType().Name;
+                return HealthCheckResult.Degraded($"Expected S3 storage but got {actualType}");
             }
 
-            // Quick check: verify service was initialized successfully
-            // The factory would have thrown on initialization if credentials were invalid
-            var serviceType = _storageService.GetType().Name;
-
-            if (!string.Equals(serviceType, nameof(S3BlobStorageService), StringComparison.Ordinal))
+            // Real connectivity check: list objects with MaxKeys=1 to verify
+            // credentials, endpoint, and bucket access with minimal overhead
+            var listRequest = new ListObjectsV2Request
             {
-                return Task.FromResult(HealthCheckResult.Degraded($"Expected S3 storage but got {serviceType}"));
-            }
+                BucketName = s3Service.Options.BucketName,
+                MaxKeys = 1
+            };
 
-            // Service type verification is sufficient for health check
-            // The factory validates S3 connectivity during DI initialization
-            // If we reached here with S3BlobStorageService, S3 is accessible
-            return Task.FromResult(HealthCheckResult.Healthy($"S3 storage accessible (endpoint: {endpoint}, bucket: {bucketName})"));
+            await s3Service.S3Client
+                .ListObjectsV2Async(listRequest, cancellationToken)
+                .ConfigureAwait(false);
+
+            return HealthCheckResult.Healthy(
+                $"S3 storage accessible (endpoint: {s3Service.Options.Endpoint}, bucket: {s3Service.Options.BucketName})");
         }
+#pragma warning disable CA1031 // Service boundary: health check must never throw
         catch (Exception ex)
         {
             _logger.LogError(ex, "S3 health check failed");
-            return Task.FromResult(HealthCheckResult.Unhealthy("S3 storage check failed", ex));
+            return HealthCheckResult.Unhealthy($"S3 storage unreachable: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 }
-

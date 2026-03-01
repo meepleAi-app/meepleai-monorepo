@@ -148,7 +148,7 @@ public class SuggestPlayerMoveCommandHandlerTests
             .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmOutput);
 
         // Act
@@ -194,7 +194,7 @@ public class SuggestPlayerMoveCommandHandlerTests
             .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmOutput);
 
         // Act
@@ -240,7 +240,7 @@ public class SuggestPlayerMoveCommandHandlerTests
             .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmOutput);
 
         // Act
@@ -287,7 +287,7 @@ public class SuggestPlayerMoveCommandHandlerTests
             .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmMoveGenerationOutput?)null); // LLM failure
 
         // Act

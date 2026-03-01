@@ -1,9 +1,15 @@
 /**
- * GameCollectionGrid Component - Issue #4581
- * Grid of MeepleCards for user's game collection
+ * GameCollectionGrid Component
+ * Issue #4909 - Uniform MeepleCard UI across dashboard, /games and admin
+ *
+ * Updated to use MeepleUserLibraryCard for visual and functional consistency
+ * with /games catalog (flip, quick actions, navigateTo footer, full imageUrl).
  */
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleUserLibraryCard,
+  MeepleUserLibraryCardSkeleton,
+} from '@/components/library/MeepleUserLibraryCard';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
 
 interface GameCollectionGridProps {
@@ -21,11 +27,7 @@ export function GameCollectionGrid({
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="h-80 animate-pulse rounded-lg bg-muted"
-            aria-label="Loading games"
-          />
+          <MeepleUserLibraryCardSkeleton key={i} variant="grid" />
         ))}
       </div>
     );
@@ -43,31 +45,11 @@ export function GameCollectionGrid({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {games.map((game) => (
-        <MeepleCard
+        <MeepleUserLibraryCard
           key={game.id}
-          entity="game"
+          game={game}
           variant="grid"
-          title={game.title}
-          subtitle={game.publisher ?? undefined}
-          imageUrl={game.thumbnailUrl ?? game.imageUrl ?? undefined}
-          rating={game.averageRating ?? undefined}
-          ratingMax={10}
-          metadata={[
-            {
-              label:
-                game.minPlayers && game.maxPlayers
-                  ? `👥 ${game.minPlayers}-${game.maxPlayers}`
-                  : '',
-            },
-            {
-              label: game.playingTimeMinutes ? `⏱️ ${game.playingTimeMinutes}m` : '',
-            },
-            {
-              label: game.playCount > 0 ? `🎲 ${game.playCount}x giocato` : '',
-            },
-          ].filter((m) => m.label)}
-          badge={game.isOwned ? 'Owned' : 'Wishlist'}
-          onClick={onGameClick ? () => onGameClick(game.id) : undefined}
+          onClick={onGameClick}
         />
       ))}
     </div>

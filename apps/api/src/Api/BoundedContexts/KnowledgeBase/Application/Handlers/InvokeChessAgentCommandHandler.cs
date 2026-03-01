@@ -181,7 +181,7 @@ internal sealed class InvokeChessAgentCommandHandler
         var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, cancellationToken).ConfigureAwait(false);
         var userPrompt = BuildChessUserPrompt(question, fenPosition, context, fenValidationError);
 
-        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.AgentTask, cancellationToken).ConfigureAwait(false);
 
         if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
         {

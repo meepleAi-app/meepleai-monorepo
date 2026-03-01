@@ -26,6 +26,12 @@ interface GameCreationStepProps {
   onComplete: (gameId: string, gameName: string) => void;
   onSkipPdf?: () => void;  // Callback for skip PDF button
   onBack: () => void;
+  /**
+   * Determines which API endpoint to use for game creation.
+   * 'admin' (default): POST /api/v1/games (shared catalog — admin only)
+   * 'user': POST /api/v1/private-games (user's private library)
+   */
+  mode?: 'admin' | 'user';
 }
 
 type ImageInputMode = 'url' | 'upload';
@@ -37,6 +43,7 @@ export function GameCreationStep({
   onComplete,
   onSkipPdf,
   onBack,
+  mode = 'admin',
 }: GameCreationStepProps) {
   const [gameName, setGameName] = useState('');
   const [publisher, setPublisher] = useState('');
@@ -113,62 +120,97 @@ export function GameCreationStep({
     setCreating(true);
 
     try {
-      // Step 1: Create game first (without images) to get gameId
-      // Issue #3372: Pass pdfId to link PDF during game creation
-      const result = await api.games.create({
-        title: gameName.trim(),
-        publisher: publisher.trim() || null,
-        yearPublished: yearPublished ?? null,
-        iconUrl: null,
-        imageUrl: null,
-        pdfId: pdfId || null,
-      });
+      let gameId: string;
 
-      // Step 2: Upload files if provided and link to game (Issue #2255)
-      let finalIconUrl: string | null = null;
-      let finalImageUrl: string | null = null;
-
-      if (iconMode === 'url' && iconUrl.trim()) {
-        // Use URL directly
-        finalIconUrl = iconUrl.trim();
-      } else if (iconMode === 'upload' && iconFile) {
-        // Upload icon file to storage
-        toast.info('Caricamento icona...');
-        const uploadResult = await api.games.uploadImage(iconFile, result.id, 'icon');
-        if (uploadResult.success && uploadResult.fileUrl) {
-          finalIconUrl = uploadResult.fileUrl;
-        } else {
-          toast.warning(`Errore caricamento icona: ${uploadResult.error || 'Errore sconosciuto'}`);
-        }
-      }
-
-      if (imageMode === 'url' && imageUrl.trim()) {
-        // Use URL directly
-        finalImageUrl = imageUrl.trim();
-      } else if (imageMode === 'upload' && imageFile) {
-        // Upload cover image to storage
-        toast.info('Caricamento immagine copertina...');
-        const uploadResult = await api.games.uploadImage(imageFile, result.id, 'image');
-        if (uploadResult.success && uploadResult.fileUrl) {
-          finalImageUrl = uploadResult.fileUrl;
-        } else {
-          toast.warning(
-            `Errore caricamento immagine: ${uploadResult.error || 'Errore sconosciuto'}`
-          );
-        }
-      }
-
-      // Step 3: Link uploaded files to game record (Issue #2255 - Code review fix)
-      // Code review finding: Files were orphaned without database link
-      if (finalIconUrl || finalImageUrl) {
-        await api.games.update(result.id, {
-          iconUrl: finalIconUrl,
-          imageUrl: finalImageUrl,
+      if (mode === 'user') {
+        // ── User wizard: create private game via /api/v1/private-games ──────────
+        const result = await api.library.addPrivateGame({
+          source: 'Manual',
+          title: gameName.trim(),
+          yearPublished: yearPublished ?? null,
+          // Required fields — user can edit them later
+          minPlayers: 1,
+          maxPlayers: 99,
+          imageUrl: null,
+          thumbnailUrl: null,
         });
+        gameId = result.id;
+
+        // Upload cover image (file upload uses shared storage endpoint)
+        let finalImageUrl: string | null = null;
+
+        if (imageMode === 'url' && imageUrl.trim()) {
+          finalImageUrl = imageUrl.trim();
+        } else if (imageMode === 'upload' && imageFile) {
+          toast.info('Caricamento immagine copertina...');
+          const uploadResult = await api.games.uploadImage(imageFile, gameId, 'image');
+          if (uploadResult.success && uploadResult.fileUrl) {
+            finalImageUrl = uploadResult.fileUrl;
+          } else {
+            toast.warning(`Errore caricamento immagine: ${uploadResult.error || 'Errore sconosciuto'}`);
+          }
+        }
+
+        // Update private game with image URL if available
+        if (finalImageUrl) {
+          await api.library.updatePrivateGame(gameId, {
+            title: gameName.trim(),
+            minPlayers: 1,
+            maxPlayers: 99,
+            imageUrl: finalImageUrl,
+          });
+        }
+      } else {
+        // ── Admin wizard: create shared game via /api/v1/games ──────────────────
+        const result = await api.games.create({
+          title: gameName.trim(),
+          publisher: publisher.trim() || null,
+          yearPublished: yearPublished ?? null,
+          iconUrl: null,
+          imageUrl: null,
+          pdfId: pdfId || null,
+        });
+        gameId = result.id;
+
+        // Step 2: Upload files if provided and link to game (Issue #2255)
+        let finalIconUrl: string | null = null;
+        let finalImageUrl: string | null = null;
+
+        if (iconMode === 'url' && iconUrl.trim()) {
+          finalIconUrl = iconUrl.trim();
+        } else if (iconMode === 'upload' && iconFile) {
+          toast.info('Caricamento icona...');
+          const uploadResult = await api.games.uploadImage(iconFile, gameId, 'icon');
+          if (uploadResult.success && uploadResult.fileUrl) {
+            finalIconUrl = uploadResult.fileUrl;
+          } else {
+            toast.warning(`Errore caricamento icona: ${uploadResult.error || 'Errore sconosciuto'}`);
+          }
+        }
+
+        if (imageMode === 'url' && imageUrl.trim()) {
+          finalImageUrl = imageUrl.trim();
+        } else if (imageMode === 'upload' && imageFile) {
+          toast.info('Caricamento immagine copertina...');
+          const uploadResult = await api.games.uploadImage(imageFile, gameId, 'image');
+          if (uploadResult.success && uploadResult.fileUrl) {
+            finalImageUrl = uploadResult.fileUrl;
+          } else {
+            toast.warning(`Errore caricamento immagine: ${uploadResult.error || 'Errore sconosciuto'}`);
+          }
+        }
+
+        // Step 3: Link uploaded files to game record (Issue #2255 - Code review fix)
+        if (finalIconUrl || finalImageUrl) {
+          await api.games.update(gameId, {
+            iconUrl: finalIconUrl,
+            imageUrl: finalImageUrl,
+          });
+        }
       }
 
       toast.success(`Gioco "${gameName}" creato con successo!`);
-      onComplete(result.id, gameName.trim());
+      onComplete(gameId, gameName.trim());
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore sconosciuto';
       toast.error(`Creazione fallita: ${message}`);
@@ -186,6 +228,7 @@ export function GameCreationStep({
     imageUrl,
     imageFile,
     pdfId,
+    mode,
     onComplete,
   ]);
 

@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.Services.LlmClients;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -54,8 +55,14 @@ public class GetLlmHealthQueryHandlerTests
             loggerMock.Object,
             aiSettingsMock.Object,
             modelConfigRepositoryMock.Object,
-            publisherMock.Object,  // Fix: Pass IPublisher mock
-            healthCheckServiceMock.Object);
+            publisherMock.Object,
+            healthCheckServiceMock.Object,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!);
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()

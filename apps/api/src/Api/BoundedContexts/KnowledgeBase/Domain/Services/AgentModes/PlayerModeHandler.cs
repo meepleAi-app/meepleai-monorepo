@@ -129,6 +129,7 @@ internal sealed class PlayerModeHandler : IAgentModeHandler
             var suggestionsResponse = await _llmService.GenerateJsonAsync<MoveSuggestionsResponse>(
                 systemPrompt,
                 userPrompt,
+                RequestSource.Manual,
                 cancellationToken)
                 .ConfigureAwait(false);
 

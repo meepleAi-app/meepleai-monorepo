@@ -67,7 +67,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)llmResponse);
 
         // Act
@@ -89,7 +89,7 @@ public class LlmRulebookOverviewExtractorTests
             x => x.GenerateJsonAsync<LlmRulebookOverviewExtractor.LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -108,7 +108,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)null);
 
         // Act
@@ -142,7 +142,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("LLM service unavailable"));
 
         // Act
@@ -171,7 +171,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.Is<string>(s => s.Contains("[Beginning]") && !s.Contains("[Middle Section]")),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResponse);
 
         // Act
@@ -195,8 +195,8 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, user, _) => capturedUserPrompt = user)
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedUserPrompt = user)
             .ReturnsAsync(llmResponse);
 
         // Act
@@ -236,7 +236,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)null); // Force fallback
 
         // Act
@@ -269,7 +269,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)null); // Force fallback
 
         // Act
@@ -292,7 +292,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)null); // Force fallback
 
         // Act
@@ -317,7 +317,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)null); // Force fallback
 
         // Act
@@ -347,8 +347,8 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, _, ct) => capturedToken = ct)
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, _, _, ct) => capturedToken = ct)
             .ReturnsAsync(llmResponse);
 
         // Act
@@ -373,7 +373,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)null); // Force fallback
 
         // Act
@@ -400,7 +400,7 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((LlmOverviewResponse?)null);
 
         // Act
@@ -428,8 +428,8 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, user, _) => capturedPrompt = user)
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedPrompt = user)
             .ReturnsAsync((LlmOverviewResponse?)CreateValidLlmResponse());
 
         // Act
@@ -454,8 +454,8 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, user, _) => capturedPrompt = user)
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedPrompt = user)
             .ReturnsAsync((LlmOverviewResponse?)CreateValidLlmResponse());
 
         // Act
@@ -480,8 +480,8 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, user, _) => capturedPrompt = user)
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedPrompt = user)
             .ReturnsAsync((LlmOverviewResponse?)CreateValidLlmResponse());
 
         // Act
@@ -524,8 +524,8 @@ public class LlmRulebookOverviewExtractorTests
             .Setup(x => x.GenerateJsonAsync<LlmOverviewResponse>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, user, _) => capturedPrompt = user)
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedPrompt = user)
             .ReturnsAsync((LlmOverviewResponse?)CreateValidLlmResponse());
 
         // Act

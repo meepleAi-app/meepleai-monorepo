@@ -84,7 +84,7 @@ export function UserBadges({
 
           {showViewAll && hasMore && (
             <Button asChild variant="outline" size="sm">
-              <Link href="/badges">View All Badges</Link>
+              <Link href="/profile?tab=badges">View All Badges</Link>
             </Button>
           )}
         </div>

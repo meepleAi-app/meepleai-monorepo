@@ -10,6 +10,23 @@
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactElement, ReactNode } from 'react';
+import { IntlProvider } from 'react-intl';
+
+// Flatten nested JSON into dot-notation keys for react-intl
+function flattenMessages(obj: Record<string, unknown>, prefix = ''): Record<string, string> {
+  return Object.keys(obj).reduce((acc, key) => {
+    const full = prefix ? `${prefix}.${key}` : key;
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      Object.assign(acc, flattenMessages(obj[key] as Record<string, unknown>, full));
+    } else {
+      acc[full] = String(obj[key]);
+    }
+    return acc;
+  }, {} as Record<string, string>);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const enMessages = flattenMessages(require('../../locales/en.json'));
 
 /**
  * Create a new QueryClient for testing
@@ -41,7 +58,7 @@ export function createTestQueryClient(): QueryClient {
 }
 
 /**
- * Wrapper component that provides QueryClient to children
+ * Wrapper component that provides QueryClient and IntlProvider to children
  */
 interface QueryWrapperProps {
   children: ReactNode;
@@ -51,22 +68,17 @@ interface QueryWrapperProps {
 function QueryWrapper({ children, queryClient }: QueryWrapperProps) {
   const client = queryClient || createTestQueryClient();
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <IntlProvider locale="en" messages={enMessages}>
+        {children}
+      </IntlProvider>
+    </QueryClientProvider>
+  );
 }
 
 /**
- * Custom render function that wraps components with QueryClientProvider
- *
- * Usage:
- * ```tsx
- * const { result } = renderWithQuery(<MyComponent />);
- * ```
- *
- * With custom QueryClient:
- * ```tsx
- * const queryClient = createTestQueryClient();
- * const { result } = renderWithQuery(<MyComponent />, { queryClient });
- * ```
+ * Custom render function that wraps components with QueryClientProvider + IntlProvider
  *
  * @param ui Component to render
  * @param options Render options with optional queryClient
@@ -86,30 +98,14 @@ export function renderWithQuery(
 
 /**
  * Wait for queries to settle (useful for async assertions)
- *
- * Usage:
- * ```tsx
- * const queryClient = createTestQueryClient();
- * renderWithQuery(<MyComponent />, { queryClient });
- * await waitForQueries(queryClient);
- * expect(screen.getByText('Data loaded')).toBeInTheDocument();
- * ```
  */
 export async function waitForQueries(queryClient: QueryClient): Promise<void> {
-  // Wait for all active queries to settle
   const queries = queryClient.getQueryCache().getAll();
   await Promise.all(queries.map(q => q.promise).filter(Boolean));
 }
 
 /**
  * Clear all query cache (useful in beforeEach/afterEach)
- *
- * Usage:
- * ```tsx
- * afterEach(() => {
- *   clearQueryCache(queryClient);
- * });
- * ```
  */
 export function clearQueryCache(queryClient: QueryClient): void {
   queryClient.clear();

@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -14,6 +15,7 @@ using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 
@@ -60,6 +62,11 @@ internal class HybridLlmService : ILlmService
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly IAiModelConfigurationRepository _modelConfigRepository;
     private readonly IPublisher _publisher;
+    private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
+    private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
+    private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
+    private readonly IServiceScopeFactory? _scopeFactory; // Issue #5086: for fire-and-forget circuit breaker notifications
+    private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker; // Issue #5087: RPD exhaustion state
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -87,7 +94,12 @@ internal class HybridLlmService : ILlmService
         IAiModelConfigurationRepository modelConfigRepository,
         IPublisher publisher,
         IProviderHealthCheckService? healthCheckService = null,
-        IUserBudgetService? userBudgetService = null)
+        IUserBudgetService? userBudgetService = null,
+        IOpenRouterFileLogger? openRouterFileLogger = null,
+        IOpenRouterUsageService? openRouterUsageService = null,
+        IOpenRouterRateLimitTracker? rateLimitTracker = null,
+        IServiceScopeFactory? scopeFactory = null,
+        IFreeModelQuotaTracker? freeModelQuotaTracker = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -98,6 +110,11 @@ internal class HybridLlmService : ILlmService
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
         _userBudgetService = userBudgetService; // Optional - for credit tracking
+        _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
+        _openRouterUsageService = openRouterUsageService; // Issue #5074: Optional - Redis usage cache
+        _rateLimitTracker = rateLimitTracker; // Issue #5075: Optional - RPM/TPM sliding window
+        _scopeFactory = scopeFactory; // Issue #5086: Optional - for circuit breaker notifications
+        _freeModelQuotaTracker = freeModelQuotaTracker; // Issue #5087: Optional - RPD exhaustion state
 
         if (_clients.Count == 0)
         {
@@ -105,10 +122,13 @@ internal class HybridLlmService : ILlmService
         }
 
         // ISSUE-962: Initialize circuit breakers and latency stats for each provider
-        // ISSUE-962: Initialize circuit breakers and latency stats for each provider
+        // ISSUE-5086: Subscribe OnStateTransition callback for admin notifications
         foreach (var providerName in _clients.Select(client => client.ProviderName))
         {
-            _circuitBreakers[providerName] = new CircuitBreakerState();
+            var breaker = new CircuitBreakerState();
+            var capturedProvider = providerName; // Capture for closure
+            breaker.OnStateTransition = (prev, next) => PublishCircuitBreakerEvent(capturedProvider, prev, next);
+            _circuitBreakers[providerName] = breaker;
             _latencyStats[providerName] = new LatencyStats();
         }
 
@@ -123,6 +143,7 @@ internal class HybridLlmService : ILlmService
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default)
     {
         return await GenerateCompletionAsync(
@@ -130,6 +151,7 @@ internal class HybridLlmService : ILlmService
             userPrompt,
             user: null, // No user context (anonymous)
             strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            source: source,
             ct).ConfigureAwait(false);
     }
 
@@ -142,6 +164,7 @@ internal class HybridLlmService : ILlmService
         string userPrompt,
         User? user,
         RagStrategy strategy = RagStrategy.Balanced,
+        RequestSource source = RequestSource.Manual,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
@@ -151,10 +174,41 @@ internal class HybridLlmService : ILlmService
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
-        // ISSUE-962: Route with circuit breaker awareness and support fallback retries
-        // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
-        var decision = _routingStrategy.SelectProvider(user, strategy);
-        var client = GetClientWithCircuitBreaker(decision.ProviderName);
+        // Issue #5089: AutomatedTest requests must never consume free OpenRouter quota
+        // Issue #5089: If OpenRouter selected but RPD quota exhausted, route directly to Ollama
+        LlmRoutingDecision decision;
+        ILlmClient? client;
+
+        if (source == RequestSource.AutomatedTest)
+        {
+            var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
+            decision = LlmRoutingDecision.Ollama(ollamaModelId, "AutomatedTest source: always routed to Ollama (free quota bypass)");
+            client = GetClientWithCircuitBreaker("Ollama");
+        }
+        else
+        {
+            // ISSUE-962: Route with circuit breaker awareness and support fallback retries
+            // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
+            decision = _routingStrategy.SelectProvider(user, strategy);
+
+            // Issue #5089: Proactively skip OpenRouter when RPD quota is known-exhausted
+            if (string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal)
+                && _freeModelQuotaTracker != null)
+            {
+                var isExhausted = await _freeModelQuotaTracker
+                    .IsRpdExhaustedAsync(decision.ModelId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (isExhausted)
+                {
+                    _logger.LogWarning(
+                        "Free model {Model} RPD quota exhausted — proactively routing to Ollama", decision.ModelId);
+                    var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
+                    decision = LlmRoutingDecision.Ollama(ollamaModelId, $"RPD quota exhausted for {decision.ModelId}");
+                }
+            }
+
+            client = GetClientWithCircuitBreaker(decision.ProviderName);
+        }
 
         if (client == null)
         {
@@ -195,6 +249,16 @@ internal class HybridLlmService : ILlmService
                 "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
                 client.ProviderName, decision.ModelId, decision.Reason);
 
+            // Issue #5075: Warn if approaching RPM limit before sending request
+            if (_rateLimitTracker != null)
+            {
+                var isApproaching = await _rateLimitTracker
+                    .IsApproachingLimitAsync(client.ProviderName, thresholdPercent: 80, cancellationToken)
+                    .ConfigureAwait(false);
+                if (isApproaching)
+                    _logger.LogWarning("OpenRouter rate limit approaching 80% for provider {Provider}", client.ProviderName);
+            }
+
             var attemptStopwatch = Stopwatch.StartNew();
             try
             {
@@ -212,12 +276,35 @@ internal class HybridLlmService : ILlmService
                 {
                     RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
+                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+
+                    // Issue #5075: Record request in RPM/TPM sliding window (fire-and-forget)
+                    if (_rateLimitTracker != null)
+                    {
+                        var totalTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
+                        _ = _rateLimitTracker.RecordRequestAsync(client.ProviderName, decision.ModelId, totalTokens);
+                    }
+
                     return result;
                 }
 
                 RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
-                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
+
+                // Issue #5087/#5088: Record rate limit events from OpenRouter for future routing avoidance
+                if (string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal)
+                    && _freeModelQuotaTracker != null
+                    && result.Metadata.TryGetValue("rate_limit_type", out var rlTypeStr)
+                    && Enum.TryParse<RateLimitErrorType>(rlTypeStr, ignoreCase: true, out var rlErrorType))
+                {
+                    result.Metadata.TryGetValue("rate_limit_reset_ms", out var resetMsStr);
+                    long? resetMs = long.TryParse(resetMsStr, NumberStyles.None, CultureInfo.InvariantCulture, out var resetMsVal)
+                        ? resetMsVal : null;
+                    result.Metadata.TryGetValue("rate_limit_model", out var rlModel);
+                    var modelForTracking = string.IsNullOrEmpty(rlModel) ? decision.ModelId : rlModel;
+                    _ = _freeModelQuotaTracker.RecordRateLimitErrorAsync(modelForTracking, rlErrorType, resetMs, cancellationToken);
+                }
+
+                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -229,7 +316,7 @@ internal class HybridLlmService : ILlmService
                     "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
                     client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
 
-                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, cancellationToken).ConfigureAwait(false);
+                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -254,6 +341,7 @@ internal class HybridLlmService : ILlmService
     public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default)
     {
         return GenerateCompletionStreamAsync(
@@ -261,6 +349,7 @@ internal class HybridLlmService : ILlmService
             userPrompt,
             user: null, // No user context (anonymous)
             strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            source: source,
             ct);
     }
 
@@ -276,6 +365,7 @@ internal class HybridLlmService : ILlmService
         string userPrompt,
         User? user,
         RagStrategy strategy = RagStrategy.Balanced,
+        RequestSource source = RequestSource.Manual,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
 #pragma warning restore S4456
 #pragma warning restore S3400
@@ -321,6 +411,7 @@ internal class HybridLlmService : ILlmService
     public async Task<T?> GenerateJsonAsync<T>(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default) where T : class
     {
         return await GenerateJsonAsync<T>(
@@ -328,6 +419,7 @@ internal class HybridLlmService : ILlmService
             userPrompt,
             user: null, // No user context (anonymous)
             strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            source: source,
             ct).ConfigureAwait(false);
     }
 
@@ -340,6 +432,7 @@ internal class HybridLlmService : ILlmService
         string userPrompt,
         User? user,
         RagStrategy strategy = RagStrategy.Balanced,
+        RequestSource source = RequestSource.Manual,
         CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
@@ -352,7 +445,7 @@ internal class HybridLlmService : ILlmService
             Just the raw JSON object that matches the required structure.
             """;
 
-        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, strategy, cancellationToken).ConfigureAwait(false);
+        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, strategy, source, cancellationToken).ConfigureAwait(false);
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
         {
@@ -518,6 +611,7 @@ internal class HybridLlmService : ILlmService
         LlmCompletionResult result,
         User? user,
         long latencyMs,
+        RequestSource source,
         CancellationToken cancellationToken)
     {
         try
@@ -540,6 +634,7 @@ internal class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
+                source: source,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Issue #2520: Update model usage statistics
@@ -570,6 +665,25 @@ internal class HybridLlmService : ILlmService
                         Timestamp: DateTime.UtcNow),
                     cancellationToken).ConfigureAwait(false);
             }
+
+            // Issue #5073: Write to rotating OpenRouter file log
+            _openRouterFileLogger?.LogRequest(
+                requestId: Guid.NewGuid().ToString(),
+                model: result.Cost.ModelId,
+                provider: result.Cost.Provider,
+                source: source.ToString(),
+                userId: user?.Id,
+                promptTokens: result.Usage.PromptTokens,
+                completionTokens: result.Usage.CompletionTokens,
+                costUsd: result.Cost.TotalCost,
+                latencyMs: latencyMs,
+                success: true,
+                isFreeModel: result.Cost.TotalCost == 0,
+                sessionId: null);
+
+            // Issue #5074: Accumulate daily spend in Redis (fire-and-forget)
+            if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
+                _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost);
         }
         catch (Exception logEx)
         {
@@ -613,6 +727,7 @@ internal class HybridLlmService : ILlmService
         string? errorMessage,
         User? user,
         long latencyMs,
+        RequestSource source,
         CancellationToken cancellationToken)
     {
         try
@@ -627,7 +742,24 @@ internal class HybridLlmService : ILlmService
                 latencyMs: (int)latencyMs,
                 ipAddress: null,
                 userAgent: null,
+                source: source,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Issue #5073: Write failure to rotating OpenRouter file log
+            _openRouterFileLogger?.LogRequest(
+                requestId: Guid.NewGuid().ToString(),
+                model: string.Empty,
+                provider: string.Empty,
+                source: source.ToString(),
+                userId: user?.Id,
+                promptTokens: 0,
+                completionTokens: 0,
+                costUsd: 0,
+                latencyMs: latencyMs,
+                success: false,
+                isFreeModel: false,
+                sessionId: null,
+                errorMessage: errorMessage);
         }
         catch (Exception logEx)
         {
@@ -813,6 +945,48 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <summary>
+    /// ISSUE-5086: Fire-and-forget circuit breaker state change notification.
+    /// Uses a new DI scope so notifications survive request completion.
+    /// </summary>
+    private void PublishCircuitBreakerEvent(string providerName, CircuitState previousState, CircuitState newState)
+    {
+        if (_scopeFactory is null)
+            return;
+
+        var reason = (previousState, newState) switch
+        {
+            (CircuitState.Closed, CircuitState.Open) =>
+                $"{providerName} circuit breaker OPENED: consecutive failure threshold reached. Falling back to alternative provider.",
+            (CircuitState.HalfOpen, CircuitState.Open) =>
+                $"{providerName} circuit breaker REOPENED: recovery attempt failed.",
+            (CircuitState.HalfOpen, CircuitState.Closed) =>
+                $"{providerName} circuit breaker CLOSED: service recovered successfully.",
+            (CircuitState.Open, CircuitState.HalfOpen) =>
+                $"{providerName} circuit breaker HALF-OPEN: testing recovery.",
+            _ => $"{providerName} circuit breaker transitioned {previousState} → {newState}."
+        };
+
+        var evt = new CircuitBreakerStateChangedEvent(providerName, previousState, newState, reason, DateTime.UtcNow);
+        var scopeFactory = _scopeFactory;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+                await publisher.Publish(evt, CancellationToken.None).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to publish CircuitBreakerStateChangedEvent for {Provider}", providerName);
+            }
+#pragma warning restore CA1031
+        });
+    }
+
+    /// <summary>
     /// ISSUE-962: Get monitoring status for all providers
     /// </summary>
     public virtual Dictionary<string, (string circuitState, string latencyStats)> GetMonitoringStatus()
@@ -893,6 +1067,7 @@ internal class HybridLlmService : ILlmService
         string explicitModel,
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(explicitModel);
@@ -972,7 +1147,7 @@ internal class HybridLlmService : ILlmService
             }
 
             // Log cost asynchronously (fire-and-forget)
-            _ = LogCostAsync(result, user: null, stopwatch.ElapsedMilliseconds, ct);
+            _ = LogCostAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, ct);
 
             _logger.LogInformation(
                 "Explicit model {Model} completion successful (tokens: {Tokens}, cost: ${Cost:F6}, latency: {Latency}ms)",

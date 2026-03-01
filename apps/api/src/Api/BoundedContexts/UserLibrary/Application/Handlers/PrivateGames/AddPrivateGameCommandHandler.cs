@@ -132,8 +132,9 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
         await _privateGameRepository.AddAsync(privateGame, cancellationToken).ConfigureAwait(false);
 
         // Create UserLibraryEntry to link the private game to user's library
+        // Use AddForPrivateGameAsync to correctly set PrivateGameId instead of SharedGameId
         var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), command.UserId, privateGame.Id);
-        await _userLibraryRepository.AddAsync(libraryEntry, cancellationToken).ConfigureAwait(false);
+        await _userLibraryRepository.AddForPrivateGameAsync(libraryEntry, cancellationToken).ConfigureAwait(false);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

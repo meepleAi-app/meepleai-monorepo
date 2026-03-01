@@ -6,3 +6,4 @@
  */
 
 export { Breadcrumb, getContextConfig, type BreadcrumbProps } from './Breadcrumb';
+export { DesktopBreadcrumb, type DesktopBreadcrumbProps } from './DesktopBreadcrumb';

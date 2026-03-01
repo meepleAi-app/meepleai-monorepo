@@ -3,6 +3,9 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.EntityRelationships.Application.Commands;
+using Api.BoundedContexts.EntityRelationships.Domain.Enums;
+using Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
@@ -11,6 +14,7 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,6 +39,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IPdfTextExtractor _pdfTextExtractor;
     private readonly IPdfTableExtractor _tableExtractor;
+    private readonly IMediator _mediator;
 
     public CompleteChunkedUploadCommandHandler(
         IChunkedUploadSessionRepository sessionRepository,
@@ -45,6 +50,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IServiceScopeFactory scopeFactory,
         IPdfTextExtractor pdfTextExtractor,
         IPdfTableExtractor tableExtractor,
+        IMediator mediator,
         TimeProvider? timeProvider = null)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
@@ -55,6 +61,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
         _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -221,7 +228,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             storageResult = await _blobStorageService.StoreAsync(
                 assembledStream,
                 sanitizedFileName,
-                session.GameId.ToString(),
+                (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty,
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -252,6 +259,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             Id = Guid.Parse(storageResult.FileId!),
             GameId = session.GameId,
+            PrivateGameId = session.PrivateGameId,
             FileName = sanitizedFileName,
             FilePath = storageResult.FilePath!,
             FileSizeBytes = storageResult.FileSizeBytes,
@@ -271,6 +279,9 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         _logger.LogInformation(
             "Chunked upload {SessionId} completed. Document {DocumentId} created.",
             sessionId, pdfDoc.Id);
+
+        // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association (shared games only)
+        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, session.GameId ?? Guid.Empty, session.UserId, cancellationToken).ConfigureAwait(false);
 
         // Cleanup temp files (async, non-blocking) via background service
         var tempDirToClean = session.TempDirectory;
@@ -626,7 +637,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             })
             .ToList();
 
-        var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks).ConfigureAwait(false);
+        var indexResult = await qdrantService.IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks).ConfigureAwait(false);
         indexingStopwatch.Stop();
 
         if (!indexResult.Success)
@@ -664,6 +675,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             {
                 Id = Guid.NewGuid(),
                 GameId = pdfDoc.GameId,
+                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "completed",
                 ChunkCount = indexedCount,
@@ -758,6 +770,56 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             _logger.LogError(saveEx, "Failed to update PDF status after processing error for {PdfId}", pdfId);
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Auto-creates an EntityLink (Game → KbCard) for the uploaded PDF.
+    /// Issue #5187: Idempotent — silently swallows DuplicateEntityLinkException on retry uploads.
+    /// Only creates the link for regular game uploads (not private games, identified by gameId != Guid.Empty).
+    /// </summary>
+    private async Task CreateKbCardEntityLinkSafelyAsync(
+        Guid pdfDocumentId,
+        Guid gameId,
+        Guid ownerUserId,
+        CancellationToken cancellationToken)
+    {
+        if (gameId == Guid.Empty)
+            return;
+
+        try
+        {
+            var cmd = new CreateEntityLinkCommand(
+                SourceEntityType: MeepleEntityType.Game,
+                SourceEntityId: gameId,
+                TargetEntityType: MeepleEntityType.KbCard,
+                TargetEntityId: pdfDocumentId,
+                LinkType: EntityLinkType.RelatedTo,
+                Scope: EntityLinkScope.User,
+                OwnerUserId: ownerUserId
+            );
+
+            await _mediator.Send(cmd, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogDebug(
+                "EntityLink Game/{GameId} → KbCard/{PdfId} created for user {UserId}",
+                gameId, pdfDocumentId, ownerUserId);
+        }
+        catch (DuplicateEntityLinkException ex)
+        {
+            // Idempotent: link already exists (e.g., retry upload). This is expected.
+            _logger.LogDebug(
+                ex,
+                "EntityLink Game/{GameId} → KbCard/{PdfId} already exists — skipping",
+                gameId, pdfDocumentId);
+        }
+        catch (Exception ex)
+        {
+            // Non-critical: log but do not fail the upload
+            _logger.LogWarning(
+                ex,
+                "Failed to create EntityLink for PDF {PdfId} → Game {GameId}. Upload still succeeded.",
+                pdfDocumentId, gameId);
+        }
     }
 
     /// <summary>

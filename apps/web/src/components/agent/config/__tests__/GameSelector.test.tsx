@@ -1,132 +1,280 @@
 /**
  * GameSelector Component Tests
- * Issue #3239: [FRONT-003] Game Selector from library
+ * Issue #4774: GameSelector API Integration
+ *
+ * Tests the GameSelector connected to real API via React Query.
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { Mock } from 'vitest';
 
-// Mock stores
-vi.mock('@/stores/agentStore', () => ({
-  useAgentStore: vi.fn(() => ({
-    selectedGameId: null,
-    setSelectedGame: vi.fn(),
-  })),
+import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
+
+// Mock API module
+vi.mock('@/lib/api', () => ({
+  api: {
+    library: {
+      getLibrary: vi.fn(),
+    },
+  },
 }));
 
-// Import after mocks
 import { GameSelector } from '../GameSelector';
-import { useAgentStore } from '@/stores/agentStore';
+import { api } from '@/lib/api';
+
+const mockLibraryResponse = {
+  items: [
+    {
+      id: 'entry-1',
+      userId: 'user-1',
+      gameId: 'game-1',
+      gameTitle: 'Catan',
+      gamePublisher: 'Kosmos',
+      gameYearPublished: 1995,
+      gameIconUrl: null,
+      gameImageUrl: null,
+      addedAt: '2024-01-01T00:00:00Z',
+      notes: null,
+      isFavorite: true,
+      currentState: 'Owned',
+      stateChangedAt: null,
+      stateNotes: null,
+      hasKb: true,
+      kbCardCount: 1,
+      kbIndexedCount: 1,
+      kbProcessingCount: 0,
+      agentIsOwned: true,
+    },
+    {
+      id: 'entry-2',
+      userId: 'user-1',
+      gameId: 'game-2',
+      gameTitle: 'Terraforming Mars',
+      gamePublisher: 'FryxGames',
+      gameYearPublished: 2016,
+      gameIconUrl: null,
+      gameImageUrl: null,
+      addedAt: '2024-01-02T00:00:00Z',
+      notes: null,
+      isFavorite: false,
+      currentState: 'Owned',
+      stateChangedAt: null,
+      stateNotes: null,
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      agentIsOwned: true,
+    },
+    {
+      id: 'entry-3',
+      userId: 'user-1',
+      gameId: 'game-3',
+      gameTitle: 'Wingspan',
+      gamePublisher: 'Stonemaier Games',
+      gameYearPublished: 2019,
+      gameIconUrl: null,
+      gameImageUrl: null,
+      addedAt: '2024-01-03T00:00:00Z',
+      notes: null,
+      isFavorite: false,
+      currentState: 'Owned',
+      stateChangedAt: null,
+      stateNotes: null,
+      hasKb: true,
+      kbCardCount: 1,
+      kbIndexedCount: 1,
+      kbProcessingCount: 0,
+      agentIsOwned: true,
+    },
+  ],
+  page: 1,
+  pageSize: 100,
+  totalCount: 3,
+  totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
+};
 
 describe('GameSelector', () => {
-  const mockSetSelectedGame = vi.fn();
+  let queryClient: QueryClient;
+  const mockOnChange = vi.fn();
 
   beforeEach(() => {
+    queryClient = createTestQueryClient();
     vi.clearAllMocks();
-
-    vi.mocked(useAgentStore).mockReturnValue({
-      selectedGameId: null,
-      setSelectedGame: mockSetSelectedGame,
-    } as unknown as ReturnType<typeof useAgentStore>);
   });
 
-  describe('Rendering', () => {
-    it('renders Select Game label', () => {
-      render(<GameSelector />);
-      expect(screen.getByText('Select Game')).toBeInTheDocument();
-    });
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 
-    it('renders required asterisk', () => {
-      render(<GameSelector />);
-      expect(screen.getByText('*')).toBeInTheDocument();
-    });
+  describe('Loading State', () => {
+    it('shows loading state while fetching', () => {
+      (api.library.getLibrary as Mock).mockImplementation(() => new Promise(() => {}));
 
-    it('renders placeholder text', () => {
-      render(<GameSelector />);
-      expect(screen.getByText('Choose a game...')).toBeInTheDocument();
-    });
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
 
-    it('shows validation message when no game selected', () => {
-      render(<GameSelector />);
-      expect(screen.getByText('Please select a game to continue')).toBeInTheDocument();
-    });
-
-    it('hides validation message when game is selected', () => {
-      vi.mocked(useAgentStore).mockReturnValue({
-        selectedGameId: '1',
-        setSelectedGame: mockSetSelectedGame,
-      } as unknown as ReturnType<typeof useAgentStore>);
-
-      render(<GameSelector />);
-      expect(screen.queryByText('Please select a game to continue')).not.toBeInTheDocument();
+      expect(screen.getByText('Loading games...')).toBeInTheDocument();
     });
   });
 
-  describe('Select Dropdown', () => {
-    it('opens dropdown when trigger clicked', () => {
-      render(<GameSelector />);
+  describe('Loaded State', () => {
+    beforeEach(() => {
+      (api.library.getLibrary as Mock).mockResolvedValue(mockLibraryResponse);
+    });
+
+    it('renders Select Game label', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText('Select Game')).toBeInTheDocument();
+      });
+    });
+
+    it('renders required asterisk', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText('*')).toBeInTheDocument();
+      });
+    });
+
+    it('renders placeholder text when no value', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose a game...')).toBeInTheDocument();
+      });
+    });
+
+    it('opens dropdown with games when clicked', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
 
-      // Check that dropdown content is visible
-      expect(screen.getByText('7 Wonders')).toBeInTheDocument();
-      expect(screen.getByText('Splendor')).toBeInTheDocument();
       expect(screen.getByText('Catan')).toBeInTheDocument();
+      expect(screen.getByText('Terraforming Mars')).toBeInTheDocument();
+      expect(screen.getByText('Wingspan')).toBeInTheDocument();
     });
 
-    it('shows rulebook indicator for games with PDF', () => {
-      render(<GameSelector />);
+    it('shows publisher for games', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
 
-      // All mock games have hasPdf: true
-      const rulebookIndicators = screen.getAllByText(/Rulebook/);
-      expect(rulebookIndicators.length).toBeGreaterThan(0);
+      expect(screen.getByText('Kosmos')).toBeInTheDocument();
+      expect(screen.getByText('FryxGames')).toBeInTheDocument();
     });
 
-    it('calls setSelectedGame when game is selected', () => {
-      render(<GameSelector />);
+    it('shows Rulebook badge for games with PDF', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
-      fireEvent.click(screen.getByText('7 Wonders'));
 
-      expect(mockSetSelectedGame).toHaveBeenCalledWith('1');
+      const rulebookBadges = screen.getAllByText(/Rulebook/);
+      expect(rulebookBadges.length).toBe(2); // Catan and Wingspan have PDF
     });
 
-    it('displays selected game name', () => {
-      vi.mocked(useAgentStore).mockReturnValue({
-        selectedGameId: '2',
-        setSelectedGame: mockSetSelectedGame,
-      } as unknown as ReturnType<typeof useAgentStore>);
+    it('shows favorite indicator', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
 
-      render(<GameSelector />);
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
 
-      // When a value is selected, the trigger should show the selected option
-      // The placeholder should not be visible
+      fireEvent.click(screen.getByRole('combobox'));
+
+      expect(screen.getByText('★')).toBeInTheDocument(); // Catan is favorite
+    });
+
+    it('calls onChange with gameId and game object when selected', async () => {
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('combobox'));
+      fireEvent.click(screen.getByText('Catan'));
+
+      expect(mockOnChange).toHaveBeenCalledWith('game-1', expect.objectContaining({
+        gameId: 'game-1',
+        gameTitle: 'Catan',
+      }));
+    });
+
+    it('shows selected game in trigger when value provided', async () => {
+      render(<GameSelector value="game-1" onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Catan')).toBeInTheDocument();
       expect(screen.queryByText('Choose a game...')).not.toBeInTheDocument();
     });
   });
 
-  describe('Game List', () => {
-    it('renders all available games', () => {
-      render(<GameSelector />);
+  describe('Error State', () => {
+    it('shows error message when API fails', async () => {
+      (api.library.getLibrary as Mock).mockRejectedValue(new Error('Network error'));
 
-      fireEvent.click(screen.getByRole('combobox'));
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
 
-      expect(screen.getByText('7 Wonders')).toBeInTheDocument();
-      expect(screen.getByText('Splendor')).toBeInTheDocument();
-      expect(screen.getByText('Catan')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load games. Please try again.')).toBeInTheDocument();
+      });
     });
+  });
 
-    it('renders BookOpen icon for each game', () => {
-      render(<GameSelector />);
+  describe('Empty State', () => {
+    it('shows empty message when no games in library', async () => {
+      (api.library.getLibrary as Mock).mockResolvedValue({
+        ...mockLibraryResponse,
+        items: [],
+        totalCount: 0,
+      });
+
+      render(<GameSelector onChange={mockOnChange} />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
 
       fireEvent.click(screen.getByRole('combobox'));
 
-      // Should have icons, but testing SVG is tricky
-      // Just verify the dropdown opened
-      expect(screen.getByRole('listbox')).toBeInTheDocument();
+      expect(screen.getByText('No games in your library')).toBeInTheDocument();
+    });
+  });
+
+  describe('Disabled State', () => {
+    it('disables the select when disabled prop is true', async () => {
+      (api.library.getLibrary as Mock).mockResolvedValue(mockLibraryResponse);
+
+      render(<GameSelector onChange={mockOnChange} disabled />, { wrapper });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading games...')).not.toBeInTheDocument();
+      });
+
+      const trigger = screen.getByRole('combobox');
+      expect(trigger).toBeDisabled();
     });
   });
 });

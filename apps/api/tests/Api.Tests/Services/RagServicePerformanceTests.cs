@@ -437,8 +437,8 @@ public sealed class RagServicePerformanceTests : IDisposable
         mock.Setup(s => s.GenerateCompletionAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(async (string sys, string user, CancellationToken ct) =>
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Returns(async (string sys, string user, RequestSource source, CancellationToken ct) =>
             {
                 // Simulate test-optimized LLM latency: 50-150ms
                 // (Reduced from 200-500ms to ensure P95 <3000ms target)

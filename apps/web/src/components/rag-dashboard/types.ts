@@ -58,8 +58,8 @@ export interface StrategyConfig {
 /**
  * Strategy configurations with token/cost estimates.
  * IMPORTANT: These values should match rag-data.ts (Single Source of Truth)
- * @see docs/03-api/rag/appendix/E-model-pricing-2026.md for pricing
- * @see docs/03-api/rag/appendix/F-calculation-formulas.md for token calculations
+ * @see docs/api/rag/appendix/E-model-pricing-2026.md for pricing
+ * @see docs/api/rag/appendix/F-calculation-formulas.md for token calculations
  */
 export const STRATEGY_CONFIGS: Record<RagStrategy, StrategyConfig> = {
   FAST: {
@@ -275,7 +275,7 @@ export interface DashboardStats {
  * Default dashboard statistics.
  * NOTE: ragVariants = 31 (removed 5 Anonymous variants - NO ACCESS)
  * NOTE: monthlyCost updated to reflect 2026 pricing.
- * See docs/03-api/rag/appendix/E-model-pricing-2026.md for details.
+ * See docs/api/rag/appendix/E-model-pricing-2026.md for details.
  */
 export const DEFAULT_STATS: DashboardStats = {
   ragVariants: 31, // Updated: removed 5 Anonymous variants
@@ -305,24 +305,24 @@ export const MODELS: Record<RagStrategy, ModelConfig[]> = {
     { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'OpenRouter', inputCostPerMillion: 0, outputCostPerMillion: 0, maxTokens: 8192 },
   ],
   BALANCED: [
-    { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', inputCostPerMillion: 0.14, outputCostPerMillion: 0.28, maxTokens: 16384 },
+    { id: 'claude-sonnet-4.5', name: 'Claude Sonnet 4.5', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
+    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', inputCostPerMillion: 0.28, outputCostPerMillion: 0.42, maxTokens: 16384 },
   ],
   PRECISE: [
-    { id: 'claude-3.5-opus', name: 'Claude 3.5 Opus', provider: 'Anthropic', inputCostPerMillion: 15, outputCostPerMillion: 75, maxTokens: 8192 },
-    { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', inputCostPerMillion: 5, outputCostPerMillion: 15, maxTokens: 8192 },
+    { id: 'claude-opus-4.5', name: 'Claude Opus 4.5', provider: 'Anthropic', inputCostPerMillion: 5, outputCostPerMillion: 25, maxTokens: 8192 },
+    { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', inputCostPerMillion: 2.5, outputCostPerMillion: 10, maxTokens: 8192 },
   ],
   EXPERT: [
-    { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
-    { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', inputCostPerMillion: 5, outputCostPerMillion: 15, maxTokens: 8192 },
+    { id: 'claude-sonnet-4.5', name: 'Claude Sonnet 4.5', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
+    { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', inputCostPerMillion: 2.5, outputCostPerMillion: 10, maxTokens: 8192 },
   ],
   CONSENSUS: [
-    { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (Voter)', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
-    { id: 'gpt-4o', name: 'GPT-4o (Voter)', provider: 'OpenAI', inputCostPerMillion: 5, outputCostPerMillion: 15, maxTokens: 8192 },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat (Voter)', provider: 'DeepSeek', inputCostPerMillion: 0.14, outputCostPerMillion: 0.28, maxTokens: 16384 },
+    { id: 'claude-sonnet-4.5', name: 'Claude Sonnet 4.5 (Voter)', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
+    { id: 'gpt-4o', name: 'GPT-4o (Voter)', provider: 'OpenAI', inputCostPerMillion: 2.5, outputCostPerMillion: 10, maxTokens: 8192 },
+    { id: 'deepseek-chat', name: 'DeepSeek Chat (Voter)', provider: 'DeepSeek', inputCostPerMillion: 0.28, outputCostPerMillion: 0.42, maxTokens: 16384 },
   ],
   CUSTOM: [
-    { id: 'claude-3.5-haiku', name: 'Claude 3.5 Haiku', provider: 'Anthropic', inputCostPerMillion: 0.25, outputCostPerMillion: 1.25, maxTokens: 8192 },
-    { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
+    { id: 'claude-haiku-4.5', name: 'Claude Haiku 4.5', provider: 'Anthropic', inputCostPerMillion: 1, outputCostPerMillion: 5, maxTokens: 8192 },
+    { id: 'claude-sonnet-4.5', name: 'Claude Sonnet 4.5', provider: 'Anthropic', inputCostPerMillion: 3, outputCostPerMillion: 15, maxTokens: 8192 },
   ],
 };

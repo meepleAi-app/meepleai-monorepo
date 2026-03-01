@@ -331,20 +331,22 @@ internal static class PdfEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
+        bool isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
         var command = new RetryPdfProcessingCommand(
             PdfId: pdfId,
-            UserId: session!.User!.Id
+            UserId: session!.User!.Id,
+            IsAdmin: isAdmin
         );
 
+        // NotFoundException (404) and ForbiddenException (403) are thrown by the handler
+        // and handled by ApiExceptionHandlerMiddleware — no manual mapping needed here.
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         if (!result.Success)
         {
-            // Determine appropriate status code
-            var statusCode = result.Message?.Contains("not found") == true ? 404
-                : result.Message?.Contains("not authorized") == true ? 403
-                : result.Message?.Contains("Maximum retry") == true ? 429 // Too Many Requests
-                : 400; // Bad Request
+            // Domain validation failures: max retries reached → 429, invalid state → 400
+            var statusCode = result.Message?.Contains("Maximum retry") == true ? 429 : 400;
 
             return Results.Json(
                 new
@@ -399,14 +401,30 @@ internal static class PdfEndpoints
             return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided" } });
         }
 
-        var (gameId, metadata, validationError) = ParseUploadMetadata(form);
-        if (validationError != null)
+        // Private game upload: frontend sends 'privateGameId' field to route through
+        // HandlePrivateGamePdfUploadAsync (ownership validation, correct DB link).
+        Guid? privateGameId = null;
+        var privateGameIdStr = form["privateGameId"].ToString();
+        if (!string.IsNullOrWhiteSpace(privateGameIdStr) && Guid.TryParse(privateGameIdStr, out var parsedPrivateGameId))
         {
-            return Results.BadRequest(new { error = validationError });
+            privateGameId = parsedPrivateGameId;
+        }
+
+        string? gameId = null;
+        PdfUploadMetadata? metadata = null;
+        if (!privateGameId.HasValue)
+        {
+            var (parsedGameId, parsedMetadata, validationError) = ParseUploadMetadata(form);
+            if (validationError != null)
+            {
+                return Results.BadRequest(new { error = validationError });
+            }
+            gameId = parsedGameId;
+            metadata = parsedMetadata;
         }
 
         var userId = session!.User!.Id;
-        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, null, userId, file!), ct).ConfigureAwait(false);
+        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, privateGameId, userId, file!), ct).ConfigureAwait(false);
 
         if (!result.Success)
         {
@@ -448,7 +466,7 @@ internal static class PdfEndpoints
             "User {UserId} initializing chunked upload for game {GameId}, file {FileName} ({FileSize} bytes)",
             userId, request.GameId, request.FileName, request.TotalFileSize);
 
-        var command = new InitChunkedUploadCommand(request.GameId, userId, request.FileName, request.TotalFileSize);
+        var command = new InitChunkedUploadCommand(request.GameId, userId, request.FileName, request.TotalFileSize, request.PrivateGameId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         if (!result.Success)
@@ -1201,7 +1219,7 @@ internal static class PdfEndpoints
     }
 }
 
-internal record InitChunkedUploadRequest(Guid GameId, string FileName, long TotalFileSize);
+internal record InitChunkedUploadRequest(Guid? GameId, string FileName, long TotalFileSize, Guid? PrivateGameId = null);
 internal record CompleteChunkedUploadRequest(Guid SessionId);
 internal record SetPdfVisibilityRequest(bool IsPublic);
 internal record ExtractBggGamesRequest(string PdfFilePath); // ISSUE-2513

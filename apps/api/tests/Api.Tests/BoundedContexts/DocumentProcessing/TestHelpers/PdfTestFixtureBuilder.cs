@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.Tests.TestHelpers;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,6 +46,7 @@ internal class PdfTestFixtureBuilder
     private Mock<IBlobStorageService>? _blobStorageServiceMock;
     private Mock<IPdfUploadQuotaService>? _quotaServiceMock;
     private IOptions<PdfProcessingOptions>? _pdfOptions;
+    private Mock<IMediator>? _mediatorMock;
     private TimeProvider? _timeProvider;
 
     /// <summary>
@@ -65,6 +67,7 @@ internal class PdfTestFixtureBuilder
         {
             MaxFileSizeBytes = 10 * 1024 * 1024 // 10 MB default
         });
+        _mediatorMock = new Mock<IMediator>();
 
         return this;
     }
@@ -337,6 +340,7 @@ internal class PdfTestFixtureBuilder
             _cacheServiceMock!,
             _blobStorageServiceMock!,
             _quotaServiceMock!,
+            _mediatorMock!,
             _pdfOptions!,
             _timeProvider);
     }
@@ -357,6 +361,7 @@ internal sealed class PdfTestFixture : IDisposable
     public Mock<IAiResponseCacheService> CacheServiceMock { get; }
     public Mock<IBlobStorageService> BlobStorageServiceMock { get; }
     public Mock<IPdfUploadQuotaService> QuotaServiceMock { get; }
+    public Mock<IMediator> MediatorMock { get; }
     public IOptions<PdfProcessingOptions> PdfOptions { get; }
     public TimeProvider? TimeProvider { get; }
 
@@ -370,6 +375,7 @@ internal sealed class PdfTestFixture : IDisposable
         Mock<IAiResponseCacheService> cacheServiceMock,
         Mock<IBlobStorageService> blobStorageServiceMock,
         Mock<IPdfUploadQuotaService> quotaServiceMock,
+        Mock<IMediator> mediatorMock,
         IOptions<PdfProcessingOptions> pdfOptions,
         TimeProvider? timeProvider = null)
     {
@@ -382,6 +388,7 @@ internal sealed class PdfTestFixture : IDisposable
         CacheServiceMock = cacheServiceMock;
         BlobStorageServiceMock = blobStorageServiceMock;
         QuotaServiceMock = quotaServiceMock;
+        MediatorMock = mediatorMock;
         PdfOptions = pdfOptions;
         TimeProvider = timeProvider;
     }
@@ -402,6 +409,7 @@ internal sealed class PdfTestFixture : IDisposable
             BlobStorageServiceMock.Object,
             QuotaServiceMock.Object,
             PdfOptions,
+            MediatorMock.Object,
             privateGameRepository: null,  // Issue #3664: New parameter
             timeProvider: TimeProvider);   // Moved to last parameter
     }
@@ -423,7 +431,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(ScopeFactoryMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -435,7 +444,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(LoggerMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -447,7 +457,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(PdfTextExtractorMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -459,7 +470,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(TableExtractorMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -471,7 +483,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(BackgroundTaskServiceMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -483,7 +496,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(CacheServiceMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -495,7 +509,8 @@ internal sealed class PdfTestFixture : IDisposable
                 null!,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(BlobStorageServiceMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -507,7 +522,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 null!,
                 QuotaServiceMock.Object,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(QuotaServiceMock) => new UploadPdfCommandHandler(
                 DbContext,
@@ -519,7 +535,8 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 null!,
-                PdfOptions),
+                PdfOptions,
+                MediatorMock.Object),
 
             nameof(PdfOptions) => new UploadPdfCommandHandler(
                 DbContext,
@@ -531,6 +548,20 @@ internal sealed class PdfTestFixture : IDisposable
                 CacheServiceMock.Object,
                 BlobStorageServiceMock.Object,
                 QuotaServiceMock.Object,
+                null!,
+                MediatorMock.Object),
+
+            nameof(MediatorMock) => new UploadPdfCommandHandler(
+                DbContext,
+                ScopeFactoryMock.Object,
+                LoggerMock.Object,
+                PdfTextExtractorMock.Object,
+                TableExtractorMock.Object,
+                BackgroundTaskServiceMock.Object,
+                CacheServiceMock.Object,
+                BlobStorageServiceMock.Object,
+                QuotaServiceMock.Object,
+                PdfOptions,
                 null!),
 
             _ => throw new ArgumentException($"Unknown dependency: {dependencyName}", nameof(dependencyName))

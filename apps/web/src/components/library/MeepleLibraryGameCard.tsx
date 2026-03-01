@@ -23,7 +23,6 @@
  *   onUploadPdf={handleUploadPdf}
  *   onEditNotes={handleEditNotes}
  *   onRemove={handleRemove}
- *   onAskAgent={handleAskAgent}
  *   selectable={selectionMode}
  *   selected={isSelected}
  *   onSelect={handleSelect}
@@ -33,7 +32,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import {
   MessageCircle,
@@ -47,10 +46,12 @@ import {
   Trophy,
 } from 'lucide-react';
 
+import { AgentCreationSheet } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
 
 // ============================================================================
@@ -70,8 +71,12 @@ export interface MeepleLibraryGameCardProps {
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   /** Remove game callback */
   onRemove: (gameId: string, gameTitle: string) => void;
-  /** Ask AI Agent callback */
-  onAskAgent: (gameId: string) => void;
+  /**
+   * @deprecated Unused since Issue #4999 removed inline chat action.
+   * Chat navigation is handled directly in the quick action onClick.
+   * Will be removed in a future cleanup PR.
+   */
+  onAskAgent?: (gameId: string) => void;
   /** Change game state callback */
   onChangeState?: (gameId: string, gameTitle: string, newState: GameStateType) => void;
   /** Share game callback */
@@ -137,7 +142,7 @@ export function MeepleLibraryGameCard({
   onUploadPdf,
   onEditNotes,
   onRemove,
-  onAskAgent,
+  onAskAgent: _onAskAgent,
   onChangeState: _onChangeState,
   onShare: _onShare,
   selectionMode = false,
@@ -147,6 +152,9 @@ export function MeepleLibraryGameCard({
   className,
 }: MeepleLibraryGameCardProps) {
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  // Issue #4777: Agent creation sheet state
+  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
+  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
@@ -207,7 +215,8 @@ export function MeepleLibraryGameCard({
       onClick: () => {
         window.location.href = `/chat/new?game=${game.gameId}`;
       },
-      hidden: !game.hasPdfDocuments,
+      // Show whenever hasKb is true; always clickable so the chat page can handle agent selection
+      hidden: !game.hasKb,
     },
     {
       icon: Settings,
@@ -229,13 +238,6 @@ export function MeepleLibraryGameCard({
       label: game.isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti',
       onClick: handleToggleFavorite,
       disabled: isTogglingFavorite,
-    },
-    {
-      icon: Bot,
-      label: 'Chiedi all\'Agent',
-      onClick: () => onAskAgent(game.gameId),
-      disabled: !game.hasPdfDocuments,
-      hidden: !game.hasPdfDocuments,
     },
     {
       icon: Trash2,
@@ -262,10 +264,14 @@ export function MeepleLibraryGameCard({
     });
   }
 
-  // Add PDF status if documents available
-  if (game.hasPdfDocuments) {
+  // Add KB status if documents available
+  if (game.hasKb) {
     metadata.push({
-      label: '📄 PDF',
+      label: game.kbCardCount > 1 ? `📄 ${game.kbIndexedCount}/${game.kbCardCount} KB` : '📄 KB',
+    });
+  } else if (game.kbProcessingCount > 0) {
+    metadata.push({
+      label: '⏳ KB in elaborazione',
     });
   }
 
@@ -292,33 +298,50 @@ export function MeepleLibraryGameCard({
   // ============================================================================
 
   return (
-    <MeepleCard
-      entity="game"
-      variant={variant}
-      title={game.gameTitle}
-      subtitle={subtitle}
-      imageUrl={game.gameImageUrl || undefined}
-      rating={undefined} // UserLibraryEntry doesn't have gameRating field
-      ratingMax={10}
-      metadata={metadata}
-      badge={badge}
-      status={mappedStatus}
-      onClick={selectionMode && onSelect ? undefined : () => window.location.href = `/library/games/${game.gameId}`}
-      flippable={flippable && !!game.notes}
-      flipData={flipData}
-      flipTrigger="button"
-      className={className}
-      data-testid={`library-game-card-${game.gameId}`}
-      // Issue #4045: Quick actions + Info button
-      entityQuickActions={entityQuickActions}
-      showInfoButton
-      infoHref={`/library/games/${game.gameId}`}
-      infoTooltip="Vai al dettaglio"
-      // Bulk selection
-      selectable={selectionMode}
-      selected={isSelected}
-      onSelect={handleSelect}
-    />
+    <>
+      <MeepleCard
+        id={game.gameId}
+        entity="game"
+        variant={variant}
+        title={game.gameTitle}
+        subtitle={subtitle}
+        imageUrl={game.gameImageUrl || undefined}
+        rating={undefined} // UserLibraryEntry doesn't have gameRating field
+        ratingMax={10}
+        metadata={metadata}
+        badge={badge}
+        status={mappedStatus}
+        onClick={selectionMode && onSelect ? undefined : () => window.location.href = `/library/games/${game.gameId}`}
+        flippable={flippable && !!game.notes}
+        flipData={flipData}
+        flipTrigger="button"
+        className={className}
+        // Epic #4688: Navigation footer
+        navigateTo={getNavigationLinks('game', { id: game.gameId })}
+        // Issue #4777, #4999: Agent action footer
+        hasAgent={agentConfigured}
+        hasKb={game.hasKb}
+        onCreateAgent={handleCreateAgent}
+        data-testid={`library-game-card-${game.gameId}`}
+        // Issue #4045: Quick actions + Info button
+        entityQuickActions={entityQuickActions}
+        showInfoButton
+        infoHref={`/library/games/${game.gameId}`}
+        infoTooltip="Vai al dettaglio"
+        // Bulk selection
+        selectable={selectionMode}
+        selected={isSelected}
+        onSelect={handleSelect}
+      />
+
+      {/* Issue #4777: Agent creation wizard */}
+      <AgentCreationSheet
+        isOpen={agentSheetOpen}
+        onClose={() => setAgentSheetOpen(false)}
+        initialGameId={game.gameId}
+        initialGameTitle={game.gameTitle}
+      />
+    </>
   );
 }
 

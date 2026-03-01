@@ -64,6 +64,19 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                 );
             }
 
+            // Validate that exactly one of GameId or PrivateGameId is provided
+            if (!request.GameId.HasValue && !request.PrivateGameId.HasValue)
+            {
+                return new InitChunkedUploadResult(
+                    Success: false,
+                    SessionId: null,
+                    TotalChunks: 0,
+                    ChunkSizeBytes: 0,
+                    ExpiresAt: null,
+                    ErrorMessage: "Either GameId or PrivateGameId must be provided."
+                );
+            }
+
             // Check for existing active sessions for this user (limit to 3 concurrent uploads)
             var activeSessions = await _sessionRepository.FindActiveByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
             if (activeSessions.Count >= 3)
@@ -92,7 +105,8 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                 userId: request.UserId,
                 fileName: request.FileName,
                 totalFileSize: request.TotalFileSize,
-                tempDirectory: tempDirectory
+                tempDirectory: tempDirectory,
+                privateGameId: request.PrivateGameId
             );
 
             await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);

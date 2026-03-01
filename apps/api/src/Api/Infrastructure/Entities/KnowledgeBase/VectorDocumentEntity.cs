@@ -8,7 +8,7 @@ public class VectorDocumentEntity
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
     // DDD-PHASE2: Converted to Guid for domain alignment
-    public Guid GameId { get; set; }
+    public Guid? GameId { get; set; }
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid PdfDocumentId { get; set; } // FK to PdfDocumentEntity
 
@@ -25,6 +25,9 @@ public class VectorDocumentEntity
 
     // Domain metadata (JSON string for flexible metadata storage)
     public string? Metadata { get; set; }
+
+    // Cross-BC reference to SharedGameCatalog (Issue #4921: admin KB cards)
+    public Guid? SharedGameId { get; set; }
 
     // Navigation properties
     public GameEntity Game { get; set; } = default!;

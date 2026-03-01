@@ -236,6 +236,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         var result = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
+            RequestSource.Manual,
             cancellationToken).ConfigureAwait(false);
 
         if (!result.Success)
@@ -269,12 +270,14 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         var gpt4Result = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
+            RequestSource.Manual,
             cancellationToken).ConfigureAwait(false);
 
         // Call Claude (via OpenRouter) - simplified for POC, reuse same service
         var claudeResult = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
+            RequestSource.Manual,
             cancellationToken).ConfigureAwait(false);
 
         // Simple consensus: concatenate both answers
@@ -324,6 +327,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
                 latencyMs: 0, // Set by caller
                 ipAddress: null,
                 userAgent: null,
+                source: RequestSource.Manual,
                 cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Cost log persisted for strategy={Strategy}", strategy);

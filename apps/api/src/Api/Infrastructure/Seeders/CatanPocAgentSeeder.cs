@@ -101,7 +101,7 @@ When NO CONTEXT is provided:
         // 2. Find SharedGame "Catan" (seeded by SharedGameSeeder)
         var sharedGame = await db.SharedGames
             .AsNoTracking()
-            .FirstOrDefaultAsync(g => g.Title == CatanGameName && !g.IsDeleted, cancellationToken)
+            .FirstOrDefaultAsync(g => EF.Functions.ILike(g.Title, CatanGameName) && !g.IsDeleted, cancellationToken)
             .ConfigureAwait(false);
 
         if (sharedGame == null)

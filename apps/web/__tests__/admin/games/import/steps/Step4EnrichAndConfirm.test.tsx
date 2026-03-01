@@ -17,7 +17,7 @@ import userEvent from '@testing-library/user-event';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
-import { Step4EnrichAndConfirm } from '@/app/(authenticated)/admin/games/import/wizard/steps/Step4EnrichAndConfirm';
+import { Step4EnrichAndConfirm } from '@/app/admin/(dashboard)/shared-games/import/steps/Step4EnrichAndConfirm';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 import type { ExtractedMetadata, BggGameData } from '@/stores/useGameImportWizardStore';
 

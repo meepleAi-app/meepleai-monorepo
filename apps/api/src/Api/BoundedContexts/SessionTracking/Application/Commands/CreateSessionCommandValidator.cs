@@ -15,8 +15,7 @@ public class CreateSessionCommandValidator : AbstractValidator<CreateSessionComm
 
         RuleFor(x => x.GameId)
             .NotEmpty()
-            .When(x => string.Equals(x.SessionType, "GameSpecific", StringComparison.Ordinal))
-            .WithMessage("GameId required for GameSpecific sessions");
+            .WithMessage("GameId is required for all sessions");
 
         RuleFor(x => x.Participants)
             .NotEmpty()

@@ -38,13 +38,27 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         return userId;
     }
 
+    private async Task<Guid> CreateTestGameAsync()
+    {
+        var gameId = Guid.NewGuid();
+        DbContext.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        {
+            Id = gameId,
+            Name = $"Test Game {gameId:N}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return gameId;
+    }
+
     [Fact]
     public async Task AddAsync_ShouldPersistSession()
     {
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync();
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(userId, gameId, SessionType.Generic);
 
         // Act
         await Repository.AddAsync(session, TestContext.Current.CancellationToken);
@@ -64,7 +78,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync("test1@example.com");
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(userId, gameId, SessionType.Generic);
         await Repository.AddAsync(session, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync();
         DbContext.ChangeTracker.Clear();
@@ -83,7 +98,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync("test2@example.com");
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(userId, gameId, SessionType.Generic);
         await Repository.AddAsync(session, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync();
         DbContext.ChangeTracker.Clear();
@@ -103,10 +119,13 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync("test3@example.com");
-        var session1 = Session.Create(userId, null, SessionType.Generic);
-        var session2 = Session.Create(userId, null, SessionType.Generic);
+        var gameId1 = await CreateTestGameAsync();
+        var gameId2 = await CreateTestGameAsync();
+        var gameId3 = await CreateTestGameAsync();
+        var session1 = Session.Create(userId, gameId1, SessionType.Generic);
+        var session2 = Session.Create(userId, gameId2, SessionType.Generic);
         session2.Pause();
-        var session3 = Session.Create(userId, null, SessionType.Generic);
+        var session3 = Session.Create(userId, gameId3, SessionType.Generic);
         session3.Finalize();
 
         await Repository.AddAsync(session1, TestContext.Current.CancellationToken);
@@ -132,7 +151,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync("test4@example.com");
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(userId, gameId, SessionType.Generic);
         await Repository.AddAsync(session, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync();
         DbContext.ChangeTracker.Clear();
@@ -156,7 +176,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync("test5@example.com");
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(userId, gameId, SessionType.Generic);
         await Repository.AddAsync(session, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync();
         DbContext.ChangeTracker.Clear();
@@ -177,12 +198,14 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync("test6@example.com");
-        var session1 = Session.Create(userId, null, SessionType.Generic);
+        var gameId1 = await CreateTestGameAsync();
+        var gameId2 = await CreateTestGameAsync();
+        var session1 = Session.Create(userId, gameId1, SessionType.Generic);
         await Repository.AddAsync(session1, TestContext.Current.CancellationToken);
         await DbContext.SaveChangesAsync();
 
         // Create session2 with same code (simulate collision)
-        var session2 = Session.Create(userId, null, SessionType.Generic);
+        var session2 = Session.Create(userId, gameId2, SessionType.Generic);
         typeof(Session).GetProperty("SessionCode")!.SetValue(session2, session1.SessionCode);
 
         // Act
@@ -203,7 +226,8 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         // Arrange
         await ResetDatabaseAsync();
         var userId = await CreateTestUserAsync("test7@example.com");
-        var session = Session.Create(userId, null, SessionType.Generic);
+        var gameId = await CreateTestGameAsync();
+        var session = Session.Create(userId, gameId, SessionType.Generic);
         var participantInfo = Api.BoundedContexts.SessionTracking.Domain.ValueObjects.ParticipantInfo.Create("Player 2", false, 2);
         session.AddParticipant(participantInfo);
 

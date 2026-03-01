@@ -62,7 +62,20 @@ internal enum StreamingEventType
     Heartbeat,          // Keep-alive signal
     Token,              // CHAT-01: Individual LLM token for QA/Setup streaming
     FollowUpQuestions,  // CHAT-02: AI-generated follow-up questions
-    SetupStep           // AI-03: Individual setup step for streaming setup guide
+    SetupStep,          // AI-03: Individual setup step for streaming setup guide
+
+    // Admin Debug Chat: real-time pipeline tracing events (types 10-20)
+    DebugAgentRouter = 10,      // Agent routing decision with intent and confidence
+    DebugStrategySelected = 11, // RAG strategy selection details
+    DebugRetrievalStart = 12,   // Search parameters before execution
+    DebugRetrievalResults = 13, // Search results with scores and timing
+    DebugPluginExecution = 14,  // Plugin execution trace
+    DebugValidationLayer = 15,  // Per-layer validation result
+    DebugPromptContext = 16,    // System/user prompt and token estimate
+    DebugCostUpdate = 17,       // Token usage and cost breakdown
+    DebugSearchDetails = 18,    // Vector/keyword/fused result breakdown
+    DebugCacheCheck = 19,       // Cache hit/miss with timing
+    DebugDocumentCheck = 20     // Document readiness check result
 }
 
 internal record RagStreamingEvent(
@@ -90,6 +103,91 @@ internal record StreamingError(string errorMessage, string? errorCode = null);
 internal record StreamingHeartbeat(string message = "keep-alive");
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
+
+// Admin Debug Chat: data records for debug streaming events
+internal record DebugAgentRouterData(
+    string TargetAgent,
+    string Intent,
+    double Confidence,
+    IReadOnlyDictionary<string, double>? Scores = null);
+
+internal record DebugStrategySelectedData(
+    string StrategyName,
+    IReadOnlyDictionary<string, object>? Parameters = null,
+    string? OverrideSource = null);
+
+internal record DebugRetrievalStartData(
+    string SearchMode,
+    int TopK,
+    double MinScore,
+    int? VectorDimensions = null);
+
+internal record DebugRetrievalResultsData(
+    int Count,
+    IReadOnlyList<DebugRetrievalItem> Items,
+    double DurationMs);
+
+internal record DebugRetrievalItem(
+    string DocumentId,
+    double Score,
+    int PageNumber,
+    string? SearchMethod = null);
+
+internal record DebugPluginExecutionData(
+    string PluginId,
+    string PluginName,
+    string? Category,
+    string Phase,
+    double DurationMs);
+
+internal record DebugValidationLayerData(
+    int LayerNumber,
+    string LayerName,
+    bool IsValid,
+    double DurationMs,
+    string? Details = null);
+
+internal record DebugPromptContextData(
+    string SystemPrompt,
+    string UserPrompt,
+    int EstimatedTokens);
+
+internal record DebugCostUpdateData(
+    int PromptTokens,
+    int CompletionTokens,
+    int TotalTokens,
+    double? CostUsd,
+    string? ModelId = null);
+
+internal record DebugSearchDetailsData(
+    int VectorResultCount,
+    int KeywordResultCount,
+    int FusedResultCount,
+    double VectorDurationMs,
+    double KeywordDurationMs,
+    double? FusionDurationMs = null);
+
+internal record DebugCacheCheckData(
+    bool Hit,
+    string CacheKey,
+    double DurationMs);
+
+internal record DebugDocumentCheckData(
+    bool AllReady,
+    int ProcessingCount,
+    int TotalCount,
+    double DurationMs);
+
+/// <summary>
+/// Admin Debug Chat request DTO for real-time pipeline tracing.
+/// </summary>
+internal record DebugChatRequest(
+    string gameId,
+    string query,
+    Guid? chatId = null,
+    IReadOnlyList<Guid>? documentIds = null,
+    string? strategyOverride = null,
+    bool includePrompts = false);
 
 // CHAT-02: Follow-Up Questions models
 internal record StreamingFollowUpQuestions(

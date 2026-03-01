@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
+using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries.PrivateGames;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
@@ -18,6 +19,7 @@ internal static class PrivateGameEndpoints
 {
     public static RouteGroupBuilder MapPrivateGameEndpoints(this RouteGroupBuilder group)
     {
+        MapGetPrivateGamesListEndpoint(group);
         MapAddPrivateGameEndpoint(group);
         MapGetPrivateGameEndpoint(group);
         MapUpdatePrivateGameEndpoint(group);
@@ -27,6 +29,55 @@ internal static class PrivateGameEndpoints
         MapUnlinkAgentEndpoint(group); // Issue #4228
 
         return group;
+    }
+
+    /// <summary>
+    /// GET /api/v1/private-games - List private games with pagination, search, and sorting
+    /// </summary>
+    private static void MapGetPrivateGamesListEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/private-games", async (
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            [FromQuery] string? search,
+            [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetPrivateGamesListQuery(
+                UserId: userId,
+                Page: page ?? 1,
+                PageSize: Math.Min(pageSize ?? 12, 50),
+                Search: search,
+                SortBy: sortBy ?? "createdAt",
+                SortDirection: sortDirection ?? "desc"
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthorization()
+        .WithName("GetPrivateGamesList")
+        .WithTags("PrivateGames")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "List private games";
+            operation.Description = "Returns a paginated list of the user's private games with optional search and sorting.";
+            return operation;
+        })
+        .Produces<PaginatedPrivateGamesResponseDto>()
+        .Produces(StatusCodes.Status401Unauthorized);
     }
 
     /// <summary>

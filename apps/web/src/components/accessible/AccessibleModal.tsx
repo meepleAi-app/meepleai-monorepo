@@ -36,7 +36,7 @@
  * ```
  */
 
-import { ReactNode, useRef } from 'react';
+import { ReactNode } from 'react';
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/overlays/dialog';
 import { cn } from '@/lib/utils';
@@ -114,12 +114,6 @@ export function AccessibleModal({
   size = 'md',
   'data-testid': dataTestId,
 }: AccessibleModalProps) {
-  // Generate unique IDs for ARIA labels
-  const titleId = useRef(`modal-title-${Math.random().toString(36).substr(2, 9)}`);
-  const descriptionId = useRef(
-    description ? `modal-desc-${Math.random().toString(36).substr(2, 9)}` : undefined
-  );
-
   // Get size class based on size prop
   const getSizeClass = (s: typeof size): string => {
     switch (s) {
@@ -157,17 +151,15 @@ export function AccessibleModal({
       <DialogContent
         className={cn(getSizeClass(size), className)}
         aria-modal="true"
-        aria-labelledby={titleId.current}
-        aria-describedby={descriptionId.current}
         onInteractOutside={handleInteractOutside}
         hideCloseButton={!showCloseButton}
         data-testid={dataTestId}
       >
-        {/* Title - direct child of DialogContent for Radix requirements */}
-        <DialogTitle id={titleId.current}>{title}</DialogTitle>
+        {/* Title - Radix manages the ID internally for aria-labelledby linking */}
+        <DialogTitle>{title}</DialogTitle>
 
         {/* Description - always present for Radix accessibility requirements */}
-        <DialogDescription id={descriptionId.current} className={!description ? 'sr-only' : ''}>
+        <DialogDescription className={!description ? 'sr-only' : ''}>
           {description || 'Dialog content'}
         </DialogDescription>
 

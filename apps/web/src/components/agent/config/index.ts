@@ -2,9 +2,12 @@
  * Agent Config Components - Barrel Exports
  * Issue #3239 (FRONT-003)
  * Issue #3: Added TypologySelector, StrategySelector
+ * Issue #4776: Added AgentCreationSheet
  */
 
 export { AgentConfigSheet } from './AgentConfigSheet';
+export { AgentCreationSheet } from './AgentCreationSheet';
+export type { AgentCreationSheetProps } from './AgentCreationSheet';
 export { TypologySelector } from './TypologySelector';
 export { StrategySelector } from './StrategySelector';
 export { GameSelector } from './GameSelector';

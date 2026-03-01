@@ -142,7 +142,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[PdfPipeline] Processing failed for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
             await TryMarkFailedAsync(pdfDocumentId, ex.Message).ConfigureAwait(false);
         }
 #pragma warning restore CA1031
@@ -325,7 +325,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             .ToList();
 
         var indexResult = await _qdrantService
-            .IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks, cancellationToken)
+            .IndexDocumentChunksAsync((pdfDoc.PrivateGameId ?? pdfDoc.GameId)?.ToString() ?? string.Empty, pdfId, documentChunks, cancellationToken)
             .ConfigureAwait(false);
 
         if (!indexResult.Success)
@@ -344,6 +344,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 Id = Guid.NewGuid(),
                 GameId = pdfDoc.GameId,
+                SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfDoc.Id,
                 IndexingStatus = "completed",
                 ChunkCount = indexResult.IndexedCount,

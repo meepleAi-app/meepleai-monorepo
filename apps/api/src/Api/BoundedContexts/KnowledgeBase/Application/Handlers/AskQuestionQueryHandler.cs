@@ -224,6 +224,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var llmResult = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
+            RequestSource.RagPipeline,
             cancellationToken).ConfigureAwait(false);
 
         var llmResponse = llmResult.Response;

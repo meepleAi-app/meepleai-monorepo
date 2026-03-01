@@ -45,4 +45,33 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lightweight read-model for the admin chat history listing.
+    /// Avoids full ChatThread domain hydration — only the fields needed for the table + preview.
+    /// Issue #4917: Admin chat history real data.
+    /// </summary>
+    internal record AdminChatSummary(
+        Guid Id,
+        Guid UserId,
+        string? AgentType,
+        int MessageCount,
+        DateTime LastMessageAt,
+        DateTime CreatedAt,
+        string? UserEmail,
+        string? UserDisplayName,
+        IReadOnlyList<(string Role, string Content)> PreviewMessages
+    );
+
+    /// <summary>
+    /// Admin-only: gets all chat threads across users with lightweight projection (no full MapToDomain).
+    /// Issue #4917: Admin chat history real data.
+    /// </summary>
+    Task<(IReadOnlyList<AdminChatSummary> Items, int TotalCount)> GetAllFilteredAsync(
+        string? agentType = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
 }

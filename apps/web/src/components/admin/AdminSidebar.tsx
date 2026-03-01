@@ -1,4 +1,3 @@
- 
 /**
  * AdminSidebar Component - Issue #881
  *
@@ -43,7 +42,12 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/overlays/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
@@ -88,7 +92,7 @@ const defaultNavigation: NavItem[] = [
   { href: '/admin/prompts', label: 'Prompts', icon: FileTextIcon },
   { href: '/admin/n8n-templates', label: 'N8N Templates', icon: PackageIcon },
   { href: '/admin/bulk-export', label: 'Bulk Export', icon: PackageIcon },
-  { href: '/admin/games/import/bulk', label: 'Bulk Import', icon: UploadIcon },
+  { href: '/admin/shared-games/import', label: 'Import Wizard', icon: UploadIcon },
 ];
 
 function NavLink({

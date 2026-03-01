@@ -144,7 +144,7 @@ public class StreamQaQueryHandlerTests
         // Setup LLM to stream tokens
         var tokens = new[] { "To", " win", " the", " game", ",", " score", " points", "." };
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensAsync(tokens));
 
         SetupQualityTrackingMocks();
@@ -245,7 +245,7 @@ public class StreamQaQueryHandlerTests
             Times.Never
         );
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
     }
@@ -297,7 +297,7 @@ public class StreamQaQueryHandlerTests
 
         // Verify LLM was called with enriched prompt
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), enrichedPrompt, It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), enrichedPrompt, It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -458,7 +458,7 @@ public class StreamQaQueryHandlerTests
 
         // Should not call LLM
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
     }
@@ -475,7 +475,7 @@ public class StreamQaQueryHandlerTests
         // Setup LLM with many tokens
         var manyTokens = Enumerable.Repeat("token", 100).ToArray();
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensAsync(manyTokens));
 
         SetupQualityTrackingMocks();
@@ -844,7 +844,7 @@ public class StreamQaQueryHandlerTests
 
         // Setup LLM to return partial tokens then throw HttpRequestException mid-stream
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensWithError());
 
         _qualityTrackingServiceMock
@@ -1031,7 +1031,7 @@ public class StreamQaQueryHandlerTests
     private void SetupLlmStreamingMock(string[] tokens)
     {
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensAsync(tokens));
     }
 

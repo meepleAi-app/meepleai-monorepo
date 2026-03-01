@@ -350,4 +350,47 @@ describe('sessionStore', () => {
       expect(result.current.scoreboard?.scores[0]).toEqual(mockScore);
     });
   });
+
+  // ── activeTool (Issue #4974) ──────────────────────────────────────────────
+
+  describe('activeTool', () => {
+    it('defaults to scoreboard', () => {
+      const { result } = renderHook(() => useSessionStore());
+      expect(result.current.activeTool).toBe('scoreboard');
+    });
+
+    it('updates activeTool via setActiveTool', () => {
+      const { result } = renderHook(() => useSessionStore());
+      act(() => {
+        result.current.setActiveTool('dice');
+      });
+      expect(result.current.activeTool).toBe('dice');
+    });
+
+    it('switches between all base tools', () => {
+      const { result } = renderHook(() => useSessionStore());
+      const tools = ['scoreboard', 'turn-order', 'dice', 'whiteboard'] as const;
+      for (const tool of tools) {
+        act(() => { result.current.setActiveTool(tool); });
+        expect(result.current.activeTool).toBe(tool);
+      }
+    });
+
+    it('accepts custom tool IDs (string)', () => {
+      const { result } = renderHook(() => useSessionStore());
+      act(() => {
+        result.current.setActiveTool('custom-dice-tool');
+      });
+      expect(result.current.activeTool).toBe('custom-dice-tool');
+    });
+
+    it('resets activeTool to scoreboard on reset()', () => {
+      const { result } = renderHook(() => useSessionStore());
+      act(() => { result.current.setActiveTool('whiteboard'); });
+      expect(result.current.activeTool).toBe('whiteboard');
+
+      act(() => { result.current.reset(); });
+      expect(result.current.activeTool).toBe('scoreboard');
+    });
+  });
 });

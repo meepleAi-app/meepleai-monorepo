@@ -224,7 +224,7 @@ This is required.";
 
         // Should NOT call LLM
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
     }
@@ -259,7 +259,7 @@ This is required.";
 
         // Should NOT call LLM
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
     }
@@ -275,7 +275,7 @@ This is required.";
         SetupQdrantMock(gameId, CreateSampleSearchResults());
 
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateFailure("LLM service error"));
 
         // Act
@@ -477,7 +477,7 @@ This is required.";
 
         // Verify LLM was called with custom prompt
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(customPrompt, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionAsync(customPrompt, It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -509,7 +509,7 @@ This is required.";
 
         // Verify LLM was called with hardcoded fallback prompt
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(It.Is<string>(s => s.Contains("board game setup assistant")), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionAsync(It.Is<string>(s => s.Contains("board game setup assistant")), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -550,7 +550,7 @@ This is required.";
 
         // Assert - should fallback to hardcoded prompt
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionAsync(It.Is<string>(s => s.Contains("board game setup assistant")), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateCompletionAsync(It.Is<string>(s => s.Contains("board game setup assistant")), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -705,7 +705,7 @@ Give each player their starting items.";
     private void SetupLlmMock(string response, int totalTokens = 50)
     {
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response,
                 new LlmUsage(30, totalTokens - 30, totalTokens),

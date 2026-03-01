@@ -64,7 +64,7 @@ internal class GetUserGamesQueryHandler : IRequestHandler<GetUserGamesQuery, Pag
             }
 
             return new UserGameDto(
-                e.Id,
+                e.SharedGameId ?? e.PrivateGameId ?? e.Id,
                 e.SharedGame?.Title ?? e.PrivateGame!.Title,
                 null,
                 e.SharedGame?.ImageUrl ?? e.PrivateGame?.ImageUrl,

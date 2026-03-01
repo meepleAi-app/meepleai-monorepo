@@ -68,7 +68,7 @@ public sealed class MetricsMaintenanceJobTests
     public async Task Execute_CancellationRequested_HandlesGracefully()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         _contextMock.Setup(c => c.CancellationToken).Returns(cts.Token);
 
         _metricsServiceMock

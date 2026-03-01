@@ -173,6 +173,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<LlmProviderFactory>();
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
+        // ISSUE-5086: IServiceScopeFactory is auto-injected by the DI container (built-in singleton)
+        // enabling fire-and-forget circuit breaker notifications without coupling to request scope
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
@@ -185,6 +187,36 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-1725: LLM budget monitoring background service
         services.AddHostedService<LlmBudgetMonitoringService>();
+
+        // Issue #5073: Rotating JSONL file logger for OpenRouter requests (Singleton - owns file handle)
+        services.AddSingleton<IOpenRouterFileLogger>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var logDir = config["OPENROUTER_LOG_PATH"] ?? Path.Combine("logs", "openrouter");
+            Directory.CreateDirectory(logDir);
+            return new OpenRouterFileLogger(logDir);
+        });
+
+        // Issue #5074: OpenRouter usage cache — polls /auth/key every 60s, accumulates daily spend
+        // Register as concrete singleton first so IOpenRouterUsageService can be resolved directly
+        // without going through GetServices<IHostedService>() which causes a circular DI deadlock
+        // (OpenRouterRpmAlertBackgroundService → IOpenRouterRateLimitTracker → IOpenRouterUsageService
+        //  → GetServices<IHostedService>() → OpenRouterRpmAlertBackgroundService → deadlock).
+        services.AddSingleton<OpenRouterUsageService>();
+        services.AddHostedService(sp => sp.GetRequiredService<OpenRouterUsageService>());
+        services.AddSingleton<IOpenRouterUsageService>(sp => sp.GetRequiredService<OpenRouterUsageService>());
+
+        // Issue #5075: RPM/TPM rate limit tracker using Redis sliding window (Singleton - stateless HTTP-independent)
+        services.AddSingleton<IOpenRouterRateLimitTracker, OpenRouterRateLimitTracker>();
+
+        // ISSUE-5084: Background service that polls OpenRouter RPM utilization and alerts admins
+        services.AddHostedService<OpenRouterRpmAlertBackgroundService>();
+
+        // ISSUE-5085: Background service that monitors daily OpenRouter budget and alerts admins at thresholds
+        services.AddHostedService<OpenRouterBudgetAlertBackgroundService>();
+
+        // Issue #5087: Free model quota tracker — Redis-backed RPD exhaustion state (Singleton - stateless)
+        services.AddSingleton<IFreeModelQuotaTracker, FreeModelQuotaTracker>();
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)
@@ -198,6 +230,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
+        services.AddScoped<ILlmRequestLogRepository, LlmRequestLogRepository>(); // ISSUE-5072: Detailed request logging with 30-day retention
         services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>(); // Issue #3808: AgentDefinition for AI Lab
         services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
@@ -339,6 +372,35 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithIdentity("conversation-memory-cleanup-trigger", "knowledge-base")
                 .WithCronSchedule("0 0 3 * * ?")
                 .WithDescription("Runs daily at 3 AM UTC to clean up conversation memories older than 90 days for GDPR compliance"));
+        });
+
+        // Issue #5072: Daily cleanup of expired LLM request logs (30-day retention)
+        // Only register job definition here - do NOT call AddQuartzHostedService (would duplicate).
+        services.AddQuartz(q =>
+        {
+            q.AddJob<LlmRequestLogCleanupJob>(opts => opts
+                .WithIdentity("llm-request-log-cleanup-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("llm-request-log-cleanup-job", "knowledge-base")
+                .WithIdentity("llm-request-log-cleanup-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 4 * * ?")
+                .WithDescription("Runs daily at 4 AM UTC to delete LLM request logs older than 30 days"));
+        });
+
+        // ISSUE-5085: Daily OpenRouter usage digest sent to all admins at 08:00 UTC
+        services.AddQuartz(q =>
+        {
+            q.AddJob<OpenRouterDailySummaryJob>(opts => opts
+                .WithIdentity("openrouter-daily-summary-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("openrouter-daily-summary-job", "knowledge-base")
+                .WithIdentity("openrouter-daily-summary-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 8 * * ?")
+                .WithDescription("Runs daily at 8 AM UTC to send yesterday's OpenRouter usage digest to all admins"));
         });
     }
 }

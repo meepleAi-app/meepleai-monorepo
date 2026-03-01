@@ -84,7 +84,7 @@ public sealed class AgentChatEndpointsIntegrationTests : IAsyncLifetime
                         .Setup(s => s.GenerateCompletionStreamAsync(
                             It.IsAny<string>(),
                             It.IsAny<string>(),
-                            It.IsAny<CancellationToken>()))
+                            It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
                         .Returns(GetMockStreamChunks());
                     services.AddScoped<ILlmService>(_ => mockLlmService.Object);
 

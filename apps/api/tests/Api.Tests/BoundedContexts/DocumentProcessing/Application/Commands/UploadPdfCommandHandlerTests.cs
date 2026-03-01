@@ -8,6 +8,7 @@ using Api.Services;
 using Api.Services.Pdf;
 using Api.Tests.TestHelpers;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,7 +39,7 @@ public class UploadPdfCommandHandlerTests
     /// <summary>
     /// Creates a fresh set of mocks for each test
     /// </summary>
-    private static (Mock<IServiceScopeFactory>, Mock<ILogger<UploadPdfCommandHandler>>, Mock<IPdfTextExtractor>, Mock<IPdfTableExtractor>, Mock<IBackgroundTaskService>, Mock<IAiResponseCacheService>, Mock<IBlobStorageService>, Mock<IPdfUploadQuotaService>, IOptions<PdfProcessingOptions>) CreateMocks()
+    private static (Mock<IServiceScopeFactory>, Mock<ILogger<UploadPdfCommandHandler>>, Mock<IPdfTextExtractor>, Mock<IPdfTableExtractor>, Mock<IBackgroundTaskService>, Mock<IAiResponseCacheService>, Mock<IBlobStorageService>, Mock<IPdfUploadQuotaService>, IOptions<PdfProcessingOptions>, Mock<IMediator>) CreateMocks()
     {
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
         var loggerMock = new Mock<ILogger<UploadPdfCommandHandler>>();
@@ -49,19 +50,20 @@ public class UploadPdfCommandHandlerTests
         var blobStorageServiceMock = new Mock<IBlobStorageService>();
         var quotaServiceMock = new Mock<IPdfUploadQuotaService>();
         var pdfOptions = Options.Create(new PdfProcessingOptions());
+        var mediatorMock = new Mock<IMediator>();
 
         // Setup quota service to allow unlimited access by default
         quotaServiceMock.Setup(q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue));
 
-        return (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions);
+        return (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock);
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         var handler = new UploadPdfCommandHandler(
@@ -74,7 +76,8 @@ public class UploadPdfCommandHandlerTests
             cacheServiceMock.Object,
             blobStorageServiceMock.Object,
             quotaServiceMock.Object,
-            pdfOptions);
+            pdfOptions,
+            mediatorMock.Object);
 
         // Assert
         handler.Should().NotBeNull();
@@ -84,7 +87,7 @@ public class UploadPdfCommandHandlerTests
     public void Constructor_WithNullDbContext_ThrowsArgumentNullException()
     {
         // Arrange - fresh resources per test
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -97,7 +100,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -109,7 +113,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (_, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (_, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -122,7 +126,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -134,7 +139,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, _, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, _, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -147,7 +152,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -159,7 +165,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, _, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, _, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -172,7 +178,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -184,7 +191,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, _, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, _, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -197,7 +204,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -209,7 +217,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, _, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, _, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -222,7 +230,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -234,7 +243,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, _, blobStorageServiceMock, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, _, blobStorageServiceMock, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -247,7 +256,8 @@ public class UploadPdfCommandHandlerTests
                 null!,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -259,7 +269,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, _, quotaServiceMock, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, _, quotaServiceMock, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -272,7 +282,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 null!,
                 quotaServiceMock.Object,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -284,7 +295,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, _, pdfOptions) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, _, pdfOptions, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -297,7 +308,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 null!,
-                pdfOptions);
+                pdfOptions,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -309,7 +321,7 @@ public class UploadPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, _) = CreateMocks();
+        var (scopeFactoryMock, loggerMock, pdfTextExtractorMock, tableExtractorMock, backgroundTaskServiceMock, cacheServiceMock, blobStorageServiceMock, quotaServiceMock, _, mediatorMock) = CreateMocks();
 
         // Act
         Action act = () => new UploadPdfCommandHandler(
@@ -322,7 +334,8 @@ public class UploadPdfCommandHandlerTests
                 cacheServiceMock.Object,
                 blobStorageServiceMock.Object,
                 quotaServiceMock.Object,
-                null!);
+                null!,
+                mediatorMock.Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>()

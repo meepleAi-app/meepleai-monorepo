@@ -1,74 +1,134 @@
-using Api.Extensions;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.Filters;
+using Api.Services;
+using MediatR;
 
 namespace Api.Routing;
 
 /// <summary>
-/// Admin endpoints for Knowledge Base management (static/prototype).
-/// Issues #4654, #4655: KB endpoints for Admin Dashboard.
+/// Admin endpoints for Knowledge Base management.
+/// Issues #4654, #4655, #4785: KB endpoints with real data from Qdrant, DB, and processing queue.
 /// </summary>
 internal static class AdminKnowledgeBaseEndpoints
 {
     public static RouteGroupBuilder MapAdminKnowledgeBaseEndpoints(this RouteGroupBuilder group)
     {
         var kbGroup = group.MapGroup("/admin/kb")
-            .WithTags("Admin", "KnowledgeBase");
+            .WithTags("Admin", "KnowledgeBase")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        // GET /api/v1/admin/kb/vector-collections (#4655)
-        kbGroup.MapGet("/vector-collections", (HttpContext context) =>
+        // GET /api/v1/admin/kb/vector-collections (#4655, #4785)
+        kbGroup.MapGet("/vector-collections", async (
+            IQdrantClientAdapter qdrantClient,
+            ILogger<Program> logger,
+            CancellationToken cancellationToken) =>
         {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var collections = new[]
+            try
             {
-                new { name = "Game Rules", vectorCount = 42500, dimensions = 384, storage = "3.2 GB", health = 98 },
-                new { name = "Strategy Guides", vectorCount = 28300, dimensions = 384, storage = "2.1 GB", health = 95 },
-                new { name = "FAQ Database", vectorCount = 9200, dimensions = 384, storage = "1.5 GB", health = 92 },
-            };
+                var collectionNames = await qdrantClient.ListCollectionsAsync(cancellationToken)
+                    .ConfigureAwait(false);
 
-            return Results.Ok(new { collections });
+                var collections = new List<object>();
+                foreach (var name in collectionNames)
+                {
+                    try
+                    {
+                        var info = await qdrantClient.GetCollectionInfoAsync(name, cancellationToken)
+                            .ConfigureAwait(false);
+
+                        var vectorCount = (long)info.PointsCount;
+                        var dimensions = 384; // Default for sentence-transformers
+                        var memoryBytes = vectorCount * dimensions * 4L;
+                        var indexedCount = (long)info.IndexedVectorsCount;
+                        var health = vectorCount > 0 && indexedCount > 0
+                            ? (int)Math.Min(100, (indexedCount * 100) / Math.Max(1, vectorCount))
+                            : 0;
+
+                        collections.Add(new
+                        {
+                            name,
+                            vectorCount,
+                            dimensions,
+                            storage = FormatBytes(memoryBytes),
+                            health,
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to get info for collection {CollectionName}", name);
+                        collections.Add(new
+                        {
+                            name,
+                            vectorCount = 0L,
+                            dimensions = 0,
+                            storage = "N/A",
+                            health = 0,
+                        });
+                    }
+                }
+
+                return Results.Ok(new { collections });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to list Qdrant collections");
+                return Results.Ok(new { collections = Array.Empty<object>() });
+            }
         });
 
-        // GET /api/v1/admin/kb/processing-queue (#4655)
-        kbGroup.MapGet("/processing-queue", (HttpContext context) =>
+        // GET /api/v1/admin/kb/processing-queue (#4655, #4785)
+        kbGroup.MapGet("/processing-queue", async (
+            IMediator mediator,
+            string? statusFilter,
+            string? searchText,
+            DateTimeOffset? fromDate,
+            DateTimeOffset? toDate,
+            int? page,
+            int? pageSize,
+            CancellationToken cancellationToken) =>
         {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
+            var query = new GetProcessingQueueQuery(
+                StatusFilter: statusFilter,
+                SearchText: searchText,
+                FromDate: fromDate,
+                ToDate: toDate,
+                Page: page ?? 1,
+                PageSize: pageSize ?? 20
+            );
 
-            var queue = new[]
-            {
-                new { id = "1", fileName = "catan-rulebook.pdf", status = "processing", progress = 65, size = "2.4 MB" },
-                new { id = "2", fileName = "wingspan-strategy.pdf", status = "completed", progress = 100, size = "1.8 MB" },
-                new { id = "3", fileName = "pandemic-faq.docx", status = "processing", progress = 35, size = "0.9 MB" },
-            };
-
-            return Results.Ok(new { queue });
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
         });
 
-        // GET /api/v1/admin/shared-games (extended for admin - #4654)
+        // GET /api/v1/admin/shared-games (extended for admin - #4654, #4785)
         var gamesGroup = group.MapGroup("/admin/shared-games")
-            .WithTags("Admin", "SharedGames");
+            .WithTags("Admin", "SharedGames")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        gamesGroup.MapGet("/categories", (HttpContext context) =>
+        gamesGroup.MapGet("/categories", async (
+            IMediator mediator,
+            CancellationToken cancellationToken) =>
         {
-            var (authorized, _, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var categories = new[]
-            {
-                new { id = "1", name = "Strategy", emoji = "♟️", gameCount = 42, color = "#3b82f6" },
-                new { id = "2", name = "Party", emoji = "🎉", gameCount = 28, color = "#ec4899" },
-                new { id = "3", name = "Cooperative", emoji = "🤝", gameCount = 19, color = "#10b981" },
-                new { id = "4", name = "Deck Building", emoji = "🃏", gameCount = 15, color = "#8b5cf6" },
-                new { id = "5", name = "Family", emoji = "👨\u200D👩\u200D👧\u200D👦", gameCount = 34, color = "#f59e0b" },
-                new { id = "6", name = "Abstract", emoji = "🔷", gameCount = 12, color = "#06b6d4" },
-                new { id = "7", name = "Thematic", emoji = "🗺️", gameCount = 23, color = "#ef4444" },
-                new { id = "8", name = "Euro", emoji = "🏛️", gameCount = 31, color = "#6366f1" },
-            };
+            var categories = await mediator.Send(new GetGameCategoriesQuery(), cancellationToken)
+                .ConfigureAwait(false);
 
             return Results.Ok(new { categories });
         });
 
         return group;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
+        double len = bytes;
+        var order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
     }
 }

@@ -87,7 +87,7 @@ internal sealed class ProcessingMetricsService : IProcessingMetricsService
         if (metrics.Count == 0)
         {
             _logger.LogWarning("No historical data for step {Step}", step);
-            return new StepDurationStats(stepName, 0, 0, 0, 0);
+            return new StepDurationStats(stepName, 0, 0, 0, 0, 0);
         }
 
         var durations = metrics.Select(m => (double)m).OrderBy(d => d).ToList();
@@ -95,8 +95,9 @@ internal sealed class ProcessingMetricsService : IProcessingMetricsService
         var average = durations.Average();
         var median = CalculatePercentile(durations, 0.50);
         var p95 = CalculatePercentile(durations, 0.95);
+        var p99 = CalculatePercentile(durations, 0.99);
 
-        return new StepDurationStats(stepName, average, median, p95, metrics.Count);
+        return new StepDurationStats(stepName, average, median, p95, p99, metrics.Count);
     }
 
     public async Task<TimeSpan?> CalculateETAAsync(

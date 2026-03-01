@@ -76,6 +76,7 @@ internal sealed class LlmGameStateSchemaGenerator : IGameStateSchemaGenerator
         var result = await _llmService.GenerateJsonAsync<SchemaGenerationResponse>(
             SystemPrompt,
             userPrompt,
+            RequestSource.RagPipeline,
             cancellationToken).ConfigureAwait(false);
 
         if (result == null)

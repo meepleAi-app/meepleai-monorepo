@@ -74,7 +74,7 @@ internal sealed class UpdateAgentDocumentsCommandHandler
             // Validate documents exist if any are provided
             if (request.DocumentIds.Count > 0)
             {
-                var existingDocIds = await _db.SharedGameDocuments
+                var existingDocIds = await _db.PdfDocuments
                     .Where(d => request.DocumentIds.Contains(d.Id))
                     .Select(d => d.Id)
                     .ToListAsync(cancellationToken)

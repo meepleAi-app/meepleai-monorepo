@@ -1,3 +1,4 @@
+#!/bin/sh
 # Pre-push hook for MeepleAI
 # Build verification only - tests are delegated to CI
 

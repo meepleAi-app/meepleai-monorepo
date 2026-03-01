@@ -119,6 +119,7 @@ export const agentDefinitionsApi = {
       temperature: current.config.temperature,
       prompts: current.prompts,
       tools: current.tools,
+      kbCardIds: current.kbCardIds,
     };
     return this.update(id, updateData);
   },
@@ -157,6 +158,7 @@ export const agentDefinitionsApi = {
       temperature: source.config.temperature,
       prompts: source.prompts,
       tools: source.tools,
+      kbCardIds: source.kbCardIds,
     });
   },
 };

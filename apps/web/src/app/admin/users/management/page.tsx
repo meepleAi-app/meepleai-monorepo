@@ -11,5 +11,5 @@ export const metadata: Metadata = {
  * Redirects to the new unified admin dashboard Users section.
  */
 export default function LegacyUserManagementRedirect() {
-  redirect('/admin/users');
+  redirect('/admin/users/activity');
 }

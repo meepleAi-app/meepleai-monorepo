@@ -3,16 +3,33 @@
  *
  * Tests the tabbed navigation system introduced in the dashboard redesign (Issue #3547).
  * Tests cover: tab switching, view modes, and content visibility.
+ *
+ * Note: RagDashboard uses URL-based state (useSearchParams + router.replace).
+ * Tab switching is tested by simulating URL param changes via mock + rerender.
  */
 
 import React from 'react';
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 import { RagDashboard, NAVIGATION_GROUPS } from '../RagDashboard';
 
-// Mock framer-motion
+// ─── next/navigation mock ─────────────────────────────────────────────────────
+
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(),
+  useSearchParams: vi.fn(),
+  usePathname: vi.fn(),
+}));
+
+const mockUseRouter = useRouter as Mock;
+const mockUseSearchParams = useSearchParams as Mock;
+const mockUsePathname = usePathname as Mock;
+
+// ─── framer-motion mock ───────────────────────────────────────────────────────
+
 vi.mock('framer-motion', () => ({
   motion: {
     header: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => (
@@ -28,7 +45,8 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
 }));
 
-// Mock IntersectionObserver
+// ─── IntersectionObserver mock ────────────────────────────────────────────────
+
 class MockIntersectionObserver {
   constructor(_callback: IntersectionObserverCallback) {
     // no-op
@@ -41,7 +59,8 @@ class MockIntersectionObserver {
   }
 }
 
-// Mock child components to simplify testing
+// ─── Technical component mocks ────────────────────────────────────────────────
+
 vi.mock('../StatsGrid', () => ({
   StatsGrid: () => <div data-testid="stats-grid">StatsGrid</div>,
 }));
@@ -106,9 +125,59 @@ vi.mock('../ParameterGuide', () => ({
   ParameterGuide: () => <div data-testid="parameter-guide">ParameterGuide</div>,
 }));
 
+// ─── Business component mocks ─────────────────────────────────────────────────
+
+vi.mock('../BusinessKpiCards', () => ({
+  BusinessKpiCards: () => <div data-testid="business-kpi-cards">BusinessKpiCards</div>,
+}));
+
+vi.mock('../BusinessStrategyComparison', () => ({
+  BusinessStrategyComparison: () => (
+    <div data-testid="business-strategy-comparison">BusinessStrategyComparison</div>
+  ),
+}));
+
+vi.mock('../BusinessRoiCalculator', () => ({
+  BusinessRoiCalculator: () => (
+    <div data-testid="business-roi-calculator">BusinessRoiCalculator</div>
+  ),
+}));
+
+vi.mock('../BusinessUseCases', () => ({
+  BusinessUseCases: () => <div data-testid="business-use-cases">BusinessUseCases</div>,
+}));
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
+/**
+ * Set up URL search params mock.
+ * RagDashboard reads `view` (default 'technical') and `tab` (default 'overview') from params.
+ */
+function setupSearchParams(params: Record<string, string> = {}) {
+  mockUseSearchParams.mockReturnValue({
+    get: (key: string) => params[key] ?? null,
+    toString: () => {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => sp.set(k, v));
+      return sp.toString();
+    },
+  });
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
 describe('Navigation Integration (Tabbed Dashboard)', () => {
   beforeEach(() => {
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+
+    // Default: technical view, overview tab
+    setupSearchParams({});
+    mockUseRouter.mockReturnValue({
+      push: vi.fn(),
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+    });
+    mockUsePathname.mockReturnValue('/');
   });
 
   afterEach(() => {
@@ -164,11 +233,15 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should switch to Architecture tab when clicked', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
       // Click Architecture tab
       const architectureButtons = screen.getAllByText('Architecture');
       fireEvent.click(architectureButtons[0]);
+
+      // Simulate URL update that router.replace would trigger
+      setupSearchParams({ tab: 'architecture' });
+      rerender(<RagDashboard />);
 
       // Architecture content should be visible
       await waitFor(() => {
@@ -182,11 +255,15 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should switch to Agents & Prompts tab when clicked', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
       // Click Agents tab
       const agentsButtons = screen.getAllByText('Agents & Prompts');
       fireEvent.click(agentsButtons[0]);
+
+      // Simulate URL update
+      setupSearchParams({ tab: 'agents' });
+      rerender(<RagDashboard />);
 
       // Agents content should be visible
       await waitFor(() => {
@@ -197,11 +274,15 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should switch to Cost & Metrics tab when clicked', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
       // Click Cost & Metrics tab
       const metricsButtons = screen.getAllByText('Cost & Metrics');
       fireEvent.click(metricsButtons[0]);
+
+      // Simulate URL update
+      setupSearchParams({ tab: 'performance' });
+      rerender(<RagDashboard />);
 
       // Cost & Metrics content should be visible
       await waitFor(() => {
@@ -214,11 +295,15 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should switch to Walkthrough tab when clicked', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
       // Click Walkthrough tab
       const walkthroughButtons = screen.getAllByText('Walkthrough');
       fireEvent.click(walkthroughButtons[0]);
+
+      // Simulate URL update
+      setupSearchParams({ tab: 'walkthrough' });
+      rerender(<RagDashboard />);
 
       // Walkthrough content should be visible
       await waitFor(() => {
@@ -236,20 +321,29 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
       expect(technicalButton).toHaveAttribute('data-active', 'true');
     });
 
-    it('should switch to business mode when Business button is clicked', () => {
-      render(<RagDashboard />);
+    it('should switch to business mode when Business ROI button is clicked', () => {
+      const { rerender } = render(<RagDashboard />);
 
-      const businessButton = screen.getByText('Business').closest('button');
+      const businessButton = screen.getByText('Business ROI').closest('button');
       fireEvent.click(businessButton!);
 
-      expect(businessButton).toHaveAttribute('data-active', 'true');
+      // Simulate URL update
+      setupSearchParams({ view: 'business' });
+      rerender(<RagDashboard />);
+
+      const updatedBusinessButton = screen.getByText('Business ROI').closest('button');
+      expect(updatedBusinessButton).toHaveAttribute('data-active', 'true');
     });
 
     it('should hide tab navigation in business mode', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
-      const businessButton = screen.getByText('Business').closest('button');
+      const businessButton = screen.getByText('Business ROI').closest('button');
       fireEvent.click(businessButton!);
+
+      // Simulate URL update
+      setupSearchParams({ view: 'business' });
+      rerender(<RagDashboard />);
 
       // Tab-specific navigation (like "Agents & Prompts") should not be visible
       await waitFor(() => {
@@ -257,51 +351,68 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
       });
     });
 
-    it('should show Executive Summary in business mode', async () => {
-      render(<RagDashboard />);
+    it('should show Business Metrics section in business mode', async () => {
+      const { rerender } = render(<RagDashboard />);
 
-      const businessButton = screen.getByText('Business').closest('button');
+      const businessButton = screen.getByText('Business ROI').closest('button');
       fireEvent.click(businessButton!);
 
+      setupSearchParams({ view: 'business' });
+      rerender(<RagDashboard />);
+
       await waitFor(() => {
-        expect(screen.getByText('Executive Summary')).toBeInTheDocument();
+        expect(screen.getByText('Business Metrics')).toBeInTheDocument();
       });
     });
 
-    it('should show business highlights in business mode', async () => {
-      render(<RagDashboard />);
+    it('should show business sections in business mode', async () => {
+      const { rerender } = render(<RagDashboard />);
 
-      const businessButton = screen.getByText('Business').closest('button');
+      const businessButton = screen.getByText('Business ROI').closest('button');
       fireEvent.click(businessButton!);
 
+      setupSearchParams({ view: 'business' });
+      rerender(<RagDashboard />);
+
       await waitFor(() => {
-        expect(screen.getByText('Cost Efficiency')).toBeInTheDocument();
-        expect(screen.getByText('Quality Assurance')).toBeInTheDocument();
-        expect(screen.getByText('Scalability')).toBeInTheDocument();
+        expect(screen.getByText('Strategy Comparison')).toBeInTheDocument();
+        expect(screen.getByText('ROI Calculator')).toBeInTheDocument();
+        expect(screen.getByText('Use Cases')).toBeInTheDocument();
       });
     });
 
     it('should preserve tab state when switching back to technical mode', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
       // Switch to Architecture tab
       const architectureButtons = screen.getAllByText('Architecture');
       fireEvent.click(architectureButtons[0]);
+
+      setupSearchParams({ tab: 'architecture' });
+      rerender(<RagDashboard />);
 
       await waitFor(() => {
         expect(screen.getByTestId('architecture-explorer')).toBeInTheDocument();
       });
 
       // Switch to business mode
-      const businessButton = screen.getByText('Business').closest('button');
+      const businessButton = screen.getByText('Business ROI').closest('button');
       fireEvent.click(businessButton!);
 
-      // Switch back to technical mode
+      setupSearchParams({ view: 'business', tab: 'architecture' });
+      rerender(<RagDashboard />);
+
+      // Switch back to technical mode — tab state is preserved in the URL
       const technicalButton = screen.getByText('Technical').closest('button');
       fireEvent.click(technicalButton!);
 
-      // Should still be on Architecture tab (or Overview - depends on implementation)
-      // The new design resets to Overview when switching back, which is acceptable behavior
+      setupSearchParams({ view: 'technical', tab: 'architecture' });
+      rerender(<RagDashboard />);
+
+      // Should still be on Architecture tab
+      await waitFor(() => {
+        expect(screen.getByTestId('architecture-explorer')).toBeInTheDocument();
+      });
     });
   });
 
@@ -316,10 +427,10 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should render Architecture tab with all expected sections', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
-      const architectureButtons = screen.getAllByText('Architecture');
-      fireEvent.click(architectureButtons[0]);
+      setupSearchParams({ tab: 'architecture' });
+      rerender(<RagDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Architecture Explorer')).toBeInTheDocument();
@@ -329,10 +440,10 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should render Agents tab with all expected sections', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
-      const agentsButtons = screen.getAllByText('Agents & Prompts');
-      fireEvent.click(agentsButtons[0]);
+      setupSearchParams({ tab: 'agents' });
+      rerender(<RagDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Agent-RAG Integration')).toBeInTheDocument();
@@ -342,10 +453,10 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should render Cost & Metrics tab with all expected sections', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
-      const metricsButtons = screen.getAllByText('Cost & Metrics');
-      fireEvent.click(metricsButtons[0]);
+      setupSearchParams({ tab: 'performance' });
+      rerender(<RagDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Parametri & Strategie')).toBeInTheDocument();
@@ -356,10 +467,10 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
     });
 
     it('should render Walkthrough tab with expected section', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
-      const walkthroughButtons = screen.getAllByText('Walkthrough');
-      fireEvent.click(walkthroughButtons[0]);
+      setupSearchParams({ tab: 'walkthrough' });
+      rerender(<RagDashboard />);
 
       await waitFor(() => {
         expect(screen.getByText('Decision Walkthrough')).toBeInTheDocument();
@@ -369,26 +480,27 @@ describe('Navigation Integration (Tabbed Dashboard)', () => {
 
   describe('Business view content', () => {
     it('should render all business sections', async () => {
-      render(<RagDashboard />);
+      const { rerender } = render(<RagDashboard />);
 
-      const businessButton = screen.getByText('Business').closest('button');
-      fireEvent.click(businessButton!);
+      setupSearchParams({ view: 'business' });
+      rerender(<RagDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('stats-grid')).toBeInTheDocument();
-        expect(screen.getByTestId('cost-calculator')).toBeInTheDocument();
-        expect(screen.getByTestId('decision-walkthrough')).toBeInTheDocument();
+        expect(screen.getByTestId('business-kpi-cards')).toBeInTheDocument();
+        expect(screen.getByTestId('business-roi-calculator')).toBeInTheDocument();
+        expect(screen.getByTestId('business-strategy-comparison')).toBeInTheDocument();
+        expect(screen.getByTestId('business-use-cases')).toBeInTheDocument();
       });
     });
 
-    it('should show How It Works section in business view', async () => {
-      render(<RagDashboard />);
+    it('should show Use Cases section in business view', async () => {
+      const { rerender } = render(<RagDashboard />);
 
-      const businessButton = screen.getByText('Business').closest('button');
-      fireEvent.click(businessButton!);
+      setupSearchParams({ view: 'business' });
+      rerender(<RagDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('How It Works')).toBeInTheDocument();
+        expect(screen.getByText('Use Cases')).toBeInTheDocument();
       });
     });
   });

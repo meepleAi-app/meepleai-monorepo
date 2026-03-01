@@ -53,7 +53,9 @@ internal class GetAgentByIdQueryHandler : IRequestHandler<GetAgentByIdQuery, Age
             LastInvokedAt: agent.LastInvokedAt,
             InvocationCount: agent.InvocationCount,
             IsRecentlyUsed: agent.IsRecentlyUsed,
-            IsIdle: agent.IsIdle
+            IsIdle: agent.IsIdle,
+            GameId: agent.GameId,
+            CreatedByUserId: agent.CreatedByUserId
         );
     }
 }

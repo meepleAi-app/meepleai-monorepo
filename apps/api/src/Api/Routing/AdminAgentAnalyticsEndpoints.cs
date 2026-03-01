@@ -1,11 +1,13 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using MediatR;
 
 namespace Api.Routing;
 
 /// <summary>
-/// Admin endpoints for agent analytics (static/prototype data).
+/// Admin endpoints for agent analytics.
 /// Issue #4653: Agents analytics for Admin Dashboard.
-/// Note: Using static data for fast prototyping. Real implementation TBD.
+/// Issue #4917: Admin chat history - replaced static mock with real ChatThread data.
 /// </summary>
 internal static class AdminAgentAnalyticsEndpoints
 {
@@ -14,21 +16,43 @@ internal static class AdminAgentAnalyticsEndpoints
         var agentsGroup = group.MapGroup("/admin/agents")
             .WithTags("Admin", "Agents");
 
-        // GET /api/v1/admin/agents/chat-history (static prototype)
-        agentsGroup.MapGet("/chat-history", (HttpContext context) =>
+        // GET /api/v1/admin/agents/chat-history (real data - Issue #4917)
+        agentsGroup.MapGet("/chat-history", async (
+            HttpContext context,
+            IMediator mediator,
+            string? agentType = null,
+            DateTime? dateFrom = null,
+            DateTime? dateTo = null,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken ct = default) =>
         {
             var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            // Static data for prototype - real query implementation pending
-            var sessions = new[]
-            {
-                new { id = "chat-001", userId = "user-123", userName = "Sarah Chen", agent = "Rules Expert", messageCount = 12, duration = 245, satisfaction = 5, date = DateTime.UtcNow.AddHours(-2), preview = Array.Empty<object>() },
-                new { id = "chat-002", userId = "user-456", userName = "Mike Johnson", agent = "Strategy Advisor", messageCount = 8, duration = 180, satisfaction = 4, date = DateTime.UtcNow.AddHours(-5), preview = Array.Empty<object>() },
-            };
+            var query = new GetAdminChatSessionsQuery(
+                AgentType: agentType,
+                DateFrom: dateFrom,
+                DateTo: dateTo,
+                Page: Math.Max(1, page),
+                PageSize: Math.Clamp(pageSize, 1, 100));
 
-            return Results.Ok(new { sessions, total = sessions.Length, page = 1, pageSize = 20 });
-        });
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(new
+            {
+                sessions = result.Sessions,
+                total = result.Total,
+                page = result.Page,
+                pageSize = result.PageSize,
+            });
+        })
+        .WithName("GetAdminChatHistory")
+        .WithSummary("Get admin chat history (real data)")
+        .WithDescription("Returns paginated real ChatThread data for admin dashboard. Issue #4917.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(403);
 
         // GET /api/v1/admin/agents/models (static config)
         agentsGroup.MapGet("/models", (HttpContext context) =>
@@ -51,4 +75,3 @@ internal static class AdminAgentAnalyticsEndpoints
         return group;
     }
 }
-

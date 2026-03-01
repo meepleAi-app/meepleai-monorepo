@@ -24,7 +24,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-import type { ScoreEntry } from '@/components/session/types';
+import type { ScoreEntry, TurnAdvancedPayload } from '@/components/session/types';
 
 /**
  * SSE Event Types (from GST-003 backend)
@@ -70,6 +70,12 @@ export interface UseSessionSyncOptions {
   /** Callback when an error occurs */
   onError?: (error: Error) => void;
 
+  /**
+   * Callback for real-time turn-advanced events (`session:toolkit` SSE event).
+   * Issue #4975 — TurnOrder Component.
+   */
+  onTurnAdvanced?: (payload: TurnAdvancedPayload) => void;
+
   /** API base URL */
   apiBaseUrl?: string;
 }
@@ -101,6 +107,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
     onResumed,
     onFinalized,
     onError,
+    onTurnAdvanced,
     apiBaseUrl,
   } = options;
 
@@ -205,10 +212,22 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
         }
       };
 
-      // Listen to all event types
+      // Listen to all score/session event types
       Object.values(SessionEventType).forEach(eventType => {
         eventSource.addEventListener(eventType, handleEvent);
       });
+
+      // Listen to turn-order toolkit events (Issue #4975)
+      if (onTurnAdvanced) {
+        eventSource.addEventListener('session:toolkit', (event: MessageEvent<string>) => {
+          try {
+            const payload = JSON.parse(event.data) as TurnAdvancedPayload;
+            onTurnAdvanced(payload);
+          } catch (err) {
+            console.error('[useSessionSync] session:toolkit parse error:', err);
+          }
+        });
+      }
 
       eventSourceRef.current = eventSource;
     } catch (err) {
@@ -217,7 +236,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
       setIsConnected(false);
       onError?.(errorObj);
     }
-  }, [sessionId, apiBaseUrl, handleEvent, onError]);
+  }, [sessionId, apiBaseUrl, handleEvent, onError, onTurnAdvanced]);
 
   /**
    * Disconnect SSE stream

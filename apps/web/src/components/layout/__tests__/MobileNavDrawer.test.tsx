@@ -9,7 +9,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { axe } from 'jest-axe';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -17,10 +17,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 
 import { MobileNavDrawer } from '../MobileNavDrawer';
+import { NAV_TEST_IDS } from '@/lib/test-ids';
 
 // Mock Next.js navigation
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 // Mock useCurrentUser hook
@@ -29,6 +31,7 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
 }));
 
 const mockUsePathname = usePathname as Mock;
+const mockUseSearchParams = useSearchParams as Mock;
 const mockUseCurrentUser = useCurrentUser as Mock;
 
 function createWrapper() {
@@ -52,6 +55,7 @@ describe('MobileNavDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/dashboard');
+    mockUseSearchParams.mockReturnValue(new URLSearchParams());
     // Default to authenticated user
     mockUseCurrentUser.mockReturnValue({
       data: { id: '1', email: 'test@test.com', role: 'User', displayName: 'Test' },
@@ -62,19 +66,19 @@ describe('MobileNavDrawer', () => {
   describe('Rendering', () => {
     it('renders hamburger button', () => {
       renderDrawer();
-      expect(screen.getByTestId('mobile-nav-trigger')).toBeInTheDocument();
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger)).toBeInTheDocument();
     });
 
     it('hamburger button has Menu icon', () => {
       renderDrawer();
-      const button = screen.getByTestId('mobile-nav-trigger');
+      const button = screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger);
       const svg = button.querySelector('svg');
       expect(svg).toBeInTheDocument();
     });
 
     it('drawer is closed initially', () => {
       renderDrawer();
-      expect(screen.queryByTestId('mobile-nav-drawer')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(NAV_TEST_IDS.mobileNavDrawer)).not.toBeInTheDocument();
     });
   });
 
@@ -83,9 +87,9 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      expect(screen.getByTestId('mobile-nav-drawer')).toBeInTheDocument();
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileNavDrawer)).toBeInTheDocument();
       expect(screen.getByText('Navigazione')).toBeInTheDocument();
     });
 
@@ -93,11 +97,11 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      // Should show at least Dashboard, Catalogo, Chat for authenticated user
+      // Should show at least Dashboard, Scopri, Chat for authenticated user
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('Catalogo')).toBeInTheDocument();
+      expect(screen.getByText('Scopri')).toBeInTheDocument();
       expect(screen.getByText('Chat')).toBeInTheDocument();
     });
 
@@ -105,22 +109,22 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
-      expect(screen.getByTestId('mobile-nav-drawer')).toBeInTheDocument();
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileNavDrawer)).toBeInTheDocument();
 
       await user.keyboard('{Escape}');
 
-      expect(screen.queryByTestId('mobile-nav-drawer')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(NAV_TEST_IDS.mobileNavDrawer)).not.toBeInTheDocument();
     });
 
     it('closes drawer on Chiudi button click', async () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
-      await user.click(screen.getByTestId('mobile-nav-close'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavClose));
 
-      expect(screen.queryByTestId('mobile-nav-drawer')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(NAV_TEST_IDS.mobileNavDrawer)).not.toBeInTheDocument();
     });
   });
 
@@ -129,31 +133,31 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      expect(screen.getByTestId('mobile-library-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle)).toBeInTheDocument();
     });
 
     it('expands library section on toggle click', async () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
-      await user.click(screen.getByTestId('mobile-library-toggle'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle));
 
-      expect(screen.getByTestId('mobile-library-item-collection')).toBeInTheDocument();
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'))).toBeInTheDocument();
     });
 
     it('collapses library section on second toggle click', async () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
-      await user.click(screen.getByTestId('mobile-library-toggle'));
-      expect(screen.getByTestId('mobile-library-item-collection')).toBeInTheDocument();
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle));
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'))).toBeInTheDocument();
 
-      await user.click(screen.getByTestId('mobile-library-toggle'));
-      expect(screen.queryByTestId('mobile-library-item-collection')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle));
+      expect(screen.queryByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'))).not.toBeInTheDocument();
     });
 
     it('library section expanded by default when library route active', async () => {
@@ -161,20 +165,20 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       // Should be expanded without clicking toggle
-      expect(screen.getByTestId('mobile-library-item-collection')).toBeInTheDocument();
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'))).toBeInTheDocument();
     });
 
     it('rotates chevron icon when expanded', async () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
-      await user.click(screen.getByTestId('mobile-library-toggle'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle));
 
-      const toggle = screen.getByTestId('mobile-library-toggle');
+      const toggle = screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle);
       const chevronContainer = toggle.querySelector('.rotate-180');
       expect(chevronContainer).toBeInTheDocument();
     });
@@ -186,9 +190,9 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      const agentsLink = screen.getByTestId('mobile-nav-item-agents');
+      const agentsLink = screen.getByTestId(NAV_TEST_IDS.mobileNavItem('agents'));
       expect(agentsLink).toHaveClass('text-[hsl(262_83%_62%)]');
       expect(agentsLink).toHaveAttribute('aria-current', 'page');
     });
@@ -198,23 +202,24 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      const libraryToggle = screen.getByTestId('mobile-library-toggle');
+      const libraryToggle = screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle);
       expect(libraryToggle).toHaveClass('text-[hsl(262_83%_62%)]');
     });
 
     it('highlights active library sub-item', async () => {
-      mockUsePathname.mockReturnValue('/library/private');
+      mockUsePathname.mockReturnValue('/library');
+      mockUseSearchParams.mockReturnValue(new URLSearchParams('tab=collection'));
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
-      // Library should auto-expand since /library/* is active
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
+      // Library should auto-expand since /library is active
 
-      const privateLink = screen.getByTestId('mobile-library-item-private');
-      expect(privateLink).toHaveClass('text-[hsl(262_83%_62%)]');
-      expect(privateLink).toHaveAttribute('aria-current', 'page');
+      const collectionLink = screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'));
+      expect(collectionLink).toHaveClass('text-[hsl(262_83%_62%)]');
+      expect(collectionLink).toHaveAttribute('aria-current', 'page');
     });
   });
 
@@ -223,7 +228,7 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       const { container } = render(<MobileNavDrawer />, { wrapper: createWrapper() });
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       const results = await axe(container);
       expect(results).toHaveNoViolations();
@@ -233,7 +238,7 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       expect(screen.getByRole('navigation', { name: /mobile navigation/i })).toBeInTheDocument();
     });
@@ -242,8 +247,8 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
-      await user.click(screen.getByTestId('mobile-library-toggle'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle));
 
       expect(screen.getByRole('group', { name: /library submenu/i })).toBeInTheDocument();
     });
@@ -252,9 +257,9 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      const toggle = screen.getByTestId('mobile-library-toggle');
+      const toggle = screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle);
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
       await user.click(toggle);
@@ -265,9 +270,9 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      expect(screen.getByTestId('mobile-library-toggle')).toHaveAttribute(
+      expect(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle)).toHaveAttribute(
         'aria-controls',
         'library-submenu'
       );
@@ -279,7 +284,7 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       expect(screen.getByText('Strumenti')).toBeInTheDocument();
       expect(screen.getByText('Agenti')).toBeInTheDocument();
@@ -290,10 +295,10 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       // The separator is inside the Sheet portal — use screen query
-      const drawer = screen.getByTestId('mobile-nav-drawer');
+      const drawer = screen.getByTestId(NAV_TEST_IDS.mobileNavDrawer);
       const hr = drawer.querySelector('hr');
       expect(hr).toBeInTheDocument();
     });
@@ -302,7 +307,7 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       // Profile should NOT appear in the navigation
       expect(screen.queryByText('Profilo')).not.toBeInTheDocument();
@@ -312,7 +317,7 @@ describe('MobileNavDrawer', () => {
   describe('Responsive Behavior', () => {
     it('has md:hidden class on trigger', () => {
       renderDrawer();
-      const trigger = screen.getByTestId('mobile-nav-trigger');
+      const trigger = screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger);
       expect(trigger).toHaveClass('md:hidden');
     });
 
@@ -320,9 +325,9 @@ describe('MobileNavDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
-      await user.click(screen.getByTestId('mobile-nav-trigger'));
+      await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
-      const drawer = screen.getByTestId('mobile-nav-drawer');
+      const drawer = screen.getByTestId(NAV_TEST_IDS.mobileNavDrawer);
       expect(drawer).toHaveClass('w-[280px]', 'sm:w-[320px]');
     });
   });

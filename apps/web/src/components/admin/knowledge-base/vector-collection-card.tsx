@@ -1,15 +1,40 @@
+/**
+ * VectorCollectionCard Component
+ * Issue #4861: MeepleCard design system for /admin/knowledge-base/vectors
+ * Issue #4877: Qdrant Advanced Operations + Delete
+ *
+ * Displays a Qdrant vector collection using MeepleCard entity="document" variant="grid"
+ * with collection metrics, health status badge, and admin quick actions.
+ */
+
 'use client';
 
-import { DatabaseIcon } from 'lucide-react';
+import { Database, Layers, RefreshCw, Trash2 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 
-interface VectorCollectionCardProps {
+export interface VectorCollectionDto {
   name: string;
   vectorCount: number;
   dimensions: number;
   storage: string;
   health: number;
+}
+
+export interface VectorCollectionCardProps {
+  name: string;
+  vectorCount: number;
+  dimensions: number;
+  storage: string;
+  health: number;
+  onReindex?: (name: string) => void;
+  onDelete?: (name: string) => void;
+}
+
+function healthLabel(health: number): string {
+  if (health >= 90) return 'Healthy';
+  if (health >= 70) return 'Degraded';
+  return 'Error';
 }
 
 export function VectorCollectionCard({
@@ -18,55 +43,40 @@ export function VectorCollectionCard({
   dimensions,
   storage,
   health,
+  onReindex,
+  onDelete,
 }: VectorCollectionCardProps) {
-  const healthColor =
-    health >= 90
-      ? 'bg-green-500'
-      : health >= 70
-        ? 'bg-amber-500'
-        : 'bg-red-500';
+  const metadata: MeepleCardMetadata[] = [
+    { icon: Database, label: `${vectorCount.toLocaleString()} vectors` },
+    { icon: Layers, label: `${dimensions}D` },
+  ];
+
+  const quickActions = [
+    ...(onReindex
+      ? [{ icon: RefreshCw, label: 'Rebuild Index', onClick: () => onReindex(name) }]
+      : []),
+    ...(onDelete
+      ? [
+          {
+            icon: Trash2,
+            label: 'Delete',
+            onClick: () => onDelete(name),
+            destructive: true,
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-            <DatabaseIcon className="w-6 h-6 text-blue-700 dark:text-blue-400" />
-          </div>
-          <div>
-            <h3 className="font-quicksand text-lg font-bold text-slate-900 dark:text-zinc-100">
-              {name}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-zinc-400">{dimensions}d vectors</p>
-          </div>
-        </div>
-        <Badge variant="outline" className={health >= 90 ? 'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300' : 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300'}>
-          {health}% healthy
-        </Badge>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex justify-between text-sm">
-          <span className="text-slate-600 dark:text-zinc-400">Vectors</span>
-          <span className="font-semibold text-slate-900 dark:text-zinc-100">
-            {vectorCount.toLocaleString()}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-slate-600 dark:text-zinc-400">Storage</span>
-          <span className="font-semibold text-slate-900 dark:text-zinc-100">{storage}</span>
-        </div>
-      </div>
-
-      {/* Health Bar */}
-      <div className="mt-4">
-        <div className="h-2 bg-gray-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-          <div
-            className={`h-full ${healthColor} transition-all duration-300`}
-            style={{ width: `${health}%` }}
-          />
-        </div>
-      </div>
-    </div>
+    <MeepleCard
+      entity="document"
+      variant="grid"
+      title={name}
+      subtitle={`${vectorCount.toLocaleString()} vectors · ${dimensions}D · ${storage}`}
+      badge={healthLabel(health)}
+      metadata={metadata}
+      quickActions={quickActions.length > 0 ? quickActions : undefined}
+      data-testid={`vector-collection-card-${name}`}
+    />
   );
 }

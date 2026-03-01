@@ -45,6 +45,8 @@ import { cn } from '@/lib/utils';
 import { GameCarousel, type CarouselGame } from '../game-carousel';
 import { MeepleCard } from '../meeple-card';
 import { EmptyState } from './components/empty-state';
+import { EntityTableView } from './components/entity-table-view';
+import { SidebarFilters } from './components/sidebar-filters';
 import { FilterPanel } from './components/filter-panel';
 import { LoadingSkeleton } from './components/loading-skeleton';
 import { SearchBar } from './components/search-bar';
@@ -99,6 +101,9 @@ export function EntityListView<T = any>({
   // Carousel configuration
   carouselOptions,
 
+  // Table configuration
+  tableColumns,
+
   // Search & Sort
   searchable = false,
   searchPlaceholder,
@@ -126,7 +131,7 @@ export function EntityListView<T = any>({
   const { mode, setMode, isAvailable: _isAvailable } = useViewMode(
     persistenceKey,
     defaultViewMode,
-    availableModes || ['grid', 'list', 'carousel'],
+    availableModes || ['grid', 'list', 'carousel', 'table'],
     controlledViewMode
   );
 
@@ -273,6 +278,25 @@ export function EntityListView<T = any>({
     );
   };
 
+
+  /**
+   * Render table layout
+   * Uses EntityTableView with DataTable integration
+   */
+  const renderTableLayout = () => {
+    return (
+      <EntityTableView
+        displayItems={displayItems}
+        items={items}
+        entity={entity}
+        renderItem={renderItem}
+        tableColumns={tableColumns}
+        onItemClick={onItemClick}
+        emptyMessage={emptyMessage}
+      />
+    );
+  };
+
   // ========== Loading State ==========
 
   if (loading) {
@@ -322,8 +346,8 @@ export function EntityListView<T = any>({
             </div>
           )}
 
-          {/* Search, Sort & Filter Controls */}
-          {(searchable || sortOptions.length > 0 || filters.length > 0) && (
+          {/* Search, Sort & Filter Controls (hidden in list mode - sidebar handles it) */}
+          {mode !== 'list' && (searchable || sortOptions.length > 0 || filters.length > 0) && (
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row gap-3">
                 {/* SearchBar */}
@@ -364,8 +388,30 @@ export function EntityListView<T = any>({
 
       {/* Content - View mode dependent */}
       {mode === 'grid' && renderGridLayout()}
-      {mode === 'list' && renderListLayout()}
+      {mode === 'list' && (
+        <div className="flex gap-6" data-testid="list-with-sidebar">
+          {/* Sidebar Filters (list mode only) */}
+          {(searchable || sortOptions.length > 0) && (
+            <SidebarFilters
+              searchQuery={query}
+              onSearchChange={setQuery}
+              searchPlaceholder={searchPlaceholder}
+              searchable={searchable}
+              sortOptions={sortOptions}
+              currentSort={currentSort}
+              onSortChange={setCurrentSort}
+              activeFilterCount={activeFilterCount}
+              onClearFilters={clearFilters}
+            />
+          )}
+          {/* List content */}
+          <div className="flex-1 min-w-0">
+            {renderListLayout()}
+          </div>
+        </div>
+      )}
       {mode === 'carousel' && renderCarouselLayout()}
+      {mode === 'table' && renderTableLayout()}
 
       {/* Screen Reader Announcements */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">

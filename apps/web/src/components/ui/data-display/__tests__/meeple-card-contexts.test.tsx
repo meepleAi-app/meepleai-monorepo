@@ -13,9 +13,9 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MeepleCard, type MeepleEntityType, type MeepleCardVariant } from '../meeple-card';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 const defaultProps = {
   title: 'Test Entity',
@@ -353,6 +353,141 @@ describe('MeepleCard - Context-Aware Tests (Issue #4080)', () => {
 
       // loading=true → renders skeleton
       expect(screen.getByTestId('meeple-card-skeleton')).toBeInTheDocument();
+    });
+  });
+
+  // Issue #4758: Snapshot History Slider + Time Travel integration
+  describe('Session Snapshot & Time Travel Integration', () => {
+    const mockSnapshots = [
+      {
+        id: 'snap-1',
+        snapshotNumber: 1,
+        triggerType: 'turnEnd',
+        description: 'End of turn 1',
+        turnNumber: 1,
+        createdAt: '2026-02-19T10:00:00Z',
+      },
+      {
+        id: 'snap-2',
+        snapshotNumber: 2,
+        triggerType: 'manual',
+        description: 'Manual save',
+        createdAt: '2026-02-19T10:15:00Z',
+      },
+      {
+        id: 'snap-3',
+        snapshotNumber: 3,
+        triggerType: 'automatic',
+        description: 'Auto-save',
+        turnNumber: 3,
+        createdAt: '2026-02-19T10:30:00Z',
+      },
+    ];
+
+    it('renders SnapshotHistorySlider for session entity', () => {
+      render(
+        <MeepleCard
+          {...defaultProps}
+          entity="session"
+          sessionSnapshots={mockSnapshots}
+          currentSnapshotIndex={0}
+        />
+      );
+
+      expect(screen.getByTestId('snapshot-history-slider')).toBeInTheDocument();
+      expect(screen.getByTestId('snapshot-dot-0')).toBeInTheDocument();
+      expect(screen.getByTestId('snapshot-dot-1')).toBeInTheDocument();
+      expect(screen.getByTestId('snapshot-dot-2')).toBeInTheDocument();
+    });
+
+    it('does not render SnapshotHistorySlider for non-session entities', () => {
+      render(
+        <MeepleCard
+          {...defaultProps}
+          entity="game"
+          sessionSnapshots={mockSnapshots}
+          currentSnapshotIndex={0}
+        />
+      );
+
+      expect(screen.queryByTestId('snapshot-history-slider')).not.toBeInTheDocument();
+    });
+
+    it('does not render SnapshotHistorySlider in compact variant', () => {
+      render(
+        <MeepleCard
+          {...defaultProps}
+          entity="session"
+          variant="compact"
+          sessionSnapshots={mockSnapshots}
+          currentSnapshotIndex={0}
+        />
+      );
+
+      expect(screen.queryByTestId('snapshot-history-slider')).not.toBeInTheDocument();
+    });
+
+    it('renders TimeTravelOverlay when time travel mode is active', () => {
+      render(
+        <MeepleCard
+          {...defaultProps}
+          entity="session"
+          sessionSnapshots={mockSnapshots}
+          currentSnapshotIndex={1}
+          isTimeTravelMode
+          onTimeTravelToggle={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('time-travel-overlay')).toBeInTheDocument();
+      expect(screen.getByText('Manual save')).toBeInTheDocument();
+    });
+
+    it('does not render TimeTravelOverlay when time travel is off', () => {
+      render(
+        <MeepleCard
+          {...defaultProps}
+          entity="session"
+          sessionSnapshots={mockSnapshots}
+          currentSnapshotIndex={0}
+          isTimeTravelMode={false}
+        />
+      );
+
+      expect(screen.queryByTestId('time-travel-overlay')).not.toBeInTheDocument();
+    });
+
+    it('calls onTimeTravelToggle(false) when overlay exit is clicked', () => {
+      const onToggle = vi.fn();
+      render(
+        <MeepleCard
+          {...defaultProps}
+          entity="session"
+          sessionSnapshots={mockSnapshots}
+          currentSnapshotIndex={0}
+          isTimeTravelMode
+          onTimeTravelToggle={onToggle}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('time-travel-exit'));
+      expect(onToggle).toHaveBeenCalledWith(false);
+    });
+
+    it('calls onSnapshotSelect when a dot is clicked', () => {
+      const onSelect = vi.fn();
+      render(
+        <MeepleCard
+          {...defaultProps}
+          entity="session"
+          sessionSnapshots={mockSnapshots}
+          currentSnapshotIndex={0}
+          onSnapshotSelect={onSelect}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('snapshot-dot-2'));
+      expect(onSelect).toHaveBeenCalledWith(2);
     });
   });
 });

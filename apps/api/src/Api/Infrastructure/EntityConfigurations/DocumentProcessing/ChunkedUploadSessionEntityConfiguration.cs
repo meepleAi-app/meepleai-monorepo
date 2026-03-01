@@ -15,8 +15,13 @@ internal class ChunkedUploadSessionEntityConfiguration : IEntityTypeConfiguratio
 
         builder.HasKey(e => e.Id);
 
-        builder.Property(e => e.GameId)
-            .IsRequired();
+        // GameId is nullable: private games have no shared GameEntity (PrivateGameId is set instead)
+        builder.Property(e => e.GameId);
+
+        // PrivateGameId: intentionally no FK — private games live in a separate bounded context
+        // and do not have a shared GameEntity. Cross-context reference stored as a raw Guid,
+        // consistent with the pattern used in PdfDocumentEntityConfiguration (Issue #3664).
+        builder.Property(e => e.PrivateGameId);
 
         builder.Property(e => e.UserId)
             .IsRequired();
@@ -60,10 +65,12 @@ internal class ChunkedUploadSessionEntityConfiguration : IEntityTypeConfiguratio
         // doesn't work with the repository pattern (MapToPersistence creates new entities).
 
         // Foreign keys
+        // GameId is optional: null for private-game sessions
         builder.HasOne(e => e.Game)
             .WithMany()
             .HasForeignKey(e => e.GameId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne(e => e.User)
             .WithMany()

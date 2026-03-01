@@ -1,4 +1,5 @@
 using Api.Infrastructure.ExternalServices.BoardGameGeek;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Routing;
@@ -11,17 +12,35 @@ internal static class BggEndpoints
 {
     public static RouteGroupBuilder MapBggEndpoints(this RouteGroupBuilder group)
     {
-        // GET /api/v1/bgg/search?query={term}
+        // GET /api/v1/bgg/search?q={term} (also accepts ?query={term})
         group.MapGet("/bgg/search", async (
-            string query,
+            [FromQuery(Name = "q")] string? q,
+            [FromQuery(Name = "query")] string? query,
+            [FromQuery(Name = "page")] int page,
+            [FromQuery(Name = "pageSize")] int pageSize,
             IBggApiClient bggClient,
             CancellationToken cancellationToken) =>
         {
-            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            var searchTerm = q ?? query;
+            if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
                 return Results.BadRequest(new { error = "Query must be at least 2 characters" });
 
-            var results = await bggClient.SearchGamesAsync(query, cancellationToken).ConfigureAwait(false);
-            return Results.Ok(results);
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+
+            var results = await bggClient.SearchGamesAsync(searchTerm, cancellationToken).ConfigureAwait(false);
+            var resultsList = results.ToList();
+            var total = resultsList.Count;
+            var paged = resultsList.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            return Results.Ok(new
+            {
+                results = paged,
+                total,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)total / pageSize)
+            });
         })
         .RequireRateLimiting("BggSearch")
         .WithName("BggPublicSearch")

@@ -21,6 +21,7 @@ using Moq;
 using StackExchange.Redis;
 using Xunit;
 
+#pragma warning disable S3261 // Namespace content is commented out — intentional pending refactoring (Issue #3490)
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
 /// <summary>
@@ -290,7 +291,7 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
         game.Should().NotBeNull();
         game!.Id.Should().Be(gameId);
 
-        // TODO: Uncomment when LinkAgentToSharedGameCommand is implemented
+        // Note: Uncomment when LinkAgentToSharedGameCommand is implemented
         // game.AgentDefinitionId.Should().Be(agentId);
     }
 

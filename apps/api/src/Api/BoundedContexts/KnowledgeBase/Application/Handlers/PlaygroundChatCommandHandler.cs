@@ -653,6 +653,7 @@ internal sealed class PlaygroundChatCommandHandler : IStreamingQueryHandler<Play
                 latencyMs: (int)totalStopwatch.ElapsedMilliseconds,
                 ipAddress: null,
                 userAgent: null,
+                source: RequestSource.Manual,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)

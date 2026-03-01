@@ -8,11 +8,13 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// <param name="AverageDurationSeconds">Mean duration in seconds</param>
 /// <param name="MedianDurationSeconds">Median duration in seconds (P50)</param>
 /// <param name="P95DurationSeconds">95th percentile duration in seconds</param>
+/// <param name="P99DurationSeconds">99th percentile duration in seconds</param>
 /// <param name="SampleSize">Number of samples used for calculation</param>
 public record StepDurationStats(
     string Step,
     double AverageDurationSeconds,
     double MedianDurationSeconds,
     double P95DurationSeconds,
+    double P99DurationSeconds,
     int SampleSize
 );

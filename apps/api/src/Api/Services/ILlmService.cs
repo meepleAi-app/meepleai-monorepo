@@ -27,6 +27,7 @@ internal interface ILlmService
     Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default);
 
     /// <summary>
@@ -36,6 +37,7 @@ internal interface ILlmService
     IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default);
 
     /// <summary>
@@ -44,6 +46,7 @@ internal interface ILlmService
     /// <typeparam name="T">The target type for deserialization (must be a class)</typeparam>
     /// <param name="systemPrompt">System-level instructions for the LLM</param>
     /// <param name="userPrompt">User's input prompt</param>
+    /// <param name="source">Request source for cost tracking</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>Deserialized object of type T, or null if parsing fails</returns>
     /// <remarks>
@@ -53,6 +56,7 @@ internal interface ILlmService
     Task<T?> GenerateJsonAsync<T>(
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default) where T : class;
 
     /// <summary>
@@ -62,12 +66,14 @@ internal interface ILlmService
     /// <param name="explicitModel">Model ID with provider prefix (e.g., "openai/gpt-4", "anthropic/claude-3.5-sonnet")</param>
     /// <param name="systemPrompt">System-level instructions for the LLM</param>
     /// <param name="userPrompt">User's input prompt</param>
+    /// <param name="source">Request source for cost tracking</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>LLM completion result with usage and cost tracking</returns>
     Task<LlmCompletionResult> GenerateCompletionWithModelAsync(
         string explicitModel,
         string systemPrompt,
         string userPrompt,
+        RequestSource source = RequestSource.Manual,
         CancellationToken ct = default);
 }
 

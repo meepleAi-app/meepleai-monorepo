@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 
 namespace Api.Infrastructure.Entities.SessionTracking;
 
@@ -16,6 +17,8 @@ public class ParticipantEntity
     public string DisplayName { get; set; } = string.Empty;
 
     public bool IsOwner { get; set; }
+    public ParticipantRole Role { get; set; } = ParticipantRole.Player;
+    public bool IsReady { get; set; }
     public int JoinOrder { get; set; }
     public int? FinalRank { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -1,14 +1,14 @@
 /**
  * Library Section Navigation Configuration
+ * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
  * Defines the library section sub-navigation tabs.
  */
 
 import {
   type LucideIcon,
   BookOpenIcon,
+  Gamepad2,
   Heart,
-  LockIcon,
-  SendIcon,
 } from 'lucide-react';
 
 /**
@@ -26,42 +26,48 @@ export interface LibraryTab {
 }
 
 /**
- * Library section tabs - route-based navigation
+ * Library section tabs — query-param based navigation (Issue #5039)
+ * Issue #5167 — renamed: Games (personal) / Collection (shared catalog, default)
+ *
+ * Tabs use ?tab= query params on /library instead of sub-routes.
+ * Default (/library, no tab param) renders Collection (shared catalog).
+ * "Proposte" moved to /discover?tab=proposals (community section).
  */
 export const LIBRARY_TABS: LibraryTab[] = [
   {
     id: 'collection',
-    label: 'Collezione',
+    label: 'Collection',
     icon: BookOpenIcon,
     href: '/library',
   },
   {
     id: 'private',
-    label: 'Giochi Privati',
-    icon: LockIcon,
-    href: '/library/private',
-  },
-  {
-    id: 'proposals',
-    label: 'Le Mie Proposte',
-    icon: SendIcon,
-    href: '/library/proposals',
+    label: 'Games',
+    icon: Gamepad2,
+    href: '/library?tab=private',
   },
   {
     id: 'wishlist',
     label: 'Wishlist',
     icon: Heart,
-    href: '/library/wishlist',
+    href: '/library?tab=wishlist',
   },
 ];
 
 /**
- * Check if a pathname matches a library tab
+ * Check if a pathname+search matches a library tab (Issue #5039)
+ * Issue #5167 — updated for new tab structure (collection/private/wishlist)
+ *
+ * Default (/library with no ?tab) → 'collection' (shared catalog).
+ * Accepts full URL (pathname + search) or just pathname.
  */
-export function getActiveLibraryTab(pathname: string): string {
-  if (pathname.startsWith('/library/private')) return 'private';
-  if (pathname.startsWith('/library/proposals')) return 'proposals';
-  if (pathname.startsWith('/library/wishlist')) return 'wishlist';
+export function getActiveLibraryTab(pathname: string, search?: string): string {
+  const tab = search
+    ? new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab')
+    : null;
+
+  if (tab === 'private') return 'private';
+  if (tab === 'wishlist') return 'wishlist';
   if (pathname === '/library') return 'collection';
   return 'collection';
 }

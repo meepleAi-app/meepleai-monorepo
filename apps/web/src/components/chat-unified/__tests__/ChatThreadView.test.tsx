@@ -57,6 +57,7 @@ const mockStreamState = {
   error: null as string | null,
   chatThreadId: null as string | null,
   totalTokens: 0,
+  debugSteps: [] as import('@/hooks/useAgentChatStream').DebugStep[],
 };
 
 vi.mock('@/hooks/useAgentChatStream', () => ({
@@ -103,6 +104,11 @@ vi.mock('@/components/agent/AgentSelector', () => ({
     arbitro: 'Arbitro',
     decisore: 'Decisore',
   },
+}));
+
+// Mock AuthProvider (Issue #4916: ChatThreadView now uses useAuth for admin detection)
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => ({ user: { id: 'user-1', role: 'User', email: 'test@test.com', displayName: 'Test' } }),
 }));
 
 // Mock store
@@ -247,9 +253,10 @@ describe('ChatThreadView', () => {
   // Empty & Error States
   // --------------------------------------------------------------------------
 
-  it('shows empty state for thread with no messages', async () => {
+  it('shows empty state for thread with no messages and no agent', async () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
+      agentId: null,
       messages: [],
     });
 
@@ -311,7 +318,8 @@ describe('ChatThreadView', () => {
     await user.click(screen.getByTestId('send-btn'));
 
     await waitFor(() => {
-      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'SSE message', 'thread-1');
+      // 4th arg is proxyGameContext (undefined when agentTypology not set)
+      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'SSE message', 'thread-1', undefined);
     });
 
     expect(apiMock.chat.addMessage).not.toHaveBeenCalled();
@@ -407,5 +415,218 @@ describe('ChatThreadView', () => {
       expect(screen.getByTestId('message-input')).toBeDisabled();
       expect(screen.getByTestId('send-btn')).toBeDisabled();
     });
+  });
+
+  // --------------------------------------------------------------------------
+  // Welcome Message (Issue #4780)
+  // --------------------------------------------------------------------------
+
+  it('shows welcome message for new thread with agent (Tutor)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Tutor',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ho studiato il regolamento di Catan/)).toBeInTheDocument();
+    });
+    // Should show capabilities
+    expect(screen.getByText(/Cosa posso fare/)).toBeInTheDocument();
+  });
+
+  it('shows welcome message for new thread with agent (Arbitro)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Arbitro',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sono il tuo arbitro per Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows welcome message for new thread with agent (Stratega)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Stratega',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/analizzare le tue mosse a Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows welcome message for new thread with agent (Narratore)', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'Narratore',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Benvenuto nel mondo di Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows default welcome message for unknown typology', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentTypology: 'unknown',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sono il tuo assistente per Catan/)).toBeInTheDocument();
+    });
+  });
+
+  it('does not show welcome message when thread has existing messages', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      agentTypology: 'Tutor',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText('Hello!')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Ho studiato il regolamento/)).not.toBeInTheDocument();
+  });
+
+  // --------------------------------------------------------------------------
+  // Proxy Game Context (Issue #4780)
+  // --------------------------------------------------------------------------
+
+  it('passes proxy game context when agentTypology is set', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      agentTypology: 'Tutor',
+    });
+
+    const user = userEvent.setup();
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-input')).toBeInTheDocument();
+    });
+
+    const input = screen.getByTestId('message-input');
+    await user.type(input, 'Help with rules');
+    await user.click(screen.getByTestId('send-btn'));
+
+    await waitFor(() => {
+      expect(mockSendViaSSE).toHaveBeenCalledWith(
+        'agent-1',
+        'Help with rules',
+        'thread-1',
+        { gameName: 'Catan', agentTypology: 'Tutor' }
+      );
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Debug Tab (Issue #4916)
+  // --------------------------------------------------------------------------
+
+  it('shows Chat and Debug tabs', async () => {
+    const user = userEvent.setup();
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tab-chat')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-debug')).toBeInTheDocument();
+    });
+
+    // Tabs have correct ARIA attributes
+    expect(screen.getByTestId('tab-chat')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('tab-debug')).toHaveAttribute('aria-selected', 'false');
+
+    // Switch to Debug tab
+    await user.click(screen.getByTestId('tab-debug'));
+    expect(screen.getByTestId('tab-debug')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('tab-chat')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('shows empty debug panel when no steps', async () => {
+    const user = userEvent.setup();
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tab-debug')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('tab-debug'));
+    expect(screen.getByTestId('debug-panel')).toBeInTheDocument();
+    expect(screen.getByText(/Invia un messaggio per visualizzare il debug/)).toBeInTheDocument();
+  });
+
+  it('shows debug steps when debugSteps is non-empty', async () => {
+    mockStreamState.debugSteps = [
+      {
+        type: 13,
+        name: 'Retrieval Results',
+        payload: { filteredCount: 5, totalResults: 10, latencyMs: 80 },
+        timestamp: '2026-01-01T12:00:00.000Z',
+        latencyMs: 80,
+      },
+    ];
+
+    const user = userEvent.setup();
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tab-debug')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('tab-debug'));
+    expect(screen.getByTestId('debug-panel')).toBeInTheDocument();
+    // DebugStepCard renders the step name
+    expect(screen.getByText(/Retrieval Results/)).toBeInTheDocument();
+
+    // Reset mock state
+    mockStreamState.debugSteps = [];
+  });
+
+  it('passes isAdmin=false to DebugStepCard for regular user (systemPrompt redacted server-side)', async () => {
+    // The AuthProvider mock returns role: 'User', isAdminOrAbove returns false
+    // After server-side fix, systemPrompt arrives as [redacted] for non-admins
+    // Frontend just renders what server sends - no additional client-side redaction needed for security
+    mockStreamState.debugSteps = [
+      {
+        type: 16,
+        name: 'Prompt Context',
+        payload: { systemPrompt: '[redacted]', userPromptPreview: 'test', estimatedPromptTokens: 100 },
+        timestamp: '2026-01-01T12:00:00.000Z',
+      },
+    ];
+
+    const user = userEvent.setup();
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tab-debug')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('tab-debug'));
+    await user.click(screen.getByRole('button', { name: /Prompt Context/i }));
+
+    expect(screen.getByText(/\[redacted\]/)).toBeInTheDocument();
+
+    // Reset mock state
+    mockStreamState.debugSteps = [];
   });
 });

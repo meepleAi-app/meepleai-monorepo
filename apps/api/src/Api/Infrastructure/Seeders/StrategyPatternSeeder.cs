@@ -83,10 +83,33 @@ internal static class StrategyPatternSeeder
 
         if (seededCount > 0)
         {
+            // Save strategy patterns first (without embeddings) to ensure idempotent seeding.
+            // Embedding generation may fail (e.g., dimension mismatch) and must not roll back patterns.
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
             if (embeddingService != null)
             {
-                embeddingCount = await GenerateEmbeddingsAsync(
-                    allNewEntities, embeddingService, logger, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    embeddingCount = await GenerateEmbeddingsAsync(
+                        allNewEntities, embeddingService, logger, cancellationToken).ConfigureAwait(false);
+
+                    if (embeddingCount > 0)
+                    {
+                        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex,
+                        "Failed to save embeddings for {Count} strategy patterns. Patterns saved without embeddings",
+                        seededCount);
+                    // Detach embedding changes to avoid polluting the DbContext
+                    foreach (var entity in allNewEntities.Where(e => e.Embedding != null))
+                    {
+                        entity.Embedding = null;
+                    }
+                }
             }
             else
             {
@@ -94,8 +117,6 @@ internal static class StrategyPatternSeeder
                     "Embedding service not available. {Count} patterns seeded without embeddings",
                     seededCount);
             }
-
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
         logger.LogInformation(

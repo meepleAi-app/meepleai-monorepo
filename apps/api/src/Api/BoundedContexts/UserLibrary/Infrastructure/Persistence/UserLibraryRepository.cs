@@ -33,13 +33,15 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
 
-        return entity != null ? MapToDomain(entity) : null;
+        // Private-game entries (SharedGameId == null) cannot be mapped to UserLibraryEntry domain model
+        return entity != null && entity.SharedGameId != null ? MapToDomain(entity) : null;
     }
 
     public async Task<IReadOnlyList<UserLibraryEntry>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.UserLibraryEntries
             .AsNoTracking()
+            .Where(e => e.SharedGameId != null) // exclude private-game entries
             .OrderByDescending(e => e.AddedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -56,7 +58,8 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .FirstOrDefaultAsync(e => e.UserId == userId && (e.SharedGameId == gameId || e.PrivateGameId == gameId), cancellationToken)
             .ConfigureAwait(false);
 
-        return entity != null ? MapToDomain(entity) : null;
+        // Private-game entries (SharedGameId == null) cannot be mapped to the catalog UserLibraryEntry domain model
+        return entity != null && entity.SharedGameId != null ? MapToDomain(entity) : null;
     }
 
     public async Task<(IReadOnlyList<UserLibraryEntry> Entries, int Total)> GetUserLibraryPaginatedAsync(
@@ -78,7 +81,9 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         var query = DbContext.UserLibraryEntries
             .AsNoTracking()
             .Include(e => e.SharedGame)
-            .Where(e => e.UserId == userId);
+            // Only catalog (shared) games — private game entries have null SharedGameId
+            // and are managed separately via the PrivateGames endpoints.
+            .Where(e => e.UserId == userId && e.SharedGameId != null);
 
         // Apply search filter (by game title)
         if (!string.IsNullOrWhiteSpace(search))
@@ -128,7 +133,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     {
         return await DbContext.UserLibraryEntries
             .AsNoTracking()
-            .CountAsync(e => e.UserId == userId, cancellationToken)
+            .CountAsync(e => e.UserId == userId && e.SharedGameId != null, cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -136,7 +141,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     {
         return await DbContext.UserLibraryEntries
             .AsNoTracking()
-            .CountAsync(e => e.UserId == userId && e.IsFavorite, cancellationToken)
+            .CountAsync(e => e.UserId == userId && e.SharedGameId != null && e.IsFavorite, cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -154,7 +159,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     {
         var dates = await DbContext.UserLibraryEntries
             .AsNoTracking()
-            .Where(e => e.UserId == userId)
+            .Where(e => e.UserId == userId && e.SharedGameId != null) // exclude private-game entries for consistency with count
             .Select(e => e.AddedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -179,7 +184,8 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .FirstOrDefaultAsync(e => e.UserId == userId && (e.SharedGameId == gameId || e.PrivateGameId == gameId), cancellationToken)
             .ConfigureAwait(false);
 
-        return entity != null ? MapToDomainWithNavigations(entity) : null;
+        // Private-game entries (SharedGameId == null) cannot be mapped to the catalog domain model
+        return entity != null && entity.SharedGameId != null ? MapToDomainWithNavigations(entity) : null;
     }
 
     public async Task<IReadOnlyList<UserLibraryEntry>> GetUserGamesAsync(
@@ -190,7 +196,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         var query = DbContext.UserLibraryEntries
             .AsNoTracking()
             .Include(e => e.SharedGame)
-            .Where(e => e.UserId == userId);
+            .Where(e => e.UserId == userId && e.SharedGameId != null); // exclude private-game entries
 
         if (state.HasValue)
         {
@@ -215,6 +221,15 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <inheritdoc />
+    public async Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .CountAsync(e => e.UserId == userId && e.CustomAgentConfigJson != null, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<UserLibraryEntry>> GetRecentlyPlayedAsync(
         Guid userId,
         int limit,
@@ -225,7 +240,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .Include(e => e.SharedGame)
             .Include(e => e.Sessions)
-            .Where(e => e.UserId == userId && e.Sessions.Any())
+            .Where(e => e.UserId == userId && e.SharedGameId != null && e.Sessions.Any()) // exclude private-game entries
             .OrderByDescending(e => e.Sessions.Max(s => s.PlayedAt))
             .Take(limit)
             .ToListAsync(cancellationToken)
@@ -247,7 +262,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .Include(e => e.SharedGame)
             .Include(e => e.Sessions)
-            .Where(e => e.UserId == userId &&
+            .Where(e => e.UserId == userId && e.SharedGameId != null && // exclude private-game entries
                         (!e.Sessions.Any() || e.Sessions.Max(s => s.PlayedAt) < cutoffDate))
             .OrderByDescending(e => e.AddedAt)
             .ToListAsync(cancellationToken)
@@ -262,6 +277,21 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         CollectDomainEvents(entry);
 
         var entity = MapToPersistence(entry);
+        await DbContext.UserLibraryEntries.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task AddForPrivateGameAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        CollectDomainEvents(entry);
+
+        var entity = MapToPersistence(entry);
+
+        // Fix FK mapping: domain GameId routes to SharedGameId via backward-compat setter,
+        // but for private games we need PrivateGameId set instead.
+        entity.PrivateGameId = entity.SharedGameId;
+        entity.SharedGameId = null;
+
         await DbContext.UserLibraryEntries.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 

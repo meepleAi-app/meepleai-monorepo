@@ -373,7 +373,7 @@ describe('AdminHeader', () => {
       expect(profileLink.closest('a')).toHaveAttribute('href', '/profile');
     });
 
-    it('settings link points to /settings', async () => {
+    it('settings link points to /profile?tab=settings', async () => {
       const user = userEvent.setup();
       render(<AdminHeader user={mockUser} />);
 
@@ -381,7 +381,7 @@ describe('AdminHeader', () => {
       await user.click(avatarButton);
 
       const settingsLink = screen.getByRole('menuitem', { name: /settings/i });
-      expect(settingsLink.closest('a')).toHaveAttribute('href', '/settings');
+      expect(settingsLink.closest('a')).toHaveAttribute('href', '/profile?tab=settings');
     });
   });
 });

@@ -31,6 +31,7 @@ import {
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
+  MetricsTimeSeriesResponseSchema,
   GetUserActivityResultSchema,
   type CreateUserRequest,
   type UpdateUserRequest,
@@ -115,6 +116,36 @@ import {
   type ModelPerformanceDto,
 } from '../schemas';
 import {
+  BulkDeleteResultSchema,
+  ReindexResponseSchema,
+  MaintenanceResultSchema,
+  PdfStatusDistributionSchema,
+  PdfStorageHealthSchema,
+  ProcessingMetricsSchema,
+  VectorCollectionsResponseSchema,
+  ProcessingQueueResponseSchema,
+  PdfListResultSchema,
+  type BulkDeleteResult,
+  type ReindexResponse,
+  type MaintenanceResult,
+  type PdfStatusDistribution,
+  type PdfStorageHealth,
+  type ProcessingMetrics,
+  type VectorCollectionsResponse,
+  type ProcessingQueueResponse,
+  type PdfListResult,
+  OpenRouterStatusDtoSchema,
+  type OpenRouterStatusDto,
+  UsageTimelineDtoSchema,
+  type UsageTimelineDto,
+  UsageCostsDtoSchema,
+  type UsageCostsDto,
+  FreeQuotaDtoSchema,
+  type FreeQuotaDto,
+  RecentLlmRequestsDtoSchema,
+  type RecentLlmRequestsDto,
+} from '../schemas/admin-knowledge-base.schemas';
+import {
   AgentCostEstimationResultSchema,
   CostScenariosResponseSchema,
   SaveScenarioResponseSchema,
@@ -126,9 +157,13 @@ import {
   type GetCostScenariosParams,
 } from '../schemas/cost-calculator.schemas';
 import {
-  type TierStrategyMatrixDto,
-  type StrategyModelMappingDto,
-} from '../schemas/tier-strategy.schemas';
+  EntityLinkDtoSchema,
+  ImportBggExpansionsResponseSchema,
+  type EntityLinkDto,
+  type CreateEntityLinkRequest,
+  type GetEntityLinksParams,
+  type ImportBggExpansionsResponse,
+} from '../schemas/entity-link.schemas';
 import {
   LedgerEntriesResponseSchema,
   LedgerSummarySchema,
@@ -157,8 +192,34 @@ import {
   type SaveResourceForecastRequest,
   type GetResourceForecastsParams,
 } from '../schemas/resource-forecast.schemas';
+import {
+  type TierStrategyMatrixDto,
+  type StrategyModelMappingDto,
+} from '../schemas/tier-strategy.schemas';
 
 import type { HttpClient } from '../core/httpClient';
+
+// ============================================================================
+// Route Constants — import in tests to avoid magic strings
+// ============================================================================
+
+export const ADMIN_PDF_ROUTES = {
+  base: '/api/v1/admin/pdfs',
+  bulkDelete: '/api/v1/admin/pdfs/bulk/delete',
+  reindex: (pdfId: string) => `/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}/reindex` as const,
+  purgeStale: '/api/v1/admin/pdfs/maintenance/purge-stale',
+  cleanupOrphans: '/api/v1/admin/pdfs/maintenance/cleanup-orphans',
+  statusDistribution: '/api/v1/admin/pdfs/analytics/distribution',
+  storageHealth: '/api/v1/admin/pdfs/storage/health',
+  processingMetrics: '/api/v1/admin/pdfs/metrics/processing',
+} as const;
+
+export const ADMIN_KB_ROUTES = {
+  vectorCollections: '/api/v1/admin/kb/vector-collections',
+  processingQueue: '/api/v1/admin/kb/processing-queue',
+} as const;
+
+// ============================================================================
 
 export interface CreateAdminClientParams {
   httpClient: HttpClient;
@@ -521,7 +582,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       search?: string;
       role?: string;
       status?: string;
-      tier?: string;              // Issue #3698: Filter by tier
+      tier?: string; // Issue #3698: Filter by tier
     }): Promise<PagedResult<AdminUser>> {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.set('page', params.page.toString());
@@ -639,6 +700,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async getInfrastructureDetails() {
       return httpClient.get('/api/v1/admin/infrastructure/details', InfrastructureDetailsSchema);
+    },
+
+    /**
+     * Get time-series metrics for infrastructure charts
+     * GET /api/v1/admin/infrastructure/metrics/timeseries?range=1h
+     *
+     * Issue #901: Returns CPU, memory, and request rate data from Prometheus.
+     */
+    async getMetricsTimeSeries(range: '1h' | '6h' | '24h' | '7d' = '1h') {
+      return httpClient.get(
+        `/api/v1/admin/infrastructure/metrics/timeseries?range=${range}`,
+        MetricsTimeSeriesResponseSchema
+      );
     },
 
     // ========== API Key Management (Issue #908) ==========
@@ -968,7 +1042,9 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       }
 
       const queryString = queryParams.toString();
-      const url = queryString ? `/api/v1/admin/ai-models?${queryString}` : '/api/v1/admin/ai-models';
+      const url = queryString
+        ? `/api/v1/admin/ai-models?${queryString}`
+        : '/api/v1/admin/ai-models';
 
       const result = await httpClient.get(url, PagedAiModelsSchema);
       return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
@@ -993,10 +1069,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Update AI model configuration (admin only)
      * PUT /api/v1/admin/ai-models/{modelId}/configure
      */
-    async updateModelConfig(
-      modelId: string,
-      request: ConfigureModelRequest
-    ): Promise<AiModelDto> {
+    async updateModelConfig(modelId: string, request: ConfigureModelRequest): Promise<AiModelDto> {
       const result = await httpClient.put(
         `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/configure`,
         request,
@@ -1037,6 +1110,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         throw new Error('Failed to fetch cost tracking data');
       }
       return result;
+    },
+
+    /**
+     * Get OpenRouter account status and rate-limit utilization snapshot.
+     * GET /api/v1/admin/openrouter/status
+     * Issue #5077: Admin usage dashboard KPI cards.
+     */
+    async getOpenRouterStatus(): Promise<OpenRouterStatusDto | null> {
+      const result = await httpClient.get(
+        '/api/v1/admin/openrouter/status',
+        OpenRouterStatusDtoSchema
+      );
+      return result ?? null;
     },
 
     /**
@@ -1244,7 +1330,8 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     }) {
       const queryParams = new URLSearchParams();
       if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
-      if (params?.createdBy && params.createdBy !== 'All') queryParams.set('createdBy', params.createdBy);
+      if (params?.createdBy && params.createdBy !== 'All')
+        queryParams.set('createdBy', params.createdBy);
       if (params?.search) queryParams.set('search', params.search);
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
@@ -1323,10 +1410,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         minAge?: number;
         description?: string;
         confidenceScore: number; // 0.0-1.0
-      }>(
-        '/api/v1/admin/games/wizard/extract-metadata',
-        { filePath }
-      );
+      }>('/api/v1/admin/games/wizard/extract-metadata', { filePath });
     },
 
     // ========== Audit Log (Issue #3691) ==========
@@ -1358,7 +1442,12 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const url = `/api/v1/admin/audit-log${qs ? `?${qs}` : ''}`;
       const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
       if (!result) {
-        return { entries: [], totalCount: 0, limit: params?.limit ?? 50, offset: params?.offset ?? 0 };
+        return {
+          entries: [],
+          totalCount: 0,
+          limit: params?.limit ?? 50,
+          offset: params?.offset ?? 0,
+        };
       }
       return result;
     },
@@ -1396,7 +1485,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/resources/tokens
      */
     async getTokenBalance(): Promise<TokenBalance> {
-      const result = await httpClient.get<TokenBalance>('/api/v1/admin/resources/tokens', TokenBalanceSchema);
+      const result = await httpClient.get<TokenBalance>(
+        '/api/v1/admin/resources/tokens',
+        TokenBalanceSchema
+      );
       if (!result) throw new Error('No token balance data returned');
       return result;
     },
@@ -1419,7 +1511,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/resources/tokens/tiers
      */
     async getTokenTierUsage(): Promise<TierUsageList> {
-      const result = await httpClient.get<TierUsageList>('/api/v1/admin/resources/tokens/tiers', TierUsageListSchema);
+      const result = await httpClient.get<TierUsageList>(
+        '/api/v1/admin/resources/tokens/tiers',
+        TierUsageListSchema
+      );
       if (!result) throw new Error('No tier usage data returned');
       return result;
     },
@@ -1454,11 +1549,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/resources/tokens/add-credits
      */
     async addTokenCredits(request: AddCreditsRequest): Promise<void> {
-      await httpClient.post(
-        '/api/v1/admin/resources/tokens/add-credits',
-        request,
-        z.any()
-      );
+      await httpClient.post('/api/v1/admin/resources/tokens/add-credits', request, z.any());
     },
 
     // ========== Batch Jobs (Issue #3693) ==========
@@ -1503,11 +1594,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/batch-jobs
      */
     async createBatchJob(request: CreateBatchJobRequest): Promise<{ id: string }> {
-      return httpClient.post(
-        '/api/v1/admin/batch-jobs',
-        request,
-        CreateBatchJobResponseSchema
-      );
+      return httpClient.post('/api/v1/admin/batch-jobs', request, CreateBatchJobResponseSchema);
     },
 
     /**
@@ -1544,9 +1631,12 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const searchParams = new URLSearchParams();
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
-      if (params?.type !== undefined && params?.type !== null) searchParams.set('type', params.type.toString());
-      if (params?.category !== undefined && params?.category !== null) searchParams.set('category', params.category.toString());
-      if (params?.source !== undefined && params?.source !== null) searchParams.set('source', params.source.toString());
+      if (params?.type !== undefined && params?.type !== null)
+        searchParams.set('type', params.type.toString());
+      if (params?.category !== undefined && params?.category !== null)
+        searchParams.set('category', params.category.toString());
+      if (params?.source !== undefined && params?.source !== null)
+        searchParams.set('source', params.source.toString());
       if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
       if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
 
@@ -1561,7 +1651,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/financial-ledger/{id}
      */
     async getLedgerEntryById(id: string): Promise<LedgerEntryDto> {
-      const result = await httpClient.get(`/api/v1/admin/financial-ledger/${id}`, LedgerEntryDtoSchema);
+      const result = await httpClient.get(
+        `/api/v1/admin/financial-ledger/${id}`,
+        LedgerEntryDtoSchema
+      );
       if (!result) throw new Error('Ledger entry not found');
       return result;
     },
@@ -1575,8 +1668,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         dateFrom: params.dateFrom,
         dateTo: params.dateTo,
       }).toString();
-      const result = await httpClient.get(`/api/v1/admin/financial-ledger/summary?${qs}`, LedgerSummarySchema);
-      return result || { totalIncome: 0, totalExpense: 0, netBalance: 0, from: params.dateFrom, to: params.dateTo };
+      const result = await httpClient.get(
+        `/api/v1/admin/financial-ledger/summary?${qs}`,
+        LedgerSummarySchema
+      );
+      return (
+        result || {
+          totalIncome: 0,
+          totalExpense: 0,
+          netBalance: 0,
+          from: params.dateFrom,
+          to: params.dateTo,
+        }
+      );
     },
 
     /**
@@ -1584,7 +1688,11 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/financial-ledger
      */
     async createLedgerEntry(request: CreateLedgerEntryRequest): Promise<CreateLedgerEntryResponse> {
-      return httpClient.post('/api/v1/admin/financial-ledger', request, CreateLedgerEntryResponseSchema);
+      return httpClient.post(
+        '/api/v1/admin/financial-ledger',
+        request,
+        CreateLedgerEntryResponseSchema
+      );
     },
 
     /**
@@ -1608,7 +1716,10 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/financial-ledger/dashboard
      */
     async getLedgerDashboard(): Promise<LedgerDashboardData> {
-      const result = await httpClient.get('/api/v1/admin/financial-ledger/dashboard', LedgerDashboardDataSchema);
+      const result = await httpClient.get(
+        '/api/v1/admin/financial-ledger/dashboard',
+        LedgerDashboardDataSchema
+      );
       if (!result) throw new Error('Failed to load ledger dashboard data');
       return result;
     },
@@ -1639,7 +1750,11 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/cost-calculator/estimate
      */
     async estimateAgentCost(request: EstimateAgentCostRequest): Promise<AgentCostEstimationResult> {
-      return httpClient.post('/api/v1/admin/cost-calculator/estimate', request, AgentCostEstimationResultSchema);
+      return httpClient.post(
+        '/api/v1/admin/cost-calculator/estimate',
+        request,
+        AgentCostEstimationResultSchema
+      );
     },
 
     /**
@@ -1647,7 +1762,11 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/cost-calculator/scenarios
      */
     async saveCostScenario(request: SaveCostScenarioRequest): Promise<SaveScenarioResponse> {
-      return httpClient.post('/api/v1/admin/cost-calculator/scenarios', request, SaveScenarioResponseSchema);
+      return httpClient.post(
+        '/api/v1/admin/cost-calculator/scenarios',
+        request,
+        SaveScenarioResponseSchema
+      );
     },
 
     /**
@@ -1679,12 +1798,12 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * POST /api/v1/admin/resource-forecast/estimate
      */
     async estimateResourceForecast(
-      request: EstimateResourceForecastRequest,
+      request: EstimateResourceForecastRequest
     ): Promise<ResourceForecastEstimationResult> {
       return httpClient.post(
         '/api/v1/admin/resource-forecast/estimate',
         request,
-        ResourceForecastEstimationResultSchema,
+        ResourceForecastEstimationResultSchema
       );
     },
 
@@ -1692,11 +1811,13 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Save a resource forecast scenario
      * POST /api/v1/admin/resource-forecast/scenarios
      */
-    async saveResourceForecast(request: SaveResourceForecastRequest): Promise<SaveForecastResponse> {
+    async saveResourceForecast(
+      request: SaveResourceForecastRequest
+    ): Promise<SaveForecastResponse> {
       return httpClient.post(
         '/api/v1/admin/resource-forecast/scenarios',
         request,
-        SaveForecastResponseSchema,
+        SaveForecastResponseSchema
       );
     },
 
@@ -1705,7 +1826,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/resource-forecast/scenarios
      */
     async getResourceForecasts(
-      params?: GetResourceForecastsParams,
+      params?: GetResourceForecastsParams
     ): Promise<ResourceForecastsResponse> {
       const searchParams = new URLSearchParams();
       if (params?.page) searchParams.set('page', params.page.toString());
@@ -1730,9 +1851,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Get app usage statistics (DAU/MAU, retention, feature adoption, geo)
      * GET /api/v1/admin/usage-stats
      */
-    async getUsageStats(params?: {
-      period?: '7d' | '30d' | '90d';
-    }): Promise<AppUsageStats | null> {
+    async getUsageStats(params?: { period?: '7d' | '30d' | '90d' }): Promise<AppUsageStats | null> {
       const queryParams = new URLSearchParams();
       if (params?.period) queryParams.set('period', params.period);
 
@@ -1818,7 +1937,14 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const url = `/api/v1/admin/rag-executions/stats${qs ? `?${qs}` : ''}`;
       const result = await httpClient.get<RagExecutionStatsResult>(url);
       if (!result) {
-        return { totalExecutions: 0, avgLatencyMs: 0, errorRate: 0, cacheHitRate: 0, totalCost: 0, avgConfidence: 0 };
+        return {
+          totalExecutions: 0,
+          avgLatencyMs: 0,
+          errorRate: 0,
+          cacheHitRate: 0,
+          totalCost: 0,
+          avgConfidence: 0,
+        };
       }
       return result;
     },
@@ -1875,10 +2001,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Issue #3715: Aggregated PDF processing metrics
      */
     async getPdfAnalytics(days: number = 30): Promise<PdfAnalyticsDto | null> {
-      return httpClient.get(
-        `/api/v1/admin/pdf-analytics?days=${days}`,
-        PdfAnalyticsDtoSchema
-      );
+      return httpClient.get(`/api/v1/admin/pdf-analytics?days=${days}`, PdfAnalyticsDtoSchema);
     },
 
     /**
@@ -1888,10 +2011,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * Issue #3714: Aggregated chat thread metrics
      */
     async getChatAnalytics(days: number = 30): Promise<ChatAnalyticsDto | null> {
-      return httpClient.get(
-        `/api/v1/admin/chat-analytics?days=${days}`,
-        ChatAnalyticsDtoSchema
-      );
+      return httpClient.get(`/api/v1/admin/chat-analytics?days=${days}`, ChatAnalyticsDtoSchema);
     },
 
     /**
@@ -1906,13 +2026,493 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         ModelPerformanceDtoSchema
       );
     },
+
+    // ========== Admin PDF Management (Issue #4784) ==========
+
+    /**
+     * Bulk delete PDF documents
+     * POST /api/v1/admin/pdfs/bulk/delete
+     */
+    async bulkDeletePdfs(ids: string[]): Promise<BulkDeleteResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/bulk/delete',
+        { pdfIds: ids },
+        BulkDeleteResultSchema
+      );
+    },
+
+    /**
+     * Reindex a PDF document (delete chunks, reset to Pending)
+     * POST /api/v1/admin/pdfs/{pdfId}/reindex
+     */
+    async reindexPdf(pdfId: string): Promise<ReindexResponse> {
+      return httpClient.post(
+        `/api/v1/admin/pdfs/${encodeURIComponent(pdfId)}/reindex`,
+        {},
+        ReindexResponseSchema
+      );
+    },
+
+    /**
+     * Mark documents stuck in processing (>24h) as failed
+     * POST /api/v1/admin/pdfs/maintenance/purge-stale
+     */
+    async purgeStaleDocuments(): Promise<MaintenanceResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/maintenance/purge-stale',
+        {},
+        MaintenanceResultSchema
+      );
+    },
+
+    /**
+     * Delete orphaned text chunks referencing non-existent PDFs
+     * POST /api/v1/admin/pdfs/maintenance/cleanup-orphans
+     */
+    async cleanupOrphans(): Promise<MaintenanceResult> {
+      return httpClient.post(
+        '/api/v1/admin/pdfs/maintenance/cleanup-orphans',
+        {},
+        MaintenanceResultSchema
+      );
+    },
+
+    /**
+     * Get PDF status distribution for analytics
+     * GET /api/v1/admin/pdfs/analytics/distribution
+     */
+    async getPdfStatusDistribution(): Promise<PdfStatusDistribution> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/analytics/distribution',
+        PdfStatusDistributionSchema
+      );
+      return result ?? { countByState: {}, totalDocuments: 0, topBySize: [] };
+    },
+
+    /**
+     * Get PDF storage health across PG, Qdrant, and file storage
+     * GET /api/v1/admin/pdfs/storage/health
+     */
+    async getPdfStorageHealth(): Promise<PdfStorageHealth> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/storage/health',
+        PdfStorageHealthSchema
+      );
+      if (!result) throw new Error('Failed to fetch PDF storage health');
+      return result;
+    },
+
+    /**
+     * Get aggregated PDF processing metrics
+     * GET /api/v1/admin/pdfs/metrics/processing
+     */
+    async getPdfMetrics(): Promise<ProcessingMetrics> {
+      const result = await httpClient.get(
+        '/api/v1/admin/pdfs/metrics/processing',
+        ProcessingMetricsSchema
+      );
+      if (!result) throw new Error('Failed to fetch PDF processing metrics');
+      return result;
+    },
+
+    /**
+     * Get all PDF documents with filtering and pagination (admin only)
+     * GET /api/v1/admin/pdfs
+     */
+    async getAllPdfs(params?: {
+      status?: string;
+      state?: string;
+      minSizeBytes?: number;
+      maxSizeBytes?: number;
+      uploadedAfter?: string;
+      uploadedBefore?: string;
+      gameId?: string;
+      sortBy?: string;
+      sortOrder?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<PdfListResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.set('status', params.status);
+      if (params?.state) queryParams.set('state', params.state);
+      if (params?.minSizeBytes) queryParams.set('minSizeBytes', params.minSizeBytes.toString());
+      if (params?.maxSizeBytes) queryParams.set('maxSizeBytes', params.maxSizeBytes.toString());
+      if (params?.uploadedAfter) queryParams.set('uploadedAfter', params.uploadedAfter);
+      if (params?.uploadedBefore) queryParams.set('uploadedBefore', params.uploadedBefore);
+      if (params?.gameId) queryParams.set('gameId', params.gameId);
+      if (params?.sortBy) queryParams.set('sortBy', params.sortBy);
+      if (params?.sortOrder) queryParams.set('sortOrder', params.sortOrder);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/pdfs${query ? `?${query}` : ''}`,
+        PdfListResultSchema
+      );
+      return result ?? { items: [], total: 0, page: 1, pageSize: 50 };
+    },
+
+    // ========== Admin Knowledge Base (Issue #4784) ==========
+
+    /**
+     * Get vector collections from Qdrant
+     * GET /api/v1/admin/kb/vector-collections
+     */
+    async getVectorCollections(): Promise<VectorCollectionsResponse> {
+      const result = await httpClient.get(
+        '/api/v1/admin/kb/vector-collections',
+        VectorCollectionsResponseSchema
+      );
+      return result ?? { collections: [] };
+    },
+
+    // ========== Admin Qdrant Operations (Issue #4877) ==========
+
+    /**
+     * Get detailed collection info from Qdrant
+     * GET /api/v1/admin/qdrant/collections/{name}
+     */
+    async getQdrantCollectionDetails(name: string): Promise<QdrantCollectionDetails | null> {
+      return httpClient.get<QdrantCollectionDetails>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}`
+      );
+    },
+
+    /**
+     * Delete an entire Qdrant collection
+     * DELETE /api/v1/admin/qdrant/collections/{name}?confirmed=true
+     */
+    async deleteQdrantCollection(name: string): Promise<void> {
+      await httpClient.delete(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}?confirmed=true`
+      );
+    },
+
+    /**
+     * Test semantic search on a Qdrant collection
+     * POST /api/v1/admin/qdrant/collections/{name}/search
+     */
+    async searchQdrantCollection(
+      name: string,
+      query: string,
+      limit?: number,
+      gameId?: string
+    ): Promise<QdrantSearchResult> {
+      const result = await httpClient.post<QdrantSearchResult>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/search`,
+        { query, limit: limit ?? 10, gameId: gameId ?? null }
+      );
+      return result ?? { query, results: [], total: 0 };
+    },
+
+    /**
+     * Browse/scroll points in a Qdrant collection
+     * GET /api/v1/admin/qdrant/collections/{name}/points?limit=20
+     */
+    async browseQdrantPoints(name: string, limit?: number): Promise<QdrantBrowseResult> {
+      const params = limit ? `?limit=${limit}` : '';
+      const result = await httpClient.get<QdrantBrowseResult>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points${params}`
+      );
+      return result ?? { points: [], count: 0 };
+    },
+
+    /**
+     * Delete vectors from a Qdrant collection by filter
+     * DELETE /api/v1/admin/qdrant/collections/{name}/points?gameId=&pdfId=&confirmed=true
+     */
+    async deleteQdrantPoints(
+      name: string,
+      opts: { gameId?: string; pdfId?: string }
+    ): Promise<void> {
+      const params = new URLSearchParams({ confirmed: 'true' });
+      if (opts.gameId) params.set('gameId', opts.gameId);
+      if (opts.pdfId) params.set('pdfId', opts.pdfId);
+      await httpClient.delete(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/points?${params.toString()}`
+      );
+    },
+
+    /**
+     * Rebuild/reindex a Qdrant collection
+     * POST /api/v1/admin/qdrant/collections/{name}/rebuild?confirmed=true
+     */
+    async rebuildQdrantIndex(name: string): Promise<{ rebuilding: boolean; collection: string }> {
+      const result = await httpClient.post<{ rebuilding: boolean; collection: string }>(
+        `/api/v1/admin/qdrant/collections/${encodeURIComponent(name)}/rebuild?confirmed=true`,
+        {}
+      );
+      return result ?? { rebuilding: false, collection: name };
+    },
+
+    // ========== Admin Embedding Service (Issue #4878) ==========
+
+    /**
+     * Get embedding service info and health
+     * GET /api/v1/admin/embedding/info
+     */
+    async getEmbeddingInfo(): Promise<EmbeddingServiceInfo | null> {
+      return httpClient.get<EmbeddingServiceInfo>('/api/v1/admin/embedding/info');
+    },
+
+    /**
+     * Get embedding service throughput metrics
+     * GET /api/v1/admin/embedding/metrics
+     */
+    async getEmbeddingMetrics(): Promise<EmbeddingServiceMetrics | null> {
+      return httpClient.get<EmbeddingServiceMetrics>('/api/v1/admin/embedding/metrics');
+    },
+
+    /**
+     * Get admin processing queue with pagination
+     * GET /api/v1/admin/kb/processing-queue
+     */
+    async getProcessingQueueAdmin(params?: {
+      statusFilter?: string;
+      searchText?: string;
+      fromDate?: string;
+      toDate?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<ProcessingQueueResponse> {
+      const queryParams = new URLSearchParams();
+      if (params?.statusFilter) queryParams.set('statusFilter', params.statusFilter);
+      if (params?.searchText) queryParams.set('searchText', params.searchText);
+      if (params?.fromDate) queryParams.set('fromDate', params.fromDate);
+      if (params?.toDate) queryParams.set('toDate', params.toDate);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/kb/processing-queue${query ? `?${query}` : ''}`,
+        ProcessingQueueResponseSchema
+      );
+      return result ?? { jobs: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
+    },
+
+    /**
+     * Get aggregated RAG pipeline health
+     * GET /api/v1/admin/kb/pipeline/health
+     * Issue #4879
+     */
+    async getPipelineHealth(): Promise<PipelineHealthResponse | null> {
+      return httpClient.get<PipelineHealthResponse>(`/api/v1/admin/kb/pipeline/health`);
+    },
+
+    /**
+     * Get processing step metrics (avg duration, percentiles)
+     * GET /api/v1/admin/pdfs/metrics/processing
+     * Issue #4880
+     */
+    async getProcessingMetrics(): Promise<ProcessingMetricsResponse | null> {
+      return httpClient.get<ProcessingMetricsResponse>(`/api/v1/admin/pdfs/metrics/processing`);
+    },
+
+    /**
+     * Get KB settings (read-only from env vars/config)
+     * GET /api/v1/admin/kb/settings
+     * Issue #4881
+     */
+    async getKBSettings(): Promise<KBSettingsResponse | null> {
+      return httpClient.get<KBSettingsResponse>(`/api/v1/admin/kb/settings`);
+    },
+
+    /**
+     * Clear KB cache
+     * POST /api/v1/admin/kb/cache/clear
+     * Issue #4881
+     */
+    async clearKBCache(): Promise<KBClearCacheResponse> {
+      const result = await httpClient.post<KBClearCacheResponse>(
+        `/api/v1/admin/kb/cache/clear`,
+        {}
+      );
+      return result ?? { success: false, message: 'No response', clearedAt: null };
+    },
+
+    // ========== OpenRouter Usage Dashboard (Issues #5078-#5083) ==========
+
+    /**
+     * Get request timeline bucketed by source.
+     * GET /api/v1/admin/openrouter/usage/timeline?period=24h|7d|30d
+     * Issue #5078: Admin usage page — request timeline chart.
+     */
+    async getUsageTimeline(period: '24h' | '7d' | '30d'): Promise<UsageTimelineDto | null> {
+      return httpClient.get(
+        `/api/v1/admin/openrouter/usage/timeline?period=${period}`,
+        UsageTimelineDtoSchema
+      );
+    },
+
+    /**
+     * Get aggregated cost breakdown by model, source, and tier.
+     * GET /api/v1/admin/openrouter/usage/costs?period=1d|7d|30d
+     * Issue #5080: Admin usage page — cost breakdown panel.
+     */
+    async getUsageCosts(period: '1d' | '7d' | '30d'): Promise<UsageCostsDto | null> {
+      return httpClient.get(
+        `/api/v1/admin/openrouter/usage/costs?period=${period}`,
+        UsageCostsDtoSchema
+      );
+    },
+
+    /**
+     * Get today's free-tier model usage vs daily limits.
+     * GET /api/v1/admin/openrouter/free-quota
+     * Issue #5082: Admin usage page — free quota indicator.
+     */
+    async getUsageFreeQuota(): Promise<FreeQuotaDto | null> {
+      return httpClient.get('/api/v1/admin/openrouter/free-quota', FreeQuotaDtoSchema);
+    },
+
+    /**
+     * Get paginated recent LLM requests with optional filters.
+     * GET /api/v1/admin/openrouter/usage/requests
+     * Issue #5083: Admin usage page — recent requests table.
+     */
+    async getRecentRequests(params: {
+      page?: number;
+      pageSize?: number;
+      source?: string;
+      model?: string;
+      successOnly?: boolean;
+    }): Promise<RecentLlmRequestsDto | null> {
+      const qs = new URLSearchParams();
+      if (params.page != null) qs.set('page', String(params.page));
+      if (params.pageSize != null) qs.set('pageSize', String(params.pageSize));
+      if (params.source) qs.set('source', params.source);
+      if (params.model) qs.set('model', params.model);
+      if (params.successOnly != null) qs.set('successOnly', String(params.successOnly));
+      const query = qs.toString();
+      return httpClient.get(
+        `/api/v1/admin/openrouter/usage/requests${query ? `?${query}` : ''}`,
+        RecentLlmRequestsDtoSchema
+      );
+    },
+
+    // ========== EntityLink Admin Methods (Issue #5142 — Epic A) ==========
+
+    /**
+     * Get entity links (admin — all scopes)
+     * GET /api/v1/admin/entity-links?sourceType=...&sourceId=...&linkType=...
+     */
+    async getAdminEntityLinks(params: GetEntityLinksParams): Promise<EntityLinkDto[]> {
+      const qs = new URLSearchParams();
+      qs.set('sourceType', params.entityType);
+      qs.set('sourceId', params.entityId);
+      if (params.linkType) qs.set('linkType', params.linkType);
+      const data = await httpClient.get<EntityLinkDto[]>(
+        `/api/v1/admin/entity-links?${qs.toString()}`,
+        z.array(EntityLinkDtoSchema)
+      );
+      return data ?? [];
+    },
+
+    /**
+     * Create entity link (admin — shared scope)
+     * POST /api/v1/admin/entity-links
+     */
+    async createAdminEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto> {
+      const result = await httpClient.post<EntityLinkDto>(
+        '/api/v1/admin/entity-links',
+        request,
+        EntityLinkDtoSchema
+      );
+      if (!result) throw new Error('Failed to create entity link');
+      return result;
+    },
+
+    /**
+     * Delete entity link (admin — any scope)
+     * DELETE /api/v1/admin/entity-links/{linkId}
+     */
+    async deleteAdminEntityLink(linkId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/entity-links/${linkId}`);
+    },
+
+    /**
+     * Import BGG expansion/reimplements links for a SharedGame (admin)
+     * POST /api/v1/admin/entity-links/import-bgg/{sharedGameId}
+     */
+    async importBggExpansions(sharedGameId: string): Promise<ImportBggExpansionsResponse> {
+      const result = await httpClient.post<ImportBggExpansionsResponse>(
+        `/api/v1/admin/entity-links/import-bgg/${sharedGameId}`,
+        {},
+        ImportBggExpansionsResponseSchema
+      );
+      if (!result) throw new Error('Failed to import BGG expansions');
+      return result;
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
 
+// ========== Qdrant Admin Types (Issue #4877) ==========
+
+export interface QdrantCollectionDetails {
+  name: string;
+  pointsCount: number;
+  indexedVectorsCount: number;
+  status: string;
+  config: {
+    vectorSize?: number;
+    distance?: string;
+  };
+  exactCount: number;
+  health: number;
+}
+
+export interface QdrantSearchResultItem {
+  id: number;
+  score: number;
+  payload?: Record<string, string>;
+}
+
+export interface QdrantSearchResult {
+  query: string;
+  results: QdrantSearchResultItem[];
+  total: number;
+}
+
+export interface QdrantBrowsePoint {
+  id: number;
+  payload?: Record<string, string>;
+}
+
+export interface QdrantBrowseResult {
+  points: QdrantBrowsePoint[];
+  count: number;
+}
+
+// ========== Embedding Service Types (Issue #4878) ==========
+
+export interface EmbeddingServiceInfo {
+  status: string;
+  model: string | null;
+  device: string | null;
+  supportedLanguages: string[];
+  dimension: number;
+  maxInputChars: number;
+  maxBatchSize: number;
+}
+
+export interface EmbeddingServiceMetrics {
+  requestsTotal: number;
+  failuresTotal: number;
+  durationMsSum: number;
+  totalCharsSum: number;
+  avgDurationMs: number;
+  failureRate: number;
+}
+
 // Re-export tier-strategy types for convenience
-export type { TierStrategyMatrixDto, StrategyModelMappingDto } from '../schemas/tier-strategy.schemas';
+export type {
+  TierStrategyMatrixDto,
+  StrategyModelMappingDto,
+} from '../schemas/tier-strategy.schemas';
 
 // ========== Agent Typology Types (Issue #3179) ==========
 
@@ -2014,4 +2614,113 @@ export type RagExecutionStatsResult = {
   cacheHitRate: number;
   totalCost: number;
   avgConfidence: number;
+};
+
+// ========== Pipeline Health Types (Issue #4879) ==========
+
+export type PipelineStageStatus = 'healthy' | 'warning' | 'error';
+
+export type PipelineStage = {
+  name: string;
+  status: PipelineStageStatus;
+  metrics: Record<string, unknown>;
+};
+
+export type PipelineRecentActivity = {
+  jobId: string;
+  fileName: string;
+  status: string;
+  completedAt: string | null;
+  durationMs: number | null;
+};
+
+export type PipelineDistribution = {
+  totalDocuments: number;
+  totalChunks: number;
+  vectorCount: number;
+  totalFiles: number;
+  storageSizeFormatted: string;
+};
+
+export type PipelineHealthResponse = {
+  stages: PipelineStage[];
+  summary: {
+    healthyCount: number;
+    warningCount: number;
+    errorCount: number;
+  };
+  recentActivity: PipelineRecentActivity[];
+  distribution: PipelineDistribution;
+  checkedAt: string;
+};
+
+// ========== Processing Metrics Types (Issue #4880) ==========
+
+export type ProcessingStepAverages = {
+  step: string;
+  avgDuration: number;
+  sampleSize: number;
+};
+
+export type ProcessingStepPercentiles = {
+  p50: number;
+  p95: number;
+  p99: number;
+};
+
+export type ProcessingMetricsResponse = {
+  averages: Record<string, ProcessingStepAverages>;
+  percentiles: Record<string, ProcessingStepPercentiles>;
+  lastUpdated: string;
+};
+
+// ========== KB Settings Types (Issue #4881) ==========
+
+export type KBSettingsResponse = {
+  embedding: {
+    provider: string;
+    model: string;
+    serviceUrl: string;
+  };
+  vectorDatabase: {
+    type: string;
+    url: string;
+    grpcPort: string;
+  };
+  chunking: {
+    defaultChunkSize: number;
+    chunkOverlap: number;
+    minChunkSize: number;
+    maxChunkSize: number;
+    embeddingTokenLimit: number;
+    charsPerToken: number;
+  };
+  cache: {
+    redis: {
+      host: string;
+      port: string;
+    };
+    hybridCache: {
+      defaultExpiration: string;
+      l2Enabled: boolean;
+    };
+    multiTier: {
+      enabled: boolean;
+      l1Ttl: string;
+      l2Ttl: string;
+    };
+  };
+  reranker: {
+    configured: boolean;
+    url: string | null;
+  };
+  storage: {
+    provider: string;
+  };
+};
+
+export type KBClearCacheResponse = {
+  success: boolean;
+  message: string;
+  clearedAt: string | null;
 };

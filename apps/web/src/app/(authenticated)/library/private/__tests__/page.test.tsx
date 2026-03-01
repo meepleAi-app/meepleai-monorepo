@@ -32,8 +32,21 @@ vi.mock('../PrivateGamesClient', () => ({
 }));
 
 // Mock LibraryNavTabs to isolate page-level testing (Issue #4055)
-vi.mock('@/components/library', () => ({
+// Must use direct file path since page.tsx imports from @/components/library/LibraryNavTabs directly
+vi.mock('@/components/library/LibraryNavTabs', () => ({
   LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
+}));
+
+// Mock LibraryNavConfig — returns null in production (sets nav config via useEffect)
+// Expose a testid so tests can verify the component is mounted (Issue #5054)
+vi.mock('../NavConfig', () => ({
+  LibraryNavConfig: () => <div data-testid="library-nav-config" />,
+}));
+
+// Mock LibraryNavConfig — returns null in production (only sets nav context via useEffect)
+// Provide a visible element so the test can assert it is rendered (Issue #5054)
+vi.mock('../../NavConfig', () => ({
+  LibraryNavConfig: () => <div data-testid="library-nav-config" />,
 }));
 
 const mockGetCurrentUser = getCurrentUser as Mock;
@@ -106,7 +119,7 @@ describe('PrivateGamesPage', () => {
     expect(await screen.findByTestId('private-games-client')).toBeInTheDocument();
   });
 
-  it('should render LibraryNavTabs when authenticated (Issue #4055)', async () => {
+  it('should render LibraryNavConfig when authenticated (Issue #5054)', async () => {
     mockGetCurrentUser.mockResolvedValue({
       success: true,
       user: { id: '1', email: 'test@test.com', role: 'User' },
@@ -114,6 +127,6 @@ describe('PrivateGamesPage', () => {
 
     render(<PrivateGamesPage />);
 
-    expect(await screen.findByTestId('library-nav-tabs')).toBeInTheDocument();
+    expect(await screen.findByTestId('library-nav-config')).toBeInTheDocument();
   });
 });

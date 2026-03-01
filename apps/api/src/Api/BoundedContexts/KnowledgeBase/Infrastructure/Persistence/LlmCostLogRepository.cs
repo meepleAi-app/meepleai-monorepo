@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -34,6 +35,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
         int latencyMs,
         string? ipAddress,
         string? userAgent,
+        RequestSource source = RequestSource.Manual,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(cost);
@@ -56,7 +58,8 @@ public class LlmCostLogRepository : ILlmCostLogRepository
             IpAddress = ipAddress,
             UserAgent = userAgent,
             CreatedAt = DateTime.UtcNow,
-            RequestDate = DateOnly.FromDateTime(DateTime.UtcNow)
+            RequestDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            RequestSource = source.ToString()
         };
 
         _context.LlmCostLogs.Add(entity);

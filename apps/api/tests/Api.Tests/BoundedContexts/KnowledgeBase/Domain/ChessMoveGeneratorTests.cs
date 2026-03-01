@@ -69,7 +69,9 @@ public sealed class ChessMoveGeneratorTests
         // Assert
         var captures = candidates.Where(m => m.IsCapture).ToList();
         captures.Should().NotBeEmpty();
+#pragma warning disable S1244 // Intentional float inequality check for test assertion
         captures.All(m => m.Score.Material != 0).Should().BeTrue();
+#pragma warning restore S1244
     }
 
     [Fact]

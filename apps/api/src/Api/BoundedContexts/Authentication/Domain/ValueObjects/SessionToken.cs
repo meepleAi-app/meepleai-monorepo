@@ -37,9 +37,24 @@ public sealed class SessionToken : ValueObject
 
     /// <summary>
     /// Reconstructs a session token from a stored string.
+    /// Throws ValidationException if value is not valid Base-64.
+    /// Tokens are always generated as Base-64 (see Generate()); non-Base-64 values
+    /// indicate a corrupted, legacy, or foreign cookie and are rejected at construction
+    /// so callers never receive a raw FormatException from ComputeHash().
     /// </summary>
     public static SessionToken FromStored(string value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ValidationException(nameof(SessionToken), "Session token cannot be empty");
+
+        // Validate Base-64 format before accepting the token.
+        // Use a small stack buffer; real tokens are 44 chars → 33 decoded bytes.
+        // For oversized or invalid strings TryFromBase64String returns false immediately.
+        const int MaxDecodedBytes = 256; // well above the 33 bytes of a real token
+        Span<byte> discard = stackalloc byte[MaxDecodedBytes];
+        if (value.Length > MaxDecodedBytes * 4 / 3 + 4 || !Convert.TryFromBase64String(value, discard, out _))
+            throw new ValidationException(nameof(SessionToken), "Session token is not a valid format");
+
         return new SessionToken(value);
     }
 

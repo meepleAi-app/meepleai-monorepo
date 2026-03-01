@@ -21,6 +21,7 @@ import {
   Clock,
   Gauge,
   Heart,
+  Loader2,
   MessageCircle,
   Trash2,
   Users,
@@ -29,6 +30,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { toast } from '@/components/layout/Toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
@@ -36,6 +38,12 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import {
+  useGameInLibraryStatus,
+  useAddGameToLibrary,
+  useRemoveGameFromLibrary,
+} from '@/hooks/queries';
+import { useEntityNavigation } from '@/hooks/useEntityNavigation';
 import { api, type SharedGameDetail } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
@@ -61,6 +69,15 @@ export default function GameDetailPage() {
   const { user } = useAuth();
   const isAuthenticated = !!user;
 
+  // Library status & mutations
+  const { data: libraryStatus, isLoading: statusLoading } = useGameInLibraryStatus(
+    gameId ?? '',
+    isAuthenticated && !!gameId
+  );
+  const addToLibrary = useAddGameToLibrary();
+  const removeFromLibrary = useRemoveGameFromLibrary();
+  const inLibrary = libraryStatus?.inLibrary ?? false;
+
   // Core game data
   const [gameDetail, setGameDetail] = useState<SharedGameDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +86,9 @@ export default function GameDetailPage() {
   // User-specific state (authenticated users only)
   const [notes, setNotes] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Entity navigation links (KB, Agents, Chats, Sessions)
+  const navigationLinks = useEntityNavigation('game', { id: gameId });
 
   // Load game data from shared-games API
   useEffect(() => {
@@ -140,6 +160,26 @@ export default function GameDetailPage() {
   const toggleFavorite = useCallback(() => {
     setIsFavorite((prev) => !prev);
   }, []);
+
+  const handleAddToLibrary = useCallback(async () => {
+    if (!gameId) return;
+    try {
+      await addToLibrary.mutateAsync({ gameId });
+      toast.success('Gioco aggiunto alla collezione!');
+    } catch {
+      toast.error('Errore durante l\'aggiunta alla collezione');
+    }
+  }, [gameId, addToLibrary]);
+
+  const handleRemoveFromLibrary = useCallback(async () => {
+    if (!gameId) return;
+    try {
+      await removeFromLibrary.mutateAsync(gameId);
+      toast.success('Gioco rimosso dalla collezione');
+    } catch {
+      toast.error('Errore durante la rimozione dalla collezione');
+    }
+  }, [gameId, removeFromLibrary]);
 
   // Build metadata for MeepleCard
   const metadata = useMemo(() => {
@@ -228,6 +268,7 @@ export default function GameDetailPage() {
             rating={gameDetail.averageRating ?? undefined}
             ratingMax={10}
             metadata={metadata}
+            navigateTo={navigationLinks}
             flippable
             flipData={{
               description: gameDetail.description || undefined,
@@ -280,15 +321,35 @@ export default function GameDetailPage() {
                     {isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti'}
                   </Button>
 
-                  <Button variant="outline" className="w-full font-nunito">
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Aggiungi alla Collezione
-                  </Button>
-
-                  <Button variant="destructive" className="w-full font-nunito">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Rimuovi dalla Collezione
-                  </Button>
+                  {!inLibrary ? (
+                    <Button
+                      variant="outline"
+                      className="w-full font-nunito"
+                      onClick={handleAddToLibrary}
+                      disabled={addToLibrary.isPending || statusLoading}
+                    >
+                      {addToLibrary.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <BookOpen className="mr-2 h-4 w-4" />
+                      )}
+                      Aggiungi alla Collezione
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      className="w-full font-nunito"
+                      onClick={handleRemoveFromLibrary}
+                      disabled={removeFromLibrary.isPending || statusLoading}
+                    >
+                      {removeFromLibrary.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-2 h-4 w-4" />
+                      )}
+                      Rimuovi dalla Collezione
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
 

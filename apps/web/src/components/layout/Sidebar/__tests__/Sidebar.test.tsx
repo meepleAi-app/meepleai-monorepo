@@ -1,6 +1,13 @@
 /**
- * Tests for Sidebar component
+ * Tests for Sidebar component - Issue #4936 (updated)
+ *
  * Validates rendering, collapsed mode, navigation, user section, and accessibility.
+ *
+ * Changes from original (Issue #3479):
+ * - Logo removed from sidebar (now in UniversalNavbar) → logo tests removed
+ * - SidebarNav replaced by SidebarContextNav → context-aware test routes
+ * - Default nav tested with non-contextual route (e.g. /sessions)
+ * - Dashboard/Library/Games contexts tested with respective routes
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -11,6 +18,16 @@ import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 
 import { Sidebar } from '../Sidebar';
+
+// Mock framer-motion (AnimatePresence + motion.div)
+vi.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({ children, ...rest }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => (
+      <div {...rest}>{children}</div>
+    ),
+  },
+}));
 
 // Mock Next.js navigation
 vi.mock('next/navigation', () => ({
@@ -46,7 +63,8 @@ describe('Sidebar', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUsePathname.mockReturnValue('/dashboard');
+    // Default to a non-contextual route so SidebarNav (standard) renders
+    mockUsePathname.mockReturnValue('/sessions');
     mockUseCurrentUser.mockReturnValue({
       data: { id: '1', email: 'test@test.com', role: 'User', displayName: 'Test User' },
       isLoading: false,
@@ -59,11 +77,6 @@ describe('Sidebar', () => {
       expect(screen.getByTestId('sidebar')).toBeInTheDocument();
     });
 
-    it('renders logo link', () => {
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByLabelText('MeepleAI Home')).toBeInTheDocument();
-    });
-
     it('renders toggle button', () => {
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByTestId('sidebar-toggle')).toBeInTheDocument();
@@ -74,7 +87,8 @@ describe('Sidebar', () => {
       expect(screen.getByTestId('sidebar-user')).toBeInTheDocument();
     });
 
-    it('renders navigation items (not profile)', () => {
+    it('renders standard navigation items on non-contextual routes (not profile)', () => {
+      // /sessions → default context → SidebarNav renders
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
       expect(screen.getByTestId('nav-chat')).toBeInTheDocument();
@@ -83,16 +97,44 @@ describe('Sidebar', () => {
       expect(screen.queryByTestId('nav-profile')).not.toBeInTheDocument();
     });
 
-    it('renders library toggle', () => {
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByTestId('sidebar-library-toggle')).toBeInTheDocument();
-    });
-
-    it('renders Strumenti group with agents and sessions', () => {
+    it('renders Strumenti group with agents and sessions on non-contextual routes', () => {
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Strumenti')).toBeInTheDocument();
       expect(screen.getByTestId('nav-agents')).toBeInTheDocument();
       expect(screen.getByTestId('nav-sessions')).toBeInTheDocument();
+    });
+  });
+
+  describe('Context-Sensitive Navigation', () => {
+    it('renders DashboardPanel when on /dashboard route', () => {
+      mockUsePathname.mockReturnValue('/dashboard');
+      render(<Sidebar {...defaultProps} />);
+      // DashboardPanel shows context-specific links
+      expect(screen.getByText('Overview')).toBeInTheDocument();
+      expect(screen.getByText('Sessioni recenti')).toBeInTheDocument();
+      expect(screen.getByText('La mia collezione')).toBeInTheDocument();
+    });
+
+    it('renders LibraryPanel when on /library route', () => {
+      mockUsePathname.mockReturnValue('/library');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
+      expect(screen.getByText('Preferiti')).toBeInTheDocument();
+      expect(screen.getByText('Wishlist')).toBeInTheDocument();
+    });
+
+    it('renders GamesPanel when on /games route', () => {
+      mockUsePathname.mockReturnValue('/games');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
+      expect(screen.getByText('Top BGG')).toBeInTheDocument();
+    });
+
+    it('renders standard SidebarNav on non-contextual routes (/admin)', () => {
+      mockUsePathname.mockReturnValue('/admin/overview');
+      render(<Sidebar {...defaultProps} />);
+      // Standard nav should show
+      expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
     });
   });
 
@@ -103,19 +145,14 @@ describe('Sidebar', () => {
       expect(sidebar).toHaveClass('w-[220px]');
     });
 
-    it('shows text labels next to icons', () => {
+    it('shows text labels next to icons in standard nav', () => {
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
       expect(screen.getByText('Chat')).toBeInTheDocument();
-      expect(screen.getByText('Catalogo')).toBeInTheDocument();
+      expect(screen.getByText('Scopri')).toBeInTheDocument();
     });
 
-    it('shows MeepleAI wordmark next to icon', () => {
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('MeepleAI')).toBeInTheDocument();
-    });
-
-    it('shows Strumenti group label', () => {
+    it('shows Strumenti group label in standard nav', () => {
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Strumenti')).toBeInTheDocument();
     });
@@ -128,15 +165,9 @@ describe('Sidebar', () => {
       expect(sidebar).toHaveClass('w-[60px]');
     });
 
-    it('hides text labels when collapsed', () => {
+    it('hides text labels when collapsed (standard nav)', () => {
       render(<Sidebar {...defaultProps} isCollapsed={true} />);
-      // Labels should not be visible (icons only)
       expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
-    });
-
-    it('hides MeepleAI wordmark when collapsed', () => {
-      render(<Sidebar {...defaultProps} isCollapsed={true} />);
-      expect(screen.queryByText('MeepleAI')).not.toBeInTheDocument();
     });
 
     it('hides Strumenti group label when collapsed', () => {
@@ -172,55 +203,43 @@ describe('Sidebar', () => {
     });
   });
 
-  describe('Library Section', () => {
-    it('expands library children on toggle click', async () => {
+  describe('Library Context', () => {
+    it('shows library sub-items when on /library route', () => {
+      mockUsePathname.mockReturnValue('/library');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
+      expect(screen.getByText('Preferiti')).toBeInTheDocument();
+      expect(screen.getByText('Wishlist')).toBeInTheDocument();
+      expect(screen.getByText('Archiviati')).toBeInTheDocument();
+    });
+
+    it('shows standard library toggle on non-contextual route', () => {
+      mockUsePathname.mockReturnValue('/sessions');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByTestId('sidebar-library-toggle')).toBeInTheDocument();
+    });
+
+    it('expands library children on toggle click (standard nav)', async () => {
       const user = userEvent.setup();
       render(<Sidebar {...defaultProps} />);
 
       await user.click(screen.getByTestId('sidebar-library-toggle'));
 
+      expect(screen.getByTestId('sidebar-library-games')).toBeInTheDocument();
       expect(screen.getByTestId('sidebar-library-collection')).toBeInTheDocument();
-      expect(screen.getByTestId('sidebar-library-private')).toBeInTheDocument();
-      expect(screen.getByTestId('sidebar-library-proposals')).toBeInTheDocument();
       expect(screen.getByTestId('sidebar-library-wishlist')).toBeInTheDocument();
-    });
-
-    it('library auto-expanded when on library route', () => {
-      mockUsePathname.mockReturnValue('/library');
-      render(<Sidebar {...defaultProps} />);
-
-      expect(screen.getByTestId('sidebar-library-collection')).toBeInTheDocument();
-    });
-  });
-
-  describe('Active State', () => {
-    it('highlights dashboard when on /dashboard', () => {
-      mockUsePathname.mockReturnValue('/dashboard');
-      render(<Sidebar {...defaultProps} />);
-
-      const dashboardLink = screen.getByTestId('nav-dashboard');
-      expect(dashboardLink).toHaveClass('text-[hsl(262_83%_62%)]');
-      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
-    });
-
-    it('highlights catalog when on /games', () => {
-      mockUsePathname.mockReturnValue('/games');
-      render(<Sidebar {...defaultProps} />);
-
-      const catalogLink = screen.getByTestId('nav-catalog');
-      expect(catalogLink).toHaveAttribute('aria-current', 'page');
     });
   });
 
   describe('User Section', () => {
-    it('shows user avatar with initial', () => {
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('T')).toBeInTheDocument(); // "Test User" → "T"
-    });
-
     it('shows notification bell', () => {
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByTestId('notification-bell')).toBeInTheDocument();
+    });
+
+    it('shows user avatar with initial', () => {
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByText('T')).toBeInTheDocument(); // "Test User" → "T"
     });
 
     it('opens user dropdown on avatar click', async () => {
@@ -253,10 +272,24 @@ describe('Sidebar', () => {
     });
   });
 
+  describe('Positioning', () => {
+    it('is offset from top by 56px for UniversalNavbar (top-14)', () => {
+      render(<Sidebar {...defaultProps} />);
+      const sidebar = screen.getByTestId('sidebar');
+      expect(sidebar).toHaveClass('top-14');
+    });
+
+    it('has reduced height accounting for navbar (h-[calc(100vh-56px)])', () => {
+      render(<Sidebar {...defaultProps} />);
+      const sidebar = screen.getByTestId('sidebar');
+      expect(sidebar).toHaveClass('h-[calc(100vh-56px)]');
+    });
+  });
+
   describe('Accessibility', () => {
     it('has sidebar navigation landmark', () => {
       render(<Sidebar {...defaultProps} />);
-      expect(screen.getByRole('navigation', { name: /sidebar navigation/i })).toBeInTheDocument();
+      expect(screen.getByRole('complementary', { name: /sidebar navigation/i })).toBeInTheDocument();
     });
 
     it('sidebar is hidden on mobile (hidden md:flex)', () => {
@@ -265,7 +298,7 @@ describe('Sidebar', () => {
       expect(sidebar).toHaveClass('hidden', 'md:flex');
     });
 
-    it('nav items meet WCAG touch target (min-h-[44px])', () => {
+    it('nav items meet WCAG touch target (min-h-[44px]) in standard nav', () => {
       render(<Sidebar {...defaultProps} />);
       const dashboardLink = screen.getByTestId('nav-dashboard');
       expect(dashboardLink).toHaveClass('min-h-[44px]');

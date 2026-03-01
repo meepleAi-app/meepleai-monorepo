@@ -1,146 +1,247 @@
+/**
+ * GameCatalogGrid - Admin Shared Games Catalog
+ * Issue #4909 - Uniform MeepleCard UI across dashboard, /games and admin
+ *
+ * Replaces mock data with real API data via useSharedGames.
+ * Uses MeepleCard directly with admin-specific quick actions.
+ * Status badge is integrated in MeepleCard (not external overlay).
+ */
+
 'use client';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Badge } from '@/components/ui/badge';
+import { useCallback, useState } from 'react';
 
-interface Game {
-  id: string;
-  title: string;
-  publisher: string;
-  imageUrl: string;
-  rating: number;
-  playerCount: string;
-  status: 'published' | 'draft' | 'archived';
+import { ArchiveRestore, Clock, Pencil, Share2, Trash2, Upload, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
+import { sharedGamesKeys, useSharedGames } from '@/hooks/queries';
+import { api } from '@/lib/api';
+import type { SharedGame } from '@/lib/api';
+import type { ResolvedNavigationLink } from '@/config/entity-navigation';
+import type { GameStatus } from '@/lib/api/schemas/shared-games.schemas';
+
+import { AdminSharedGameCardContainer } from './AdminSharedGameCardContainer';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function formatPlayers(
+  min: number | null | undefined,
+  max: number | null | undefined,
+): string {
+  if (!min && !max) return 'N/A';
+  if (min === max) return `${min}`;
+  return `${min ?? '?'}-${max ?? '?'}`;
 }
 
-const MOCK_GAMES: Game[] = [
-  {
-    id: '1',
-    title: 'Catan',
-    publisher: 'Catan Studio',
-    imageUrl: 'https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/M_3Vg1j2HlNgkv7PL3H05tvUAhk=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg',
-    rating: 7.2,
-    playerCount: '3-4',
-    status: 'published',
-  },
-  {
-    id: '2',
-    title: 'Wingspan',
-    publisher: 'Stonemaier Games',
-    imageUrl: 'https://cf.geekdo-images.com/yLZJCVLlIx4c7eJEWUNJ7w__imagepage/img/VNToqgS2-pG8VAPGRKjKSFxuRBY=/fit-in/900x600/filters:no_upscale():strip_icc()/pic4458123.jpg',
-    rating: 8.1,
-    playerCount: '1-5',
-    status: 'published',
-  },
-  {
-    id: '3',
-    title: 'Azul',
-    publisher: 'Plan B Games',
-    imageUrl: 'https://cf.geekdo-images.com/aPSHJO0d0XOpQR5X-wJonw__imagepage/img/q4uWd2nXGeEkKDR7OaunhqWsVto=/fit-in/900x600/filters:no_upscale():strip_icc()/pic6973671.png',
-    rating: 7.8,
-    playerCount: '2-4',
-    status: 'published',
-  },
-  {
-    id: '4',
-    title: 'Ticket to Ride',
-    publisher: 'Days of Wonder',
-    imageUrl: 'https://cf.geekdo-images.com/ZWJg0dCdrWHxVnc0eFXK8w__imagepage/img/amgwj5qkc0RuxaT6clWIDbJw-kQ=/fit-in/900x600/filters:no_upscale():strip_icc()/pic66668.jpg',
-    rating: 7.4,
-    playerCount: '2-5',
-    status: 'published',
-  },
-  {
-    id: '5',
-    title: '7 Wonders',
-    publisher: 'Repos Production',
-    imageUrl: 'https://cf.geekdo-images.com/35h9Za_JvMMMtx_92kT0Jg__imagepage/img/gjk3QJmge3w0CiKJ8nqz8KLJUjI=/fit-in/900x600/filters:no_upscale():strip_icc()/pic7149798.jpg',
-    rating: 7.7,
-    playerCount: '2-7',
-    status: 'published',
-  },
-  {
-    id: '6',
-    title: 'Pandemic',
-    publisher: 'Z-Man Games',
-    imageUrl: 'https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__imagepage/img/kIBu-2Ljb_ml5n-S8uIbE6ehGFc=/fit-in/900x600/filters:no_upscale():strip_icc()/pic1534148.jpg',
-    rating: 7.6,
-    playerCount: '2-4',
-    status: 'published',
-  },
-  {
-    id: '7',
-    title: 'Splendor',
-    publisher: 'Space Cowboys',
-    imageUrl: 'https://cf.geekdo-images.com/rwOMxx4q5yuElIvo-1-OFw__imagepage/img/vDN3N-3q3Z3tULl-1z_C_Q=/fit-in/900x600/filters:no_upscale():strip_icc()/pic1904079.jpg',
-    rating: 7.5,
-    playerCount: '2-4',
-    status: 'draft',
-  },
-  {
-    id: '8',
-    title: 'Scythe',
-    publisher: 'Stonemaier Games',
-    imageUrl: 'https://cf.geekdo-images.com/7k_nOxpO9OGIjhLq2BUZdA__imagepage/img/iqB2ydL8Al11ulX8MXITD69Aw1c=/fit-in/900x600/filters:no_upscale():strip_icc()/pic3163924.jpg',
-    rating: 8.2,
-    playerCount: '1-5',
-    status: 'published',
-  },
-];
+function formatPlaytime(minutes: number | null | undefined): string {
+  if (!minutes) return 'N/A';
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  return `${minutes}m`;
+}
 
-const statusColors = {
-  published: 'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300',
-  draft: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300',
-  archived: 'bg-gray-100 text-gray-900 dark:bg-gray-900/30 dark:text-gray-300',
+const STATUS_LABELS: Record<GameStatus, string> = {
+  Draft: 'Bozza',
+  PendingApproval: 'In Attesa',
+  Published: 'Pubblicato',
+  Archived: 'Archiviato',
 };
 
+// ============================================================================
+// Admin Game Card
+// ============================================================================
+
+interface AdminGameCardProps {
+  game: SharedGame;
+  onPublish: (id: string) => void;
+  onArchive: (id: string) => void;
+  onDelete: (id: string) => void;
+  onOpenExtraCard: (id: string) => void;
+}
+
+function AdminGameCard({ game, onPublish, onArchive, onDelete, onOpenExtraCard }: AdminGameCardProps) {
+  const router = useRouter();
+
+  const metadata = [
+    { icon: Users, value: formatPlayers(game.minPlayers, game.maxPlayers) },
+    { icon: Clock, value: formatPlaytime(game.playingTimeMinutes) },
+  ];
+
+  const quickActions = [
+    {
+      icon: Pencil,
+      label: 'Modifica',
+      onClick: () => router.push(`/admin/shared-games/${game.id}`),
+    },
+    game.status === 'Published'
+      ? {
+          icon: ArchiveRestore,
+          label: 'Archivia',
+          onClick: () => onArchive(game.id),
+        }
+      : {
+          icon: Upload,
+          label: 'Pubblica',
+          onClick: () => onPublish(game.id),
+        },
+    {
+      icon: Trash2,
+      label: 'Elimina',
+      onClick: () => onDelete(game.id),
+    },
+    {
+      icon: Share2,
+      label: 'Condividi',
+      onClick: () => {
+        navigator.clipboard?.writeText(`${window.location.origin}/games/${game.id}`);
+      },
+    },
+  ];
+
+  const navigateTo: ResolvedNavigationLink[] = [
+    {
+      entity: 'document',
+      label: 'Info',
+      onClick: () => onOpenExtraCard(game.id),
+    },
+  ];
+
+  return (
+    <MeepleCard
+      id={game.id}
+      entity="game"
+      variant="grid"
+      title={game.title}
+      subtitle={game.yearPublished ? String(game.yearPublished) : undefined}
+      imageUrl={game.imageUrl || undefined}
+      rating={game.averageRating || undefined}
+      ratingMax={10}
+      metadata={metadata}
+      badge={STATUS_LABELS[game.status]}
+      onClick={() => router.push(`/admin/shared-games/${game.id}`)}
+      entityQuickActions={quickActions}
+      navigateTo={navigateTo}
+      showInfoButton
+      infoHref={`/admin/shared-games/${game.id}`}
+      infoTooltip="Dettaglio admin"
+      data-testid={`admin-game-card-${game.id}`}
+    />
+  );
+}
+
+// ============================================================================
+// GameCatalogGrid
+// ============================================================================
+
 export function GameCatalogGrid() {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useSharedGames({ pageSize: 50 });
+  const games = data?.items ?? [];
+
+  // ExtraCard sheet state
+  const [sheetGameId, setSheetGameId] = useState<string | null>(null);
+
+  const publishMutation = useMutation({
+    mutationFn: (id: string) => api.sharedGames.publish(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sharedGamesKeys.lists() }),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (id: string) => api.sharedGames.archive(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sharedGamesKeys.lists() }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.sharedGames.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sharedGamesKeys.lists() }),
+  });
+
+  const handlePublish = useCallback((id: string) => publishMutation.mutate(id), [publishMutation]);
+  const handleArchive = useCallback((id: string) => archiveMutation.mutate(id), [archiveMutation]);
+  const handleDelete = useCallback((id: string) => deleteMutation.mutate(id), [deleteMutation]);
+  const handleOpenExtraCard = useCallback((id: string) => setSheetGameId(id), []);
+
+  const published = games.filter((g) => g.status === 'Published').length;
+  const draft = games.filter((g) => g.status === 'Draft').length;
+
   return (
     <div className="space-y-6">
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-          <div className="text-sm text-slate-600 dark:text-zinc-400">Total Games</div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100">{MOCK_GAMES.length}</div>
-        </div>
-        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-          <div className="text-sm text-slate-600 dark:text-zinc-400">Published</div>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {MOCK_GAMES.filter((g) => g.status === 'published').length}
+          <div className="text-sm text-slate-600 dark:text-zinc-400">Totale</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100">
+            {isLoading ? '—' : games.length}
           </div>
         </div>
         <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
-          <div className="text-sm text-slate-600 dark:text-zinc-400">Draft</div>
+          <div className="text-sm text-slate-600 dark:text-zinc-400">Pubblicati</div>
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+            {isLoading ? '—' : published}
+          </div>
+        </div>
+        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-slate-200/50 dark:border-zinc-700/50">
+          <div className="text-sm text-slate-600 dark:text-zinc-400">Bozze</div>
           <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-            {MOCK_GAMES.filter((g) => g.status === 'draft').length}
+            {isLoading ? '—' : draft}
           </div>
         </div>
       </div>
 
       {/* Game Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {MOCK_GAMES.map((game) => (
-          <div key={game.id} className="relative">
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
             <MeepleCard
+              key={i}
               entity="game"
               variant="grid"
-              title={game.title}
-              subtitle={game.publisher}
-              imageUrl={game.imageUrl}
-              rating={game.rating}
-              ratingMax={10}
-              metadata={[
-                { label: 'Players', value: game.playerCount },
-              ]}
+              title=""
+              loading
+              data-testid="admin-game-card-skeleton"
             />
-            <div className="absolute top-3 right-3">
-              <Badge variant="outline" className={statusColors[game.status]}>
-                {game.status.charAt(0).toUpperCase() + game.status.slice(1)}
-              </Badge>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : games.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p className="text-lg mb-2">Nessun gioco nel catalogo</p>
+          <p className="text-sm">Aggiungi il primo gioco al catalogo condiviso.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {games.map((game) => (
+            <AdminGameCard
+              key={game.id}
+              game={game}
+              onPublish={handlePublish}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+              onOpenExtraCard={handleOpenExtraCard}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ExtraCard Sheet */}
+      <Sheet open={!!sheetGameId} onOpenChange={(open) => { if (!open) setSheetGameId(null); }}>
+        <SheetContent side="right" className="w-[640px] sm:max-w-[640px] p-0 overflow-y-auto">
+          <SheetTitle className="sr-only">Dettaglio gioco</SheetTitle>
+          {sheetGameId && (
+            <AdminSharedGameCardContainer
+              gameId={sheetGameId}
+              onClose={() => setSheetGameId(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

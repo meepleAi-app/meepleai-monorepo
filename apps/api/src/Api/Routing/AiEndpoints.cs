@@ -47,7 +47,7 @@ internal static class AiEndpoints
 
         // REMOVED: MapBggEndpoints(group); - Now handled by dedicated BggEndpoints.cs (Issue #3120)
 
-        MapChessKnowledgeEndpoints(group);
+        // REMOVED: MapChessKnowledgeEndpoints(group); - Now handled by AdminMiscEndpoints.cs (duplicate route fix)
 
         // UI-01: Chat management endpoints
         return group;
@@ -74,23 +74,7 @@ internal static class AiEndpoints
 
     // REMOVED: MapBggEndpoints - Now handled by dedicated BggEndpoints.cs (Issue #3120)
 
-    private static void MapChessKnowledgeEndpoints(RouteGroupBuilder group)
-    {
-        // Migrated to CQRS: Uses IndexChessKnowledgeCommand via MediatR (Issue #1188)
-        // Migrated to CQRS: Uses IndexChessKnowledgeCommand via MediatR (Issue #1188)
-        group.MapPost("/chess/index", HandleIndexChessKnowledge)
-        .RequireAdminSession(); // Issue #1446: Admin-only endpoint
-
-        // Migrated to CQRS: Uses SearchChessKnowledgeQuery via MediatR (Issue #1188)
-        // Migrated to CQRS: Uses SearchChessKnowledgeQuery via MediatR (Issue #1188)
-        group.MapGet("/chess/search", HandleSearchChessKnowledge)
-        .RequireSession(); // Issue #1446: Automatic session validation
-
-        // Migrated to CQRS: Uses DeleteChessKnowledgeCommand via MediatR (Issue #1188)
-        // Migrated to CQRS: Uses DeleteChessKnowledgeCommand via MediatR (Issue #1188)
-        group.MapDelete("/chess/index", HandleDeleteChessKnowledge)
-        .RequireAdminSession(); // Issue #1446: Admin-only endpoint
-    }
+    // REMOVED: MapChessKnowledgeEndpoints - Now handled by AdminMiscEndpoints.cs (duplicate route fix)
 
     private static void MapSetupGuideEndpoint(RouteGroupBuilder group)
     {
@@ -515,93 +499,8 @@ internal static class AiEndpoints
     // REMOVED: HandleBggSearch, HandleGetBggGameDetails, HandleBatchThumbnails
     // Now handled by dedicated BggEndpoints.cs (Issue #3120)
 
-    private static async Task<IResult> HandleIndexChessKnowledge(HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
-    {
-        // Session validated AND Admin role checked by RequireAdminSessionFilter
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User!.Id);
-
-        var result = await mediator.Send(new IndexChessKnowledgeCommand(), ct).ConfigureAwait(false);
-
-        if (!result.Success)
-        {
-            logger.LogError("Chess knowledge indexing failed: {Error}", result.ErrorMessage);
-            return Results.BadRequest(new { error = result.ErrorMessage });
-        }
-
-        logger.LogInformation("Chess knowledge indexing completed: {TotalItems} items, {TotalChunks} chunks",
-            result.TotalKnowledgeItems, result.TotalChunks);
-
-        return Results.Json(new
-        {
-            success = true,
-            totalItems = result.TotalKnowledgeItems,
-            totalChunks = result.TotalChunks,
-            categoryCounts = result.CategoryCounts
-        });
-    }
-
-    private static async Task<IResult> HandleSearchChessKnowledge(string? q, int? limit, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
-    {
-        // Session validated by RequireSessionFilter
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        // Issue #1445: Use centralized query validation
-        var queryError = QueryValidator.ValidateQuery(q);
-        if (queryError != null)
-        {
-            return Results.BadRequest(new { error = queryError });
-        }
-        var validatedQuery = q!;
-
-        logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User!.Id, validatedQuery);
-
-        var searchResult = await mediator.Send(new SearchChessKnowledgeQuery
-        {
-            Query = validatedQuery,
-            Limit = limit ?? 5
-        }, ct).ConfigureAwait(false);
-
-        if (!searchResult.Success)
-        {
-            logger.LogError("Chess knowledge search failed: {Error}", searchResult.ErrorMessage);
-            return Results.BadRequest(new { error = searchResult.ErrorMessage });
-        }
-
-        logger.LogInformation("Chess knowledge search completed: {ResultCount} results", searchResult.Results.Count);
-
-        return Results.Json(new
-        {
-            success = true,
-            results = searchResult.Results.Select(r => new
-            {
-                score = r.Score,
-                text = r.Text,
-                page = r.Page,
-                chunkIndex = r.ChunkIndex
-            })
-        });
-    }
-
-    private static async Task<IResult> HandleDeleteChessKnowledge(HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
-    {
-        // Session validated AND Admin role checked by RequireAdminSessionFilter
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User!.Id);
-
-        var success = await mediator.Send(new DeleteChessKnowledgeCommand(), ct).ConfigureAwait(false);
-
-        if (!success)
-        {
-            logger.LogError("Chess knowledge deletion failed");
-            return Results.StatusCode(StatusCodes.Status500InternalServerError);
-        }
-
-        logger.LogInformation("Chess knowledge deletion completed successfully");
-        return Results.Json(new { success = true });
-    }
+    // REMOVED: HandleIndexChessKnowledge, HandleSearchChessKnowledge, HandleDeleteChessKnowledge
+    // Now handled by AdminMiscEndpoints.cs (duplicate route fix)
 
     private static async Task<IResult> HandleSetupGuide(
         SetupGuideRequest req,

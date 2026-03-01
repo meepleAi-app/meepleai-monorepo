@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
 
 /**
- * Users base route - redirects to roles & permissions
- * Prevents React #130 error when navigating to /admin/users
+ * /admin/users index — redirect to the activity log as the default user view.
  */
-export default function UsersBasePage() {
-  redirect('/admin/users/roles');
+export default function AdminUsersPage() {
+  redirect('/admin/users/activity');
 }

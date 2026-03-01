@@ -122,7 +122,9 @@ export function PdfUploadForm({
   const [retryCount, setRetryCount] = useState(0);
   const [retryMessage, setRetryMessage] = useState<string | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+  // Use relative URLs to go through Next.js API proxy route
+  // This ensures cookies are forwarded and avoids CORS issues
+  const API_BASE = '';
 
   // Chunked upload hook for large files
   const {

@@ -50,7 +50,7 @@ internal sealed class GetProcessingMetricsQueryHandler : IQueryHandler<GetProces
             kvp => new StepPercentiles(
                 kvp.Value.MedianDurationSeconds,
                 kvp.Value.P95DurationSeconds,
-                kvp.Value.P95DurationSeconds), // P99 not yet implemented, use P95
+                kvp.Value.P99DurationSeconds),
             StringComparer.Ordinal);
 
         var response = new ProcessingMetricsDto(

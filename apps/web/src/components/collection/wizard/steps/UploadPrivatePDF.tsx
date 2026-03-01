@@ -76,7 +76,7 @@ export function UploadPrivatePDF() {
       // Use XHR for progress tracking (same pattern as admin wizard)
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ id: string }>((resolve, reject) => {
+      const uploadPromise = new Promise<{ documentId: string; fileName: string }>((resolve, reject) => {
         xhr.upload.addEventListener('progress', e => {
           if (e.lengthComputable) {
             setUploadProgress(Math.round((e.loaded / e.total) * 100));
@@ -106,7 +106,7 @@ export function UploadPrivatePDF() {
         });
 
         // Upload to ingest endpoint (private PDF, not public library)
-        xhr.open('POST', `${API_BASE}/api/v1/ingest/upload`);
+        xhr.open('POST', '/api/v1/ingest/pdf');
         xhr.withCredentials = true;
         xhr.send(formData);
       });
@@ -114,7 +114,7 @@ export function UploadPrivatePDF() {
       const result = await uploadPromise;
 
       toast.success('PDF uploaded successfully!');
-      setUploadedPdf(result.id, file.name);
+      setUploadedPdf(result.documentId, file.name);
       goNext(); // Automatically advance to review step
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';

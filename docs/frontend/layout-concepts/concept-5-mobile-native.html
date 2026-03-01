@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI &#8212; Concept 5: Mobile Native</title>
+<style>
+  /* ============================================================
+     CONCEPT 5: MOBILE NATIVE
+     Notion/Craft mobile — bottom tab bar primary nav on mobile,
+     contextual action bar replaces tab bar when in context.
+     On desktop: converts to left sidebar + top tabs + right panel.
+
+     Mobile  (<768px): Bottom tab bar (5 tabs), section title + mini-nav
+                        pills at top, action-bar swaps tab bar on context.
+     Desktop (>=768px): Left sidebar 220px + top tabs + right action panel.
+     ============================================================ */
+
+  :root {
+    --bg:           #f5f4f1;
+    --bg-card:      #ffffff;
+    --bg-sidebar:   #1c1c22;
+    --bg-topbar:    #ffffff;
+    --bg-action:    #ffffff;
+    --border:       rgba(0,0,0,0.07);
+    --border-md:    rgba(0,0,0,0.12);
+    --border-dark:  rgba(255,255,255,0.08);
+    --text-1:       #1a1a22;
+    --text-2:       #6b6b80;
+    --text-3:       #a0a0b0;
+    --text-inv:     #f0f0f8;
+    --text-inv-2:   rgba(240,240,248,0.6);
+    --accent:       #5b5bd6;
+    --accent-2:     #4949b8;
+    --accent-light: rgba(91,91,214,0.1);
+    --accent-muted: rgba(91,91,214,0.06);
+    --green:        #18a558;
+    --amber:        #e08c00;
+    --orange:       #e16b3a;
+
+    /* Layout measurements */
+    --sidebar-w:    220px;
+    --topbar-h:     52px;
+    --combined-h:   56px;
+    --bottom-tab-h: 72px;
+    --action-h:     72px;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-pill: 999px;
+
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --trans: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --trans-slow: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-1);
+    height: 100vh;
+    overflow: hidden;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============================================================
+     DESKTOP LAYOUT (>= 768px)
+     Left sidebar + content column
+     ============================================================ */
+  .app {
+    display: flex;
+    height: 100vh;
+  }
+
+  /* ---- TIER 1 DESKTOP: LEFT SIDEBAR ---- */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .sidebar-header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--border-dark);
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.4px;
+    color: var(--text-inv);
+    text-decoration: none;
+  }
+
+  .logo-chip {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--accent), #7c7cff);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    padding: 12px 8px 4px;
+  }
+
+  .sidebar-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-inv-2);
+    padding: 0 8px 6px;
+    opacity: 0.5;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-inv-2);
+    cursor: pointer;
+    transition: all var(--trans);
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    position: relative;
+  }
+
+  .sidebar-item:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-inv);
+  }
+
+  .sidebar-item.active {
+    background: rgba(91,91,214,0.2);
+    color: #c4c4ff;
+  }
+
+  .sidebar-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 25%;
+    height: 50%;
+    width: 2px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+
+  .sidebar-badge {
+    margin-left: auto;
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 99px;
+  }
+
+  .sidebar-spacer { flex: 1; }
+
+  .sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid var(--border-dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-2), #7c7cff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .sidebar-user-info { flex: 1; min-width: 0; }
+
+  .sidebar-username {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-inv);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar-role {
+    font-size: 10px;
+    color: var(--text-inv-2);
+    opacity: 0.6;
+  }
+
+  /* ---- CONTENT COLUMN ---- */
+  .content-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ---- TIER 2 DESKTOP: TOP TAB BAR ---- */
+  .top-tabs-bar {
+    height: var(--topbar-h);
+    background: var(--bg-topbar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .top-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all var(--trans);
+    border: none;
+    background: none;
+    white-space: nowrap;
+  }
+
+  .top-tab:hover {
+    color: var(--text-1);
+    background: var(--bg);
+  }
+
+  .top-tab.active {
+    color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .tab-count {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-3);
+    background: var(--border);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .top-tab.active .tab-count {
+    color: var(--accent);
+    background: rgba(91,91,214,0.12);
+  }
+
+  .tabs-spacer { flex: 1; }
+
+  /* ---- TIER 3 DESKTOP: RIGHT ACTION PANEL ---- */
+  .action-panel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .ap-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--trans);
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .ap-btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-2);
+  }
+
+  .ap-btn-primary:hover {
+    background: var(--accent-2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(91,91,214,0.3);
+  }
+
+  .ap-btn-secondary {
+    background: var(--bg);
+    color: var(--text-2);
+    border-color: var(--border-md);
+  }
+
+  .ap-btn-secondary:hover {
+    background: var(--bg-card);
+    color: var(--text-1);
+  }
+
+  .ap-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border-md);
+    flex-shrink: 0;
+  }
+
+  .ap-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-2);
+    cursor: pointer;
+    border: 1px solid var(--border-md);
+    background: var(--bg);
+    transition: all var(--trans);
+  }
+
+  .ap-icon-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-1);
+  }
+
+  /* ---- MAIN CONTENT ---- */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-md) transparent;
+  }
+
+  .content::-webkit-scrollbar { width: 5px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
+
+  /* Page heading */
+  .page-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .page-h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text-1);
+  }
+
+  .page-count {
+    font-size: 13px;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+
+  /* Stats */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+  }
+
+  .stat-val {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: -0.6px;
+    color: var(--text-1);
+  }
+
+  .stat-lbl {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  .stat-delta {
+    font-size: 11px;
+    color: var(--green);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* Game cards — clean light style */
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--trans);
+  }
+
+  .game-card:hover {
+    border-color: var(--border-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+
+  .game-art {
+    width: 100%;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    position: relative;
+  }
+
+  .game-art-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(0deg, rgba(0,0,0,0.4) 0%, transparent 100%);
+  }
+
+  .game-art-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+  }
+
+  .badge-ready {
+    background: rgba(24,165,88,0.85);
+    color: #fff;
+  }
+
+  .badge-indexing {
+    background: rgba(224,140,0,0.85);
+    color: #fff;
+  }
+
+  .game-body { padding: 12px; }
+
+  .game-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-1);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .game-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .game-genre {
+    font-size: 11px;
+    color: var(--text-3);
+  }
+
+  .game-rating {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  /* Art colors */
+  .art-1 { background: linear-gradient(135deg,#312e81,#4c1d95); }
+  .art-2 { background: linear-gradient(135deg,#5c2d0a,#7c3d12); }
+  .art-3 { background: linear-gradient(135deg,#14532d,#15803d); }
+  .art-4 { background: linear-gradient(135deg,#1e3a8a,#1d4ed8); }
+  .art-5 { background: linear-gradient(135deg,#7f1d1d,#b91c1c); }
+  .art-6 { background: linear-gradient(135deg,#1e1b4b,#3730a3); }
+
+  /* ============================================================
+     MOBILE LAYOUT (<768px)
+     ============================================================ */
+  @media (max-width: 767px) {
+    .sidebar { display: none; }
+    .app { flex-direction: column; }
+    .content-col { flex: 1; overflow: hidden; }
+    .top-tabs-bar { display: none; }
+
+    /* Mobile header bar — title + mini-nav pills */
+    .mobile-header {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-topbar);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px 0;
+      flex-shrink: 0;
+    }
+
+    .mobile-header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .mobile-logo {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--text-1);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .mobile-logo-chip {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, var(--accent), #7c7cff);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .mobile-spacer { flex: 1; }
+
+    .mobile-section-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-1);
+    }
+
+    /* Pill strip mini-nav */
+    .mobile-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 10px;
+    }
+
+    .mobile-pills::-webkit-scrollbar { display: none; }
+
+    .mobile-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      border: 1px solid var(--border-md);
+      background: var(--bg);
+      color: var(--text-2);
+      transition: all var(--trans);
+      flex-shrink: 0;
+    }
+
+    .mobile-pill.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .mobile-pill-count {
+      font-size: 10px;
+      opacity: 0.75;
+    }
+
+    /* Mobile action bar (replaces bottom tab bar on context) */
+    .mobile-action-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-action);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    }
+
+    .mab-btn-primary {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 13px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mab-btn-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border: 1px solid var(--border-md);
+      color: var(--text-2);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .game-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .content {
+      padding: 16px;
+      padding-bottom: calc(90px + env(safe-area-inset-bottom));
+    }
+  }
+
+  /* Desktop: hide mobile-only elements */
+  @media (min-width: 768px) {
+    .mobile-header { display: none; }
+    .mobile-action-bar { display: none; }
+    .bottom-tab-bar { display: none; }
+  }
+
+  /* ============================================================
+     BOTTOM TAB BAR (mobile primary nav)
+     Shown on mobile only, replaced by action-bar in context.
+     ============================================================ */
+  .bottom-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--bottom-tab-h);
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 90;
+    box-shadow: 0 -1px 0 var(--border), 0 -8px 24px rgba(0,0,0,0.04);
+  }
+
+  .btab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: all var(--trans);
+    padding: 8px 4px;
+    position: relative;
+  }
+
+  .btab-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-3);
+    transition: all var(--trans);
+    position: relative;
+  }
+
+  .btab.active .btab-icon { color: var(--accent); }
+
+  .btab-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-3);
+    transition: all var(--trans);
+    letter-spacing: 0.01em;
+  }
+
+  .btab.active .btab-label { color: var(--accent); }
+
+  .btab-pip {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: 2px solid var(--bg-card);
+  }
+
+  /* Concept switcher */
+  .concept-switcher {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.97);
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 200;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+
+  .cs-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    padding: 0 4px 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+
+  .cs-btn {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 8px;
+    border-radius: 5px;
+    color: var(--text-2);
+    cursor: pointer;
+    border: none;
+    background: none;
+    text-align: left;
+    transition: all var(--trans);
+    white-space: nowrap;
+    text-decoration: none;
+    display: block;
+  }
+
+  .cs-btn:hover { color: var(--text-1); background: var(--bg); }
+  .cs-btn.current { color: var(--accent); font-weight: 700; }
+
+  @media (max-width: 767px) {
+    .concept-switcher {
+      top: auto;
+      bottom: calc(var(--bottom-tab-h) + 12px);
+      right: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============================================================
+       DESKTOP: LEFT SIDEBAR (Tier 1)
+       ============================================================ -->
+  <nav class="sidebar" aria-label="Primary navigation">
+
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="#">
+        <div class="logo-chip">&#9823;</div>
+        MeepleAI
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Tool</div>
+
+      <button class="sidebar-item active" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Library
+      </button>
+
+      <button class="sidebar-item" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Agents
+      </button>
+
+      <button class="sidebar-item" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chat
+        <span class="sidebar-badge">3</span>
+      </button>
+
+      <button class="sidebar-item" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Sessions
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Discover</div>
+
+      <button class="sidebar-item" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Catalog
+      </button>
+
+      <button class="sidebar-item" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Community
+      </button>
+
+      <button class="sidebar-item" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Proposals
+      </button>
+    </div>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="sidebar-section">
+      <button class="sidebar-item" onclick="selectSidebar(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Admin
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-avatar">JD</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username">John Doe</div>
+        <div class="sidebar-role">Pro member</div>
+      </div>
+    </div>
+
+  </nav>
+
+  <!-- ============================================================
+       CONTENT COLUMN
+       ============================================================ -->
+  <div class="content-col">
+
+    <!-- MOBILE: Section title + pill mini-nav -->
+    <div class="mobile-header">
+      <div class="mobile-header-row">
+        <div class="mobile-logo">
+          <div class="mobile-logo-chip">&#9823;</div>
+          MeepleAI
+        </div>
+        <div class="mobile-spacer"></div>
+        <button style="border:none;background:none;cursor:pointer;color:var(--text-2)" aria-label="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M20 12h-2M6 12H4M18.66 18.66l-1.41-1.41M6.76 6.76L5.35 5.35"/><path d="M12 2v2M12 20v2"/></svg>
+        </button>
+        <button style="border:none;background:none;cursor:pointer;color:var(--text-2)" aria-label="Notifications">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+      </div>
+      <div class="mobile-section-title">Library</div>
+      <div style="height:8px"></div>
+
+      <!-- TIER 2 MOBILE: Pill mini-nav -->
+      <div class="mobile-pills" role="tablist" aria-label="Library sub-sections">
+        <button class="mobile-pill active" role="tab" aria-selected="true" onclick="selectMobilePill(this)">
+          Games <span class="mobile-pill-count">24</span>
+        </button>
+        <button class="mobile-pill" role="tab" aria-selected="false" onclick="selectMobilePill(this)">
+          Wishlist <span class="mobile-pill-count">8</span>
+        </button>
+        <button class="mobile-pill" role="tab" aria-selected="false" onclick="selectMobilePill(this)">
+          Private <span class="mobile-pill-count">2</span>
+        </button>
+        <button class="mobile-pill" role="tab" aria-selected="false" onclick="selectMobilePill(this)">
+          History
+        </button>
+      </div>
+    </div>
+
+    <!-- DESKTOP: Top tabs (Tier 2) + action panel (Tier 3) -->
+    <div class="top-tabs-bar">
+      <button class="top-tab active" onclick="selectTopTab(this)">
+        Games <span class="tab-count">24</span>
+      </button>
+      <button class="top-tab" onclick="selectTopTab(this)">
+        Wishlist <span class="tab-count">8</span>
+      </button>
+      <button class="top-tab" onclick="selectTopTab(this)">
+        Private <span class="tab-count">2</span>
+      </button>
+      <button class="top-tab" onclick="selectTopTab(this)">History</button>
+
+      <div class="tabs-spacer"></div>
+
+      <!-- TIER 3 DESKTOP: Action panel (right) -->
+      <div class="action-panel" role="toolbar" aria-label="Library actions">
+        <button class="ap-btn ap-btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Game
+        </button>
+        <button class="ap-btn ap-btn-secondary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import BGG
+        </button>
+        <button class="ap-btn ap-btn-secondary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Upload PDF
+        </button>
+        <div class="ap-sep" role="separator"></div>
+        <button class="ap-icon-btn" aria-label="Filter">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+        <button class="ap-icon-btn" aria-label="Grid view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+
+      <div class="page-heading" aria-hidden="true">
+        <h1 class="page-h1">My Library</h1>
+        <span class="page-count">24 games</span>
+      </div>
+
+      <div class="stats-row" role="region" aria-label="Library statistics">
+        <div class="stat-card">
+          <div class="stat-val">24</div>
+          <div class="stat-lbl">Games</div>
+          <div class="stat-delta">+3 this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">3</div>
+          <div class="stat-lbl">Agents</div>
+          <div class="stat-delta">2 indexed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">47</div>
+          <div class="stat-lbl">Sessions</div>
+          <div class="stat-delta">12h played</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">8</div>
+          <div class="stat-lbl">KB Docs</div>
+          <div class="stat-delta">All indexed</div>
+        </div>
+      </div>
+
+      <div class="game-grid" role="list" aria-label="Game library">
+
+        <article class="game-card" role="listitem">
+          <div class="game-art art-1" aria-hidden="true">
+            &#127922;
+            <div class="game-art-overlay"></div>
+            <span class="game-art-badge badge-ready">KB Ready</span>
+          </div>
+          <div class="game-body">
+            <div class="game-name">Gloomhaven</div>
+            <div class="game-meta">
+              <span class="game-genre">Dungeon Crawler</span>
+              <span class="game-rating" aria-label="Rating 8.8">&#9733; 8.8</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-card" role="listitem">
+          <div class="game-art art-2" aria-hidden="true">
+            &#128506;
+            <div class="game-art-overlay"></div>
+            <span class="game-art-badge badge-indexing">Indexing&#8230;</span>
+          </div>
+          <div class="game-body">
+            <div class="game-name">Spirit Island</div>
+            <div class="game-meta">
+              <span class="game-genre">Strategy</span>
+              <span class="game-rating" aria-label="Rating 8.4">&#9733; 8.4</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-card" role="listitem">
+          <div class="game-art art-3" aria-hidden="true">
+            &#127754;
+            <div class="game-art-overlay"></div>
+          </div>
+          <div class="game-body">
+            <div class="game-name">Wingspan</div>
+            <div class="game-meta">
+              <span class="game-genre">Engine Builder</span>
+              <span class="game-rating" aria-label="Rating 8.1">&#9733; 8.1</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-card" role="listitem">
+          <div class="game-art art-4" aria-hidden="true">
+            &#127756;
+            <div class="game-art-overlay"></div>
+            <span class="game-art-badge badge-ready">KB Ready</span>
+          </div>
+          <div class="game-body">
+            <div class="game-name">Twilight Imperium</div>
+            <div class="game-meta">
+              <span class="game-genre">Space Opera</span>
+              <span class="game-rating" aria-label="Rating 8.7">&#9733; 8.7</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-card" role="listitem">
+          <div class="game-art art-5" aria-hidden="true">
+            &#127968;
+            <div class="game-art-overlay"></div>
+          </div>
+          <div class="game-body">
+            <div class="game-name">Terraforming Mars</div>
+            <div class="game-meta">
+              <span class="game-genre">Sci-Fi</span>
+              <span class="game-rating" aria-label="Rating 8.4">&#9733; 8.4</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="game-card" role="listitem">
+          <div class="game-art art-6" aria-hidden="true">
+            &#127759;
+            <div class="game-art-overlay"></div>
+          </div>
+          <div class="game-body">
+            <div class="game-name">Root</div>
+            <div class="game-meta">
+              <span class="game-genre">Asymmetric</span>
+              <span class="game-rating" aria-label="Rating 8.1">&#9733; 8.1</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+  </div><!-- end content-col -->
+
+</div><!-- end app -->
+
+<!-- ============================================================
+     MOBILE: BOTTOM TAB BAR (Tier 1 on mobile)
+     ============================================================ -->
+<nav class="bottom-tab-bar" aria-label="Main navigation">
+
+  <button class="btab active" onclick="selectBottomTab(this)" aria-label="Library">
+    <div class="btab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </div>
+    <span class="btab-label">Library</span>
+  </button>
+
+  <button class="btab" onclick="selectBottomTab(this)" aria-label="Discover">
+    <div class="btab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </div>
+    <span class="btab-label">Discover</span>
+  </button>
+
+  <button class="btab" onclick="selectBottomTab(this)" aria-label="Chat, 3 unread">
+    <div class="btab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="btab-pip" aria-label="3 unread"></span>
+    </div>
+    <span class="btab-label">Chat</span>
+  </button>
+
+  <button class="btab" onclick="selectBottomTab(this)" aria-label="Profile">
+    <div class="btab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <span class="btab-label">Profile</span>
+  </button>
+
+  <button class="btab" onclick="selectBottomTab(this)" aria-label="Admin">
+    <div class="btab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    </div>
+    <span class="btab-label">Admin</span>
+  </button>
+
+</nav>
+
+<!-- MOBILE: TIER 3 ACTION BAR (replaces bottom tab bar on context) -->
+<div class="mobile-action-bar" id="mobile-action-bar" style="display:none" role="toolbar" aria-label="Library actions">
+  <button class="mab-btn-primary">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add Game
+  </button>
+  <button class="mab-btn-icon" aria-label="Import from BGG">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  </button>
+  <button class="mab-btn-icon" aria-label="Upload PDF">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+  </button>
+  <button class="mab-btn-icon" aria-label="Filter">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+  </button>
+</div>
+
+<!-- Concept switcher -->
+<div class="concept-switcher">
+  <div class="cs-label">Layout Concept</div>
+  <a class="cs-btn" href="concept-1-command-center.html">1 &#183; Command Center</a>
+  <a class="cs-btn" href="concept-2-focus-flow.html">2 &#183; Focus Flow</a>
+  <a class="cs-btn" href="concept-3-game-board.html">3 &#183; Game Board</a>
+  <a class="cs-btn" href="concept-4-spatial-layers.html">4 &#183; Spatial Layers</a>
+  <div class="cs-btn current">5 &#183; Mobile Native</div>
+</div>
+
+<script>
+  function selectSidebar(btn) {
+    document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  function selectTopTab(btn) {
+    var bar = btn.closest('.top-tabs-bar');
+    if (!bar) return;
+    bar.querySelectorAll('.top-tab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  function selectBottomTab(btn) {
+    document.querySelectorAll('.btab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  function selectMobilePill(btn) {
+    var parent = btn.closest('[role="tablist"]');
+    if (!parent) return;
+    parent.querySelectorAll('.mobile-pill').forEach(function(t) {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+  }
+</script>
+</body>
+</html>

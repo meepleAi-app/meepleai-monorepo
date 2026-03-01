@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { adminClient } from '@/lib/api/clients/adminClient';
+import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { HttpClient } from '@/lib/api/core/httpClient';
 import type { InfrastructureDetails } from '@/lib/api/schemas/admin.schemas';
+
+const httpClient = new HttpClient();
+const adminClient = createAdminClient({ httpClient });
 
 /**
  * System Health Page

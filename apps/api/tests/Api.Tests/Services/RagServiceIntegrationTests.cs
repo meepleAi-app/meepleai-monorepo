@@ -273,7 +273,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
             .Setup(s => s.GenerateCompletionAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,

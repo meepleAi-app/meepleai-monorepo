@@ -58,8 +58,8 @@ export interface CarouselGame {
   metadata?: MeepleCardMetadata[];
   badge?: string;
   description?: string;
-  /** Whether the game has PDF documents for RAG-based chat */
-  hasPdfDocuments?: boolean;
+  /** Whether the game has an indexed knowledge base for RAG-based chat */
+  hasKb?: boolean;
 }
 
 /**
@@ -115,6 +115,8 @@ export interface GameCarouselProps {
   className?: string;
   /** Test ID */
   'data-testid'?: string;
+  /** Current user ID (for auth-gated actions) */
+  userId?: string;
 }
 
 // ============================================================================
@@ -541,6 +543,7 @@ export const GameCarousel = React.memo(function GameCarousel({
   flippable,
   className,
   'data-testid': testId,
+  userId,
 }: GameCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -560,7 +563,8 @@ export const GameCarousel = React.memo(function GameCarousel({
   const centerEntityActions = useEntityActions({
     entity: 'game',
     id: fallbackId,
-    data: { hasPdfDocuments: centerGame?.hasPdfDocuments ?? false },
+    userId,
+    data: { hasKb: centerGame?.hasKb ?? false },
   });
 
   // Support controlled and uncontrolled sort modes

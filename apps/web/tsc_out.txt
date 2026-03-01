@@ -1,0 +1,29 @@
+.next/types/validator.ts(467,39): error TS2307: Cannot find module '../../src/app/(authenticated)/admin/games/[gameId]/toolkit/page.js' or its corresponding type declarations.
+.next/types/validator.ts(989,39): error TS2307: Cannot find module '../../src/app/(authenticated)/library/private/[privateGameId]/toolkit/configure/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1313,39): error TS2307: Cannot find module '../../src/app/(chat)/chat/agents/create/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1340,39): error TS2307: Cannot find module '../../src/app/(dev)/showcase/[component]/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1349,39): error TS2307: Cannot find module '../../src/app/(dev)/showcase/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1682,39): error TS2307: Cannot find module '../../src/app/admin/(dashboard)/agents/chat-limits/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1745,39): error TS2307: Cannot find module '../../src/app/admin/(dashboard)/games/[gameId]/agent/test/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1754,39): error TS2307: Cannot find module '../../src/app/admin/(dashboard)/games/[gameId]/processing/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1880,39): error TS2307: Cannot find module '../../src/app/admin/(dashboard)/shared-games/[id]/page.js' or its corresponding type declarations.
+.next/types/validator.ts(1907,39): error TS2307: Cannot find module '../../src/app/admin/(dashboard)/shared-games/new/page.js' or its corresponding type declarations.
+.next/types/validator.ts(2055,39): error TS2307: Cannot find module '../../src/app/(dev)/showcase/layout.js' or its corresponding type declarations.
+src/components/session/CounterTool.tsx(14,15): error TS2305: Module '"./types"' has no exported member 'CounterState'.
+src/components/session/index.ts(52,3): error TS2305: Module '"./types"' has no exported member 'TurnOrderData'.
+src/components/session/index.ts(53,3): error TS2305: Module '"./types"' has no exported member 'WhiteboardState'.
+src/components/session/index.ts(54,3): error TS2305: Module '"./types"' has no exported member 'WhiteboardToken'.
+src/components/session/index.ts(55,3): error TS2305: Module '"./types"' has no exported member 'Stroke'.
+src/components/session/index.ts(56,3): error TS2305: Module '"./types"' has no exported member 'StrokePoint'.
+src/components/session/index.ts(57,3): error TS2305: Module '"./types"' has no exported member 'GridSize'.
+src/components/session/index.ts(58,3): error TS2305: Module '"./types"' has no exported member 'WhiteboardMode'.
+src/components/session/index.ts(59,3): error TS2305: Module '"./types"' has no exported member 'CounterState'.
+src/components/session/TurnOrderTool.tsx(14,15): error TS2305: Module '"./types"' has no exported member 'TurnOrderData'.
+src/components/session/TurnOrderTool.tsx(66,37): error TS7006: Parameter 'player' implicitly has an 'any' type.
+src/components/session/TurnOrderTool.tsx(66,45): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/components/session/WhiteboardTool.tsx(20,3): error TS2305: Module '"./types"' has no exported member 'GridSize'.
+src/components/session/WhiteboardTool.tsx(21,3): error TS2305: Module '"./types"' has no exported member 'Stroke'.
+src/components/session/WhiteboardTool.tsx(22,3): error TS2305: Module '"./types"' has no exported member 'StrokePoint'.
+src/components/session/WhiteboardTool.tsx(23,3): error TS2305: Module '"./types"' has no exported member 'WhiteboardMode'.
+src/components/session/WhiteboardTool.tsx(24,3): error TS2305: Module '"./types"' has no exported member 'WhiteboardState'.
+src/components/session/WhiteboardTool.tsx(25,3): error TS2305: Module '"./types"' has no exported member 'WhiteboardToken'.

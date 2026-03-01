@@ -1,6 +1,4 @@
 #pragma warning disable MA0002 // Dictionary without StringComparer
-#pragma warning disable MA0026 // TODO comments
-#pragma warning disable S1135 // Sonar TODO comments
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
@@ -135,8 +133,8 @@ internal sealed class SuggestMoveCommandHandler : IRequestHandler<SuggestMoveCom
             throw new InvalidOperationException("Player mode handler not registered");
         }
 
-        // 5. Build context (MVP: use minimal configuration without full AgentConfiguration entity)
-        // TODO Issue #2404: Integrate with AgentConfiguration when ready
+        // 5. Build context (MVP: uses simplified mock configuration)
+        // NOTE: Issue #2404 is closed. AgentConfiguration integration deferred to future iteration.
         var mockConfig = CreateMockConfiguration(agent);
 
         var context = new AgentModeContext(
@@ -171,8 +169,8 @@ internal sealed class SuggestMoveCommandHandler : IRequestHandler<SuggestMoveCom
     }
 
     /// <summary>
-    /// Creates a mock AgentConfiguration for MVP (will be replaced with real configuration)
-    /// TODO Issue #2404: Remove this when AgentConfiguration repository is available
+    /// Creates a simplified AgentConfiguration for MVP with hardcoded defaults.
+    /// NOTE: Issue #2404 closed. Can be wired to real AgentConfiguration DI when needed.
     /// </summary>
     private static AgentConfiguration CreateMockConfiguration(Agent agent)
     {
@@ -191,9 +189,9 @@ internal sealed class SuggestMoveCommandHandler : IRequestHandler<SuggestMoveCom
     }
 
     /// <summary>
-    /// Parses suggestions from agent mode result
-    /// MVP: Returns formatted content as single suggestion
-    /// TODO Issue #2404: Extract structured MoveSuggestion list from PlayerModeHandler metadata
+    /// Parses suggestions from agent mode result.
+    /// MVP: Returns formatted content as single suggestion.
+    /// NOTE: Issue #2404 closed. Structured MoveSuggestion extraction deferred to future iteration.
     /// </summary>
     private static List<MoveSuggestionItemDto> ParseSuggestionsFromResult(AgentModeResult result)
     {

@@ -67,8 +67,8 @@ const POC_FEATURES: FeatureCategory[] = [
         name: 'Semantic Search (Vector)',
         description: 'Qdrant vector database con cosine similarity',
         status: 'implemented',
-        details: 'text-embedding-3-large, 3072 dimensioni, HNSW index',
-        file: 'QdrantVectorSearcher.cs',
+        details: 'sentence-transformers 384d, HNSW (m=16, ef=200), scalar 8-bit quantization',
+        file: 'VectorSearchDomainService.cs',
       },
       {
         name: 'Keyword Search (FTS)',
@@ -82,20 +82,28 @@ const POC_FEATURES: FeatureCategory[] = [
         description: 'Reciprocal Rank Fusion con pesi configurabili',
         status: 'implemented',
         details: 'k=60, vector_weight=0.7, keyword_weight=0.3',
-        file: 'HybridSearchService.cs',
+        file: 'RrfFusionDomainService.cs',
+      },
+      {
+        name: 'Cross-Encoder Reranking',
+        description: 'Reranking con BAAI/bge-reranker-v2-m3',
+        status: 'implemented',
+        details: 'Graceful degradation, parent chunk resolution, latency metrics',
+        file: 'ResilientRetrievalService.cs',
       },
       {
         name: 'Query Expansion',
         description: 'Espansione query con sinonimi e varianti',
         status: 'partial',
-        details: 'Implementazione base, senza LLM expansion',
+        details: 'Implementazione base, LLM expansion in roadmap',
         file: 'IQueryExpansionService.cs',
       },
       {
-        name: 'Cross-Encoder Reranking',
-        description: 'Reranking con BAAI/bge-reranker-v2-m3',
-        status: 'planned',
-        details: 'Docker service pronto, integrazione pending',
+        name: 'Advanced Chunking',
+        description: 'Hierarchical, semantic, sentence-window chunking',
+        status: 'implemented',
+        details: 'Dynamic strategy selection, parent chunk tracking',
+        file: 'AdvancedChunkingService.cs',
       },
     ],
   },
@@ -121,24 +129,58 @@ const POC_FEATURES: FeatureCategory[] = [
       },
       {
         name: 'Tier-Based Routing',
-        description: 'User tier → Provider selection',
+        description: 'User tier → Strategy → Model selection',
         status: 'implemented',
-        details: 'User→Ollama, Editor→Balanced, Admin→Premium',
+        details: 'Tier determines strategies, strategy determines model',
         file: 'HybridAdaptiveRoutingStrategy.cs',
       },
       {
-        name: 'Circuit Breaker',
-        description: 'Failover automatico tra provider',
+        name: 'Circuit Breaker + Fallback',
+        description: 'Failover automatico tra provider con latency tracking',
         status: 'implemented',
-        details: '5 failures → open 30s, health monitoring',
+        details: '5 failures → open 30s, health monitoring, automatic fallback chain',
         file: 'HybridLlmService.cs',
       },
       {
-        name: 'Cost Tracking',
-        description: 'Logging costi per query/user',
+        name: 'Cost Tracking & Budget',
+        description: 'Logging costi per query/user con alerting',
         status: 'implemented',
-        details: 'Token usage, cost per model',
-        file: 'LlmCostLogEntity.cs',
+        details: 'Per-token pricing, budget threshold alerts, model usage stats',
+        file: 'LlmCostAlertService.cs',
+      },
+    ],
+  },
+  {
+    id: 'agents',
+    name: 'Multi-Agent System',
+    icon: <Bot className="h-5 w-5" />,
+    color: 'hsl(280 70% 55%)',
+    features: [
+      {
+        name: 'Agent Router + Intent Classifier',
+        description: 'Query classification → Agent routing intelligente',
+        status: 'implemented',
+        details: 'Pattern matching + LLM classification, 6 agent types',
+        file: 'AgentRouterService.cs',
+      },
+      {
+        name: 'Agent State Coordination',
+        description: 'Shared context tra agenti in multi-agent workflows',
+        status: 'implemented',
+        details: 'Cross-agent state sharing, invocation tracking',
+        file: 'AgentStateCoordinator.cs',
+      },
+      {
+        name: 'Mode Handlers',
+        description: 'ChatMode, PlayerMode, LedgerMode specializzati',
+        status: 'implemented',
+        details: 'Decisore (chess AI), Arbitro (rules validation)',
+      },
+      {
+        name: 'Agent Definitions (Admin)',
+        description: 'CRUD agenti, playground testing, prompt editing',
+        status: 'implemented',
+        details: 'Admin UI completa con live testing',
       },
     ],
   },
@@ -149,22 +191,29 @@ const POC_FEATURES: FeatureCategory[] = [
     color: 'hsl(25 95% 53%)',
     features: [
       {
+        name: 'Strategy Router (L1)',
+        description: 'Query classification → Strategy selection',
+        status: 'implemented',
+        details: 'IntentClassifier + AgentRouterService, automatic routing',
+        file: 'IntentClassifier.cs',
+      },
+      {
         name: 'FAST Strategy',
-        description: 'Cache + Single-pass generation',
-        status: 'partial',
-        details: 'Implementato come default flow, senza routing esplicito',
+        description: 'Cache + Single-pass generation (free models)',
+        status: 'implemented',
+        details: 'Default flow con Llama 3.3 70B, <200ms target',
       },
       {
         name: 'BALANCED Strategy',
         description: 'CRAG evaluation + re-retrieval',
-        status: 'planned',
-        details: 'Richiede T5-Large evaluator',
+        status: 'partial',
+        details: 'Flow base implementato, T5-Large evaluator in roadmap',
       },
       {
         name: 'PRECISE Strategy',
         description: 'Multi-agent pipeline con Self-RAG',
         status: 'planned',
-        details: 'Richiede LangGraph orchestrator',
+        details: 'Richiede LangGraph orchestrator completo',
       },
       {
         name: 'EXPERT Strategy',
@@ -176,13 +225,76 @@ const POC_FEATURES: FeatureCategory[] = [
         name: 'CONSENSUS Strategy',
         description: 'Multi-LLM voting (3 voters)',
         status: 'planned',
-        details: 'Richiede 3 LLM calls paralleli',
+        details: 'Richiede 3 LLM calls paralleli + aggregator',
+      },
+    ],
+  },
+  {
+    id: 'docprocessing',
+    name: 'Document Processing',
+    icon: <Database className="h-5 w-5" />,
+    color: 'hsl(200 80% 50%)',
+    features: [
+      {
+        name: 'PDF Pipeline (7 stati)',
+        description: 'Uploading → Extracting → Chunking → Embedding → Indexing',
+        status: 'implemented',
+        details: 'Per-state timing, progress tracking, ETA calculation',
+        file: 'PdfDocument.cs',
       },
       {
-        name: 'Strategy Router (L1)',
-        description: 'Query classification → Strategy selection',
-        status: 'planned',
-        details: 'Richiede LLM classifier',
+        name: 'Retry Mechanism',
+        description: 'Auto-retry con error categorization (max 3)',
+        status: 'implemented',
+        details: 'RetryFailedPdfsJob, error categories, stale document cleanup',
+        file: 'RetryFailedPdfsJob.cs',
+      },
+      {
+        name: 'S3 Storage',
+        description: 'Multi-provider: Cloudflare R2, AWS S3, MinIO',
+        status: 'implemented',
+        details: 'Server-side encryption, pre-signed URLs, path traversal protection',
+        file: 'S3BlobStorageService.cs',
+      },
+      {
+        name: 'Processing Metrics',
+        description: 'Step duration stats, hourly aggregations',
+        status: 'implemented',
+        details: 'Storage breakdown per game/user/status, failed PDF analytics',
+        file: 'ProcessingMetricsService.cs',
+      },
+    ],
+  },
+  {
+    id: 'validation',
+    name: 'Validation (Layer 6)',
+    icon: <Shield className="h-5 w-5" />,
+    color: 'hsl(0 72% 51%)',
+    features: [
+      {
+        name: 'RAG Validation Pipeline (5 layers)',
+        description: 'Confidence + Citation + Hallucination + Consensus + Accuracy',
+        status: 'implemented',
+        details: 'Threshold ≥0.70, multilingual, multi-model consensus',
+        file: 'RagValidationPipelineService.cs',
+      },
+      {
+        name: 'Citation Verification',
+        description: 'Source verification con page reference extraction',
+        status: 'implemented',
+        details: 'Regex-based + LLM verification, page number extraction',
+      },
+      {
+        name: 'Hallucination Detection',
+        description: 'Verifica claim vs context (multilingual)',
+        status: 'implemented',
+        details: 'GPT-4 + Claude multi-model consensus check',
+      },
+      {
+        name: 'Accuracy Tracking',
+        description: 'Golden dataset validation, accuracy trends',
+        status: 'partial',
+        details: 'Framework pronto, dataset collection in corso',
       },
     ],
   },
@@ -203,33 +315,40 @@ const POC_FEATURES: FeatureCategory[] = [
         name: 'Semantic Cache',
         description: 'Cache basata su embedding similarity',
         status: 'planned',
-        details: 'Target 80% hit rate',
+        details: 'Target 80% hit rate, embedding-based matching',
       },
     ],
   },
   {
-    id: 'validation',
-    name: 'Validation (Layer 6)',
-    icon: <Shield className="h-5 w-5" />,
-    color: 'hsl(0 72% 51%)',
+    id: 'observability',
+    name: 'Admin Observability',
+    icon: <Server className="h-5 w-5" />,
+    color: 'hsl(170 70% 45%)',
     features: [
       {
-        name: 'Citation Extraction',
-        description: 'Estrazione riferimenti pagina',
+        name: 'RAG Execution History',
+        description: 'Storico esecuzioni con trace, metriche, costi',
         status: 'implemented',
-        details: 'Regex-based, page number extraction',
+        details: 'Execution trace (JSONB), confidence scores, cache hit tracking',
+        file: 'RagExecution.cs',
       },
       {
-        name: 'Self-RAG Validation',
-        description: 'Auto-verifica con reflection',
-        status: 'planned',
-        details: 'Richiede LLM evaluation loop',
+        name: 'Execution Replay',
+        description: 'Replay esecuzioni passate con SSE streaming',
+        status: 'implemented',
+        details: 'Config overrides, side-by-side comparison, diff highlighting',
       },
       {
-        name: 'Hallucination Detection',
-        description: 'Verifica claim vs context',
-        status: 'planned',
-        details: 'Richiede NLI model',
+        name: 'Strategy Builder (Visual)',
+        description: 'Drag-and-drop builder con 23 building blocks',
+        status: 'implemented',
+        details: 'Real-time validation, live testing, export/import JSON',
+      },
+      {
+        name: 'Tier-Strategy Config',
+        description: 'Admin UI per matrice tier-strategy e model mappings',
+        status: 'implemented',
+        details: 'Toggle access per tier, strategy-model mapping editor',
       },
     ],
   },
@@ -247,7 +366,7 @@ const POC_FEATURES: FeatureCategory[] = [
       },
       {
         name: 'Qdrant Vector DB',
-        description: 'Vector storage con HNSW',
+        description: 'Vector storage con HNSW + quantization',
         status: 'implemented',
         file: 'docker-compose.yml',
       },
@@ -265,7 +384,7 @@ const POC_FEATURES: FeatureCategory[] = [
       },
       {
         name: 'Embedding Service',
-        description: 'Python embedding server',
+        description: 'Python sentence-transformers server',
         status: 'implemented',
         file: 'apps/embedding-service/',
       },
@@ -273,21 +392,21 @@ const POC_FEATURES: FeatureCategory[] = [
         name: 'SmolDocling Service',
         description: 'VLM PDF extraction',
         status: 'implemented',
-        details: 'Stage 2 fallback',
+        details: 'Stage 2 fallback for complex PDFs',
         file: 'apps/smoldocling-service/',
       },
       {
         name: 'Reranker Service',
-        description: 'Cross-encoder reranking',
+        description: 'Cross-encoder reranking server',
         status: 'implemented',
-        details: 'Container ready, API pending',
+        details: 'BAAI/bge-reranker-v2-m3, integrated via ResilientRetrievalService',
         file: 'apps/reranker-service/',
       },
       {
         name: 'Orchestrator Service',
         description: 'LangGraph multi-agent',
         status: 'partial',
-        details: 'Container ready, workflow pending',
+        details: 'Container ready, full workflow orchestration in roadmap',
         file: 'apps/orchestration-service/',
       },
     ],
@@ -504,23 +623,29 @@ export function PocStatus({ className }: PocStatusProps) {
           <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
             <div className="font-semibold text-green-600 dark:text-green-400 mb-2 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
-              Funzionante nel POC
+              Production-Ready
             </div>
             <ul className="space-y-1 text-xs text-muted-foreground">
               <li>
-                • <strong>Hybrid Search</strong>: Vector + Keyword + RRF
+                • <strong>Hybrid Search + Reranking</strong>: Vector + Keyword + RRF + Cross-Encoder
               </li>
               <li>
-                • <strong>LLM Providers</strong>: Ollama (free) + OpenRouter
+                • <strong>LLM Orchestration</strong>: Ollama + OpenRouter, circuit breaker, fallback chain
               </li>
               <li>
-                • <strong>Tier Routing</strong>: User → Ollama, Admin → Premium
+                • <strong>Multi-Agent System</strong>: Router + Intent Classifier + State Coordination
               </li>
               <li>
-                • <strong>Circuit Breaker</strong>: Auto-failover tra provider
+                • <strong>Validation Pipeline</strong>: 5-layer (confidence, citation, hallucination, consensus, accuracy)
               </li>
               <li>
-                • <strong>PDF Pipeline</strong>: Unstructured + SmolDocling
+                • <strong>PDF Pipeline</strong>: 7-state processing, S3 storage, retry mechanism
+              </li>
+              <li>
+                • <strong>Admin Observability</strong>: Execution history, replay, strategy builder, tier config
+              </li>
+              <li>
+                • <strong>Cost Management</strong>: Per-token pricing, budget alerts, usage stats
               </li>
             </ul>
           </div>
@@ -532,19 +657,19 @@ export function PocStatus({ className }: PocStatusProps) {
             </div>
             <ul className="space-y-1 text-xs text-muted-foreground">
               <li>
-                • <strong>Strategy Router (L1)</strong>: Query → Strategy
+                • <strong>Semantic Cache (L2)</strong>: Embedding-based similarity, 80% hit target
               </li>
               <li>
-                • <strong>CRAG Evaluation (L4)</strong>: Quality gate
+                • <strong>CRAG Evaluation (L4)</strong>: T5-Large quality gate
               </li>
               <li>
-                • <strong>Semantic Cache (L2)</strong>: 80% hit target
+                • <strong>PRECISE/EXPERT/CONSENSUS</strong>: Advanced strategy pipelines
               </li>
               <li>
-                • <strong>Self-RAG (L6)</strong>: Auto-validation
+                • <strong>Full Orchestration</strong>: LangGraph multi-agent workflows
               </li>
               <li>
-                • <strong>Reranker Integration</strong>: Cross-encoder
+                • <strong>Fine-tuning Pipeline</strong>: Model adaptation system
               </li>
             </ul>
           </div>

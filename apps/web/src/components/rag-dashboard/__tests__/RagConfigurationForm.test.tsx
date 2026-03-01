@@ -327,13 +327,9 @@ describe('RagConfigurationForm', () => {
         await user.click(fastPanel);
       }
 
-      // Find and modify an input
-      await waitFor(() => {
-        const inputs = screen.getAllByRole('spinbutton');
-        if (inputs.length > 0) {
-          fireEvent.change(inputs[0], { target: { value: '5000' } });
-        }
-      });
+      // Find and modify an input (findAllByRole waits for elements to appear)
+      const inputs0 = await screen.findAllByRole('spinbutton');
+      fireEvent.change(inputs0[0], { target: { value: '5000' } });
 
       // Now save button should be enabled
       const saveButton = screen.getByRole('button', { name: 'Salva' });
@@ -372,13 +368,9 @@ describe('RagConfigurationForm', () => {
         await user.click(fastPanel);
       }
 
-      // Modify an input
-      await waitFor(async () => {
-        const inputs = screen.getAllByRole('spinbutton');
-        if (inputs.length > 0) {
-          fireEvent.change(inputs[0], { target: { value: '5000' } });
-        }
-      });
+      // Modify an input (findAllByRole waits for elements to appear)
+      const inputsUnsaved = await screen.findAllByRole('spinbutton');
+      fireEvent.change(inputsUnsaved[0], { target: { value: '5000' } });
 
       // Should show unsaved indicator
       await waitFor(() => {
@@ -558,13 +550,8 @@ describe('RagConfigurationForm', () => {
       }
 
       // Find and change estimated latency input
-      await waitFor(async () => {
-        const inputs = screen.getAllByRole('spinbutton');
-        if (inputs.length > 0) {
-          await user.clear(inputs[0]);
-          await user.type(inputs[0], '100');
-        }
-      });
+      const inputsLatency = await screen.findAllByRole('spinbutton');
+      fireEvent.change(inputsLatency[0], { target: { value: '100' } });
 
       // Verify change is reflected
       await waitFor(() => {
@@ -584,14 +571,8 @@ describe('RagConfigurationForm', () => {
       }
 
       // Find and change measured value input
-      await waitFor(async () => {
-        const inputs = screen.getAllByRole('spinbutton');
-        // Find a measured input (second column)
-        if (inputs.length > 1) {
-          await user.clear(inputs[1]);
-          await user.type(inputs[1], '200');
-        }
-      });
+      const inputsMeasured = await screen.findAllByRole('spinbutton');
+      fireEvent.change(inputsMeasured[1], { target: { value: '200' } });
 
       // Verify change triggers unsaved state
       await waitFor(() => {
@@ -612,12 +593,8 @@ describe('RagConfigurationForm', () => {
         await user.click(fastPanel);
       }
 
-      await waitFor(async () => {
-        const inputs = screen.getAllByRole('spinbutton');
-        if (inputs.length > 0) {
-          fireEvent.change(inputs[0], { target: { value: '999' } });
-        }
-      });
+      const inputsReset = await screen.findAllByRole('spinbutton');
+      fireEvent.change(inputsReset[0], { target: { value: '999' } });
 
       // Verify unsaved changes appear
       await waitFor(() => {
@@ -684,14 +661,8 @@ describe('RagConfigurationForm', () => {
       }
 
       // Find accuracy inputs
-      await waitFor(async () => {
-        const inputs = screen.getAllByRole('spinbutton');
-        // Change accuracy value
-        if (inputs.length > 2) {
-          await user.clear(inputs[2]);
-          await user.type(inputs[2], '0.90');
-        }
-      });
+      const inputsAccuracy = await screen.findAllByRole('spinbutton');
+      fireEvent.change(inputsAccuracy[2], { target: { value: '0.90' } });
 
       // Should trigger unsaved state
       await waitFor(() => {
@@ -711,14 +682,8 @@ describe('RagConfigurationForm', () => {
       }
 
       // Find usage distribution inputs
-      await waitFor(async () => {
-        const inputs = screen.getAllByRole('spinbutton');
-        // Change usage value
-        if (inputs.length > 3) {
-          await user.clear(inputs[3]);
-          await user.type(inputs[3], '0.15');
-        }
-      });
+      const inputsUsage = await screen.findAllByRole('spinbutton');
+      fireEvent.change(inputsUsage[3], { target: { value: '0.15' } });
 
       // Should trigger unsaved state
       await waitFor(() => {
@@ -790,12 +755,8 @@ describe('RagConfigurationForm', () => {
         await user.click(fastPanel);
 
         // Make changes to latency
-        await waitFor(async () => {
-          const inputs = screen.getAllByRole('spinbutton');
-          if (inputs.length > 0) {
-            fireEvent.change(inputs[0], { target: { value: '100' } });
-          }
-        });
+        const inputsLatencySave = await screen.findAllByRole('spinbutton');
+        fireEvent.change(inputsLatencySave[0], { target: { value: '100' } });
 
         // Click save button
         const saveButton = screen.getByRole('button', { name: 'Salva' });

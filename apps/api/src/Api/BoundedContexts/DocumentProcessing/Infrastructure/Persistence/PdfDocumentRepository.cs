@@ -57,7 +57,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             {
                 entities = await DbContext.PdfDocuments
                     .AsNoTracking()
-                    .Where(p => resolvedGameIds.Contains(p.GameId))
+                    .Where(p => p.GameId.HasValue && resolvedGameIds.Contains(p.GameId.Value))
                     .OrderByDescending(p => p.UploadedAt)
                     .ToListAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -185,7 +185,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
         return PdfDocument.Reconstitute(
             id: entity.Id,
-            gameId: entity.GameId,
+            gameId: entity.GameId ?? Guid.Empty,
             fileName: fileName,
             filePath: entity.FilePath,
             fileSize: fileSize,

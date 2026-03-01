@@ -198,7 +198,7 @@ export function ProfileBar({ compact = false, className }: ProfileBarProps) {
           {/* Settings */}
           <DropdownMenuItem asChild data-testid="settings-menu-item">
             <Link
-              href="/settings"
+              href="/profile?tab=settings"
               className="flex items-center gap-2 cursor-pointer"
             >
               <Settings className="h-4 w-4" />

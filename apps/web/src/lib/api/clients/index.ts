@@ -31,3 +31,4 @@ export * from './tierStrategyClient'; // ISSUE-3440
 export * from './dashboardClient'; // ISSUE-3316, ISSUE-3319
 export * from './knowledgeBaseClient'; // ISSUE-4065
 export * from './ragExecutionClient'; // ISSUE-4459
+export * from './entityLinksClient'; // ISSUE-5129

@@ -4,7 +4,15 @@ import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
-import { Badge, Button, DataTable, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  DataTable,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui';
 import type { AgentDefinitionDto } from '@/lib/api/schemas/agent-definitions.schemas';
 
 interface BuilderTableProps {
@@ -60,15 +68,12 @@ export function BuilderTable({ data, onDelete }: BuilderTableProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/admin/agent-definitions/${agent.id}/edit`}>
+                <Link href={`/admin/agents/definitions/${agent.id}/edit`}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete(agent.id)}
-                className="text-destructive"
-              >
+              <DropdownMenuItem onClick={() => onDelete(agent.id)} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>

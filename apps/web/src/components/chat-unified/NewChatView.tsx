@@ -503,7 +503,7 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, selectedAgentType, resolveAgentId, router]
+    [selectedGameId, selectedGame?.title, selectedAgentType, selectedCustomAgentId, resolveAgentId, router]
   );
 
   const handleQuickStart = useCallback(

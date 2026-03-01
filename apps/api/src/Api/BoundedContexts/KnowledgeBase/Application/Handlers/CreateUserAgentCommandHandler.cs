@@ -100,9 +100,18 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
         // Persist
         await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation(
-            "User {UserId} created agent {AgentId} ({AgentType}) for game {ResolvedGameId} (resolved from {OriginalGameId})",
-            request.UserId, agent.Id, agentType.Value, resolvedGameId.Value, request.GameId);
+        if (resolvedGameId.Value != request.GameId)
+        {
+            _logger.LogInformation(
+                "User {UserId} created agent {AgentId} ({AgentType}) for game {ResolvedGameId} (resolved from shared catalog {OriginalGameId})",
+                request.UserId, agent.Id, agentType.Value, resolvedGameId.Value, request.GameId);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "User {UserId} created agent {AgentId} ({AgentType}) for game {GameId}",
+                request.UserId, agent.Id, agentType.Value, resolvedGameId.Value);
+        }
 
         return CreateAgentCommandHandler.ToDto(agent);
     }

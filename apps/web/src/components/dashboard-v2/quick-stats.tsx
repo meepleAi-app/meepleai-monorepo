@@ -1,6 +1,8 @@
 /**
- * QuickStats Component - Issue #4581
- * 4-card stats overview grid
+ * QuickStats Component - Issue #4936 (updated warm style)
+ * Issue #4581 - originally created
+ *
+ * Horizontal 4-KPI stats row with warm glassmorphism StatCards.
  */
 
 import type { UserStatsDto } from '@/lib/api/dashboard-client';
@@ -15,11 +17,14 @@ interface QuickStatsProps {
 export function QuickStats({ stats, isLoading }: QuickStatsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
-            className="h-32 animate-pulse rounded-lg bg-muted"
+            className={[
+              'h-28 rounded-2xl animate-pulse',
+              'bg-[rgba(200,180,160,0.20)] dark:bg-[rgba(40,36,32,0.40)]',
+            ].join(' ')}
             aria-label="Loading stats"
           />
         ))}
@@ -27,9 +32,7 @@ export function QuickStats({ stats, isLoading }: QuickStatsProps) {
     );
   }
 
-  if (!stats) {
-    return null;
-  }
+  if (!stats) return null;
 
   // Format weekly playtime from TimeSpan "HH:MM:SS"
   const formatPlayTime = (timeSpan: string): string => {
@@ -39,32 +42,36 @@ export function QuickStats({ stats, isLoading }: QuickStatsProps) {
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
-  const changeIndicator =
-    stats.monthlyPlaysChange > 0 ? `+${stats.monthlyPlaysChange}%` : `${stats.monthlyPlaysChange}%`;
+  const monthChange = stats.monthlyPlaysChange;
+  const changeBadge =
+    monthChange !== 0 ? `${monthChange > 0 ? '+' : ''}${monthChange}%` : undefined;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatCard icon="🎲" value={stats.totalGames} label="Giochi Collezione" />
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCard
+        icon="🎲"
+        value={stats.totalGames}
+        label="Giochi in collezione"
+      />
 
       <StatCard
         icon="🎯"
         value={stats.monthlyPlays}
-        label="Partite"
-        sublabel={`Questo Mese (${changeIndicator})`}
+        label="Partite questo mese"
+        badge={changeBadge}
+        badgeTone={monthChange > 0 ? 'positive' : monthChange < 0 ? 'negative' : 'neutral'}
       />
 
       <StatCard
         icon="⏱️"
         value={formatPlayTime(stats.weeklyPlayTime)}
-        label="Giocate"
-        sublabel="Questa Settimana"
+        label="Giocate questa settimana"
       />
 
       <StatCard
         icon="⭐"
         value={stats.monthlyFavorites}
-        label="Preferiti"
-        sublabel="Questo Mese"
+        label="Preferiti questo mese"
       />
     </div>
   );

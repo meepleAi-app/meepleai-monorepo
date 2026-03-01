@@ -3,6 +3,7 @@ using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.Entities.GameToolkit;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.SystemConfiguration;
@@ -47,7 +48,17 @@ public class MeepleAiDbContext : DbContext
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players
     public DbSet<RuleConflictFAQEntity> RuleConflictFAQs => Set<RuleConflictFAQEntity>(); // ISSUE-3761: Conflict resolution FAQ
+    public DbSet<GameReviewEntity> GameReviews => Set<GameReviewEntity>(); // ISSUE-4904: Game reviews API
+    public DbSet<GameStrategyEntity> GameStrategies => Set<GameStrategyEntity>(); // ISSUE-4903: Game strategies API
     public DbSet<RecordScoreEntity> RecordScores => Set<RecordScoreEntity>(); // ISSUE-3888: Play record scores
+    public DbSet<LiveGameSessionEntity> LiveGameSessions => Set<LiveGameSessionEntity>(); // ISSUE-4750: Live game sessions
+    public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
+    public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
+    public DbSet<SessionPlayerEntity> SessionPlayers => Set<SessionPlayerEntity>(); // ISSUE-4750: Live session players
+    public DbSet<SessionTeamEntity> SessionTeams => Set<SessionTeamEntity>(); // ISSUE-4750: Live session teams
+    public DbSet<LiveRoundScoreEntity> LiveRoundScores => Set<LiveRoundScoreEntity>(); // ISSUE-4750: Live session round scores
+    public DbSet<LiveTurnRecordEntity> LiveTurnRecords => Set<LiveTurnRecordEntity>(); // ISSUE-4750: Live session turn records
     public DbSet<RuleSpecEntity> RuleSpecs => Set<RuleSpecEntity>();
     public DbSet<RuleAtomEntity> RuleAtoms => Set<RuleAtomEntity>();
     public DbSet<AgentEntity> Agents => Set<AgentEntity>();
@@ -56,6 +67,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
     public DbSet<ProcessingMetricEntity> ProcessingMetrics => Set<ProcessingMetricEntity>(); // ISSUE-4212: Historical metrics storage
+    public DbSet<ProcessingJobEntity> ProcessingJobs => Set<ProcessingJobEntity>(); // ISSUE-4730: Processing queue management
+    public DbSet<ProcessingStepEntity> ProcessingSteps => Set<ProcessingStepEntity>(); // ISSUE-4730: Processing queue steps
+    public DbSet<StepLogEntryEntity> StepLogEntries => Set<StepLogEntryEntity>(); // ISSUE-4730: Processing step log entries
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
@@ -86,6 +100,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
     public DbSet<UsedTotpCodeEntity> UsedTotpCodes => Set<UsedTotpCodeEntity>(); // SEC-07: Issue #1787 TOTP Replay Prevention
     public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
+    public DbSet<LlmRequestLogEntity> LlmRequestLogs => Set<LlmRequestLogEntity>(); // ISSUE-5072: Detailed request logging with 30-day retention
     public DbSet<ChunkedUploadSessionEntity> ChunkedUploadSessions => Set<ChunkedUploadSessionEntity>(); // Chunked PDF upload
     public DbSet<AdminReportEntity> AdminReports => Set<AdminReportEntity>(); // ISSUE-916: Report generation + scheduling
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
@@ -142,6 +157,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario> CostScenarios => Set<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario>(); // ISSUE-3725: Agent Cost Calculator
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast> ResourceForecasts => Set<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast>(); // ISSUE-3726: Resource Forecasting Simulator
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario> PlaygroundTestScenarios => Set<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario>(); // ISSUE-4396: Playground Test Scenarios
+    public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -153,6 +169,14 @@ public class MeepleAiDbContext : DbContext
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity> SessionDecks => Set<Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.CardEntity> Cards => Set<Api.Infrastructure.Entities.SessionTracking.CardEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity> SessionNotes => Set<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity>();
+
+    // Issue #4754: ToolState for live game sessions
+    public DbSet<ToolStateEntity> ToolStates => Set<ToolStateEntity>();
+    public DbSet<SessionSnapshotEntity> SessionSnapshots => Set<SessionSnapshotEntity>(); // ISSUE-4755
+    public DbSet<TurnOrderEntity> TurnOrders => Set<TurnOrderEntity>(); // ISSUE-4970: TurnOrder base toolkit
+    public DbSet<WhiteboardStateEntity> WhiteboardStates => Set<WhiteboardStateEntity>(); // ISSUE-4971: Whiteboard base toolkit
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity> SessionMedia => Set<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>(); // ISSUE-4760
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
     // Issue #4220: Notification preferences
     public DbSet<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity> NotificationPreferences => Set<Api.Infrastructure.Entities.UserNotifications.NotificationPreferencesEntity>();
@@ -221,6 +245,14 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747
+        modelBuilder.Ignore<BoundedContexts.GameToolkit.Domain.Entities.GameToolkit>(); // ISSUE-4753
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.ToolState.ToolState>(); // ISSUE-4754
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(); // ISSUE-4755
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.TurnOrder.TurnOrder>(); // ISSUE-4970
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.WhiteboardState.WhiteboardState>(); // ISSUE-4971
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051
@@ -250,6 +282,13 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.PlayerNote>(); // ISSUE-3160
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.DiceRoll>(); // ISSUE-3160
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.CardDraw>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.SessionMedia>(); // ISSUE-4760
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.SessionChatMessage>(); // ISSUE-4760
+
+        // ISSUE-4730: Processing queue domain entities
+        modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob>();
+        modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingStep>();
+        modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.StepLogEntry>();
     }
 
     /// <summary>

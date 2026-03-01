@@ -12,7 +12,7 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
         builder.ToTable("text_chunks");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasMaxLength(64);
-        builder.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+        builder.Property(e => e.GameId).IsRequired(false).HasMaxLength(64);
         builder.Property(e => e.PdfDocumentId).IsRequired().HasMaxLength(64);
         builder.Property(e => e.Content).IsRequired(); // No max length for long text chunks
         builder.Property(e => e.ChunkIndex).IsRequired();
@@ -27,6 +27,7 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
         builder.HasOne(e => e.Game)
             .WithMany()
             .HasForeignKey(e => e.GameId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(e => e.PdfDocument)
             .WithMany()

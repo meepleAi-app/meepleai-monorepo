@@ -439,18 +439,30 @@ public class ValidateSessionQueryHandlerTests
         Assert.Equal(session.ExpiresAt, result.ExpiresAt); // Handler returns session timestamps
         Assert.Equal(session.LastSeenAt, result.LastSeenAt);
     }
-    [Fact]
-    public async Task Handle_WithInvalidTokenFormat_ReturnsInvalidStatus()
+    [Theory]
+    [InlineData("invalid-token-format")]         // hyphens not in Base-64 alphabet
+    [InlineData("not!base64@value")]             // special chars
+    [InlineData("short")]                        // too short to be a real token
+    [InlineData("  spaces  ")]                   // whitespace-only is blocked by FromStored
+    public async Task Handle_WithInvalidTokenFormat_ReturnsInvalidStatus(string invalidToken)
     {
         // Arrange
-        var query = new ValidateSessionQuery("invalid-token-format");
+        var query = new ValidateSessionQuery(invalidToken);
 
-        // Act & Assert - Should handle gracefully
-        var exception = await Record.ExceptionAsync(
-            async () => await _handler.Handle(query, TestContext.Current.CancellationToken)
-        );
+        // Act — must NOT throw; malformed cookies must return invalid session (not 500)
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(exception);
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
+        Assert.Null(result.User);
+        Assert.Null(result.ExpiresAt);
+        Assert.Null(result.LastSeenAt);
+
+        // Repository must never be called for a malformed token
+        _sessionRepositoryMock.Verify(
+            x => x.GetByTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

@@ -7,6 +7,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition
 /// Command to update an existing agent definition.
 /// Issue #3808 (Epic #3687)
 /// Issue #3708: Extended with Type and Strategy fields for full template specification.
+/// Issue #5140: Added KbCardIds and GameId for KB card validation.
 /// </summary>
 public sealed record UpdateAgentDefinitionCommand(
     Guid Id,
@@ -19,5 +20,7 @@ public sealed record UpdateAgentDefinitionCommand(
     string? StrategyName = null,
     Dictionary<string, object>? StrategyParameters = null,
     List<PromptTemplateDto>? Prompts = null,
-    List<ToolConfigDto>? Tools = null
+    List<ToolConfigDto>? Tools = null,
+    List<Guid>? KbCardIds = null,
+    Guid? GameId = null
 ) : IRequest<AgentDefinitionDto>;

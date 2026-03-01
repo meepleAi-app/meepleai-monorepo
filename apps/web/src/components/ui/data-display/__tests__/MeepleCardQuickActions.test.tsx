@@ -88,7 +88,8 @@ describe('MeepleCardQuickActions', () => {
       </div>
     );
 
-    expect(screen.getByLabelText('Disabled')).toBeDisabled();
+    // Component uses aria-disabled for accessibility instead of HTML disabled attribute
+    expect(screen.getByLabelText('Disabled')).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('stops event propagation on click', async () => {

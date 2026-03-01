@@ -158,16 +158,6 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
             .ReturnsAsync(details);
     }
 
-    private SharedGame? SetupGameCapture()
-    {
-        SharedGame? capturedGame = null;
-        _gameRepositoryMock
-            .Setup(r => r.AddAsync(It.IsAny<SharedGame>(), It.IsAny<CancellationToken>()))
-            .Callback<SharedGame, CancellationToken>((g, _) => capturedGame = g)
-            .Returns(Task.CompletedTask);
-        return capturedGame;
-    }
-
     #region Success Scenarios with BGG Enrichment
 
     [Fact]

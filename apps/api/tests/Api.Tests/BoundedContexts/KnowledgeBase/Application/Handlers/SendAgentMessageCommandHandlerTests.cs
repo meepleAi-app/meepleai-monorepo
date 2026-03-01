@@ -6,10 +6,12 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -28,7 +30,11 @@ public sealed class SendAgentMessageCommandHandlerTests
     private readonly Mock<IChatThreadRepository> _mockChatThreadRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILlmService> _mockLlmService;
+    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
+    private readonly Mock<IQdrantService> _mockQdrantService;
+    private readonly Mock<IUserBudgetService> _mockBudgetService;
     private readonly Mock<ILogger<SendAgentMessageCommandHandler>> _mockLogger;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly SendAgentMessageCommandHandler _handler;
     private readonly Guid _userId = Guid.NewGuid();
 
@@ -38,16 +44,42 @@ public sealed class SendAgentMessageCommandHandlerTests
         _mockChatThreadRepository = new Mock<IChatThreadRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLlmService = new Mock<ILlmService>();
+        _mockEmbeddingService = new Mock<IEmbeddingService>();
+        _mockQdrantService = new Mock<IQdrantService>();
+        _mockBudgetService = new Mock<IUserBudgetService>();
         _mockLogger = new Mock<ILogger<SendAgentMessageCommandHandler>>();
+        var dbOptions = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase($"SendAgentTests_{Guid.NewGuid()}")
+            .Options;
+        _dbContext = new MeepleAiDbContext(dbOptions, Mock.Of<MediatR.IMediator>(), Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>());
+
+        // Default RAG pipeline mocks: embedding → vector search → budget check
+        _mockEmbeddingService
+            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[384] }));
+
+        _mockQdrantService
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<IReadOnlyList<string>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Api.Services.SearchResult.CreateSuccess(new List<SearchResultItem>()));
+
+        _mockBudgetService
+            .Setup(s => s.HasBudgetForQueryAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         _handler = new SendAgentMessageCommandHandler(
             _mockAgentRepository.Object,
             _mockChatThreadRepository.Object,
             _mockUnitOfWork.Object,
             _mockLlmService.Object,
-            Mock.Of<IQdrantService>(),
-            Mock.Of<IEmbeddingService>(),
-            Mock.Of<MeepleAiDbContext>(),
-            Mock.Of<IUserBudgetService>(),
+            _mockQdrantService.Object,
+            _mockEmbeddingService.Object,
+            _dbContext,
+            _mockBudgetService.Object,
             Mock.Of<ILlmModelOverrideService>(),
             _mockLogger.Object
         );
@@ -59,25 +91,20 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "What is Catan?", _userId);
 
         _mockAgentRepository
             .Setup(r => r.GetByIdAsync(agentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agent);
 
-        var chunks = new[]
-        {
-            new StreamChunk("Catan "),
-            new StreamChunk("is "),
-            new StreamChunk("a board game.")
-        };
-
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
+            .Setup(s => s.GenerateCompletionWithModelAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks));
+                It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Catan is a board game."));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -93,7 +120,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         Assert.Contains(events, e => e.Type == StreamingEventType.Complete);
 
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(3, tokenEvents.Count);
+        Assert.Single(tokenEvents); // Non-streaming: single token with full response
     }
 
     [Fact]
@@ -130,6 +157,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "Chess Master", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "Teach me chess", _userId);
 
         _mockAgentRepository
@@ -137,11 +165,12 @@ public sealed class SendAgentMessageCommandHandlerTests
             .ReturnsAsync(agent);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
+            .Setup(s => s.GenerateCompletionWithModelAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Chess is...") }));
+                It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Chess is..."));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -162,6 +191,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "Test question", _userId);
 
         _mockAgentRepository
@@ -169,11 +199,12 @@ public sealed class SendAgentMessageCommandHandlerTests
             .ReturnsAsync(agent);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
+            .Setup(s => s.GenerateCompletionWithModelAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Response") }));
+                It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Response"));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -187,7 +218,8 @@ public sealed class SendAgentMessageCommandHandlerTests
         Assert.Equal(StreamingEventType.Complete, completeEvent.Type);
 
         var complete = Assert.IsType<StreamingComplete>(completeEvent.Data);
-        Assert.True(complete.confidence > 0);
+        // No vector results returned → retrievalConfidence is null
+        Assert.Null(complete.confidence);
     }
 
     [Fact]
@@ -196,26 +228,21 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "Test", _userId);
 
         _mockAgentRepository
             .Setup(r => r.GetByIdAsync(agentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agent);
 
-        var chunks = new[]
-        {
-            new StreamChunk("Valid"),
-            new StreamChunk(""),
-            new StreamChunk(null),
-            new StreamChunk("Token")
-        };
-
+        // Empty LLM response should not emit a token event
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
+            .Setup(s => s.GenerateCompletionWithModelAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks));
+                It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(""));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -224,9 +251,13 @@ public sealed class SendAgentMessageCommandHandlerTests
             events.Add(@event);
         }
 
-        // Assert
+        // Assert - handler emits single token (non-streaming), but skips persistence for empty response
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(2, tokenEvents.Count); // Only non-empty chunks
+        Assert.Single(tokenEvents);
+        // Only user message update (no assistant persistence for empty response)
+        _mockChatThreadRepository.Verify(
+            r => r.UpdateAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -248,6 +279,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "What is Catan?", _userId);
 
         _mockAgentRepository
@@ -255,9 +287,9 @@ public sealed class SendAgentMessageCommandHandlerTests
             .ReturnsAsync(agent);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Answer") }));
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer"));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -280,6 +312,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         var agentId = Guid.NewGuid();
         var threadId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var existingThread = new ChatThread(threadId, _userId, agentId: agentId, title: "Existing thread");
         var command = new SendAgentMessageCommand(agentId, "Follow-up question", _userId, threadId);
 
@@ -292,9 +325,9 @@ public sealed class SendAgentMessageCommandHandlerTests
             .ReturnsAsync(existingThread);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Response") }));
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Response"));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -319,6 +352,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         var agentId = Guid.NewGuid();
         var threadId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "Question", _userId, threadId);
 
         _mockAgentRepository
@@ -348,6 +382,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "Question", _userId);
 
         _mockAgentRepository
@@ -355,9 +390,9 @@ public sealed class SendAgentMessageCommandHandlerTests
             .ReturnsAsync(agent);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Answer") }));
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer"));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -379,6 +414,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "Question", _userId);
 
         _mockAgentRepository
@@ -386,9 +422,9 @@ public sealed class SendAgentMessageCommandHandlerTests
             .ReturnsAsync(agent);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Answer") }));
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer"));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -409,6 +445,7 @@ public sealed class SendAgentMessageCommandHandlerTests
         // Arrange
         var agentId = Guid.NewGuid();
         var agent = new Agent(agentId, "TestAgent", AgentType.RagAgent, AgentStrategy.Custom("default", new Dictionary<string, object>(StringComparer.Ordinal)), true);
+        SeedAgentConfiguration(agentId);
         var command = new SendAgentMessageCommand(agentId, "What is Catan?", _userId);
 
         _mockAgentRepository
@@ -416,9 +453,9 @@ public sealed class SendAgentMessageCommandHandlerTests
             .ReturnsAsync(agent);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(new[] { new StreamChunk("Catan is great") }));
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Catan is great"));
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -437,12 +474,23 @@ public sealed class SendAgentMessageCommandHandlerTests
             Times.Exactly(3));
     }
 
-    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
+    private void SeedAgentConfiguration(Guid agentId)
     {
-        foreach (var item in items)
+        _dbContext.AgentConfigurations.Add(new AgentConfigurationEntity
         {
-            await Task.Yield();
-            yield return item;
-        }
+            Id = Guid.NewGuid(),
+            AgentId = agentId,
+            LlmProvider = 0,
+            LlmModel = "gpt-4",
+            AgentMode = 0,
+            SelectedDocumentIdsJson = $"[\"{Guid.NewGuid()}\"]",
+            Temperature = 0.7m,
+            MaxTokens = 2048,
+            IsCurrent = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.NewGuid()
+        });
+        _dbContext.SaveChanges();
     }
+
 }

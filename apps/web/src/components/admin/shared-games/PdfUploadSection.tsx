@@ -7,18 +7,27 @@
  * - Upload progress tracking
  * - File validation (PDF, 50MB limit)
  * - Links uploaded PDF to SharedGame
+ * - Live processing status polling after upload (Issue #5196)
  */
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // ========== Types ==========
 
@@ -57,7 +66,59 @@ export function PdfUploadSection({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Processing status polling (Issue #5196)
+  const [processingDoc, setProcessingDoc] = useState<PdfDocumentDto | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+  const TERMINAL_STATES = new Set(['Ready', 'Failed']);
+
+  // Poll document processing status after upload (Issue #5196)
+  useEffect(() => {
+    if (!processingDoc || !gameId || TERMINAL_STATES.has(processingDoc.processingState)) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/v1/games/${gameId}/pdfs`, { credentials: 'include' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { pdfs?: PdfDocumentDto[] } | PdfDocumentDto[];
+        const pdfs: PdfDocumentDto[] = Array.isArray(json) ? json : (json.pdfs ?? []);
+        const doc = pdfs.find(p => p.id === processingDoc.id);
+        if (doc) {
+          setProcessingDoc(doc);
+          if (TERMINAL_STATES.has(doc.processingState)) {
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+            if (doc.processingState === 'Ready') {
+              toast.success('PDF indicizzato con successo!');
+            }
+          }
+        }
+      } catch {
+        // ignore transient errors
+      }
+    };
+
+    pollingRef.current = setInterval(() => {
+      void poll();
+    }, 3000);
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processingDoc?.id, processingDoc?.processingState, gameId]);
 
   // Validate file selection
   const validateFile = useCallback((selectedFile: File): boolean => {
@@ -113,25 +174,31 @@ export function PdfUploadSection({
   }, []);
 
   // Link PDF to SharedGame
-  const linkPdfToGame = useCallback(async (targetGameId: string, pdfId: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/shared-games/${targetGameId}/documents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ documentId: pdfId, setAsActive: true }),
-      });
+  const linkPdfToGame = useCallback(
+    async (targetGameId: string, pdfId: string) => {
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/v1/admin/shared-games/${targetGameId}/documents`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ documentId: pdfId, setAsActive: true }),
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error('Errore nel collegamento del PDF al gioco');
+        if (!response.ok) {
+          throw new Error('Errore nel collegamento del PDF al gioco');
+        }
+
+        toast.success('PDF collegato al gioco');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Errore sconosciuto';
+        toast.error(`Collegamento fallito: ${message}`);
       }
-
-      toast.success('PDF collegato al gioco');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Errore sconosciuto';
-      toast.error(`Collegamento fallito: ${message}`);
-    }
-  }, [API_BASE]);
+    },
+    [API_BASE]
+  );
 
   // Upload PDF
   const handleUpload = useCallback(async () => {
@@ -152,44 +219,46 @@ export function PdfUploadSection({
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ id: string }>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', e => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        });
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch {
-              reject(new Error('Risposta server non valida'));
+      const uploadPromise = new Promise<{ documentId: string; fileName: string }>(
+        (resolve, reject) => {
+          xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable) {
+              setUploadProgress(Math.round((e.loaded / e.total) * 100));
             }
-          } else {
-            try {
-              const errorResponse = JSON.parse(xhr.responseText);
-              reject(new Error(errorResponse.error || 'Upload fallito'));
-            } catch {
-              reject(new Error(`Upload fallito: ${xhr.statusText}`));
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response);
+              } catch {
+                reject(new Error('Risposta server non valida'));
+              }
+            } else {
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                reject(new Error(errorResponse.error || 'Upload fallito'));
+              } catch {
+                reject(new Error(`Upload fallito: ${xhr.statusText}`));
+              }
             }
-          }
-        });
+          });
 
-        xhr.addEventListener('error', () => {
-          reject(new Error('Errore di rete durante l\'upload'));
-        });
+          xhr.addEventListener('error', () => {
+            reject(new Error("Errore di rete durante l'upload"));
+          });
 
-        xhr.open('POST', `${API_BASE}/api/v1/ingest/upload`);
-        xhr.withCredentials = true;
-        xhr.send(formData);
-      });
+          xhr.open('POST', '/api/v1/ingest/pdf');
+          xhr.withCredentials = true;
+          xhr.send(formData);
+        }
+      );
 
       const result = await uploadPromise;
 
       const uploaded: UploadedPdf = {
-        id: result.id,
+        id: result.documentId,
         fileName: file.name,
         fileSize: file.size,
       };
@@ -199,9 +268,30 @@ export function PdfUploadSection({
       toast.success('PDF caricato con successo!');
       onPdfUploaded?.(uploaded);
 
-      // If we have a gameId, link the PDF to the game
+      // If we have a gameId, link the PDF to the game and start polling
       if (gameId) {
-        await linkPdfToGame(gameId, result.id);
+        await linkPdfToGame(gameId, result.documentId);
+        // Start processing status polling (Issue #5196)
+        setProcessingDoc({
+          id: result.documentId,
+          gameId,
+          fileName: file.name,
+          filePath: '',
+          fileSizeBytes: file.size,
+          processingStatus: 'Processing',
+          uploadedAt: new Date().toISOString(),
+          processedAt: null,
+          pageCount: null,
+          documentType: 'base',
+          isPublic: false,
+          processingState: 'Uploading',
+          progressPercentage: 0,
+          retryCount: 0,
+          maxRetries: 3,
+          canRetry: false,
+          errorCategory: null,
+          processingError: null,
+        });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore sconosciuto';
@@ -217,6 +307,7 @@ export function PdfUploadSection({
     setUploadedPdf(null);
     setFile(null);
     setError(null);
+    setProcessingDoc(null);
     onPdfRemoved?.();
   }, [onPdfRemoved]);
 
@@ -262,6 +353,16 @@ export function PdfUploadSection({
             >
               <X className="h-4 w-4" />
             </Button>
+          </div>
+        )}
+
+        {/* Processing status (polling after upload) - Issue #5196 */}
+        {processingDoc && (
+          <div data-testid="pdf-processing-status">
+            <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
+              Stato elaborazione
+            </p>
+            <KbCardStatusRow document={processingDoc} />
           </div>
         )}
 

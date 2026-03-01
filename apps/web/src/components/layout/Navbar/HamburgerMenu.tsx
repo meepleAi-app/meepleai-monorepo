@@ -183,7 +183,7 @@ export function HamburgerMenu({ className }: HamburgerMenuProps) {
         <div className="mt-auto border-t border-border/50 p-4 space-y-3">
           {/* Settings link */}
           <Link
-            href="/settings"
+            href="/profile?tab=settings"
             onClick={handleNavigation}
             className={cn(
               'flex items-center gap-2 px-4 py-3 rounded-lg',

@@ -12,6 +12,7 @@ import { notFound } from 'next/navigation';
 
 import { AgentInfoCard } from '@/components/agent/AgentInfoCard';
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import { api } from '@/lib/api';
 
 interface AgentPageProps {
@@ -102,6 +103,7 @@ export default async function AgentPage({ params }: AgentPageProps) {
           title={agent.name}
           subtitle={agent.isActive ? 'Active' : 'Inactive'}
           metadata={metadata}
+          navigateTo={getNavigationLinks('agent', { id: agent.id })}
         />
 
         {/* Right: Tabbed Chat Interface */}

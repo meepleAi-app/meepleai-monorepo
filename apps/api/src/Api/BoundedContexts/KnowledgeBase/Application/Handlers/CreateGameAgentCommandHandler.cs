@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -66,9 +67,26 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
             throw new ConflictException($"Invalid RAG strategy: '{request.StrategyName}'");
         }
 
-        // 4. Get or create library entry for this game
+        // 3.5. Check if agent already exists for this game before quota validation.
+        // This ensures a user at their limit who re-submits for an existing agent gets the
+        // correct "already exists" error rather than a misleading quota error. (Issue #4944)
         var entry = await _libraryRepository.GetByUserAndGameAsync(request.UserId, request.GameId, cancellationToken).ConfigureAwait(false);
 
+        if (entry != null && entry.HasCustomAgent())
+        {
+            throw new ConflictException($"Agent configuration already exists for game '{game.Title}'");
+        }
+
+        // 4. Enforce agent creation quota per user tier (Issue #4944)
+        var agentCount = await _libraryRepository.GetAgentConfigCountAsync(request.UserId, cancellationToken).ConfigureAwait(false);
+        var maxAgents = AgentTierLimits.GetMaxAgents(request.UserTier, request.UserRole);
+        if (agentCount >= maxAgents)
+        {
+            throw new ConflictException(
+                $"Agent limit reached ({maxAgents}). Upgrade your tier for more agents.");
+        }
+
+        // 5. Get or create library entry for this game
         if (entry == null)
         {
             // Game not in user's library - add it first
@@ -79,13 +97,8 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
             );
             await _libraryRepository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
         }
-        else if (entry.HasCustomAgent())
-        {
-            // Agent config already exists - conflict
-            throw new ConflictException($"Agent configuration already exists for game '{game.Title}'");
-        }
 
-        // 5. Create agent configuration (using typology defaults + strategy)
+        // 6. Create agent configuration (using typology defaults + strategy)
         var agentConfig = AgentConfiguration.Create(
             llmModel: typology.DefaultStrategy.GetParameter<string>("Model", "gpt-4"),
             temperature: typology.DefaultStrategy.GetParameter<double>("Temperature", 0.7),
@@ -95,10 +108,10 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
             personalNotes: request.StrategyParameters
         );
 
-        // 6. Configure agent through domain method
+        // 7. Configure agent through domain method
         entry.ConfigureAgent(agentConfig);
 
-        // 7. Persist changes
+        // 8. Persist changes
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
@@ -109,7 +122,7 @@ internal class CreateGameAgentCommandHandler : IRequestHandler<CreateGameAgentCo
             strategy.GetDisplayName()
         );
 
-        // 8. Return result
+        // 9. Return result
         return new CreateGameAgentResult
         {
             LibraryEntryId = entry.Id,

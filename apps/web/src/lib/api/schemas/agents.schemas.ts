@@ -23,6 +23,9 @@ export const AgentDtoSchema = z.object({
   invocationCount: z.number().int().nonnegative(),
   isRecentlyUsed: z.boolean(),
   isIdle: z.boolean(),
+  // Issue #4914: user-owned agent fields
+  gameId: z.string().uuid().nullable().optional(),
+  createdByUserId: z.string().uuid().nullable().optional(),
 });
 
 export type AgentDto = z.infer<typeof AgentDtoSchema>;

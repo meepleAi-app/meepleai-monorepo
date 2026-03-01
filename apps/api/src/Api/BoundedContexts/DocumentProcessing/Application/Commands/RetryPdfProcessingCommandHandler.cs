@@ -1,7 +1,6 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
-using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -11,7 +10,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// <summary>
 /// Handler for RetryPdfProcessingCommand.
 /// Issue #4216: Manual retry mechanism for failed PDF processing.
-/// Refactored to use domain method for proper DDD architecture.
+/// Issue #5189: Added IsAdmin flag; aligned error handling to throw NotFoundException/ForbiddenException.
 /// </summary>
 internal sealed class RetryPdfProcessingCommandHandler
     : ICommandHandler<RetryPdfProcessingCommand, RetryPdfProcessingResult>
@@ -44,24 +43,13 @@ internal sealed class RetryPdfProcessingCommandHandler
             .ConfigureAwait(false);
 
         if (pdf == null)
-        {
-            return new RetryPdfProcessingResult(
-                Success: false,
-                CurrentState: "NotFound",
-                RetryCount: 0,
-                Message: $"PDF document {command.PdfId} not found"
-            );
-        }
+            throw new NotFoundException("PdfDocument", command.PdfId.ToString());
 
-        // Authorization: Only owner can retry (admin check would go here if needed)
-        if (pdf.UploadedByUserId != command.UserId)
+        // Authorization: admin can retry any PDF; owner can retry their own
+        if (!command.IsAdmin && pdf.UploadedByUserId != command.UserId)
         {
-            return new RetryPdfProcessingResult(
-                Success: false,
-                CurrentState: pdf.ProcessingState.ToString(),
-                RetryCount: pdf.RetryCount,
-                Message: $"User {command.UserId} is not authorized to retry this PDF"
-            );
+            throw new ForbiddenException(
+                $"User {command.UserId} is not authorized to retry PDF {command.PdfId}");
         }
 
         // Apply domain retry logic with proper validation and state transitions
@@ -82,8 +70,10 @@ internal sealed class RetryPdfProcessingCommandHandler
             await _mediator.Publish(retryEvent, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "PDF {PdfId} retry initiated: RetryCount={RetryCount}, State={State}",
+                "PDF {PdfId} retry initiated by {UserId} (IsAdmin={IsAdmin}): RetryCount={RetryCount}, State={State}",
                 command.PdfId,
+                command.UserId,
+                command.IsAdmin,
                 pdf.RetryCount,
                 pdf.ProcessingState);
 

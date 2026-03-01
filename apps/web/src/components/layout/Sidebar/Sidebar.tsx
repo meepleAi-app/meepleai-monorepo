@@ -1,17 +1,21 @@
 /**
- * Sidebar Component
- * Desktop-only collapsible sidebar with navigation, user section, and logo.
+ * Sidebar Component - Issue #4936 (updated)
+ * Desktop-only collapsible sidebar with context-sensitive navigation.
  * Hidden on mobile (< md breakpoint).
+ *
+ * Changes from original (Issue #3479):
+ * - Starts at top-14 (56px offset for UniversalNavbar)
+ * - Height: h-[calc(100vh-56px)] instead of h-screen
+ * - Logo removed (now in UniversalNavbar)
+ * - SidebarNav replaced by SidebarContextNav (context-sensitive, animated)
+ * - SidebarUser kept for notifications + theme (profile moved to navbar)
  */
 
 'use client';
 
-import Link from 'next/link';
-
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import { cn } from '@/lib/utils';
 
-import { SidebarNav } from './SidebarNav';
+import { SidebarContextNav } from './SidebarContextNav';
 import { SidebarToggle } from './SidebarToggle';
 import { SidebarUser } from './SidebarUser';
 
@@ -25,7 +29,9 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     <aside
       className={cn(
         'hidden md:flex flex-col',
-        'fixed top-0 left-0 h-screen z-40',
+        // Offset 56px for UniversalNavbar (h-14)
+        'fixed top-14 left-0 z-40',
+        'h-[calc(100vh-56px)]',
         'bg-sidebar text-sidebar-foreground',
         'border-r border-sidebar-border',
         'transition-[width] duration-200 ease-in-out motion-reduce:transition-none',
@@ -37,22 +43,10 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       {/* Toggle button */}
       <SidebarToggle isCollapsed={isCollapsed} onToggle={onToggle} />
 
-      {/* Logo */}
-      <div className={cn('flex items-center border-b border-sidebar-border', isCollapsed ? 'justify-center px-2 py-4' : 'px-4 py-4')}>
-        <Link href="/dashboard" className="flex items-center gap-2" aria-label="MeepleAI Home">
-          <MeepleLogo variant="icon" size="sm" />
-          {!isCollapsed && (
-            <span className="font-quicksand font-bold text-lg text-sidebar-foreground">
-              MeepleAI
-            </span>
-          )}
-        </Link>
-      </div>
+      {/* Context-sensitive navigation (scrollable middle) */}
+      <SidebarContextNav isCollapsed={isCollapsed} />
 
-      {/* Navigation (scrollable middle) */}
-      <SidebarNav isCollapsed={isCollapsed} />
-
-      {/* User section (bottom) */}
+      {/* User utilities (bottom): notifications + theme toggle */}
       <SidebarUser isCollapsed={isCollapsed} />
     </aside>
   );

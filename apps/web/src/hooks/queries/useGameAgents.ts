@@ -51,5 +51,7 @@ export function useGameAgents({ gameId, enabled = true }: UseGameAgentsOptions) 
     enabled: enabled && gameId !== null,
     staleTime: 30_000, // 30 seconds - agent lists don't change frequently
     gcTime: 5 * 60_000, // 5 minutes cache
+    // Don't retry on 404 — game ID may not exist in shared catalog (e.g. private game UUIDs)
+    retry: false,
   });
 }

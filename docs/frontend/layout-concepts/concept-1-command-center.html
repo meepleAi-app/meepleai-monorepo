@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeepleAI — Concept 1: Command Center</title>
+<style>
+  /* ============================================================
+     CONCEPT 1: COMMAND CENTER
+     Linear.app inspired — horizontal tier system, spacious, clean
+
+     Mobile: navbar collapses to hamburger + bottom action-bar
+     Tablet: mini-nav scrolls horizontally, action-bar stays docked
+     Desktop: full 3-tier layout as shown
+     ============================================================ */
+
+  :root {
+    --bg:        #0a0a0f;
+    --bg-card:   #111118;
+    --bg-nav:    #0d0d14;
+    --border:    rgba(255,255,255,0.06);
+    --border-md: rgba(255,255,255,0.10);
+    --text-1:    #f1f1f4;
+    --text-2:    #9090a8;
+    --text-3:    #5a5a72;
+    --accent:    #7c6af7;
+    --accent-2:  #5b4fd4;
+    --accent-glow: rgba(124,106,247,0.15);
+    --success:   #22c55e;
+    --warning:   #f59e0b;
+    --danger:    #ef4444;
+
+    --nav-h:     52px;
+    --mini-h:    44px;
+    --action-h:  56px;
+    --sidebar-w: 0px; /* Command Center: no sidebar */
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-pill: 999px;
+
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    --trans: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-1);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- TIER 1: NAVBAR ---- */
+  .navbar {
+    height: var(--nav-h);
+    background: var(--bg-nav);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
+  }
+
+  .navbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.3px;
+    color: var(--text-1);
+    text-decoration: none;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  /* Pill group containers */
+  .nav-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 3px;
+  }
+
+  .nav-group + .nav-group { margin-left: 4px; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all var(--trans);
+    white-space: nowrap;
+    text-decoration: none;
+    user-select: none;
+    border: none;
+    background: none;
+  }
+
+  .nav-item:hover {
+    color: var(--text-1);
+    background: rgba(255,255,255,0.06);
+  }
+
+  .nav-item.active {
+    color: var(--text-1);
+    background: rgba(124,106,247,0.18);
+  }
+
+  .nav-item svg { opacity: 0.75; flex-shrink: 0; }
+  .nav-item.active svg { opacity: 1; }
+
+  .nav-spacer { flex: 1; }
+
+  .nav-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 99px;
+    line-height: 1.4;
+  }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c6af7, #a78bfa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+    border: 2px solid var(--border-md);
+  }
+
+  /* ---- TIER 2: MINI-NAV ---- */
+  .mini-nav {
+    height: var(--mini-h);
+    background: var(--bg-nav);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 4px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    position: relative;
+    z-index: 40;
+  }
+
+  .mini-nav::-webkit-scrollbar { display: none; }
+
+  .mini-nav-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  .mini-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all var(--trans);
+    white-space: nowrap;
+    border: none;
+    background: none;
+  }
+
+  .mini-item:hover {
+    color: var(--text-1);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .mini-item.active {
+    color: var(--text-1);
+    background: rgba(255,255,255,0.08);
+    position: relative;
+  }
+
+  .mini-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 16px);
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .mini-count {
+    font-size: 10px;
+    color: var(--text-3);
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  /* ---- MAIN LAYOUT ---- */
+  .layout-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    padding-bottom: calc(var(--action-h) + 24px);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-md) transparent;
+  }
+
+  /* ---- TIER 3: ACTION-BAR ---- */
+  .action-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--action-h);
+    background: var(--bg-nav);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 8px;
+    z-index: 30;
+  }
+
+  .action-bar-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--trans);
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .action-btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-2);
+  }
+  .action-btn-primary:hover {
+    background: #8b78ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124,106,247,0.35);
+  }
+
+  .action-btn-secondary {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-2);
+    border-color: var(--border);
+  }
+  .action-btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-1);
+  }
+
+  .action-btn-ghost {
+    background: none;
+    color: var(--text-3);
+    border: none;
+  }
+  .action-btn-ghost:hover { color: var(--text-2); background: rgba(255,255,255,0.04); }
+
+  .action-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  .action-spacer { flex: 1; }
+
+  /* ---- CONTENT AREA ---- */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+  }
+
+  .section-meta {
+    font-size: 13px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+
+  /* Game grid */
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .game-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--trans);
+    position: relative;
+  }
+
+  .game-card:hover {
+    border-color: var(--border-md);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  .game-card-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .game-card-body {
+    padding: 12px;
+  }
+
+  .game-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .game-card-meta {
+    font-size: 11px;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .game-card-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 3px 7px;
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+  }
+
+  .badge-indexed {
+    background: rgba(34,197,94,0.2);
+    color: var(--success);
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+
+  .badge-processing {
+    background: rgba(245,158,11,0.2);
+    color: var(--warning);
+    border: 1px solid rgba(245,158,11,0.3);
+  }
+
+  .rating {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text-1);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  .stat-delta {
+    font-size: 11px;
+    color: var(--success);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* Color swatches for game cards */
+  .gc-1 { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
+  .gc-2 { background: linear-gradient(135deg, #1c1917 0%, #3d2b1f 100%); }
+  .gc-3 { background: linear-gradient(135deg, #042f2e 0%, #134e4a 100%); }
+  .gc-4 { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+  .gc-5 { background: linear-gradient(135deg, #2d1515 0%, #4a1515 100%); }
+  .gc-6 { background: linear-gradient(135deg, #1a2535 0%, #0f3460 100%); }
+
+  /* Concept switcher */
+  .concept-switcher {
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    background: rgba(13,13,20,0.95);
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .cs-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    padding: 0 4px 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+
+  .cs-btn {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 8px;
+    border-radius: 5px;
+    color: var(--text-2);
+    cursor: pointer;
+    border: none;
+    background: none;
+    text-align: left;
+    transition: all var(--trans);
+    white-space: nowrap;
+  }
+  .cs-btn:hover { color: var(--text-1); background: rgba(255,255,255,0.06); }
+  .cs-btn.current { color: var(--accent); font-weight: 700; }
+
+  /* Tab switching logic */
+  [data-section] { display: none; }
+  [data-section].visible { display: block; }
+
+  /* Scrollbar */
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     TIER 1: NAVBAR — always visible, role-aware
+     ============================================================ -->
+<nav class="navbar">
+  <a class="navbar-logo" href="#">
+    <div class="logo-icon">♟</div>
+    MeepleAI
+  </a>
+
+  <!-- Tool group -->
+  <div class="nav-group">
+    <button class="nav-item active" onclick="switchSection('library')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Library
+    </button>
+    <button class="nav-item" onclick="switchSection('agents')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Agents
+    </button>
+    <button class="nav-item" onclick="switchSection('chat')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+      <span class="nav-badge">3</span>
+    </button>
+    <button class="nav-item" onclick="switchSection('sessions')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Sessions
+    </button>
+  </div>
+
+  <!-- Discover group -->
+  <div class="nav-group">
+    <button class="nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Catalog
+    </button>
+    <button class="nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Community
+    </button>
+    <button class="nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Proposals
+    </button>
+  </div>
+
+  <div class="nav-spacer"></div>
+
+  <!-- Admin group -->
+  <div class="nav-group">
+    <button class="nav-item" onclick="switchSection('admin')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Admin
+    </button>
+  </div>
+
+  <div class="avatar">JD</div>
+</nav>
+
+<!-- ============================================================
+     TIER 2: MINI-NAV — context-dependent sub-tabs
+     ============================================================ -->
+<div class="mini-nav" id="mini-library">
+  <span class="mini-nav-label">Library</span>
+  <button class="mini-item active">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Games
+    <span class="mini-count">24</span>
+  </button>
+  <button class="mini-item">Wishlist <span class="mini-count">8</span></button>
+  <button class="mini-item">Private <span class="mini-count">2</span></button>
+  <button class="mini-item">History</button>
+</div>
+
+<div class="mini-nav" id="mini-agents" style="display:none">
+  <span class="mini-nav-label">Agents</span>
+  <button class="mini-item active">My Agents <span class="mini-count">3</span></button>
+  <button class="mini-item">Slots</button>
+</div>
+
+<div class="mini-nav" id="mini-chat" style="display:none">
+  <span class="mini-nav-label">Chat</span>
+  <button class="mini-item active">Recent</button>
+  <button class="mini-item">All Threads <span class="mini-count">12</span></button>
+</div>
+
+<div class="mini-nav" id="mini-sessions" style="display:none">
+  <span class="mini-nav-label">Sessions</span>
+  <button class="mini-item active">Active <span class="mini-count">1</span></button>
+  <button class="mini-item">Past</button>
+  <button class="mini-item">Scoring</button>
+</div>
+
+<div class="mini-nav" id="mini-admin" style="display:none">
+  <span class="mini-nav-label">Admin</span>
+  <button class="mini-item active">Users</button>
+  <button class="mini-item">AI</button>
+  <button class="mini-item">Content</button>
+  <button class="mini-item">Analytics</button>
+  <button class="mini-item">Config</button>
+  <button class="mini-item">Monitor</button>
+</div>
+
+<!-- ============================================================
+     MAIN BODY
+     ============================================================ -->
+<div class="layout-body">
+  <main class="content">
+
+    <!-- LIBRARY SECTION -->
+    <div id="section-library" data-section class="visible">
+      <div class="section-header">
+        <div>
+          <div class="section-title">My Library</div>
+          <div class="section-meta">24 games · Last played 2 days ago</div>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-value">24</div>
+          <div class="stat-label">Total Games</div>
+          <div class="stat-delta">+3 this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Active Agents</div>
+          <div class="stat-delta">2 indexed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">47</div>
+          <div class="stat-label">Sessions</div>
+          <div class="stat-delta">12h played</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">8</div>
+          <div class="stat-label">KB Documents</div>
+          <div class="stat-delta">All indexed</div>
+        </div>
+      </div>
+
+      <div class="game-grid">
+        <div class="game-card">
+          <div class="game-card-img gc-1">🎲
+            <span class="game-card-badge badge-indexed">KB Ready</span>
+          </div>
+          <div class="game-card-body">
+            <div class="game-card-title">Gloomhaven</div>
+            <div class="game-card-meta">
+              <span class="rating">★ 8.8</span>
+              · Dungeon Crawler
+            </div>
+          </div>
+        </div>
+
+        <div class="game-card">
+          <div class="game-card-img gc-2">🗺
+            <span class="game-card-badge badge-processing">Indexing…</span>
+          </div>
+          <div class="game-card-body">
+            <div class="game-card-title">Spirit Island</div>
+            <div class="game-card-meta">
+              <span class="rating">★ 8.4</span>
+              · Strategy
+            </div>
+          </div>
+        </div>
+
+        <div class="game-card">
+          <div class="game-card-img gc-3">🌊</div>
+          <div class="game-card-body">
+            <div class="game-card-title">Wingspan</div>
+            <div class="game-card-meta">
+              <span class="rating">★ 8.1</span>
+              · Engine Builder
+            </div>
+          </div>
+        </div>
+
+        <div class="game-card">
+          <div class="game-card-img gc-4">⚔️
+            <span class="game-card-badge badge-indexed">KB Ready</span>
+          </div>
+          <div class="game-card-body">
+            <div class="game-card-title">Twilight Imperium</div>
+            <div class="game-card-meta">
+              <span class="rating">★ 8.7</span>
+              · Space Opera
+            </div>
+          </div>
+        </div>
+
+        <div class="game-card">
+          <div class="game-card-img gc-5">🏰</div>
+          <div class="game-card-body">
+            <div class="game-card-title">Terraforming Mars</div>
+            <div class="game-card-meta">
+              <span class="rating">★ 8.4</span>
+              · Sci-Fi
+            </div>
+          </div>
+        </div>
+
+        <div class="game-card">
+          <div class="game-card-img gc-6">🌌</div>
+          <div class="game-card-body">
+            <div class="game-card-title">Root</div>
+            <div class="game-card-meta">
+              <span class="rating">★ 8.1</span>
+              · Asymmetric
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENTS SECTION -->
+    <div id="section-agents" data-section>
+      <div class="section-header">
+        <div>
+          <div class="section-title">AI Agents</div>
+          <div class="section-meta">3 of 5 slots used</div>
+        </div>
+      </div>
+      <div style="color:var(--text-2); text-align:center; padding: 60px 0; font-size:15px;">
+        Agents panel — switch sections via navbar
+      </div>
+    </div>
+
+    <!-- CHAT SECTION -->
+    <div id="section-chat" data-section>
+      <div class="section-header">
+        <div>
+          <div class="section-title">Chat</div>
+          <div class="section-meta">3 unread threads</div>
+        </div>
+      </div>
+      <div style="color:var(--text-2); text-align:center; padding: 60px 0; font-size:15px;">
+        Chat panel
+      </div>
+    </div>
+
+    <!-- SESSIONS SECTION -->
+    <div id="section-sessions" data-section>
+      <div class="section-header">
+        <div><div class="section-title">Sessions</div></div>
+      </div>
+      <div style="color:var(--text-2); text-align:center; padding: 60px 0; font-size:15px;">
+        Sessions panel
+      </div>
+    </div>
+
+    <!-- ADMIN SECTION -->
+    <div id="section-admin" data-section>
+      <div class="section-header">
+        <div>
+          <div class="section-title">Admin Panel</div>
+          <div class="section-meta">MeepleAI v2.1 · 1,247 users</div>
+        </div>
+      </div>
+      <div style="color:var(--text-2); text-align:center; padding: 60px 0; font-size:15px;">
+        Admin panel
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       TIER 3: ACTION-BAR — sticky bottom, changes with section
+       ============================================================ -->
+  <div class="action-bar" id="action-library">
+    <span class="action-bar-label">Actions</span>
+    <button class="action-btn action-btn-primary">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Game
+    </button>
+    <button class="action-btn action-btn-secondary">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import BGG
+    </button>
+    <button class="action-btn action-btn-secondary">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Upload PDF
+    </button>
+    <div class="action-divider"></div>
+    <button class="action-btn action-btn-ghost">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      Filter
+    </button>
+    <button class="action-btn action-btn-ghost">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      View
+    </button>
+    <div class="action-spacer"></div>
+    <span style="font-size:12px; color:var(--text-3)">24 games</span>
+  </div>
+
+</div>
+
+<!-- Quick nav switcher UI label -->
+<div class="concept-switcher">
+  <div class="cs-label">Layout Concept</div>
+  <div class="cs-btn current">1 · Command Center</div>
+  <a class="cs-btn" href="concept-2-focus-flow.html">2 · Focus Flow</a>
+  <a class="cs-btn" href="concept-3-game-board.html">3 · Game Board</a>
+  <a class="cs-btn" href="concept-4-spatial-layers.html">4 · Spatial Layers</a>
+  <a class="cs-btn" href="concept-5-mobile-native.html">5 · Mobile Native</a>
+</div>
+
+<script>
+  function switchSection(section) {
+    // Update nav items
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    // Hide all sections and mini-navs
+    document.querySelectorAll('[data-section]').forEach(el => el.classList.remove('visible'));
+    document.querySelectorAll('.mini-nav').forEach(el => el.style.display = 'none');
+
+    // Show target
+    const sec = document.getElementById('section-' + section);
+    if (sec) sec.classList.add('visible');
+
+    const mini = document.getElementById('mini-' + section);
+    if (mini) mini.style.display = 'flex';
+
+    // Update action bar
+    const bar = document.getElementById('action-library');
+    if (section === 'library') {
+      bar.style.display = 'flex';
+    } else {
+      // For demo, keep showing library action bar with adapted content
+      bar.style.display = 'flex';
+    }
+  }
+
+  // Mini-nav tab interactivity
+  document.querySelectorAll('.mini-item').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.closest('.mini-nav').querySelectorAll('.mini-item').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

@@ -25,6 +25,8 @@
  * Authorized Roles: Admin, Editor
  */
 
+import { Suspense } from 'react';
+
 import dynamic from 'next/dynamic';
 
 import { RequireRole } from '@/components/auth/RequireRole';
@@ -42,7 +44,9 @@ const EditorClient = dynamic(
 export default function EditorPage() {
   return (
     <RequireRole allowedRoles={['Admin', 'Editor']}>
-      <EditorClient />
+      <Suspense fallback={<div className="flex items-center justify-center h-screen">Caricamento editor...</div>}>
+        <EditorClient />
+      </Suspense>
     </RequireRole>
   );
 }

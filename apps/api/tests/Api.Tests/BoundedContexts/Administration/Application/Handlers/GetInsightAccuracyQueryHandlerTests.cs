@@ -15,7 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Unit tests for GetInsightAccuracyQueryHandler.
 /// Issue #4124: AI Insights Runtime Validation (Performance + Accuracy).
 /// </summary>
-public class GetInsightAccuracyQueryHandlerTests : IDisposable
+public sealed class GetInsightAccuracyQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly FakeTimeProvider _timeProvider;

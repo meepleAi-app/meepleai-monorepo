@@ -129,7 +129,8 @@ internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSe
             userId: entity.UserId,
             fileName: entity.FileName,
             totalFileSize: entity.TotalFileSize,
-            tempDirectory: entity.TempDirectory
+            tempDirectory: entity.TempDirectory,
+            privateGameId: entity.PrivateGameId
         );
 
         // Override properties from DB using reflection
@@ -157,6 +158,7 @@ internal class ChunkedUploadSessionRepository : RepositoryBase, IChunkedUploadSe
         {
             Id = domain.Id,
             GameId = domain.GameId,
+            PrivateGameId = domain.PrivateGameId,
             UserId = domain.UserId,
             FileName = domain.FileName,
             TotalFileSize = domain.TotalFileSize,

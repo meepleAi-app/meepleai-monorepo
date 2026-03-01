@@ -10,6 +10,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -228,6 +229,19 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             "Searching for game {GameId} with {DocumentCount} PDF document filters",
             gameId, pdfDocumentIds.Count);
 
+        // Debug: emit retrieval start event (Issue #4916)
+        var retrievalStopwatch = Stopwatch.StartNew();
+        yield return CreateEvent(
+            StreamingEventType.DebugRetrievalStart,
+            new
+            {
+                query = command.UserQuestion,
+                gameId,
+                documentIds = pdfDocumentIds,
+                limit = 10,
+                minScore = 0.6
+            });
+
         var searchResult = await _qdrantService.SearchAsync(
             gameId,
             embeddingResult.Embeddings[0],
@@ -250,12 +264,36 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         var relevantChunks = searchResult.Results
             .Where(r => r.Score >= minScore)
             .ToList();
+        retrievalStopwatch.Stop();
 
         _logger.LogInformation(
             "Retrieved {ChunkCount} relevant chunks (score >= {MinScore}) for agent {AgentId}",
             relevantChunks.Count, minScore, command.AgentId);
 
+        // Debug: emit retrieval results event (Issue #4916)
+        yield return CreateEvent(
+            StreamingEventType.DebugRetrievalResults,
+            new
+            {
+                totalResults = searchResult.Results.Count,
+                filteredCount = relevantChunks.Count,
+                minScore,
+                latencyMs = retrievalStopwatch.ElapsedMilliseconds,
+                chunks = relevantChunks.Take(5).Select(c => new
+                {
+                    text = c.Text.Length > 200 ? string.Concat(c.Text.AsSpan(0, 197), "...") : c.Text,
+                    score = c.Score,
+                    page = c.Page,
+                    pdfId = c.PdfId
+                }).ToList()
+            });
+
         var ragContext = BuildContextFromChunks(relevantChunks);
+
+        // Compute confidence from average top-3 retrieval scores (null if no chunks retrieved)
+        var retrievalConfidence = relevantChunks.Count > 0
+            ? (double?)relevantChunks.Take(3).Average(c => c.Score)
+            : null;
 
         // Step 4: Emit citations for frontend display
         if (relevantChunks.Count > 0)
@@ -282,9 +320,26 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                           "If the context doesn't contain the answer, say so clearly. " +
                           "Always cite the page number when referencing specific rules.";
 
+        // Debug: emit prompt context event (Issue #4916)
+        // Server-side role check: systemPrompt only visible to Admin/Editor roles
+        var role = command.UserRole?.ToLowerInvariant();
+        var isAdminCaller = role is "admin" or "superadmin" or "editor";
+        var estimatedPromptTokens = (systemPrompt.Length + (ragContext.Length > 0 ? ragContext.Length : command.UserQuestion.Length)) / 4;
+
         var userPrompt = string.IsNullOrEmpty(ragContext)
             ? $"Question: {command.UserQuestion}\n\nNote: No relevant context found in knowledge base."
             : $"Context from game documents:\n{ragContext}\n\nQuestion: {command.UserQuestion}\n\nProvide a clear answer based on the context above.";
+
+        yield return CreateEvent(
+            StreamingEventType.DebugPromptContext,
+            new
+            {
+                systemPrompt = isAdminCaller ? systemPrompt : "[redacted]",
+                userPromptPreview = userPrompt.Length > 500 ? string.Concat(userPrompt.AsSpan(0, 497), "...") : userPrompt,
+                estimatedPromptTokens,
+                hasRagContext = !string.IsNullOrEmpty(ragContext),
+                contextChunkCount = relevantChunks.Count
+            });
 
         // Budget Display System: Check user budget and fallback to free model if exhausted
         var requestedModel = agentConfig.LlmModel;
@@ -328,6 +383,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             modelToUse,
             systemPrompt,
             userPrompt,
+            RequestSource.Manual,
             cancellationToken).ConfigureAwait(false);
 
         if (!llmResult.Success)
@@ -343,6 +399,18 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         var fullResponse = llmResult.Response;
         var tokenCount = llmResult.Usage.TotalTokens;
 
+        // Debug: emit cost/token update (Issue #4916)
+        yield return CreateEvent(
+            StreamingEventType.DebugCostUpdate,
+            new
+            {
+                model = modelToUse,
+                promptTokens = llmResult.Usage.PromptTokens,
+                completionTokens = llmResult.Usage.CompletionTokens,
+                totalTokens = tokenCount,
+                confidence = retrievalConfidence
+            });
+
         yield return CreateEvent(
             StreamingEventType.Token,
             new StreamingToken(fullResponse));
@@ -353,7 +421,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             thread.AddAssistantMessageWithMetadata(
                 content: fullResponse,
                 agentType: agent.Type.Value,
-                confidence: 0.85f,
+                confidence: (float?)retrievalConfidence,
                 tokenCount: tokenCount);
 
             await _chatThreadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
@@ -372,7 +440,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 promptTokens: 0,
                 completionTokens: tokenCount,
                 totalTokens: tokenCount,
-                confidence: 0.85,
+                confidence: retrievalConfidence,
                 chatThreadId: thread.Id));
     }
 

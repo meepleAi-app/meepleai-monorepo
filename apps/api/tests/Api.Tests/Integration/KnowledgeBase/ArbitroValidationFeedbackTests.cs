@@ -33,11 +33,8 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IArbitroValidationFeedbackRepository? _repository;
-    private IUnitOfWork? _unitOfWork;
     private IMediator? _mediator;
     private IServiceProvider? _serviceProvider;
-
-    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public ArbitroValidationFeedbackTests(SharedTestcontainersFixture fixture)
     {
@@ -67,7 +64,6 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _repository = _serviceProvider.GetRequiredService<IArbitroValidationFeedbackRepository>();
-        _unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
         _mediator = _serviceProvider.GetRequiredService<IMediator>();
 
         // Create database schema
@@ -266,5 +262,3 @@ public sealed class ArbitroValidationFeedbackTests : IAsyncLifetime
         conflictFeedback.First().GameSessionId.Should().Be(sessionWithConflict);
     }
 }
-
-#pragma warning restore S1144

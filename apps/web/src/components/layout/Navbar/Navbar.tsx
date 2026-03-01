@@ -1,210 +1,170 @@
-/**
- * Navbar - Responsive navigation header
- * Issue #3288 - Phase 2: Navbar Components
- *
- * @deprecated Use UnifiedHeader instead. This component is kept for
- * backward compatibility and will be removed in a future release.
- *
- * Features:
- * - Responsive layout (mobile/tablet/desktop)
- * - Hamburger menu on mobile
- * - Full navigation on desktop
- * - Profile section with user menu
- * - Sticky header with glass morphism
- * - Search trigger integration (Phase 3)
- */
-
 'use client';
 
-import { useState, useEffect } from 'react';
+/**
+ * Navbar — Main navigation header (3-section, role-aware)
+ * Issue #5036 — Navbar Component
+ *
+ * Replaces the deprecated Navbar + UnifiedHeader with a unified 3-tier L1 component.
+ *
+ * Desktop layout:
+ *   [MeepleAI logo]  [Tool ▾]  [Discover ▾]  [Admin ▾]  [🔔]  [Avatar ▾]
+ *
+ * Mobile layout:
+ *   [☰]  [MeepleAI logo]  [🔔]  [Avatar ▾]
+ *   ↳ hamburger opens NavbarMobileDrawer with 3 collapsible sections
+ *
+ * Role visibility:
+ *   - Admin section: visible for role admin | superadmin | editor
+ *   - Tool + Discover: always visible (auth-gated by route)
+ *
+ * Does NOT depend on LayoutProvider — self-contained with own mobile state.
+ * Designed to be placed in the `navbar` slot of <LayoutShell>.
+ */
+
+import { useState } from 'react';
 
 import {
-  Gamepad2,
   BookOpen,
-  LayoutDashboard,
   MessageSquare,
+  Gamepad2,
+  BarChart3,
+  Lightbulb,
+  Globe,
   Shield,
-  User,
-  Dice6,
+  Bot,
+  FolderOpen,
+  Activity,
   Settings,
+  Clock,
+  Menu,
 } from 'lucide-react';
-import Link from 'next/link';
 
-import { useLayout } from '@/components/layout/LayoutProvider';
 import { NotificationBell } from '@/components/notifications';
 import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
 
-import { HamburgerButton } from './HamburgerButton';
-import { HamburgerMenu } from './HamburgerMenu';
 import { Logo } from './Logo';
-import { NavItems, type NavItem } from './NavItems';
-import { ProfileBar } from './ProfileBar';
+import { NavbarDropdown, type NavbarDropdownItem } from './NavbarDropdown';
+import { NavbarMobileDrawer } from './NavbarMobileDrawer';
+import { NavbarUserMenu } from './NavbarUserMenu';
 
-/**
- * Desktop navigation items
- */
-const DESKTOP_NAV_ITEMS: NavItem[] = [
-  {
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    label: 'Dashboard',
-    ariaLabel: 'Navigate to dashboard',
-  },
-  {
-    href: '/library',
-    icon: BookOpen,
-    label: 'I Miei Giochi',
-    ariaLabel: 'Navigate to your game library',
-  },
-  {
-    href: '/games',
-    icon: Gamepad2,
-    label: 'Catalogo',
-    ariaLabel: 'Navigate to games catalog',
-  },
-  {
-    href: '/chat/new',
-    icon: MessageSquare,
-    label: 'Chat',
-    ariaLabel: 'Navigate to chat interface',
-  },
-  {
-    href: '/toolkit',
-    icon: Dice6,
-    label: 'Toolkit',
-    ariaLabel: 'Navigate to game session toolkit',
-  },
-  {
-    href: '/profile',
-    icon: User,
-    label: 'Profilo',
-    ariaLabel: 'Navigate to your profile',
-  },
+// ─── Section Definitions ────────────────────────────────────────────────────
+
+const TOOL_ITEMS: NavbarDropdownItem[] = [
+  { id: 'library', label: 'Libreria', href: '/library', icon: BookOpen },
+  { id: 'agents', label: 'Agenti', href: '/agents', icon: Bot },
+  { id: 'chat', label: 'Chat', href: '/chat', icon: MessageSquare },
+  { id: 'sessions', label: 'Sessioni', href: '/sessions', icon: Gamepad2 },
+  { id: 'play-records', label: 'Partite', href: '/play-records', icon: BarChart3 },
 ];
 
-const ADMIN_NAV_ITEM: NavItem = {
-  href: '/admin/overview',
-  icon: Shield,
-  label: 'Admin',
-  ariaLabel: 'Navigate to admin dashboard',
-  adminOnly: true,
-};
+const DISCOVER_ITEMS: NavbarDropdownItem[] = [
+  { id: 'catalog', label: 'Catalogo', href: '/games', icon: Gamepad2 },
+  { id: 'proposals', label: 'Proposte', href: '/proposals', icon: Lightbulb },
+  { id: 'community', label: 'Community', href: '/community', icon: Globe },
+];
+
+const ADMIN_ITEMS: NavbarDropdownItem[] = [
+  { id: 'users', label: 'Utenti', href: '/admin/users', icon: Shield },
+  { id: 'ai', label: 'Intelligenza Artificiale', href: '/admin/agents', icon: Bot },
+  { id: 'content', label: 'Contenuti', href: '/admin/shared-games', icon: FolderOpen },
+  { id: 'analytics', label: 'Analytics', href: '/admin/overview', icon: BarChart3 },
+  { id: 'config', label: 'Configurazione', href: '/admin/config', icon: Settings },
+  { id: 'monitor', label: 'Monitor', href: '/admin/monitor', icon: Activity },
+];
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export interface NavbarProps {
-  /** Additional className */
+  /** Additional className for the nav element */
   className?: string;
-  /** Whether to show search (Phase 3) */
-  showSearch?: boolean;
-  /** Whether to show notifications */
-  showNotifications?: boolean;
 }
 
 /**
- * Navbar Component
+ * Navbar
  *
- * Main navigation header with responsive behavior.
- * Mobile: Hamburger + Logo + Actions
- * Desktop: Logo + Nav + Search + Actions
+ * 3-section role-aware navigation bar for the MeepleAI layout system.
+ * Slot target: `navbar` prop of `<LayoutShell>`.
  */
-export function Navbar({
-  className,
-  showSearch = true,
-  showNotifications = true,
-}: NavbarProps) {
-  const { responsive, isMenuOpen, toggleMenu } = useLayout();
-  const { isMobile } = responsive;
+export function Navbar({ className }: NavbarProps) {
   const { data: user } = useCurrentUser();
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
-
-  // Build navigation items
-  const navItems = isAdmin
-    ? [...DESKTOP_NAV_ITEMS, ADMIN_NAV_ITEM]
-    : DESKTOP_NAV_ITEMS;
-
-  // Track scroll for shadow effect
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const isAdmin =
+    user?.role?.toLowerCase() === 'admin' ||
+    user?.role?.toLowerCase() === 'superadmin' ||
+    user?.role?.toLowerCase() === 'editor';
 
   return (
     <>
-      <header
+      <nav
         className={cn(
-          'sticky top-0 z-50 w-full border-b',
-          // Light mode: Glass morphism
-          'bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%]',
-          // Dark mode: Solid professional
-          'dark:bg-card dark:backdrop-blur-none',
-          'border-border/50 dark:border-border/30',
-          // Shadow on scroll
-          'transition-shadow duration-200',
-          isScrolled && 'shadow-sm dark:shadow-md',
+          'flex h-full w-full items-center justify-between px-4 sm:px-6',
+          'bg-background/95 backdrop-blur-sm border-b border-border/50',
           className
         )}
+        role="navigation"
+        aria-label="Main navigation"
         data-testid="navbar"
       >
-        <div className="container mx-auto flex h-14 md:h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Left section */}
-          <div className="flex items-center gap-2">
-            {/* Hamburger (mobile only) */}
-            {isMobile && (
-              <HamburgerButton
-                isOpen={isMenuOpen}
-                onToggle={() => toggleMenu()}
-              />
-            )}
+        {/* ── Left: Hamburger (mobile) + Logo ────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          {/* Hamburger — mobile only */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            aria-label="Apri menu di navigazione"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-drawer"
+            onClick={() => setMobileOpen(true)}
+            data-testid="hamburger-button"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </Button>
 
-            {/* Logo */}
-            <Logo variant="auto" size="sm" />
-          </div>
+          {/* Logo */}
+          <Logo variant="auto" size="sm" />
+        </div>
 
-          {/* Center section (desktop navigation) */}
-          {!isMobile && (
-            <NavItems
-              items={navItems}
-              direction="horizontal"
-              className="hidden md:flex"
+        {/* ── Center: Section dropdowns (desktop only) ───────────────────── */}
+        <div
+          className="hidden md:flex items-center gap-1"
+          role="menubar"
+          aria-label="Navigation sections"
+        >
+          <NavbarDropdown
+            label="Tool"
+            items={TOOL_ITEMS}
+            data-testid="tool-dropdown"
+          />
+          <NavbarDropdown
+            label="Scopri"
+            items={DISCOVER_ITEMS}
+            data-testid="discover-dropdown"
+          />
+          {isAdmin && (
+            <NavbarDropdown
+              label="Admin"
+              items={ADMIN_ITEMS}
+              data-testid="admin-dropdown"
             />
           )}
-
-          {/* Right section */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Mobile settings button */}
-            {isMobile && (
-              <Link href="/settings">
-                <Button variant="ghost" size="icon" aria-label="Impostazioni">
-                  <Settings className="h-5 w-5" />
-                </Button>
-              </Link>
-            )}
-
-            {/* Search trigger (Phase 3 placeholder) */}
-            {showSearch && (
-              <div className="hidden sm:block">
-                {/* GlobalSearch will be added in Phase 3 */}
-              </div>
-            )}
-
-            {/* Notifications */}
-            {showNotifications && <NotificationBell />}
-
-            {/* Profile */}
-            <ProfileBar compact={isMobile} />
-          </div>
         </div>
-      </header>
 
-      {/* Mobile menu (Sheet) */}
-      <HamburgerMenu />
+        {/* ── Right: Notifications + User ────────────────────────────────── */}
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <NavbarUserMenu />
+        </div>
+      </nav>
+
+      {/* Mobile drawer (rendered outside nav to avoid nesting issues) */}
+      <NavbarMobileDrawer
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+      />
     </>
   );
 }

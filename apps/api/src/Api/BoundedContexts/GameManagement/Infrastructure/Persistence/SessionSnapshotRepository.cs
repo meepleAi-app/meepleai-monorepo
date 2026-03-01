@@ -1,0 +1,132 @@
+using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.GameManagement;
+using Microsoft.EntityFrameworkCore;
+
+namespace Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
+
+/// <summary>
+/// EF Core implementation of ISessionSnapshotRepository.
+/// Issue #4755: SessionSnapshot - Delta-based History + State Reconstruction.
+/// </summary>
+internal sealed class SessionSnapshotRepository : ISessionSnapshotRepository
+{
+    private readonly MeepleAiDbContext _dbContext;
+
+    public SessionSnapshotRepository(MeepleAiDbContext dbContext)
+    {
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+    }
+
+    public async Task<SessionSnapshot?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.SessionSnapshots
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity == null ? null : MapToDomain(entity);
+    }
+
+    public async Task<IReadOnlyList<SessionSnapshot>> GetBySessionIdAsync(
+        Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.SessionSnapshots
+            .AsNoTracking()
+            .Where(s => s.SessionId == sessionId)
+            .OrderBy(s => s.SnapshotIndex)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<SessionSnapshot?> GetBySessionAndIndexAsync(
+        Guid sessionId, int snapshotIndex, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.SessionSnapshots
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.SnapshotIndex == snapshotIndex, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity == null ? null : MapToDomain(entity);
+    }
+
+    public async Task<SessionSnapshot?> GetLatestBySessionIdAsync(
+        Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.SessionSnapshots
+            .AsNoTracking()
+            .Where(s => s.SessionId == sessionId)
+            .OrderByDescending(s => s.SnapshotIndex)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity == null ? null : MapToDomain(entity);
+    }
+
+    public async Task<IReadOnlyList<SessionSnapshot>> GetSnapshotsForReconstructionAsync(
+        Guid sessionId, int targetIndex, CancellationToken cancellationToken = default)
+    {
+        // Find the nearest checkpoint at or before targetIndex
+        var checkpointIndex = SessionSnapshot.GetNearestCheckpointIndex(targetIndex);
+
+        var entities = await _dbContext.SessionSnapshots
+            .AsNoTracking()
+            .Where(s => s.SessionId == sessionId
+                && s.SnapshotIndex >= checkpointIndex
+                && s.SnapshotIndex <= targetIndex)
+            .OrderBy(s => s.SnapshotIndex)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<int> GetSnapshotCountAsync(
+        Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.SessionSnapshots
+            .CountAsync(s => s.SessionId == sessionId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task AddAsync(SessionSnapshot snapshot, CancellationToken cancellationToken = default)
+    {
+        var entity = MapToPersistence(snapshot);
+        await _dbContext.SessionSnapshots.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static SessionSnapshot MapToDomain(SessionSnapshotEntity entity)
+    {
+        return new SessionSnapshot(
+            entity.Id,
+            entity.SessionId,
+            entity.SnapshotIndex,
+            (SnapshotTrigger)entity.TriggerType,
+            entity.TriggerDescription,
+            entity.DeltaDataJson,
+            entity.IsCheckpoint,
+            entity.TurnIndex,
+            entity.PhaseIndex,
+            entity.CreatedByPlayerId);
+    }
+
+    private static SessionSnapshotEntity MapToPersistence(SessionSnapshot snapshot)
+    {
+        return new SessionSnapshotEntity
+        {
+            Id = snapshot.Id,
+            SessionId = snapshot.SessionId,
+            SnapshotIndex = snapshot.SnapshotIndex,
+            TriggerType = (int)snapshot.TriggerType,
+            TriggerDescription = snapshot.TriggerDescription,
+            DeltaDataJson = snapshot.DeltaDataJson,
+            IsCheckpoint = snapshot.IsCheckpoint,
+            TurnIndex = snapshot.TurnIndex,
+            PhaseIndex = snapshot.PhaseIndex,
+            Timestamp = snapshot.Timestamp,
+            CreatedByPlayerId = snapshot.CreatedByPlayerId
+        };
+    }
+}

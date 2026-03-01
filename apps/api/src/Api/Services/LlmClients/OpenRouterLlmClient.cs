@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Security;
@@ -172,8 +174,32 @@ internal class OpenRouterLlmClient : ILlmClient
 
         if (!response.IsSuccessStatusCode)
         {
+            var statusCode = (int)response.StatusCode;
             _logger.LogError("OpenRouter API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
-            return LlmCompletionResult.CreateFailure($"OpenRouter API error: {(int)response.StatusCode} ({response.StatusCode})");
+
+            // Issue #5087: Parse 429/402 rate limit errors to surface metadata for fallback routing
+            var rateLimitError = OpenRouterErrorParser.TryParseRateLimitError(responseBody, statusCode);
+            if (rateLimitError != null)
+            {
+                var rlMetadata = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["rate_limit_type"] = rateLimitError.ErrorType.ToString().ToLowerInvariant()
+                };
+                if (rateLimitError.ResetTimestampMs.HasValue)
+                    rlMetadata["rate_limit_reset_ms"] = rateLimitError.ResetTimestampMs.Value.ToString(CultureInfo.InvariantCulture);
+                if (!string.IsNullOrEmpty(rateLimitError.ModelId))
+                    rlMetadata["rate_limit_model"] = rateLimitError.ModelId;
+
+                _logger.LogWarning(
+                    "OpenRouter rate limit: {ErrorType} for {Model} (resetMs={ResetMs})",
+                    rateLimitError.ErrorType, rateLimitError.ModelId, rateLimitError.ResetTimestampMs);
+
+                return LlmCompletionResult.CreateFailure(
+                    $"OpenRouter rate limit: {rateLimitError.ErrorType} ({statusCode})")
+                    with { Metadata = rlMetadata };
+            }
+
+            return LlmCompletionResult.CreateFailure($"OpenRouter API error: {statusCode} ({response.StatusCode})");
         }
 
         var chatResponse = JsonSerializer.Deserialize<OpenRouterChatResponse>(responseBody);
@@ -231,6 +257,21 @@ internal class OpenRouterLlmClient : ILlmClient
         _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
 
         return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync("models", ct).ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "OpenRouter health check failed");
+            return false;
+        }
     }
 
     /// <inheritdoc/>

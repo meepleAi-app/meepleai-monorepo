@@ -29,18 +29,17 @@ const ChartSkeleton = () => (
 
 // Issue #2850: MeepleAI color palette for categories
 const CATEGORY_COLORS: Record<string, string> = {
-  'Embeddings': '#d2691e', // MeepleAI orange (primary)
-  'Completions': '#8b5cf6', // MeepleAI purple (secondary)
-  'OCR': '#16a34a',  // MeepleAI green (success)
-  'Default': '#666' // MeepleAI text gray
+  Embeddings: '#d2691e', // MeepleAI orange (primary)
+  Completions: '#8b5cf6', // MeepleAI purple (secondary)
+  OCR: '#16a34a', // MeepleAI green (success)
+  Default: '#666', // MeepleAI text gray
 };
 
 function getCategoryColor(category: string): string {
-   
   return CATEGORY_COLORS[category] ?? CATEGORY_COLORS['Default'];
 }
 
-export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps){
+export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps) {
   if (isLoading) {
     return <ChartSkeleton />;
   }
@@ -98,9 +97,13 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps){
                   borderRadius: '0.75rem',
                   boxShadow: '0 4px 12px rgba(139, 90, 60, 0.1)',
                 }}
-                formatter={(value: number, name: string, props: { payload?: { count?: number } }) => [
-                  `${props?.payload?.count?.toLocaleString() ?? value} calls (${value}%)`,
-                  name
+                formatter={(
+                  value: number | undefined,
+                  name: string | undefined,
+                  props: { payload?: { count?: number } }
+                ) => [
+                  `${props?.payload?.count?.toLocaleString() ?? value ?? 0} calls (${value ?? 0}%)`,
+                  name,
                 ]}
               />
               <Legend

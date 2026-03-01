@@ -79,7 +79,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
             l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -206,7 +206,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
             l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -225,7 +225,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TimeoutException("OpenRouter API timeout"));
 
         // Act
@@ -275,7 +275,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
 
         _blobStorageServiceMock
             .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, _, ct) =>
+            .Callback<string, string, RequestSource, CancellationToken>((_, _, _, ct) =>
             {
                 tokenReceived = ct == cts.Token;
             })
@@ -321,7 +321,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
             .Setup(l => l.GenerateJsonAsync<GameMetadataDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(metadata);
     }
 

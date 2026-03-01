@@ -1,32 +1,21 @@
 /**
  * Authenticated Route Group Layout
- * Issue #3479 - Layout System v2: Unified Layout
+ * Issue #5035 - Layout System v3: LayoutShell (Concept 4 Floating)
  *
- * Applies AuthenticatedLayout to all pages in (authenticated) group:
- * - /dashboard
- * - /library
- * - /toolkit
- * - /agent
- * - /admin (all admin routes)
+ * Applies LayoutShell to all pages in (authenticated) group.
+ * Concept 4: TopNavbar (sticky) + MiniNav (context) + FloatingActionBar (pill)
  *
- * Features:
- * - UnifiedHeader with desktop nav + settings + notifications + user menu
- * - UnifiedActionBar (mobile-only): bottom nav with integrated FAB + context actions
- * - Breadcrumb navigation (desktop)
- * - Dark mode support
- * - Mobile-first responsive design
+ * Pages register their nav config via useSetNavConfig() in layout.tsx or page.tsx.
  */
-
-'use client';
 
 import { ReactNode } from 'react';
 
-import { AuthenticatedLayout } from '@/components/layouts/AuthenticatedLayout';
+import { LayoutShell } from '@/components/layout/LayoutShell';
 
 export default function AuthenticatedRouteLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthenticatedLayout>
+    <LayoutShell>
       {children}
-    </AuthenticatedLayout>
+    </LayoutShell>
   );
 }

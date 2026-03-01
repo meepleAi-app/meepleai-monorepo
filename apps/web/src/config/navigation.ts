@@ -14,12 +14,16 @@
 
 import {
   BookOpen,
+  Brain,
   Calendar,
+  Clock,
   Gamepad2,
   History,
   LayoutDashboard,
+  ShieldIcon,
   User,
   Users,
+  Users2,
 } from 'lucide-react';
 
 import { LIBRARY_TABS } from '@/config/library-navigation';
@@ -122,14 +126,16 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
   },
   {
     id: 'catalog',
-    href: '/games',
+    // Issue #5039: /games/* consolidated into /discover
+    href: '/discover',
     icon: Gamepad2,
     iconName: 'gamepad-2',
-    label: 'Catalogo',
-    ariaLabel: 'Navigate to games catalog',
+    label: 'Scopri',
+    ariaLabel: 'Navigate to discover page',
     priority: 5,
     testId: 'nav-catalog',
-    activePattern: /^\/games/,
+    // Match both /discover and legacy /games (while redirects drain)
+    activePattern: /^\/(discover|games)/,
     // No visibility — visible to everyone
   },
   {
@@ -170,6 +176,58 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     activePattern: /^\/sessions/,
     visibility: { authOnly: true },
     group: 'strumenti',
+  },
+  {
+    id: 'play-records',
+    href: '/play-records',
+    icon: Clock,
+    iconName: 'clock',
+    label: 'Sessioni recenti',
+    ariaLabel: 'Navigate to recent play records',
+    priority: 9,
+    testId: 'nav-play-records',
+    activePattern: /^\/play-records/,
+    visibility: { authOnly: true },
+    group: 'strumenti',
+  },
+  {
+    id: 'players',
+    href: '/players',
+    icon: Users2,
+    iconName: 'users-2',
+    label: 'Giocatori',
+    ariaLabel: 'Navigate to players list',
+    priority: 10,
+    testId: 'nav-players',
+    activePattern: /^\/players/,
+    visibility: { authOnly: true },
+    group: 'strumenti',
+  },
+  {
+    id: 'knowledge-base',
+    href: '/knowledge-base',
+    icon: Brain,
+    iconName: 'brain',
+    label: 'Knowledge Base',
+    ariaLabel: 'Navigate to knowledge base',
+    priority: 11,
+    testId: 'nav-knowledge-base',
+    activePattern: /^\/knowledge-base/,
+    visibility: { authOnly: true },
+    group: 'strumenti',
+  },
+  {
+    id: 'admin',
+    href: '/admin',
+    icon: ShieldIcon,
+    iconName: 'shield',
+    label: 'Admin Hub',
+    ariaLabel: 'Navigate to admin hub',
+    priority: 12,
+    testId: 'nav-admin',
+    activePattern: /^\/admin/,
+    visibility: { authOnly: true, minRole: 'Admin' },
+    group: 'admin',
   },
 ];
 

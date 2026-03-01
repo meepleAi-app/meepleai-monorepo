@@ -31,7 +31,32 @@ internal class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, Lis
     {
         List<Agent> agents;
 
-        if (request.Type != null)
+        // Resolve game ID: input may be a shared_games.Id — convert to games.Id
+        var resolvedGameId = request.GameId.HasValue
+            ? await _agentRepository.ResolveGameIdAsync(request.GameId.Value, cancellationToken).ConfigureAwait(false)
+            : null;
+
+        // Issue #4914: filter by game + user for custom agent lookup
+        if (resolvedGameId.HasValue && request.OwnedByUserId.HasValue)
+        {
+            var byGame = await _agentRepository.GetByGameIdAsync(resolvedGameId.Value, cancellationToken).ConfigureAwait(false);
+            agents = byGame
+                .Where(a => a.CreatedByUserId == request.OwnedByUserId.Value)
+                .Where(a => !request.ActiveOnly.GetValueOrDefault(false) || a.IsActive)
+                .ToList();
+        }
+        else if (resolvedGameId.HasValue)
+        {
+            var byGame = await _agentRepository.GetByGameIdAsync(resolvedGameId.Value, cancellationToken).ConfigureAwait(false);
+            agents = request.ActiveOnly.GetValueOrDefault(false)
+                ? byGame.Where(a => a.IsActive).ToList()
+                : byGame;
+        }
+        else if (request.OwnedByUserId.HasValue)
+        {
+            agents = await _agentRepository.GetByUserIdAsync(request.OwnedByUserId.Value, cancellationToken).ConfigureAwait(false);
+        }
+        else if (request.Type != null)
         {
             // Filter by type
             var agentType = AgentType.Parse(request.Type);
@@ -66,7 +91,9 @@ internal class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, Lis
             LastInvokedAt: agent.LastInvokedAt,
             InvocationCount: agent.InvocationCount,
             IsRecentlyUsed: agent.IsRecentlyUsed,
-            IsIdle: agent.IsIdle
+            IsIdle: agent.IsIdle,
+            GameId: agent.GameId,
+            CreatedByUserId: agent.CreatedByUserId
         );
     }
 }

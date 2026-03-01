@@ -5,7 +5,7 @@
  * Tests: BGG search, game details, error handling, edge cases
  */
 
-import { createBggClient } from '../bggClient';
+import { createBggClient, BGG_ROUTES } from '../bggClient';
 import { HttpClient } from '../../core/httpClient';
 
 describe('createBggClient', () => {
@@ -39,7 +39,7 @@ describe('createBggClient', () => {
       const result = await bggClient.search('catan');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('q=catan'),
+        expect.stringContaining('query=catan'),
         expect.anything(),
         expect.anything()
       );
@@ -52,7 +52,7 @@ describe('createBggClient', () => {
       await bggClient.search('Catan', true);
 
       const callUrl = mockHttpClient.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('q=Catan');
+      expect(callUrl).toContain('query=Catan');
       expect(callUrl).toContain('exact=true');
     });
 
@@ -62,7 +62,7 @@ describe('createBggClient', () => {
       await bggClient.search('Pandemic');
 
       const callUrl = mockHttpClient.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('q=Pandemic');
+      expect(callUrl).toContain('query=Pandemic');
       expect(callUrl).not.toContain('exact=');
     });
 
@@ -81,7 +81,7 @@ describe('createBggClient', () => {
       await bggClient.search('');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('q='),
+        expect.stringContaining('query='),
         expect.anything(),
         expect.anything()
       );
@@ -93,7 +93,7 @@ describe('createBggClient', () => {
       await bggClient.search('Ticket to Ride');
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('q=Ticket+to+Ride'),
+        expect.stringContaining('query=Ticket+to+Ride'),
         expect.anything(),
         expect.anything()
       );
@@ -156,7 +156,7 @@ describe('createBggClient', () => {
 
       const result = await bggClient.getGameDetails(13);
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/bgg/games/13', expect.anything(), expect.anything());
+      expect(mockHttpClient.get).toHaveBeenCalledWith(BGG_ROUTES.gameDetails(13), expect.anything(), expect.anything());
       expect(result).toEqual(mockDetails);
     });
 
@@ -166,7 +166,7 @@ describe('createBggClient', () => {
       await bggClient.getGameDetails(999999);
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/bgg/games/999999',
+        BGG_ROUTES.gameDetails(999999),
         expect.anything(),
         expect.anything()
       );
@@ -177,7 +177,7 @@ describe('createBggClient', () => {
 
       await bggClient.getGameDetails(1);
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/bgg/games/1', expect.anything(), expect.anything());
+      expect(mockHttpClient.get).toHaveBeenCalledWith(BGG_ROUTES.gameDetails(1), expect.anything(), expect.anything());
     });
 
     it('should throw error when game not found', async () => {

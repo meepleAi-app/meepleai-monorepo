@@ -81,6 +81,7 @@ internal sealed partial class LlmRulebookOverviewExtractor : IRulebookOverviewEx
             var result = await _llmService.GenerateJsonAsync<LlmOverviewResponse>(
                 SystemPrompt,
                 userPrompt,
+                RequestSource.RagPipeline,
                 cancellationToken).ConfigureAwait(false);
 
             if (result is null)

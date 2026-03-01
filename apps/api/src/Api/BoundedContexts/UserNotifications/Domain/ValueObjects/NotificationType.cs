@@ -48,6 +48,25 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType GameProposalInReview = new("game_proposal_in_review");
     public static readonly NotificationType GameProposalKbMerged = new("game_proposal_kb_merged");
 
+    // ISSUE-4736: Processing job notification types
+    public static readonly NotificationType ProcessingJobCompleted = new("processing_job_completed");
+    public static readonly NotificationType ProcessingJobFailed = new("processing_job_failed");
+
+    // ISSUE-5009: Agent linked to shared game notification
+    public static readonly NotificationType AgentLinked = new("agent_linked");
+
+    // ISSUE-5084: OpenRouter RPM threshold alert (admin)
+    public static readonly NotificationType AdminOpenRouterRpmAlert = new("admin_openrouter_rpm_alert");
+
+    // ISSUE-5085: OpenRouter daily budget alert (admin)
+    public static readonly NotificationType AdminOpenRouterBudgetAlert = new("admin_openrouter_budget_alert");
+
+    // ISSUE-5086: Circuit breaker state change alert (admin)
+    public static readonly NotificationType AdminCircuitBreakerStateChanged = new("admin_circuit_breaker_state_changed");
+
+    // ISSUE-5085: Daily OpenRouter usage digest sent at 08:00 UTC (admin)
+    public static readonly NotificationType AdminOpenRouterDailySummary = new("admin_openrouter_daily_summary");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -94,6 +113,13 @@ internal sealed class NotificationType : ValueObject
             "session_terminated" => SessionTerminated,
             "game_proposal_in_review" => GameProposalInReview,
             "game_proposal_kb_merged" => GameProposalKbMerged,
+            "processing_job_completed" => ProcessingJobCompleted,
+            "processing_job_failed" => ProcessingJobFailed,
+            "agent_linked" => AgentLinked,
+            "admin_openrouter_rpm_alert" => AdminOpenRouterRpmAlert,
+            "admin_openrouter_budget_alert" => AdminOpenRouterBudgetAlert,
+            "admin_circuit_breaker_state_changed" => AdminCircuitBreakerStateChanged,
+            "admin_openrouter_daily_summary" => AdminOpenRouterDailySummary,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

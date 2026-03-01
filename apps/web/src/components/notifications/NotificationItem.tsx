@@ -15,6 +15,7 @@
 'use client';
 
 import {
+  Bot,
   CheckCircle2,
   Info,
   AlertTriangle,
@@ -60,6 +61,9 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   const isPdfNotification =
     notification.type === 'pdf_upload_completed' || notification.type === 'processing_failed';
 
+  // Check if KB indexing complete notification (Issue #4947)
+  const isKbReady = notification.type === 'processing_job_completed';
+
   return (
     <button
       onClick={handleClick}
@@ -104,6 +108,14 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 
           {/* Timestamp */}
           <p className="text-xs text-muted-foreground/70 mt-1">{timeAgo}</p>
+
+          {/* KB-ready CTA (Issue #4947) */}
+          {isKbReady && notification.link && (
+            <p className="text-xs font-medium text-teal-600 dark:text-teal-400 mt-1.5 flex items-center gap-1">
+              <Bot className="h-3 w-3" />
+              Crea il tuo agente →
+            </p>
+          )}
         </div>
 
         {/* Unread indicator */}
@@ -150,6 +162,8 @@ function getTypeIcon(type: string): React.ComponentType<{ className?: string }> 
       return LinkIcon;
     case 'processing_failed':
       return XCircle;
+    case 'processing_job_completed':
+      return Bot;
     default:
       return Info;
   }

@@ -107,6 +107,16 @@ async function proxyRequest(request: NextRequest, method: string) {
       return nextResponse;
     }
 
+    // 204/304 responses must have no body (Fetch spec forbids it)
+    if (response.status === 204 || response.status === 304) {
+      const nextResponse = new NextResponse(null, {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      copyResponseHeaders(response, nextResponse, apiPath);
+      return nextResponse;
+    }
+
     // Non-streaming: buffer the full response (original behavior)
     const responseBody = await response.arrayBuffer();
     const nextResponse = new NextResponse(responseBody, {

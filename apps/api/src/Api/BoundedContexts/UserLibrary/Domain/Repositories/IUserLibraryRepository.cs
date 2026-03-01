@@ -116,6 +116,14 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
     Task<int> GetPrivatePdfCountAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Adds a library entry referencing a PrivateGame (sets PrivateGameId instead of SharedGameId).
+    /// Issue #3662: Required because domain entity GameId maps to SharedGameId by default.
+    /// </summary>
+    /// <param name="entry">The library entry (GameId will be used as PrivateGameId)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task AddForPrivateGameAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets recently played games for a user, ordered by last played date descending.
     /// Issue #3916: Required for AI insights recommendations.
     /// </summary>
@@ -127,6 +135,15 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
         Guid userId,
         int limit,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the count of library entries with a configured game agent for a user.
+    /// Issue #4944: Required for agent creation quota enforcement.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Count of entries with a custom agent configuration</returns>
+    Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets unplayed games or games not played for a specified number of days.

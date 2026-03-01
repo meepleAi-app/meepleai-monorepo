@@ -18,6 +18,9 @@ internal sealed class ChatSession : AggregateRoot<Guid>
     public Guid GameId { get; private set; }
     public Guid? UserLibraryEntryId { get; private set; }
     public Guid? AgentSessionId { get; private set; }
+    public Guid? AgentId { get; private set; }           // Custom agent (user-owned AgentDefinition)
+    public string? AgentType { get; private set; }       // System agent type: auto|tutor|arbitro|decisore
+    public string? AgentName { get; private set; }       // Display name for grouping (copied on create)
     public string? Title { get; private set; }
     public string AgentConfigJson { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -38,6 +41,7 @@ internal sealed class ChatSession : AggregateRoot<Guid>
 
     /// <summary>
     /// Creates a new chat session.
+    /// Issue #4913: Added AgentId/AgentType/AgentName for grouped history.
     /// </summary>
     public ChatSession(
         Guid id,
@@ -46,7 +50,10 @@ internal sealed class ChatSession : AggregateRoot<Guid>
         string? title = null,
         Guid? userLibraryEntryId = null,
         Guid? agentSessionId = null,
-        string? agentConfigJson = null) : base(id)
+        string? agentConfigJson = null,
+        Guid? agentId = null,
+        string? agentType = null,
+        string? agentName = null) : base(id)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty", nameof(userId));
@@ -57,6 +64,9 @@ internal sealed class ChatSession : AggregateRoot<Guid>
         GameId = gameId;
         UserLibraryEntryId = userLibraryEntryId;
         AgentSessionId = agentSessionId;
+        AgentId = agentId;
+        AgentType = agentType;
+        AgentName = agentName;
         Title = title?.Trim();
         AgentConfigJson = agentConfigJson ?? "{}";
         CreatedAt = DateTime.UtcNow;

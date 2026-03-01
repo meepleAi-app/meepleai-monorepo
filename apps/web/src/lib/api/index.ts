@@ -47,6 +47,7 @@ import {
   createDashboardClient,
   createKnowledgeBaseClient,
   createRagExecutionClient,
+  createEntityLinksClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -74,6 +75,7 @@ import {
   type DashboardClient,
   type KnowledgeBaseClient,
   type RagExecutionClient,
+  type EntityLinksClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -132,7 +134,11 @@ export { logger, logApiError } from './core/logger';
 
 // Re-export PDF-specific types
 export type { ProcessingProgress, ProcessingStepDto, PdfMetrics } from './schemas/pdf.schemas';
-export { ProcessingStepSchema, ProcessingProgressSchema, PdfMetricsSchema } from './schemas/pdf.schemas';
+export {
+  ProcessingStepSchema,
+  ProcessingProgressSchema,
+  PdfMetricsSchema,
+} from './schemas/pdf.schemas';
 
 // Re-export all types and schemas
 export * from './schemas';
@@ -238,6 +244,9 @@ export interface ApiClient {
   /** RAG Execution Replay & Compare (Issue #4459) */
   ragExecution: RagExecutionClient;
 
+  /** Entity Relationships (Issue #5129) */
+  entityLinks: EntityLinksClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -315,6 +324,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     dashboard: createDashboardClient({ httpClient }), // ISSUE-3316, ISSUE-3319
     knowledgeBase: createKnowledgeBaseClient({ httpClient }), // ISSUE-4065
     ragExecution: createRagExecutionClient({ httpClient }), // ISSUE-4459
+    entityLinks: createEntityLinksClient({ httpClient }), // ISSUE-5129
     delete: (path: string) => httpClient.delete(path),
   };
 

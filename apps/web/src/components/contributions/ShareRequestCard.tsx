@@ -1,154 +1,107 @@
 /**
  * ShareRequestCard Component (Issue #2744)
+ * Issue #4860: Migrated to MeepleCard design system
  *
- * Displays a share request card with:
- * - Game thumbnail
- * - Title + status badge
- * - Contribution type badge
- * - Metadata (created date, document count)
- * - Admin feedback (if any)
- * - Quick actions (view details, update, view game)
+ * Displays a share request card using MeepleCard entity="game" variant="list"
+ * with request metadata, status badge, and contextual quick actions.
  */
 
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
 import { FileText, Eye, Edit, ExternalLink } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-
-import { Badge } from '@/components/ui/data-display/badge';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
+import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
 import type { UserShareRequestDto } from '@/lib/api/schemas/share-requests.schemas';
-
-import { ContributionStatusBadge } from './ContributionStatusBadge';
 
 interface ShareRequestCardProps {
   request: UserShareRequestDto;
 }
 
+const statusLabels: Record<string, string> = {
+  Pending: 'In attesa',
+  InReview: 'In revisione',
+  ChangesRequested: 'Modifiche richieste',
+  Approved: 'Approvato',
+  Rejected: 'Rifiutato',
+  Withdrawn: 'Ritirato',
+};
+
 export function ShareRequestCard({ request }: ShareRequestCardProps) {
+  const router = useRouter();
+
   const canUpdate = request.status === 'ChangesRequested';
   const hasResult = request.status === 'Approved' && request.resultingSharedGameId;
 
-  const contributionTypeBadge =
-    request.contributionType === 'NewGame' ? (
-      <Badge variant="default" className="text-xs">
-        New Game
-      </Badge>
-    ) : (
-      <Badge variant="secondary" className="text-xs">
-        Additional Content
-      </Badge>
-    );
+  const contributionLabel =
+    request.contributionType === 'NewGame' ? 'New Game' : 'Additional Content';
+
+  const submittedAgo = formatDistanceToNow(new Date(request.createdAt), { addSuffix: true });
+
+  const subtitle = `${contributionLabel} \u00b7 ${submittedAgo}`;
+
+  const metadata: MeepleCardMetadata[] = [
+    ...(request.attachedDocumentCount > 0
+      ? [
+          {
+            icon: FileText,
+            label: `${request.attachedDocumentCount} doc${request.attachedDocumentCount !== 1 ? 's' : ''}`,
+          },
+        ]
+      : []),
+  ];
+
+  const quickActions = [
+    ...(hasResult
+      ? [
+          {
+            icon: ExternalLink,
+            label: 'View Game',
+            onClick: () => router.push(`/games/catalog/${request.resultingSharedGameId}`),
+          },
+        ]
+      : []),
+    ...(canUpdate
+      ? [
+          {
+            icon: Edit,
+            label: 'Update',
+            onClick: () => router.push(`/contributions/requests/${request.id}/edit`),
+          },
+        ]
+      : []),
+    {
+      icon: Eye,
+      label: 'Details',
+      onClick: () => router.push(`/contributions/requests/${request.id}`),
+    },
+  ];
+
+  // Build preview from notes and admin feedback
+  const previewParts: string[] = [];
+  if (request.userNotes) previewParts.push(request.userNotes);
+  if (request.adminFeedback) previewParts.push(`Admin: ${request.adminFeedback}`);
+  if (request.resolvedAt) {
+    const resolvedAgo = formatDistanceToNow(new Date(request.resolvedAt), { addSuffix: true });
+    previewParts.push(`Resolved ${resolvedAgo}`);
+  }
 
   return (
-    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow">
-      <CardHeader className="p-4">
-        <div className="flex items-start gap-4">
-          {/* Game Thumbnail */}
-          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
-            {request.gameThumbnailUrl ? (
-              <Image
-                src={request.gameThumbnailUrl}
-                alt={request.gameTitle}
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                <FileText className="h-8 w-8" />
-              </div>
-            )}
-          </div>
-
-          {/* Title + Badges */}
-          <div className="flex-1 space-y-2">
-            <CardTitle className="text-lg line-clamp-1">{request.gameTitle}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <ContributionStatusBadge status={request.status} />
-              {contributionTypeBadge}
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex-1 space-y-2 p-4 pt-0">
-        {/* Metadata */}
-        <CardDescription className="text-xs">
-          Submitted {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
-          {request.attachedDocumentCount > 0 && (
-            <>
-              {' '}
-              • <FileText className="inline h-3 w-3" /> {request.attachedDocumentCount} document
-              {request.attachedDocumentCount !== 1 ? 's' : ''}
-            </>
-          )}
-        </CardDescription>
-
-        {/* User Notes (if any) */}
-        {request.userNotes && (
-          <div className="rounded-md bg-muted/50 p-2">
-            <p className="text-xs font-medium text-muted-foreground">Your Notes</p>
-            <p className="mt-1 text-sm line-clamp-2">{request.userNotes}</p>
-          </div>
-        )}
-
-        {/* Admin Feedback (if any) */}
-        {request.adminFeedback && (
-          <div className="rounded-md border border-orange-200 bg-orange-50 p-2">
-            <p className="text-xs font-medium text-orange-700">Admin Feedback</p>
-            <p className="mt-1 text-sm text-orange-800 line-clamp-2">{request.adminFeedback}</p>
-          </div>
-        )}
-
-        {/* Resolved Date (if approved/rejected) */}
-        {request.resolvedAt && (
-          <CardDescription className="text-xs">
-            Resolved {formatDistanceToNow(new Date(request.resolvedAt), { addSuffix: true })}
-          </CardDescription>
-        )}
-      </CardContent>
-
-      <CardFooter className="flex flex-wrap gap-2 p-4 pt-0">
-        {/* View Game (if approved) */}
-        {hasResult && (
-          <Button asChild variant="default" size="sm">
-            <Link href={`/games/catalog/${request.resultingSharedGameId}`}>
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-              View Game
-            </Link>
-          </Button>
-        )}
-
-        {/* Update (if changes requested) */}
-        {canUpdate && (
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/contributions/requests/${request.id}/edit`}>
-              <Edit className="mr-1.5 h-3.5 w-3.5" />
-              Update
-            </Link>
-          </Button>
-        )}
-
-        {/* View Details */}
-        <Button asChild variant="outline" size="sm" className="ml-auto">
-          <Link href={`/contributions/requests/${request.id}`}>
-            <Eye className="mr-1.5 h-3.5 w-3.5" />
-            Details
-          </Link>
-        </Button>
-      </CardFooter>
-    </Card>
+    <MeepleCard
+      entity="game"
+      variant="list"
+      title={request.gameTitle}
+      subtitle={subtitle}
+      imageUrl={request.gameThumbnailUrl || undefined}
+      badge={statusLabels[request.status] || request.status}
+      metadata={metadata.length > 0 ? metadata : undefined}
+      quickActions={quickActions}
+      showPreview={previewParts.length > 0}
+      previewData={
+        previewParts.length > 0 ? { description: previewParts.join('\n\n') } : undefined
+      }
+      data-testid={`share-request-card-${request.id}`}
+    />
   );
 }

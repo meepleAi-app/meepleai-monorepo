@@ -17,6 +17,19 @@ import {
   type UpdateAgentConfigRequest,
 } from '../schemas/agent-config.schemas';
 import {
+  EntityLinkDtoSchema,
+  EntityLinkCountResponseSchema,
+  type EntityLinkDto,
+  type CreateEntityLinkRequest,
+  type GetEntityLinksParams,
+} from '../schemas/entity-link.schemas';
+import {
+  ToolkitDashboardDtoSchema,
+  type ToolkitDashboardDto,
+  type OverrideToolkitRequest,
+  type UpdateWidgetRequest,
+} from '../schemas/toolkit.schemas';
+import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
@@ -52,16 +65,18 @@ import {
   type MigrationChoiceRequest,
   type MigrationChoiceResponse,
 } from '../schemas/migrations.schemas';
+import { GamePdfDtoSchema, type GamePdfDto } from '../schemas/pdf.schemas';
 import {
   PrivateGameDtoSchema,
   PaginatedPrivateGamesResponseSchema,
+  PdfIndexingStatusSchema,
   type PrivateGameDto,
   type AddPrivateGameRequest,
   type UpdatePrivateGameRequest,
+  type PdfIndexingStatus,
   type PaginatedPrivateGamesResponse,
   type GetPrivateGamesParams,
 } from '../schemas/private-games.schemas';
-
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -86,11 +101,17 @@ export interface LibraryClient {
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
-  saveAgentConfig(gameId: string, request: { typologyId: string; modelName: string; costEstimate: number }): Promise<{ success: boolean; configId: string; message: string }>;
+  saveAgentConfig(
+    gameId: string,
+    request: { typologyId: string; modelName: string; costEstimate: number }
+  ): Promise<{ success: boolean; configId: string; message: string }>;
   // Library Sharing (Issue #2614)
   getShareLink(): Promise<LibraryShareLink | null>;
   createShareLink(request: CreateLibraryShareLinkRequest): Promise<LibraryShareLink>;
-  updateShareLink(shareToken: string, request: UpdateLibraryShareLinkRequest): Promise<LibraryShareLink>;
+  updateShareLink(
+    shareToken: string,
+    request: UpdateLibraryShareLinkRequest
+  ): Promise<LibraryShareLink>;
   revokeShareLink(shareToken: string): Promise<void>;
   getSharedLibrary(shareToken: string): Promise<SharedLibrary | null>;
   // Game Labels (Issue #3512)
@@ -106,9 +127,29 @@ export interface LibraryClient {
   addPrivateGame(request: AddPrivateGameRequest): Promise<PrivateGameDto>;
   updatePrivateGame(id: string, request: UpdatePrivateGameRequest): Promise<PrivateGameDto>;
   deletePrivateGame(id: string): Promise<void>;
+  // PDF Indexing Status (Issue #4946)
+  getPdfProcessingStatus(gameId: string): Promise<PdfIndexingStatus>;
   // Proposal Migrations (Issue #3669)
   getPendingMigrations(): Promise<PendingMigrationDto[]>;
-  chooseMigration(migrationId: string, request: MigrationChoiceRequest): Promise<MigrationChoiceResponse>;
+  chooseMigration(
+    migrationId: string,
+    request: MigrationChoiceRequest
+  ): Promise<MigrationChoiceResponse>;
+  // Game PDFs (Issue #4915)
+  getGamePdfs(gameId: string): Promise<GamePdfDto[]>;
+  // EntityLinks (Issue #5142 — Epic A)
+  getEntityLinks(params: GetEntityLinksParams): Promise<EntityLinkDto[]>;
+  getEntityLinkCount(entityType: string, entityId: string): Promise<number>;
+  createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto>;
+  deleteEntityLink(linkId: string): Promise<void>;
+  // Toolkit Dashboard (Issue #5147 — Epic B4)
+  getActiveToolkit(gameId: string): Promise<ToolkitDashboardDto | null>;
+  overrideToolkit(gameId: string, request?: OverrideToolkitRequest): Promise<ToolkitDashboardDto>;
+  updateToolkitWidget(
+    gameId: string,
+    widgetType: string,
+    request: UpdateWidgetRequest
+  ): Promise<ToolkitDashboardDto>;
 }
 
 /**
@@ -599,7 +640,10 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      * @param request - Updated game data
      * @returns Updated private game
      */
-    async updatePrivateGame(id: string, request: UpdatePrivateGameRequest): Promise<PrivateGameDto> {
+    async updatePrivateGame(
+      id: string,
+      request: UpdatePrivateGameRequest
+    ): Promise<PrivateGameDto> {
       const data = await httpClient.put<PrivateGameDto>(
         `/api/v1/private-games/${id}`,
         request,
@@ -619,6 +663,26 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
      */
     async deletePrivateGame(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/private-games/${id}`);
+    },
+
+    // ==================== PDF Indexing Status (Issue #4946) ====================
+
+    /**
+     * Get PDF indexing/processing status for a game
+     * @param gameId - Game UUID
+     * @returns PDF indexing status with progress, chunkCount and errorMessage
+     */
+    async getPdfProcessingStatus(gameId: string): Promise<PdfIndexingStatus> {
+      const data = await httpClient.get<PdfIndexingStatus>(
+        `/api/v1/library/games/${gameId}/pdf-status`,
+        PdfIndexingStatusSchema
+      );
+
+      if (!data) {
+        throw new Error('Failed to fetch PDF processing status');
+      }
+
+      return data;
     },
 
     // ==================== Proposal Migrations (Issue #3669) ====================
@@ -660,6 +724,121 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         throw new Error('Failed to process migration choice');
       }
 
+      return data;
+    },
+
+    /**
+     * Get PDFs for a game in user's library (custom + catalog)
+     * Issue #4915: Agent creation wizard PDF selection
+     * @param gameId - Game UUID
+     */
+    async getGamePdfs(gameId: string): Promise<GamePdfDto[]> {
+      const data = await httpClient.get<GamePdfDto[]>(
+        `/api/v1/library/games/${gameId}/pdfs`,
+        z.array(GamePdfDtoSchema)
+      );
+      return data ?? [];
+    },
+
+    // ========== EntityLink User Methods (Issue #5142 — Epic A) ==========
+
+    /**
+     * Get entity links for an entity (user scope — own + approved shared)
+     * GET /api/v1/library/entity-links?entityType=...&entityId=...&linkType=...
+     */
+    async getEntityLinks(params: GetEntityLinksParams): Promise<EntityLinkDto[]> {
+      const qs = new URLSearchParams();
+      qs.set('entityType', params.entityType);
+      qs.set('entityId', params.entityId);
+      if (params.linkType) qs.set('linkType', params.linkType);
+      const data = await httpClient.get<EntityLinkDto[]>(
+        `/api/v1/library/entity-links?${qs.toString()}`,
+        z.array(EntityLinkDtoSchema)
+      );
+      return data ?? [];
+    },
+
+    /**
+     * Get count of entity links for an entity
+     * GET /api/v1/library/entity-links/count?entityType=...&entityId=...
+     */
+    async getEntityLinkCount(entityType: string, entityId: string): Promise<number> {
+      const qs = new URLSearchParams({ entityType, entityId });
+      const data = await httpClient.get(
+        `/api/v1/library/entity-links/count?${qs.toString()}`,
+        EntityLinkCountResponseSchema
+      );
+      return data?.count ?? 0;
+    },
+
+    /**
+     * Create a user-scoped entity link
+     * POST /api/v1/library/entity-links
+     */
+    async createEntityLink(request: CreateEntityLinkRequest): Promise<EntityLinkDto> {
+      const result = await httpClient.post<EntityLinkDto>(
+        '/api/v1/library/entity-links',
+        request,
+        EntityLinkDtoSchema
+      );
+      if (!result) throw new Error('Failed to create entity link');
+      return result;
+    },
+
+    /**
+     * Delete a user-scoped entity link (owner only)
+     * DELETE /api/v1/library/entity-links/{linkId}
+     */
+    async deleteEntityLink(linkId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/library/entity-links/${linkId}`);
+    },
+
+    // ========== Toolkit Dashboard (Issue #5147 — Epic B4) ==========
+
+    /**
+     * Get the active toolkit for a game (user override or shared default).
+     * Returns null when no toolkit exists yet (204 from API).
+     * GET /api/v1/library/games/{gameId}/toolkit
+     */
+    async getActiveToolkit(gameId: string): Promise<ToolkitDashboardDto | null> {
+      return httpClient.get<ToolkitDashboardDto>(
+        `/api/v1/library/games/${gameId}/toolkit`,
+        ToolkitDashboardDtoSchema
+      );
+    },
+
+    /**
+     * Create or update the user's toolkit override for a game.
+     * PUT /api/v1/library/games/{gameId}/toolkit
+     */
+    async overrideToolkit(
+      gameId: string,
+      request: OverrideToolkitRequest = {}
+    ): Promise<ToolkitDashboardDto> {
+      const data = await httpClient.put<ToolkitDashboardDto>(
+        `/api/v1/library/games/${gameId}/toolkit`,
+        request,
+        ToolkitDashboardDtoSchema
+      );
+      if (!data) throw new Error('Failed to create toolkit override');
+      return data;
+    },
+
+    /**
+     * Enable/disable or reconfigure a single widget in the active toolkit.
+     * PATCH /api/v1/library/games/{gameId}/toolkit/widgets/{widgetType}
+     */
+    async updateToolkitWidget(
+      gameId: string,
+      widgetType: string,
+      request: UpdateWidgetRequest
+    ): Promise<ToolkitDashboardDto> {
+      const data = await httpClient.patch<ToolkitDashboardDto>(
+        `/api/v1/library/games/${gameId}/toolkit/widgets/${widgetType}`,
+        request,
+        ToolkitDashboardDtoSchema
+      );
+      if (!data) throw new Error('Failed to update toolkit widget');
       return data;
     },
   };

@@ -235,7 +235,7 @@ internal class RagService : IRagService
             "Using prompt template for game {GameId}, question type {QuestionType}",
             gameId, questionType);
 
-        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.RagPipeline, cancellationToken).ConfigureAwait(false);
 
         if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
         {
@@ -785,7 +785,7 @@ internal class RagService : IRagService
             gameId, questionType, searchMode);
 
         // Step 5: Generate LLM response
-        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+        var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.RagPipeline, cancellationToken).ConfigureAwait(false);
 
         if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
         {
@@ -973,6 +973,7 @@ Instructions:
         var llmResult = await _llmService.GenerateCompletionAsync(
             customSystemPrompt,
             userPrompt,
+            RequestSource.RagPipeline,
             cancellationToken).ConfigureAwait(false);
 
         if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))

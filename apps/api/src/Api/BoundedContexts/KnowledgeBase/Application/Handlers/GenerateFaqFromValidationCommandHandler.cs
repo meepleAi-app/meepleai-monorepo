@@ -23,7 +23,6 @@ internal sealed class GenerateFaqFromValidationCommandHandler : IRequestHandler<
 
     // Thresholds for auto-generation
     private const double MinConfidenceForFaq = 0.85; // High confidence required
-    // private const int MinUsageCount = 3; // Future: Pattern occurrence threshold for batch generation
 
     public GenerateFaqFromValidationCommandHandler(
         IArbitroValidationFeedbackRepository feedbackRepository,

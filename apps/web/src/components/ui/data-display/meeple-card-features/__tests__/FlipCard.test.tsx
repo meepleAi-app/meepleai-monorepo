@@ -9,6 +9,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { CARD_TEST_IDS } from '@/lib/test-ids';
 import { FlipCard, type MeepleCardFlipData } from '../FlipCard';
 
 // Mock framer-motion to avoid animation complexity in tests
@@ -83,9 +84,9 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      expect(screen.getByTestId('meeple-card-flip-container')).toBeInTheDocument();
-      expect(screen.getByTestId('meeple-card-front')).toBeInTheDocument();
-      expect(screen.getByTestId('meeple-card-back')).toBeInTheDocument();
+      expect(screen.getByTestId(CARD_TEST_IDS.flipContainer)).toBeInTheDocument();
+      expect(screen.getByTestId(CARD_TEST_IDS.flipFront)).toBeInTheDocument();
+      expect(screen.getByTestId(CARD_TEST_IDS.flipBack)).toBeInTheDocument();
     });
 
     it('should render "Informazioni" heading on back', () => {
@@ -148,7 +149,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
+      fireEvent.click(screen.getByTestId(CARD_TEST_IDS.flipContainer));
       expect(onFlip).toHaveBeenCalledWith(true);
     });
 
@@ -160,7 +161,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      const container = screen.getByTestId('meeple-card-flip-container');
+      const container = screen.getByTestId(CARD_TEST_IDS.flipContainer);
 
       fireEvent.click(container);
       expect(onFlip).toHaveBeenCalledWith(true);
@@ -177,7 +178,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.keyDown(screen.getByTestId('meeple-card-flip-container'), { key: 'Enter' });
+      fireEvent.keyDown(screen.getByTestId(CARD_TEST_IDS.flipContainer), { key: 'Enter' });
       expect(onFlip).toHaveBeenCalledWith(true);
     });
 
@@ -189,7 +190,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.keyDown(screen.getByTestId('meeple-card-flip-container'), { key: ' ' });
+      fireEvent.keyDown(screen.getByTestId(CARD_TEST_IDS.flipContainer), { key: ' ' });
       expect(onFlip).toHaveBeenCalledWith(true);
     });
 
@@ -201,7 +202,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.keyDown(screen.getByTestId('meeple-card-flip-container'), { key: 'Tab' });
+      fireEvent.keyDown(screen.getByTestId(CARD_TEST_IDS.flipContainer), { key: 'Tab' });
       expect(onFlip).not.toHaveBeenCalled();
     });
   });
@@ -215,7 +216,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
+      fireEvent.click(screen.getByTestId(CARD_TEST_IDS.flipContainer));
       expect(onFlip).toHaveBeenCalledWith(true);
     });
 
@@ -227,7 +228,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
+      fireEvent.click(screen.getByTestId(CARD_TEST_IDS.flipContainer));
       expect(onFlip).toHaveBeenCalledWith(false);
     });
   });
@@ -242,11 +243,11 @@ describe('FlipCard', () => {
       );
 
       // First flip to back
-      fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
+      fireEvent.click(screen.getByTestId(CARD_TEST_IDS.flipContainer));
       expect(onFlip).toHaveBeenCalledWith(true);
 
       // Click container again to flip back to front
-      fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
+      fireEvent.click(screen.getByTestId(CARD_TEST_IDS.flipContainer));
       expect(onFlip).toHaveBeenCalledWith(false);
     });
   });
@@ -355,7 +356,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      expect(screen.getByText(/Età minima: 12\+/)).toBeInTheDocument();
+      expect(screen.getByText(/Età: 12\+/)).toBeInTheDocument();
     });
 
     it('should not show min age for grid variant', () => {
@@ -401,7 +402,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      const container = screen.getByTestId('meeple-card-flip-container');
+      const container = screen.getByTestId(CARD_TEST_IDS.flipContainer);
       expect(container).toHaveAttribute('role', 'button');
     });
 
@@ -412,7 +413,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      expect(screen.getByTestId('meeple-card-flip-container')).toHaveAttribute('tabIndex', '0');
+      expect(screen.getByTestId(CARD_TEST_IDS.flipContainer)).toHaveAttribute('tabIndex', '0');
     });
 
     it('should have descriptive aria-label', () => {
@@ -422,7 +423,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      expect(screen.getByTestId('meeple-card-flip-container')).toHaveAttribute(
+      expect(screen.getByTestId(CARD_TEST_IDS.flipContainer)).toHaveAttribute(
         'aria-label',
         expect.stringContaining('dettagli sul retro'),
       );
@@ -437,7 +438,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      expect(screen.getByTestId('meeple-card-flip-button')).toBeInTheDocument();
+      expect(screen.getByTestId(CARD_TEST_IDS.flipButton)).toBeInTheDocument();
     });
 
     it('should not render flip button in card mode', () => {
@@ -447,7 +448,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      expect(screen.queryByTestId('meeple-card-flip-button')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(CARD_TEST_IDS.flipButton)).not.toBeInTheDocument();
     });
 
     it('should not have role="button" on container in button mode', () => {
@@ -457,7 +458,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      const container = screen.getByTestId('meeple-card-flip-container');
+      const container = screen.getByTestId(CARD_TEST_IDS.flipContainer);
       expect(container).not.toHaveAttribute('role');
     });
 
@@ -468,7 +469,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      const container = screen.getByTestId('meeple-card-flip-container');
+      const container = screen.getByTestId(CARD_TEST_IDS.flipContainer);
       expect(container).not.toHaveAttribute('tabIndex');
     });
 
@@ -479,7 +480,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      const container = screen.getByTestId('meeple-card-flip-container');
+      const container = screen.getByTestId(CARD_TEST_IDS.flipContainer);
       expect(container.className).not.toContain('cursor-pointer');
     });
 
@@ -491,7 +492,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.click(screen.getByTestId('meeple-card-flip-button'));
+      fireEvent.click(screen.getByTestId(CARD_TEST_IDS.flipButton));
       expect(onFlip).toHaveBeenCalledWith(true);
     });
 
@@ -503,7 +504,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
+      fireEvent.click(screen.getByTestId(CARD_TEST_IDS.flipContainer));
       expect(onFlip).not.toHaveBeenCalled();
     });
 
@@ -524,7 +525,7 @@ describe('FlipCard', () => {
         </FlipCard>,
       );
 
-      const button = screen.getByTestId('meeple-card-flip-button');
+      const button = screen.getByTestId(CARD_TEST_IDS.flipButton);
       expect(button).toHaveAttribute('aria-label', 'Mostra dettagli carta');
     });
   });

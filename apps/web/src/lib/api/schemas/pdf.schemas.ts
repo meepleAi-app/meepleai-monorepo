@@ -21,9 +21,36 @@ export const PdfDocumentDtoSchema = z.object({
   pageCount: z.number().int().positive().nullable(),
   documentType: z.enum(['base', 'expansion', 'errata', 'homerule']).default('base'), // Issue #2051
   isPublic: z.boolean().default(false), // Admin Wizard: Public library visibility
+  // Issue #5186: granular state + progress for KbCardStatusRow
+  processingState: z.string().default('Pending'), // PdfProcessingState enum value
+  progressPercentage: z.number().int().min(0).max(100).default(0),
+  retryCount: z.number().int().nonnegative().default(0),
+  maxRetries: z.number().int().positive().default(3),
+  // Issue #5183: retry eligibility + error categorization
+  canRetry: z.boolean().default(false),
+  errorCategory: z.string().nullable().default(null),
+  processingError: z.string().nullable().default(null),
 });
 
 export type PdfDocumentDto = z.infer<typeof PdfDocumentDtoSchema>;
+
+// ========== Game PDF DTO (Issue #4915) ==========
+
+/**
+ * Game PDF DTO from GET /api/v1/library/games/{gameId}/pdfs
+ * Matches GamePdfDto from UserLibrary bounded context
+ */
+export const GamePdfDtoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  pageCount: z.number().int().nonnegative(),
+  fileSizeBytes: z.number().nonnegative(),
+  uploadedAt: z.string().datetime(),
+  source: z.string(), // "Custom" or "Catalog"
+  language: z.string().nullable().optional(),
+});
+
+export type GamePdfDto = z.infer<typeof GamePdfDtoSchema>;
 
 // ========== Processing Step Enum ==========
 

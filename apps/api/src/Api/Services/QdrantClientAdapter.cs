@@ -191,4 +191,45 @@ internal class QdrantClientAdapter : IQdrantClientAdapter
     {
         return _client.GetCollectionInfoAsync(collectionName, cancellationToken: cancellationToken);
     }
+
+    public async Task DeleteCollectionAsync(
+        string collectionName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogWarning("Deleting Qdrant collection {CollectionName}", collectionName);
+        await _client.DeleteCollectionAsync(collectionName, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        _logger.LogInformation("Collection {CollectionName} deleted successfully", collectionName);
+    }
+
+    public async Task<IReadOnlyList<RetrievedPoint>> ScrollPointsAsync(
+        string collectionName,
+        Filter? filter = null,
+        uint limit = 20,
+        PointId? offset = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _client.ScrollAsync(
+            collectionName,
+            filter: filter,
+            limit: limit,
+            offset: offset,
+            payloadSelector: true,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return response.Result.ToList();
+    }
+
+    public async Task<ulong> CountAsync(
+        string collectionName,
+        Filter? filter = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _client.CountAsync(
+            collectionName,
+            filter: filter,
+            exact: true,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result;
+    }
 }

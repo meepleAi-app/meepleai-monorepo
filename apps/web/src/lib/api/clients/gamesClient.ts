@@ -14,8 +14,12 @@ import {
   GameFAQSchema,
   GameSchema,
   GameSessionDtoSchema,
+  GameStrategyDtoSchema,
+  GameReviewDtoSchema,
   GetGameFAQsResultSchema,
   GetSimilarGamesResultSchema,
+  PagedStrategiesResultSchema,
+  PagedReviewsResultSchema,
   PaginatedGamesResponseSchema,
   QuickQuestionSchema,
   RuleSpecDiffSchema,
@@ -27,9 +31,13 @@ import {
   type EditorLock,
   type Game,
   type GameFAQ,
+  type GameReviewDto,
   type GameSessionDto,
+  type GameStrategyDto,
   type GetGameFAQsResult,
   type GetSimilarGamesResult,
+  type PagedStrategiesResult,
+  type PagedReviewsResult,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
   type QuickQuestion,
@@ -619,6 +627,66 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       const result = await httpClient.get(url, GetSimilarGamesResultSchema);
       return result ?? { games: [], sourceGameId: gameId, sourceGameTitle: '' };
     },
+
+    // ========== Game Strategies (Issue #4903) ==========
+
+    /**
+     * Get paginated strategies for a game
+     * GET /api/v1/games/{gameId}/strategies?pageNumber=1&pageSize=10
+     * Issue #4903: Game strategies API endpoint
+     */
+    async getStrategies(
+      gameId: string,
+      pageNumber: number = 1,
+      pageSize: number = 10
+    ): Promise<PagedStrategiesResult> {
+      const params = new URLSearchParams();
+      params.append('pageNumber', pageNumber.toString());
+      params.append('pageSize', pageSize.toString());
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/strategies?${params.toString()}`;
+      const result = await httpClient.get(url, PagedStrategiesResultSchema);
+      return result ?? { items: [], total: 0, page: pageNumber, pageSize };
+    },
+
+    // ========== Game Reviews (Issue #4904) ==========
+
+    /**
+     * Get paginated reviews for a game
+     * GET /api/v1/games/{gameId}/reviews?pageNumber=1&pageSize=10
+     * Issue #4904: Game reviews API endpoint
+     */
+    async getReviews(
+      gameId: string,
+      pageNumber: number = 1,
+      pageSize: number = 10
+    ): Promise<PagedReviewsResult> {
+      const params = new URLSearchParams();
+      params.append('pageNumber', pageNumber.toString());
+      params.append('pageSize', pageSize.toString());
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/reviews?${params.toString()}`;
+      const result = await httpClient.get(url, PagedReviewsResultSchema);
+      return result ?? { items: [], total: 0, page: pageNumber, pageSize };
+    },
+
+    /**
+     * Create a review for a game
+     * POST /api/v1/games/{gameId}/reviews
+     * Issue #4904: Game reviews API endpoint
+     */
+    async createReview(
+      gameId: string,
+      request: { authorName: string; rating: number; content: string }
+    ): Promise<GameReviewDto> {
+      const result = await httpClient.post(
+        `/api/v1/games/${encodeURIComponent(gameId)}/reviews`,
+        request,
+        GameReviewDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to create review: no response from server');
+      }
+      return result;
+    },
   };
 }
 
@@ -629,3 +697,6 @@ export type { QuickQuestion } from '../schemas';
 
 // Re-export Similar Games types for convenience
 export type { SimilarGameDto, GetSimilarGamesResult } from '../schemas';
+
+// Re-export Strategies and Reviews types for convenience (Issue #4889)
+export type { GameStrategyDto, PagedStrategiesResult, GameReviewDto, PagedReviewsResult } from '../schemas';

@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Integration tests for SubmitInsightFeedbackCommandHandler.
 /// Issue #4124: AI Insights Runtime Validation (Performance + Accuracy).
 /// </summary>
-public class SubmitInsightFeedbackCommandHandlerTests : IDisposable
+public sealed class SubmitInsightFeedbackCommandHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly FakeTimeProvider _timeProvider;

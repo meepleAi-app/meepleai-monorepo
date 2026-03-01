@@ -56,7 +56,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
         // 2. Retrieve PDF file from blob storage
         var fileStream = await _blobStorage.RetrieveAsync(
             pdfId.ToString("N"),
-            pdf.GameId.ToString(),
+            (pdf.PrivateGameId ?? pdf.GameId)?.ToString() ?? string.Empty,
             cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)

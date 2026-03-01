@@ -13,5 +13,6 @@ internal record SendAgentMessageCommand(
     Guid AgentId,
     string UserQuestion,
     Guid UserId,
-    Guid? ChatThreadId = null
+    Guid? ChatThreadId = null,
+    string? UserRole = null
 ) : IStreamingQuery<RagStreamingEvent>;

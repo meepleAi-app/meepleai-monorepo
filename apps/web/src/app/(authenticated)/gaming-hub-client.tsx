@@ -1,125 +1,97 @@
 /**
- * Gaming Hub Client - Issue #4584
- * Epic #4575: Gaming Hub Dashboard - Phase 2
+ * Gaming Hub Client — Issue #5098, Epic #5094
  *
- * Main dashboard for authenticated users with gaming focus
+ * Dashboard redesign: Hero + mixed sections layout.
+ *
+ * Sections:
+ *   1. Greeting + QuickStats
+ *   2. DashboardSessionHero (active session or empty state)
+ *   3. RecentGamesSection (3 list-cards)
+ *   4. AgentsDashboardSection (2 agent cards + CTA)
+ *   5. RecentChatsDashboardSection (2 list-cards)
  */
 
 'use client';
 
 import { useEffect } from 'react';
 
+import { motion } from 'framer-motion';
+
 import {
+  AgentsDashboardSection,
+  DashboardSessionHero,
   QuickStats,
-  RecentSessions,
-  GameCollectionGrid,
-  FilterBar,
-  EmptyState,
+  RecentChatsDashboardSection,
+  RecentGamesSection,
 } from '@/components/dashboard-v2';
-import { Layout } from '@/components/layout';
-import { Card } from '@/components/ui/card';
+import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDashboardStore } from '@/lib/stores/dashboard-store';
 
+// ─── Animation factory ───────────────────────────────────────────────────────
+
+function fadeUp(delay: number) {
+  return {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay: delay * 0.07, duration: 0.25 },
+  } as const;
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export function GamingHubClient() {
   const { user } = useAuthUser();
+  const { openWizard } = useAddGameWizard();
 
   const {
     stats,
     recentSessions,
     games,
-    filters,
     isLoadingStats,
-    isLoadingSessions,
     isLoadingGames,
     fetchStats,
     fetchRecentSessions,
     fetchGames,
-    updateFilters,
   } = useDashboardStore();
 
-  // Fetch data on mount
   useEffect(() => {
     fetchStats();
-    fetchRecentSessions(3);
+    fetchRecentSessions(1); // used as "last session" fallback in hero
     fetchGames();
   }, [fetchStats, fetchRecentSessions, fetchGames]);
 
-  // Calculate monthly change display
-  const getChangeText = (change: number): string => {
-    if (change === 0) return '';
-    const sign = change > 0 ? '+' : '';
-    return `${sign}${change}%`;
-  };
+  const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Giocatore';
 
   return (
-    <Layout showActionBar>
-      <div className="container mx-auto py-8 space-y-8">
-        {/* Welcome Banner */}
-        <Card className="bg-amber-100/50 backdrop-blur-md border border-amber-200 p-6">
-          <h1 className="text-2xl font-quicksand font-bold text-amber-900">
-            Benvenuto, {user?.displayName || 'Giocatore'}! 👋
-          </h1>
-          {stats && stats.monthlyPlays > 0 && (
-            <p className="text-amber-900 font-nunito mt-2">
-              Hai giocato {stats.monthlyPlays} partite questo mese
-              {stats.monthlyPlaysChange !== 0 && (
-                <span
-                  className={
-                    stats.monthlyPlaysChange > 0 ? 'text-green-700' : 'text-red-700'
-                  }
-                >
-                  {' '}
-                  ({getChangeText(stats.monthlyPlaysChange)} rispetto al mese scorso)
-                </span>
-              )}
-            </p>
-          )}
-        </Card>
+    <div className="py-6 space-y-8 max-w-4xl">
+      {/* ── 1. Greeting + QuickStats ────────────────────────────── */}
+      <motion.section {...fadeUp(0)}>
+        <p className="font-quicksand text-2xl font-bold text-foreground mb-4">
+          Ciao, {displayName}! 👋
+        </p>
+        <QuickStats stats={stats} isLoading={isLoadingStats} />
+      </motion.section>
 
-        {/* Quick Stats */}
-        <section>
-          <h2 className="text-xl font-quicksand font-semibold mb-4">📊 Panoramica</h2>
-          <QuickStats stats={stats} isLoading={isLoadingStats} />
-        </section>
+      {/* ── 2. Session Hero ─────────────────────────────────────── */}
+      <motion.section {...fadeUp(1)}>
+        <DashboardSessionHero lastSession={recentSessions[0]} />
+      </motion.section>
 
-        {/* Recent Sessions */}
-        <section>
-          <RecentSessions sessions={recentSessions} isLoading={isLoadingSessions} />
-        </section>
+      {/* ── 3. Giochi recenti ───────────────────────────────────── */}
+      <motion.section {...fadeUp(2)}>
+        <RecentGamesSection games={games} isLoading={isLoadingGames} />
+      </motion.section>
 
-        {/* Game Collection */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-quicksand font-semibold">📚 I Miei Giochi</h2>
-            <span className="text-sm text-muted-foreground font-nunito">
-              {stats?.totalGames || 0} giochi totali
-            </span>
-          </div>
+      {/* ── 4. Agenti ───────────────────────────────────────────── */}
+      <motion.section {...fadeUp(3)}>
+        <AgentsDashboardSection />
+      </motion.section>
 
-          <FilterBar
-            categories={['all', 'strategy', 'family', 'party', 'solo', 'cooperative']}
-            currentCategory={filters.category}
-            currentSort={filters.sort}
-            onCategoryChange={(cat) => updateFilters({ category: cat })}
-            onSortChange={(sort) =>
-              updateFilters({
-                sort: sort as 'alphabetical' | 'playCount',
-              })
-            }
-          />
-
-          <GameCollectionGrid games={games} isLoading={isLoadingGames} />
-        </section>
-
-        {/* Upcoming Games - Empty State */}
-        <section>
-          <h2 className="text-xl font-quicksand font-semibold mb-4">
-            📅 Prossime Partite
-          </h2>
-          <EmptyState variant="no-upcoming" />
-        </section>
-      </div>
-    </Layout>
+      {/* ── 5. Chat recenti ─────────────────────────────────────── */}
+      <motion.section {...fadeUp(4)}>
+        <RecentChatsDashboardSection />
+      </motion.section>
+    </div>
   );
 }

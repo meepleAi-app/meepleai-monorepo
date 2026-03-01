@@ -12,6 +12,7 @@ import React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { Skeleton } from '../../../feedback/skeleton';
 import { GameCarouselSkeleton } from '../../game-carousel';
 import { MeepleCardSkeleton } from '../../meeple-card';
 
@@ -37,6 +38,35 @@ export const LoadingSkeleton = React.memo(function LoadingSkeleton({
   className,
   'data-testid': testId,
 }: LoadingSkeletonProps) {
+  // Table skeleton
+  if (mode === 'table') {
+    return (
+      <div
+        className={cn('rounded-md border', className)}
+        data-testid={testId || 'loading-skeleton-table'}
+        role="status"
+        aria-label="Loading"
+      >
+        <div className="flex gap-4 p-3 border-b bg-muted/20">
+          <Skeleton className="h-4 w-[200px]" />
+          <Skeleton className="h-4 w-[150px]" />
+          <Skeleton className="h-4 w-[80px]" />
+        </div>
+        {Array.from({ length: Math.min(count, 8) }).map((_, idx) => (
+          <div key={idx} className="flex gap-4 p-3 border-b last:border-b-0">
+            <div className="flex items-center gap-2 w-[200px]">
+              <Skeleton className="h-8 w-8 rounded" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
+            <Skeleton className="h-4 w-[150px]" />
+            <Skeleton className="h-4 w-[80px]" />
+          </div>
+        ))}
+        <span className="sr-only">Loading...</span>
+      </div>
+    );
+  }
+
   // Carousel has its own skeleton
   if (mode === 'carousel') {
     return <GameCarouselSkeleton className={className} />;

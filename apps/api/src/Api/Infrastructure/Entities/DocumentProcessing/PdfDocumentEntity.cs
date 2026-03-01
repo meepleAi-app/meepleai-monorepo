@@ -9,7 +9,7 @@ public class PdfDocumentEntity
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
     // DDD-PHASE2: Converted to Guid for domain alignment
-    public Guid GameId { get; set; }
+    public Guid? GameId { get; set; }
     public string FileName { get; set; } = default!;
     public string FilePath { get; set; } = default!;
     public long FileSizeBytes { get; set; }
@@ -72,6 +72,9 @@ public class PdfDocumentEntity
 
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; set; }
+
+    // Admin Wizard: Processing priority (Normal=0, Admin=10)
+    public string ProcessingPriority { get; set; } = "Normal";
 
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; set; }

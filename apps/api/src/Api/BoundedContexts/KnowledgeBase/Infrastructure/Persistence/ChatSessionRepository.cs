@@ -111,6 +111,17 @@ internal class ChatSessionRepository : RepositoryBase, IChatSessionRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<ChatSession?> GetOldestActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.Set<ChatSessionEntity>()
+            .AsNoTracking()
+            .Where(s => s.UserId == userId && !s.IsArchived)
+            .OrderBy(s => s.LastMessageAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return entity != null ? MapToDomainSummary(entity) : null;
+    }
+
     public async Task<int> CountByUserAndGameAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<ChatSessionEntity>()
@@ -226,7 +237,10 @@ internal class ChatSessionRepository : RepositoryBase, IChatSessionRepository
             title: entity.Title,
             userLibraryEntryId: entity.UserLibraryEntryId,
             agentSessionId: entity.AgentSessionId,
-            agentConfigJson: entity.AgentConfigJson);
+            agentConfigJson: entity.AgentConfigJson,
+            agentId: entity.AgentId,
+            agentType: entity.AgentType,
+            agentName: entity.AgentName);
 
         // Override timestamps from DB
         var createdAtProp = typeof(ChatSession).GetProperty("CreatedAt");
@@ -271,6 +285,9 @@ internal class ChatSessionRepository : RepositoryBase, IChatSessionRepository
             GameId = session.GameId,
             UserLibraryEntryId = session.UserLibraryEntryId,
             AgentSessionId = session.AgentSessionId,
+            AgentId = session.AgentId,
+            AgentType = session.AgentType,
+            AgentName = session.AgentName,
             Title = session.Title,
             AgentConfigJson = session.AgentConfigJson,
             CreatedAt = session.CreatedAt,

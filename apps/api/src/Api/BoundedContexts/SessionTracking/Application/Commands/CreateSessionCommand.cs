@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 
 public record CreateSessionCommand(
     Guid UserId,
-    Guid? GameId,
+    Guid GameId,
     string SessionType,
     DateTime? SessionDate,
     string? Location,

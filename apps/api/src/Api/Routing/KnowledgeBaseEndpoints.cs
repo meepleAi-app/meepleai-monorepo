@@ -223,7 +223,7 @@ internal static class KnowledgeBaseEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        logger.LogDebug("[KnowledgeBase.Ask] HandleAsk ENTRY - gameId: {GameId}, query: {Query}", 
+        logger.LogDebug("[KnowledgeBase.Ask] HandleAsk ENTRY - gameId: {GameId}, query: {Query}",
             req.gameId, req.query?.Substring(0, Math.Min(50, req.query?.Length ?? 0)));
 
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
@@ -257,7 +257,7 @@ internal static class KnowledgeBaseEndpoints
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var response = await mediator.Send(query, ct).ConfigureAwait(false);
         stopwatch.Stop();
-        
+
         logger.LogInformation(
             "[KnowledgeBase.Ask] Q&A completed in {ElapsedMs}ms: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
             stopwatch.ElapsedMilliseconds, response.OverallConfidence, response.IsLowQuality);

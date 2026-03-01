@@ -163,7 +163,7 @@ public class ApproveGameProposalCommandHandlerTests
             UserId = TestUserId,
             PrivateGameId = null, // Missing PrivateGameId
             AddedAt = DateTime.UtcNow,
-                    };
+        };
         _dbContext.UserLibraryEntries.Add(libraryEntry);
         await _dbContext.SaveChangesAsync();
 
@@ -196,7 +196,7 @@ public class ApproveGameProposalCommandHandlerTests
             UserId = TestUserId,
             PrivateGameId = TestPrivateGameId,
             AddedAt = DateTime.UtcNow,
-                    };
+        };
         _dbContext.UserLibraryEntries.Add(libraryEntry);
         await _dbContext.SaveChangesAsync();
 
@@ -479,7 +479,7 @@ public class ApproveGameProposalCommandHandlerTests
             UserId = TestUserId,
             PrivateGameId = TestPrivateGameId,
             AddedAt = DateTime.UtcNow,
-                    };
+        };
         _dbContext.UserLibraryEntries.Add(libraryEntry);
         await _dbContext.SaveChangesAsync();
     }

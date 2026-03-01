@@ -28,9 +28,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     private readonly List<RoundScore> _roundScores = new();
     private readonly List<TurnRecord> _turnRecords = new();
 
-    #pragma warning disable CS8618
+#pragma warning disable CS8618
     private LiveGameSession() : base()
-    #pragma warning restore CS8618
+#pragma warning restore CS8618
     {
     }
 

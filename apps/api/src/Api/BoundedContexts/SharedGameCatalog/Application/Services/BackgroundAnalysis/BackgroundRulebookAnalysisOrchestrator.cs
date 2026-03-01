@@ -116,10 +116,10 @@ internal sealed class BackgroundRulebookAnalysisOrchestrator : IBackgroundRulebo
                 {
                     var chunkProgress = (double)current / total;
                     var percentage = phase3BaseProgress + (int)(_options.Phase3ProgressWeight * chunkProgress);
-                    
+
                     try
                     {
-                        await UpdateProgressAsync(taskId, AnalysisPhase.ChunkAnalysis, percentage, 
+                        await UpdateProgressAsync(taskId, AnalysisPhase.ChunkAnalysis, percentage,
                             $"Analyzing chunks ({current}/{total})", effectiveCt).ConfigureAwait(false);
                     }
                     catch (Exception ex)

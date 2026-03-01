@@ -288,7 +288,10 @@ public class GetCatalogTrendingQueryHandlerTests
         using var context = CreateInMemoryContext();
         var cachedTrending = Enumerable.Range(1, 10).Select(i => new TrendingGameDto
         {
-            Rank = i, GameId = Guid.NewGuid(), Title = $"Game {i}", Score = 100.0 - i
+            Rank = i,
+            GameId = Guid.NewGuid(),
+            Title = $"Game {i}",
+            Score = 100.0 - i
         }).ToList();
 
         _cacheMock.Setup(c => c.GetOrCreateAsync(

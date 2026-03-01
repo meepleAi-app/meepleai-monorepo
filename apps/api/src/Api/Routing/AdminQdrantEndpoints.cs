@@ -199,19 +199,25 @@ internal static class AdminQdrantEndpoints
                 var conditions = new List<Condition>();
                 if (!string.IsNullOrEmpty(gameId))
                 {
-                    conditions.Add(new Condition { Field = new FieldCondition
+                    conditions.Add(new Condition
                     {
-                        Key = "game_id",
-                        Match = new Match { Keyword = gameId },
-                    }});
+                        Field = new FieldCondition
+                        {
+                            Key = "game_id",
+                            Match = new Match { Keyword = gameId },
+                        }
+                    });
                 }
                 if (!string.IsNullOrEmpty(pdfId))
                 {
-                    conditions.Add(new Condition { Field = new FieldCondition
+                    conditions.Add(new Condition
                     {
-                        Key = "pdf_id",
-                        Match = new Match { Keyword = pdfId },
-                    }});
+                        Field = new FieldCondition
+                        {
+                            Key = "pdf_id",
+                            Match = new Match { Keyword = pdfId },
+                        }
+                    });
                 }
 
                 var filter = new Filter { Must = { conditions } };

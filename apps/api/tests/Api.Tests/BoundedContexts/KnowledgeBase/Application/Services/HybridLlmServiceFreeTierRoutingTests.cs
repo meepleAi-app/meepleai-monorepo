@@ -255,7 +255,8 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
                 It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 LlmCompletionResult.CreateFailure("OpenRouter rate limit: Rpd (429)")
-                    with { Metadata = rateLimitMetadata });
+                    with
+                { Metadata = rateLimitMetadata });
 
         // Ollama handles the fallback
         _ollamaMock
@@ -296,7 +297,8 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
                 It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 LlmCompletionResult.CreateFailure("OpenRouter rate limit: Rpm (429)")
-                    with { Metadata = rateLimitMetadata });
+                    with
+                { Metadata = rateLimitMetadata });
 
         _ollamaMock
             .Setup(c => c.GenerateCompletionAsync(

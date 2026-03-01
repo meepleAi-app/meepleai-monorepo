@@ -40,11 +40,11 @@ public sealed record OrchestrationResult
     public static OrchestrationResult CreateSuccess(
         MergedRulebookAnalysis analysis,
         OrchestrationMetrics metrics) => new()
-    {
-        Success = true,
-        Analysis = analysis,
-        Metrics = metrics
-    };
+        {
+            Success = true,
+            Analysis = analysis,
+            Metrics = metrics
+        };
 
     public static OrchestrationResult CreateFailure(string error) => new()
     {

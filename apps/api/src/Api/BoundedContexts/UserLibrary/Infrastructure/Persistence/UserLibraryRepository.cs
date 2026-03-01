@@ -577,7 +577,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             CurrentState = (int)domainEntity.CurrentState.Value,
             StateChangedAt = domainEntity.CurrentState.ChangedAt,
             StateNotes = domainEntity.CurrentState.StateNotes,
-            
+
             // Game statistics
             TimesPlayed = domainEntity.Stats.TimesPlayed,
             LastPlayed = domainEntity.Stats.LastPlayed,

@@ -44,14 +44,14 @@ public sealed record OverviewExtractionResult
         int playerCountMax,
         int playtimeMinutes,
         List<string> sectionHeaders) => new()
-    {
-        GameTitle = gameTitle,
-        GameSummary = gameSummary,
-        MainMechanics = mainMechanics,
-        VictoryConditionSummary = victoryConditionSummary,
-        PlayerCountMin = playerCountMin,
-        PlayerCountMax = playerCountMax,
-        PlaytimeMinutes = playtimeMinutes,
-        SectionHeaders = sectionHeaders
-    };
+        {
+            GameTitle = gameTitle,
+            GameSummary = gameSummary,
+            MainMechanics = mainMechanics,
+            VictoryConditionSummary = victoryConditionSummary,
+            PlayerCountMin = playerCountMin,
+            PlayerCountMax = playerCountMax,
+            PlaytimeMinutes = playtimeMinutes,
+            SectionHeaders = sectionHeaders
+        };
 }

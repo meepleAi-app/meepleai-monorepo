@@ -143,9 +143,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           timestamp: m.timestamp,
         }));
 
-        const threadRecord = threadData as Record<string, unknown>;
-        const agentId = (threadRecord.agentId as string | null) ?? null;
-        const agentTypology = (threadRecord.agentTypology as string | null) ?? null;
+        const agentId = threadData.agentId ?? null;
+        const agentTypology = threadData.agentType ?? null;
 
         setThread({
           id: threadData.id,

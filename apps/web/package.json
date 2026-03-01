@@ -270,7 +270,10 @@
       "bn.js": ">=5.2.3",
       "minimatch": ">=10.2.3",
       "webpack": ">=5.104.1",
-      "pdfjs-dist": "5.4.624"
+      "pdfjs-dist": "5.4.624",
+      "serialize-javascript": ">=7.0.3",
+      "rollup": ">=4.59.0",
+      "basic-ftp": ">=5.2.0"
     }
   }
 }

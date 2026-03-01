@@ -34,18 +34,18 @@ internal sealed class GetPrivateGamesListQueryHandler
         // Sort
         var sorted = (query.SortBy.ToLowerInvariant(), query.SortDirection.ToLowerInvariant()) switch
         {
-            ("title",     "asc")  => games.OrderBy(g => g.Title, StringComparer.OrdinalIgnoreCase),
-            ("title",     _)      => games.OrderByDescending(g => g.Title, StringComparer.OrdinalIgnoreCase),
-            ("updatedat", "asc")  => games.OrderBy(g => g.UpdatedAt ?? g.CreatedAt),
-            ("updatedat", _)      => games.OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt),
-            (_,           "asc")  => games.OrderBy(g => g.CreatedAt),     // createdAt asc
-            _                     => games.OrderByDescending(g => g.CreatedAt), // createdAt desc (default)
+            ("title", "asc") => games.OrderBy(g => g.Title, StringComparer.OrdinalIgnoreCase),
+            ("title", _) => games.OrderByDescending(g => g.Title, StringComparer.OrdinalIgnoreCase),
+            ("updatedat", "asc") => games.OrderBy(g => g.UpdatedAt ?? g.CreatedAt),
+            ("updatedat", _) => games.OrderByDescending(g => g.UpdatedAt ?? g.CreatedAt),
+            (_, "asc") => games.OrderBy(g => g.CreatedAt),     // createdAt asc
+            _ => games.OrderByDescending(g => g.CreatedAt), // createdAt desc (default)
         };
 
         // Paginate
         var totalCount = games.Count;
-        var pageSize   = query.PageSize;
-        var page       = query.Page;
+        var pageSize = query.PageSize;
+        var page = query.Page;
         var totalPages = totalCount == 0 ? 1 : (int)Math.Ceiling((double)totalCount / pageSize);
 
         var items = sorted

@@ -196,7 +196,8 @@ internal class OpenRouterLlmClient : ILlmClient
 
                 return LlmCompletionResult.CreateFailure(
                     $"OpenRouter rate limit: {rateLimitError.ErrorType} ({statusCode})")
-                    with { Metadata = rlMetadata };
+                    with
+                { Metadata = rlMetadata };
             }
 
             return LlmCompletionResult.CreateFailure($"OpenRouter API error: {statusCode} ({response.StatusCode})");

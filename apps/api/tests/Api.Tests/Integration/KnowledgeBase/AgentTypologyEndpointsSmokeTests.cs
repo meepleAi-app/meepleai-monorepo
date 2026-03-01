@@ -245,7 +245,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
 
         var responseBody = await response.Content.ReadAsStringAsync();
         var result = System.Text.Json.JsonDocument.Parse(responseBody).RootElement;
-        
+
         Assert.True(result.GetProperty("success").GetBoolean());
         Assert.True(result.TryGetProperty("response", out var responseText));
         Assert.NotEqual(string.Empty, responseText.GetString());
@@ -285,7 +285,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
         // Assert: Should fail with 422 (validation error - FluentValidation runs before handler sees ownership)
         // Or 400 if handler catches and returns BadRequest
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest || 
+            response.StatusCode == HttpStatusCode.BadRequest ||
             response.StatusCode == HttpStatusCode.UnprocessableEntity,
             $"Expected 400 or 422, got {response.StatusCode}");
     }

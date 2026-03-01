@@ -196,19 +196,19 @@ public sealed class GetUserContributionStatsQueryHandlerTests : IAsyncLifetime
         Guid contributorId,
         ContributionRecordType type,
         int version) => new()
-    {
-        Id = Guid.NewGuid(),
-        ContributorId = contributorId,
-        Type = (int)type,
-        Description = $"Contribution v{version}",
-        Version = version,
-        ContributedAt = DateTime.UtcNow.AddDays(-version),
-        IncludesGameData = type == ContributionRecordType.InitialSubmission,
-        IncludesMetadata = true,
-        DocumentIdsJson = type == ContributionRecordType.DocumentAddition
+        {
+            Id = Guid.NewGuid(),
+            ContributorId = contributorId,
+            Type = (int)type,
+            Description = $"Contribution v{version}",
+            Version = version,
+            ContributedAt = DateTime.UtcNow.AddDays(-version),
+            IncludesGameData = type == ContributionRecordType.InitialSubmission,
+            IncludesMetadata = true,
+            DocumentIdsJson = type == ContributionRecordType.DocumentAddition
             ? JsonSerializer.Serialize(new List<Guid> { Guid.NewGuid(), Guid.NewGuid() })
             : null
-    };
+        };
 
     [Fact]
     public async Task Handle_ShouldReturnCorrectShareRequestStats()

@@ -3,8 +3,13 @@ using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -20,11 +25,16 @@ public class CreateUserAgentCommandHandlerTests
 {
     private readonly Mock<IAgentRepository> _repository = new();
     private readonly Mock<ILogger<CreateUserAgentCommandHandler>> _logger = new();
+    private readonly MeepleAiDbContext _db;
     private readonly CreateUserAgentCommandHandler _handler;
 
     public CreateUserAgentCommandHandlerTests()
     {
-        _handler = new CreateUserAgentCommandHandler(_repository.Object, _logger.Object);
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new MeepleAiDbContext(options, new Mock<IMediator>().Object, new Mock<IDomainEventCollector>().Object);
+        _handler = new CreateUserAgentCommandHandler(_repository.Object, _db, _logger.Object);
     }
 
     [Fact]

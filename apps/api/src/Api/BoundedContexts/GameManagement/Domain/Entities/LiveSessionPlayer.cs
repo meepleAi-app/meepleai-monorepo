@@ -13,9 +13,9 @@ internal sealed class LiveSessionPlayer : Entity<Guid>
     private const int MaxDisplayNameLength = 100;
     private const int MaxAvatarUrlLength = 500;
 
-    #pragma warning disable CS8618
+#pragma warning disable CS8618
     private LiveSessionPlayer() : base()
-    #pragma warning restore CS8618
+#pragma warning restore CS8618
     {
     }
 

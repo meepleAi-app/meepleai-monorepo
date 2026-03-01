@@ -27,7 +27,7 @@ internal class SessionAuthenticationMiddleware
 
     public async Task InvokeAsync(HttpContext context, IMediator mediator)
     {
-        _logger.LogDebug("[SessionAuth] InvokeAsync START - Path: {Path}, Method: {Method}", 
+        _logger.LogDebug("[SessionAuth] InvokeAsync START - Path: {Path}, Method: {Method}",
             context.Request.Path, context.Request.Method);
 
         // Process only API routes
@@ -39,14 +39,14 @@ internal class SessionAuthenticationMiddleware
                 if (context.Request.Cookies.TryGetValue(cookieName, out var token) && !string.IsNullOrWhiteSpace(token))
                 {
                     _logger.LogDebug("[SessionAuth] Cookie found, validating session token (length: {Length})", token.Length);
-                    
+
                     // Validate session via DDD CQRS ValidateSessionQuery
                     var query = new ValidateSessionQuery(SessionToken: token);
                     var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                     var result = await mediator.Send(query).ConfigureAwait(false);
                     stopwatch.Stop();
-                    
-                    _logger.LogInformation("[SessionAuth] ValidateSessionQuery completed in {ElapsedMs}ms - IsValid: {IsValid}", 
+
+                    _logger.LogInformation("[SessionAuth] ValidateSessionQuery completed in {ElapsedMs}ms - IsValid: {IsValid}",
                         stopwatch.ElapsedMilliseconds, result.IsValid);
 
                     if (result.IsValid && result.User != null)

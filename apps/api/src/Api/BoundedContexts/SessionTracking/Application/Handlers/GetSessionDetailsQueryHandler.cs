@@ -32,8 +32,8 @@ public class GetSessionDetailsQueryHandler : IRequestHandler<GetSessionDetailsQu
 
         // Get player notes
         var playerNotes = await _context.SessionTrackingPlayerNotes
-            .Where(n => n.SessionId == session.Id && 
-                       n.NoteType == "Shared" && 
+            .Where(n => n.SessionId == session.Id &&
+                       n.NoteType == "Shared" &&
                        !n.IsHidden)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 

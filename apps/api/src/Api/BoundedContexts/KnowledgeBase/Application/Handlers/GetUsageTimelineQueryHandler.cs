@@ -27,9 +27,9 @@ internal sealed class GetUsageTimelineQueryHandler
         var now = DateTime.UtcNow;
         var (from, groupByHour) = request.Period switch
         {
-            "7d"  => (now.AddDays(-7), false),
+            "7d" => (now.AddDays(-7), false),
             "30d" => (now.AddDays(-30), false),
-            _     => (now.AddHours(-24), true)   // default "24h"
+            _ => (now.AddHours(-24), true)   // default "24h"
         };
 
         var raw = await _repository
@@ -45,27 +45,27 @@ internal sealed class GetUsageTimelineQueryHandler
                     g.Where(x => string.Equals(x.Source, src, StringComparison.Ordinal)).Sum(x => x.Count);
 
                 return new TimelineBucketDto(
-                    Bucket:          g.Key,
-                    Manual:          CountFor("Manual"),
-                    RagPipeline:     CountFor("RagPipeline"),
-                    EventDriven:     CountFor("EventDriven"),
-                    AutomatedTest:   CountFor("AutomatedTest"),
-                    AgentTask:       CountFor("AgentTask"),
-                    AdminOperation:  CountFor("AdminOperation"),
-                    TotalCostUsd:    g.Sum(x => x.CostUsd)
+                    Bucket: g.Key,
+                    Manual: CountFor("Manual"),
+                    RagPipeline: CountFor("RagPipeline"),
+                    EventDriven: CountFor("EventDriven"),
+                    AutomatedTest: CountFor("AutomatedTest"),
+                    AgentTask: CountFor("AgentTask"),
+                    AdminOperation: CountFor("AdminOperation"),
+                    TotalCostUsd: g.Sum(x => x.CostUsd)
                 );
             })
             .OrderBy(b => b.Bucket)
             .ToList();
 
         return new UsageTimelineDto(
-            Buckets:       byBucket,
-            Period:        request.Period,
+            Buckets: byBucket,
+            Period: request.Period,
             GroupedByHour: groupByHour,
             TotalRequests: byBucket.Sum(b =>
                 b.Manual + b.RagPipeline + b.EventDriven +
                 b.AutomatedTest + b.AgentTask + b.AdminOperation),
-            TotalCostUsd:  byBucket.Sum(b => b.TotalCostUsd)
+            TotalCostUsd: byBucket.Sum(b => b.TotalCostUsd)
         );
     }
 }

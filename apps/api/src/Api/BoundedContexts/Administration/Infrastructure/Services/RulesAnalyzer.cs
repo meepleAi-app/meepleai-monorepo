@@ -40,7 +40,7 @@ internal sealed class RulesAnalyzer : IRulesAnalyzer
                 .AsNoTracking()
                 .Where(p => p.UploadedByUserId == userId)
                 .Where(p => p.UploadedAt < thresholdDate) // Uploaded 7+ days ago
-                // FUTURE: Add LastAccessedAt filter when available
+                                                          // FUTURE: Add LastAccessedAt filter when available
                 .OrderBy(p => p.UploadedAt)
                 .Take(MaxInsights)
                 .Select(p => new { p.Id, p.FileName })

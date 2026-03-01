@@ -31,18 +31,23 @@ internal class GetAllAgentsQueryHandler : IRequestHandler<GetAllAgentsQuery, Lis
     {
         List<Agent> agents;
 
+        // Resolve game ID: input may be a shared_games.Id — convert to games.Id
+        var resolvedGameId = request.GameId.HasValue
+            ? await _agentRepository.ResolveGameIdAsync(request.GameId.Value, cancellationToken).ConfigureAwait(false)
+            : null;
+
         // Issue #4914: filter by game + user for custom agent lookup
-        if (request.GameId.HasValue && request.OwnedByUserId.HasValue)
+        if (resolvedGameId.HasValue && request.OwnedByUserId.HasValue)
         {
-            var byGame = await _agentRepository.GetByGameIdAsync(request.GameId.Value, cancellationToken).ConfigureAwait(false);
+            var byGame = await _agentRepository.GetByGameIdAsync(resolvedGameId.Value, cancellationToken).ConfigureAwait(false);
             agents = byGame
                 .Where(a => a.CreatedByUserId == request.OwnedByUserId.Value)
                 .Where(a => !request.ActiveOnly.GetValueOrDefault(false) || a.IsActive)
                 .ToList();
         }
-        else if (request.GameId.HasValue)
+        else if (resolvedGameId.HasValue)
         {
-            agents = await _agentRepository.GetByGameIdAsync(request.GameId.Value, cancellationToken).ConfigureAwait(false);
+            agents = await _agentRepository.GetByGameIdAsync(resolvedGameId.Value, cancellationToken).ConfigureAwait(false);
         }
         else if (request.OwnedByUserId.HasValue)
         {

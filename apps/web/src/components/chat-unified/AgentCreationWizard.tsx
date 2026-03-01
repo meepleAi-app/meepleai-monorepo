@@ -43,7 +43,9 @@ import {
   WIZARD_STEP_LABEL,
   WIZARD_STEP_TITLE,
   WIZARD_TESTID,
+  WIZARD_TYPE_TO_BACKEND,
 } from './wizard-constants';
+import type { WizardAgentTypeId } from './wizard-constants';
 
 // ============================================================================
 // Types
@@ -580,9 +582,10 @@ export function AgentCreationWizard() {
     setSubmitError(null);
 
     try {
+      const backendType = WIZARD_TYPE_TO_BACKEND[state.agentType as WizardAgentTypeId] ?? state.agentType;
       const agent = await api.agents.createUserAgent({
         gameId: state.selectedGame.gameId,
-        agentType: state.agentType,
+        agentType: backendType,
         name: state.agentName.trim() || undefined,
       });
 

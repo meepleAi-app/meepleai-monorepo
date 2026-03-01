@@ -55,6 +55,7 @@ import {
   WIZARD_AGENT_TYPE,
   WIZARD_BTN,
   WIZARD_TESTID,
+  WIZARD_TYPE_TO_BACKEND,
 } from '../wizard-constants';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import type { GamePdfDto } from '@/lib/api/schemas/pdf.schemas';
@@ -215,5 +216,30 @@ describe('AgentCreationWizard', () => {
       expect(screen.getByText(GAME_TITLE)).toBeInTheDocument()
     );
     expect(screen.getByText(WIZARD_AGENT_TYPE.Tutor)).toBeInTheDocument();
+  });
+
+  // ── Submit (type mapping) ──────────────────────────────────────────────────
+
+  it('maps wizard persona type to backend AgentType on submit', async () => {
+    render(<AgentCreationWizard />);
+    await advanceToStep3();
+
+    const nameInput = await waitFor(() => screen.getByTestId(WIZARD_TESTID.NameInput));
+    fireEvent.change(nameInput, { target: { value: 'Il mio Tutor' } });
+    fireEvent.click(screen.getByRole('button', { name: WIZARD_BTN.Next }));
+
+    // Step 4 → Submit
+    await waitFor(() => screen.getByRole('button', { name: WIZARD_BTN.Submit }));
+    fireEvent.click(screen.getByRole('button', { name: WIZARD_BTN.Submit }));
+
+    await waitFor(() => {
+      expect(mockCreateUserAgent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gameId: GAME_ID,
+          agentType: WIZARD_TYPE_TO_BACKEND[WIZARD_AGENT_TYPE.Tutor], // 'RAG', not 'Tutor'
+          name: 'Il mio Tutor',
+        })
+      );
+    });
   });
 });

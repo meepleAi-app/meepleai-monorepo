@@ -14,6 +14,16 @@ export const WIZARD_AGENT_TYPE = {
 
 export type WizardAgentTypeId = (typeof WIZARD_AGENT_TYPE)[keyof typeof WIZARD_AGENT_TYPE];
 
+/**
+ * Maps wizard persona types to backend AgentType values accepted by the API validator.
+ * Backend accepts: RAG, Citation, Confidence, RulesInterpreter, Conversation
+ */
+export const WIZARD_TYPE_TO_BACKEND: Record<WizardAgentTypeId, string> = {
+  Tutor: 'RAG',
+  Arbitro: 'RulesInterpreter',
+  Decisore: 'Confidence',
+} as const;
+
 // ─── Step Labels ───────────────────────────────────────────────────────────────
 
 export const WIZARD_STEP_LABEL = ['Gioco', 'Tipo', 'Nome & KB', 'Riepilogo'] as const;

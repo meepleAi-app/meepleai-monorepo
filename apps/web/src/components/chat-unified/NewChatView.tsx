@@ -1,9 +1,12 @@
 /**
  * NewChatView - Game + Agent selection for new conversations (Issue #4363)
  *
- * Welcome page showing selectable MeepleCard grids for:
- * 1. Games from user library + shared catalog
- * 2. AI agents (Auto, Tutor, Arbitro, Decisore)
+ * Two modes:
+ * 1. Full mode (no ?game param): Game grid → Agent grid → Start
+ * 2. Direct game mode (?game=id from MeepleCard chat button):
+ *    - 0 custom agents → redirect to agent creation
+ *    - 1 custom agent  → auto-create thread and redirect to chat
+ *    - 2+ custom agents → show agent picker only (no game grid)
  *
  * Features:
  * - Query params pre-selection (?game=id, ?agent=type)
@@ -14,7 +17,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 
 import { Bot, Gamepad2, MessageSquarePlus, Plus, Search, Sparkles, Zap } from 'lucide-react';
 import Link from 'next/link';
@@ -372,24 +375,28 @@ export function NewChatView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Direct game mode: arrived from MeepleCard "Chat" button with ?game=id
+  const directGameId = searchParams?.get('game') ?? null;
+  const isDirectGameMode = !!directGameId;
+
   // State
   const [games, setGames] = useState<Game[]>([]);
   const [agents, setAgents] = useState<AgentDto[]>([]);
   const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [selectedAgentType, setSelectedAgentType] = useState<string | null>('auto');
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(directGameId);
+  const [selectedAgentType, setSelectedAgentType] = useState<string | null>(isDirectGameMode ? null : 'auto');
   const [selectedCustomAgentId, setSelectedCustomAgentId] = useState<string | null>(null);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
-  const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(false);
+  const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(isDirectGameMode);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pre-select from query params
-  useEffect(() => {
-    const gameParam = searchParams?.get('game');
-    const agentParam = searchParams?.get('agent');
+  // Prevent double auto-start in direct game mode
+  const autoStartedRef = useRef(false);
 
-    if (gameParam) setSelectedGameId(gameParam);
+  // Pre-select from query params (non-direct mode uses agent param too)
+  useEffect(() => {
+    const agentParam = searchParams?.get('agent');
     if (agentParam) setSelectedAgentType(agentParam);
   }, [searchParams]);
 
@@ -434,6 +441,43 @@ export function NewChatView() {
 
     return () => { cancelled = true; };
   }, [selectedGameId]);
+
+  // Direct game mode: auto-start or redirect based on agent count
+  useEffect(() => {
+    if (!isDirectGameMode || autoStartedRef.current) return;
+    if (isLoadingCustomAgents) return;
+    if (!selectedGameId) return;
+
+    if (customAgents.length === 0) {
+      // No agents → redirect to agent creation
+      autoStartedRef.current = true;
+      router.replace(`/chat/agents/create?gameId=${selectedGameId}`);
+    } else if (customAgents.length === 1) {
+      // Exactly 1 agent → auto-create thread
+      autoStartedRef.current = true;
+      setIsCreating(true);
+
+      const agent = customAgents[0];
+      const gameName = games.find(g => g.id === selectedGameId)?.title;
+
+      api.chat.createThread({
+        gameId: selectedGameId,
+        agentId: agent.id,
+        title: gameName ? `Chat: ${gameName}` : 'Nuova conversazione',
+        initialMessage: null,
+      })
+        .then(thread => {
+          if (thread?.id) {
+            router.push(`/chat?threadId=${thread.id}`);
+          }
+        })
+        .catch(() => {
+          setError('Errore nella creazione della conversazione');
+          setIsCreating(false);
+        });
+    }
+    // 2+ agents: fall through to show agent selection UI
+  }, [isDirectGameMode, isLoadingCustomAgents, selectedGameId, customAgents, games, router]);
 
   // Handle game selection — reset custom agent selection
   const handleGameSelect = useCallback((gameId: string) => {
@@ -515,6 +559,28 @@ export function NewChatView() {
 
   const canStart = selectedAgentType !== null || selectedCustomAgentId !== null;
 
+  // Direct game mode: show loading spinner while resolving agents (0 or 1 → auto-redirect)
+  if (isDirectGameMode && (isLoadingCustomAgents || isCreating || (customAgents.length <= 1 && !error))) {
+    return (
+      <div className="min-h-dvh bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 border-3 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground font-nunito">
+            {isCreating ? 'Avvio chat in corso...' : 'Preparazione...'}
+          </p>
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-200 dark:border-red-500/20"
+            >
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-background">
       <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
@@ -523,11 +589,14 @@ export function NewChatView() {
           <div className="inline-flex items-center gap-3 mb-4">
             <MessageSquarePlus className="h-8 w-8 text-amber-500" />
             <h1 className="text-2xl sm:text-3xl font-bold font-quicksand text-foreground">
-              Inizia una nuova conversazione
+              {isDirectGameMode ? 'Seleziona un agente' : 'Inizia una nuova conversazione'}
             </h1>
           </div>
           <p className="text-muted-foreground font-nunito max-w-lg mx-auto">
-            Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.
+            {isDirectGameMode && selectedGame
+              ? <>Scegli un agente per <span className="font-semibold text-foreground">{selectedGame.title}</span></>
+              : 'Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.'
+            }
           </p>
         </div>
 
@@ -544,19 +613,21 @@ export function NewChatView() {
 
         {/* Content */}
         <div className="space-y-8">
-          {/* Game Selection */}
-          <section
-            className="p-6 rounded-2xl bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
-            data-testid="game-selection-section"
-          >
-            <SectionTitle icon={Gamepad2} title="Seleziona un gioco" />
-            <GameGrid
-              games={games}
-              selectedGameId={selectedGameId}
-              onSelect={handleGameSelect}
-              isLoading={isLoadingGames}
-            />
-          </section>
+          {/* Game Selection — hidden in direct game mode */}
+          {!isDirectGameMode && (
+            <section
+              className="p-6 rounded-2xl bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
+              data-testid="game-selection-section"
+            >
+              <SectionTitle icon={Gamepad2} title="Seleziona un gioco" />
+              <GameGrid
+                games={games}
+                selectedGameId={selectedGameId}
+                onSelect={handleGameSelect}
+                isLoading={isLoadingGames}
+              />
+            </section>
+          )}
 
           {/* Agent Selection */}
           <section

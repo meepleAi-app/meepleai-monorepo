@@ -220,15 +220,21 @@ describe('AgentCreationWizard', () => {
 
   // ── Submit (type mapping) ──────────────────────────────────────────────────
 
-  it('maps wizard persona type to backend AgentType on submit', async () => {
+  it.each([
+    [WIZARD_AGENT_TYPE.Tutor, 'RAG'],
+    [WIZARD_AGENT_TYPE.Arbitro, 'RulesInterpreter'],
+    [WIZARD_AGENT_TYPE.Decisore, 'Confidence'],
+  ] as const)('maps %s to backend type %s on submit', async (wizardType, expectedBackendType) => {
     render(<AgentCreationWizard />);
-    await advanceToStep3();
+    await advanceToStep2();
 
-    const nameInput = await waitFor(() => screen.getByTestId(WIZARD_TESTID.NameInput));
-    fireEvent.change(nameInput, { target: { value: 'Il mio Tutor' } });
+    fireEvent.click(screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(wizardType)));
     fireEvent.click(screen.getByRole('button', { name: WIZARD_BTN.Next }));
 
-    // Step 4 → Submit
+    const nameInput = await waitFor(() => screen.getByTestId(WIZARD_TESTID.NameInput));
+    fireEvent.change(nameInput, { target: { value: 'Test Agent' } });
+    fireEvent.click(screen.getByRole('button', { name: WIZARD_BTN.Next }));
+
     await waitFor(() => screen.getByRole('button', { name: WIZARD_BTN.Submit }));
     fireEvent.click(screen.getByRole('button', { name: WIZARD_BTN.Submit }));
 
@@ -236,8 +242,7 @@ describe('AgentCreationWizard', () => {
       expect(mockCreateUserAgent).toHaveBeenCalledWith(
         expect.objectContaining({
           gameId: GAME_ID,
-          agentType: WIZARD_TYPE_TO_BACKEND[WIZARD_AGENT_TYPE.Tutor], // 'RAG', not 'Tutor'
-          name: 'Il mio Tutor',
+          agentType: expectedBackendType,
         })
       );
     });

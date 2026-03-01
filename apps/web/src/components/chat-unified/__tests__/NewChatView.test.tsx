@@ -2,22 +2,16 @@
  * NewChatView Tests - Issue #4363
  *
  * Tests for the new chat page with game + agent selection:
- * 1. Renders game selection section
- * 2. Renders agent selection with 4 options
- * 3. Selects a game card
- * 4. Selects an agent card
- * 5. Pre-selects via query params
- * 6. Search filters games
- * 7. Quick start suggestions change with game
- * 8. Start chat creates thread and redirects
- * 9. Shows error on API failure
- * 10. Shows loading skeleton while fetching games
- * 11. Skip game option (generic chat)
+ * 1. Full mode (no ?game param): game grid + agent grid + start
+ * 2. Direct game mode (?game=id):
+ *    - 0 agents → redirects to agent creation
+ *    - 1 agent  → auto-creates thread and redirects
+ *    - 2+ agents → shows agent picker only (no game grid)
  *
  * Pattern: Vitest + React Testing Library
  */
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import React from 'react';
@@ -27,10 +21,11 @@ import { NewChatView } from '../NewChatView';
 
 // Mock next/navigation
 const mockPush = vi.fn();
-const mockSearchParams = new URLSearchParams();
+const mockReplace = vi.fn();
+let mockSearchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useSearchParams: () => mockSearchParams,
 }));
 
@@ -76,15 +71,24 @@ const mockAgents = [
   { id: 'agent-2', name: 'Rules Agent', type: 'rules', strategyName: 'rules', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: true },
 ];
 
+const mockCustomAgents = [
+  { id: 'custom-1', name: 'My Catan Expert', type: 'custom', strategyName: 'default', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false },
+];
+
+const mockMultipleCustomAgents = [
+  { id: 'custom-1', name: 'My Catan Expert', type: 'custom', strategyName: 'default', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false },
+  { id: 'custom-2', name: 'Strategy Pro', type: 'strategy', strategyName: 'default', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false },
+];
+
 // ============================================================================
 // Helpers
 // ============================================================================
 
 let apiMock: any;
 
-async function renderView() {
+async function renderFullMode() {
+  mockSearchParams = new URLSearchParams();
   const result = render(<NewChatView />);
-  // Wait for games to load
   await waitFor(() => {
     expect(screen.queryByTestId(CHAT_TEST_IDS.gameSelectionSection)).toBeInTheDocument();
   });
@@ -92,14 +96,14 @@ async function renderView() {
 }
 
 // ============================================================================
-// Tests
+// Tests: Full Mode (no ?game param)
 // ============================================================================
 
-describe('NewChatView', () => {
+describe('NewChatView — Full Mode', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
 
-    // Import api mock
     const { api } = await import('@/lib/api');
     apiMock = api;
 
@@ -109,18 +113,14 @@ describe('NewChatView', () => {
     (apiMock.chat.createThread as Mock).mockResolvedValue({ id: 'thread-new-1' });
   });
 
-  // --------------------------------------------------------------------------
-  // Section Rendering
-  // --------------------------------------------------------------------------
-
   it('renders game selection section', async () => {
-    await renderView();
+    await renderFullMode();
     expect(screen.getByTestId(CHAT_TEST_IDS.gameSelectionSection)).toBeInTheDocument();
     expect(screen.getByText('Seleziona un gioco')).toBeInTheDocument();
   });
 
   it('renders agent selection with 4 options', async () => {
-    await renderView();
+    await renderFullMode();
     expect(screen.getByTestId(CHAT_TEST_IDS.agentSelectionSection)).toBeInTheDocument();
     expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('auto'))).toBeInTheDocument();
     expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('qa'))).toBeInTheDocument();
@@ -129,22 +129,18 @@ describe('NewChatView', () => {
   });
 
   it('renders quick start section', async () => {
-    await renderView();
+    await renderFullMode();
     expect(screen.getByTestId(CHAT_TEST_IDS.quickStartSection)).toBeInTheDocument();
   });
 
   it('renders start chat button', async () => {
-    await renderView();
+    await renderFullMode();
     expect(screen.getByTestId(CHAT_TEST_IDS.startChatBtn)).toBeInTheDocument();
     expect(screen.getByText('Inizia Chat')).toBeInTheDocument();
   });
 
-  // --------------------------------------------------------------------------
-  // Game Selection
-  // --------------------------------------------------------------------------
-
   it('renders game cards after loading', async () => {
-    await renderView();
+    await renderFullMode();
 
     await waitFor(() => {
       expect(screen.getByText('Catan')).toBeInTheDocument();
@@ -155,20 +151,19 @@ describe('NewChatView', () => {
 
   it('selects a game card on click', async () => {
     const user = userEvent.setup();
-    await renderView();
+    await renderFullMode();
 
     await waitFor(() => {
       expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toBeInTheDocument();
     });
 
     await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1')));
-
     expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('filters games with search input', async () => {
     const user = userEvent.setup();
-    await renderView();
+    await renderFullMode();
 
     await waitFor(() => {
       expect(screen.getByText('Catan')).toBeInTheDocument();
@@ -183,7 +178,7 @@ describe('NewChatView', () => {
 
   it('allows skipping game selection', async () => {
     const user = userEvent.setup();
-    await renderView();
+    await renderFullMode();
 
     await waitFor(() => {
       expect(screen.getByTestId(CHAT_TEST_IDS.skipGameBtn)).toBeInTheDocument();
@@ -193,63 +188,45 @@ describe('NewChatView', () => {
     expect(screen.getByText('Continua senza gioco (chat generica)')).toBeInTheDocument();
   });
 
-  // --------------------------------------------------------------------------
-  // Agent Selection
-  // --------------------------------------------------------------------------
-
   it('selects an agent card on click', async () => {
     const user = userEvent.setup();
-    await renderView();
+    await renderFullMode();
 
     await user.click(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules')));
     expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules'))).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('has auto agent pre-selected by default', async () => {
-    await renderView();
+    await renderFullMode();
     expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('auto'))).toHaveAttribute('aria-pressed', 'true');
   });
 
-  // --------------------------------------------------------------------------
-  // Quick Start
-  // --------------------------------------------------------------------------
-
   it('shows contextual suggestions when game selected', async () => {
     const user = userEvent.setup();
-    await renderView();
+    await renderFullMode();
 
     await waitFor(() => {
       expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toBeInTheDocument();
     });
 
-    // Before selecting game - generic suggestions
     expect(screen.getByText('Consiglia un gioco')).toBeInTheDocument();
 
-    // Select game
     await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1')));
 
-    // After selecting - contextual suggestions
     await waitFor(() => {
       expect(screen.getByText('Come si gioca a Catan')).toBeInTheDocument();
     });
   });
 
-  // --------------------------------------------------------------------------
-  // Thread Creation
-  // --------------------------------------------------------------------------
-
   it('creates thread and redirects on start', async () => {
     const user = userEvent.setup();
-    await renderView();
+    await renderFullMode();
 
     await waitFor(() => {
       expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1'))).toBeInTheDocument();
     });
 
-    // Select game
     await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('game-1')));
-
-    // Click start
     await user.click(screen.getByTestId(CHAT_TEST_IDS.startChatBtn));
 
     await waitFor(() => {
@@ -265,9 +242,8 @@ describe('NewChatView', () => {
 
   it('creates generic thread when no game selected', async () => {
     const user = userEvent.setup();
-    await renderView();
+    await renderFullMode();
 
-    // Click start without game
     await user.click(screen.getByTestId(CHAT_TEST_IDS.startChatBtn));
 
     await waitFor(() => {
@@ -279,10 +255,6 @@ describe('NewChatView', () => {
       });
     });
   });
-
-  // --------------------------------------------------------------------------
-  // Error Handling
-  // --------------------------------------------------------------------------
 
   it('shows error when API fails', async () => {
     (apiMock.games.getAll as Mock).mockRejectedValue(new Error('Network'));
@@ -297,12 +269,102 @@ describe('NewChatView', () => {
   it('shows error when thread creation fails', async () => {
     const user = userEvent.setup();
     (apiMock.chat.createThread as Mock).mockRejectedValue(new Error('Failed'));
-    await renderView();
+    await renderFullMode();
 
     await user.click(screen.getByTestId('start-chat-btn'));
 
     await waitFor(() => {
       expect(screen.getByText('Errore nella creazione della conversazione')).toBeInTheDocument();
     });
+  });
+});
+
+// ============================================================================
+// Tests: Direct Game Mode (?game=id)
+// ============================================================================
+
+describe('NewChatView — Direct Game Mode', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+
+    const { api } = await import('@/lib/api');
+    apiMock = api;
+
+    (apiMock.games.getAll as Mock).mockResolvedValue({ games: mockGames });
+    (apiMock.agents.getAvailable as Mock).mockResolvedValue(mockAgents);
+    (apiMock.chat.createThread as Mock).mockResolvedValue({ id: 'thread-auto-1' });
+  });
+
+  it('redirects to agent creation when 0 custom agents', async () => {
+    mockSearchParams = new URLSearchParams('game=game-1');
+    (apiMock.agents.getUserAgentsForGame as Mock).mockResolvedValue([]);
+
+    render(<NewChatView />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/chat/agents/create?gameId=game-1');
+    });
+  });
+
+  it('auto-creates thread when exactly 1 custom agent', async () => {
+    mockSearchParams = new URLSearchParams('game=game-1');
+    (apiMock.agents.getUserAgentsForGame as Mock).mockResolvedValue(mockCustomAgents);
+
+    render(<NewChatView />);
+
+    await waitFor(() => {
+      expect(apiMock.chat.createThread).toHaveBeenCalledWith({
+        gameId: 'game-1',
+        agentId: 'custom-1',
+        title: 'Chat: Catan',
+        initialMessage: null,
+      });
+      expect(mockPush).toHaveBeenCalledWith('/chat?threadId=thread-auto-1');
+    });
+  });
+
+  it('shows agent selection without game grid when 2+ custom agents', async () => {
+    mockSearchParams = new URLSearchParams('game=game-1');
+    (apiMock.agents.getUserAgentsForGame as Mock).mockResolvedValue(mockMultipleCustomAgents);
+
+    render(<NewChatView />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId(CHAT_TEST_IDS.agentSelectionSection)).toBeInTheDocument();
+    });
+
+    // Game grid should NOT be visible
+    expect(screen.queryByTestId(CHAT_TEST_IDS.gameSelectionSection)).not.toBeInTheDocument();
+
+    // Custom agents should be shown
+    expect(screen.getByText('My Catan Expert')).toBeInTheDocument();
+    expect(screen.getByText('Strategy Pro')).toBeInTheDocument();
+
+    // System agents still visible
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('auto'))).toBeInTheDocument();
+  });
+
+  it('shows contextual header with game name when 2+ agents', async () => {
+    mockSearchParams = new URLSearchParams('game=game-1');
+    (apiMock.agents.getUserAgentsForGame as Mock).mockResolvedValue(mockMultipleCustomAgents);
+
+    render(<NewChatView />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Scegli un agente per/)).toBeInTheDocument();
+      expect(screen.getByText('Catan')).toBeInTheDocument();
+    });
+  });
+
+  it('shows loading spinner during auto-start', async () => {
+    mockSearchParams = new URLSearchParams('game=game-1');
+    // Delay the agent response to observe loading state
+    (apiMock.agents.getUserAgentsForGame as Mock).mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve(mockCustomAgents), 100))
+    );
+
+    render(<NewChatView />);
+
+    expect(screen.getByText('Preparazione...')).toBeInTheDocument();
   });
 });

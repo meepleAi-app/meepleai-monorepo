@@ -76,5 +76,13 @@ internal interface IAgentRepository
     /// Issue #4683: User Agent CRUD.
     /// </summary>
     Task<bool> ExistsByNameForUserAsync(Guid userId, string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves a game reference ID to a GameManagement games.Id.
+    /// The input may be a games.Id (direct match) or a shared_games.Id
+    /// (resolved via games.SharedGameId).
+    /// Returns null if no matching game is found.
+    /// </summary>
+    Task<Guid?> ResolveGameIdAsync(Guid gameId, CancellationToken cancellationToken = default);
 }
 

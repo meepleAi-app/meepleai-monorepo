@@ -153,5 +153,25 @@ internal class AgentRepository : RepositoryBase, IAgentRepository
         return await DbContext.Set<AgentEntity>()
             .AnyAsync(a => a.CreatedByUserId == userId && a.Name == name && a.IsActive, cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<Guid?> ResolveGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
+    {
+        // 1. Direct match: gameId is already a games.Id
+        var directMatch = await DbContext.Games
+            .AsNoTracking()
+            .AnyAsync(g => g.Id == gameId, cancellationToken).ConfigureAwait(false);
+
+        if (directMatch)
+            return gameId;
+
+        // 2. Resolve via shared catalog: shared_games.Id → games.SharedGameId → games.Id
+        var resolvedId = await DbContext.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId == gameId)
+            .Select(g => (Guid?)g.Id)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return resolvedId;
+    }
 }
 

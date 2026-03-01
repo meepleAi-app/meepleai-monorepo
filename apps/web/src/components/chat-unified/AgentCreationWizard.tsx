@@ -582,7 +582,12 @@ export function AgentCreationWizard() {
     setSubmitError(null);
 
     try {
-      const backendType = WIZARD_TYPE_TO_BACKEND[state.agentType as WizardAgentTypeId] ?? state.agentType;
+      const backendType = WIZARD_TYPE_TO_BACKEND[state.agentType as WizardAgentTypeId];
+      if (!backendType) {
+        setSubmitError(`Tipo di agent non supportato: ${state.agentType}`);
+        setIsSubmitting(false);
+        return;
+      }
       const agent = await api.agents.createUserAgent({
         gameId: state.selectedGame.gameId,
         agentType: backendType,

@@ -9,6 +9,7 @@ public class ChatThreadEntity
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
     public Guid? GameId { get; set; }
+    public Guid? AgentId { get; set; } // Issue #2030 - Track which agent was used
     public string? AgentType { get; set; } // Issue #4362 - tutor/arbitro/decisore/auto
     public string? Title { get; set; }
     public string Status { get; set; } = "active";

@@ -3,7 +3,10 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -15,13 +18,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, AgentDto>
 {
     private readonly IAgentRepository _agentRepository;
+    private readonly MeepleAiDbContext _db;
     private readonly ILogger<CreateAgentCommandHandler> _logger;
 
     public CreateAgentCommandHandler(
         IAgentRepository agentRepository,
+        MeepleAiDbContext db,
         ILogger<CreateAgentCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -52,8 +58,33 @@ internal class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, A
             isActive: request.IsActive
         );
 
-        // Persist
-        await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
+        // Create default AgentConfiguration so the agent is immediately chat-ready
+        var defaultConfig = new AgentConfigurationEntity
+        {
+            Id = Guid.NewGuid(),
+            AgentId = agent.Id,
+            LlmProvider = 0, // OpenRouter
+            LlmModel = "anthropic/claude-3-haiku",
+            AgentMode = 0, // Chat
+            SelectedDocumentIdsJson = "[]",
+            Temperature = 0.3m,
+            MaxTokens = 2048,
+            IsCurrent = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.Empty // admin context, no user
+        };
+
+        // Persist agent + config atomically
+        var executionStrategy = _db.Database.CreateExecutionStrategy();
+        await executionStrategy.ExecuteAsync(async ct =>
+        {
+            using var transaction = await _db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+            await _agentRepository.AddAsync(agent, ct).ConfigureAwait(false);
+            _db.Set<AgentConfigurationEntity>().Add(defaultConfig);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await transaction.CommitAsync(ct).ConfigureAwait(false);
+            return true;
+        }, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created agent {AgentId} with name '{Name}' and type '{Type}'",

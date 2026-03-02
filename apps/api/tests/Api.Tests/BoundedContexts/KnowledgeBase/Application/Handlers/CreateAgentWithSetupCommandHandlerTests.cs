@@ -5,9 +5,13 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -26,6 +30,7 @@ public class CreateAgentWithSetupCommandHandlerTests
     private readonly Mock<IChatThreadRepository> _mockChatRepo;
     private readonly Mock<IUserLibraryRepository> _mockLibraryRepo;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+    private readonly MeepleAiDbContext _db;
     private readonly Mock<ILogger<CreateAgentWithSetupCommandHandler>> _mockLogger;
     private readonly CreateAgentWithSetupCommandHandler _handler;
 
@@ -40,11 +45,17 @@ public class CreateAgentWithSetupCommandHandlerTests
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = new Mock<ILogger<CreateAgentWithSetupCommandHandler>>();
 
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new MeepleAiDbContext(options, new Mock<IMediator>().Object, new Mock<IDomainEventCollector>().Object);
+
         _handler = new CreateAgentWithSetupCommandHandler(
             _mockAgentRepo.Object,
             _mockChatRepo.Object,
             _mockLibraryRepo.Object,
             _mockUnitOfWork.Object,
+            _db,
             _mockLogger.Object);
 
         // Default: no existing agents, name doesn't exist

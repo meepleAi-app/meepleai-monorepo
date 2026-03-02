@@ -34,12 +34,12 @@ public sealed record SemanticChunkingResult
     public static SemanticChunkingResult Create(
         List<SemanticChunk> chunks,
         ChunkingStrategy strategy) => new()
-    {
-        Chunks = chunks,
-        TotalChunks = chunks.Count,
-        TotalCharacters = chunks.Sum(c => c.CharacterCount),
-        StrategyUsed = strategy
-    };
+        {
+            Chunks = chunks,
+            TotalChunks = chunks.Count,
+            TotalCharacters = chunks.Sum(c => c.CharacterCount),
+            StrategyUsed = strategy
+        };
 }
 
 /// <summary>

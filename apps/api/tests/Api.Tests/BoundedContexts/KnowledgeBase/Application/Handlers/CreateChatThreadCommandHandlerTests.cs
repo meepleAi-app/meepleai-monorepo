@@ -17,6 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public class CreateChatThreadCommandHandlerTests
 {
     private readonly Mock<IChatThreadRepository> _mockRepository;
+    private readonly Mock<IAgentRepository> _mockAgentRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IPublisher> _mockPublisher;
     private readonly CreateChatThreadCommandHandler _handler;
@@ -24,9 +25,10 @@ public class CreateChatThreadCommandHandlerTests
     public CreateChatThreadCommandHandlerTests()
     {
         _mockRepository = new Mock<IChatThreadRepository>();
+        _mockAgentRepository = new Mock<IAgentRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockPublisher = new Mock<IPublisher>();
-        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object);
+        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object);
     }
 
     [Fact]

@@ -101,7 +101,7 @@ internal sealed class RoutingMetricsCollector
         );
     }
 
-    #pragma warning disable S1244 // Intentional CAS loop for lock-free atomic double addition
+#pragma warning disable S1244 // Intentional CAS loop for lock-free atomic double addition
     private static void AddToDouble(ref double target, double value)
     {
         double current;
@@ -113,7 +113,7 @@ internal sealed class RoutingMetricsCollector
         }
         while (Interlocked.CompareExchange(ref target, newValue, current) != current);
     }
-    #pragma warning restore S1244
+#pragma warning restore S1244
 }
 
 /// <summary>

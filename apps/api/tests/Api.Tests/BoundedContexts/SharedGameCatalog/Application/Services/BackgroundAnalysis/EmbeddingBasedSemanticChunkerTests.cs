@@ -416,7 +416,7 @@ public class EmbeddingBasedSemanticChunkerTests
             var currentChunkStart = result.Chunks[i].StartCharIndex;
             var overlap = previousChunkEnd - currentChunkStart;
 
-            overlap.Should().Be(500, $"overlap between chunk {i-1} and {i} should be 500 chars");
+            overlap.Should().Be(500, $"overlap between chunk {i - 1} and {i} should be 500 chars");
         }
     }
 

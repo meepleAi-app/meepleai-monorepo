@@ -45,6 +45,8 @@ export type ChatThreadMessageDto = z.infer<typeof ChatThreadMessageDtoSchema>;
 export const ChatThreadDtoSchema = z.object({
   id: z.string().uuid(),
   gameId: z.string().uuid().nullable(),
+  agentId: z.string().uuid().nullable().optional(),
+  agentType: z.string().nullable().optional(),
   title: z.string().nullable(),
   createdAt: z.string().datetime(),
   lastMessageAt: z.string().datetime().nullable(),

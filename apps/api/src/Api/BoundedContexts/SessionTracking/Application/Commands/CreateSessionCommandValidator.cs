@@ -9,7 +9,7 @@ public class CreateSessionCommandValidator : AbstractValidator<CreateSessionComm
     {
         RuleFor(x => x.SessionType)
             .NotEmpty()
-            .Must(t => string.Equals(t, "Generic", StringComparison.Ordinal) || 
+            .Must(t => string.Equals(t, "Generic", StringComparison.Ordinal) ||
                       string.Equals(t, "GameSpecific", StringComparison.Ordinal))
             .WithMessage("SessionType must be 'Generic' or 'GameSpecific'");
 

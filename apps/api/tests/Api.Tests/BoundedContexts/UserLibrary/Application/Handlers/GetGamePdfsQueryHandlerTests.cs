@@ -1,11 +1,14 @@
-using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Handlers;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
-using Api.BoundedContexts.UserLibrary.Domain.Entities;
-using Api.BoundedContexts.UserLibrary.Domain.Repositories;
-using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.GameManagement;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -20,176 +23,144 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 [Trait("BoundedContext", "UserLibrary")]
 public class GetGamePdfsQueryHandlerTests
 {
-    private readonly Mock<IUserLibraryRepository> _mockRepository;
-    private readonly Mock<ILogger<GetGamePdfsQueryHandler>> _mockLogger;
+    private readonly MeepleAiDbContext _db;
     private readonly GetGamePdfsQueryHandler _handler;
 
     public GetGamePdfsQueryHandlerTests()
     {
-        _mockRepository = new Mock<IUserLibraryRepository>();
-        _mockLogger = new Mock<ILogger<GetGamePdfsQueryHandler>>();
-        _handler = new GetGamePdfsQueryHandler(
-            _mockRepository.Object,
-            _mockLogger.Object
-        );
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _db = new MeepleAiDbContext(options, new Mock<IMediator>().Object, new Mock<IDomainEventCollector>().Object);
+        var mockLogger = new Mock<ILogger<GetGamePdfsQueryHandler>>();
+        _handler = new GetGamePdfsQueryHandler(_db, mockLogger.Object);
     }
 
     [Fact]
-    public async Task Handle_WhenGameNotInLibrary_ReturnsEmptyList()
+    public async Task Handle_WhenNoPdfsExist_ReturnsEmptyList()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
         var query = new GetGamePdfsQuery(gameId, userId);
-
-        _mockRepository
-            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((UserLibraryEntry?)null);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.Should().BeEmpty();
-        _mockRepository.Verify(
-            r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()),
-            Times.Once
-        );
     }
 
     [Fact]
-    public async Task Handle_WhenGameHasNoCustomPdf_ReturnsMockStandardPdf()
+    public async Task Handle_WhenPdfExistsForGame_ReturnsPdf()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
+
+        var game = new GameEntity { Id = gameId, Name = "Test Game" };
+        _db.Games.Add(game);
+
+        var pdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = gameId,
+            FileName = "TestRules.pdf",
+            FilePath = "/test/path.pdf",
+            FileSizeBytes = 1_000_000,
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow,
+            PageCount = 10,
+            Language = "EN"
+        };
+        _db.PdfDocuments.Add(pdf);
+        await _db.SaveChangesAsync();
+
         var query = new GetGamePdfsQuery(gameId, userId);
-
-        var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
-
-        _mockRepository
-            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(libraryEntry);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.Should().HaveCount(1);
+        result[0].Name.Should().Be("TestRules");
+        result[0].FileSizeBytes.Should().Be(1_000_000);
         result[0].Source.Should().Be("Catalog");
-        result[0].Name.Should().Be("Regolamento Standard");
-        result[0].Language.Should().Be("IT");
-    }
-
-    [Fact]
-    public async Task Handle_WhenGameHasCustomPdf_ReturnsCustomPdf()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
-        var query = new GetGamePdfsQuery(gameId, userId);
-
-        var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
-        var customPdf = CustomPdfMetadata.Create(
-            url: "https://example.com/my-custom-rules-IT.pdf",
-            fileSizeBytes: 2_500_000,
-            originalFileName: "CustomRules-IT.pdf"
-        );
-        libraryEntry.UploadCustomPdf(customPdf);
-
-        _mockRepository
-            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(libraryEntry);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result[0].Source.Should().Be("Custom");
-        result[0].Name.Should().Be("CustomRules-IT");
-        result[0].FileSizeBytes.Should().Be(2_500_000);
-        result[0].Language.Should().Be("IT");
-    }
-
-    [Fact]
-    public async Task Handle_DetectsItalianLanguageFromFilename()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
-        var query = new GetGamePdfsQuery(gameId, userId);
-
-        var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
-        var customPdf = CustomPdfMetadata.Create(
-            url: "https://example.com/rules.pdf",
-            fileSizeBytes: 1_000_000,
-            originalFileName: "Regolamento_it.pdf"
-        );
-        libraryEntry.UploadCustomPdf(customPdf);
-
-        _mockRepository
-            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(libraryEntry);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        result[0].Language.Should().Be("IT");
-    }
-
-    [Fact]
-    public async Task Handle_DetectsEnglishLanguageFromFilename()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
-        var query = new GetGamePdfsQuery(gameId, userId);
-
-        var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
-        var customPdf = CustomPdfMetadata.Create(
-            url: "https://example.com/rules.pdf",
-            fileSizeBytes: 1_000_000,
-            originalFileName: "Rulebook-EN.pdf"
-        );
-        libraryEntry.UploadCustomPdf(customPdf);
-
-        _mockRepository
-            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(libraryEntry);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
         result[0].Language.Should().Be("EN");
     }
 
     [Fact]
-    public async Task Handle_ReturnsNullLanguageWhenUndetectable()
+    public async Task Handle_WhenPdfExistsForSharedGame_ReturnsPdf()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
-        var query = new GetGamePdfsQuery(gameId, userId);
+        var sharedGameId = Guid.NewGuid();
 
-        var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
-        var customPdf = CustomPdfMetadata.Create(
-            url: "https://example.com/rules.pdf",
-            fileSizeBytes: 1_000_000,
-            originalFileName: "MyRules.pdf" // No language indicator
-        );
-        libraryEntry.UploadCustomPdf(customPdf);
+        var pdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
+            FileName = "SharedRules.pdf",
+            FilePath = "/test/shared.pdf",
+            FileSizeBytes = 500_000,
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow,
+            Language = "IT"
+        };
+        _db.PdfDocuments.Add(pdf);
+        await _db.SaveChangesAsync();
 
-        _mockRepository
-            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(libraryEntry);
+        var query = new GetGamePdfsQuery(sharedGameId, userId);
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
         // Assert
-        result[0].Language.Should().BeNull();
+        result.Should().HaveCount(1);
+        result[0].Name.Should().Be("SharedRules");
+        result[0].Language.Should().Be("IT");
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsPdfsOrderedByUploadDateDescending()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+
+        var olderPdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
+            FileName = "OlderRules.pdf",
+            FilePath = "/test/older.pdf",
+            FileSizeBytes = 100_000,
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow.AddDays(-1),
+            Language = "EN"
+        };
+        var newerPdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
+            FileName = "NewerRules.pdf",
+            FilePath = "/test/newer.pdf",
+            FileSizeBytes = 200_000,
+            UploadedByUserId = userId,
+            UploadedAt = DateTime.UtcNow,
+            Language = "IT"
+        };
+        _db.PdfDocuments.AddRange(olderPdf, newerPdf);
+        await _db.SaveChangesAsync();
+
+        var query = new GetGamePdfsQuery(sharedGameId, userId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().HaveCount(2);
+        result[0].Name.Should().Be("NewerRules");
+        result[1].Name.Should().Be("OlderRules");
     }
 }

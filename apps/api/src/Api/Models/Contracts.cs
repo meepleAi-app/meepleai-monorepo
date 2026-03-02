@@ -75,7 +75,8 @@ internal enum StreamingEventType
     DebugCostUpdate = 17,       // Token usage and cost breakdown
     DebugSearchDetails = 18,    // Vector/keyword/fused result breakdown
     DebugCacheCheck = 19,       // Cache hit/miss with timing
-    DebugDocumentCheck = 20     // Document readiness check result
+    DebugDocumentCheck = 20,    // Document readiness check result
+    ModelDowngrade = 21         // LLM fallback notification (model was downgraded)
 }
 
 internal record RagStreamingEvent(
@@ -103,6 +104,12 @@ internal record StreamingError(string errorMessage, string? errorCode = null);
 internal record StreamingHeartbeat(string message = "keep-alive");
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
+internal record StreamingModelDowngrade(
+    string OriginalModel,
+    string FallbackModel,
+    string Reason,
+    bool IsLocalFallback,
+    string? UpgradeMessage);
 
 // Admin Debug Chat: data records for debug streaming events
 internal record DebugAgentRouterData(

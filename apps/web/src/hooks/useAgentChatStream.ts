@@ -32,6 +32,7 @@ const StreamingEventType = {
   DebugSearchDetails: 18,
   DebugCacheCheck: 19,
   DebugDocumentCheck: 20,
+  ModelDowngrade: 21,
 } as const;
 
 // Debug step captured from SSE stream (Issue #4916)
@@ -80,6 +81,14 @@ export interface AgentChatStreamState {
   totalTokens: number;
   /** Debug pipeline steps captured during streaming (Issue #4916) */
   debugSteps: DebugStep[];
+  /** Model downgrade notice (fallback occurred) */
+  modelDowngrade: {
+    originalModel: string;
+    fallbackModel: string;
+    reason: string;
+    isLocalFallback: boolean;
+    upgradeMessage: string | null;
+  } | null;
 }
 
 /** Game context for OpenRouter proxy requests */
@@ -107,6 +116,7 @@ const INITIAL_STATE: AgentChatStreamState = {
   chatThreadId: null,
   totalTokens: 0,
   debugSteps: [],
+  modelDowngrade: null,
 };
 
 export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
@@ -295,6 +305,27 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
 
                 case StreamingEventType.Heartbeat:
                   break;
+
+                case StreamingEventType.ModelDowngrade: {
+                  const data = event.data as {
+                    originalModel?: string;
+                    fallbackModel?: string;
+                    reason?: string;
+                    isLocalFallback?: boolean;
+                    upgradeMessage?: string | null;
+                  };
+                  setState(prev => ({
+                    ...prev,
+                    modelDowngrade: {
+                      originalModel: data?.originalModel || 'unknown',
+                      fallbackModel: data?.fallbackModel || 'unknown',
+                      reason: data?.reason || 'unknown',
+                      isLocalFallback: data?.isLocalFallback || false,
+                      upgradeMessage: data?.upgradeMessage ?? null,
+                    },
+                  }));
+                  break;
+                }
 
                 // Debug pipeline events (Issue #4916) — types 10-20
                 case StreamingEventType.DebugAgentRouter:

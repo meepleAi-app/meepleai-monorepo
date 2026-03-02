@@ -25,4 +25,10 @@ internal static class AgentDefaults
     /// Default max tokens for agent responses.
     /// </summary>
     public const int DefaultMaxTokens = 2048;
+
+    /// <summary>
+    /// Local Ollama fallback model (zero cost).
+    /// Used when free-tier OpenRouter models are rate-limited or unavailable.
+    /// </summary>
+    public const string OllamaFallbackModel = "llama3:8b";
 }

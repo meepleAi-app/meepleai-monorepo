@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -81,6 +82,7 @@ public sealed class SendAgentMessageCommandHandlerTests
             _dbContext,
             _mockBudgetService.Object,
             Mock.Of<ILlmModelOverrideService>(),
+            Mock.Of<IModelConfigurationService>(),
             _mockLogger.Object
         );
     }

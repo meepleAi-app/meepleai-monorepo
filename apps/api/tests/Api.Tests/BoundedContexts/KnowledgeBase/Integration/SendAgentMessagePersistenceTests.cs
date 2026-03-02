@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -77,6 +78,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             _dbContext,
             Mock.Of<IUserBudgetService>(),
             Mock.Of<ILlmModelOverrideService>(),
+            Mock.Of<IModelConfigurationService>(),
             Mock.Of<ILogger<SendAgentMessageCommandHandler>>());
 
         // Seed a test user (FK requirement)

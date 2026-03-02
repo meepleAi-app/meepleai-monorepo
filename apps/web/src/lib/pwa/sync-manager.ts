@@ -56,54 +56,57 @@ const SYNC_TIMEOUT = 30000; // 30 seconds per action
 // API Endpoints Mapping
 // ============================================================================
 
-const ACTION_ENDPOINTS: Record<ActionType, { method: string; path: (payload: Record<string, unknown>) => string }> = {
+const ACTION_ENDPOINTS: Record<
+  ActionType,
+  { method: string; path: (payload: Record<string, unknown>) => string }
+> = {
   DICE_ROLL: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/dice/roll`,
+    path: p => `/api/v1/sessions/${p.sessionId}/dice/roll`,
   },
   CARD_DRAW: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/decks/${p.deckId}/draw`,
+    path: p => `/api/v1/sessions/${p.sessionId}/decks/${p.deckId}/draw`,
   },
   CARD_SHUFFLE: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/decks/${p.deckId}/shuffle`,
+    path: p => `/api/v1/sessions/${p.sessionId}/decks/${p.deckId}/shuffle`,
   },
   TIMER_START: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/timer/start`,
+    path: p => `/api/v1/sessions/${p.sessionId}/timer/start`,
   },
   TIMER_PAUSE: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/timer/pause`,
+    path: p => `/api/v1/sessions/${p.sessionId}/timer/pause`,
   },
   TIMER_RESUME: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/timer/resume`,
+    path: p => `/api/v1/sessions/${p.sessionId}/timer/resume`,
   },
   TIMER_RESET: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/timer/reset`,
+    path: p => `/api/v1/sessions/${p.sessionId}/timer/reset`,
   },
   COIN_FLIP: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/coin/flip`,
+    path: p => `/api/v1/sessions/${p.sessionId}/coin/flip`,
   },
   WHEEL_SPIN: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/wheel/spin`,
+    path: p => `/api/v1/sessions/${p.sessionId}/wheel/spin`,
   },
   NOTE_CREATE: {
     method: 'POST',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/notes`,
+    path: p => `/api/v1/sessions/${p.sessionId}/notes`,
   },
   NOTE_UPDATE: {
     method: 'PUT',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/notes/${p.noteId}`,
+    path: p => `/api/v1/sessions/${p.sessionId}/notes/${p.noteId}`,
   },
   NOTE_DELETE: {
     method: 'DELETE',
-    path: (p) => `/api/v1/sessions/${p.sessionId}/notes/${p.noteId}`,
+    path: p => `/api/v1/sessions/${p.sessionId}/notes/${p.noteId}`,
   },
 };
 
@@ -143,7 +146,7 @@ class SyncManager {
   }
 
   private notifyListeners() {
-    this.listeners.forEach((listener) => listener(this.state));
+    this.listeners.forEach(listener => listener(this.state));
   }
 
   public subscribe(listener: (state: SyncState) => void): () => void {
@@ -162,8 +165,10 @@ class SyncManager {
   // ==========================================================================
 
   private handleOnline = async () => {
-    // eslint-disable-next-line no-console
-    console.log('[SyncManager] Back online');
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('[SyncManager] Back online');
+    }
     this.updateState({ isOnline: true });
 
     // Auto-sync when back online
@@ -171,8 +176,10 @@ class SyncManager {
   };
 
   private handleOffline = () => {
-    // eslint-disable-next-line no-console
-    console.log('[SyncManager] Went offline');
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('[SyncManager] Went offline');
+    }
     this.updateState({ isOnline: false });
   };
 
@@ -188,14 +195,18 @@ class SyncManager {
 
   public async syncAll(): Promise<SyncResult> {
     if (this.syncInProgress) {
-      // eslint-disable-next-line no-console
-      console.log('[SyncManager] Sync already in progress');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[SyncManager] Sync already in progress');
+      }
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
 
     if (!navigator.onLine) {
-      // eslint-disable-next-line no-console
-      console.log('[SyncManager] Cannot sync: offline');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[SyncManager] Cannot sync: offline');
+      }
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
 
@@ -213,8 +224,10 @@ class SyncManager {
       const pendingActions = await getPendingActions();
       this.updateState({ pendingCount: pendingActions.length });
 
-      // eslint-disable-next-line no-console
-      console.log(`[SyncManager] Syncing ${pendingActions.length} pending actions`);
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log(`[SyncManager] Syncing ${pendingActions.length} pending actions`);
+      }
 
       for (const action of pendingActions) {
         const actionResult = await this.syncAction(action);
@@ -337,16 +350,25 @@ class SyncManager {
   // ==========================================================================
 
   public async registerBackgroundSync(): Promise<boolean> {
-    if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration.prototype)) {
+    if (
+      !('serviceWorker' in navigator) ||
+      !('sync' in window.ServiceWorkerRegistration.prototype)
+    ) {
       console.warn('[SyncManager] Background sync not supported');
       return false;
     }
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      await (registration as ServiceWorkerRegistration & { sync: { register: (tag: string) => Promise<void> } }).sync.register('session-sync');
-      // eslint-disable-next-line no-console
-      console.log('[SyncManager] Background sync registered');
+      await (
+        registration as ServiceWorkerRegistration & {
+          sync: { register: (tag: string) => Promise<void> };
+        }
+      ).sync.register('session-sync');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[SyncManager] Background sync registered');
+      }
       return true;
     } catch (error) {
       console.error('[SyncManager] Failed to register background sync:', error);

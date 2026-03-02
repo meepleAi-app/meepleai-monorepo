@@ -92,6 +92,16 @@ internal static class RateLimitingServiceExtensions
                 // Issue #4683: Agent creation rate limiting policy
                 options.AddPolicy("AgentCreation", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // SEC-05: Auth rate limiting policies (disabled in tests)
+                options.AddPolicy("AuthLogin", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("AuthRegister", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("AuthPasswordReset", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
             return services;
@@ -326,6 +336,60 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
+            // SEC-05: Policy 14: AuthLogin - 10 req/min per IP for login attempts
+            // Prevents brute-force password attacks.
+            options.AddPolicy("AuthLogin", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"auth-login-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // SEC-05: Policy 15: AuthRegister - 5 req/min per IP for registration
+            // Prevents mass account creation.
+            options.AddPolicy("AuthRegister", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"auth-register-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 5,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // SEC-05: Policy 16: AuthPasswordReset - 5 req/min per IP for password reset
+            // Prevents password reset abuse and email flooding.
+            options.AddPolicy("AuthPasswordReset", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"auth-password-reset-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 5,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
             // Rejection behavior: Return 429 Too Many Requests with retry-after info
             options.OnRejected = async (context, cancellationToken) =>
             {
@@ -354,8 +418,8 @@ internal static class RateLimitingServiceExtensions
 
     /// <summary>
     /// Gets the client IP address from the HttpContext.
-    /// Checks X-Forwarded-For header first (for proxied requests via Traefik), then RemoteIpAddress.
-    /// Defensive implementation with full null checks to prevent rate limiter crashes.
+    /// SEC-06: Uses only RemoteIpAddress (already rewritten by ForwardedHeaders middleware).
+    /// Raw X-Forwarded-For is NOT read directly to prevent IP spoofing bypass.
     /// </summary>
     private static string GetClientIpAddress(HttpContext? httpContext)
     {
@@ -368,20 +432,8 @@ internal static class RateLimitingServiceExtensions
 
         try
         {
-            var request = httpContext.Request;
-            if (request is not null)
-            {
-                var forwardedFor = request.Headers["X-Forwarded-For"].FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(forwardedFor))
-                {
-                    var firstIp = forwardedFor.Split(',')[0].Trim();
-                    if (!string.IsNullOrWhiteSpace(firstIp))
-                    {
-                        return firstIp;
-                    }
-                }
-            }
-
+            // SEC-06: Only use RemoteIpAddress which is already resolved by
+            // ForwardedHeaders middleware from trusted proxies.
             var connection = httpContext.Connection;
             if (connection is not null)
             {

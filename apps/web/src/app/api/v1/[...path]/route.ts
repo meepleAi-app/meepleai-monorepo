@@ -18,9 +18,11 @@ export const dynamic = 'force-dynamic';
 const API_BASE =
   process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
-// Log API_BASE on module load for debugging
-// eslint-disable-next-line no-console
-console.log('[API Proxy] Module initialized with API_BASE:', API_BASE);
+// WEB-01: Only log in development
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line no-console
+  console.log('[API Proxy] Module initialized with API_BASE:', API_BASE);
+}
 
 /**
  * Build forwarding headers from the incoming request.
@@ -43,12 +45,12 @@ function buildForwardHeaders(request: NextRequest): Headers {
  */
 function copyResponseHeaders(source: Response, target: NextResponse, apiPath: string): void {
   const setCookies = source.headers.getSetCookie();
-  if (setCookies.length > 0) {
+  for (const cookie of setCookies) {
+    target.headers.append('set-cookie', cookie);
+  }
+  if (setCookies.length > 0 && process.env.NODE_ENV !== 'production') {
     // eslint-disable-next-line no-console
     console.log(`[API Proxy] Set-Cookie headers received: ${setCookies.length} cookie(s)`);
-    for (const cookie of setCookies) {
-      target.headers.append('set-cookie', cookie);
-    }
   }
 
   source.headers.forEach((value, key) => {
@@ -57,9 +59,11 @@ function copyResponseHeaders(source: Response, target: NextResponse, apiPath: st
     }
   });
 
-  if (apiPath.includes('/auth/')) {
+  if (apiPath.includes('/auth/') && process.env.NODE_ENV !== 'production') {
     // eslint-disable-next-line no-console
-    console.log(`[API Proxy] Auth response: ${source.status} ${source.statusText}, Set-Cookie: ${setCookies.length > 0 ? `${setCookies.length} cookie(s)` : 'absent'}`);
+    console.log(
+      `[API Proxy] Auth response: ${source.status} ${source.statusText}, Set-Cookie: ${setCookies.length > 0 ? `${setCookies.length} cookie(s)` : 'absent'}`
+    );
   }
 
   target.headers.set('x-no-compression', '1');
@@ -78,8 +82,10 @@ async function proxyRequest(request: NextRequest, method: string) {
     const pathname = request.nextUrl.pathname;
     const apiPath = pathname.replace('/api/v1/', '/api/v1/');
     const targetUrl = `${API_BASE}${apiPath}${request.nextUrl.search}`;
-    // eslint-disable-next-line no-console
-    console.log(`[API Proxy] ${method} ${targetUrl}`);
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log(`[API Proxy] ${method} ${targetUrl}`);
+    }
 
     // Issue #2432: Use arrayBuffer() to preserve exact binary content
     let body: BodyInit | null = null;

@@ -165,10 +165,10 @@ const PLAIN_TEXT_CONFIG: DOMPurifyConfig = {
  */
 export function sanitizeHtml(html: string, config: DOMPurifyConfig = DEFAULT_CONFIG): string {
   if (typeof window === 'undefined') {
-    // Server-side: return empty string (DOMPurify requires DOM)
-    // In production, consider using a server-side sanitization library
-    console.warn('DOMPurify requires a browser environment. Returning empty string.');
-    return '';
+    // WEB-02: Server-side fallback — strip all HTML tags to prevent unsanitized SSR output.
+    // This is a safe default: removes all tags while preserving text content.
+    // For full server-side HTML sanitization, install isomorphic-dompurify.
+    return html.replace(/<[^>]*>/g, '');
   }
 
   // Add hooks to remove dangerous URLs (data:, javascript:, etc.)

@@ -59,7 +59,9 @@ internal static class CookieHelpers
 
     /// <summary>
     /// Writes the user role cookie for middleware authorization checks.
-    /// This cookie is NOT HttpOnly so the middleware can read it.
+    /// SEC-07: Cookie is HttpOnly to prevent XSS-based role discovery.
+    /// Next.js middleware can read HttpOnly cookies on the server side.
+    /// Role should be exposed to client-side JS via the /auth/me endpoint instead.
     /// </summary>
     public static void WriteUserRoleCookie(HttpContext context, string role, DateTime expiresAt)
     {
@@ -77,12 +79,12 @@ internal static class CookieHelpers
         var secure = configuration.Secure ?? isHttps;
         var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
-        // Use same SameSite as session cookie but NOT HttpOnly so middleware can read it
+        // Use same SameSite as session cookie
         var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
 
         var options = new CookieOptions
         {
-            HttpOnly = false, // Must be readable by Next.js middleware
+            HttpOnly = true, // SEC-07: Prevent XSS from reading admin role
             Secure = secure,
             SameSite = sameSite,
             Path = path,
@@ -98,9 +100,11 @@ internal static class CookieHelpers
         if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() &&
             sameSite == SameSiteMode.None && !secure)
         {
+            // SEC-07: Include HttpOnly in manual Set-Cookie header
             var cookieValue = $"{UserRoleCookieName}={role.ToLowerInvariant()}; " +
                             $"Path={path}; " +
                             $"Expires={expiresAt:R}; " +
+                            $"HttpOnly; " +
                             $"SameSite=None";
 
             if (!string.IsNullOrWhiteSpace(configuration.Domain))
@@ -127,7 +131,7 @@ internal static class CookieHelpers
 
         var options = new CookieOptions
         {
-            HttpOnly = false,
+            HttpOnly = true, // SEC-07: Match write options
             Path = path,
             Expires = DateTimeOffset.UnixEpoch
         };

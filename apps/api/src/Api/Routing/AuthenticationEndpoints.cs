@@ -52,6 +52,7 @@ internal static class AuthenticationEndpoints
 
     private static void MapRegisterEndpoint(RouteGroupBuilder group)
     {
+        // SEC-05: Rate limit registration to 5 req/min per IP
         group.MapPost("/auth/register", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             RegisterPayload? payload;
@@ -93,11 +94,12 @@ internal static class AuthenticationEndpoints
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
             return Results.Json(new { user = result.User, expiresAt = result.ExpiresAt });
-        });
+        }).RequireRateLimiting("AuthRegister");
     }
 
     private static void MapLoginEndpoint(RouteGroupBuilder group)
     {
+        // SEC-05: Rate limit login to 10 req/min per IP
         group.MapPost("/auth/login", async (HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
         {
             LoginPayload? payload;
@@ -156,7 +158,7 @@ internal static class AuthenticationEndpoints
             logger.LogInformation("User {UserId} logged in successfully with role {Role}", result.User.Id, result.User.Role);
 
             return Results.Json(new { user = result.User, expiresAt });
-        });
+        }).RequireRateLimiting("AuthLogin");
     }
 
     private static void MapLogoutEndpoint(RouteGroupBuilder group)

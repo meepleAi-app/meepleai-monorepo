@@ -9,11 +9,10 @@ namespace Api.Infrastructure.BackgroundTasks;
 /// <summary>
 /// Background cleanup task for expired TOTP codes
 /// SECURITY: Issue #1787 - Removes expired used_totp_codes entries hourly
-/// Pattern: IHostedService with scheduled execution
+/// ARCH-01: Uses BackgroundService with PeriodicTimer instead of async void Timer callback
 /// </summary>
-internal class UsedTotpCodeCleanupTask : IHostedService, IDisposable
+internal class UsedTotpCodeCleanupTask : BackgroundService
 {
-    private Timer? _timer;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<UsedTotpCodeCleanupTask> _logger;
     private readonly TimeProvider _timeProvider;
@@ -30,37 +29,31 @@ internal class UsedTotpCodeCleanupTask : IHostedService, IDisposable
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    /// <summary>
-    /// Start background task with 5-minute initial delay, then hourly execution
-    /// </summary>
-    public Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("UsedTotpCodeCleanupTask: Starting background task");
 
-        // Start after 5 minutes, then run every hour
-        _timer = new Timer(
-            CleanupExpiredCodes,
-            null,
-            TimeSpan.FromMinutes(5), // Initial delay
-            TimeSpan.FromHours(1));  // Period
+        // Initial delay of 5 minutes
+        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken).ConfigureAwait(false);
 
-        return Task.CompletedTask;
-    }
+        // ARCH-01: Use PeriodicTimer for proper async execution (no async void)
+        using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
 
-    /// <summary>
-    /// Stop background task
-    /// </summary>
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
+        // Run once immediately after initial delay, then on each tick
+        await CleanupExpiredCodesAsync(stoppingToken).ConfigureAwait(false);
+
+        while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
+        {
+            await CleanupExpiredCodesAsync(stoppingToken).ConfigureAwait(false);
+        }
+
         _logger.LogInformation("UsedTotpCodeCleanupTask: Stopping background task");
-        _timer?.Change(Timeout.Infinite, 0);
-        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Cleanup expired TOTP codes (ExecuteDelete for efficiency)
     /// </summary>
-    private async void CleanupExpiredCodes(object? state)
+    private async Task CleanupExpiredCodesAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -72,7 +65,7 @@ internal class UsedTotpCodeCleanupTask : IHostedService, IDisposable
             // EF Core 7+: ExecuteDelete for bulk delete without loading entities
             var deleted = await dbContext.UsedTotpCodes
                 .Where(u => u.ExpiresAt < now)
-                .ExecuteDeleteAsync().ConfigureAwait(false);
+                .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 
             if (deleted > 0)
             {
@@ -86,20 +79,6 @@ internal class UsedTotpCodeCleanupTask : IHostedService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "UsedTotpCodeCleanupTask: Error during cleanup");
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            _timer?.Dispose();
         }
     }
 }

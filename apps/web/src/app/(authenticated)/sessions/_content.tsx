@@ -1,8 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-
 import { Clock, History } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 export function SessionsContent() {
   const searchParams = useSearchParams();

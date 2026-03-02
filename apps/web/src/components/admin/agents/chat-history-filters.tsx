@@ -4,8 +4,9 @@ import { useState } from 'react';
 
 import { DownloadIcon } from 'lucide-react';
 
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -13,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 
 export interface ChatHistoryFiltersProps {
   onAgentChange?: (value: string) => void;
@@ -78,7 +78,7 @@ export function ChatHistoryFilters({
             id="date-filter"
             type="date"
             value={date}
-            onChange={(e) => handleDateChange(e.target.value)}
+            onChange={e => handleDateChange(e.target.value)}
             className="bg-white/90 dark:bg-zinc-900"
           />
         </div>

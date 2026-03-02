@@ -1018,7 +1018,7 @@ export const MeepleCard = React.memo(function MeepleCard({
   sessionStatus,
   sessionPlayers,
   sessionRoundScores,
-  sessionScoringConfig,
+  sessionScoringConfig: _sessionScoringConfig,
   sessionTurn,
   sessionActions,
   isSessionHost,

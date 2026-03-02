@@ -9,8 +9,8 @@ import { useState } from 'react';
 
 import { ChevronDown, ChevronRight, Clock } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import type { DebugStep } from '@/hooks/useAgentChatStream';
+import { cn } from '@/lib/utils';
 
 // ─── Step icon/color config ───────────────────────────────────────────────────
 

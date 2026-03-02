@@ -367,7 +367,7 @@ export function DrawerErrorState({
 }
 
 /** Placeholder shown for entity types not yet implemented */
-function DrawerComingSoon({ label, issueNumber }: { label: string; issueNumber: number }) {
+function _DrawerComingSoon({ label, issueNumber }: { label: string; issueNumber: number }) {
   return (
     <div
       className="flex flex-col items-center justify-center gap-3 p-8 text-center"

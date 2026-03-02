@@ -24,12 +24,6 @@ import {
   type GetEntityLinksParams,
 } from '../schemas/entity-link.schemas';
 import {
-  ToolkitDashboardDtoSchema,
-  type ToolkitDashboardDto,
-  type OverrideToolkitRequest,
-  type UpdateWidgetRequest,
-} from '../schemas/toolkit.schemas';
-import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
@@ -77,6 +71,12 @@ import {
   type PaginatedPrivateGamesResponse,
   type GetPrivateGamesParams,
 } from '../schemas/private-games.schemas';
+import {
+  ToolkitDashboardDtoSchema,
+  type ToolkitDashboardDto,
+  type OverrideToolkitRequest,
+  type UpdateWidgetRequest,
+} from '../schemas/toolkit.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 

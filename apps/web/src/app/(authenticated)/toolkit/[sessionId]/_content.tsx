@@ -18,7 +18,7 @@
  * `sessionStore.activeTool` mirrors the URL for cross-component access.
  */
 
-import React, { Suspense, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { Hash, Loader2 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -175,7 +175,7 @@ export function ActiveSessionPageContent() {
     sessionId,
     participantId: currentParticipant?.id ?? '',
     participantName: currentParticipant?.displayName ?? '',
-    onRollReceived: (roll) => {
+    onRollReceived: roll => {
       if (!roll.participantId || roll.participantId !== currentParticipant?.id) {
         toast.info(`${roll.participantName}: ${roll.formula} = ${roll.total}`);
       }
@@ -247,8 +247,7 @@ export function ActiveSessionPageContent() {
   };
 
   // Current user is a session owner if any participant marked isCurrentUser + isOwner
-  const isCurrentUserOwner =
-    participants.find(p => p.isCurrentUser)?.isOwner ?? false;
+  const isCurrentUserOwner = participants.find(p => p.isCurrentUser)?.isOwner ?? false;
 
   // Loading state
   if (isLoading || !activeSession || !scoreboard) {

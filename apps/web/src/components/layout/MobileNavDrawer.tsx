@@ -19,15 +19,10 @@
 
 import { useState } from 'react';
 
-import {
-  Menu,
-  X,
-  ChevronDown,
-} from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-import { getActiveLibraryTab } from '@/config/library-navigation';
 import {
   Sheet,
   SheetClose,
@@ -37,6 +32,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
+import { getActiveLibraryTab } from '@/config/library-navigation';
 import { useNavigationItems } from '@/hooks/useNavigationItems';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
@@ -46,9 +42,7 @@ export interface MobileNavDrawerProps {
   className?: string;
 }
 
-export function MobileNavDrawer({
-  className,
-}: MobileNavDrawerProps) {
+export function MobileNavDrawer({ className }: MobileNavDrawerProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { items: navItems, isItemActive } = useNavigationItems();
@@ -115,7 +109,9 @@ export function MobileNavDrawer({
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
                 onClick={handleLinkClick}
-                data-testid={NAV_TEST_IDS.mobileNavItem(item.href.split('/').filter(Boolean).join('-') || 'home')}
+                data-testid={NAV_TEST_IDS.mobileNavItem(
+                  item.href.split('/').filter(Boolean).join('-') || 'home'
+                )}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
                 <span>{item.label}</span>
@@ -216,7 +212,9 @@ export function MobileNavDrawer({
                         : 'text-muted-foreground hover:text-primary hover:bg-muted'
                     )}
                     onClick={handleLinkClick}
-                    data-testid={NAV_TEST_IDS.mobileNavItem(item.href.split('/').filter(Boolean).join('-') || item.id)}
+                    data-testid={NAV_TEST_IDS.mobileNavItem(
+                      item.href.split('/').filter(Boolean).join('-') || item.id
+                    )}
                   >
                     <Icon className="h-5 w-5" aria-hidden="true" />
                     <span>{item.label}</span>

@@ -15,17 +15,16 @@
 
 import { useState, useCallback, useEffect } from 'react';
 
-import {
-  Settings,
-  RotateCcw,
-  Loader2,
-  Zap,
-  Thermometer,
-  DollarSign,
-} from 'lucide-react';
+import { Settings, RotateCcw, Loader2, Zap, Thermometer, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/navigation/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/navigation/sheet';
 import {
   Select,
   SelectContent,
@@ -37,7 +36,11 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Slider } from '@/components/ui/primitives/slider';
-import { useAvailableModels, useAgentConfiguration, useUpdateAgentConfiguration } from '@/hooks/queries/useModels';
+import {
+  useAvailableModels,
+  useAgentConfiguration,
+  useUpdateAgentConfiguration,
+} from '@/hooks/queries/useModels';
 import { api } from '@/lib/api';
 
 // ============================================================================
@@ -87,7 +90,9 @@ export function AgentSettingsDrawer({
   const { data: models = [], isLoading: modelsLoading } = useAvailableModels(userTier);
 
   // Fetch current agent config
-  const { data: agentConfig, isLoading: configLoading } = useAgentConfiguration(isOpen ? agentId : null);
+  const { data: agentConfig, isLoading: configLoading } = useAgentConfiguration(
+    isOpen ? agentId : null
+  );
 
   // Mutation for PATCH
   const { mutate: patchConfig, isPending } = useUpdateAgentConfiguration(agentId);
@@ -129,7 +134,8 @@ export function AgentSettingsDrawer({
     // Only include fields that changed from current config
     if (agentConfig) {
       if (form.modelId !== agentConfig.llmModel) configPayload.modelId = form.modelId;
-      if (form.temperature !== agentConfig.temperature) configPayload.temperature = form.temperature;
+      if (form.temperature !== agentConfig.temperature)
+        configPayload.temperature = form.temperature;
       if (form.maxTokens !== agentConfig.maxTokens) configPayload.maxTokens = form.maxTokens;
     } else {
       configPayload.modelId = form.modelId;
@@ -139,6 +145,7 @@ export function AgentSettingsDrawer({
 
     // Patch config if anything changed
     if (Object.keys(configPayload).length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       patchConfig(configPayload as any, {
         onSuccess: () => {
           toast.success('Configurazione aggiornata!', {
@@ -157,7 +164,8 @@ export function AgentSettingsDrawer({
 
     // Update name separately via existing PUT endpoint
     if (form.name.trim() && form.name.trim() !== agentName) {
-      api.agents.updateUserAgent(agentId, { name: form.name.trim() })
+      api.agents
+        .updateUserAgent(agentId, { name: form.name.trim() })
         .then(() => {
           onNameUpdated?.(form.name.trim());
         })
@@ -223,8 +231,14 @@ export function AgentSettingsDrawer({
                   <Zap className="h-4 w-4 text-purple-400" />
                   Modello AI
                 </Label>
-                <Select value={form.modelId} onValueChange={id => setForm(prev => ({ ...prev, modelId: id }))}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white" data-testid="model-selector">
+                <Select
+                  value={form.modelId}
+                  onValueChange={id => setForm(prev => ({ ...prev, modelId: id }))}
+                >
+                  <SelectTrigger
+                    className="bg-slate-800 border-slate-700 text-white"
+                    data-testid="model-selector"
+                  >
                     <SelectValue placeholder="Seleziona modello" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
@@ -241,11 +255,12 @@ export function AgentSettingsDrawer({
                               {model.tier}
                             </span>
                           )}
-                          {model.costPer1kInputTokens === 0 && model.costPer1kOutputTokens === 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-300 rounded">
-                              FREE
-                            </span>
-                          )}
+                          {model.costPer1kInputTokens === 0 &&
+                            model.costPer1kOutputTokens === 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-300 rounded">
+                                FREE
+                              </span>
+                            )}
                         </div>
                       </SelectItem>
                     ))}
@@ -324,11 +339,7 @@ export function AgentSettingsDrawer({
             Reset
           </Button>
           <div className="flex-1" />
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            disabled={isPending}
-          >
+          <Button variant="ghost" onClick={onClose} disabled={isPending}>
             Annulla
           </Button>
           <Button

@@ -15,9 +15,8 @@ import {
   GamepadIcon,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-
+import { Button } from '@/components/ui/primitives/button';
 import { useLaunchAdminPdfProcessing } from '@/hooks/queries/useAdminGameWizard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -82,12 +81,10 @@ export function LaunchProcessingStep({
 
           {/* Priority badge */}
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 p-3">
-            <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-              Admin Priority
-            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">Admin Priority</p>
             <p className="text-sm text-amber-600 dark:text-amber-400/80 mt-1">
-              This PDF will be processed before all user-uploaded PDFs.
-              The pipeline includes text extraction, chunking, embedding generation, and vector indexing.
+              This PDF will be processed before all user-uploaded PDFs. The pipeline includes text
+              extraction, chunking, embedding generation, and vector indexing.
             </p>
           </div>
         </CardContent>
@@ -95,11 +92,7 @@ export function LaunchProcessingStep({
 
       {/* Actions */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          disabled={launchProcessing.isPending}
-        >
+        <Button variant="ghost" onClick={onBack} disabled={launchProcessing.isPending}>
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back
         </Button>
@@ -131,9 +124,7 @@ export function LaunchProcessingStep({
       {/* Error state */}
       {launchProcessing.isError && (
         <div className="rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/20 p-3">
-          <p className="text-sm text-red-700 dark:text-red-400">
-            {launchProcessing.error.message}
-          </p>
+          <p className="text-sm text-red-700 dark:text-red-400">{launchProcessing.error.message}</p>
         </div>
       )}
     </div>

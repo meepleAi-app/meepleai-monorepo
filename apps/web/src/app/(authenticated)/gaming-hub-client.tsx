@@ -42,7 +42,7 @@ function fadeUp(delay: number) {
 
 export function GamingHubClient() {
   const { user } = useAuthUser();
-  const { openWizard } = useAddGameWizard();
+  const { openWizard: _openWizard } = useAddGameWizard();
 
   const {
     stats,

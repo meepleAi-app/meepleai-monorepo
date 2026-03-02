@@ -11,7 +11,7 @@ const MOCK_USAGE_DATA = [
 ];
 
 export function UsageTrendChart() {
-  const maxQueries = Math.max(...MOCK_USAGE_DATA.map((d) => d.queries));
+  const _maxQueries = Math.max(...MOCK_USAGE_DATA.map(d => d.queries));
 
   return (
     <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-amber-200/50 dark:border-zinc-700/50">
@@ -19,7 +19,7 @@ export function UsageTrendChart() {
         Usage Trend (7 Days)
       </h2>
       <div className="flex items-end justify-between gap-4 h-[200px]">
-        {MOCK_USAGE_DATA.map((item) => (
+        {MOCK_USAGE_DATA.map(item => (
           <div key={item.day} className="flex flex-col items-center flex-1 gap-2">
             <div
               className="w-full bg-gradient-to-t from-amber-500 to-amber-400 rounded-t-md transition-all hover:opacity-80 hover:translate-y-[-2px] cursor-pointer relative group"

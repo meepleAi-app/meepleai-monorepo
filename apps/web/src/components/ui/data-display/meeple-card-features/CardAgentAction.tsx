@@ -10,9 +10,8 @@
 
 'use client';
 
-import Link from 'next/link';
-
 import { Bot, MessageCircle, Plus, Upload } from 'lucide-react';
+import Link from 'next/link';
 
 import {
   Tooltip,
@@ -69,20 +68,15 @@ export function CardAgentAction({
     'border-t border-border/60',
     'bg-muted/[0.28] dark:bg-muted/20',
     !hasNavFooter && 'rounded-b-2xl',
-    className,
+    className
   );
 
   // Agent exists → show "Chat" link (takes priority over KB state)
   if (hasAgent) {
-    const chatHref = agentId
-      ? `/chat/new?agentId=${agentId}`
-      : `/chat/new?gameId=${gameId}`;
+    const chatHref = agentId ? `/chat/new?agentId=${agentId}` : `/chat/new?gameId=${gameId}`;
 
     return (
-      <div
-        className={containerClass}
-        data-testid="card-agent-action"
-      >
+      <div className={containerClass} data-testid="card-agent-action">
         <Link
           href={chatHref}
           className={cn(
@@ -91,9 +85,9 @@ export function CardAgentAction({
             'text-xs font-semibold font-nunito',
             'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
             'hover:bg-blue-100 dark:hover:bg-blue-950/60',
-            'transition-colors duration-200',
+            'transition-colors duration-200'
           )}
-          onClick={(e) => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
           data-testid="card-agent-chat-link"
         >
           <MessageCircle className="w-3.5 h-3.5" />
@@ -110,14 +104,17 @@ export function CardAgentAction({
       return (
         <div className={containerClass} data-testid="card-agent-action">
           <button
-            onClick={(e) => { e.stopPropagation(); onUploadPdf(); }}
+            onClick={e => {
+              e.stopPropagation();
+              onUploadPdf();
+            }}
             className={cn(
               'flex items-center justify-center gap-2',
               'w-full px-3 py-1.5 rounded-lg',
               'text-xs font-semibold font-nunito',
               'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300',
               'hover:bg-purple-100 dark:hover:bg-purple-950/60',
-              'transition-colors duration-200',
+              'transition-colors duration-200'
             )}
             data-testid="card-agent-upload-button"
           >
@@ -133,14 +130,17 @@ export function CardAgentAction({
       return (
         <div className={containerClass} data-testid="card-agent-action">
           <button
-            onClick={(e) => { e.stopPropagation(); onAddToCollection(); }}
+            onClick={e => {
+              e.stopPropagation();
+              onAddToCollection();
+            }}
             className={cn(
               'flex items-center justify-center gap-2',
               'w-full px-3 py-1.5 rounded-lg',
               'text-xs font-semibold font-nunito',
               'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
               'hover:bg-emerald-100 dark:hover:bg-emerald-950/60',
-              'transition-colors duration-200',
+              'transition-colors duration-200'
             )}
             data-testid="card-agent-add-collection-button"
           >
@@ -159,7 +159,7 @@ export function CardAgentAction({
           'flex items-center justify-center gap-2',
           'w-full px-3 py-1.5 rounded-lg',
           'text-xs font-semibold font-nunito',
-          'bg-muted/60 text-muted-foreground/50 cursor-not-allowed',
+          'bg-muted/60 text-muted-foreground/50 cursor-not-allowed'
         )}
         data-testid="card-agent-create-button"
       >
@@ -187,7 +187,7 @@ export function CardAgentAction({
 
   const button = (
     <button
-      onClick={(e) => {
+      onClick={e => {
         e.stopPropagation();
         onCreateAgent?.();
       }}
@@ -202,7 +202,7 @@ export function CardAgentAction({
           : [
               'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
               'hover:bg-amber-100 dark:hover:bg-amber-950/60',
-            ],
+            ]
       )}
       data-testid="card-agent-create-button"
     >
@@ -212,10 +212,7 @@ export function CardAgentAction({
   );
 
   return (
-    <div
-      className={containerClass}
-      data-testid="card-agent-action"
-    >
+    <div className={containerClass} data-testid="card-agent-action">
       {isDisabled && !isLoading ? (
         <TooltipProvider>
           <Tooltip>

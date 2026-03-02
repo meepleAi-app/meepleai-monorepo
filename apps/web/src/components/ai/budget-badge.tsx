@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getUserBudget, type UserBudgetDto } from '@/lib/api/clients/budgetClient';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+
 import { CreditCard, AlertCircle } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getUserBudget, type UserBudgetDto } from '@/lib/api/clients/budgetClient';
 
 interface BudgetBadgeProps {
   userId: string;
@@ -67,15 +64,18 @@ export function BudgetBadge({ userId, className }: BudgetBadgeProps) {
   }
 
   // Calculate usage percentage for color coding
-  const usagePercent = budget.dailyLimit > 0
-    ? ((budget.dailyLimit - budget.creditsRemaining) / budget.dailyLimit) * 100
-    : 0;
+  const usagePercent =
+    budget.dailyLimit > 0
+      ? ((budget.dailyLimit - budget.creditsRemaining) / budget.dailyLimit) * 100
+      : 0;
 
   // Determine variant based on remaining credits
   const variant =
-    usagePercent >= 80 ? 'destructive' :  // Red: <20% remaining
-    usagePercent >= 50 ? 'default' :       // Amber: 20-50% remaining
-    'outline';                              // Green: >50% remaining
+    usagePercent >= 80
+      ? 'destructive' // Red: <20% remaining
+      : usagePercent >= 50
+        ? 'default' // Amber: 20-50% remaining
+        : 'outline'; // Green: >50% remaining
 
   // Format credits with K suffix for large numbers
   const formatCredits = (credits: number): string => {

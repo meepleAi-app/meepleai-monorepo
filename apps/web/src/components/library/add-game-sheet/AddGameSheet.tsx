@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -11,13 +13,13 @@ import {
   SheetTitle,
   SheetFooter,
 } from '@/components/ui/navigation/sheet';
-import { Button } from '@/components/ui/button';
-import { StepIndicator } from './StepIndicator';
 import {
   useAddGameWizardStore,
   type WizardEntryPoint,
   type SelectedGameData,
 } from '@/lib/stores/add-game-wizard-store';
+
+import { StepIndicator } from './StepIndicator';
 import { GameSourceStep, KnowledgeBaseStep, GameInfoStep } from './steps';
 
 /**
@@ -66,10 +68,10 @@ export function AddGameSheet({
   onSuccess,
 }: AddGameSheetProps) {
   // Select only primitive/stable values from the store
-  const currentStep = useAddGameWizardStore((s) => s.currentStep);
-  const selectedGame = useAddGameWizardStore((s) => s.selectedGame);
-  const isDirty = useAddGameWizardStore((s) => s.isDirty);
-  const initialize = useAddGameWizardStore((s) => s.initialize);
+  const currentStep = useAddGameWizardStore(s => s.currentStep);
+  const selectedGame = useAddGameWizardStore(s => s.selectedGame);
+  const _isDirty = useAddGameWizardStore(s => s.isDirty);
+  const initialize = useAddGameWizardStore(s => s.initialize);
   // Derive canGoNext inline so Zustand tracks the actual dependencies
   const isNextAllowed = currentStep === 1 ? selectedGame !== null : currentStep === 2;
 
@@ -126,13 +128,14 @@ export function AddGameSheet({
     onOpenChange(false);
   }, [onOpenChange]);
 
-  const isFirstStep = entryPoint.type === 'fromGameCard' || entryPoint.type === 'fromSearch'
-    ? currentStep === 2
-    : currentStep === 1;
+  const isFirstStep =
+    entryPoint.type === 'fromGameCard' || entryPoint.type === 'fromSearch'
+      ? currentStep === 2
+      : currentStep === 1;
   const isLastStep = currentStep === 3;
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
+    <Sheet open={open} onOpenChange={o => !o && handleClose()}>
       <SheetContent
         side="right"
         className="w-full sm:max-w-[520px] lg:max-w-[580px] flex flex-col p-0"
@@ -184,22 +187,14 @@ export function AddGameSheet({
         {/* Footer with navigation */}
         <SheetFooter className="border-t border-slate-800 px-6 py-4 flex-row gap-3">
           {!isFirstStep && (
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              className="gap-1.5"
-            >
+            <Button variant="outline" onClick={handleBack} className="gap-1.5">
               <ChevronLeft className="h-4 w-4" />
               Indietro
             </Button>
           )}
           <div className="flex-1" />
           {!isLastStep && (
-            <Button
-              onClick={handleNext}
-              disabled={!isNextAllowed}
-              className="gap-1.5"
-            >
+            <Button onClick={handleNext} disabled={!isNextAllowed} className="gap-1.5">
               Avanti
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -210,25 +205,15 @@ export function AddGameSheet({
         {showCloseConfirm && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="mx-6 rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-xl max-w-sm">
-              <h3 className="text-base font-semibold text-slate-100 mb-2">
-                Modifiche non salvate
-              </h3>
+              <h3 className="text-base font-semibold text-slate-100 mb-2">Modifiche non salvate</h3>
               <p className="text-sm text-slate-400 mb-5">
                 Hai modifiche non salvate. Vuoi chiudere e perdere le modifiche?
               </p>
               <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCloseConfirm(false)}
-                >
+                <Button variant="outline" size="sm" onClick={() => setShowCloseConfirm(false)}>
                   Annulla
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleConfirmClose}
-                >
+                <Button variant="destructive" size="sm" onClick={handleConfirmClose}>
                   Chiudi
                 </Button>
               </div>
@@ -239,4 +224,3 @@ export function AddGameSheet({
     </Sheet>
   );
 }
-

@@ -22,8 +22,6 @@ export function UploadPrivatePDF() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-
   const handleFileSelect = useCallback((selectedFile: File) => {
     if (selectedFile.type !== 'application/pdf') {
       toast.error('Please select a PDF file');
@@ -76,40 +74,42 @@ export function UploadPrivatePDF() {
       // Use XHR for progress tracking (same pattern as admin wizard)
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ documentId: string; fileName: string }>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', e => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        });
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch {
-              reject(new Error('Invalid response from server'));
+      const uploadPromise = new Promise<{ documentId: string; fileName: string }>(
+        (resolve, reject) => {
+          xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable) {
+              setUploadProgress(Math.round((e.loaded / e.total) * 100));
             }
-          } else {
-            try {
-              const error = JSON.parse(xhr.responseText);
-              reject(new Error(error.error || 'Upload failed'));
-            } catch {
-              reject(new Error(`Upload failed: ${xhr.statusText}`));
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response);
+              } catch {
+                reject(new Error('Invalid response from server'));
+              }
+            } else {
+              try {
+                const error = JSON.parse(xhr.responseText);
+                reject(new Error(error.error || 'Upload failed'));
+              } catch {
+                reject(new Error(`Upload failed: ${xhr.statusText}`));
+              }
             }
-          }
-        });
+          });
 
-        xhr.addEventListener('error', () => {
-          reject(new Error('Network error during upload'));
-        });
+          xhr.addEventListener('error', () => {
+            reject(new Error('Network error during upload'));
+          });
 
-        // Upload to ingest endpoint (private PDF, not public library)
-        xhr.open('POST', '/api/v1/ingest/pdf');
-        xhr.withCredentials = true;
-        xhr.send(formData);
-      });
+          // Upload to ingest endpoint (private PDF, not public library)
+          xhr.open('POST', '/api/v1/ingest/pdf');
+          xhr.withCredentials = true;
+          xhr.send(formData);
+        }
+      );
 
       const result = await uploadPromise;
 
@@ -122,7 +122,7 @@ export function UploadPrivatePDF() {
     } finally {
       setUploading(false);
     }
-  }, [file, API_BASE, setUploadedPdf, goNext]);
+  }, [file, setUploadedPdf, goNext]);
 
   const handleSkip = () => {
     goNext(); // Skip PDF upload and go to review

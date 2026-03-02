@@ -1,4 +1,5 @@
 import { useQuery, useQueries } from '@tanstack/react-query';
+
 import { apiClient } from '@/lib/api/client';
 
 // ── Types matching backend DTOs ────────────────────────────────────────
@@ -100,7 +101,10 @@ export async function reorderQueue(orderedJobIds: string[]): Promise<void> {
   await apiClient.put('/api/v1/admin/queue/reorder', { orderedJobIds });
 }
 
-export async function enqueuePdf(pdfDocumentId: string, priority: number = 0): Promise<{ jobId: string }> {
+export async function enqueuePdf(
+  pdfDocumentId: string,
+  priority: number = 0
+): Promise<{ jobId: string }> {
   return await apiClient.post<{ jobId: string }>('/api/v1/admin/queue/enqueue', {
     pdfDocumentId,
     priority,
@@ -127,7 +131,7 @@ export function useJobDetail(jobId: string | null, sseConnected: boolean = false
     queryFn: () => fetchJobDetail(jobId!),
     enabled: !!jobId,
     staleTime: sseConnected ? 30_000 : 5_000,
-    refetchInterval: (query) => {
+    refetchInterval: query => {
       const data = query.state.data as ProcessingJobDetailDto | null | undefined;
       if (data && TERMINAL_STATUSES.includes(data.status)) return false;
       // When SSE is connected, use longer fallback interval
@@ -142,7 +146,7 @@ const STATS_STATUSES: JobStatus[] = ['Queued', 'Processing', 'Completed', 'Faile
 
 export function useQueueStats() {
   return useQueries({
-    queries: STATS_STATUSES.map((status) => ({
+    queries: STATS_STATUSES.map(status => ({
       queryKey: ['admin', 'queue', 'stats', status],
       queryFn: () => fetchQueue({ status, pageSize: 1 }),
       staleTime: 15_000,

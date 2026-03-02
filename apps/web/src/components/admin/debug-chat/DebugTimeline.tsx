@@ -8,9 +8,11 @@
  */
 
 import { useRef, useEffect } from 'react';
-import { DebugEventCard } from './DebugEventCard';
-import { DebugCostBadge } from './DebugCostBadge';
+
 import type { DebugEvent } from '@/hooks/useDebugChatStream';
+
+import { DebugCostBadge } from './DebugCostBadge';
+import { DebugEventCard } from './DebugEventCard';
 
 interface DebugTimelineProps {
   events: DebugEvent[];
@@ -29,13 +31,15 @@ export function DebugTimeline({ events, isStreaming }: DebugTimelineProps) {
 
   // Extract cost data from the most recent DebugCostUpdate event (type 17)
   const costEvent = events.findLast(e => e.type === 17);
-  const costData = costEvent?.data as {
-    promptTokens?: number;
-    completionTokens?: number;
-    totalTokens?: number;
-    costUsd?: number;
-    modelId?: string;
-  } | undefined;
+  const costData = costEvent?.data as
+    | {
+        promptTokens?: number;
+        completionTokens?: number;
+        totalTokens?: number;
+        costUsd?: number;
+        modelId?: string;
+      }
+    | undefined;
 
   return (
     <div className="flex h-full flex-col">
@@ -60,18 +64,13 @@ export function DebugTimeline({ events, isStreaming }: DebugTimelineProps) {
       </div>
 
       {/* Events list */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
         {events.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             Send a message to see pipeline events
           </div>
         ) : (
-          events.map(event => (
-            <DebugEventCard key={event.id} event={event} />
-          ))
+          events.map(event => <DebugEventCard key={event.id} event={event} />)
         )}
       </div>
 

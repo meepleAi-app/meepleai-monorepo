@@ -30,10 +30,10 @@ import { AgentCreationSheet } from '@/components/agent/config';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { useEntityActions } from '@/hooks/use-entity-actions';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================
@@ -133,7 +133,7 @@ export function MeepleGameCatalogCard({
         yearPublished: game.yearPublished ?? undefined,
         description: game.description || undefined,
         source: 'catalog',
-      },
+      }
     );
   }, [openWizard, game]);
 
@@ -182,16 +182,17 @@ export function MeepleGameCatalogCard({
   const showActions = variant === 'featured' || variant === 'hero';
   // Loading state: only show loading if fetching individually (no batch status provided)
   const isLoadingStatus = !libraryStatus && statusLoading;
-  const actions = showActions && !isLoadingStatus
-    ? [
-        {
-          label: inLibrary ? 'Nella Libreria' : 'Aggiungi',
-          primary: !inLibrary,
-          disabled: inLibrary,
-          onClick: inLibrary ? undefined : handleAddToCollection,
-        },
-      ]
-    : undefined;
+  const actions =
+    showActions && !isLoadingStatus
+      ? [
+          {
+            label: inLibrary ? 'Nella Libreria' : 'Aggiungi',
+            primary: !inLibrary,
+            disabled: inLibrary,
+            onClick: inLibrary ? undefined : handleAddToCollection,
+          },
+        ]
+      : undefined;
 
   // Build badge
   const badge = inLibrary && !isLoadingStatus ? 'In Libreria' : undefined;
@@ -202,12 +203,14 @@ export function MeepleGameCatalogCard({
         description: game.description || undefined,
         complexityRating: game.complexityRating,
         minAge: game.minAge || undefined,
-        ...(isDetailGame(game) ? {
-          categories: game.categories,
-          mechanics: game.mechanics,
-          designers: game.designers,
-          publishers: game.publishers,
-        } : {}),
+        ...(isDetailGame(game)
+          ? {
+              categories: game.categories,
+              mechanics: game.mechanics,
+              designers: game.designers,
+              publishers: game.publishers,
+            }
+          : {}),
       }
     : undefined;
 

@@ -7,12 +7,14 @@
 
 'use client';
 
-import { Copy, Check, Users, Gamepad2 } from 'lucide-react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-import { ConnectionStatusBadge } from './ConnectionStatusBadge';
-import type { ConnectionStatus } from '@/lib/hooks/useSessionStream';
+import { Copy, Check, Users, Gamepad2 } from 'lucide-react';
+
 import type { Participant } from '@/components/session/types';
+import type { ConnectionStatus } from '@/lib/hooks/useSessionStream';
+
+import { ConnectionStatusBadge } from './ConnectionStatusBadge';
 
 interface SessionLobbyProps {
   sessionCode: string;
@@ -30,7 +32,7 @@ export function SessionLobby({
   participants,
   connectionStatus,
   reconnectCount = 0,
-  isHost = false,
+  isHost: _isHost = false,
   className = '',
 }: SessionLobbyProps) {
   const [copied, setCopied] = useState(false);
@@ -93,11 +95,7 @@ export function SessionLobby({
             className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
             aria-label={copied ? 'Copied!' : 'Copy session code'}
           >
-            {copied ? (
-              <Check className="h-5 w-5 text-emerald-500" />
-            ) : (
-              <Copy className="h-5 w-5" />
-            )}
+            {copied ? <Check className="h-5 w-5 text-emerald-500" /> : <Copy className="h-5 w-5" />}
           </button>
         </div>
       </div>
@@ -127,17 +125,13 @@ export function SessionLobby({
                   Host
                 </span>
               )}
-              {p.isCurrentUser && (
-                <span className="text-xs text-gray-400">(you)</span>
-              )}
+              {p.isCurrentUser && <span className="text-xs text-gray-400">(you)</span>}
             </div>
           ))}
         </div>
 
         {participants.length === 0 && (
-          <p className="text-center text-sm text-gray-400">
-            Waiting for players to join...
-          </p>
+          <p className="text-center text-sm text-gray-400">Waiting for players to join...</p>
         )}
       </div>
     </div>

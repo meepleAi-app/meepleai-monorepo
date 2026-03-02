@@ -9,7 +9,6 @@
 import {
   Activity,
   BarChart2,
-  Bell,
   BookOpen,
   Bot,
   Cpu,
@@ -22,8 +21,6 @@ import {
   MessageSquare,
   Monitor,
   Settings,
-  Shield,
-  Sliders,
   Users,
 } from 'lucide-react';
 

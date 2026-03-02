@@ -17,13 +17,9 @@ import {
   TargetIcon,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent } from '@/components/ui/data-display/card';
-
-import {
-  useAskAgentQuestion,
-  type AgentChatMessage,
-} from '@/hooks/queries/useAgentTesting';
+import { Button } from '@/components/ui/primitives/button';
+import { useAskAgentQuestion, type AgentChatMessage } from '@/hooks/queries/useAgentTesting';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,9 +42,7 @@ function ChatMessageBubble({ message }: { message: AgentChatMessage }) {
       )}
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-          isUser
-            ? 'bg-amber-500 text-white'
-            : 'bg-slate-100 dark:bg-zinc-800 text-foreground'
+          isUser ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-foreground'
         }`}
       >
         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -113,7 +107,7 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
       content: question,
       timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
 
     try {
@@ -133,14 +127,14 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
         chunksRetrieved: response.retrievedChunks.length,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
     } catch {
       const errorMessage: AgentChatMessage = {
         role: 'assistant',
         content: 'Sorry, I encountered an error while processing your question. Please try again.',
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
@@ -161,7 +155,7 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((msg) => (
+              {messages.map(msg => (
                 <ChatMessageBubble key={`${msg.role}-${msg.timestamp.getTime()}`} message={msg} />
               ))}
               {isPending && (
@@ -185,7 +179,7 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
         <input
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={e => setInput(e.target.value)}
           placeholder="Ask a question about the game rules..."
           disabled={isPending}
           className="flex-1 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:opacity-50"

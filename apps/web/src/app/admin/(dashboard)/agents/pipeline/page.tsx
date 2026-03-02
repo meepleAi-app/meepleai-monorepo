@@ -14,8 +14,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { useRouter } from 'next/navigation';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
+
 import {
   PipelineDiagram,
   TimelineStep,
@@ -24,7 +25,12 @@ import {
   type PipelineStep,
   type TimelineStepDetail,
 } from '@/components/admin/rag';
-import { createAdminClient, type RagExecutionListItem, type RagExecutionDetail } from '@/lib/api/clients/adminClient';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  createAdminClient,
+  type RagExecutionListItem,
+  type RagExecutionDetail,
+} from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import { cn } from '@/lib/utils';
 
@@ -115,7 +121,7 @@ function formatTime(dateString: string | null): string {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false
+      hour12: false,
     });
   } catch {
     return 'N/A';
@@ -133,7 +139,10 @@ function transformStepDetails(details: Record<string, unknown>): TimelineStepDet
     if (value === null || value === undefined) return;
 
     // Determine formatting based on key patterns
-    const isMono = /^(model|query|tokens|score|count|type|collection|dimension|cache|provider|temperature)$/i.test(key);
+    const isMono =
+      /^(model|query|tokens|score|count|type|collection|dimension|cache|provider|temperature)$/i.test(
+        key
+      );
     const isWide = /^(query|answer|response|preview)$/i.test(key);
 
     // Determine badge variant
@@ -143,7 +152,7 @@ function transformStepDetails(details: Record<string, unknown>): TimelineStepDet
     if (key === 'quality' || key === 'intent') badge = 'primary';
 
     // Format value
-    let displayValue = String(value);
+    const displayValue = String(value);
 
     result.push({
       label: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
@@ -258,12 +267,13 @@ export default function PipelineExplorerPage() {
   }, []);
 
   // Transform trace steps to pipeline steps
-  const pipelineSteps: PipelineStep[] = executionTrace?.steps.map(step => ({
-    name: step.name,
-    icon: step.icon,
-    latencyMs: step.latencyMs,
-    status: step.status,
-  })) || [];
+  const pipelineSteps: PipelineStep[] =
+    executionTrace?.steps.map(step => ({
+      name: step.name,
+      icon: step.icon,
+      latencyMs: step.latencyMs,
+      status: step.status,
+    })) || [];
 
   // Calculate total latency
   const totalLatency = executionTrace?.totalLatencyMs || executionDetail?.totalLatencyMs || 0;
@@ -330,7 +340,7 @@ export default function PipelineExplorerPage() {
           {/* Dropdown */}
           <select
             value={selectedExecutionId || ''}
-            onChange={(e) => setSelectedExecutionId(e.target.value)}
+            onChange={e => setSelectedExecutionId(e.target.value)}
             className={cn(
               'flex-1 min-w-[280px] rounded-xl border border-black/20 px-4 py-2.5',
               'bg-white/70 font-nunito text-sm text-zinc-800 backdrop-blur-sm',
@@ -342,9 +352,10 @@ export default function PipelineExplorerPage() {
             )}
             disabled={isLoadingList}
           >
-            {executions.map((exec) => (
+            {executions.map(exec => (
               <option key={exec.id} value={exec.id}>
-                {exec.status === 'success' ? '✓' : '✗'} &quot;{exec.query}&quot; — {exec.totalLatencyMs}ms
+                {exec.status === 'success' ? '✓' : '✗'} &quot;{exec.query}&quot; —{' '}
+                {exec.totalLatencyMs}ms
                 {exec.cacheHit ? ' (cache)' : ''}
               </option>
             ))}
@@ -354,22 +365,33 @@ export default function PipelineExplorerPage() {
           {selectedExecution && (
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-                Agent: <strong className="text-zinc-800 dark:text-zinc-100">{selectedExecution.agentName || 'Unknown'}</strong>
+                Agent:{' '}
+                <strong className="text-zinc-800 dark:text-zinc-100">
+                  {selectedExecution.agentName || 'Unknown'}
+                </strong>
               </div>
               <div className="flex items-center gap-1.5">
                 Strategy: <StrategyBadge strategy={selectedExecution.strategy} />
               </div>
               <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-                Time: <strong className="font-mono text-zinc-800 dark:text-zinc-100">{formatTime(selectedExecution.createdAt)}</strong>
+                Time:{' '}
+                <strong className="font-mono text-zinc-800 dark:text-zinc-100">
+                  {formatTime(selectedExecution.createdAt)}
+                </strong>
               </div>
               <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
                 Total:{' '}
-                <strong className={cn(
-                  'font-mono',
-                  getLatencyClass(selectedExecution.totalLatencyMs) === 'green' && 'text-green-600 dark:text-green-400',
-                  getLatencyClass(selectedExecution.totalLatencyMs) === 'amber' && 'text-amber-600 dark:text-amber-400',
-                  getLatencyClass(selectedExecution.totalLatencyMs) === 'red' && 'text-red-600 dark:text-red-400'
-                )}>
+                <strong
+                  className={cn(
+                    'font-mono',
+                    getLatencyClass(selectedExecution.totalLatencyMs) === 'green' &&
+                      'text-green-600 dark:text-green-400',
+                    getLatencyClass(selectedExecution.totalLatencyMs) === 'amber' &&
+                      'text-amber-600 dark:text-amber-400',
+                    getLatencyClass(selectedExecution.totalLatencyMs) === 'red' &&
+                      'text-red-600 dark:text-red-400'
+                  )}
+                >
                   {selectedExecution.totalLatencyMs}ms
                 </strong>
               </div>
@@ -393,7 +415,9 @@ export default function PipelineExplorerPage() {
         ) : executionTrace && pipelineSteps.length > 0 ? (
           <>
             <div className="mb-4 flex items-center gap-2">
-              <span className="text-lg" aria-hidden="true">🔍</span>
+              <span className="text-lg" aria-hidden="true">
+                🔍
+              </span>
               <h2 className="font-quicksand text-lg font-bold text-zinc-800 dark:text-zinc-100">
                 Pipeline Flow
               </h2>
@@ -414,7 +438,9 @@ export default function PipelineExplorerPage() {
       {/* Timeline Card */}
       <div className="glass-card rounded-2xl border border-black/10 bg-white/90 p-5 backdrop-blur-md dark:border-white/10 dark:bg-zinc-800/90">
         <div className="mb-4 flex items-center gap-2">
-          <span className="text-lg" aria-hidden="true">📅</span>
+          <span className="text-lg" aria-hidden="true">
+            📅
+          </span>
           <h2 className="font-quicksand text-lg font-bold text-zinc-800 dark:text-zinc-100">
             Step Details
           </h2>

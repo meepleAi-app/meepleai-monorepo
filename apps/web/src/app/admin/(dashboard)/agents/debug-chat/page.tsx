@@ -10,13 +10,15 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+
 import { SendIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
+import { DebugTimeline } from '@/components/admin/debug-chat/DebugTimeline';
+import { StrategySelectorBar } from '@/components/admin/debug-chat/StrategySelectorBar';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { useDebugChatStream } from '@/hooks/useDebugChatStream';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { StrategySelectorBar } from '@/components/admin/debug-chat/StrategySelectorBar';
-import { DebugTimeline } from '@/components/admin/debug-chat/DebugTimeline';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
+import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +50,7 @@ export default function AdminDebugChatPage() {
   }, [setShowDebug]);
 
   const { state, sendMessage, stopStreaming, reset } = useDebugChatStream({
-    onComplete: (answer) => {
+    onComplete: answer => {
       // Add completed assistant message
       setMessages(prev => {
         const updated = [...prev];
@@ -60,7 +62,7 @@ export default function AdminDebugChatPage() {
         return updated;
       });
     },
-    onError: (error) => {
+    onError: error => {
       setMessages(prev => [
         ...prev,
         {
@@ -106,7 +108,14 @@ export default function AdminDebugChatPage() {
 
     // Scroll chat to bottom
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-  }, [inputValue, selectedGameId, selectedStrategy, state.isStreaming, state.chatThreadId, sendMessage]);
+  }, [
+    inputValue,
+    selectedGameId,
+    selectedStrategy,
+    state.isStreaming,
+    state.chatThreadId,
+    sendMessage,
+  ]);
 
   const handleReExecute = useCallback(() => {
     if (!lastQueryRef.current || state.isStreaming) return;
@@ -192,18 +201,15 @@ export default function AdminDebugChatPage() {
             {displayMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm text-muted-foreground text-center max-w-xs">
-                  Select a game and ask a question to start a debug chat session.
-                  Debug events will appear in the right panel.
+                  Select a game and ask a question to start a debug chat session. Debug events will
+                  appear in the right panel.
                 </p>
               </div>
             ) : (
               displayMessages.map(msg => (
                 <div
                   key={msg.id}
-                  className={cn(
-                    'flex',
-                    msg.role === 'user' ? 'justify-end' : 'justify-start'
-                  )}
+                  className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}
                 >
                   <div
                     className={cn(
@@ -213,15 +219,14 @@ export default function AdminDebugChatPage() {
                         : 'bg-muted text-foreground'
                     )}
                   >
-                    {msg.content || (
-                      state.isStreaming ? (
+                    {msg.content ||
+                      (state.isStreaming ? (
                         <span className="inline-flex items-center gap-1 text-muted-foreground">
                           <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
                           <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse [animation-delay:0.2s]" />
                           <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse [animation-delay:0.4s]" />
                         </span>
-                      ) : null
-                    )}
+                      ) : null)}
                   </div>
                 </div>
               ))
@@ -305,10 +310,7 @@ export default function AdminDebugChatPage() {
 
             {/* Desktop: inline panel */}
             <div className="min-h-0 hidden lg:flex lg:flex-col">
-              <DebugTimeline
-                events={state.debugEvents}
-                isStreaming={state.isStreaming}
-              />
+              <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
             </div>
           </>
         )}
@@ -321,10 +323,7 @@ export default function AdminDebugChatPage() {
             <SheetTitle className="text-sm">Pipeline Debug</SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0 overflow-hidden">
-            <DebugTimeline
-              events={state.debugEvents}
-              isStreaming={state.isStreaming}
-            />
+            <DebugTimeline events={state.debugEvents} isStreaming={state.isStreaming} />
           </div>
         </SheetContent>
       </Sheet>

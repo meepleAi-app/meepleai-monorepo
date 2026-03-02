@@ -10,17 +10,8 @@
 import { useState, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-
-import { AgentsNavConfig } from './NavConfig';
 import { format, subDays } from 'date-fns';
-import {
-  Activity,
-  Target,
-  BarChart3,
-  TrendingUp,
-  RefreshCw,
-  BotIcon,
-} from 'lucide-react';
+import { Activity, Target, BarChart3, TrendingUp, RefreshCw, BotIcon } from 'lucide-react';
 import Link from 'next/link';
 
 import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
@@ -38,6 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
+
+import { AgentsNavConfig } from './NavConfig';
 
 // Types from existing agent metrics
 interface AgentMetrics {
@@ -182,9 +175,7 @@ export default function AgentsPage() {
       {metricsError && (
         <Card className="border-destructive">
           <CardContent className="py-4">
-            <p className="text-destructive">
-              Failed to load metrics. Please try again.
-            </p>
+            <p className="text-destructive">Failed to load metrics. Please try again.</p>
           </CardContent>
         </Card>
       )}
@@ -256,7 +247,7 @@ export default function AgentsPage() {
         <CardContent>
           {topAgentsLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3].map(i => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>

@@ -6,8 +6,11 @@
  */
 
 import React from 'react';
+
 import { Timer, Play, Pause, RotateCcw, AlertTriangle } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type { TimerState, TimerActions, TimerStatus } from '../types';
 
 interface InteractiveTimerProps {
@@ -82,12 +85,13 @@ function TimerRing({
       </svg>
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn('font-mono text-xl font-bold', styles.text)} data-testid="timer-display">
+        <span
+          className={cn('font-mono text-xl font-bold', styles.text)}
+          data-testid="timer-display"
+        >
           {formatTime(remainingSeconds)}
         </span>
-        {status === 'expired' && (
-          <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
-        )}
+        {status === 'expired' && <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />}
         {status === 'warning' && (
           <span className="font-nunito text-[10px] text-orange-500 animate-pulse">Low time!</span>
         )}
@@ -121,20 +125,22 @@ function PlayerTimerRow({
       data-testid={`player-timer-${playerId}`}
     >
       <div className="flex items-center gap-2">
-        {isActive && (
-          <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-        )}
-        <span className={cn(
-          'font-nunito text-xs font-medium',
-          isActive ? 'text-slate-800 font-semibold' : 'text-slate-500'
-        )}>
+        {isActive && <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
+        <span
+          className={cn(
+            'font-nunito text-xs font-medium',
+            isActive ? 'text-slate-800 font-semibold' : 'text-slate-500'
+          )}
+        >
           {playerName}
         </span>
       </div>
-      <span className={cn(
-        'font-mono text-sm font-bold tabular-nums',
-        isActive ? styles.text : 'text-slate-400'
-      )}>
+      <span
+        className={cn(
+          'font-mono text-sm font-bold tabular-nums',
+          isActive ? styles.text : 'text-slate-400'
+        )}
+      >
         {formatTime(remainingSeconds)}
       </span>
     </div>
@@ -159,17 +165,17 @@ export function InteractiveTimer({ state, actions, playerNames }: InteractiveTim
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Timer className="h-3.5 w-3.5 text-indigo-500" />
-          <span className="font-nunito text-xs font-bold text-slate-700">
-            {state.toolName}
-          </span>
-          <span className="font-nunito text-[10px] text-slate-400">
-            {state.timerType}
-          </span>
+          <span className="font-nunito text-xs font-bold text-slate-700">{state.toolName}</span>
+          <span className="font-nunito text-[10px] text-slate-400">{state.timerType}</span>
         </div>
-        <span className={cn(
-          'rounded-full px-2 py-0.5 font-nunito text-[10px] font-semibold capitalize',
-          styles.bg, styles.text
-        )} data-testid="timer-status-badge">
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 font-nunito text-[10px] font-semibold capitalize',
+            styles.bg,
+            styles.text
+          )}
+          data-testid="timer-status-badge"
+        >
           {state.status}
         </span>
       </div>

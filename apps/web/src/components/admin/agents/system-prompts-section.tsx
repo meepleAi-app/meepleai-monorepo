@@ -2,8 +2,8 @@
 
 import { EyeIcon, PencilIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface SystemPrompt {
   id: string;
@@ -47,7 +47,7 @@ export function SystemPromptsSection() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {MOCK_PROMPTS.map((prompt) => (
+        {MOCK_PROMPTS.map(prompt => (
           <div
             key={prompt.id}
             className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50"
@@ -56,13 +56,14 @@ export function SystemPromptsSection() {
               <h3 className="font-quicksand text-lg font-bold text-slate-900 dark:text-zinc-100">
                 {prompt.title}
               </h3>
-              <Badge variant="outline" className="bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300">
+              <Badge
+                variant="outline"
+                className="bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300"
+              >
                 {prompt.tokenCount} tokens
               </Badge>
             </div>
-            <p className="text-sm text-slate-600 dark:text-zinc-400 mb-4">
-              {prompt.description}
-            </p>
+            <p className="text-sm text-slate-600 dark:text-zinc-400 mb-4">{prompt.description}</p>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-500 dark:text-zinc-500">
                 Updated {prompt.lastUpdated}

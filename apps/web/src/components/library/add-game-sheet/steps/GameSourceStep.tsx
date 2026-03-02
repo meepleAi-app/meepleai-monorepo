@@ -7,26 +7,25 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { ExternalLink, Loader2, Plus, Search, X } from 'lucide-react';
 
-import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/data-display/badge';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
-import {
-  useAddGameWizardStore,
-  type SelectedGameData,
-} from '@/lib/stores/add-game-wizard-store';
-import { GameSearchResults, type GameSearchResultItem } from './GameSearchResults';
+import { useAddGameWizardStore, type SelectedGameData } from '@/lib/stores/add-game-wizard-store';
+
 import { CustomGameForm, type CustomGameValues } from './CustomGameForm';
+import { GameSearchResults, type GameSearchResultItem } from './GameSearchResults';
 
 const DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
 
 export function GameSourceStep() {
-  const setSelectedGame = useAddGameWizardStore((s) => s.setSelectedGame);
-  const goNext = useAddGameWizardStore((s) => s.goNext);
-  const selectedGame = useAddGameWizardStore((s) => s.selectedGame);
+  const setSelectedGame = useAddGameWizardStore(s => s.setSelectedGame);
+  const goNext = useAddGameWizardStore(s => s.goNext);
+  const selectedGame = useAddGameWizardStore(s => s.selectedGame);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -74,7 +73,7 @@ export function GameSourceStep() {
 
         if (response.items.length > 0) {
           setResults(
-            response.items.map((game) => ({
+            response.items.map(game => ({
               id: game.id,
               title: game.title,
               yearPublished: game.yearPublished,
@@ -116,7 +115,7 @@ export function GameSourceStep() {
 
       if (response.results.length > 0) {
         setResults(
-          response.results.map((item) => ({
+          response.results.map(item => ({
             id: `bgg-${item.bggId}`,
             title: item.name,
             yearPublished: item.yearPublished ?? undefined,
@@ -236,7 +235,11 @@ export function GameSourceStep() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-teal-300 truncate">{selectedGame.title}</p>
             <p className="text-xs text-slate-400">
-              {selectedGame.source === 'catalog' ? 'Dal catalogo' : selectedGame.source === 'bgg' ? 'Da BGG' : 'Personalizzato'}
+              {selectedGame.source === 'catalog'
+                ? 'Dal catalogo'
+                : selectedGame.source === 'bgg'
+                  ? 'Da BGG'
+                  : 'Personalizzato'}
             </p>
           </div>
           <Badge variant="outline" className="text-teal-400 border-teal-500/30">
@@ -254,7 +257,7 @@ export function GameSourceStep() {
             type="search"
             placeholder="Cerca un gioco..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             className="pl-10 pr-10 bg-slate-800 border-slate-700"
             aria-label="Cerca giochi"
           />
@@ -273,31 +276,18 @@ export function GameSourceStep() {
       )}
 
       {/* Error */}
-      {error && !loading && (
-        <p className="text-sm text-red-400 text-center py-2">{error}</p>
-      )}
+      {error && !loading && <p className="text-sm text-red-400 text-center py-2">{error}</p>}
 
       {/* Search Results */}
       {!showCustomForm && (
-        <GameSearchResults
-          results={results}
-          loading={loading}
-          onSelect={handleSelectGame}
-        />
+        <GameSearchResults results={results} loading={loading} onSelect={handleSelectGame} />
       )}
 
       {/* BGG Fallback Button */}
       {showBggButton && !loading && !showCustomForm && (
         <div className="text-center py-3">
-          <p className="text-sm text-slate-500 mb-3">
-            Nessun gioco trovato nel catalogo.
-          </p>
-          <Button
-            onClick={handleBggSearch}
-            disabled={bggLoading}
-            variant="outline"
-            size="sm"
-          >
+          <p className="text-sm text-slate-500 mb-3">Nessun gioco trovato nel catalogo.</p>
+          <Button onClick={handleBggSearch} disabled={bggLoading} variant="outline" size="sm">
             {bggLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -309,13 +299,18 @@ export function GameSourceStep() {
       )}
 
       {/* No results after search */}
-      {!loading && !showBggButton && !error && results.length === 0 && debouncedTerm.trim() && !showCustomForm && (
-        <div className="text-center py-4">
-          <p className="text-sm text-slate-500">
-            Nessun risultato per &quot;{debouncedTerm}&quot;
-          </p>
-        </div>
-      )}
+      {!loading &&
+        !showBggButton &&
+        !error &&
+        results.length === 0 &&
+        debouncedTerm.trim() &&
+        !showCustomForm && (
+          <div className="text-center py-4">
+            <p className="text-sm text-slate-500">
+              Nessun risultato per &quot;{debouncedTerm}&quot;
+            </p>
+          </div>
+        )}
 
       {/* Custom Game Form */}
       {showCustomForm && (

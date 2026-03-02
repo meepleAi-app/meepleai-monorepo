@@ -7,6 +7,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -92,7 +93,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
         <Input
           id="custom-game-title"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={e => setTitle(e.target.value)}
           placeholder="Es. Catan, Ticket to Ride..."
           className="bg-slate-800 border-slate-700"
           disabled={submitting}
@@ -112,7 +113,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
             min={1}
             max={99}
             value={minPlayers}
-            onChange={(e) => setMinPlayers(e.target.value)}
+            onChange={e => setMinPlayers(e.target.value)}
             placeholder="1"
             className="bg-slate-800 border-slate-700"
             disabled={submitting}
@@ -129,7 +130,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
             min={1}
             max={99}
             value={maxPlayers}
-            onChange={(e) => setMaxPlayers(e.target.value)}
+            onChange={e => setMaxPlayers(e.target.value)}
             placeholder="4"
             className="bg-slate-800 border-slate-700"
             disabled={submitting}
@@ -149,7 +150,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
           min={1}
           max={10000}
           value={playingTime}
-          onChange={(e) => setPlayingTime(e.target.value)}
+          onChange={e => setPlayingTime(e.target.value)}
           placeholder="Es. 60"
           className="bg-slate-800 border-slate-700"
           disabled={submitting}
@@ -165,7 +166,7 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
         <Textarea
           id="custom-game-desc"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={e => setDescription(e.target.value)}
           placeholder="Breve descrizione del gioco..."
           rows={2}
           className="bg-slate-800 border-slate-700 resize-none"
@@ -175,19 +176,10 @@ export function CustomGameForm({ onSubmit, onCancel, submitting = false }: Custo
 
       {/* Actions */}
       <div className="flex gap-2 justify-end pt-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onCancel}
-          disabled={submitting}
-        >
+        <Button variant="outline" size="sm" onClick={onCancel} disabled={submitting}>
           Annulla
         </Button>
-        <Button
-          size="sm"
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
+        <Button size="sm" onClick={handleSubmit} disabled={submitting}>
           {submitting && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
           Crea gioco
         </Button>

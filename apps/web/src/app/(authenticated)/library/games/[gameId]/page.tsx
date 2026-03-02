@@ -16,8 +16,6 @@ import { ArrowLeft, Clock, Gauge, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
-import LibraryGameDetailLoading from './loading';
-
 import { CatalogDetailsSection } from '@/components/library/game-detail/CatalogDetailsSection';
 import { UserActionSection } from '@/components/library/game-detail/UserActionSection';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
@@ -25,6 +23,8 @@ import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
+
+import LibraryGameDetailLoading from './loading';
 
 export default function LibraryGameDetailPage() {
   const params = useParams();
@@ -39,9 +39,10 @@ export default function LibraryGameDetailPage() {
     const items = [];
 
     if (gameDetail.minPlayers && gameDetail.maxPlayers) {
-      const players = gameDetail.minPlayers === gameDetail.maxPlayers
-        ? `${gameDetail.minPlayers}`
-        : `${gameDetail.minPlayers}-${gameDetail.maxPlayers}`;
+      const players =
+        gameDetail.minPlayers === gameDetail.maxPlayers
+          ? `${gameDetail.minPlayers}`
+          : `${gameDetail.minPlayers}-${gameDetail.maxPlayers}`;
       items.push({ icon: Users, value: players });
     }
 
@@ -64,14 +65,12 @@ export default function LibraryGameDetailPage() {
           <Alert variant="destructive">
             <AlertTitle>Errore</AlertTitle>
             <AlertDescription>
-              {error instanceof Error ? error.message : 'Si è verificato un errore nel caricamento del gioco.'}
+              {error instanceof Error
+                ? error.message
+                : 'Si è verificato un errore nel caricamento del gioco.'}
             </AlertDescription>
           </Alert>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={() => router.push('/library')}
-          >
+          <Button variant="outline" className="mt-4" onClick={() => router.push('/library')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Torna alla Libreria
           </Button>
@@ -87,15 +86,9 @@ export default function LibraryGameDetailPage() {
         <div className="mx-auto max-w-6xl px-4 py-8">
           <Alert>
             <AlertTitle>Gioco non trovato</AlertTitle>
-            <AlertDescription>
-              Questo gioco non è presente nella tua libreria.
-            </AlertDescription>
+            <AlertDescription>Questo gioco non è presente nella tua libreria.</AlertDescription>
           </Alert>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={() => router.push('/library')}
-          >
+          <Button variant="outline" className="mt-4" onClick={() => router.push('/library')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Torna alla Libreria
           </Button>

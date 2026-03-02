@@ -2,9 +2,9 @@ import { Suspense } from 'react';
 
 import { type Metadata } from 'next';
 
-import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
-import { UploadSettings } from '@/components/admin/knowledge-base/upload-settings';
 import { ProcessingQueue } from '@/components/admin/knowledge-base/processing-queue';
+import { UploadSettings } from '@/components/admin/knowledge-base/upload-settings';
+import { UploadZone } from '@/components/admin/knowledge-base/upload-zone';
 
 export const metadata: Metadata = {
   title: 'Upload & Process',
@@ -13,7 +13,9 @@ export const metadata: Metadata = {
 
 function CardSkeleton({ height = 'h-[300px]' }: { height?: string }) {
   return (
-    <div className={`${height} bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse`} />
+    <div
+      className={`${height} bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse`}
+    />
   );
 }
 

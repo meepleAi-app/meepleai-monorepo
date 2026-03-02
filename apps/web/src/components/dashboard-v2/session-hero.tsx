@@ -13,12 +13,12 @@ import { it } from 'date-fns/locale';
 import { Play, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { useGame } from '@/hooks/queries/useGames';
+import { Button } from '@/components/ui/primitives/button';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
+import { useGame } from '@/hooks/queries/useGames';
 import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
+import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -37,10 +37,7 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
 
   const gameTitle = game?.title ?? 'Sessione in corso';
   const duration = formatDuration(session.durationMinutes);
-  const meta = [
-    `${session.playerCount} giocatori`,
-    duration ? `Da ${duration}` : null,
-  ]
+  const meta = [`${session.playerCount} giocatori`, duration ? `Da ${duration}` : null]
     .filter(Boolean)
     .join(' · ');
 
@@ -48,8 +45,7 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
     <div
       className="relative flex items-center gap-4 rounded-2xl px-6 py-5 overflow-hidden"
       style={{
-        background:
-          'linear-gradient(135deg, hsl(240,60%,55%), hsl(240,60%,38%))',
+        background: 'linear-gradient(135deg, hsl(240,60%,55%), hsl(240,60%,38%))',
       }}
     >
       {/* Diagonal stripe overlay */}
@@ -78,19 +74,12 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
         <p className="text-[11px] font-bold font-quicksand uppercase tracking-widest text-white/75">
           🟢 Sessione attiva
         </p>
-        <h2 className="font-quicksand text-lg font-bold text-white truncate mt-0.5">
-          {gameTitle}
-        </h2>
-        {meta && (
-          <p className="text-xs text-white/70 font-nunito mt-0.5">{meta}</p>
-        )}
+        <h2 className="font-quicksand text-lg font-bold text-white truncate mt-0.5">{gameTitle}</h2>
+        {meta && <p className="text-xs text-white/70 font-nunito mt-0.5">{meta}</p>}
       </div>
 
       {/* CTA */}
-      <Link
-        href={`/sessions/${session.id}`}
-        className="relative z-10 shrink-0"
-      >
+      <Link href={`/sessions/${session.id}`} className="relative z-10 shrink-0">
         <Button
           size="sm"
           className="font-quicksand font-bold bg-white text-[hsl(240,60%,55%)] hover:bg-white/90 hover:-translate-y-px transition-transform"
@@ -104,11 +93,7 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
 
 // ─── Empty hero ───────────────────────────────────────────────────────────────
 
-function EmptySessionHero({
-  lastSession,
-}: {
-  lastSession?: SessionSummaryDto;
-}) {
+function EmptySessionHero({ lastSession }: { lastSession?: SessionSummaryDto }) {
   const lastGameName = lastSession?.gameName;
   const lastDate = lastSession?.sessionDate
     ? formatDistanceToNow(new Date(lastSession.sessionDate), {
@@ -156,12 +141,7 @@ function EmptySessionHero({
           </Link>
         </Button>
         {lastSession && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="font-quicksand font-bold gap-1.5"
-            asChild
-          >
+          <Button variant="outline" size="sm" className="font-quicksand font-bold gap-1.5" asChild>
             <Link href="/sessions">
               <RotateCcw className="h-3.5 w-3.5" />
               Riprendi ultima

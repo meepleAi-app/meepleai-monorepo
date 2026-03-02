@@ -545,14 +545,18 @@ export function NewChatView() {
     setSelectedCustomAgentId(null);
   }, []);
 
-  // Resolve actual agent ID from backend agents list (for system agents)
+  // Resolve actual agent ID — system agent types (auto/qa/rules/strategy) are UI-only
+  // labels that don't map to backend agent types, so pick the best real agent
   const resolveAgentId = useCallback(
-    (agentType: string | null): string | undefined => {
-      if (!agentType || agentType === 'auto') return undefined;
-      const match = agents.find(a => a.type === agentType);
-      return match?.id;
+    (): string | undefined => {
+      // If user explicitly selected a system agent type, prefer system agents
+      if (selectedAgentType !== null) {
+        return agents[0]?.id ?? customAgents[0]?.id;
+      }
+      // Otherwise prefer custom agents (more game-specific), fall back to system
+      return customAgents[0]?.id ?? agents[0]?.id;
     },
-    [agents]
+    [selectedAgentType, customAgents, agents]
   );
 
   // Get selected game name for quick-start (search both lists)
@@ -574,8 +578,8 @@ export function NewChatView() {
 
       try {
         const gameId = selectedGameId && selectedGameId !== '' ? selectedGameId : undefined;
-        // Issue #4914: custom agent → use UUID directly; system agent → resolve from list
-        const agentId = selectedCustomAgentId ?? resolveAgentId(selectedAgentType);
+        // Issue #4914: custom agent → use UUID directly; system agent → resolve best available
+        const agentId = selectedCustomAgentId ?? resolveAgentId();
 
         const thread = await api.chat.createThread({
           gameId: gameId ?? null,
@@ -595,7 +599,7 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, selectedAgentType, selectedCustomAgentId, resolveAgentId, router]
+    [selectedGameId, selectedGame?.title, selectedCustomAgentId, resolveAgentId, router]
   );
 
   const handleQuickStart = useCallback(
@@ -605,7 +609,8 @@ export function NewChatView() {
     [handleStartChat]
   );
 
-  const canStart = selectedAgentType !== null || selectedCustomAgentId !== null;
+  const hasAgentAvailable = agents.length > 0 || customAgents.length > 0;
+  const canStart = hasAgentAvailable && (selectedAgentType !== null || selectedCustomAgentId !== null);
 
   // Direct game mode: show loading spinner while resolving agents (0 or 1 → auto-redirect)
   if (isDirectGameMode && (isLoadingCustomAgents || isCreating || (customAgents.length <= 1 && !error))) {

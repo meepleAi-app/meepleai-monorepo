@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -36,15 +38,18 @@ internal sealed class OpenRouterUsageService : BackgroundService, IOpenRouterUsa
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<OpenRouterUsageService> _logger;
+    private readonly string? _apiKey;
 
     public OpenRouterUsageService(
         IHttpClientFactory httpClientFactory,
         IConnectionMultiplexer redis,
+        IConfiguration configuration,
         ILogger<OpenRouterUsageService> logger)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _apiKey = SecretsHelper.GetSecretOrValue(configuration, "OPENROUTER_API_KEY", logger, required: false);
     }
 
     // ─── BackgroundService ──────────────────────────────────────────────────
@@ -130,7 +135,15 @@ internal sealed class OpenRouterUsageService : BackgroundService, IOpenRouterUsa
     {
         try
         {
+            if (string.IsNullOrEmpty(_apiKey))
+            {
+                _logger.LogDebug("OpenRouter API key not configured — skipping /auth/key poll");
+                return;
+            }
+
             using var client = _httpClientFactory.CreateClient("OpenRouter");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiKey);
             using var response = await client.GetAsync(AuthKeyEndpoint, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)

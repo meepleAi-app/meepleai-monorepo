@@ -196,9 +196,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('apps/web/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ hashFiles('apps/web/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-playwright-
+            ${{ runner.os }}-${{ runner.arch }}-playwright-
 
       - name: Install Playwright Browsers
         working-directory: apps/web

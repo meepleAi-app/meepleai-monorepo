@@ -27,6 +27,7 @@ export function useAgentConfiguration(agentId: string | null) {
     queryKey: ['agent-configuration', agentId],
     queryFn: () => api.agents.getAgentConfiguration(agentId!),
     enabled: !!agentId,
+    retry: false, // Don't retry — handler returns defaults if no config exists
   });
 }
 

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -63,12 +64,12 @@ internal class CreateAgentCommandHandler : IRequestHandler<CreateAgentCommand, A
         {
             Id = Guid.NewGuid(),
             AgentId = agent.Id,
-            LlmProvider = 0, // OpenRouter
-            LlmModel = "anthropic/claude-3-haiku",
+            LlmProvider = AgentDefaults.DefaultLlmProvider,
+            LlmModel = AgentDefaults.DefaultFreeModel,
             AgentMode = 0, // Chat
             SelectedDocumentIdsJson = "[]",
-            Temperature = 0.3m,
-            MaxTokens = 2048,
+            Temperature = AgentDefaults.DefaultTemperature,
+            MaxTokens = AgentDefaults.DefaultMaxTokens,
             IsCurrent = true,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = Guid.Empty // admin context, no user

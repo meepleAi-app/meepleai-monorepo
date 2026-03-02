@@ -34,6 +34,12 @@ import {
   type Typology, // Added for AGT-012
 } from '../schemas';
 
+import type {
+  BackendModelDto,
+  GetModelsResponse,
+  BackendAgentConfigurationDto,
+  UpdateAgentConfigurationRequest,
+} from '../schemas/agent-config.schemas';
 import type { HttpClient } from '../core/httpClient';
 
 export interface CreateAgentsClientParams {
@@ -539,6 +545,29 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return saved;
     },
 
+    /**
+     * Update a user-owned agent (name, strategy)
+     * PUT /api/v1/agents/{id}/user
+     * Issue #4683: User Agent CRUD Endpoints
+     */
+    async updateUserAgent(agentId: string, request: {
+      name?: string;
+      strategyName?: string;
+      strategyParameters?: Record<string, unknown>;
+    }): Promise<AgentDto> {
+      const response = await httpClient.put<AgentDto>(
+        `/api/v1/agents/${encodeURIComponent(agentId)}/user`,
+        request,
+        AgentDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to update user agent: no response from server');
+      }
+
+      return response;
+    },
+
     // ========== Agent Chat SSE (Issue #4126) ==========
 
     /**
@@ -607,6 +636,41 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       } finally {
         reader.releaseLock();
       }
+    },
+
+    // ========== Model & Agent Configuration ==========
+
+    /** Get available AI models, optionally filtered by tier */
+    async getModels(tier?: string): Promise<BackendModelDto[]> {
+      const params = tier ? `?tier=${encodeURIComponent(tier)}` : '';
+      const response = await httpClient.get<GetModelsResponse>(`/api/v1/models${params}`);
+      return response?.models ?? [];
+    },
+
+    /** Get current LLM configuration for an agent */
+    async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
+      const response = await httpClient.get<BackendAgentConfigurationDto>(
+        `/api/v1/agents/${agentId}/configuration`
+      );
+      if (!response) {
+        throw new Error('Failed to get agent configuration: no response from server');
+      }
+      return response;
+    },
+
+    /** Patch LLM configuration for an agent (partial update) */
+    async updateAgentConfiguration(
+      agentId: string,
+      config: UpdateAgentConfigurationRequest
+    ): Promise<BackendAgentConfigurationDto> {
+      const response = await httpClient.patch<BackendAgentConfigurationDto>(
+        `/api/v1/agents/${agentId}/configuration`,
+        config
+      );
+      if (!response) {
+        throw new Error('Failed to update agent configuration: no response from server');
+      }
+      return response;
     },
   };
 }

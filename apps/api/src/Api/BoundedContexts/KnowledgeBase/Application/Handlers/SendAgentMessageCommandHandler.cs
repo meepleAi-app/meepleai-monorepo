@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
@@ -132,12 +133,12 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             {
                 Id = Guid.NewGuid(),
                 AgentId = command.AgentId,
-                LlmProvider = 0,
-                LlmModel = "anthropic/claude-3-haiku",
+                LlmProvider = AgentDefaults.DefaultLlmProvider,
+                LlmModel = AgentDefaults.DefaultFreeModel,
                 AgentMode = 0,
                 SelectedDocumentIdsJson = JsonSerializer.Serialize(autoDocIds),
-                Temperature = 0.3m,
-                MaxTokens = 2048,
+                Temperature = AgentDefaults.DefaultTemperature,
+                MaxTokens = AgentDefaults.DefaultMaxTokens,
                 IsCurrent = true,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = command.UserId

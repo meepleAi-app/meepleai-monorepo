@@ -241,6 +241,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             thread = new ChatThread(
                 id: Guid.NewGuid(),
                 userId: command.UserId,
+                gameId: agent.GameId,
                 agentId: command.AgentId,
                 agentType: agent.Type.Value,
                 title: command.UserQuestion.Length > 100
@@ -281,9 +282,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         }
 
         // Step 2: Vector search in Qdrant with document filtering
-        // POC FIX #1: Get gameId from VectorDocument (thread.GameId is null for new chats)
-        // POC FIX #2: Get PdfDocumentIds (Qdrant uses pdf_id, not vector_document_id)
-        Guid? gameIdForSearch = thread.GameId;
+        // Resolve gameId: thread first, then agent, then vector docs
+        Guid? gameIdForSearch = thread.GameId ?? agent.GameId;
         var pdfDocumentIds = new List<string>();
 
         if (selectedDocumentIds.Count > 0)

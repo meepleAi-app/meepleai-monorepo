@@ -419,7 +419,7 @@ describe('NewChatView — Full Mode', () => {
     await waitFor(() => {
       expect(apiMock.chat.createThread).toHaveBeenCalledWith({
         gameId: 'priv-1',
-        agentId: null,
+        agentId: 'agent-1', // resolveAgentId() returns first system agent when selectedAgentType is set
         title: 'Chat: My Custom Game',
         initialMessage: null,
       });
@@ -436,7 +436,7 @@ describe('NewChatView — Full Mode', () => {
     await waitFor(() => {
       expect(apiMock.chat.createThread).toHaveBeenCalledWith({
         gameId: null,
-        agentId: null,
+        agentId: 'agent-1', // resolveAgentId() returns first system agent when selectedAgentType is set (auto is default)
         title: 'Nuova conversazione',
         initialMessage: null,
       });

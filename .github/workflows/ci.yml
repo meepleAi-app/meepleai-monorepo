@@ -221,8 +221,8 @@ jobs:
       # Stage 4: Backend Integration Tests (Testcontainers)
       # Both stages run sequentially in this job with service containers
       - name: Run Tests
-        # Issue #3102: Increased to 45 minutes - ARM64 runner is 30-40% slower than x86-64
-        timeout-minutes: 45
+        # Issue #2967: Increased to 60 minutes - ARM64 self-hosted runner needs extra time for integration tests
+        timeout-minutes: 60
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432

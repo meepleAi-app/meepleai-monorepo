@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain;
@@ -6,9 +7,12 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -27,6 +31,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly MeepleAiDbContext _db;
     private readonly ILogger<CreateAgentWithSetupCommandHandler> _logger;
 
     public CreateAgentWithSetupCommandHandler(
@@ -34,12 +39,14 @@ internal sealed class CreateAgentWithSetupCommandHandler
         IChatThreadRepository chatThreadRepository,
         IUserLibraryRepository libraryRepository,
         IUnitOfWork unitOfWork,
+        MeepleAiDbContext db,
         ILogger<CreateAgentWithSetupCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -105,6 +112,38 @@ internal sealed class CreateAgentWithSetupCommandHandler
                 createdByUserId: request.UserId);
 
             await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
+
+            // Step 3b: Create default AgentConfiguration with auto-selected indexed documents
+            var indexedDocIds = await _db.VectorDocuments
+                .Where(vd => vd.GameId == request.GameId && vd.IndexingStatus == "completed")
+                .Select(vd => vd.Id)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var documentIdsJson = indexedDocIds.Count > 0
+                ? JsonSerializer.Serialize(indexedDocIds)
+                : "[]";
+
+            var defaultConfig = new AgentConfigurationEntity
+            {
+                Id = Guid.NewGuid(),
+                AgentId = agent.Id,
+                LlmProvider = 0, // OpenRouter
+                LlmModel = "anthropic/claude-3-haiku",
+                AgentMode = 0, // Chat
+                SelectedDocumentIdsJson = documentIdsJson,
+                Temperature = 0.3m,
+                MaxTokens = 2048,
+                IsCurrent = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = request.UserId
+            };
+
+            _db.Set<AgentConfigurationEntity>().Add(defaultConfig);
+
+            _logger.LogInformation(
+                "Created default config for agent {AgentId} with {DocCount} indexed documents",
+                agent.Id, indexedDocIds.Count);
 
             // Step 4: Create initial chat thread
             var chatThread = new ChatThread(

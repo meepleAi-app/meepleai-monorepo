@@ -23,7 +23,7 @@ jobs:
   # Quick path filtering
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     outputs:
       e2e-needed: ${{ steps.filter.outputs.e2e }}
     steps:
@@ -41,7 +41,7 @@ jobs:
   # Backend E2E Tests with Testcontainers
   backend-e2e-tests:
     name: Backend E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.e2e-needed == 'true' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 20
@@ -105,7 +105,7 @@ jobs:
   # Quality Gate
   backend-e2e-quality-gate:
     name: Backend E2E Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: backend-e2e-tests
     if: always()
     steps:

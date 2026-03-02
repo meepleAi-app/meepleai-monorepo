@@ -14,7 +14,7 @@ concurrency:
 jobs:
   create-reminder-issue:
     name: Create Quarterly Security Review Issue
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     permissions:
       issues: write
       contents: read

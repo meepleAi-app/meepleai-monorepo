@@ -38,7 +38,7 @@ env:
 jobs:
   backend-unit-tests:
     name: Backend Unit Tests (Permission System)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -102,7 +102,7 @@ jobs:
 
   backend-integration-tests:
     name: Backend Integration Tests (Permission API)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: backend-unit-tests
 
     services:
@@ -144,7 +144,7 @@ jobs:
 
   frontend-unit-tests:
     name: Frontend Unit Tests (Components)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -190,7 +190,7 @@ jobs:
 
   frontend-typecheck:
     name: TypeScript Type Check
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -223,7 +223,7 @@ jobs:
 
   frontend-lint:
     name: ESLint & Prettier
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -238,7 +238,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [frontend-unit-tests, frontend-typecheck]
 
     steps:
@@ -268,7 +268,7 @@ jobs:
 
   accessibility-audit:
     name: Accessibility Audit (axe-core)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: frontend-unit-tests
 
     steps:
@@ -309,7 +309,7 @@ jobs:
 
   visual-regression:
     name: Visual Regression (Chromatic)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: frontend-unit-tests
 
     steps:
@@ -336,7 +336,7 @@ jobs:
 
   performance-tests:
     name: Performance Benchmarks
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [frontend-unit-tests, backend-unit-tests]
 
     steps:
@@ -377,7 +377,7 @@ jobs:
 
   bundle-size-check:
     name: Bundle Size Impact Analysis
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: frontend-unit-tests
 
     steps:
@@ -410,7 +410,7 @@ jobs:
 
   security-scan:
     name: Security Vulnerability Scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -437,7 +437,7 @@ jobs:
 
   deployment-preview:
     name: Deploy Preview (Vercel)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [frontend-unit-tests, frontend-typecheck, frontend-lint]
     if: github.event_name == 'pull_request'
 
@@ -467,7 +467,7 @@ jobs:
 
   summary:
     name: Test Summary
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [backend-unit-tests, backend-integration-tests, frontend-unit-tests, e2e-tests, accessibility-audit, performance-tests, bundle-size-check]
     if: always()
 
@@ -507,7 +507,7 @@ jobs:
 
   auto-merge-dependabot:
     name: Auto-Merge Dependabot (if tests pass)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: summary
     if: github.actor == 'dependabot[bot]' && needs.summary.result == 'success'
 

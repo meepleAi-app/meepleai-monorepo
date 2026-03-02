@@ -21,7 +21,7 @@ concurrency:
 jobs:
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     outputs:
       web: ${{ steps.filter.outputs.web }}
     steps:
@@ -37,7 +37,7 @@ jobs:
   # Playwright Visual Snapshots
   playwright-visual:
     name: Playwright Visual Snapshots
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.web == 'true'
     continue-on-error: true
@@ -97,7 +97,7 @@ jobs:
   # Chromatic UI Review (Storybook)
   chromatic:
     name: Chromatic UI Review
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.web == 'true'
     continue-on-error: true
@@ -176,7 +176,7 @@ jobs:
   # Summary
   visual-summary:
     name: Visual Tests Summary
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [playwright-visual, chromatic]
     if: always() && github.event_name == 'pull_request'
     steps:

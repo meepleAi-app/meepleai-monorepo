@@ -28,7 +28,7 @@ public class CreateChatThreadCommandHandlerTests
         _mockAgentRepository = new Mock<IAgentRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockPublisher = new Mock<IPublisher>();
-        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object);
+        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object, Microsoft.Extensions.Logging.Abstractions.NullLogger<CreateChatThreadCommandHandler>.Instance);
     }
 
     [Fact]

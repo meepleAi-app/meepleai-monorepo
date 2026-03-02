@@ -125,6 +125,49 @@ export const MODEL_OPTIONS: ModelInfo[] = [
   },
 ];
 
+// ============================================================================
+// Backend Model DTOs (from GET /api/v1/models and PATCH /api/v1/agents/:id/configuration)
+// ============================================================================
+
+/** ModelDto from GET /api/v1/models?tier= */
+export interface BackendModelDto {
+  id: string;
+  name: string;
+  provider: string;
+  tier: string;
+  costPer1kInputTokens: number;
+  costPer1kOutputTokens: number;
+  maxTokens: number;
+  supportsStreaming: boolean;
+  description?: string;
+}
+
+/** Response from GET /api/v1/models */
+export interface GetModelsResponse {
+  models: BackendModelDto[];
+}
+
+/** AgentConfigurationDto from PATCH/GET /api/v1/agents/:id/configuration */
+export interface BackendAgentConfigurationDto {
+  id: string;
+  agentId: string;
+  llmModel: string;
+  llmProvider: string;
+  temperature: number;
+  maxTokens: number;
+  selectedDocumentIds: string[];
+  isCurrent: boolean;
+  createdAt: string;
+}
+
+/** Request body for PATCH /api/v1/agents/:id/configuration */
+export interface UpdateAgentConfigurationRequest {
+  modelId?: string;
+  temperature?: number;
+  maxTokens?: number;
+  selectedDocumentIds?: string[];
+}
+
 /**
  * Personality Display Information
  */

@@ -14,6 +14,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { useAvailableModels } from '@/hooks/queries/useModels';
 import { useSessionQuotaWithStatus } from '@/hooks/queries/useSessionQuota';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
@@ -28,17 +29,6 @@ export interface ModelConfig {
   cost: number; // Cost per query in dollars
   recommended?: boolean;
 }
-
-const MODEL_CONFIG: Record<UserTier, ModelConfig[]> = {
-  Free: [
-    { name: 'GPT-4o-mini', cost: 0.001, recommended: true },
-    { name: 'Llama-3.3-70b', cost: 0.0008 },
-  ],
-  Premium: [
-    { name: 'Claude-3.5-Haiku', cost: 0.003 },
-    { name: 'GPT-4o', cost: 0.005, recommended: true },
-  ],
-};
 
 // ========== localStorage Keys ==========
 
@@ -167,10 +157,21 @@ export function useAgentConfigModal({
     return quota.percentageUsed >= 90;
   }, [quota]);
 
-  // ========== Models (tier-filtered) ==========
+  // ========== Models (tier-filtered, from API) ==========
 
-  // eslint-disable-next-line security/detect-object-injection -- userTier is typed UserTier with valid MODEL_CONFIG keys
-  const availableModels = useMemo(() => MODEL_CONFIG[userTier], [userTier]);
+  const { data: apiModels = [] } = useAvailableModels(userTier.toLowerCase());
+
+  const availableModels: ModelConfig[] = useMemo(() => {
+    if (apiModels.length === 0) {
+      // Fallback: show a default free model while API loads
+      return [{ name: 'Llama 3.3 70B Free', cost: 0, recommended: true }];
+    }
+    return apiModels.map((m, i) => ({
+      name: m.name,
+      cost: (m.costPer1kInputTokens * 2 + m.costPer1kOutputTokens * 1),
+      recommended: i === 0,
+    }));
+  }, [apiModels]);
 
   // ========== Cost Estimation ==========
 
@@ -187,15 +188,16 @@ export function useAgentConfigModal({
     if (cached) {
       setSelectedTypologyId(cached.typologyId);
       setSelectedModelName(cached.modelName);
-    } else {
-      // Pre-select recommended model, or first available model if none recommended
+    } else if (!selectedModelName) {
+      // Pre-select recommended model only if user hasn't selected one yet
       const recommended = availableModels.find((m) => m.recommended);
       const defaultModel = recommended ?? availableModels[0];
       if (defaultModel) {
         setSelectedModelName(defaultModel.name);
       }
     }
-  }, [gameId, availableModels]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId]);
 
   // ========== Mutation: Save Config ==========
 

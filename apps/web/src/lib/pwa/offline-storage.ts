@@ -103,12 +103,14 @@ export async function initOfflineStorage(): Promise<IDBDatabase> {
 
     request.onsuccess = () => {
       dbInstance = request.result;
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] Database opened successfully');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] Database opened successfully');
+      }
       resolve(dbInstance);
     };
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = event => {
       const db = (event.target as IDBOpenDBRequest).result;
 
       // Sessions store
@@ -137,8 +139,10 @@ export async function initOfflineStorage(): Promise<IDBDatabase> {
         db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
       }
 
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] Database schema created/upgraded');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] Database schema created/upgraded');
+      }
     };
   });
 }
@@ -161,8 +165,10 @@ export async function saveSession(session: OfflineSession): Promise<void> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] Session saved:', session.id);
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] Session saved:', session.id);
+      }
       resolve();
     };
   });
@@ -211,7 +217,7 @@ export async function deleteSession(id: string): Promise<void> {
     const actionIndex = actionsStore.index('sessionId');
     const actionRequest = actionIndex.openCursor(IDBKeyRange.only(id));
 
-    actionRequest.onsuccess = (event) => {
+    actionRequest.onsuccess = event => {
       const cursor = (event.target as IDBRequest).result;
       if (cursor) {
         cursor.delete();
@@ -220,8 +226,10 @@ export async function deleteSession(id: string): Promise<void> {
     };
 
     transaction.oncomplete = () => {
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] Session deleted:', id);
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] Session deleted:', id);
+      }
       resolve();
     };
 
@@ -233,7 +241,9 @@ export async function deleteSession(id: string): Promise<void> {
 // Pending Actions Queue
 // ============================================================================
 
-export async function queueAction(action: Omit<OfflineAction, 'id' | 'timestamp' | 'retryCount'>): Promise<string> {
+export async function queueAction(
+  action: Omit<OfflineAction, 'id' | 'timestamp' | 'retryCount'>
+): Promise<string> {
   const db = await initOfflineStorage();
   const id = crypto.randomUUID();
 
@@ -252,8 +262,10 @@ export async function queueAction(action: Omit<OfflineAction, 'id' | 'timestamp'
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] Action queued:', fullAction.type, id);
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] Action queued:', fullAction.type, id);
+      }
       resolve(id);
     };
   });
@@ -296,8 +308,10 @@ export async function removeAction(id: string): Promise<void> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] Action removed:', id);
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] Action removed:', id);
+      }
       resolve();
     };
   });
@@ -336,8 +350,10 @@ export async function clearAllActions(): Promise<void> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] All actions cleared');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] All actions cleared');
+      }
       resolve();
     };
   });
@@ -389,7 +405,7 @@ export async function clearOldGamesCache(maxAge: number = 7 * 24 * 60 * 60 * 100
 
     const request = index.openCursor(IDBKeyRange.upperBound(cutoff));
 
-    request.onsuccess = (event) => {
+    request.onsuccess = event => {
       const cursor = (event.target as IDBRequest).result;
       if (cursor) {
         cursor.delete();
@@ -446,21 +462,21 @@ export async function getStorageStats(): Promise<{
   const db = await initOfflineStorage();
 
   const counts = await Promise.all([
-    new Promise<number>((resolve) => {
+    new Promise<number>(resolve => {
       const transaction = db.transaction(STORES.SESSIONS, 'readonly');
       const store = transaction.objectStore(STORES.SESSIONS);
       const request = store.count();
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => resolve(0);
     }),
-    new Promise<number>((resolve) => {
+    new Promise<number>(resolve => {
       const transaction = db.transaction(STORES.ACTIONS, 'readonly');
       const store = transaction.objectStore(STORES.ACTIONS);
       const request = store.count();
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => resolve(0);
     }),
-    new Promise<number>((resolve) => {
+    new Promise<number>(resolve => {
       const transaction = db.transaction(STORES.GAMES, 'readonly');
       const store = transaction.objectStore(STORES.GAMES);
       const request = store.count();
@@ -489,8 +505,10 @@ export async function clearAllData(): Promise<void> {
     }
 
     transaction.oncomplete = () => {
-      // eslint-disable-next-line no-console
-      console.log('[OfflineStorage] All data cleared');
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log('[OfflineStorage] All data cleared');
+      }
       resolve();
     };
 

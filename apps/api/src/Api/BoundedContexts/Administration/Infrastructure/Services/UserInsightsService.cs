@@ -52,12 +52,17 @@ internal sealed class UserInsightsService : IUserInsightsService
         await Task.WhenAll(backlogTask, rulesTask, ragTask, streakTask)
             .ConfigureAwait(false);
 
-        // Merge results from all analyzers
+        // ARCH-03: Use await instead of .Result to preserve exception fidelity
+        var backlogInsights = await backlogTask.ConfigureAwait(false);
+        var rulesInsights = await rulesTask.ConfigureAwait(false);
+        var ragInsights = await ragTask.ConfigureAwait(false);
+        var streakInsights = await streakTask.ConfigureAwait(false);
+
         var allInsights = new List<AIInsight>();
-        allInsights.AddRange(backlogTask.Result);
-        allInsights.AddRange(rulesTask.Result);
-        allInsights.AddRange(ragTask.Result);
-        allInsights.AddRange(streakTask.Result);
+        allInsights.AddRange(backlogInsights);
+        allInsights.AddRange(rulesInsights);
+        allInsights.AddRange(ragInsights);
+        allInsights.AddRange(streakInsights);
 
         // Sort by priority (descending) and limit to max count
         var sortedInsights = allInsights
@@ -73,10 +78,10 @@ internal sealed class UserInsightsService : IUserInsightsService
             sortedInsights.Count,
             userId,
             duration.TotalMilliseconds,
-            backlogTask.Result.Count,
-            rulesTask.Result.Count,
-            ragTask.Result.Count,
-            streakTask.Result.Count);
+            backlogInsights.Count,
+            rulesInsights.Count,
+            ragInsights.Count,
+            streakInsights.Count);
 
         return sortedInsights;
     }

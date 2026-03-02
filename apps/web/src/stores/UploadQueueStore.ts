@@ -152,8 +152,10 @@ class UploadQueueStore {
 
       switch (response.type) {
         case 'WORKER_READY':
-          // eslint-disable-next-line no-console
-          console.log('[UploadQueueStore] Worker ready');
+          if (process.env.NODE_ENV !== 'production') {
+            // eslint-disable-next-line no-console
+            console.log('[UploadQueueStore] Worker ready');
+          }
           this.isReady = true;
           this.workerError = null;
           this.restartCount = 0;
@@ -366,10 +368,12 @@ class UploadQueueStore {
       return;
     }
 
-    // eslint-disable-next-line no-console
-    console.log(
-      `[UploadQueueStore] Processing ${this.pendingFileRequests.length} buffered file requests`
-    );
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[UploadQueueStore] Processing ${this.pendingFileRequests.length} buffered file requests`
+      );
+    }
 
     // Process all buffered requests
     const requests = [...this.pendingFileRequests];
@@ -452,8 +456,10 @@ class UploadQueueStore {
   private restoreStateToWorker(): void {
     const saved = this.loadFromLocalStorage();
     if (saved && saved.items.length > 0) {
-      // eslint-disable-next-line no-console
-      console.log(`[UploadQueueStore] Restoring ${saved.items.length} items to worker`);
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.log(`[UploadQueueStore] Restoring ${saved.items.length} items to worker`);
+      }
 
       this.postMessage({
         type: 'RESTORE_STATE',
@@ -649,8 +655,10 @@ class UploadQueueStore {
             const stats = this.getStats();
             // Only cleanup if queue is empty and no active uploads
             if (stats.total === 0 || (stats.pending === 0 && stats.uploading === 0)) {
-              // eslint-disable-next-line no-console
-              console.log('[UploadQueueStore] Idle cleanup - terminating worker');
+              if (process.env.NODE_ENV !== 'production') {
+                // eslint-disable-next-line no-console
+                console.log('[UploadQueueStore] Idle cleanup - terminating worker');
+              }
               this.destroy();
             }
           },
@@ -681,8 +689,10 @@ class UploadQueueStore {
     this.listeners.clear();
     this.isReady = false;
 
-    // eslint-disable-next-line no-console
-    console.log('[UploadQueueStore] Worker destroyed and cleaned up');
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('[UploadQueueStore] Worker destroyed and cleaned up');
+    }
   }
 }
 

@@ -243,8 +243,10 @@ function markAsHandledByOtherTab(id: string): void {
   const item = state.items.find(i => i.id === id);
   if (item && item.status === 'pending') {
     // Leave it pending but don't process it
-    // eslint-disable-next-line no-console
-    console.log(`[UploadWorker] Item ${id} being handled by another tab`);
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log(`[UploadWorker] Item ${id} being handled by another tab`);
+    }
   }
 }
 
@@ -612,8 +614,10 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
         // Restore state from main thread's localStorage
         state.items = message.payload.items;
         state.metrics = message.payload.metrics;
-        // eslint-disable-next-line no-console
-        console.log(`[UploadWorker] Restored ${state.items.length} items from main thread`);
+        if (process.env.NODE_ENV !== 'production') {
+          // eslint-disable-next-line no-console
+          console.log(`[UploadWorker] Restored ${state.items.length} items from main thread`);
+        }
         notifyStateUpdate();
         void processQueue(); // Auto-start processing restored items
         break;
@@ -634,5 +638,7 @@ self.postMessage({
   type: 'WORKER_READY',
 } as WorkerResponse);
 
-// eslint-disable-next-line no-console
-console.log('[UploadWorker] Initialized, awaiting state restoration from main thread');
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line no-console
+  console.log('[UploadWorker] Initialized, awaiting state restoration from main thread');
+}

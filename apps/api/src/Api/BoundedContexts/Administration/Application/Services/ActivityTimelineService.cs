@@ -137,10 +137,16 @@ internal sealed class ActivityTimelineService : IActivityTimelineService
         await Task.WhenAll(libraryTask, sessionTask, chatTask, wishlistTask)
             .ConfigureAwait(false);
 
-        return libraryTask.Result
-            .Concat(sessionTask.Result)
-            .Concat(chatTask.Result)
-            .Concat(wishlistTask.Result)
+        // ARCH-03: Use await instead of .Result to preserve exception fidelity
+        var libraryResult = await libraryTask.ConfigureAwait(false);
+        var sessionResult = await sessionTask.ConfigureAwait(false);
+        var chatResult = await chatTask.ConfigureAwait(false);
+        var wishlistResult = await wishlistTask.ConfigureAwait(false);
+
+        return libraryResult
+            .Concat(sessionResult)
+            .Concat(chatResult)
+            .Concat(wishlistResult)
             .OrderByDescending(e => e.Timestamp)
             .ToList();
     }
@@ -160,10 +166,16 @@ internal sealed class ActivityTimelineService : IActivityTimelineService
         await Task.WhenAll(libraryTask, sessionTask, chatTask, wishlistTask)
             .ConfigureAwait(false);
 
-        var allEvents = libraryTask.Result
-            .Concat(sessionTask.Result)
-            .Concat(chatTask.Result)
-            .Concat(wishlistTask.Result)
+        // ARCH-03: Use await instead of .Result to preserve exception fidelity
+        var libResult = await libraryTask.ConfigureAwait(false);
+        var sessResult = await sessionTask.ConfigureAwait(false);
+        var chatResult2 = await chatTask.ConfigureAwait(false);
+        var wishResult = await wishlistTask.ConfigureAwait(false);
+
+        var allEvents = libResult
+            .Concat(sessResult)
+            .Concat(chatResult2)
+            .Concat(wishResult)
             .OrderByDescending(e => e.Timestamp)
             .Take(limit)
             .ToList();

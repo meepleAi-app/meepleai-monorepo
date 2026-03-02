@@ -262,8 +262,8 @@ internal sealed class TestAgentTypologyCommandHandler : IRequestHandler<TestAgen
             ? topResult.TextContent[..200] + "..."
             : topResult.TextContent;
 
-        var confidenceLevel = overallConfidence.IsHigh() ? "High" 
-            : overallConfidence.IsMedium() ? "Medium" 
+        var confidenceLevel = overallConfidence.IsHigh() ? "High"
+            : overallConfidence.IsMedium() ? "Medium"
             : "Low";
 
         return $"✅ Test Successful!\n\n" +

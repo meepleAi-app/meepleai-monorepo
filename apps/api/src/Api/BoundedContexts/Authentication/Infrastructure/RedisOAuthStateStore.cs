@@ -83,10 +83,21 @@ internal class RedisOAuthStateStore : IOAuthStateStore
                 state[..Math.Min(8, state.Length)]);
             return false;
         }
+        // QUAL-02: Differentiate transient Redis errors from permanent failures
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogError(ex, "Redis connection error during OAuth state validation (transient)");
+            return false;
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogError(ex, "Redis timeout during OAuth state validation (transient)");
+            return false;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating OAuth state in Redis");
-            return false;
+            _logger.LogError(ex, "Unexpected error validating OAuth state in Redis");
+            throw;
         }
     }
 
@@ -102,10 +113,21 @@ internal class RedisOAuthStateStore : IOAuthStateStore
 
             return await db.KeyExistsAsync(key).ConfigureAwait(false);
         }
+        // QUAL-02: Differentiate transient Redis errors from permanent failures
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogError(ex, "Redis connection error during OAuth state check (transient)");
+            return false;
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogError(ex, "Redis timeout during OAuth state check (transient)");
+            return false;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking OAuth state existence in Redis");
-            return false;
+            _logger.LogError(ex, "Unexpected error checking OAuth state existence in Redis");
+            throw;
         }
     }
 

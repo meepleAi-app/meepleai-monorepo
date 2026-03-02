@@ -25,6 +25,8 @@ permissions:
   contents: read
   packages: write
   id-token: write
+  pull-requests: write
+  checks: write
 
 env:
   REGISTRY: ghcr.io

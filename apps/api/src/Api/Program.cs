@@ -613,11 +613,15 @@ v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints();
 v1Api.MapBggImportQueueEndpoints();
 
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
-v1Api.MapTelemetryTestEndpoints();
-v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
+// SEC-01: Only register test endpoints in Development to prevent exposure in staging/QA
+if (app.Environment.IsDevelopment())
+{
+    v1Api.MapTelemetryTestEndpoints();
+    v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
 
-// Issue #2004: Runbook validation test endpoints
-v1Api.MapTestEndpoints();
+    // Issue #2004: Runbook validation test endpoints
+    v1Api.MapTestEndpoints();
+}
 
 // Issue #2406: SignalR hub for real-time game state updates
 app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");

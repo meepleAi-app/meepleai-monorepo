@@ -46,11 +46,11 @@ internal sealed class GetUsageFreeQuotaQueryHandler
                     : 0.0;
 
                 return new FreeModelUsageDto(
-                    ModelId:      x.ModelId,
+                    ModelId: x.ModelId,
                     RequestsToday: x.RequestsToday,
-                    DailyLimit:   DefaultDailyLimit,
-                    PercentUsed:  percent,
-                    IsExhausted:  x.RequestsToday >= DefaultDailyLimit,
+                    DailyLimit: DefaultDailyLimit,
+                    PercentUsed: percent,
+                    IsExhausted: x.RequestsToday >= DefaultDailyLimit,
                     NextResetUtc: nextResetUtc
                 );
             })
@@ -58,9 +58,9 @@ internal sealed class GetUsageFreeQuotaQueryHandler
             .ToList();
 
         return new FreeQuotaDto(
-            Models:                  models,
-            TotalFreeRequestsToday:  freeModelUsage.Sum(x => x.RequestsToday),
-            GeneratedAt:             DateTime.UtcNow
+            Models: models,
+            TotalFreeRequestsToday: freeModelUsage.Sum(x => x.RequestsToday),
+            GeneratedAt: DateTime.UtcNow
         );
     }
 }

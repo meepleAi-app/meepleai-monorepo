@@ -63,9 +63,9 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.InviteExpiresAt))!.SetValue(session, entity.InviteExpiresAt);
 
         // Map participants (need to access private _participants field)
-        #pragma warning disable S3011 // Reflection is required for domain entity hydration from persistence
+#pragma warning disable S3011 // Reflection is required for domain entity hydration from persistence
         var participantsField = typeof(Session).GetField("_participants", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        #pragma warning restore S3011
+#pragma warning restore S3011
         var participantsList = (List<Participant>)participantsField.GetValue(session)!;
         participantsList.Clear();
         participantsList.AddRange(entity.Participants.Select(ParticipantMapper.ToDomain));

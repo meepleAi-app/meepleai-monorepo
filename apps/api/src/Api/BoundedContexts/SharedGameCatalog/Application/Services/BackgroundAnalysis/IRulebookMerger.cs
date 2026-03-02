@@ -46,17 +46,17 @@ public sealed record MergedRulebookAnalysis
         List<string> commonQuestions,
         decimal confidenceScore,
         MergeMetadata metadata) => new()
-    {
-        GameTitle = gameTitle,
-        Summary = summary,
-        KeyMechanics = keyMechanics,
-        VictoryConditions = victoryConditions,
-        Resources = resources,
-        GamePhases = gamePhases,
-        CommonQuestions = commonQuestions,
-        ConfidenceScore = confidenceScore,
-        Metadata = metadata
-    };
+        {
+            GameTitle = gameTitle,
+            Summary = summary,
+            KeyMechanics = keyMechanics,
+            VictoryConditions = victoryConditions,
+            Resources = resources,
+            GamePhases = gamePhases,
+            CommonQuestions = commonQuestions,
+            ConfidenceScore = confidenceScore,
+            Metadata = metadata
+        };
 }
 
 /// <summary>
@@ -77,12 +77,12 @@ public sealed record MergeMetadata
         int failedChunks,
         int duplicatesRemoved,
         TimeSpan analysisTime) => new()
-    {
-        TotalChunksProcessed = totalChunks,
-        SuccessfulChunks = successfulChunks,
-        FailedChunks = failedChunks,
-        ChunkSuccessRate = totalChunks > 0 ? (double)successfulChunks / totalChunks : 0,
-        DuplicatesRemoved = duplicatesRemoved,
-        TotalAnalysisTime = analysisTime
-    };
+        {
+            TotalChunksProcessed = totalChunks,
+            SuccessfulChunks = successfulChunks,
+            FailedChunks = failedChunks,
+            ChunkSuccessRate = totalChunks > 0 ? (double)successfulChunks / totalChunks : 0,
+            DuplicatesRemoved = duplicatesRemoved,
+            TotalAnalysisTime = analysisTime
+        };
 }

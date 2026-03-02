@@ -9,6 +9,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -125,11 +126,17 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
 
         // Persist agent + config atomically — AddAsync calls SaveChangesAsync internally,
         // so we wrap both writes in a transaction to prevent orphaned agents.
-        using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await _agentRepository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
-        _db.Set<AgentConfigurationEntity>().Add(defaultConfig);
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        // Must use CreateExecutionStrategy() because NpgsqlRetryingExecutionStrategy is configured.
+        var executionStrategy = _db.Database.CreateExecutionStrategy();
+        await executionStrategy.ExecuteAsync(async ct =>
+        {
+            using var transaction = await _db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+            await _agentRepository.AddAsync(agent, ct).ConfigureAwait(false);
+            _db.Set<AgentConfigurationEntity>().Add(defaultConfig);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+            await transaction.CommitAsync(ct).ConfigureAwait(false);
+            return true;
+        }, cancellationToken).ConfigureAwait(false);
 
         if (resolvedGameId.Value != request.GameId)
         {

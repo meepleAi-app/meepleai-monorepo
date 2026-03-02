@@ -40,6 +40,8 @@ export function SplitViewLayout({
   const [leftRatio, setLeftRatio] = useState<number>(initialRatio);
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // WEB-04: Gate to prevent persist effect from writing before hydration reads stored value
+  const hasHydrated = useRef(false);
 
   // Load persisted ratio from localStorage
   useEffect(() => {
@@ -51,12 +53,13 @@ export function SplitViewLayout({
           setLeftRatio(ratio);
         }
       }
+      hasHydrated.current = true;
     }
   }, [storageKey, minLeftRatio, maxLeftRatio]);
 
-  // Persist ratio to localStorage
+  // Persist ratio to localStorage (only after hydration)
   useEffect(() => {
-    if (typeof window !== 'undefined' && storageKey) {
+    if (typeof window !== 'undefined' && storageKey && hasHydrated.current) {
       localStorage.setItem(storageKey, leftRatio.toString());
     }
   }, [leftRatio, storageKey]);
@@ -108,15 +111,9 @@ export function SplitViewLayout({
   const rightWidthPercentage = (1 - leftRatio) * 100;
 
   return (
-    <div
-      ref={containerRef}
-      className={cn('flex h-full overflow-hidden', className)}
-    >
+    <div ref={containerRef} className={cn('flex h-full overflow-hidden', className)}>
       {/* Left Panel */}
-      <div
-        style={{ width: `${leftWidthPercentage}%` }}
-        className="flex-shrink-0 overflow-hidden"
-      >
+      <div style={{ width: `${leftWidthPercentage}%` }} className="flex-shrink-0 overflow-hidden">
         {leftPanel}
       </div>
 
@@ -131,10 +128,7 @@ export function SplitViewLayout({
       />
 
       {/* Right Panel */}
-      <div
-        style={{ width: `${rightWidthPercentage}%` }}
-        className="flex-shrink-0 overflow-hidden"
-      >
+      <div style={{ width: `${rightWidthPercentage}%` }} className="flex-shrink-0 overflow-hidden">
         {rightPanel}
       </div>
     </div>

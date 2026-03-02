@@ -132,7 +132,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
             .Select(g => (
                 Bucket: g.Key.Bucket,
                 Source: g.Key.RequestSource,
-                Count:  g.Count(),
+                Count: g.Count(),
                 CostUsd: g.Sum(x => x.CostUsd)
             ))
             .OrderBy(x => x.Bucket)
@@ -170,9 +170,9 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         var byModel = rows
             .GroupBy(x => x.ModelId, StringComparer.Ordinal)
             .Select(g => (
-                ModelId:     g.Key,
-                CostUsd:     g.Sum(x => x.CostUsd),
-                Requests:    g.Count(),
+                ModelId: g.Key,
+                CostUsd: g.Sum(x => x.CostUsd),
+                Requests: g.Count(),
                 TotalTokens: g.Sum(x => x.TotalTokens)
             ))
             .OrderByDescending(x => x.CostUsd)
@@ -181,8 +181,8 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         var bySource = rows
             .GroupBy(x => x.RequestSource, StringComparer.Ordinal)
             .Select(g => (
-                Source:   g.Key,
-                CostUsd:  g.Sum(x => x.CostUsd),
+                Source: g.Key,
+                CostUsd: g.Sum(x => x.CostUsd),
                 Requests: g.Count()
             ))
             .OrderByDescending(x => x.CostUsd)
@@ -191,8 +191,8 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         var byTier = rows
             .GroupBy(x => x.UserRole ?? "Unknown", StringComparer.Ordinal)
             .Select(g => (
-                Tier:     g.Key,
-                CostUsd:  g.Sum(x => x.CostUsd),
+                Tier: g.Key,
+                CostUsd: g.Sum(x => x.CostUsd),
                 Requests: g.Count()
             ))
             .OrderByDescending(x => x.CostUsd)
@@ -209,7 +209,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         CancellationToken cancellationToken = default)
     {
         var startUtc = forDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var endUtc   = forDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+        var endUtc = forDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
         var rows = await _context.LlmRequestLogs
             .AsNoTracking()

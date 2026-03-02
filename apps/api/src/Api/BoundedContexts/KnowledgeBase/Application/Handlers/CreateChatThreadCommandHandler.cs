@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -16,27 +17,47 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThreadCommand, ChatThreadDto>
 {
     private readonly IChatThreadRepository _threadRepository;
+    private readonly IAgentRepository _agentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPublisher _publisher;
+    private readonly ILogger<CreateChatThreadCommandHandler> _logger;
 
     public CreateChatThreadCommandHandler(
         IChatThreadRepository threadRepository,
+        IAgentRepository agentRepository,
         IUnitOfWork unitOfWork,
-        IPublisher publisher)
+        IPublisher publisher,
+        ILogger<CreateChatThreadCommandHandler> logger)
     {
         _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<ChatThreadDto> Handle(CreateChatThreadCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Resolve game ID: input may be a shared_games.Id — convert to games.Id
+        Guid? resolvedGameId = null;
+        if (command.GameId.HasValue)
+        {
+            resolvedGameId = await _agentRepository.ResolveGameIdAsync(command.GameId.Value, cancellationToken).ConfigureAwait(false);
+            if (resolvedGameId is null)
+            {
+                _logger.LogWarning(
+                    "GameId {GameId} could not be resolved for chat thread creation by user {UserId} — thread will have no game association",
+                    command.GameId.Value, command.UserId);
+            }
+        }
+
         // Create ChatThread aggregate
         var thread = new ChatThread(
             id: Guid.NewGuid(),
             userId: command.UserId,
-            gameId: command.GameId,
+            gameId: resolvedGameId,
             title: command.Title,
             agentId: command.AgentId,
             agentType: command.AgentType // Issue #4362

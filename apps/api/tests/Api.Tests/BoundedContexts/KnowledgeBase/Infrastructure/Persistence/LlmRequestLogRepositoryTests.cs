@@ -151,19 +151,22 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         DbContext.LlmRequestLogs.AddRange(
             new Api.Infrastructure.Entities.LlmRequestLogEntity
             {
-                ModelId = "m", Provider = "p",
+                ModelId = "m",
+                Provider = "p",
                 RequestedAt = now.AddDays(-31),
                 ExpiresAt = now.AddDays(-1) // EXPIRED
             },
             new Api.Infrastructure.Entities.LlmRequestLogEntity
             {
-                ModelId = "m", Provider = "p",
+                ModelId = "m",
+                Provider = "p",
                 RequestedAt = now.AddDays(-35),
                 ExpiresAt = now.AddHours(-1) // EXPIRED
             },
             new Api.Infrastructure.Entities.LlmRequestLogEntity
             {
-                ModelId = "m", Provider = "p",
+                ModelId = "m",
+                Provider = "p",
                 RequestedAt = now,
                 ExpiresAt = now.AddDays(30) // ACTIVE
             });
@@ -187,7 +190,8 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var now = DateTime.UtcNow;
         DbContext.LlmRequestLogs.Add(new Api.Infrastructure.Entities.LlmRequestLogEntity
         {
-            ModelId = "m", Provider = "p",
+            ModelId = "m",
+            Provider = "p",
             RequestedAt = now,
             ExpiresAt = now.AddDays(30)
         });

@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -104,12 +105,50 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
 
         if (agentConfig == null)
         {
-            yield return CreateEvent(
-                StreamingEventType.Error,
-                new StreamingError(
-                    "Agent non configurato. Configura l'agente prima di chattare.",
-                    "AGENT_NOT_CONFIGURED"));
-            yield break;
+            // Defense-in-depth: auto-create default config for orphaned agents
+            _logger.LogWarning(
+                "Agent {AgentId} has no current configuration — attempting auto-creation",
+                command.AgentId);
+
+            var autoDocIds = agent.GameId.HasValue
+                ? await _dbContext.VectorDocuments
+                    .Where(vd => vd.GameId == agent.GameId.Value && vd.IndexingStatus == "completed")
+                    .Select(vd => vd.Id)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false)
+                : new List<Guid>();
+
+            if (autoDocIds.Count == 0)
+            {
+                yield return CreateEvent(
+                    StreamingEventType.Error,
+                    new StreamingError(
+                        "Agent non configurato. Configura l'agente prima di chattare.",
+                        "AGENT_NOT_CONFIGURED"));
+                yield break;
+            }
+
+            agentConfig = new AgentConfigurationEntity
+            {
+                Id = Guid.NewGuid(),
+                AgentId = command.AgentId,
+                LlmProvider = 0,
+                LlmModel = "anthropic/claude-3-haiku",
+                AgentMode = 0,
+                SelectedDocumentIdsJson = JsonSerializer.Serialize(autoDocIds),
+                Temperature = 0.3m,
+                MaxTokens = 2048,
+                IsCurrent = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = command.UserId
+            };
+
+            _dbContext.Set<AgentConfigurationEntity>().Add(agentConfig);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Auto-created default config for agent {AgentId} with {DocCount} documents",
+                command.AgentId, autoDocIds.Count);
         }
 
         // Parse and validate selected documents

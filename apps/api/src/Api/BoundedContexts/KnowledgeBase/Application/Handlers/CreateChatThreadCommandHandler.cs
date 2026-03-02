@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -19,17 +20,20 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
     private readonly IAgentRepository _agentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPublisher _publisher;
+    private readonly ILogger<CreateChatThreadCommandHandler> _logger;
 
     public CreateChatThreadCommandHandler(
         IChatThreadRepository threadRepository,
         IAgentRepository agentRepository,
         IUnitOfWork unitOfWork,
-        IPublisher publisher)
+        IPublisher publisher,
+        ILogger<CreateChatThreadCommandHandler> logger)
     {
         _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<ChatThreadDto> Handle(CreateChatThreadCommand command, CancellationToken cancellationToken)
@@ -41,7 +45,12 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
         if (command.GameId.HasValue)
         {
             resolvedGameId = await _agentRepository.ResolveGameIdAsync(command.GameId.Value, cancellationToken).ConfigureAwait(false);
-            // If resolution fails, store null rather than an FK-violating shared catalog ID
+            if (resolvedGameId is null)
+            {
+                _logger.LogWarning(
+                    "GameId {GameId} could not be resolved for chat thread creation by user {UserId} — thread will have no game association",
+                    command.GameId.Value, command.UserId);
+            }
         }
 
         // Create ChatThread aggregate

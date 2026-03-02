@@ -294,7 +294,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     setShowAgentConfirm(false);
     try {
       await api.chat.switchThreadAgent(thread.id, pendingAgent);
-      setThread(prev => prev ? { ...prev, agentId: pendingAgent } : prev);
+      setThread(prev => prev ? { ...prev, agentTypology: pendingAgent } : prev);
     } catch {
       setError('Errore nel cambio agente');
     }

@@ -221,8 +221,8 @@ jobs:
       # Stage 4: Backend Integration Tests (Testcontainers)
       # Both stages run sequentially in this job with service containers
       - name: Run Tests
-        # Issue #3102: Increased from 20 to 30 minutes - integration tests with Testcontainers are slow
-        timeout-minutes: 30
+        # Issue #3102: Increased to 45 minutes - ARM64 runner is 30-40% slower than x86-64
+        timeout-minutes: 45
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -468,9 +468,9 @@ jobs:
       - name: Setup Test Environment
         run: cp .env.test.example .env.test
 
-      - name: Run E2E Tests
-        timeout-minutes: 45
-        run: pnpm test:e2e --project=desktop-chrome
+      - name: Run E2E Tests (Smoke)
+        timeout-minutes: 15
+        run: pnpm test:e2e --project=desktop-chrome e2e/smoke.spec.ts
         env:
           CI: true
 

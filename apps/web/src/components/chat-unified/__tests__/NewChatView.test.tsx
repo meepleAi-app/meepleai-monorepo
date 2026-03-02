@@ -64,8 +64,24 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
 
 const mockPrivateGamesResponse = {
   items: [
-    { id: 'priv-1', title: 'My Custom Game', createdAt: '2024-06-01T00:00:00Z', ownerId: 'u1', source: 'Manual', minPlayers: 2, maxPlayers: 4 },
-    { id: 'priv-2', title: 'Another Private', createdAt: '2024-06-02T00:00:00Z', ownerId: 'u1', source: 'Manual', minPlayers: 1, maxPlayers: 6 },
+    {
+      id: 'priv-1',
+      title: 'My Custom Game',
+      createdAt: '2024-06-01T00:00:00Z',
+      ownerId: 'u1',
+      source: 'Manual',
+      minPlayers: 2,
+      maxPlayers: 4,
+    },
+    {
+      id: 'priv-2',
+      title: 'Another Private',
+      createdAt: '2024-06-02T00:00:00Z',
+      ownerId: 'u1',
+      source: 'Manual',
+      minPlayers: 1,
+      maxPlayers: 6,
+    },
   ],
   page: 1,
   pageSize: 100,
@@ -77,9 +93,48 @@ const mockPrivateGamesResponse = {
 
 const mockLibraryResponse = {
   items: [
-    { id: 'lib-1', userId: 'u1', gameId: 'game-1', gameTitle: 'Catan', addedAt: '2024-01-01T00:00:00Z', isFavorite: false, currentState: 'Owned', hasKb: true, kbCardCount: 1, kbIndexedCount: 1, kbProcessingCount: 0, agentIsOwned: true },
-    { id: 'lib-2', userId: 'u1', gameId: 'game-2', gameTitle: 'Ticket to Ride', addedAt: '2024-01-02T00:00:00Z', isFavorite: false, currentState: 'Owned', hasKb: true, kbCardCount: 2, kbIndexedCount: 2, kbProcessingCount: 0, agentIsOwned: true },
-    { id: 'lib-3', userId: 'u1', gameId: 'game-3', gameTitle: 'Wingspan', addedAt: '2024-01-03T00:00:00Z', isFavorite: false, currentState: 'Owned', hasKb: false, kbCardCount: 0, kbIndexedCount: 0, kbProcessingCount: 0, agentIsOwned: false },
+    {
+      id: 'lib-1',
+      userId: 'u1',
+      gameId: 'game-1',
+      gameTitle: 'Catan',
+      addedAt: '2024-01-01T00:00:00Z',
+      isFavorite: false,
+      currentState: 'Owned',
+      hasKb: true,
+      kbCardCount: 1,
+      kbIndexedCount: 1,
+      kbProcessingCount: 0,
+      agentIsOwned: true,
+    },
+    {
+      id: 'lib-2',
+      userId: 'u1',
+      gameId: 'game-2',
+      gameTitle: 'Ticket to Ride',
+      addedAt: '2024-01-02T00:00:00Z',
+      isFavorite: false,
+      currentState: 'Owned',
+      hasKb: true,
+      kbCardCount: 2,
+      kbIndexedCount: 2,
+      kbProcessingCount: 0,
+      agentIsOwned: true,
+    },
+    {
+      id: 'lib-3',
+      userId: 'u1',
+      gameId: 'game-3',
+      gameTitle: 'Wingspan',
+      addedAt: '2024-01-03T00:00:00Z',
+      isFavorite: false,
+      currentState: 'Owned',
+      hasKb: false,
+      kbCardCount: 0,
+      kbIndexedCount: 0,
+      kbProcessingCount: 0,
+      agentIsOwned: false,
+    },
   ],
   page: 1,
   pageSize: 100,
@@ -90,17 +145,77 @@ const mockLibraryResponse = {
 };
 
 const mockAgents = [
-  { id: 'agent-1', name: 'QA Agent', type: 'qa', strategyName: 'qa', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: true },
-  { id: 'agent-2', name: 'Rules Agent', type: 'rules', strategyName: 'rules', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: true },
+  {
+    id: 'agent-1',
+    name: 'QA Agent',
+    type: 'qa',
+    strategyName: 'qa',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: true,
+  },
+  {
+    id: 'agent-2',
+    name: 'Rules Agent',
+    type: 'rules',
+    strategyName: 'rules',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: true,
+  },
 ];
 
 const mockCustomAgents = [
-  { id: 'custom-1', name: 'My Catan Expert', type: 'custom', strategyName: 'default', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false },
+  {
+    id: 'custom-1',
+    name: 'My Catan Expert',
+    type: 'custom',
+    strategyName: 'default',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: false,
+  },
 ];
 
 const mockMultipleCustomAgents = [
-  { id: 'custom-1', name: 'My Catan Expert', type: 'custom', strategyName: 'default', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false },
-  { id: 'custom-2', name: 'Strategy Pro', type: 'strategy', strategyName: 'default', strategyParameters: {}, isActive: true, createdAt: '2024-01-01T00:00:00Z', lastInvokedAt: null, invocationCount: 0, isRecentlyUsed: false, isIdle: false },
+  {
+    id: 'custom-1',
+    name: 'My Catan Expert',
+    type: 'custom',
+    strategyName: 'default',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: false,
+  },
+  {
+    id: 'custom-2',
+    name: 'Strategy Pro',
+    type: 'strategy',
+    strategyName: 'default',
+    strategyParameters: {},
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastInvokedAt: null,
+    invocationCount: 0,
+    isRecentlyUsed: false,
+    isIdle: false,
+  },
 ];
 
 // ============================================================================
@@ -181,8 +296,14 @@ describe('NewChatView — Full Mode', () => {
 
   it('has private tab selected by default', async () => {
     await renderFullMode();
-    expect(screen.getByTestId(CHAT_TEST_IDS.tabPrivateGames)).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByTestId(CHAT_TEST_IDS.tabSharedGames)).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByTestId(CHAT_TEST_IDS.tabPrivateGames)).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+    expect(screen.getByTestId(CHAT_TEST_IDS.tabSharedGames)).toHaveAttribute(
+      'aria-selected',
+      'false'
+    );
   });
 
   it('lazy-loads shared games on tab switch and filters by hasKb', async () => {
@@ -215,7 +336,10 @@ describe('NewChatView — Full Mode', () => {
     });
 
     await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1')));
-    expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1'))).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1'))).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   it('filters games with search input', async () => {
@@ -250,12 +374,18 @@ describe('NewChatView — Full Mode', () => {
     await renderFullMode();
 
     await user.click(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules')));
-    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules'))).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('rules'))).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   it('has auto agent pre-selected by default', async () => {
     await renderFullMode();
-    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('auto'))).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId(CHAT_TEST_IDS.agentCard('auto'))).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   it('shows contextual suggestions when game selected', async () => {
@@ -293,7 +423,7 @@ describe('NewChatView — Full Mode', () => {
         title: 'Chat: My Custom Game',
         initialMessage: null,
       });
-      expect(mockPush).toHaveBeenCalledWith('/chat?threadId=thread-new-1');
+      expect(mockPush).toHaveBeenCalledWith('/chat/thread-new-1');
     });
   });
 
@@ -373,7 +503,10 @@ describe('NewChatView — Full Mode', () => {
 
     // Select a private game
     await user.click(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1')));
-    expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1'))).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1'))).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
 
     // Switch to shared tab
     await user.click(screen.getByTestId(CHAT_TEST_IDS.tabSharedGames));
@@ -386,7 +519,10 @@ describe('NewChatView — Full Mode', () => {
     await user.click(screen.getByTestId(CHAT_TEST_IDS.tabPrivateGames));
 
     await waitFor(() => {
-      expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1'))).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId(CHAT_TEST_IDS.gameCard('priv-1'))).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
     });
   });
 });
@@ -432,7 +568,7 @@ describe('NewChatView — Direct Game Mode', () => {
         title: 'Chat: My Custom Game',
         initialMessage: null,
       });
-      expect(mockPush).toHaveBeenCalledWith('/chat?threadId=thread-auto-1');
+      expect(mockPush).toHaveBeenCalledWith('/chat/thread-auto-1');
     });
   });
 

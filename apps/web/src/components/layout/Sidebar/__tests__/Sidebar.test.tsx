@@ -23,7 +23,10 @@ import { Sidebar } from '../Sidebar';
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
-    div: ({ children, ...rest }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => (
+    div: ({
+      children,
+      ...rest
+    }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => (
       <div {...rest}>{children}</div>
     ),
   },
@@ -196,10 +199,7 @@ describe('Sidebar', () => {
 
     it('has correct aria-label when collapsed', () => {
       render(<Sidebar {...defaultProps} isCollapsed={true} />);
-      expect(screen.getByTestId('sidebar-toggle')).toHaveAttribute(
-        'aria-label',
-        'Expand sidebar'
-      );
+      expect(screen.getByTestId('sidebar-toggle')).toHaveAttribute('aria-label', 'Expand sidebar');
     });
   });
 
@@ -225,7 +225,7 @@ describe('Sidebar', () => {
 
       await user.click(screen.getByTestId('sidebar-library-toggle'));
 
-      expect(screen.getByTestId('sidebar-library-games')).toBeInTheDocument();
+      expect(screen.getByTestId('sidebar-library-private')).toBeInTheDocument();
       expect(screen.getByTestId('sidebar-library-collection')).toBeInTheDocument();
       expect(screen.getByTestId('sidebar-library-wishlist')).toBeInTheDocument();
     });
@@ -289,7 +289,9 @@ describe('Sidebar', () => {
   describe('Accessibility', () => {
     it('has sidebar navigation landmark', () => {
       render(<Sidebar {...defaultProps} />);
-      expect(screen.getByRole('complementary', { name: /sidebar navigation/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('complementary', { name: /sidebar navigation/i })
+      ).toBeInTheDocument();
     });
 
     it('sidebar is hidden on mobile (hidden md:flex)', () => {

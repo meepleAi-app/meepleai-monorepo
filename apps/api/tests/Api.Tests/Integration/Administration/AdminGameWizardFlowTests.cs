@@ -318,9 +318,12 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         _dbContext.Games.Add(new GameEntity { Id = gameBId, Name = "Game B" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId, GameId = gameBId,
-            FileName = "game-b.pdf", FilePath = "/uploads/game-b.pdf",
-            UploadedByUserId = AdminUserId, ProcessingPriority = "Normal",
+            Id = pdfId,
+            GameId = gameBId,
+            FileName = "game-b.pdf",
+            FilePath = "/uploads/game-b.pdf",
+            UploadedByUserId = AdminUserId,
+            ProcessingPriority = "Normal",
         });
         await _dbContext.SaveChangesAsync();
 

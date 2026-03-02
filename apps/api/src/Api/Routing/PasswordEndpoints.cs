@@ -18,6 +18,7 @@ internal static class PasswordEndpoints
     // AUTH-04: Password reset endpoints
     public static RouteGroupBuilder MapPasswordResetEndpoints(this RouteGroupBuilder group, Action<HttpContext, string, DateTime> writeSessionCookie)
     {
+        // SEC-05: Rate limit password reset to 5 req/min per IP
         group.MapPost("/auth/password-reset/request", async (
             PasswordResetRequestPayload payload,
             IMediator mediator,
@@ -40,7 +41,7 @@ internal static class PasswordEndpoints
 
             // Always return success to prevent email enumeration
             return Results.Json(new { ok = true, message = result.Message });
-        });
+        }).RequireRateLimiting("AuthPasswordReset");
 
         group.MapGet("/auth/password-reset/verify", async (
             string token,

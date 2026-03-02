@@ -56,7 +56,7 @@ public class SessionMediaRepository : ISessionMediaRepository
     public async Task<int> GetCountBySessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default)
     {
         return await _context.SessionMedia
-            .CountAsync(m => m.SessionId == sessionId , cancellationToken)
+            .CountAsync(m => m.SessionId == sessionId, cancellationToken)
             .ConfigureAwait(false);
     }
 

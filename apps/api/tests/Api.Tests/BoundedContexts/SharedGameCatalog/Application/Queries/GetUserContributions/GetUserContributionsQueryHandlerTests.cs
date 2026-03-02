@@ -151,19 +151,19 @@ public sealed class GetUserContributionsQueryHandlerTests : IAsyncLifetime
         ContributionRecordType type,
         int version,
         DateTime contributedAt) => new()
-    {
-        Id = Guid.NewGuid(),
-        ContributorId = contributorId,
-        Type = (int)type,
-        Description = $"Contribution v{version}",
-        Version = version,
-        ContributedAt = contributedAt,
-        IncludesGameData = type == ContributionRecordType.InitialSubmission,
-        IncludesMetadata = true,
-        DocumentIdsJson = type == ContributionRecordType.DocumentAddition
+        {
+            Id = Guid.NewGuid(),
+            ContributorId = contributorId,
+            Type = (int)type,
+            Description = $"Contribution v{version}",
+            Version = version,
+            ContributedAt = contributedAt,
+            IncludesGameData = type == ContributionRecordType.InitialSubmission,
+            IncludesMetadata = true,
+            DocumentIdsJson = type == ContributionRecordType.DocumentAddition
             ? JsonSerializer.Serialize(new List<Guid> { Guid.NewGuid(), Guid.NewGuid() })
             : null
-    };
+        };
 
     [Fact]
     public async Task Handle_ShouldReturnOnlyUserContributions()

@@ -67,15 +67,15 @@ public sealed record ChunkAnalysisResult
         List<GamePhase> phases,
         List<string> questions,
         string summary) => new()
-    {
-        ChunkIndex = chunkIndex,
-        ExtractedMechanics = mechanics,
-        Resources = resources,
-        GamePhases = phases,
-        CommonQuestions = questions,
-        ChunkSummary = summary,
-        Success = true
-    };
+        {
+            ChunkIndex = chunkIndex,
+            ExtractedMechanics = mechanics,
+            Resources = resources,
+            GamePhases = phases,
+            CommonQuestions = questions,
+            ChunkSummary = summary,
+            Success = true
+        };
 
     public static ChunkAnalysisResult CreateFailure(int chunkIndex, string error) => new()
     {

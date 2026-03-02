@@ -47,37 +47,19 @@ internal static class InfrastructureServiceExtensions
         // Only configure Postgres in non-test environments (tests will override with SQLite)
         if (!environment.IsEnvironment("Testing"))
         {
-            // Issue #2152: Debug ALL environment variables to find ConnectionStrings__Postgres
-            Console.WriteLine("[DEBUG #2152] === Environment Variables Containing 'POSTGRES' ===");
-            foreach (System.Collections.DictionaryEntry env in Environment.GetEnvironmentVariables())
-            {
-                var key = env.Key?.ToString() ?? "";
-                if (key.Contains("POSTGRES", StringComparison.OrdinalIgnoreCase) || key.Contains("ConnectionStrings", StringComparison.OrdinalIgnoreCase))
-                {
-                    var val = env.Value?.ToString() ?? "NULL";
-                    var maskedVal = val.Length > 50 ? string.Concat(val.AsSpan(0, 50), "...") : val;
-                    Console.WriteLine($"  {key} = {maskedVal}");
-                }
-            }
-            Console.WriteLine("[DEBUG #2152] ===================================================");
+            // SEC-03: Debug block removed (Issue #2152 resolved). Connection string must never be logged.
 
-            // Issue #2152: Read ConnectionStrings__Postgres directly from env var to bypass ALL config caching
-            var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
-            Console.WriteLine($"[DEBUG #2152] Environment.GetEnvironmentVariable('ConnectionStrings__Postgres'): {(envVarConnectionString != null ? envVarConnectionString.Substring(0, Math.Min(80, envVarConnectionString.Length)) : "NULL")}");
-
-            // Issue #2152: Try SecretsHelper FIRST (reads uncorrupted POSTGRES_* vars)
+            // Issue #2152: Try SecretsHelper FIRST (reads POSTGRES_* vars)
             var secretsHelperResult = SecretsHelper.BuildPostgresConnectionString(configuration);
 
             // SEC-708: Build connection string from Docker Secrets if available
-            // Issue #2152: Use SecretsHelper if it succeeded, otherwise fallback to (possibly corrupted) env vars
+            var envVarConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
             var connectionString = secretsHelperResult != null
                 ? secretsHelperResult
                 : (envVarConnectionString
                     ?? configuration["ConnectionStrings__Postgres"]
                     ?? configuration.GetConnectionString("Postgres")
                     ?? throw new InvalidOperationException("No PostgreSQL connection string configured"));
-
-            Console.WriteLine($"[DEBUG #2152] FINAL connectionString source: {(secretsHelperResult != null ? "SecretsHelper (POSTGRES_* vars)" : envVarConnectionString != null ? "Environment.GetEnvironmentVariable (corrupted)" : "IConfiguration")}");
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>

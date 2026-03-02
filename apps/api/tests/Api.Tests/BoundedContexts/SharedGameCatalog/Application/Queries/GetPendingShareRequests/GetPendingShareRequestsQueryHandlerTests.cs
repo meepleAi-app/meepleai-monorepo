@@ -127,19 +127,19 @@ public sealed class GetPendingShareRequestsQueryHandlerTests : IAsyncLifetime
         ShareRequestStatus status,
         string? notes,
         Guid? reviewingAdminId = null) => new()
-    {
-        Id = Guid.NewGuid(),
-        UserId = userId,
-        SourceGameId = sourceGameId,
-        Status = (int)status,
-        ContributionType = (int)ContributionType.NewGame,
-        UserNotes = notes,
-        ReviewingAdminId = reviewingAdminId,
-        ReviewStartedAt = reviewingAdminId.HasValue ? DateTime.UtcNow : null,
-        CreatedAt = DateTime.UtcNow,
-        CreatedBy = userId,
-        ResolvedAt = status is ShareRequestStatus.Approved or ShareRequestStatus.Rejected ? DateTime.UtcNow : null
-    };
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SourceGameId = sourceGameId,
+            Status = (int)status,
+            ContributionType = (int)ContributionType.NewGame,
+            UserNotes = notes,
+            ReviewingAdminId = reviewingAdminId,
+            ReviewStartedAt = reviewingAdminId.HasValue ? DateTime.UtcNow : null,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId,
+            ResolvedAt = status is ShareRequestStatus.Approved or ShareRequestStatus.Rejected ? DateTime.UtcNow : null
+        };
 
     [Fact]
     public async Task Handle_ShouldReturnOnlyActiveRequests()

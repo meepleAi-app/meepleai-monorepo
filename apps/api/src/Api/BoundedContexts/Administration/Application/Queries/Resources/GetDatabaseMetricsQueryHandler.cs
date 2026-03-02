@@ -24,18 +24,17 @@ internal class GetDatabaseMetricsQueryHandler : IQueryHandler<GetDatabaseMetrics
         ArgumentNullException.ThrowIfNull(request);
 
         // Query database metrics using direct connection
-        var dbName = _db.Database.GetDbConnection().Database;
         var connection = _db.Database.GetDbConnection();
 
         try
         {
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-            // Query current database size
+            // QUAL-01: Use parameterized queries instead of string interpolation
             long sizeResult;
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = $"SELECT pg_database_size('{dbName}')";
+                command.CommandText = "SELECT pg_database_size(current_database())";
                 var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                 sizeResult = result != null ? Convert.ToInt64(result, System.Globalization.CultureInfo.InvariantCulture) : 0;
             }
@@ -47,10 +46,10 @@ internal class GetDatabaseMetricsQueryHandler : IQueryHandler<GetDatabaseMetrics
 
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = $@"
+                command.CommandText = @"
                     SELECT numbackends, xact_commit, xact_rollback
                     FROM pg_stat_database
-                    WHERE datname = '{dbName}'";
+                    WHERE datname = current_database()";
 
                 using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
                 if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))

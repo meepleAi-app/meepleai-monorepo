@@ -27,20 +27,20 @@ internal sealed class GetUsageCostsQueryHandler
         var from = request.Period switch
         {
             "30d" => now.AddDays(-30),
-            "1d"  => now.AddDays(-1),
-            _     => now.AddDays(-7)   // default "7d"
+            "1d" => now.AddDays(-1),
+            _ => now.AddDays(-7)   // default "7d"
         };
 
         var (byModel, bySource, byTier, totalCostUsd, totalRequests) =
             await _repository.GetCostBreakdownAsync(from, now, cancellationToken).ConfigureAwait(false);
 
         return new UsageCostsDto(
-            ByModel:       byModel.Select(x => new ModelCostDto(x.ModelId, x.CostUsd, x.Requests, x.TotalTokens)).ToList(),
-            BySource:      bySource.Select(x => new SourceCostDto(x.Source, x.CostUsd, x.Requests)).ToList(),
-            ByTier:        byTier.Select(x => new TierCostDto(x.Tier, x.CostUsd, x.Requests)).ToList(),
-            TotalCostUsd:  totalCostUsd,
+            ByModel: byModel.Select(x => new ModelCostDto(x.ModelId, x.CostUsd, x.Requests, x.TotalTokens)).ToList(),
+            BySource: bySource.Select(x => new SourceCostDto(x.Source, x.CostUsd, x.Requests)).ToList(),
+            ByTier: byTier.Select(x => new TierCostDto(x.Tier, x.CostUsd, x.Requests)).ToList(),
+            TotalCostUsd: totalCostUsd,
             TotalRequests: totalRequests,
-            Period:        request.Period
+            Period: request.Period
         );
     }
 }

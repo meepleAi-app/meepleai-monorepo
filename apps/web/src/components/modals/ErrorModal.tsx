@@ -28,7 +28,8 @@ export function ErrorModal({
 }: ErrorModalProps) {
   useEffect(() => {
     if (isOpen) {
-      // Prevent body scroll when modal is open
+      // WEB-03: Save and restore original overflow value
+      const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
 
       // Handle escape key
@@ -41,7 +42,7 @@ export function ErrorModal({
       document.addEventListener('keydown', handleEscape);
 
       return () => {
-        document.body.style.overflow = 'unset';
+        document.body.style.overflow = originalOverflow;
         document.removeEventListener('keydown', handleEscape);
       };
     }

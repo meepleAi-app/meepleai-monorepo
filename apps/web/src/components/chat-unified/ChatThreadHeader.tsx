@@ -19,6 +19,7 @@ import {
   Download,
   History,
   Pencil,
+  Settings,
   Share2,
   Trash2,
   X,
@@ -42,6 +43,8 @@ export interface ChatThreadHeaderProps {
   editableTitle?: boolean;
   /** Handler for title change */
   onTitleChange?: (newTitle: string) => void;
+  /** Handler for settings drawer toggle */
+  onSettings?: () => void;
   /** Handler for history drawer toggle */
   onHistoryToggle?: () => void;
   /** Handler for export */
@@ -64,6 +67,7 @@ export function ChatThreadHeader({
   agentName,
   editableTitle = true,
   onTitleChange,
+  onSettings,
   onHistoryToggle,
   onExport,
   onShare,
@@ -179,6 +183,16 @@ export function ChatThreadHeader({
 
       {/* Action buttons */}
       <div className="flex items-center gap-1 flex-shrink-0">
+        {onSettings && (
+          <button
+            onClick={onSettings}
+            className="p-2 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Impostazioni agente"
+            data-testid="header-settings-btn"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        )}
         {onHistoryToggle && (
           <button
             onClick={onHistoryToggle}

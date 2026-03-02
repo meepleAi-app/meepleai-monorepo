@@ -18,6 +18,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
+import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -78,6 +79,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'debug'>('chat');
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAgentConfirm, setShowAgentConfirm] = useState(false);
   const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
 
@@ -362,6 +364,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         gameName={game?.title}
         agentName={thread?.agentTypology ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto'] : undefined}
         onTitleChange={handleTitleChange}
+        onSettings={thread?.agentId ? () => setSettingsOpen(true) : undefined}
         onDelete={handleDelete}
       />
 
@@ -597,6 +600,17 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             </div>
           </div>
         </div>
+
+        {/* Agent Settings Drawer */}
+        {thread?.agentId && (
+          <AgentSettingsDrawer
+            isOpen={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            agentId={thread.agentId}
+            agentName={thread.agentTypology ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto'] : undefined}
+            userTier={user ? 'premium' : 'free'}
+          />
+        )}
 
         {/* Info Panel (right) - Hidden on mobile */}
         <div className="hidden lg:flex w-[340px] flex-shrink-0 flex-col border-l border-border/50 bg-card/50 p-4 overflow-y-auto">

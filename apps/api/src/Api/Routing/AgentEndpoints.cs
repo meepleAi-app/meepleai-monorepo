@@ -51,6 +51,10 @@ internal static class AgentEndpoints
         // Issue #4772: Orchestrated agent creation
         MapCreateAgentWithSetupEndpoint(group);
 
+        // Agent LLM configuration (user-facing)
+        MapGetAgentConfigurationEndpoint(group);
+        MapUpdateAgentConfigurationEndpoint(group);
+
         return group;
     }
 
@@ -823,6 +827,84 @@ internal static class AgentEndpoints
         .Produces(409)
         .Produces(429);
     }
+
+    /// <summary>
+    /// Get the current LLM configuration for a user-owned agent.
+    /// </summary>
+    private static void MapGetAgentConfigurationEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/{id:guid}/configuration", async (
+            Guid id,
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new GetAgentConfigurationQuery(
+                AgentId: id,
+                UserId: session.User!.Id,
+                UserRole: session.User.Role
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("GetAgentConfiguration")
+        .WithTags("Agents", "User")
+        .WithSummary("Get current LLM configuration for a user-owned agent")
+        .Produces<AgentConfigurationDto>(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
+
+    /// <summary>
+    /// Patch the LLM configuration for a user-owned agent.
+    /// Only non-null fields are updated. Enforces tier-based model restrictions.
+    /// </summary>
+    private static void MapUpdateAgentConfigurationEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/agents/{id:guid}/configuration", async (
+            Guid id,
+            UpdateAgentConfigurationRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new UpdateAgentLlmConfigurationCommand(
+                AgentId: id,
+                UserId: session.User!.Id,
+                UserTier: session.User.Tier,
+                UserRole: session.User.Role,
+                ModelId: req.ModelId,
+                Temperature: req.Temperature,
+                MaxTokens: req.MaxTokens,
+                SelectedDocumentIds: req.SelectedDocumentIds
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} updated LLM config for agent {AgentId}",
+                session.User.Id, id);
+
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("UpdateAgentConfiguration")
+        .WithTags("Agents", "User")
+        .WithSummary("Update LLM configuration for a user-owned agent (partial update)")
+        .Produces<AgentConfigurationDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
 }
 
 /// <summary>
@@ -946,4 +1028,14 @@ internal record CreateAgentWithSetupRequest(
     string? AgentName = null,
     string? StrategyName = null,
     IDictionary<string, object>? StrategyParameters = null
+);
+
+/// <summary>
+/// Request for updating agent LLM configuration (partial update).
+/// </summary>
+internal record UpdateAgentConfigurationRequest(
+    string? ModelId = null,
+    decimal? Temperature = null,
+    int? MaxTokens = null,
+    IReadOnlyList<Guid>? SelectedDocumentIds = null
 );

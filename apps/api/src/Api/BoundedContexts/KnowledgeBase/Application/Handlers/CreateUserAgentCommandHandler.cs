@@ -113,12 +113,12 @@ internal sealed class CreateUserAgentCommandHandler : IRequestHandler<CreateUser
         {
             Id = Guid.NewGuid(),
             AgentId = agent.Id,
-            LlmProvider = 0, // OpenRouter
-            LlmModel = "anthropic/claude-3-haiku",
+            LlmProvider = AgentDefaults.DefaultLlmProvider,
+            LlmModel = AgentDefaults.DefaultFreeModel,
             AgentMode = 0, // Chat
             SelectedDocumentIdsJson = documentIdsJson,
-            Temperature = 0.3m,
-            MaxTokens = 2048,
+            Temperature = AgentDefaults.DefaultTemperature,
+            MaxTokens = AgentDefaults.DefaultMaxTokens,
             IsCurrent = true,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = request.UserId

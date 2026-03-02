@@ -20,7 +20,7 @@ jobs:
   # CodeQL SAST
   codeql:
     name: CodeQL Analysis
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       matrix:
         language: ['csharp', 'javascript']
@@ -58,7 +58,7 @@ jobs:
   # Dependency scanning
   dependencies:
     name: Dependency Vulnerabilities
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -118,7 +118,7 @@ jobs:
   # Secrets scanning with Semgrep
   secrets:
     name: Secrets Detection
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     container:
       image: semgrep/semgrep
     steps:

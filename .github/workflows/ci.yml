@@ -21,7 +21,7 @@ jobs:
   # Quick path filtering to skip unchanged areas
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
@@ -47,7 +47,7 @@ jobs:
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
   frontend:
     name: Frontend - Build & Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -99,7 +99,7 @@ jobs:
   # Backend: Build, Unit Tests, Integration Tests
   backend:
     name: Backend - Build & Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -177,16 +177,16 @@ jobs:
           echo "✅ Test images pulled and cached"
 
       - name: Pre-Test Cleanup
-        shell: pwsh
+        shell: bash
         run: |
-          Write-Host "🧹 Cleaning up orphaned Testcontainers..." -ForegroundColor Cyan
-          $containers = docker ps -a --filter "label=org.testcontainers=true" -q 2>$null
-          if ($containers) {
-            $containers | ForEach-Object { docker rm -f $_ 2>$null } | Out-Null
-            Write-Host "✅ Cleaned up orphaned containers" -ForegroundColor Green
-          } else {
-            Write-Host "✅ No orphaned containers found" -ForegroundColor Green
-          }
+          echo "🧹 Cleaning up orphaned Testcontainers..."
+          containers=$(docker ps -a --filter "label=org.testcontainers=true" -q 2>/dev/null)
+          if [ -n "$containers" ]; then
+            echo "$containers" | xargs docker rm -f 2>/dev/null || true
+            echo "✅ Cleaned up orphaned containers"
+          else
+            echo "✅ No orphaned containers found"
+          fi
 
       - name: Install Redis CLI
         run: sudo apt-get update && sudo apt-get install -y redis-tools
@@ -276,7 +276,7 @@ jobs:
   # Python Services: Pytest for orchestration-service
   python-tests:
     name: Python - Orchestration Service Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -324,7 +324,7 @@ jobs:
   # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
   e2e:
     name: E2E - Critical Paths
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -483,7 +483,7 @@ jobs:
   # Final status check
   ci-success:
     name: CI Success
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [frontend, backend, python-tests, e2e]
     if: always()
     steps:

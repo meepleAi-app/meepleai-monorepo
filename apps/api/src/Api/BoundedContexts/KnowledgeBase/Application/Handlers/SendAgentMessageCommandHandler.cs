@@ -2,8 +2,11 @@ using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Models;
@@ -36,6 +39,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly MeepleAiDbContext _dbContext;
     private readonly IUserBudgetService _userBudgetService;
     private readonly ILlmModelOverrideService _modelOverrideService;
+    private readonly IModelConfigurationService _modelConfigService;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     public SendAgentMessageCommandHandler(
@@ -48,6 +52,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         MeepleAiDbContext dbContext,
         IUserBudgetService userBudgetService,
         ILlmModelOverrideService modelOverrideService,
+        IModelConfigurationService modelConfigService,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -59,6 +64,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
         _modelOverrideService = modelOverrideService ?? throw new ArgumentNullException(nameof(modelOverrideService));
+        _modelConfigService = modelConfigService ?? throw new ArgumentNullException(nameof(modelConfigService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -452,20 +458,80 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
 
         _logger.LogInformation("Using model: {Model} (requested: {Requested})", modelToUse, requestedModel);
 
+        // === LLM Call with Retry + Tiered Fallback ===
+        var originalModel = modelToUse;
+        string? fallbackReason = null;
+
+        // Attempt 1: Primary model
         var llmResult = await _llmService.GenerateCompletionWithModelAsync(
-            modelToUse,
-            systemPrompt,
-            userPrompt,
-            RequestSource.Manual,
-            cancellationToken).ConfigureAwait(false);
+            modelToUse, systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
+            .ConfigureAwait(false);
 
         if (!llmResult.Success)
         {
-            _logger.LogError("LLM failed: {Error}", llmResult.ErrorMessage);
+            _logger.LogWarning("Primary LLM call failed ({Model}): {Error}. Retrying in 2s...",
+                modelToUse, llmResult.ErrorMessage);
+            fallbackReason = llmResult.ErrorMessage;
+
+            // Attempt 2: Retry same model after 2s delay (heartbeat keeps SSE alive through proxies)
+            yield return CreateEvent(StreamingEventType.Heartbeat, new StreamingHeartbeat("retrying"));
+            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken).ConfigureAwait(false);
+            llmResult = await _llmService.GenerateCompletionWithModelAsync(
+                modelToUse, systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (!llmResult.Success)
+        {
+            _logger.LogWarning("Retry failed ({Model}). Selecting fallback model...", modelToUse);
+
+            var fallbackModel = GetFallbackModel(modelToUse);
+
+            if (fallbackModel != null && !string.Equals(fallbackModel, modelToUse, StringComparison.Ordinal))
+            {
+                _logger.LogInformation("Falling back: {Original} -> {Fallback}", modelToUse, fallbackModel);
+                modelToUse = fallbackModel;
+
+                // Attempt 3: Fallback model
+                llmResult = await _llmService.GenerateCompletionWithModelAsync(
+                    modelToUse, systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                _logger.LogWarning("No alternative fallback model available for {Model} (fallback={Fallback})",
+                    modelToUse, fallbackModel);
+            }
+        }
+
+        // All attempts exhausted
+        if (!llmResult.Success)
+        {
+            _logger.LogError("All LLM attempts failed. Original={Original}, Last={Last}, Error={Error}",
+                originalModel, modelToUse, llmResult.ErrorMessage);
             yield return CreateEvent(
                 StreamingEventType.Error,
-                new StreamingError($"LLM failed: {llmResult.ErrorMessage}", "LLM_FAILED"));
+                new StreamingError("Il servizio AI non è al momento disponibile. Riprova tra qualche minuto.", "LLM_FAILED"));
             yield break;
+        }
+
+        // Emit downgrade notice if model changed
+        if (!string.Equals(modelToUse, originalModel, StringComparison.Ordinal))
+        {
+            var isLocal = !modelToUse.Contains('/', StringComparison.Ordinal);
+            var currentModelConfig = _modelConfigService.GetModelById(originalModel);
+            var isFreeUser = currentModelConfig?.Tier == ModelTier.Free;
+
+            yield return CreateEvent(StreamingEventType.ModelDowngrade,
+                new StreamingModelDowngrade(
+                    OriginalModel: originalModel,
+                    FallbackModel: modelToUse,
+                    Reason: fallbackReason ?? "provider_unavailable",
+                    IsLocalFallback: isLocal,
+                    UpgradeMessage: isFreeUser
+                        ? "Il modello gratuito è temporaneamente non disponibile. Risposta generata con modello locale. Passa a Premium per modelli più affidabili."
+                        : null
+                ));
         }
 
         // Emit response (non-streaming for POC)
@@ -530,6 +596,45 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             $"[{index + 1}] (Score: {chunk.Score:F2}, Page: {chunk.Page})\n{chunk.Text}");
 
         return string.Join("\n\n---\n\n", contextParts);
+    }
+
+    /// <summary>
+    /// Selects a fallback model based on the failed model's tier.
+    /// Free tier -> Ollama local (zero cost).
+    /// Paid tiers -> another model in the same tier.
+    /// </summary>
+    private string? GetFallbackModel(string failedModel)
+    {
+        var modelConfig = _modelConfigService.GetModelById(failedModel);
+
+        // Unknown model -> Ollama fallback (safe default)
+        if (modelConfig == null)
+            return AgentDefaults.OllamaFallbackModel;
+
+        // Free tier -> always fall back to Ollama (zero cost, no exceptions)
+        if (modelConfig.Tier == ModelTier.Free)
+            return AgentDefaults.OllamaFallbackModel;
+
+        // Paid tiers -> find another model in the exact same tier (different provider preferred)
+        var sameTierModels = _modelConfigService.GetAllModels()
+            .Where(m => m.Tier == modelConfig.Tier
+                      && !string.Equals(m.Id, failedModel, StringComparison.Ordinal)
+                      && !string.Equals(m.Provider, "ollama", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // Prefer different provider to avoid same upstream outage
+        var differentProvider = sameTierModels
+            .FirstOrDefault(m => !string.Equals(m.Provider, modelConfig.Provider, StringComparison.OrdinalIgnoreCase));
+
+        if (differentProvider != null)
+            return differentProvider.Id;
+
+        // Same provider, different model
+        if (sameTierModels.Count > 0)
+            return sameTierModels[0].Id;
+
+        // No same-tier alternative -> fall back to Ollama
+        return AgentDefaults.OllamaFallbackModel;
     }
 
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

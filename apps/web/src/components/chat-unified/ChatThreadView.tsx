@@ -538,6 +538,33 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               </div>
             )}
 
+            {/* Model downgrade banner */}
+            {streamState.modelDowngrade && (
+              <div
+                className="mx-0 mb-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                data-testid="model-downgrade-banner"
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>
+                    {streamState.modelDowngrade.isLocalFallback
+                      ? `Modello ${streamState.modelDowngrade.originalModel} non disponibile. Risposta generata con modello locale (${streamState.modelDowngrade.fallbackModel}).`
+                      : `Modello cambiato: ${streamState.modelDowngrade.originalModel} → ${streamState.modelDowngrade.fallbackModel}`}
+                  </span>
+                </div>
+                {streamState.modelDowngrade.upgradeMessage && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <a href="/pricing" className="font-medium text-amber-900 underline dark:text-amber-100">
+                      Passa a Premium
+                    </a>
+                    <span className="text-amber-600 dark:text-amber-400">per modelli più veloci e affidabili</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Streaming response bubble */}
             {streamState.isStreaming && streamState.currentAnswer && (
               <div

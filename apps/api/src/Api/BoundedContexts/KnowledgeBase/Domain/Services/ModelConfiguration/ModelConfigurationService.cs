@@ -84,17 +84,6 @@ internal sealed class ModelConfigurationService : IModelConfigurationService
             supportsStreaming: true,
             description: "Free tier Llama 3.3 70B model via OpenRouter"));
 
-        AddModel(models, ModelConfiguration.Create(
-            id: "meta-llama/llama-3.1-70b-instruct:free",
-            name: "Llama 3.1 70B Instruct (Free)",
-            provider: "meta-llama",
-            tier: ModelTier.Free,
-            costPer1kInput: 0m,
-            costPer1kOutput: 0m,
-            maxTokens: 8192,
-            supportsStreaming: true,
-            description: "Free tier Llama 3.1 70B model via OpenRouter"));
-
         // Local Ollama models (self-hosted, free)
         AddModel(models, ModelConfiguration.Create(
             id: "llama3:8b",

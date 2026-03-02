@@ -3,14 +3,32 @@
 import { useState } from 'react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, Filter, Grid3x3, List, Shield, Award, Mail, ArrowUpDown, UserX, Eye, Table2, ChevronDown } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Grid3x3,
+  List,
+  Shield,
+  Award,
+  Mail,
+  ArrowUpDown,
+  UserX,
+  Eye,
+  Table2,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -59,7 +77,8 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
   });
 
   const suspendMutation = useMutation({
-    mutationFn: () => user?.isActive ? adminClient.suspendUser(userId) : adminClient.unsuspendUser(userId),
+    mutationFn: () =>
+      user?.isActive ? adminClient.suspendUser(userId) : adminClient.unsuspendUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-detail', userId] });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -69,18 +88,29 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
       });
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to update user status', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to update user status',
+        variant: 'destructive',
+      });
     },
   });
 
   const impersonateMutation = useMutation({
     mutationFn: () => adminClient.impersonateUser(userId),
-    onSuccess: (result) => {
+    onSuccess: result => {
       if (!result?.sessionToken) {
-        toast({ title: 'Error', description: 'Impersonation failed: no session returned', variant: 'destructive' });
+        toast({
+          title: 'Error',
+          description: 'Impersonation failed: no session returned',
+          variant: 'destructive',
+        });
         return;
       }
-      toast({ title: 'Impersonation started', description: `Session token: ${result.sessionToken.slice(0, 8)}...` });
+      toast({
+        title: 'Impersonation started',
+        description: `Session token: ${result.sessionToken.slice(0, 8)}...`,
+      });
     },
     onError: () => {
       toast({ title: 'Error', description: 'Failed to impersonate user', variant: 'destructive' });
@@ -91,9 +121,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-xl font-semibold">
-            User Profile
-          </SheetTitle>
+          <SheetTitle className="text-xl font-semibold">User Profile</SheetTitle>
         </SheetHeader>
 
         {user && (
@@ -107,10 +135,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                   </h3>
                   <p className="font-nunito text-sm text-slate-600">{user.email}</p>
                 </div>
-                <Badge
-                  variant={user.isActive ? 'default' : 'secondary'}
-                  className="font-nunito"
-                >
+                <Badge variant={user.isActive ? 'default' : 'secondary'} className="font-nunito">
                   {user.isActive ? 'Active' : 'Suspended'}
                 </Badge>
               </div>
@@ -135,8 +160,8 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                       user.tier === 'premium'
                         ? 'border-amber-500 text-amber-700 bg-amber-50'
                         : user.tier === 'normal'
-                        ? 'border-blue-500 text-blue-700 bg-blue-50'
-                        : 'border-slate-400 text-slate-600'
+                          ? 'border-blue-500 text-blue-700 bg-blue-50'
+                          : 'border-slate-400 text-slate-600'
                     }`}
                   >
                     {user.tier}
@@ -198,7 +223,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                   Achievements
                 </h4>
                 <div className="space-y-2">
-                  {badges.map((badge) => (
+                  {badges.map(badge => (
                     <div
                       key={badge.id}
                       className="flex items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50/50 rounded-lg border border-amber-200/40"
@@ -237,10 +262,7 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
                   <Mail className="w-4 h-4" />
                   Email
                 </Button>
-                <Select
-                  value={user.tier}
-                  onValueChange={(tier) => changeTierMutation.mutate(tier)}
-                >
+                <Select value={user.tier} onValueChange={tier => changeTierMutation.mutate(tier)}>
                   <SelectTrigger className="h-9 gap-2">
                     <ArrowUpDown className="w-4 h-4" />
                     <SelectValue placeholder="Change Tier" />
@@ -292,9 +314,7 @@ export function UserManagementBlock() {
   const queryClient = useQueryClient();
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
   };
 
   const toggleSelectAll = () => {
@@ -302,7 +322,7 @@ export function UserManagementBlock() {
     if (selectedIds.length === data.items.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(data.items.map((u) => u.id));
+      setSelectedIds(data.items.map(u => u.id));
     }
   };
 
@@ -323,16 +343,14 @@ export function UserManagementBlock() {
 
   const suspendMutation = useMutation({
     mutationFn: (userId: string) => adminClient.suspendUser(userId),
-    onMutate: async (userId) => {
+    onMutate: async userId => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData(queryKey);
       queryClient.setQueryData(queryKey, (old: typeof data) => {
         if (!old) return old;
         return {
           ...old,
-          items: old.items.map((u) =>
-            u.id === userId ? { ...u, isActive: false } : u
-          ),
+          items: old.items.map(u => (u.id === userId ? { ...u, isActive: false } : u)),
         };
       });
       return { previous };
@@ -351,16 +369,14 @@ export function UserManagementBlock() {
 
   const unsuspendMutation = useMutation({
     mutationFn: (userId: string) => adminClient.unsuspendUser(userId),
-    onMutate: async (userId) => {
+    onMutate: async userId => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData(queryKey);
       queryClient.setQueryData(queryKey, (old: typeof data) => {
         if (!old) return old;
         return {
           ...old,
-          items: old.items.map((u) =>
-            u.id === userId ? { ...u, isActive: true } : u
-          ),
+          items: old.items.map(u => (u.id === userId ? { ...u, isActive: true } : u)),
         };
       });
       return { previous };
@@ -379,7 +395,7 @@ export function UserManagementBlock() {
 
   const bulkSuspendMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      await Promise.all(ids.map((id) => adminClient.suspendUser(id)));
+      await Promise.all(ids.map(id => adminClient.suspendUser(id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -387,27 +403,38 @@ export function UserManagementBlock() {
       toast({ title: 'Users suspended', description: `${selectedIds.length} accounts suspended` });
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to suspend some users', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to suspend some users',
+        variant: 'destructive',
+      });
     },
   });
 
   const bulkUnsuspendMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      await Promise.all(ids.map((id) => adminClient.unsuspendUser(id)));
+      await Promise.all(ids.map(id => adminClient.unsuspendUser(id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       setSelectedIds([]);
-      toast({ title: 'Users unsuspended', description: `${selectedIds.length} accounts reactivated` });
+      toast({
+        title: 'Users unsuspended',
+        description: `${selectedIds.length} accounts reactivated`,
+      });
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to unsuspend some users', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to unsuspend some users',
+        variant: 'destructive',
+      });
     },
   });
 
   const bulkChangeTierMutation = useMutation({
     mutationFn: async ({ ids, tier }: { ids: string[]; tier: string }) => {
-      await Promise.all(ids.map((id) => adminClient.updateUserTier(id, tier)));
+      await Promise.all(ids.map(id => adminClient.updateUserTier(id, tier)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -415,7 +442,11 @@ export function UserManagementBlock() {
       toast({ title: 'Tier updated', description: `Tier changed for ${selectedIds.length} users` });
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to change tier for some users', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to change tier for some users',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -424,12 +455,8 @@ export function UserManagementBlock() {
       {/* Block Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-foreground">
-            User Management
-          </h2>
-          <Badge variant="secondary">
-            {data?.totalCount ?? 0} users
-          </Badge>
+          <h2 className="text-xl font-semibold text-foreground">User Management</h2>
+          <Badge variant="secondary">{data?.totalCount ?? 0} users</Badge>
         </div>
         <Link
           href="/admin/users/management"
@@ -516,9 +543,7 @@ export function UserManagementBlock() {
       {/* Bulk Actions Bar (table mode) */}
       {viewMode === 'table' && selectedIds.length > 0 && (
         <div className="flex items-center gap-3 px-4 py-2 bg-primary/5 border border-primary/20 rounded-lg">
-          <span className="text-sm font-medium text-primary">
-            {selectedIds.length} selected
-          </span>
+          <span className="text-sm font-medium text-primary">{selectedIds.length} selected</span>
           <Button
             size="sm"
             variant="outline"
@@ -539,9 +564,7 @@ export function UserManagementBlock() {
             <Eye className="w-3.5 h-3.5" />
             Unsuspend
           </Button>
-          <Select
-            onValueChange={(tier) => bulkChangeTierMutation.mutate({ ids: selectedIds, tier })}
-          >
+          <Select onValueChange={tier => bulkChangeTierMutation.mutate({ ids: selectedIds, tier })}>
             <SelectTrigger className="w-[130px] h-8 text-xs">
               <ArrowUpDown className="w-3 h-3 mr-1" />
               <SelectValue placeholder="Change Tier" />
@@ -557,11 +580,23 @@ export function UserManagementBlock() {
 
       {/* Users Display */}
       {isLoading ? (
-        <div className={viewMode === 'table' ? 'space-y-0' : viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+        <div
+          className={
+            viewMode === 'table'
+              ? 'space-y-0'
+              : viewMode === 'grid'
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+                : 'space-y-4'
+          }
+        >
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className={viewMode === 'table' ? 'h-12 bg-white/40 dark:bg-zinc-800/40 animate-pulse border-b' : 'h-[240px] bg-white/40 backdrop-blur-sm rounded-xl border border-slate-200/60 animate-pulse'}
+              className={
+                viewMode === 'table'
+                  ? 'h-12 bg-white/40 dark:bg-zinc-800/40 animate-pulse border-b'
+                  : 'h-[240px] bg-white/40 backdrop-blur-sm rounded-xl border border-slate-200/60 animate-pulse'
+              }
             />
           ))}
         </div>
@@ -593,13 +628,13 @@ export function UserManagementBlock() {
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((user) => (
+                {data.items.map(user => (
                   <tr
                     key={user.id}
                     className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30 cursor-pointer"
                     onClick={() => setSelectedUserId(user.id)}
                   >
-                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="p-3" onClick={e => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(user.id)}
@@ -624,8 +659,8 @@ export function UserManagementBlock() {
                           user.tier === 'premium'
                             ? 'border-amber-500 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300'
                             : user.tier === 'normal'
-                            ? 'border-blue-500 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300'
-                            : 'border-slate-400 text-slate-600 dark:text-zinc-400'
+                              ? 'border-blue-500 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300'
+                              : 'border-slate-400 text-slate-600 dark:text-zinc-400'
                         }`}
                       >
                         {user.tier}
@@ -634,15 +669,16 @@ export function UserManagementBlock() {
                     <td className="p-3">
                       <Badge
                         variant={user.isActive ? 'default' : 'secondary'}
-                        className={user.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                        className={
+                          user.isActive
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                         }
                       >
                         {user.isActive ? 'Active' : 'Suspended'}
                       </Badge>
                     </td>
-                    <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="p-3 text-right" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -659,7 +695,7 @@ export function UserManagementBlock() {
                         </Button>
                         <Select
                           value={user.tier}
-                          onValueChange={(tier) =>
+                          onValueChange={tier =>
                             adminClient.updateUserTier(user.id, tier).then(() => {
                               queryClient.invalidateQueries({ queryKey: ['admin-users'] });
                               toast({ title: 'Tier updated' });
@@ -685,8 +721,14 @@ export function UserManagementBlock() {
         </div>
       ) : (
         /* Grid / List View (existing) */
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
-          {data?.items.map((user) => (
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+              : 'space-y-4'
+          }
+        >
+          {data?.items.map(user => (
             <MeepleCard
               key={user.id}
               id={user.id}

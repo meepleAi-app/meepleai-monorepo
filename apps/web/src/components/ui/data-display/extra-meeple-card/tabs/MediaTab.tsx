@@ -6,8 +6,11 @@
  */
 
 import React, { useState } from 'react';
+
 import { Camera, FileText, Filter, ImageOff } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type { MediaTabData, MediaItem } from '../types';
 
 interface MediaTabProps {
@@ -62,9 +65,7 @@ function MediaItemCard({ item }: { item: MediaItem }) {
           <span className="text-[10px] text-slate-400 font-nunito">Turn {item.turnNumber}</span>
         )}
       </div>
-      <p className="font-nunito text-xs text-slate-600 line-clamp-3">
-        {item.content || ''}
-      </p>
+      <p className="font-nunito text-xs text-slate-600 line-clamp-3">{item.content || ''}</p>
       <p className="font-nunito text-[10px] text-slate-400">
         {item.createdBy && `${item.createdBy} · `}
         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -86,14 +87,14 @@ export function MediaTab({ data }: MediaTabProps) {
     );
   }
 
-  const filteredItems = data.items.filter((item) => {
+  const filteredItems = data.items.filter(item => {
     if (filter === 'photos') return item.type === 'photo';
     if (filter === 'notes') return item.type === 'note';
     return true;
   });
 
-  const photos = filteredItems.filter((i) => i.type === 'photo');
-  const notes = filteredItems.filter((i) => i.type === 'note');
+  const photos = filteredItems.filter(i => i.type === 'photo');
+  const notes = filteredItems.filter(i => i.type === 'note');
 
   return (
     <div className="space-y-3" data-testid="media-tab">
@@ -102,7 +103,7 @@ export function MediaTab({ data }: MediaTabProps) {
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
           <div className="flex gap-1">
-            {(['all', 'photos', 'notes'] as const).map((f) => (
+            {(['all', 'photos', 'notes'] as const).map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -114,7 +115,11 @@ export function MediaTab({ data }: MediaTabProps) {
                 )}
                 data-testid={`media-filter-${f}`}
               >
-                {f === 'all' ? 'All' : f === 'photos' ? `Photos (${data.totalPhotos})` : `Notes (${data.totalNotes})`}
+                {f === 'all'
+                  ? 'All'
+                  : f === 'photos'
+                    ? `Photos (${data.totalPhotos})`
+                    : `Notes (${data.totalNotes})`}
               </button>
             ))}
           </div>
@@ -130,7 +135,7 @@ export function MediaTab({ data }: MediaTabProps) {
             </h3>
           )}
           <div className="grid grid-cols-3 gap-2">
-            {photos.map((item) => (
+            {photos.map(item => (
               <MediaItemCard key={item.id} item={item} />
             ))}
           </div>
@@ -146,7 +151,7 @@ export function MediaTab({ data }: MediaTabProps) {
             </h3>
           )}
           <div className="space-y-2">
-            {notes.map((item) => (
+            {notes.map(item => (
               <MediaItemCard key={item.id} item={item} />
             ))}
           </div>

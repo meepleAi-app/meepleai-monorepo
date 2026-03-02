@@ -46,10 +46,10 @@ import { GameCarousel, type CarouselGame } from '../game-carousel';
 import { MeepleCard } from '../meeple-card';
 import { EmptyState } from './components/empty-state';
 import { EntityTableView } from './components/entity-table-view';
-import { SidebarFilters } from './components/sidebar-filters';
 import { FilterPanel } from './components/filter-panel';
 import { LoadingSkeleton } from './components/loading-skeleton';
 import { SearchBar } from './components/search-bar';
+import { SidebarFilters } from './components/sidebar-filters';
 import { SortDropdown } from './components/sort-dropdown';
 import { ViewModeSwitcher } from './components/view-mode-switcher';
 import { useFilters } from './hooks/use-filters';
@@ -128,7 +128,11 @@ export function EntityListView<T = any>({
   'data-testid': testId,
 }: EntityListViewProps<T>) {
   // View mode state with localStorage persistence
-  const { mode, setMode, isAvailable: _isAvailable } = useViewMode(
+  const {
+    mode,
+    setMode,
+    isAvailable: _isAvailable,
+  } = useViewMode(
     persistenceKey,
     defaultViewMode,
     availableModes || ['grid', 'list', 'carousel', 'table'],
@@ -141,11 +145,11 @@ export function EntityListView<T = any>({
   }, [mode, onViewModeChange]);
 
   // Search functionality (Phase 3)
-  const { query, setQuery, filteredItems: searchedItems } = useSearch(
-    items,
-    searchFields as string[],
-    customSearch
-  );
+  const {
+    query,
+    setQuery,
+    filteredItems: searchedItems,
+  } = useSearch(items, searchFields as string[], customSearch);
 
   // Filter functionality (Phase 4)
   const {
@@ -247,7 +251,7 @@ export function EntityListView<T = any>({
    */
   const renderCarouselLayout = () => {
     // Transform generic items to CarouselGame format
-    const carouselGames: CarouselGame[] = displayItems.map((item) => {
+    const carouselGames: CarouselGame[] = displayItems.map(item => {
       const cardProps = renderItem(item);
       return {
         id: cardProps.id || String(displayItems.indexOf(item)),
@@ -265,8 +269,8 @@ export function EntityListView<T = any>({
       <div data-testid="carousel-layout">
         <GameCarousel
           games={carouselGames}
-          onGameSelect={(game) => {
-            const originalItem = items.find((item) => renderItem(item).id === game.id);
+          onGameSelect={game => {
+            const originalItem = items.find(item => renderItem(item).id === game.id);
             if (originalItem) onItemClick?.(originalItem);
           }}
           autoPlay={carouselOptions?.autoPlay ?? false}
@@ -277,7 +281,6 @@ export function EntityListView<T = any>({
       </div>
     );
   };
-
 
   /**
    * Render table layout
@@ -318,7 +321,12 @@ export function EntityListView<T = any>({
       aria-label={title || 'Entity list'}
     >
       {/* Header */}
-      {(title || subtitle || showViewSwitcher || searchable || sortOptions.length > 0 || filters.length > 0) && (
+      {(title ||
+        subtitle ||
+        showViewSwitcher ||
+        searchable ||
+        sortOptions.length > 0 ||
+        filters.length > 0) && (
         <header className="space-y-4 mb-6">
           {/* Title, Subtitle & View Mode Switcher */}
           {(title || subtitle || showViewSwitcher) && (
@@ -353,11 +361,7 @@ export function EntityListView<T = any>({
                 {/* SearchBar */}
                 {searchable && (
                   <div className="flex-1">
-                    <SearchBar
-                      value={query}
-                      onChange={setQuery}
-                      placeholder={searchPlaceholder}
-                    />
+                    <SearchBar value={query} onChange={setQuery} placeholder={searchPlaceholder} />
                   </div>
                 )}
 
@@ -405,9 +409,7 @@ export function EntityListView<T = any>({
             />
           )}
           {/* List content */}
-          <div className="flex-1 min-w-0">
-            {renderListLayout()}
-          </div>
+          <div className="flex-1 min-w-0">{renderListLayout()}</div>
         </div>
       )}
       {mode === 'carousel' && renderCarouselLayout()}

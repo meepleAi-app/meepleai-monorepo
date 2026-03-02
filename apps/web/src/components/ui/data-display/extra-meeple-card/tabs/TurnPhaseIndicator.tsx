@@ -6,8 +6,11 @@
  */
 
 import React from 'react';
+
 import { GitBranch } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type { TurnPhaseState } from '../types';
 
 interface TurnPhaseIndicatorProps {
@@ -39,9 +42,7 @@ export function TurnPhaseIndicator({ state }: TurnPhaseIndicatorProps) {
             Turn {state.currentTurnNumber}
           </span>
           {state.totalTurns != null && (
-            <span className="font-nunito text-[10px] text-slate-400">
-              of {state.totalTurns}
-            </span>
+            <span className="font-nunito text-[10px] text-slate-400">of {state.totalTurns}</span>
           )}
         </div>
         <span className="font-nunito text-[10px] font-semibold text-indigo-600">
@@ -50,7 +51,13 @@ export function TurnPhaseIndicator({ state }: TurnPhaseIndicatorProps) {
       </div>
 
       {/* Phase bar */}
-      <div className="flex gap-1" role="progressbar" aria-valuenow={state.currentPhaseIndex + 1} aria-valuemin={1} aria-valuemax={state.phases.length}>
+      <div
+        className="flex gap-1"
+        role="progressbar"
+        aria-valuenow={state.currentPhaseIndex + 1}
+        aria-valuemin={1}
+        aria-valuemax={state.phases.length}
+      >
         {state.phases.map((phase, index) => {
           const colorIndex = index % PHASE_COLORS.length;
           const color = PHASE_COLORS[colorIndex];
@@ -68,7 +75,8 @@ export function TurnPhaseIndicator({ state }: TurnPhaseIndicatorProps) {
               <div
                 className={cn(
                   'h-2 rounded-full transition-all duration-300',
-                  isCurrent && cn(color.bg, 'ring-2 ring-offset-1', color.border.replace('border-', 'ring-')),
+                  isCurrent &&
+                    cn(color.bg, 'ring-2 ring-offset-1', color.border.replace('border-', 'ring-')),
                   isCompleted && cn(color.bg, 'opacity-60'),
                   isFuture && 'bg-slate-200'
                 )}

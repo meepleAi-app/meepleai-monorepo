@@ -4,9 +4,11 @@
  * Examples of RAG pipeline step timeline component usage
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { TimelineStep } from './TimelineStep';
 import { useState } from 'react';
+
+import { TimelineStep } from './TimelineStep';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Admin/RAG/TimelineStep',
@@ -160,9 +162,7 @@ export const InteractiveTimeline = () => {
 
   return (
     <div className="space-y-2 max-w-4xl">
-      <h3 className="text-lg font-quicksand font-bold mb-4">
-        RAG Pipeline Timeline (982ms total)
-      </h3>
+      <h3 className="text-lg font-quicksand font-bold mb-4">RAG Pipeline Timeline (982ms total)</h3>
       {exampleSteps.map((step, idx) => (
         <TimelineStep
           key={idx}

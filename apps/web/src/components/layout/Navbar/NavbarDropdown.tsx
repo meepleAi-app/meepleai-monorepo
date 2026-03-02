@@ -8,8 +8,9 @@
  */
 
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
-import Link from 'next/link';
+
 import { ChevronDown, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
@@ -46,7 +47,7 @@ export function NavbarDropdown({ label, items, className }: NavbarDropdownProps)
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Check if any item in this section is active
-  const isActive = items.some((item) => pathname?.startsWith(item.href));
+  const isActive = items.some(item => pathname?.startsWith(item.href));
 
   // Close on outside click
   useEffect(() => {
@@ -69,7 +70,7 @@ export function NavbarDropdown({ label, items, className }: NavbarDropdownProps)
   function handleTriggerKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      setOpen((prev) => !prev);
+      setOpen(prev => !prev);
     } else if (e.key === 'ArrowDown' && !open) {
       e.preventDefault();
       setOpen(true);
@@ -107,7 +108,7 @@ export function NavbarDropdown({ label, items, className }: NavbarDropdownProps)
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => setOpen(prev => !prev)}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
           'flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium',
@@ -141,7 +142,7 @@ export function NavbarDropdown({ label, items, className }: NavbarDropdownProps)
             'py-1 animate-in fade-in-0 zoom-in-95 duration-100'
           )}
         >
-          {items.map((item) => {
+          {items.map(item => {
             const Icon = item.icon;
             const isItemActive = pathname?.startsWith(item.href);
             return (

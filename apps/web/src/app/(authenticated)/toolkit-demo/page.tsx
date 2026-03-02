@@ -27,7 +27,6 @@ import {
   ToolRail,
   BASE_TOOLS,
 } from '@/components/session';
-
 import type {
   Session,
   TurnOrderData,
@@ -58,9 +57,33 @@ const MOCK_SESSION: Session = {
 };
 
 const MOCK_PARTICIPANTS: Participant[] = [
-  { id: 'p1', displayName: 'Mario (io)', isOwner: true,  isCurrentUser: true,  avatarColor: '#D97706', totalScore: 8,  rank: 1 },
-  { id: 'p2', displayName: 'Giulia',     isOwner: false, isCurrentUser: false, avatarColor: '#2563EB', totalScore: 7,  rank: 2 },
-  { id: 'p3', displayName: 'Luca',       isOwner: false, isCurrentUser: false, avatarColor: '#DC2626', totalScore: 5,  rank: 3 },
+  {
+    id: 'p1',
+    displayName: 'Mario (io)',
+    isOwner: true,
+    isCurrentUser: true,
+    avatarColor: '#D97706',
+    totalScore: 8,
+    rank: 1,
+  },
+  {
+    id: 'p2',
+    displayName: 'Giulia',
+    isOwner: false,
+    isCurrentUser: false,
+    avatarColor: '#2563EB',
+    totalScore: 7,
+    rank: 2,
+  },
+  {
+    id: 'p3',
+    displayName: 'Luca',
+    isOwner: false,
+    isCurrentUser: false,
+    avatarColor: '#DC2626',
+    totalScore: 5,
+    rank: 3,
+  },
 ];
 
 const MOCK_TURN_ORDER_INIT: TurnOrderData = {
@@ -101,12 +124,60 @@ const MOCK_COUNTER_STATE_INIT: CounterState = {
 };
 
 const MOCK_SCORES: ScoreEntry[] = [
-  { id: 's1', participantId: 'p1', roundNumber: 1, category: 'Risorse', scoreValue: 3, timestamp: MOCK_DATE, createdBy: 'p1' },
-  { id: 's2', participantId: 'p2', roundNumber: 1, category: 'Risorse', scoreValue: 2, timestamp: MOCK_DATE, createdBy: 'p2' },
-  { id: 's3', participantId: 'p3', roundNumber: 1, category: 'Risorse', scoreValue: 1, timestamp: MOCK_DATE, createdBy: 'p3' },
-  { id: 's4', participantId: 'p1', roundNumber: 2, category: 'Città',   scoreValue: 5, timestamp: MOCK_DATE, createdBy: 'p1' },
-  { id: 's5', participantId: 'p2', roundNumber: 2, category: 'Città',   scoreValue: 5, timestamp: MOCK_DATE, createdBy: 'p2' },
-  { id: 's6', participantId: 'p3', roundNumber: 2, category: 'Città',   scoreValue: 4, timestamp: MOCK_DATE, createdBy: 'p3' },
+  {
+    id: 's1',
+    participantId: 'p1',
+    roundNumber: 1,
+    category: 'Risorse',
+    scoreValue: 3,
+    timestamp: MOCK_DATE,
+    createdBy: 'p1',
+  },
+  {
+    id: 's2',
+    participantId: 'p2',
+    roundNumber: 1,
+    category: 'Risorse',
+    scoreValue: 2,
+    timestamp: MOCK_DATE,
+    createdBy: 'p2',
+  },
+  {
+    id: 's3',
+    participantId: 'p3',
+    roundNumber: 1,
+    category: 'Risorse',
+    scoreValue: 1,
+    timestamp: MOCK_DATE,
+    createdBy: 'p3',
+  },
+  {
+    id: 's4',
+    participantId: 'p1',
+    roundNumber: 2,
+    category: 'Città',
+    scoreValue: 5,
+    timestamp: MOCK_DATE,
+    createdBy: 'p1',
+  },
+  {
+    id: 's5',
+    participantId: 'p2',
+    roundNumber: 2,
+    category: 'Città',
+    scoreValue: 5,
+    timestamp: MOCK_DATE,
+    createdBy: 'p2',
+  },
+  {
+    id: 's6',
+    participantId: 'p3',
+    roundNumber: 2,
+    category: 'Città',
+    scoreValue: 4,
+    timestamp: MOCK_DATE,
+    createdBy: 'p3',
+  },
 ];
 
 const MOCK_SCOREBOARD: ScoreboardData = {
@@ -182,11 +253,17 @@ export default function ToolkitDemoPage() {
       tokens: WhiteboardState['tokens'],
       gridSize: WhiteboardState['gridSize'],
       showGrid: boolean,
-      mode: WhiteboardState['mode'],
+      mode: WhiteboardState['mode']
     ) => {
-      setWhiteboardState((prev: WhiteboardState) => ({ ...prev, tokens, gridSize, showGrid, mode }));
+      setWhiteboardState((prev: WhiteboardState) => ({
+        ...prev,
+        tokens,
+        gridSize,
+        showGrid,
+        mode,
+      }));
     },
-    [],
+    []
   );
 
   const handleWhiteboardClear = useCallback(() => {
@@ -238,13 +315,7 @@ export default function ToolkitDemoPage() {
   function renderActiveTool() {
     switch (activeTool) {
       case 'scoreboard':
-        return (
-          <Scoreboard
-            data={MOCK_SCOREBOARD}
-            isRealTime={false}
-            variant="full"
-          />
-        );
+        return <Scoreboard data={MOCK_SCOREBOARD} isRealTime={false} variant="full" />;
 
       case 'turn-order':
         return (
@@ -327,9 +398,7 @@ export default function ToolkitDemoPage() {
           onToolChange={setActiveTool}
           tools={[...BASE_TOOLS, ...CUSTOM_TOOLS]}
         />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {renderActiveTool()}
-        </main>
+        <main className="flex-1 overflow-auto p-4 md:p-6">{renderActiveTool()}</main>
       </div>
     </div>
   );

@@ -11,10 +11,9 @@
 
 import React from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, ChevronRight, Cpu, LineChart, Workflow, Zap } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
@@ -34,8 +33,8 @@ import { PerformanceMetricsTable } from './PerformanceMetricsTable';
 import { PocStatus } from './PocStatus';
 import { PromptTemplateBuilder } from './PromptTemplateBuilder';
 import { QuerySimulator } from './QuerySimulator';
-import { RagHero } from './RagHero';
 import { METRICS } from './rag-data';
+import { RagHero } from './RagHero';
 import { StatsGrid } from './StatsGrid';
 import { TechnicalReference } from './TechnicalReference';
 import { TokenFlowVisualizer } from './TokenFlowVisualizer';
@@ -360,10 +359,7 @@ function TechnicalView({ activeTab, onTabChange }: TechnicalViewProps) {
 function BusinessView() {
   return (
     <div className="space-y-8">
-      <Section
-        title="Business Metrics"
-        description="Key cost efficiency and accuracy indicators"
-      >
+      <Section title="Business Metrics" description="Key cost efficiency and accuracy indicators">
         <BusinessKpiCards />
       </Section>
 

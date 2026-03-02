@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { PartyPopper, ArrowRight, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -82,10 +82,7 @@ export function WelcomeContent() {
         <div className="relative inline-flex items-center justify-center">
           <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
           <div className="relative bg-primary/10 dark:bg-primary/20 rounded-full p-6">
-            <PartyPopper
-              className="h-16 w-16 text-primary animate-bounce"
-              aria-hidden="true"
-            />
+            <PartyPopper className="h-16 w-16 text-primary animate-bounce" aria-hidden="true" />
           </div>
           <Sparkles
             className="absolute -top-2 -right-2 h-8 w-8 text-yellow-500 animate-pulse"
@@ -108,14 +105,8 @@ export function WelcomeContent() {
 
         {/* Progress Bar */}
         <div className="space-y-2" role="status" aria-live="polite">
-          <Progress
-            value={progress}
-            className="h-2 w-full"
-            aria-label="Redirect progress"
-          />
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            Reindirizzamento in corso...
-          </p>
+          <Progress value={progress} className="h-2 w-full" aria-label="Redirect progress" />
+          <p className="text-xs text-slate-400 dark:text-slate-500">Reindirizzamento in corso...</p>
         </div>
 
         {/* Manual Redirect Button */}

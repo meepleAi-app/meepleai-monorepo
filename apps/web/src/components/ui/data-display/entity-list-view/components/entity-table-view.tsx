@@ -177,7 +177,7 @@ function createColumnsFromConfig(configs: TableColumnConfig[]): ColumnDef<TableR
 
 export function EntityTableView<T>({
   displayItems,
-  items,
+  items: _items,
   entity,
   renderItem,
   tableColumns: customColumns,

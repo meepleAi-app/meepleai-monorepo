@@ -1,6 +1,7 @@
 'use client';
 
 import type { SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
+
 import { GameDiscoverHero } from './GameDiscoverHero';
 import { GameRulesSection } from './GameRulesSection';
 

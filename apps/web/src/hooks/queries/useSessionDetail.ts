@@ -8,9 +8,9 @@
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
+import type { SnapshotInfo } from '@/components/ui/data-display/extra-meeple-card/types';
 import { api } from '@/lib/api';
 import type { GameSessionDto } from '@/lib/api/schemas';
-import type { SnapshotInfo } from '@/components/ui/data-display/extra-meeple-card/types';
 
 import { sessionsKeys } from './useActiveSessions';
 

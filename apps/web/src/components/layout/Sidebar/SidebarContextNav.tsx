@@ -15,6 +15,7 @@
 
 'use client';
 
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard,
   BookOpen,
@@ -31,19 +32,19 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { Variants } from 'framer-motion';
-import { AnimatePresence, motion } from 'framer-motion';
 
 import { cn } from '@/lib/utils';
 
 import { SidebarNav } from './SidebarNav';
+
+import type { Variants } from 'framer-motion';
 
 // ─── Animation config ────────────────────────────────────────────────────────
 
 const PANEL_VARIANTS: Variants = {
   initial: { opacity: 0, x: -8 },
   animate: { opacity: 1, x: 0, transition: { duration: 0.18, ease: 'easeOut' } },
-  exit:    { opacity: 0, x: -6, transition: { duration: 0.12, ease: 'easeIn' } },
+  exit: { opacity: 0, x: -6, transition: { duration: 0.12, ease: 'easeIn' } },
 };
 
 // ─── Shared link style ───────────────────────────────────────────────────────
@@ -96,13 +97,43 @@ function DashboardPanel({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Dashboard navigation">
-      <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Overview" isActive={pathname === '/dashboard'} isCollapsed={isCollapsed} />
-      <SidebarLink href="/play-records" icon={Clock} label="Sessioni recenti" isActive={pathname?.startsWith('/play-records')} isCollapsed={isCollapsed} />
-      <SidebarLink href="/library" icon={Library} label="La mia collezione" isActive={pathname?.startsWith('/library')} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/dashboard"
+        icon={LayoutDashboard}
+        label="Overview"
+        isActive={pathname === '/dashboard'}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/play-records"
+        icon={Clock}
+        label="Sessioni recenti"
+        isActive={pathname?.startsWith('/play-records')}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/library"
+        icon={Library}
+        label="La mia collezione"
+        isActive={pathname?.startsWith('/library')}
+        isCollapsed={isCollapsed}
+      />
 
       <SectionLabel label="Accesso rapido" isCollapsed={isCollapsed} />
-      <SidebarLink href="/games" icon={Gamepad2} label="Catalogo giochi" isActive={false} isCollapsed={isCollapsed} />
-      <SidebarLink href="/players" icon={Users} label="Giocatori" isActive={pathname?.startsWith('/players')} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/games"
+        icon={Gamepad2}
+        label="Catalogo giochi"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/players"
+        icon={Users}
+        label="Giocatori"
+        isActive={pathname?.startsWith('/players')}
+        isCollapsed={isCollapsed}
+      />
     </nav>
   );
 }
@@ -112,17 +143,59 @@ function LibraryPanel({ isCollapsed }: { isCollapsed: boolean }) {
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Library navigation">
       {/* Back to Dashboard */}
-      <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={false} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/dashboard"
+        icon={LayoutDashboard}
+        label="Dashboard"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
       <hr className="my-1 border-sidebar-border" />
 
-      <SidebarLink href="/library" icon={BookOpen} label="Tutti i giochi" isActive={pathname === '/library'} isCollapsed={isCollapsed} />
-      <SidebarLink href="/library/favorites" icon={Heart} label="Preferiti" isActive={pathname?.startsWith('/library/favorites')} isCollapsed={isCollapsed} />
-      <SidebarLink href="/library/wishlist" icon={Star} label="Wishlist" isActive={pathname?.startsWith('/library/wishlist')} isCollapsed={isCollapsed} />
-      <SidebarLink href="/library/archived" icon={Archive} label="Archiviati" isActive={pathname?.startsWith('/library/archived')} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/library"
+        icon={BookOpen}
+        label="Tutti i giochi"
+        isActive={pathname === '/library'}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/library/favorites"
+        icon={Heart}
+        label="Preferiti"
+        isActive={pathname?.startsWith('/library/favorites')}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/library/wishlist"
+        icon={Star}
+        label="Wishlist"
+        isActive={pathname?.startsWith('/library/wishlist')}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/library/archived"
+        icon={Archive}
+        label="Archiviati"
+        isActive={pathname?.startsWith('/library/archived')}
+        isCollapsed={isCollapsed}
+      />
 
       <SectionLabel label="Collezioni" isCollapsed={isCollapsed} />
-      <SidebarLink href="/library/private" icon={Layers} label="Giochi privati" isActive={pathname?.startsWith('/library/private')} isCollapsed={isCollapsed} />
-      <SidebarLink href="/library/proposals" icon={Calendar} label="Proposte" isActive={pathname?.startsWith('/library/proposals')} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/library/private"
+        icon={Layers}
+        label="Giochi privati"
+        isActive={pathname?.startsWith('/library/private')}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/library/proposals"
+        icon={Calendar}
+        label="Proposte"
+        isActive={pathname?.startsWith('/library/proposals')}
+        isCollapsed={isCollapsed}
+      />
     </nav>
   );
 }
@@ -132,19 +205,61 @@ function GamesPanel({ isCollapsed }: { isCollapsed: boolean }) {
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Games catalog navigation">
       {/* Back to Dashboard */}
-      <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" isActive={false} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/dashboard"
+        icon={LayoutDashboard}
+        label="Dashboard"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
       <hr className="my-1 border-sidebar-border" />
 
-      <SidebarLink href="/games" icon={Gamepad2} label="Tutti i giochi" isActive={pathname === '/games'} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/games"
+        icon={Gamepad2}
+        label="Tutti i giochi"
+        isActive={pathname === '/games'}
+        isCollapsed={isCollapsed}
+      />
 
       <SectionLabel label="Filtri rapidi" isCollapsed={isCollapsed} />
-      <SidebarLink href="/games?bggOnly=true" icon={Star} label="Top BGG" isActive={false} isCollapsed={isCollapsed} />
-      <SidebarLink href="/games?minPlayers=2&maxPlayers=2" icon={Users} label="2 Giocatori" isActive={false} isCollapsed={isCollapsed} />
-      <SidebarLink href="/games?minPlayers=3&maxPlayers=6" icon={Users} label="3-6 Giocatori" isActive={false} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/games?bggOnly=true"
+        icon={Star}
+        label="Top BGG"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/games?minPlayers=2&maxPlayers=2"
+        icon={Users}
+        label="2 Giocatori"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/games?minPlayers=3&maxPlayers=6"
+        icon={Users}
+        label="3-6 Giocatori"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
 
       <SectionLabel label="Avanzato" isCollapsed={isCollapsed} />
-      <SidebarLink href="/games?sortBy=recent" icon={Clock} label="Aggiunti di recente" isActive={false} isCollapsed={isCollapsed} />
-      <SidebarLink href="/games" icon={SlidersHorizontal} label="Filtri avanzati" isActive={false} isCollapsed={isCollapsed} />
+      <SidebarLink
+        href="/games?sortBy=recent"
+        icon={Clock}
+        label="Aggiunti di recente"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
+      <SidebarLink
+        href="/games"
+        icon={SlidersHorizontal}
+        label="Filtri avanzati"
+        isActive={false}
+        isCollapsed={isCollapsed}
+      />
     </nav>
   );
 }
@@ -184,9 +299,9 @@ export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
           className="h-full"
         >
           {contextKey === 'dashboard' && <DashboardPanel isCollapsed={isCollapsed} />}
-          {contextKey === 'library'   && <LibraryPanel   isCollapsed={isCollapsed} />}
-          {contextKey === 'games'     && <GamesPanel     isCollapsed={isCollapsed} />}
-          {contextKey === 'default'   && <SidebarNav     isCollapsed={isCollapsed} />}
+          {contextKey === 'library' && <LibraryPanel isCollapsed={isCollapsed} />}
+          {contextKey === 'games' && <GamesPanel isCollapsed={isCollapsed} />}
+          {contextKey === 'default' && <SidebarNav isCollapsed={isCollapsed} />}
         </motion.div>
       </AnimatePresence>
     </div>

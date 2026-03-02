@@ -16,7 +16,7 @@
 
 import React from 'react';
 
-import { CheckCircle2, Loader2, Pause, Play, Settings } from 'lucide-react';
+import { CheckCircle2, Pause, Play, Settings } from 'lucide-react';
 
 import {
   Tooltip,
@@ -112,7 +112,7 @@ export const SessionStatusBadge = React.memo(function SessionStatusBadge({
               size === 'sm' ? 'text-[10px]' : 'text-xs',
               config.bgClass,
               config.textClass,
-              className,
+              className
             )}
             data-testid={`session-status-${status}`}
             aria-label={`Session status: ${config.label}`}
@@ -123,7 +123,7 @@ export const SessionStatusBadge = React.memo(function SessionStatusBadge({
                 className={cn(
                   'w-2 h-2 rounded-full',
                   config.dotClass,
-                  isPulsating && 'animate-mc-live-pulse',
+                  isPulsating && 'animate-mc-live-pulse'
                 )}
                 aria-hidden="true"
               />
@@ -131,7 +131,7 @@ export const SessionStatusBadge = React.memo(function SessionStatusBadge({
                 <span
                   className={cn(
                     'absolute w-2 h-2 rounded-full opacity-75 animate-ping',
-                    config.dotClass,
+                    config.dotClass
                   )}
                   aria-hidden="true"
                 />

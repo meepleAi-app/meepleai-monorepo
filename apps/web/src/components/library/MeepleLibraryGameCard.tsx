@@ -48,10 +48,14 @@ import {
 
 import { AgentCreationSheet } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
-import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleCard,
+  type MeepleCardVariant,
+  type MeepleCardMetadata,
+} from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { getNavigationLinks } from '@/config/entity-navigation';
+import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
 
 // ============================================================================
@@ -100,10 +104,15 @@ export interface MeepleLibraryGameCardProps {
 /**
  * Map game state to MeepleCard status format
  */
-function mapGameStateToStatus(state: GameStateType | null | undefined): 'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade' | undefined {
+function mapGameStateToStatus(
+  state: GameStateType | null | undefined
+): 'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade' | undefined {
   if (!state) return undefined;
 
-  const stateMap: Record<GameStateType, 'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade'> = {
+  const stateMap: Record<
+    GameStateType,
+    'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade'
+  > = {
     Owned: 'owned',
     Wishlist: 'wishlisted',
     Nuovo: 'owned', // New items are owned
@@ -191,7 +200,7 @@ export function MeepleLibraryGameCard({
       );
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Errore durante l\'aggiornamento dei preferiti'
+        error instanceof Error ? error.message : "Errore durante l'aggiornamento dei preferiti"
       );
     } finally {
       setIsTogglingFavorite(false);
@@ -279,7 +288,8 @@ export function MeepleLibraryGameCard({
   // Build Props
   // ============================================================================
 
-  const subtitle = game.gamePublisher || `Aggiunto il ${new Date(game.addedAt).toLocaleDateString('it-IT')}`;
+  const subtitle =
+    game.gamePublisher || `Aggiunto il ${new Date(game.addedAt).toLocaleDateString('it-IT')}`;
 
   const mappedStatus = mapGameStateToStatus(game.currentState);
 
@@ -287,11 +297,12 @@ export function MeepleLibraryGameCard({
   const badge = game.isFavorite ? '❤️ Preferito' : undefined;
 
   // Flip data
-  const flipData: MeepleCardFlipData | undefined = flippable && game.notes
-    ? {
-        description: game.notes,
-      }
-    : undefined;
+  const flipData: MeepleCardFlipData | undefined =
+    flippable && game.notes
+      ? {
+          description: game.notes,
+        }
+      : undefined;
 
   // ============================================================================
   // Render
@@ -311,7 +322,11 @@ export function MeepleLibraryGameCard({
         metadata={metadata}
         badge={badge}
         status={mappedStatus}
-        onClick={selectionMode && onSelect ? undefined : () => window.location.href = `/library/games/${game.gameId}`}
+        onClick={
+          selectionMode && onSelect
+            ? undefined
+            : () => (window.location.href = `/library/games/${game.gameId}`)
+        }
         flippable={flippable && !!game.notes}
         flipData={flipData}
         flipTrigger="button"

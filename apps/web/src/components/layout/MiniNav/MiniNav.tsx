@@ -28,8 +28,8 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-import { useNavigation } from '@/context/NavigationContext';
 import { Button } from '@/components/ui/primitives/button';
+import { useNavigation } from '@/context/NavigationContext';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
@@ -121,9 +121,7 @@ export function MiniNav({ className }: MiniNavProps) {
     const container = scrollRef.current;
     if (!container) return;
 
-    const activeIndex = miniNavTabs.findIndex((tab) =>
-      isTabActive(tab.href, pathname, search)
-    );
+    const activeIndex = miniNavTabs.findIndex(tab => isTabActive(tab.href, pathname, search));
     if (activeIndex === -1) return;
 
     // Find the active tab element and scroll it into view
@@ -157,7 +155,7 @@ export function MiniNav({ className }: MiniNavProps) {
         'h-12 md:h-12',
         'border-b border-border/50',
         'bg-background/95 backdrop-blur-sm',
-        className,
+        className
       )}
       data-testid={NAV_TEST_IDS.miniNav}
     >
@@ -169,7 +167,7 @@ export function MiniNav({ className }: MiniNavProps) {
           className={cn(
             'hidden md:flex h-full w-8 shrink-0 rounded-none',
             'transition-opacity duration-150',
-            canScrollLeft ? 'opacity-100' : 'opacity-0 pointer-events-none',
+            canScrollLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'
           )}
           onClick={scrollLeft}
           aria-label="Scorri tab a sinistra"
@@ -193,16 +191,12 @@ export function MiniNav({ className }: MiniNavProps) {
           '[-ms-overflow-style:none]',
           '[scrollbar-width:none]',
           // Left/right padding when arrows shown
-          showArrows ? 'px-0' : 'px-2',
+          showArrows ? 'px-0' : 'px-2'
         )}
         data-testid={NAV_TEST_IDS.miniNavTablist}
       >
-        {miniNavTabs.map((tab) => (
-          <MiniNavTab
-            key={tab.id}
-            tab={tab}
-            isActive={isTabActive(tab.href, pathname, search)}
-          />
+        {miniNavTabs.map(tab => (
+          <MiniNavTab key={tab.id} tab={tab} isActive={isTabActive(tab.href, pathname, search)} />
         ))}
       </div>
 
@@ -214,7 +208,7 @@ export function MiniNav({ className }: MiniNavProps) {
           className={cn(
             'hidden md:flex h-full w-8 shrink-0 rounded-none',
             'transition-opacity duration-150',
-            canScrollRight ? 'opacity-100' : 'opacity-0 pointer-events-none',
+            canScrollRight ? 'opacity-100' : 'opacity-0 pointer-events-none'
           )}
           onClick={scrollRight}
           aria-label="Scorri tab a destra"

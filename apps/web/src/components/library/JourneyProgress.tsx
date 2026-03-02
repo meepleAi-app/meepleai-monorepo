@@ -19,12 +19,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronDown, ChevronUp, Loader2, X } from 'lucide-react';
 
-import { useQuery } from '@tanstack/react-query';
-
-import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
+import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { usePdfProcessingStatus } from '@/hooks/queries/usePdfProcessingStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -87,7 +86,9 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
   useEffect(() => {
     try {
       if (localStorage.getItem(STORAGE_KEY) === 'true') setDismissed(true);
-    } catch { /* localStorage unavailable */ }
+    } catch {
+      /* localStorage unavailable */
+    }
   }, []);
 
   // ── Data sources ─────────────────────────────────────────────────────────
@@ -101,8 +102,11 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
   });
 
   // Steps 2–3 — PDF upload & indexing status
-  const { data: pdfStatus, isLoading: pdfLoading, isError: pdfError } =
-    usePdfProcessingStatus(gameId ?? null);
+  const {
+    data: pdfStatus,
+    isLoading: pdfLoading,
+    isError: pdfError,
+  } = usePdfProcessingStatus(gameId ?? null);
 
   // Step 4 — agent created
   // When agentDefinitionId is explicitly provided (private game context), skip the
@@ -133,11 +137,11 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
     // Step 4: agent configured
     // For private games: agentDefinitionId prop is explicitly set → use it directly.
     // For shared catalog games: fall back to agents list from useGameAgents.
-    const hasAgent = !!gameId && (
-      agentDefinitionId !== undefined
-        ? !!agentDefinitionId          // private game: truthy UUID = has agent
-        : (agents?.length ?? 0) > 0   // shared catalog game: check agents list
-    );
+    const hasAgent =
+      !!gameId &&
+      (agentDefinitionId !== undefined
+        ? !!agentDefinitionId // private game: truthy UUID = has agent
+        : (agents?.length ?? 0) > 0); // shared catalog game: check agents list
 
     // Step 5: at least one chat session exists for this game
     const hasChat = !!gameId && (chatData?.sessions ?? []).some(s => s.gameId === gameId);
@@ -168,11 +172,12 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
     const step5Status = resolveStatus(s5, s4);
 
     // Inline detail for active KB step
-    const kbDetail = step3Status === 'active' && pdfIsProcessing && pdfStatus?.progress != null
-      ? `Indicizzazione: ${pdfStatus.progress}%…`
-      : step3Status === 'active' && pdfIsProcessing
-        ? 'Indicizzazione in corso…'
-        : undefined;
+    const kbDetail =
+      step3Status === 'active' && pdfIsProcessing && pdfStatus?.progress != null
+        ? `Indicizzazione: ${pdfStatus.progress}%…`
+        : step3Status === 'active' && pdfIsProcessing
+          ? 'Indicizzazione in corso…'
+          : undefined;
 
     return [
       {
@@ -228,7 +233,9 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
       try {
         const key = gameId ? `${STORAGE_KEY}-${gameId}` : STORAGE_KEY;
         localStorage.setItem(key, 'true');
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       setDismissed(true);
     }
   }, [isComplete, gameId]);
@@ -240,7 +247,9 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
   const handleDismiss = () => {
     try {
       localStorage.setItem(STORAGE_KEY, 'true');
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setDismissed(true);
   };
 
@@ -298,11 +307,7 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
             role="list"
           >
             {steps.map((step, index) => (
-              <StepItem
-                key={step.id}
-                step={step}
-                isLast={index === steps.length - 1}
-              />
+              <StepItem key={step.id} step={step} isLast={index === steps.length - 1} />
             ))}
           </div>
         </div>
@@ -315,13 +320,7 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
 // StepItem sub-component
 // ============================================================================
 
-function StepItem({
-  step,
-  isLast,
-}: {
-  step: Step;
-  isLast: boolean;
-}) {
+function StepItem({ step, isLast }: { step: Step; isLast: boolean }) {
   const isCompleted = step.status === 'completed';
   const isActive = step.status === 'active';
 
@@ -331,7 +330,9 @@ function StepItem({
         'relative h-6 w-6 rounded-full flex items-center justify-center shrink-0 border-2 transition-all duration-300',
         isCompleted && 'border-teal-500 bg-teal-500 text-white',
         isActive && 'border-orange-500 bg-background text-orange-500',
-        !isCompleted && !isActive && 'border-muted-foreground/30 bg-background text-muted-foreground/40'
+        !isCompleted &&
+          !isActive &&
+          'border-muted-foreground/30 bg-background text-muted-foreground/40'
       )}
       aria-hidden="true"
     >
@@ -411,9 +412,7 @@ function StepItem({
       data-status={step.status}
     >
       {/* Step content */}
-      <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
-        {wrappedContent}
-      </div>
+      <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">{wrappedContent}</div>
 
       {/* Connector line (not shown after last step) */}
       {!isLast && (

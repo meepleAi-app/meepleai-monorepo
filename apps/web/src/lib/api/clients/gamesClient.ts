@@ -14,7 +14,6 @@ import {
   GameFAQSchema,
   GameSchema,
   GameSessionDtoSchema,
-  GameStrategyDtoSchema,
   GameReviewDtoSchema,
   GetGameFAQsResultSchema,
   GetSimilarGamesResultSchema,
@@ -33,7 +32,6 @@ import {
   type GameFAQ,
   type GameReviewDto,
   type GameSessionDto,
-  type GameStrategyDto,
   type GetGameFAQsResult,
   type GetSimilarGamesResult,
   type PagedStrategiesResult,
@@ -699,4 +697,9 @@ export type { QuickQuestion } from '../schemas';
 export type { SimilarGameDto, GetSimilarGamesResult } from '../schemas';
 
 // Re-export Strategies and Reviews types for convenience (Issue #4889)
-export type { GameStrategyDto, PagedStrategiesResult, GameReviewDto, PagedReviewsResult } from '../schemas';
+export type {
+  GameStrategyDto,
+  PagedStrategiesResult,
+  GameReviewDto,
+  PagedReviewsResult,
+} from '../schemas';

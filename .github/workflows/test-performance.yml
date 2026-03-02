@@ -417,7 +417,7 @@ jobs:
           frozen-lockfile: 'true'
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: nextjs-build-lighthouse-${{ github.sha }}
           path: apps/web

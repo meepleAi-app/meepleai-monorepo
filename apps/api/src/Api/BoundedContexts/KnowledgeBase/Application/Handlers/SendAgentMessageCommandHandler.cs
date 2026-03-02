@@ -471,7 +471,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         {
             _logger.LogWarning("Primary LLM call failed ({Model}): {Error}. Retrying in 2s...",
                 modelToUse, llmResult.ErrorMessage);
-            fallbackReason = llmResult.ErrorMessage;
+            fallbackReason = llmResult.ErrorMessage?.Contains("429", StringComparison.Ordinal) == true
+                ? "rate_limited"
+                : "provider_unavailable";
 
             // Attempt 2: Retry same model after 2s delay (heartbeat keeps SSE alive through proxies)
             yield return CreateEvent(StreamingEventType.Heartbeat, new StreamingHeartbeat("retrying"));
@@ -518,9 +520,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         // Emit downgrade notice if model changed
         if (!string.Equals(modelToUse, originalModel, StringComparison.Ordinal))
         {
-            var isLocal = !modelToUse.Contains('/', StringComparison.Ordinal);
-            var currentModelConfig = _modelConfigService.GetModelById(originalModel);
-            var isFreeUser = currentModelConfig?.Tier == ModelTier.Free;
+            var isLocal = string.Equals(modelToUse, AgentDefaults.OllamaFallbackModel, StringComparison.Ordinal);
 
             yield return CreateEvent(StreamingEventType.ModelDowngrade,
                 new StreamingModelDowngrade(
@@ -528,7 +528,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                     FallbackModel: modelToUse,
                     Reason: fallbackReason ?? "provider_unavailable",
                     IsLocalFallback: isLocal,
-                    UpgradeMessage: isFreeUser
+                    UpgradeMessage: isLocal
                         ? "Il modello gratuito è temporaneamente non disponibile. Risposta generata con modello locale. Passa a Premium per modelli più affidabili."
                         : null
                 ));

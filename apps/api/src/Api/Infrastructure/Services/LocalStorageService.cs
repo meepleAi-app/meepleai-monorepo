@@ -156,15 +156,21 @@ internal sealed class LocalStorageService : IStorageService
     }
 
     /// <summary>
-    /// Generates a simple signature for URL validation.
-    /// NOTE: Production should use HMAC-SHA256 with secret key.
+    /// Generates an HMAC-SHA256 signature for URL validation.
+    /// SEC-04: Uses cryptographic keyed hash instead of non-cryptographic GetHashCode.
     /// </summary>
     private static string GenerateSignature(string path, long expiration)
     {
-        // Simple hash for testing (NOT secure for production)
-        var input = $"{path}:{expiration}";
-        var hashCode = StringComparer.Ordinal.GetHashCode(input);
-        return Convert.ToBase64String(BitConverter.GetBytes(hashCode))
+        // SEC-04: Use HMAC-SHA256 with a fixed key derived from the storage path base.
+        // In production with S3, pre-signed URLs are handled by the cloud provider.
+        // This key should ideally come from configuration; using a deterministic
+        // derivation from a fixed secret for local dev storage.
+        var keyBytes = System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes("MeepleAI-LocalStorage-SigningKey"));
+        var input = System.Text.Encoding.UTF8.GetBytes($"{path}:{expiration}");
+
+        var hash = System.Security.Cryptography.HMACSHA256.HashData(keyBytes, input);
+        return Convert.ToBase64String(hash)
             .Replace("+", "-")
             .Replace("/", "_")
             .TrimEnd('=');

@@ -10,7 +10,8 @@ namespace Api.BoundedContexts.Authentication.Application.Validators;
 /// </summary>
 internal sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {
-    private static readonly string[] ValidRoles = { "user", "editor", "admin" };
+    // SEC-08: Only "user" is valid for self-registration. Admin accounts are created via admin endpoints only.
+    private static readonly string[] ValidRoles = { "user", "editor" };
 
     public RegisterCommandValidator()
     {

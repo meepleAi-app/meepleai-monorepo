@@ -211,14 +211,14 @@ internal static class TelemetryTestEndpoints
                 statusCode: 500);
         }
 
-        // These should be redacted by OpenTelemetry instrumentation
+        // SEC-01: Use clearly non-realistic placeholder values for redaction testing
         var testData = new
         {
             username = "test-user",
-            password = "super-secret-password",  // Should be [REDACTED]
-            apiKey = "mpl_live_abc123xyz789",    // Should be [REDACTED]
-            token = "Bearer xyz789abc123",        // Should be [REDACTED]
-            secret = "my-secret-key"              // Should be [REDACTED]
+            password = "PLACEHOLDER_FOR_REDACTION_TEST",
+            apiKey = "test_key_not_real_000000",
+            token = "Bearer test_token_not_real_000000",
+            secret = "test_secret_not_real"
         };
 
         activity.SetTag("test.username", testData.username);

@@ -133,10 +133,12 @@ internal class QdrantService : IQdrantService
         try
         {
             _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId}", validChunks.Count, pdfId);
+            // Issue #5254: Normalize pdf_id to no-hyphen format for consistent filtering
+            var normalizedPdfId = pdfId.Replace("-", "", StringComparison.Ordinal);
             var basePayload = new Dictionary<string, Value>(StringComparer.Ordinal)
             {
                 ["game_id"] = gameId,
-                ["pdf_id"] = pdfId
+                ["pdf_id"] = normalizedPdfId
             };
             var points = _vectorIndexer.BuildPoints(validChunks, basePayload);
             await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), cancellationToken).ConfigureAwait(false);
@@ -237,8 +239,21 @@ internal class QdrantService : IQdrantService
         try
         {
             _logger.LogInformation("Deleting vectors for PDF {PdfId}", pdfId);
-            var filter = _vectorSearcher.BuildPdfFilter(pdfId);
-            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, cancellationToken).ConfigureAwait(false);
+
+            // Issue #5254: Delete both hyphenated and non-hyphenated pdf_id formats
+            // to clean up legacy duplicates from inconsistent formatting.
+            var normalized = pdfId.Replace("-", "", StringComparison.Ordinal);
+            var hyphenated = pdfId.Contains('-') ? pdfId : Guid.Parse(pdfId).ToString();
+
+            var filterNormalized = _vectorSearcher.BuildPdfFilter(normalized);
+            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filterNormalized, cancellationToken).ConfigureAwait(false);
+
+            if (!string.Equals(normalized, hyphenated, StringComparison.Ordinal))
+            {
+                var filterHyphenated = _vectorSearcher.BuildPdfFilter(hyphenated);
+                await _vectorIndexer.DeleteByFilterAsync(CollectionName, filterHyphenated, cancellationToken).ConfigureAwait(false);
+            }
+
             _logger.LogInformation("Successfully deleted vectors for PDF {PdfId}", pdfId);
             return true;
         }

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
@@ -12,6 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Handler for GetAgentConfigurationQuery.
 /// Returns the active (IsCurrent = true) configuration row.
+/// If no configuration exists, returns a default configuration (same pattern as SendAgentMessageCommandHandler).
 /// </summary>
 internal sealed class GetAgentConfigurationQueryHandler
     : IRequestHandler<GetAgentConfigurationQuery, AgentConfigurationDto>
@@ -50,8 +52,20 @@ internal sealed class GetAgentConfigurationQueryHandler
                 cancellationToken)
             .ConfigureAwait(false);
 
+        // Return default configuration if none exists yet (agent never configured)
         if (config is null)
-            throw new NotFoundException("AgentConfiguration", request.AgentId.ToString());
+        {
+            return new AgentConfigurationDto(
+                Id: Guid.Empty,
+                AgentId: request.AgentId,
+                LlmModel: AgentDefaults.DefaultFreeModel,
+                LlmProvider: AgentDefaults.DefaultLlmProvider.ToString(),
+                Temperature: AgentDefaults.DefaultTemperature,
+                MaxTokens: AgentDefaults.DefaultMaxTokens,
+                SelectedDocumentIds: [],
+                IsCurrent: true,
+                CreatedAt: DateTime.UtcNow);
+        }
 
         return UpdateAgentLlmConfigurationCommandHandler.ToDto(config);
     }

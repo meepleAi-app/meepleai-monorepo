@@ -414,7 +414,9 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Install EF Core Tools
-        run: dotnet tool install --global dotnet-ef
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Run Database Migrations
         working-directory: apps/api/src/Api

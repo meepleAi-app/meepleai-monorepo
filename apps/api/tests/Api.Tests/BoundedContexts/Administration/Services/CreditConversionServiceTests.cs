@@ -161,7 +161,7 @@ public sealed class CreditConversionServiceTests
 
         public LlmCostCalculation CalculateCost(string modelId, string provider, int promptTokens, int completionTokens)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public LlmModelPricing? GetModelPricing(string modelId)

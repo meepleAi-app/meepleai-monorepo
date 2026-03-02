@@ -252,36 +252,58 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             DiceToolsJson = toolkit.DiceTools.Count > 0
                 ? JsonSerializer.Serialize(toolkit.DiceTools.Select(d => new DiceToolJsonModel
                 {
-                    Name = d.Name, DiceType = d.DiceType, Quantity = d.Quantity,
-                    CustomFaces = d.CustomFaces, IsInteractive = d.IsInteractive, Color = d.Color
+                    Name = d.Name,
+                    DiceType = d.DiceType,
+                    Quantity = d.Quantity,
+                    CustomFaces = d.CustomFaces,
+                    IsInteractive = d.IsInteractive,
+                    Color = d.Color
                 }).ToList(), JsonOptions)
                 : null,
             CardToolsJson = toolkit.CardTools.Count > 0
                 ? JsonSerializer.Serialize(toolkit.CardTools.Select(c => new CardToolJsonModel
                 {
-                    Name = c.Name, DeckType = c.DeckType, CardCount = c.CardCount, Shuffleable = c.Shuffleable,
-                    DefaultZone = c.DefaultZone, DefaultOrientation = c.DefaultOrientation,
+                    Name = c.Name,
+                    DeckType = c.DeckType,
+                    CardCount = c.CardCount,
+                    Shuffleable = c.Shuffleable,
+                    DefaultZone = c.DefaultZone,
+                    DefaultOrientation = c.DefaultOrientation,
                     CardEntries = c.CardEntries.Select(e => new CardEntryJsonModel
                     {
-                        Name = e.Name, Suit = e.Suit, Rank = e.Rank, CustomData = e.CustomData
+                        Name = e.Name,
+                        Suit = e.Suit,
+                        Rank = e.Rank,
+                        CustomData = e.CustomData
                     }).ToList(),
-                    AllowDraw = c.AllowDraw, AllowDiscard = c.AllowDiscard,
-                    AllowPeek = c.AllowPeek, AllowReturnToDeck = c.AllowReturnToDeck
+                    AllowDraw = c.AllowDraw,
+                    AllowDiscard = c.AllowDiscard,
+                    AllowPeek = c.AllowPeek,
+                    AllowReturnToDeck = c.AllowReturnToDeck
                 }).ToList(), JsonOptions)
                 : null,
             TimerToolsJson = toolkit.TimerTools.Count > 0
                 ? JsonSerializer.Serialize(toolkit.TimerTools.Select(t => new TimerToolJsonModel
                 {
-                    Name = t.Name, DurationSeconds = t.DurationSeconds, TimerType = t.TimerType,
-                    AutoStart = t.AutoStart, Color = t.Color, IsPerPlayer = t.IsPerPlayer,
+                    Name = t.Name,
+                    DurationSeconds = t.DurationSeconds,
+                    TimerType = t.TimerType,
+                    AutoStart = t.AutoStart,
+                    Color = t.Color,
+                    IsPerPlayer = t.IsPerPlayer,
                     WarningThresholdSeconds = t.WarningThresholdSeconds
                 }).ToList(), JsonOptions)
                 : null,
             CounterToolsJson = toolkit.CounterTools.Count > 0
                 ? JsonSerializer.Serialize(toolkit.CounterTools.Select(c => new CounterToolJsonModel
                 {
-                    Name = c.Name, MinValue = c.MinValue, MaxValue = c.MaxValue,
-                    DefaultValue = c.DefaultValue, IsPerPlayer = c.IsPerPlayer, Icon = c.Icon, Color = c.Color
+                    Name = c.Name,
+                    MinValue = c.MinValue,
+                    MaxValue = c.MaxValue,
+                    DefaultValue = c.DefaultValue,
+                    IsPerPlayer = c.IsPerPlayer,
+                    Icon = c.Icon,
+                    Color = c.Color
                 }).ToList(), JsonOptions)
                 : null,
             ScoringTemplateJson = toolkit.ScoringTemplate != null

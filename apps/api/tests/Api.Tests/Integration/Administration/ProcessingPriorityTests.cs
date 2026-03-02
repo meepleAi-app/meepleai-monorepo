@@ -193,15 +193,21 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext!.Games.Add(new GameEntity { Id = gameId, Name = "Pandemic" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = targetPdfId, GameId = gameId,
-            FileName = "pandemic.pdf", FilePath = "/uploads/pandemic.pdf",
-            UploadedByUserId = UserId, ProcessingPriority = "Normal",
+            Id = targetPdfId,
+            GameId = gameId,
+            FileName = "pandemic.pdf",
+            FilePath = "/uploads/pandemic.pdf",
+            UploadedByUserId = UserId,
+            ProcessingPriority = "Normal",
         });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = otherPdfId, GameId = gameId,
-            FileName = "pandemic-expansion.pdf", FilePath = "/uploads/pandemic-expansion.pdf",
-            UploadedByUserId = UserId, ProcessingPriority = "Normal",
+            Id = otherPdfId,
+            GameId = gameId,
+            FileName = "pandemic-expansion.pdf",
+            FilePath = "/uploads/pandemic-expansion.pdf",
+            UploadedByUserId = UserId,
+            ProcessingPriority = "Normal",
         });
         await _dbContext.SaveChangesAsync();
 
@@ -280,9 +286,12 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.Games.Add(new GameEntity { Id = gameBId, Name = "Game B" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId, GameId = gameBId,
-            FileName = "game-b.pdf", FilePath = "/uploads/game-b.pdf",
-            UploadedByUserId = UserId, ProcessingPriority = "Normal",
+            Id = pdfId,
+            GameId = gameBId,
+            FileName = "game-b.pdf",
+            FilePath = "/uploads/game-b.pdf",
+            UploadedByUserId = UserId,
+            ProcessingPriority = "Normal",
         });
         await _dbContext.SaveChangesAsync();
 

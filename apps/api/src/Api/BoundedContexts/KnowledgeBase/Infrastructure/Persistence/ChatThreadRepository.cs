@@ -319,6 +319,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             userId: entity.UserId,
             gameId: entity.GameId,
             title: entity.Title,
+            agentId: entity.AgentId, // Issue #2030
             agentType: entity.AgentType // Issue #4362
         );
 
@@ -374,6 +375,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             Id = domainEntity.Id,
             UserId = domainEntity.UserId,
             GameId = domainEntity.GameId,
+            AgentId = domainEntity.AgentId, // Issue #2030
             AgentType = domainEntity.AgentType, // Issue #4362
             Title = domainEntity.Title,
             Status = domainEntity.Status.Value,

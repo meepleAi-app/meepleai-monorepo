@@ -14,9 +14,9 @@ internal sealed class LiveSessionTeam : Entity<Guid>
 
     private readonly List<Guid> _playerIds = new();
 
-    #pragma warning disable CS8618
+#pragma warning disable CS8618
     private LiveSessionTeam() : base()
-    #pragma warning restore CS8618
+#pragma warning restore CS8618
     {
     }
 

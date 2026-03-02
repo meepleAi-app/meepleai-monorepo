@@ -313,6 +313,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         var pdfId = pdfDoc.Id.ToString();
 
+        // Issue #5254: Delete old vectors before re-indexing to prevent duplicates
+        var deleted = await _qdrantService.DeleteDocumentAsync(pdfId, cancellationToken).ConfigureAwait(false);
+        if (deleted)
+        {
+            _logger.LogInformation("Deleted old vectors for PDF {PdfId} before re-indexing", pdfId);
+        }
+
         var documentChunks = chunks
             .Select((chunk, index) => new DocumentChunk
             {

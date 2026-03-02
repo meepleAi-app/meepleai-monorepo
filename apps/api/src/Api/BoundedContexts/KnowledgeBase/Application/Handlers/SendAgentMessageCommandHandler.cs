@@ -338,10 +338,15 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             yield break;
         }
 
-        // Step 3: Filter results by minimum score and build context
+        // Step 3: Filter results by minimum score, deduplicate, and build context
+        // Issue #5254: Duplicate Qdrant points cause identical chunks in results.
+        // Deduplicate by (PdfId normalized, ChunkIndex), keeping highest score.
         var minScore = 0.6; // Configurable threshold
         var relevantChunks = searchResult.Results
             .Where(r => r.Score >= minScore)
+            .OrderByDescending(r => r.Score)
+            .GroupBy(r => (PdfId: r.PdfId.Replace("-", "", StringComparison.Ordinal), r.ChunkIndex))
+            .Select(g => g.First())
             .ToList();
         retrievalStopwatch.Stop();
 

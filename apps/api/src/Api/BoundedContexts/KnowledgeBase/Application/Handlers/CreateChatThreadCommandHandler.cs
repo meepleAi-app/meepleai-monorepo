@@ -53,13 +53,29 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
             }
         }
 
+        // Auto-resolve agent when not provided but game is known (defense-in-depth)
+        Guid? resolvedAgentId = command.AgentId;
+        if (!resolvedAgentId.HasValue && resolvedGameId.HasValue)
+        {
+            var gameAgents = await _agentRepository.GetByGameIdAsync(
+                resolvedGameId.Value, cancellationToken).ConfigureAwait(false);
+            var activeAgent = gameAgents.FirstOrDefault(a => a.IsActive);
+            if (activeAgent != null)
+            {
+                resolvedAgentId = activeAgent.Id;
+                _logger.LogInformation(
+                    "Auto-resolved agent {AgentId} ({AgentName}) for game {GameId}",
+                    activeAgent.Id, activeAgent.Name, resolvedGameId.Value);
+            }
+        }
+
         // Create ChatThread aggregate
         var thread = new ChatThread(
             id: Guid.NewGuid(),
             userId: command.UserId,
             gameId: resolvedGameId,
             title: command.Title,
-            agentId: command.AgentId,
+            agentId: resolvedAgentId,
             agentType: command.AgentType // Issue #4362
         );
 

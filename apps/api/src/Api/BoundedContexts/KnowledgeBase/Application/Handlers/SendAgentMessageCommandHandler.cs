@@ -143,12 +143,44 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 CreatedBy = command.UserId
             };
 
-            _dbContext.Set<AgentConfigurationEntity>().Add(agentConfig);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            var configInsertFailed = false;
+            try
+            {
+                _dbContext.Set<AgentConfigurationEntity>().Add(agentConfig);
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            _logger.LogInformation(
-                "Auto-created default config for agent {AgentId} with {DocCount} documents",
-                command.AgentId, autoDocIds.Count);
+                _logger.LogInformation(
+                    "Auto-created default config for agent {AgentId} with {DocCount} documents",
+                    command.AgentId, autoDocIds.Count);
+            }
+            catch (DbUpdateException ex)
+            {
+                // Race condition: another request already created the config.
+                _logger.LogWarning(ex,
+                    "Concurrent config creation for agent {AgentId} — will re-read",
+                    command.AgentId);
+                _dbContext.Entry(agentConfig).State = EntityState.Detached;
+                configInsertFailed = true;
+            }
+
+            if (configInsertFailed)
+            {
+                agentConfig = await _dbContext.AgentConfigurations
+                    .FirstOrDefaultAsync(
+                        c => c.AgentId == command.AgentId && c.IsCurrent,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (agentConfig == null)
+                {
+                    yield return CreateEvent(
+                        StreamingEventType.Error,
+                        new StreamingError(
+                            "Agent non configurato. Configura l'agente prima di chattare.",
+                            "AGENT_NOT_CONFIGURED"));
+                    yield break;
+                }
+            }
         }
 
         // Parse and validate selected documents

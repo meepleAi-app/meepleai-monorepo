@@ -36,8 +36,8 @@ export default function ActivityFeedPage() {
       try {
         const data = await adminDashboardClient.getUserActivityLog();
         // Transform API data to ActivityEvent format
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedEvents: ActivityEvent[] =
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data.activities?.map((a: any) => ({
             id: a.id,
             eventType: a.actionType,

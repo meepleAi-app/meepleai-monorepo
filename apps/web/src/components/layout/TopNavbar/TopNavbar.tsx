@@ -18,6 +18,7 @@ import { ChevronDown, LogOut, Menu, Settings, User, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { logoutAction } from '@/actions/auth';
 import { NotificationBell } from '@/components/notifications';
 import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -230,14 +231,17 @@ function UserMenu({ userName, userRole }: UserMenuProps) {
 
           <div className="my-1 border-t border-border" />
 
-          <Link
-            href="/api/auth/logout"
+          <button
             role="menuitem"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
+            onClick={() => {
+              setOpen(false);
+              void logoutAction();
+            }}
+            className="flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
           >
             <LogOut className="h-4 w-4" />
             Esci
-          </Link>
+          </button>
         </div>
       )}
     </div>

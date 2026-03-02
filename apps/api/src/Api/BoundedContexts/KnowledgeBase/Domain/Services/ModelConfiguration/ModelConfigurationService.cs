@@ -34,6 +34,7 @@ internal sealed class ModelConfigurationService : IModelConfigurationService
         return _models.Values
             .Where(m => m.Tier <= tier)
             .OrderBy(m => m.Tier)
+            .ThenBy(m => string.Equals(m.Provider, "ollama", StringComparison.Ordinal) ? 1 : 0) // Cloud models before local Ollama
             .ThenBy(m => m.Name, StringComparer.Ordinal)
             .ToList();
     }

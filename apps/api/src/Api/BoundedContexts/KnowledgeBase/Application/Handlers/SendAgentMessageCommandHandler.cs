@@ -292,7 +292,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 gameIdForSearch = vectorDocs[0].GameId;
             }
 
-            pdfDocumentIds = vectorDocs.Select(vd => vd.PdfDocumentId.ToString()).ToList();
+            // Qdrant stores pdf_id without hyphens (from BlobStorageService.FileId format "N")
+            pdfDocumentIds = vectorDocs.Select(vd => vd.PdfDocumentId.ToString("N")).ToList();
         }
 
         var gameId = gameIdForSearch?.ToString() ?? "default";

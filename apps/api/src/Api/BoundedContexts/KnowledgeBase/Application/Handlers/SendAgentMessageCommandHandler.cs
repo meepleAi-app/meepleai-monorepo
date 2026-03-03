@@ -40,6 +40,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly IUserBudgetService _userBudgetService;
     private readonly ILlmModelOverrideService _modelOverrideService;
     private readonly IModelConfigurationService _modelConfigService;
+    private readonly ChatContextDomainService _chatContextService;
+    private readonly IConversationQueryRewriter _queryRewriter;
+    private readonly IConversationSummarizer _conversationSummarizer;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     public SendAgentMessageCommandHandler(
@@ -53,6 +56,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         IUserBudgetService userBudgetService,
         ILlmModelOverrideService modelOverrideService,
         IModelConfigurationService modelConfigService,
+        ChatContextDomainService chatContextService,
+        IConversationQueryRewriter queryRewriter,
+        IConversationSummarizer conversationSummarizer,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -65,6 +71,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _userBudgetService = userBudgetService ?? throw new ArgumentNullException(nameof(userBudgetService));
         _modelOverrideService = modelOverrideService ?? throw new ArgumentNullException(nameof(modelOverrideService));
         _modelConfigService = modelConfigService ?? throw new ArgumentNullException(nameof(modelConfigService));
+        _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
+        _queryRewriter = queryRewriter ?? throw new ArgumentNullException(nameof(queryRewriter));
+        _conversationSummarizer = conversationSummarizer ?? throw new ArgumentNullException(nameof(conversationSummarizer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -252,6 +261,20 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        // Issue #5256: Build conversation history BEFORE adding current message
+        // to avoid duplicating the current question in the history context.
+        var chatHistoryContext = string.Empty;
+        if (_chatContextService.ShouldIncludeChatHistory(thread))
+        {
+            chatHistoryContext = _chatContextService.BuildChatHistoryContext(thread);
+            if (!string.IsNullOrEmpty(chatHistoryContext))
+            {
+                _logger.LogInformation(
+                    "Including {MessageCount} previous messages in conversation context for thread {ThreadId}",
+                    thread.MessageCount, thread.Id);
+            }
+        }
+
         // Persist user message
         thread.AddUserMessage(command.UserQuestion);
         await _chatThreadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
@@ -267,9 +290,17 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Searching knowledge base...", thread.Id));
 
-        // Step 1: Generate embedding for user question
+        // Issue #5258: Rewrite ambiguous follow-up queries for better RAG retrieval
+        var searchQuery = command.UserQuestion;
+        if (!string.IsNullOrEmpty(chatHistoryContext))
+        {
+            searchQuery = await _queryRewriter.RewriteQueryAsync(
+                command.UserQuestion, chatHistoryContext, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Step 1: Generate embedding for search query (rewritten if applicable)
         var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
-            command.UserQuestion,
+            searchQuery,
             cancellationToken).ConfigureAwait(false);
 
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
@@ -398,21 +429,19 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate("Generating response...", thread.Id));
 
-        // Prepare prompts for LLM
-        var systemPrompt = $"You are {agent.Name}, a specialized board game AI assistant. " +
-                          "Answer questions based ONLY on the provided context from the game rules and documentation. " +
-                          "If the context doesn't contain the answer, say so clearly. " +
-                          "Always cite the page number when referencing specific rules.";
+        // Issue #5260: Structured multi-turn prompt template
+        var hasHistory = !string.IsNullOrEmpty(chatHistoryContext);
+        var systemPrompt = _chatContextService.BuildSystemPrompt(agent.Name, hasHistory);
+        var userPrompt = _chatContextService.BuildStructuredUserPrompt(
+            command.UserQuestion,
+            ragContext,
+            hasHistory ? chatHistoryContext : null);
 
         // Debug: emit prompt context event (Issue #4916)
         // Server-side role check: systemPrompt only visible to Admin/Editor roles
         var role = command.UserRole?.ToLowerInvariant();
         var isAdminCaller = role is "admin" or "superadmin" or "editor";
-        var estimatedPromptTokens = (systemPrompt.Length + (ragContext.Length > 0 ? ragContext.Length : command.UserQuestion.Length)) / 4;
-
-        var userPrompt = string.IsNullOrEmpty(ragContext)
-            ? $"Question: {command.UserQuestion}\n\nNote: No relevant context found in knowledge base."
-            : $"Context from game documents:\n{ragContext}\n\nQuestion: {command.UserQuestion}\n\nProvide a clear answer based on the context above.";
+        var estimatedPromptTokens = (systemPrompt.Length + userPrompt.Length) / 4;
 
         yield return CreateEvent(
             StreamingEventType.DebugPromptContext,
@@ -574,6 +603,35 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             _logger.LogInformation(
                 "Persisted chat to thread {ThreadId}: user msg + assistant msg ({TokenCount} tokens)",
                 thread.Id, tokenCount);
+
+            // Issue #5259: Progressive summarization — after persisting, check if we need
+            // to summarize older messages that have slid out of the verbatim window.
+            // This runs inline but is fast (small LLM call) and only triggers occasionally.
+            var messagesToSummarize = _chatContextService.GetMessagesToSummarize(thread);
+            if (messagesToSummarize.Count > 0)
+            {
+                try
+                {
+                    var updatedSummary = await _conversationSummarizer.SummarizeAsync(
+                        messagesToSummarize, thread.ConversationSummary, cancellationToken).ConfigureAwait(false);
+
+                    if (!string.IsNullOrWhiteSpace(updatedSummary))
+                    {
+                        thread.UpdateConversationSummary(updatedSummary);
+                        await _chatThreadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                        _logger.LogInformation(
+                            "Updated conversation summary for thread {ThreadId} ({SummaryLength} chars)",
+                            thread.Id, updatedSummary.Length);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Never fail the response because of summarization
+                    _logger.LogWarning(ex, "Failed to update conversation summary for thread {ThreadId}", thread.Id);
+                }
+            }
         }
 
         // Complete event (include ThreadId for frontend)

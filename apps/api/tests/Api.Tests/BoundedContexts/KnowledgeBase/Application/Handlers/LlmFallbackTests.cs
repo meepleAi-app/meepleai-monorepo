@@ -526,6 +526,11 @@ public sealed class LlmFallbackTests : IDisposable
 
     private SendAgentMessageCommandHandler CreateHandler()
     {
+        var mockQueryRewriter = new Mock<IConversationQueryRewriter>();
+        mockQueryRewriter
+            .Setup(r => r.RewriteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, string, CancellationToken>((query, _, _) => Task.FromResult(query));
+
         return new SendAgentMessageCommandHandler(
             _mockAgentRepo.Object,
             _mockThreadRepo.Object,
@@ -537,6 +542,9 @@ public sealed class LlmFallbackTests : IDisposable
             _budgetMock.Object,
             Mock.Of<ILlmModelOverrideService>(),
             _mockModelConfigService.Object,
+            new ChatContextDomainService(),
+            mockQueryRewriter.Object,
+            Mock.Of<IConversationSummarizer>(),
             _mockLogger.Object);
     }
 

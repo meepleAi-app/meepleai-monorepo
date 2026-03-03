@@ -19,6 +19,10 @@ public class ChatThreadEntity
     // Messages stored as JSON array
     public string MessagesJson { get; set; } = "[]";
 
+    // Issue #5259: Progressive conversation summary for sliding window strategy
+    public string? ConversationSummary { get; set; }
+    public int LastSummarizedMessageCount { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
     public GameEntity? Game { get; set; }

@@ -546,17 +546,18 @@ export function NewChatView() {
   }, []);
 
   // Resolve actual agent ID — system agent types (auto/qa/rules/strategy) are UI-only
-  // labels that don't map to backend agent types, so pick the best real agent
+  // labels that don't map to backend agent types (RAG, Citation, etc.), so pick the
+  // best real agent. Custom agents are game-specific and always take priority.
   const resolveAgentId = useCallback(
     (): string | undefined => {
-      // If user explicitly selected a system agent type, prefer system agents
-      if (selectedAgentType !== null) {
-        return agents[0]?.id ?? customAgents[0]?.id;
+      // Custom agents for the selected game take priority (most relevant)
+      if (customAgents.length > 0) {
+        return customAgents[0].id;
       }
-      // Otherwise prefer custom agents (more game-specific), fall back to system
-      return customAgents[0]?.id ?? agents[0]?.id;
+      // Fall back to first available system agent
+      return agents[0]?.id;
     },
-    [selectedAgentType, customAgents, agents]
+    [customAgents, agents]
   );
 
   // Get selected game name for quick-start (search both lists)

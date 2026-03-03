@@ -55,13 +55,11 @@ internal class HybridLlmService : ILlmService
 {
     private readonly List<ILlmClient> _clients;
     private readonly ILlmRoutingStrategy _routingStrategy;
-    private readonly ILlmCostLogRepository _costLogRepository;
     private readonly IUserBudgetService? _userBudgetService;
     private readonly ILogger<HybridLlmService> _logger;
     private readonly IProviderHealthCheckService? _healthCheckService;
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly IAiModelConfigurationRepository _modelConfigRepository;
-    private readonly IPublisher _publisher;
     private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
     private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
@@ -88,11 +86,9 @@ internal class HybridLlmService : ILlmService
     public HybridLlmService(
         IEnumerable<ILlmClient> clients,
         ILlmRoutingStrategy routingStrategy,
-        ILlmCostLogRepository costLogRepository,
         ILogger<HybridLlmService> logger,
         IOptions<AiProviderSettings> aiSettings,
         IAiModelConfigurationRepository modelConfigRepository,
-        IPublisher publisher,
         IProviderHealthCheckService? healthCheckService = null,
         IUserBudgetService? userBudgetService = null,
         IOpenRouterFileLogger? openRouterFileLogger = null,
@@ -103,11 +99,9 @@ internal class HybridLlmService : ILlmService
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
-        _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _modelConfigRepository = modelConfigRepository ?? throw new ArgumentNullException(nameof(modelConfigRepository));
-        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
         _userBudgetService = userBudgetService; // Optional - for credit tracking
         _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
@@ -607,6 +601,12 @@ internal class HybridLlmService : ILlmService
         }
     }
 
+    /// <summary>
+    /// Log LLM cost and update usage stats.
+    /// Uses a dedicated DI scope for DB operations because this method may be called
+    /// fire-and-forget (e.g. from GenerateCompletionWithModelAsync line 1163), which
+    /// would otherwise cause DbContext concurrency with the caller's SaveChangesAsync.
+    /// </summary>
     private async Task LogCostAsync(
         LlmCompletionResult result,
         User? user,
@@ -616,46 +616,57 @@ internal class HybridLlmService : ILlmService
     {
         try
         {
-            await _costLogRepository.LogCostAsync(
-                user?.Id,
-                user?.Role.Value ?? "Anonymous",
-                new LlmCostCalculation
-                {
-                    ModelId = result.Cost.ModelId,
-                    Provider = result.Cost.Provider,
-                    PromptTokens = result.Usage.PromptTokens,
-                    CompletionTokens = result.Usage.CompletionTokens,
-                    InputCost = result.Cost.InputCost,
-                    OutputCost = result.Cost.OutputCost
-                },
-                endpoint: "completion",
-                success: true,
-                errorMessage: null,
-                latencyMs: (int)latencyMs,
-                ipAddress: null,
-                userAgent: null,
-                source: source,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            // Use a dedicated scope for DB-dependent cost logging to prevent
+            // "A second operation was started on this context instance" when called fire-and-forget
+            if (_scopeFactory != null)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
+                await costLogRepo.LogCostAsync(
+                    user?.Id,
+                    user?.Role.Value ?? "Anonymous",
+                    new LlmCostCalculation
+                    {
+                        ModelId = result.Cost.ModelId,
+                        Provider = result.Cost.Provider,
+                        PromptTokens = result.Usage.PromptTokens,
+                        CompletionTokens = result.Usage.CompletionTokens,
+                        InputCost = result.Cost.InputCost,
+                        OutputCost = result.Cost.OutputCost
+                    },
+                    endpoint: "completion",
+                    success: true,
+                    errorMessage: null,
+                    latencyMs: (int)latencyMs,
+                    ipAddress: null,
+                    userAgent: null,
+                    source: source,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
 
-            // Issue #2520: Update model usage statistics
+            // Issue #2520: Update model usage statistics (uses its own scope internally)
             await UpdateModelUsageStatsAsync(result, cancellationToken).ConfigureAwait(false);
 
             // Budget Display System: Record credit usage (if service available and user authenticated)
-            if (_userBudgetService != null && user?.Id != null)
+            if (_userBudgetService != null && user?.Id != null && _scopeFactory != null)
             {
+                using var budgetScope = _scopeFactory.CreateScope();
+                var budgetService = budgetScope.ServiceProvider.GetRequiredService<IUserBudgetService>();
                 var requestCost = result.Cost.TotalCost;
                 var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
 
-                await _userBudgetService
+                await budgetService
                     .RecordUsageAsync(user.Id, requestCost, requestTokens, cancellationToken)
                     .ConfigureAwait(false);
             }
 
             // Issue #3721: Publish event for automatic financial ledger tracking
             var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
-            if (totalCost > 0 && user?.Id != null)
+            if (totalCost > 0 && user?.Id != null && _scopeFactory != null)
             {
-                await _publisher.Publish(
+                using var publishScope = _scopeFactory.CreateScope();
+                var publisher = publishScope.ServiceProvider.GetRequiredService<IPublisher>();
+                await publisher.Publish(
                     new TokenUsageLedgerEvent(
                         UserId: user.Id,
                         ModelId: result.Cost.ModelId,
@@ -666,7 +677,7 @@ internal class HybridLlmService : ILlmService
                     cancellationToken).ConfigureAwait(false);
             }
 
-            // Issue #5073: Write to rotating OpenRouter file log
+            // Issue #5073: Write to rotating OpenRouter file log (no DB, safe without scope)
             _openRouterFileLogger?.LogRequest(
                 requestId: Guid.NewGuid().ToString(),
                 model: result.Cost.ModelId,
@@ -681,7 +692,7 @@ internal class HybridLlmService : ILlmService
                 isFreeModel: result.Cost.TotalCost == 0,
                 sessionId: null);
 
-            // Issue #5074: Accumulate daily spend in Redis (fire-and-forget)
+            // Issue #5074: Accumulate daily spend in Redis (fire-and-forget, no DB)
             if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
                 _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost);
         }
@@ -692,13 +703,26 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <summary>
-    /// Issue #2520: Update AiModelConfiguration usage statistics after successful request
+    /// Issue #2520: Update AiModelConfiguration usage statistics after successful request.
+    /// Uses a dedicated DI scope to avoid DbContext concurrency with the calling handler's scope.
+    /// Without this, long-running SSE requests (e.g. Ollama fallback) cause
+    /// "A second operation was started on this context instance" when the handler's
+    /// SaveChangesAsync runs concurrently with this repository call.
     /// </summary>
     private async Task UpdateModelUsageStatsAsync(LlmCompletionResult result, CancellationToken cancellationToken)
     {
+        if (_scopeFactory is null)
+        {
+            _logger.LogDebug("IServiceScopeFactory not available, skipping usage stats update");
+            return;
+        }
+
         try
         {
-            var modelConfig = await _modelConfigRepository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
+            using var scope = _scopeFactory.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IAiModelConfigurationRepository>();
+
+            var modelConfig = await repository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
             if (modelConfig != null)
             {
                 var inputTokens = result.Usage.PromptTokens;
@@ -706,7 +730,7 @@ internal class HybridLlmService : ILlmService
                 var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
 
                 modelConfig.TrackUsage(inputTokens, outputTokens, totalCost); // Issue #2580: Use TrackUsage API
-                await _modelConfigRepository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
+                await repository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
 
                 _logger.LogDebug(
                     "Updated usage stats for model {ModelId}: +{Tokens} tokens, +${Cost:F6}",
@@ -723,6 +747,9 @@ internal class HybridLlmService : ILlmService
         }
     }
 
+    /// <summary>
+    /// Log LLM failure cost. Uses a dedicated DI scope for the same concurrency reasons as LogCostAsync.
+    /// </summary>
     private async Task LogCostFailureAsync(
         string? errorMessage,
         User? user,
@@ -732,20 +759,25 @@ internal class HybridLlmService : ILlmService
     {
         try
         {
-            await _costLogRepository.LogCostAsync(
-                user?.Id,
-                user?.Role.Value ?? "Anonymous",
-                LlmCostCalculation.Empty,
-                endpoint: "completion",
-                success: false,
-                errorMessage: errorMessage,
-                latencyMs: (int)latencyMs,
-                ipAddress: null,
-                userAgent: null,
-                source: source,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (_scopeFactory != null)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
+                await costLogRepo.LogCostAsync(
+                    user?.Id,
+                    user?.Role.Value ?? "Anonymous",
+                    LlmCostCalculation.Empty,
+                    endpoint: "completion",
+                    success: false,
+                    errorMessage: errorMessage,
+                    latencyMs: (int)latencyMs,
+                    ipAddress: null,
+                    userAgent: null,
+                    source: source,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
 
-            // Issue #5073: Write failure to rotating OpenRouter file log
+            // Issue #5073: Write failure to rotating OpenRouter file log (no DB, safe without scope)
             _openRouterFileLogger?.LogRequest(
                 requestId: Guid.NewGuid().ToString(),
                 model: string.Empty,

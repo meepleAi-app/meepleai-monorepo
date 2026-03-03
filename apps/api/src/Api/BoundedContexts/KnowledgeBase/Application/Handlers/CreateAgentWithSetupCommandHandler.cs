@@ -129,7 +129,7 @@ internal sealed class CreateAgentWithSetupCommandHandler
                 Id = Guid.NewGuid(),
                 AgentId = agent.Id,
                 LlmProvider = AgentDefaults.DefaultLlmProvider,
-                LlmModel = AgentDefaults.DefaultFreeModel,
+                LlmModel = AgentDefaults.DefaultModel,
                 AgentMode = 0, // Chat
                 SelectedDocumentIdsJson = documentIdsJson,
                 Temperature = AgentDefaults.DefaultTemperature,

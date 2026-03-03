@@ -11,15 +11,13 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, CheckSquare, Plus, Share2 } from 'lucide-react';
+import { BookOpen, CheckSquare, Share2 } from 'lucide-react';
 import Link from 'next/link';
 
 import {
-  QuotaStatusBar,
-  QuotaStickyHeader,
   LibraryFilters,
   EditNotesModal,
   RemoveGameDialog,
@@ -31,6 +29,8 @@ import {
   ViewModeToggle,
   type ViewMode,
 } from '@/components/library';
+import { LibraryQuickStats } from '@/components/library/LibraryQuickStats';
+import { LibraryQuotaBadge } from '@/components/library/LibraryQuotaBadge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -109,6 +109,15 @@ export default function CollectionPageClient() {
   // Share library modal state (Issue #2614)
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
+  // Filter panel toggle — driven by ActionBar CustomEvent
+  const [showFilters, setShowFilters] = useState(true);
+
+  useEffect(() => {
+    const handler = () => setShowFilters(prev => !prev);
+    document.addEventListener('library:toggle-filter', handler);
+    return () => document.removeEventListener('library:toggle-filter', handler);
+  }, []);
+
   // Bulk selection state (Issue #2613)
   const {
     selectionMode,
@@ -124,17 +133,9 @@ export default function CollectionPageClient() {
   } = useBulkSelectionStore();
 
   // Fetch user's library and quota
-  const {
-    data: libraryData,
-    isLoading: libraryLoading,
-    error: libraryError,
-  } = useLibrary(filters);
+  const { data: libraryData, isLoading: libraryLoading, error: libraryError } = useLibrary(filters);
 
-  const {
-    data: quota,
-    isLoading: quotaLoading,
-    error: quotaError,
-  } = useLibraryQuota();
+  const { data: quota, isLoading: quotaLoading, error: quotaError } = useLibraryQuota();
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
@@ -160,10 +161,7 @@ export default function CollectionPageClient() {
     }));
   };
 
-  const handleSortChange = (
-    sortBy: 'addedAt' | 'title' | 'favorite',
-    descending: boolean
-  ) => {
+  const handleSortChange = (sortBy: 'addedAt' | 'title' | 'favorite', descending: boolean) => {
     setFilters(prev => ({
       ...prev,
       sortBy,
@@ -266,7 +264,7 @@ export default function CollectionPageClient() {
   // Loading state with staggered skeleton animations (Issue #2618)
   if (libraryLoading || quotaLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 space-y-6">
+      <div className="container mx-auto px-4 py-4 space-y-4">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -303,7 +301,7 @@ export default function CollectionPageClient() {
       libraryError instanceof Error ? libraryError.message : String(libraryError || quotaError);
 
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4">
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
@@ -313,26 +311,23 @@ export default function CollectionPageClient() {
 
   return (
     <>
-      {/* Quota Sticky Header (Issue #2869) */}
-      {quota && (
-        <QuotaStickyHeader
-          currentCount={quota.currentCount}
-          maxAllowed={quota.maxAllowed}
-          percentageUsed={quota.percentageUsed}
-          userTier={quota.userTier}
-        />
-      )}
+      <div className="container mx-auto px-4 py-4 space-y-4">
+        {/* Quick stats row */}
+        <LibraryQuickStats />
 
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl font-bold font-quicksand">La Mia Collezione</h1>
+        {/* Toolbar: quota badge + view controls */}
+        <div className="flex items-center justify-between gap-3">
+          {quota && (
+            <LibraryQuotaBadge
+              currentCount={quota.currentCount}
+              maxAllowed={quota.maxAllowed}
+              percentageUsed={quota.percentageUsed}
+            />
+          )}
           <div className="flex items-center gap-2">
+            {hasGames && <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />}
             {hasGames && (
-              <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />
-            )}
-            {hasGames && (
-              <Button variant="outline" onClick={() => setShareModalOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => setShareModalOpen(true)}>
                 <Share2 className="mr-2 h-4 w-4" />
                 Condividi
               </Button>
@@ -340,34 +335,18 @@ export default function CollectionPageClient() {
             {hasGames && (
               <Button
                 variant={selectionMode ? 'secondary' : 'outline'}
+                size="sm"
                 onClick={toggleSelectionMode}
               >
                 <CheckSquare className="mr-2 h-4 w-4" />
-                {selectionMode ? 'Annulla Selezione' : 'Seleziona'}
+                {selectionMode ? 'Annulla' : 'Seleziona'}
               </Button>
             )}
-            <Button asChild>
-              <Link href="/games/catalog">
-                <Plus className="mr-2 h-4 w-4" />
-                Aggiungi al Catalogo
-              </Link>
-            </Button>
           </div>
         </div>
 
-        {/* Quota Status Bar */}
-        {quota && (
-          <QuotaStatusBar
-            currentCount={quota.currentCount}
-            maxAllowed={quota.maxAllowed}
-            userTier={quota.userTier}
-            remainingSlots={quota.remainingSlots}
-            percentageUsed={quota.percentageUsed}
-          />
-        )}
-
         {/* Filters (Issue #2866) */}
-        {hasGames && (
+        {hasGames && showFilters && (
           <LibraryFilters
             searchQuery={searchQuery}
             onSearchChange={handleSearchChange}
@@ -491,10 +470,7 @@ export default function CollectionPageClient() {
         />
 
         {/* Share Library Modal (Issue #2614) */}
-        <ShareLibraryModal
-          isOpen={shareModalOpen}
-          onClose={() => setShareModalOpen(false)}
-        />
+        <ShareLibraryModal isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
       </div>
     </>
   );

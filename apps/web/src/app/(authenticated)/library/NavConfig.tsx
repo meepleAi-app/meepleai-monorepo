@@ -1,64 +1,108 @@
 'use client';
 
 /**
- * LibraryNavConfig — Registers MiniNav tabs + ActionBar actions for /library
- * Issue #5042 — Library + Game Detail MiniNav + ActionBar
- * Issue #5167 — Tab rename: Games (personal) / Collection (shared catalog)
+ * LibraryNavConfig — Single source of truth for /library MiniNav + ActionBar
  *
- * Tabs: Games · Collection · Wishlist · History
+ * Tabs: Collection · Games · Wishlist · Proposals (with icons + badge counts)
  * ActionBar: Add Game (primary) · Import BGG · Import PDF · Filter
  *
- * Include in library/page.tsx or library/layout.tsx:
+ * Include in library/page.tsx:
  *   <LibraryNavConfig />
  */
 
 import { useEffect } from 'react';
 
-import { Download, FileText, Filter, Plus } from 'lucide-react';
+import {
+  BookOpen,
+  Download,
+  FileText,
+  Filter,
+  Gamepad2,
+  Plus,
+  SendHorizontal,
+  Star,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { useLibraryQuota } from '@/hooks/queries/useLibrary';
+import { useShareRequests } from '@/hooks/queries/useShareRequests';
 import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 
 export function LibraryNavConfig() {
   const setNavConfig = useSetNavConfig();
   const router = useRouter();
 
+  // Badge data
+  const { data: quota } = useLibraryQuota();
+  const { data: proposals } = useShareRequests({ status: 'Pending', pageSize: 1 });
+
+  const collectionCount = quota?.currentCount;
+  const pendingProposals = proposals?.totalCount || undefined;
+
   useEffect(() => {
     setNavConfig({
       miniNav: [
-        { id: 'collection', label: 'Collection', href: '/library' },
-        { id: 'private',    label: 'Games',      href: '/library?tab=private' },
-        { id: 'wishlist',   label: 'Wishlist',   href: '/library?tab=wishlist' },
+        {
+          id: 'collection',
+          label: 'Collection',
+          href: '/library',
+          icon: BookOpen,
+          badge: collectionCount ?? undefined,
+        },
+        {
+          id: 'private',
+          label: 'Games',
+          href: '/library?tab=private',
+          icon: Gamepad2,
+        },
+        {
+          id: 'wishlist',
+          label: 'Wishlist',
+          href: '/library?tab=wishlist',
+          icon: Star,
+        },
+        {
+          id: 'proposals',
+          label: 'Proposals',
+          href: '/library?tab=proposals',
+          icon: SendHorizontal,
+          badge: pendingProposals,
+        },
       ],
       actionBar: [
         {
           id: 'add-game',
-          label: 'Add Game',
+          label: 'Aggiungi gioco',
           icon: Plus,
           variant: 'primary',
           onClick: () => router.push('/library?action=add'),
         },
         {
           id: 'import-bgg',
-          label: 'Import BGG',
+          label: 'Importa da BGG',
           icon: Download,
+          variant: 'ghost',
           onClick: () => router.push('/library?action=import-bgg'),
         },
         {
           id: 'import-pdf',
-          label: 'Import PDF',
+          label: 'Carica PDF',
           icon: FileText,
+          variant: 'ghost',
           onClick: () => router.push('/library?action=import-pdf'),
         },
         {
           id: 'filter',
-          label: 'Filter',
+          label: 'Filtra',
           icon: Filter,
-          onClick: () => router.push('/library?action=filter'),
+          variant: 'ghost',
+          onClick: () => {
+            document.dispatchEvent(new CustomEvent('library:toggle-filter'));
+          },
         },
       ],
     });
-  }, [setNavConfig, router]);
+  }, [setNavConfig, router, collectionCount, pendingProposals]);
 
   return null;
 }

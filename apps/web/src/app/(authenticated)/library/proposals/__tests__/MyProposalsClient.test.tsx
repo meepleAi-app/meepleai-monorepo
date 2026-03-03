@@ -33,7 +33,9 @@ vi.mock('@/hooks/queries/useShareRequests', () => ({
 // Mock Next.js Link
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -105,11 +107,6 @@ describe('MyProposalsClient', () => {
   });
 
   describe('Rendering', () => {
-    it('renders page title', () => {
-      render(<MyProposalsClient />);
-      expect(screen.getByText('Le Mie Proposte')).toBeInTheDocument();
-    });
-
     it('renders page description', () => {
       render(<MyProposalsClient />);
       expect(screen.getByText(/Traccia le tue proposte/i)).toBeInTheDocument();

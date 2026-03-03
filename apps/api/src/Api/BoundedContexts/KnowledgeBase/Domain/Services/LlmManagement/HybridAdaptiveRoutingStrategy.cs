@@ -246,12 +246,17 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 
     /// <summary>
     /// Map authentication Role to LlmUserTier.
+    /// When user is null (internal pipeline calls like ConversationQueryRewriter),
+    /// default to User tier so internal services aren't blocked by Anonymous tier
+    /// which has zero strategy access.
     /// </summary>
     private static LlmUserTier MapRoleToTier(Role userRole, bool isAnonymous)
     {
         if (isAnonymous)
         {
-            return LlmUserTier.Anonymous;
+            // Internal pipeline calls (e.g., query rewriting) pass user=null.
+            // Use User tier as default so they can access basic strategies.
+            return LlmUserTier.User;
         }
 
         return userRole.Value switch
@@ -322,14 +327,15 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 
     /// <summary>
     /// Get default model for a provider.
+    /// Uses AgentDefaults for centralized, configurable model names.
     /// </summary>
     private static string GetDefaultModelForProvider(string providerName)
     {
         return providerName.ToLowerInvariant() switch
         {
-            "ollama" => "llama3:8b",
-            "openrouter" => "meta-llama/llama-3.3-70b-instruct:free",
-            _ => "llama3:8b"
+            "ollama" => AgentDefaults.OllamaFallbackModel,
+            "openrouter" => AgentDefaults.DefaultModel,
+            _ => AgentDefaults.OllamaFallbackModel
         };
     }
 

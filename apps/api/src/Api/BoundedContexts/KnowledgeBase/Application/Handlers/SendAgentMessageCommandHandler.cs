@@ -149,7 +149,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 Id = Guid.NewGuid(),
                 AgentId = command.AgentId,
                 LlmProvider = AgentDefaults.DefaultLlmProvider,
-                LlmModel = AgentDefaults.DefaultFreeModel,
+                LlmModel = AgentDefaults.DefaultModel,
                 AgentMode = 0,
                 SelectedDocumentIdsJson = JsonSerializer.Serialize(autoDocIds),
                 Temperature = AgentDefaults.DefaultTemperature,

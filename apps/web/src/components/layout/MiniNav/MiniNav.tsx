@@ -151,10 +151,12 @@ export function MiniNav({ className }: MiniNavProps) {
   return (
     <div
       className={cn(
+        'sticky top-14 z-30',
         'relative flex items-stretch',
-        'h-12 md:h-12',
-        'border-b border-border/50',
-        'bg-background/95 backdrop-blur-sm',
+        'h-12',
+        'border-b border-white/20 dark:border-border/40',
+        'bg-white/60 dark:bg-card/60 backdrop-blur-xl',
+        'shadow-sm',
         className
       )}
       data-testid={NAV_TEST_IDS.miniNav}
@@ -184,7 +186,7 @@ export function MiniNav({ className }: MiniNavProps) {
         role="tablist"
         aria-label="Section navigation"
         className={cn(
-          'flex flex-1 items-stretch overflow-x-auto',
+          'flex flex-1 items-center gap-0.5 overflow-x-auto',
           // Hide scrollbar on all browsers
           'scrollbar-none',
           '[&::-webkit-scrollbar]:hidden',

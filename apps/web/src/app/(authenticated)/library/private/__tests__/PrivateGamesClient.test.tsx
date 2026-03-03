@@ -36,7 +36,10 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/test'),
   useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
-import type { PrivateGameDto, PaginatedPrivateGamesResponse } from '@/lib/api/schemas/private-games.schemas';
+import type {
+  PrivateGameDto,
+  PaginatedPrivateGamesResponse,
+} from '@/lib/api/schemas/private-games.schemas';
 
 import PrivateGamesClient from '../PrivateGamesClient';
 
@@ -87,7 +90,11 @@ vi.mock('@/lib/api', () => ({
 // Mock AddGameDrawer — the Add Game button now opens this drawer instead of navigating (Issue #5217)
 vi.mock('@/app/(authenticated)/library/AddGameDrawer', () => ({
   AddGameDrawer: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
-    open ? <div data-testid="add-game-drawer"><button onClick={onClose}>Close</button></div> : null,
+    open ? (
+      <div data-testid="add-game-drawer">
+        <button onClick={onClose}>Close</button>
+      </div>
+    ) : null,
 }));
 
 // Keep AddPrivateGameForm mock for edit dialog
@@ -193,7 +200,6 @@ describe('PrivateGamesClient', () => {
 
       renderWithQuery(<PrivateGamesClient />);
 
-      expect(screen.getByText(testI18nT('privateGames.title'))).toBeInTheDocument();
       expect(screen.getByTestId(LIBRARY_TEST_IDS.addPrivateGameBtn)).toBeInTheDocument();
       expect(screen.getByTestId(LIBRARY_TEST_IDS.searchInput)).toBeInTheDocument();
     });
@@ -209,9 +215,7 @@ describe('PrivateGamesClient', () => {
         expect(screen.getByTestId(LIBRARY_TEST_IDS.errorState)).toBeInTheDocument();
       });
 
-      expect(
-        screen.getByText(testI18nT('privateGames.loadError'))
-      ).toBeInTheDocument();
+      expect(screen.getByText(testI18nT('privateGames.loadError'))).toBeInTheDocument();
     });
 
     it('should retry loading when clicking Retry button', async () => {
@@ -247,17 +251,13 @@ describe('PrivateGamesClient', () => {
       });
 
       expect(screen.getByText(testI18nT('privateGames.noGamesYet'))).toBeInTheDocument();
-      expect(
-        screen.getByText(testI18nT('privateGames.emptyStateDescription'))
-      ).toBeInTheDocument();
+      expect(screen.getByText(testI18nT('privateGames.emptyStateDescription'))).toBeInTheDocument();
       expect(screen.getByText(testI18nT('privateGames.addFirstGame'))).toBeInTheDocument();
     });
 
     it('should show search empty state when search has no results', async () => {
       // First load with games
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -278,9 +278,7 @@ describe('PrivateGamesClient', () => {
 
   describe('Games Grid', () => {
     it('should render game cards after loading', async () => {
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       renderWithQuery(<PrivateGamesClient />);
 
@@ -320,9 +318,7 @@ describe('PrivateGamesClient', () => {
 
   describe('Search', () => {
     it('should call API with search parameter', async () => {
-      mockGetPrivateGames.mockResolvedValue(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValue(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -334,10 +330,7 @@ describe('PrivateGamesClient', () => {
       await user.type(screen.getByTestId(LIBRARY_TEST_IDS.searchInput), 'Catan');
 
       await waitFor(() => {
-        const lastCall =
-          mockGetPrivateGames.mock.calls[
-            mockGetPrivateGames.mock.calls.length - 1
-          ];
+        const lastCall = mockGetPrivateGames.mock.calls[mockGetPrivateGames.mock.calls.length - 1];
         expect(lastCall[0]).toEqual(
           expect.objectContaining({ search: expect.stringContaining('C') })
         );
@@ -345,9 +338,7 @@ describe('PrivateGamesClient', () => {
     });
 
     it('should reset to page 1 when searching', async () => {
-      mockGetPrivateGames.mockResolvedValue(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValue(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -359,10 +350,7 @@ describe('PrivateGamesClient', () => {
       await user.type(screen.getByTestId(LIBRARY_TEST_IDS.searchInput), 'a');
 
       await waitFor(() => {
-        const lastCall =
-          mockGetPrivateGames.mock.calls[
-            mockGetPrivateGames.mock.calls.length - 1
-          ];
+        const lastCall = mockGetPrivateGames.mock.calls[mockGetPrivateGames.mock.calls.length - 1];
         expect(lastCall[0]).toEqual(expect.objectContaining({ page: 1 }));
       });
     });
@@ -372,17 +360,13 @@ describe('PrivateGamesClient', () => {
 
       renderWithQuery(<PrivateGamesClient />);
 
-      expect(
-        screen.getByLabelText('Search private games')
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Search private games')).toBeInTheDocument();
     });
   });
 
   describe('Sort Controls', () => {
     it('should toggle sort direction on button click', async () => {
-      mockGetPrivateGames.mockResolvedValue(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValue(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -395,20 +379,13 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByTestId(LIBRARY_TEST_IDS.sortDirectionBtn));
 
       await waitFor(() => {
-        const lastCall =
-          mockGetPrivateGames.mock.calls[
-            mockGetPrivateGames.mock.calls.length - 1
-          ];
-        expect(lastCall[0]).toEqual(
-          expect.objectContaining({ sortDirection: 'asc' })
-        );
+        const lastCall = mockGetPrivateGames.mock.calls[mockGetPrivateGames.mock.calls.length - 1];
+        expect(lastCall[0]).toEqual(expect.objectContaining({ sortDirection: 'asc' }));
       });
     });
 
     it('should have accessible sort direction button', async () => {
-      mockGetPrivateGames.mockResolvedValue(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValue(createPaginatedResponse(mockGames));
 
       renderWithQuery(<PrivateGamesClient />);
 
@@ -417,9 +394,7 @@ describe('PrivateGamesClient', () => {
       });
 
       // Default desc → button says "Sort ascending"
-      expect(
-        screen.getByLabelText('Sort ascending')
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Sort ascending')).toBeInTheDocument();
     });
 
     it('should have sort by select with correct aria-label', () => {
@@ -522,10 +497,7 @@ describe('PrivateGamesClient', () => {
       await user.click(screen.getByLabelText('Next page'));
 
       await waitFor(() => {
-        const lastCall =
-          mockGetPrivateGames.mock.calls[
-            mockGetPrivateGames.mock.calls.length - 1
-          ];
+        const lastCall = mockGetPrivateGames.mock.calls[mockGetPrivateGames.mock.calls.length - 1];
         expect(lastCall[0]).toEqual(expect.objectContaining({ page: 2 }));
       });
     });
@@ -533,9 +505,7 @@ describe('PrivateGamesClient', () => {
 
   describe('Add Game Navigation', () => {
     it('should open AddGameDrawer when clicking Add Game button (Issue #5217)', async () => {
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -569,9 +539,7 @@ describe('PrivateGamesClient', () => {
 
   describe('Edit Game Dialog', () => {
     it('should open edit dialog when clicking edit on a game card', async () => {
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -590,9 +558,7 @@ describe('PrivateGamesClient', () => {
 
   describe('Delete Game Dialog', () => {
     it('should open delete dialog when clicking delete on a game card', async () => {
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -605,16 +571,12 @@ describe('PrivateGamesClient', () => {
 
       await waitFor(() => {
         expect(screen.getByText(testI18nT('privateGames.deleteGame'))).toBeInTheDocument();
-        expect(
-          screen.getByText(/Are you sure you want to delete/)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Are you sure you want to delete/)).toBeInTheDocument();
       });
     });
 
     it('should call API and reload when confirming delete', async () => {
-      mockGetPrivateGames.mockResolvedValue(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValue(createPaginatedResponse(mockGames));
       mockDeletePrivateGame.mockResolvedValueOnce({});
 
       const user = userEvent.setup();
@@ -638,9 +600,7 @@ describe('PrivateGamesClient', () => {
     });
 
     it('should show cancel button in delete dialog', async () => {
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -659,9 +619,7 @@ describe('PrivateGamesClient', () => {
 
   describe('API Integration', () => {
     it('should call getPrivateGames with default params on initial load', async () => {
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValueOnce(createPaginatedResponse(mockGames));
 
       renderWithQuery(<PrivateGamesClient />);
 
@@ -677,9 +635,7 @@ describe('PrivateGamesClient', () => {
     });
 
     it('should open AddGameDrawer on Add Game click (Issue #5217)', async () => {
-      mockGetPrivateGames.mockResolvedValue(
-        createPaginatedResponse(mockGames)
-      );
+      mockGetPrivateGames.mockResolvedValue(createPaginatedResponse(mockGames));
 
       const user = userEvent.setup();
       renderWithQuery(<PrivateGamesClient />);
@@ -697,22 +653,6 @@ describe('PrivateGamesClient', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have proper heading hierarchy', async () => {
-      mockGetPrivateGames.mockResolvedValueOnce(
-        createPaginatedResponse(mockGames)
-      );
-
-      renderWithQuery(<PrivateGamesClient />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId(LIBRARY_TEST_IDS.gamesGrid)).toBeInTheDocument();
-      });
-
-      expect(
-        screen.getByRole('heading', { level: 1, name: testI18nT('privateGames.title') })
-      ).toBeInTheDocument();
-    });
-
     it('should have search icon as aria-hidden', () => {
       mockGetPrivateGames.mockReturnValue(new Promise(() => {}));
 

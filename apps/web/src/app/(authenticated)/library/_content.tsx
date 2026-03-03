@@ -63,6 +63,12 @@ const WishlistPageClient = dynamicImport(() => import('./wishlist/page'), {
   loading: () => <LibraryLoadingSkeleton />,
 });
 
+// Proposals tab: user's game proposals to shared catalog
+const ProposalsPageClient = dynamicImport(() => import('./proposals/MyProposalsClient'), {
+  ssr: false,
+  loading: () => <LibraryLoadingSkeleton />,
+});
+
 // ── Tab switcher + drawer controller ──────────────────────────────────────────
 
 export function LibraryContent() {
@@ -72,7 +78,9 @@ export function LibraryContent() {
   return (
     <>
       {/* Tab content */}
-      {tab === 'private' ? (
+      {tab === 'proposals' ? (
+        <ProposalsPageClient />
+      ) : tab === 'private' ? (
         <GamesPageClient />
       ) : tab === 'wishlist' ? (
         <WishlistPageClient />

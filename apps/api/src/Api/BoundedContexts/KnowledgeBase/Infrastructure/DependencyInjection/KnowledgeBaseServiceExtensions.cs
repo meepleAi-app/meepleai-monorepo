@@ -57,6 +57,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
+        services.AddScoped<IConversationQueryRewriter, Application.Services.ConversationQueryRewriter>(); // Issue #5258: Query rewriting for multi-turn RAG
+        services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>(); // Issue #3184 (AGT-010): Session agent prompt building

@@ -68,6 +68,11 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
         _unitOfWork = new UnitOfWork(_dbContext);
         _mockLlmService = new Mock<ILlmService>();
 
+        var mockQueryRewriter = new Mock<IConversationQueryRewriter>();
+        mockQueryRewriter
+            .Setup(r => r.RewriteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, string, CancellationToken>((query, _, _) => Task.FromResult(query));
+
         _handler = new SendAgentMessageCommandHandler(
             _agentRepository,
             _chatThreadRepository,
@@ -79,6 +84,9 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             Mock.Of<IUserBudgetService>(),
             Mock.Of<ILlmModelOverrideService>(),
             Mock.Of<IModelConfigurationService>(),
+            new ChatContextDomainService(),
+            mockQueryRewriter.Object,
+            Mock.Of<IConversationSummarizer>(),
             Mock.Of<ILogger<SendAgentMessageCommandHandler>>());
 
         // Seed a test user (FK requirement)

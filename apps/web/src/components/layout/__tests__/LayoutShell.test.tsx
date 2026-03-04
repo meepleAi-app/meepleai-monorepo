@@ -38,9 +38,25 @@ vi.mock('@/components/ui/navigation/card-stack-panel', () => ({
   CardStackPanel: () => <div data-testid="card-stack-panel" />,
 }));
 
+vi.mock('@/components/layout/Sidebar/Sidebar', () => ({
+  Sidebar: ({ isCollapsed }: { isCollapsed: boolean }) => (
+    <div data-testid="sidebar" data-collapsed={isCollapsed}>
+      Sidebar
+    </div>
+  ),
+}));
+
+vi.mock('@/hooks/useSidebarState', () => ({
+  useSidebarState: () => ({ isCollapsed: false, toggle: vi.fn(), setCollapsed: vi.fn() }),
+}));
+
 // Mock internal nav layers to avoid QueryClient / NavigationContext dependencies
 vi.mock('@/components/layout/TopNavbar', () => ({
-  TopNavbar: () => <header role="banner" data-testid="top-navbar">TopNavbar</header>,
+  TopNavbar: () => (
+    <header role="banner" data-testid="top-navbar">
+      TopNavbar
+    </header>
+  ),
 }));
 
 vi.mock('@/components/layout/MiniNav', () => ({
@@ -103,6 +119,16 @@ describe('LayoutShell', () => {
   it('renders FloatingActionBar', () => {
     renderShell();
     expect(screen.getByTestId('floating-action-bar')).toBeInTheDocument();
+  });
+
+  it('renders Sidebar', () => {
+    renderShell();
+    expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+  });
+
+  it('renders content area wrapper with sidebar offset', () => {
+    renderShell();
+    expect(screen.getByTestId('layout-content-area')).toBeInTheDocument();
   });
 
   it('does NOT render ImpersonationBanner when not impersonating', () => {

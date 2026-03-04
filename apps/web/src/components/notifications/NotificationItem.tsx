@@ -27,7 +27,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { PdfStatusBadge } from '@/components/pdf';
-import type { NotificationDto, NotificationSeverity, NotificationType } from '@/lib/api';
+import type { NotificationDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notification/store';
 
@@ -137,7 +137,7 @@ function getSeverityConfig(severity: string): {
   icon: React.ComponentType<{ className?: string }> | null;
   color: string;
 } {
-  switch (severity as NotificationSeverity) {
+  switch (severity) {
     case 'success':
       return { icon: CheckCircle2, color: 'text-green-600 dark:text-green-400' };
     case 'info':
@@ -152,7 +152,7 @@ function getSeverityConfig(severity: string): {
 }
 
 function getTypeIcon(type: string): React.ComponentType<{ className?: string }> {
-  switch (type as NotificationType) {
+  switch (type) {
     case 'pdf_upload_completed':
     case 'rule_spec_generated':
       return FileCheck;

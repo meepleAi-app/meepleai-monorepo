@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import {
   Calendar,
@@ -27,13 +27,10 @@ import {
   Star,
   Trash2,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { EditNotesModal } from '@/components/library/EditNotesModal';
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
 import { LabelBadge, LabelSelector } from '@/components/library/labels';
-import { RemoveGameDialog } from '@/components/library/RemoveGameDialog';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   DropdownMenu,
@@ -53,7 +50,10 @@ export interface UserActionSectionProps {
 }
 
 // State configuration
-const stateConfig: Record<GameStateType, { label: string; color: string; bgColor: string; icon: typeof Check }> = {
+const stateConfig: Record<
+  GameStateType,
+  { label: string; color: string; bgColor: string; icon: typeof Check }
+> = {
   Owned: {
     label: 'Posseduto',
     color: 'text-emerald-600',
@@ -81,10 +81,6 @@ const stateConfig: Record<GameStateType, { label: string; color: string; bgColor
 };
 
 export function UserActionSection({ gameDetail }: UserActionSectionProps) {
-  const router = useRouter();
-  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
-  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
-
   const updateGameState = useUpdateGameState();
 
   // Fetch labels for this game (Issue #3514)
@@ -101,7 +97,6 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
   const StateIcon = stateInfo.icon;
 
   // Play statistics from backend GameDetailDto
-  const _hasPlayStats = gameDetail.timesPlayed > 0;
   const stats = {
     gamesPlayed: gameDetail.timesPlayed,
     lastPlayed: gameDetail.lastPlayed,
@@ -151,20 +146,14 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
 
   return (
     <>
-      <section
-        className="rounded-3xl border border-[rgba(45,42,38,0.08)] bg-[#FFFDF9] p-6"
-        style={{ boxShadow: '0 4px 20px rgba(45, 42, 38, 0.1)' }}
-      >
+      <section className="rounded-3xl border border-border/40 bg-card p-6 shadow-sm">
         {/* Action Bar */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
           {/* State Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                className={cn(
-                  'font-quicksand font-semibold text-white',
-                  stateInfo.bgColor
-                )}
+                className={cn('font-quicksand font-semibold text-white', stateInfo.bgColor)}
                 disabled={updateGameState.isPending}
               >
                 {updateGameState.isPending ? (
@@ -177,17 +166,14 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
-              {(Object.keys(stateConfig) as GameStateType[]).map((state) => {
+              {(Object.keys(stateConfig) as GameStateType[]).map(state => {
                 const config = stateConfig[state];
                 const Icon = config.icon;
                 return (
                   <DropdownMenuItem
                     key={state}
                     onClick={() => handleStateChange(state)}
-                    className={cn(
-                      'cursor-pointer',
-                      state === currentState && 'bg-[rgba(45,42,38,0.04)]'
-                    )}
+                    className={cn('cursor-pointer', state === currentState && 'bg-muted/40')}
                   >
                     <Icon className={cn('mr-2 h-4 w-4', config.color)} />
                     <span className={cn('font-nunito', config.color)}>{config.label}</span>
@@ -204,7 +190,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
           {gameDetail.hasCustomPdf && (
             <Button
               variant="outline"
-              className="border-[rgba(45,42,38,0.12)] font-quicksand font-semibold text-[#6B665C] hover:bg-[rgba(45,42,38,0.04)] hover:text-[#2D2A26]"
+              className="border-border/40 font-quicksand font-semibold text-muted-foreground hover:bg-muted/40 hover:text-foreground"
             >
               <FileText className="mr-2 h-4 w-4" />
               Regole PDF
@@ -215,7 +201,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
           <FavoriteToggle
             gameId={gameDetail.gameId}
             isFavorite={gameDetail.isFavorite}
-            className="border-[rgba(45,42,38,0.12)] font-quicksand font-semibold"
+            className="border-border/40 font-quicksand font-semibold"
           />
 
           {/* Spacer */}
@@ -225,7 +211,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
           <Button
             variant="ghost"
             className="font-quicksand font-semibold text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
-            onClick={() => setIsRemoveDialogOpen(true)}
+            onClick={() => document.dispatchEvent(new CustomEvent('game-detail:remove-game'))}
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Rimuovi
@@ -233,8 +219,8 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
         </div>
 
         {/* Labels Row (Issue #3514) */}
-        <div className="mb-6 flex flex-wrap items-center gap-2 border-t border-[rgba(45,42,38,0.08)] pt-6">
-          <span className="mr-2 font-nunito text-sm text-[#9C958A]">Etichette:</span>
+        <div className="mb-6 flex flex-wrap items-center gap-2 border-t border-border/40 pt-6">
+          <span className="mr-2 font-nunito text-sm text-muted-foreground">Etichette:</span>
 
           {isLoadingLabels ? (
             <>
@@ -244,7 +230,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
             </>
           ) : (
             <>
-              {gameLabels.map((label) => (
+              {gameLabels.map(label => (
                 <LabelBadge
                   key={label.id}
                   label={label}
@@ -266,32 +252,32 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
         {/* Stats Grid */}
         <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           {/* Added Date */}
-          <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
-            <p className="mb-1 font-nunito text-xs text-[#9C958A]">Aggiunto</p>
-            <p className="font-quicksand text-base font-semibold text-[#2D2A26]">
+          <div className="rounded-xl bg-muted/40 p-4 text-center">
+            <p className="mb-1 font-nunito text-xs text-muted-foreground">Aggiunto</p>
+            <p className="font-quicksand text-base font-semibold text-foreground">
               {formatDate(gameDetail.addedAt)}
             </p>
           </div>
 
           {/* Games Played */}
-          <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
-            <p className="mb-1 font-nunito text-xs text-[#9C958A]">Partite giocate</p>
-            <p className="font-quicksand text-base font-semibold text-[#2D2A26]">
+          <div className="rounded-xl bg-muted/40 p-4 text-center">
+            <p className="mb-1 font-nunito text-xs text-muted-foreground">Partite giocate</p>
+            <p className="font-quicksand text-base font-semibold text-foreground">
               {stats.gamesPlayed}
             </p>
           </div>
 
           {/* Last Played */}
-          <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
-            <p className="mb-1 font-nunito text-xs text-[#9C958A]">Ultima partita</p>
-            <p className="font-quicksand text-base font-semibold text-[#2D2A26]">
+          <div className="rounded-xl bg-muted/40 p-4 text-center">
+            <p className="mb-1 font-nunito text-xs text-muted-foreground">Ultima partita</p>
+            <p className="font-quicksand text-base font-semibold text-foreground">
               {stats.lastPlayed ? formatDate(stats.lastPlayed) : 'Mai'}
             </p>
           </div>
 
           {/* Win Rate */}
-          <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
-            <p className="mb-1 font-nunito text-xs text-[#9C958A]">Win rate</p>
+          <div className="rounded-xl bg-muted/40 p-4 text-center">
+            <p className="mb-1 font-nunito text-xs text-muted-foreground">Win rate</p>
             <p className="font-quicksand text-base font-semibold text-emerald-600">
               {stats.winRate ?? 'N/A'}
             </p>
@@ -299,49 +285,29 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
         </div>
 
         {/* Notes Section */}
-        <div className="rounded-xl border border-[rgba(45,42,38,0.08)] bg-[rgba(45,42,38,0.02)] p-4">
+        <div className="rounded-xl border border-border/40 bg-muted/20 p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="font-quicksand text-sm font-semibold text-[#2D2A26]">Note personali</h4>
+            <h4 className="font-quicksand text-sm font-semibold text-foreground">Note personali</h4>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-[#6B665C] hover:text-[hsl(25,95%,38%)]"
-              onClick={() => setIsNotesModalOpen(true)}
+              className="h-8 px-2 text-muted-foreground hover:text-[hsl(25,95%,38%)]"
+              onClick={() => document.dispatchEvent(new CustomEvent('game-detail:edit-notes'))}
             >
               <Edit2 className="h-3.5 w-3.5" />
             </Button>
           </div>
           {gameDetail.notes ? (
-            <p className="font-nunito text-sm leading-relaxed text-[#6B665C]">
+            <p className="font-nunito text-sm leading-relaxed text-muted-foreground">
               {gameDetail.notes}
             </p>
           ) : (
-            <p className="font-nunito text-sm italic text-[#9C958A]">
+            <p className="font-nunito text-sm italic text-muted-foreground">
               Nessuna nota. Clicca per aggiungerne una.
             </p>
           )}
         </div>
       </section>
-
-      {/* Edit Notes Modal */}
-      <EditNotesModal
-        isOpen={isNotesModalOpen}
-        onClose={() => setIsNotesModalOpen(false)}
-        gameId={gameDetail.gameId}
-        gameTitle={gameDetail.gameTitle}
-        currentNotes={gameDetail.notes}
-      />
-
-      {/* Remove Game Dialog */}
-      <RemoveGameDialog
-        isOpen={isRemoveDialogOpen}
-        onClose={() => setIsRemoveDialogOpen(false)}
-        gameId={gameDetail.gameId}
-        gameTitle={gameDetail.gameTitle}
-        onRemoved={() => {
-          router.push('/library');
-        }}
-      />
     </>
   );
 }

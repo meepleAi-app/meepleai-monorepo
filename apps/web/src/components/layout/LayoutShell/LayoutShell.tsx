@@ -1,29 +1,30 @@
 /**
- * LayoutShell — 3-Tier Navigation System, Concept 4: Floating
+ * LayoutShell — Left Sidebar + Slim TopNavbar Layout
  * Issue #5035 — LayoutShell Component
  *
- * Full-page shell implementing the Concept 4 "Floating" layout:
+ * Full-page shell with left sidebar navigation:
  *
- *   ┌────────────────────────────────────┐
- *   │ TopNavbar (sticky h-14)            │
- *   ├────────────────────────────────────┤
- *   │ MiniNav (h-10, context-aware)      │ ← auto-hides when no tabs
- *   ├────────────────────────────────────┤
- *   │                                    │
- *   │   Page Content (scrollable)        │
- *   │                                    │
- *   │   ┌───────────────────┐            │
- *   │   │ FloatingActionBar │            │ ← fixed bottom-center pill
- *   │   └───────────────────┘            │
- *   └────────────────────────────────────┘
+ *   ┌────────────────────────────────────────────┐
+ *   │ TopNavbar (sticky h-14, slim: logo+avatar) │
+ *   ├──────┬─────────────────────────────────────┤
+ *   │      │ MiniNav (h-10, context-aware)       │ ← auto-hides when no tabs
+ *   │ Side ├─────────────────────────────────────┤
+ *   │ bar  │                                     │
+ *   │      │   Page Content (scrollable)         │
+ *   │      │                                     │
+ *   │      │   ┌───────────────────┐             │
+ *   │      │   │ FloatingActionBar │             │
+ *   │      │   └───────────────────┘             │
+ *   └──────┴─────────────────────────────────────┘
  *
  * Responsibilities:
  * - Provides NavigationProvider so pages can call useSetNavConfig()
- * - Renders the 3 nav layers in the correct order
+ * - Renders Sidebar (desktop-only, collapsible) + slim TopNavbar
+ * - Renders MiniNav + FloatingActionBar offset by sidebar width
  * - Preserves ImpersonationBanner and CardStackPanel
- * - Padding-bottom on content area to clear FloatingActionBar
+ * - Mobile: no sidebar, MobileNavDrawer via hamburger in TopNavbar
  *
- * Usage (replace AuthenticatedLayout in route layouts):
+ * Usage:
  * ```tsx
  * import { LayoutShell } from '@/components/layout/LayoutShell';
  *
@@ -40,11 +41,13 @@ import { type ReactNode, Suspense } from 'react';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
+import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
 
 import { FloatingActionBar } from '../FloatingActionBar';
 import { MiniNav } from '../MiniNav';
+import { Sidebar } from '../Sidebar/Sidebar';
 import { TopNavbar } from '../TopNavbar';
 
 // ─── LayoutShell ──────────────────────────────────────────────────────────────
@@ -79,6 +82,7 @@ export function LayoutShell({ children, fullWidth = false, className }: LayoutSh
 function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) {
   const { isImpersonating, impersonatedUser, isLoading, endImpersonation } =
     useImpersonationStore();
+  const { isCollapsed, toggle } = useSidebarState();
 
   return (
     <div className="min-h-screen flex flex-col bg-background" data-testid="layout-shell">
@@ -90,34 +94,47 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
         isLoading={isLoading}
       />
 
-      {/* ── Level 1: TopNavbar ─────────────────────────────────────────────── */}
+      {/* ── Level 1: TopNavbar (slim: logo + notifications + user) ────────── */}
       <TopNavbar />
 
-      {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────────── */}
-      <Suspense>
-        <MiniNav />
-      </Suspense>
+      {/* ── Desktop Sidebar (hidden on mobile) ────────────────────────────── */}
+      <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
 
-      {/* ── Main content ───────────────────────────────────────────────────── */}
-      <main
-        id="main-content"
-        tabIndex={-1}
+      {/* ── Content area (offset by sidebar width on desktop) ─────────────── */}
+      <div
         className={cn(
-          'flex-1',
-          // Horizontal padding unless fullWidth
-          !fullWidth && 'px-4 sm:px-6 lg:px-8',
-          // Bottom padding to clear FloatingActionBar pill (h≈52px + gap-6 = 80px)
-          'pb-24',
-          // Top spacing
-          'pt-4',
-          className
+          'flex flex-col flex-1',
+          'transition-[margin] duration-200 ease-in-out',
+          isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]'
         )}
+        data-testid="layout-content-area"
       >
-        {children}
-      </main>
+        {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────── */}
+        <Suspense>
+          <MiniNav />
+        </Suspense>
 
-      {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ─────────── */}
-      <FloatingActionBar />
+        {/* ── Main content ─────────────────────────────────────────────────── */}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={cn(
+            'flex-1',
+            // Horizontal padding unless fullWidth
+            !fullWidth && 'px-4 sm:px-6 lg:px-8',
+            // Bottom padding to clear FloatingActionBar pill (h≈52px + gap-6 = 80px)
+            'pb-24',
+            // Top spacing
+            'pt-4',
+            className
+          )}
+        >
+          {children}
+        </main>
+
+        {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ───── */}
+        <FloatingActionBar />
+      </div>
 
       {/* Card Stack Panel — "Carte in Mano" */}
       <CardStackPanel />

@@ -57,7 +57,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                 'transition-colors duration-200',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                 active
-                  ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25,95%,42%)] font-semibold'
+                  ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                 isCollapsed && 'justify-center px-2'
               )}
@@ -101,7 +101,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                         'transition-colors duration-200',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                         isLibraryActive
-                          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25,95%,42%)] font-semibold'
+                          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       )}
                       data-testid={libraryItem.testId}
@@ -124,7 +124,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                     'transition-colors duration-200',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                     isLibraryActive
-                      ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25,95%,42%)] font-semibold'
+                      ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}
                   data-testid="sidebar-library-toggle"
@@ -163,7 +163,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                               'transition-colors duration-200',
                               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                               childActive
-                                ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25,95%,42%)] font-medium'
+                                ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-medium'
                                 : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                             )}
                             data-testid={`sidebar-library-${child.id}`}
@@ -212,7 +212,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                     'transition-colors duration-200',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                     active
-                      ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25,95%,42%)] font-semibold'
+                      ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                     isCollapsed && 'justify-center px-2'
                   )}

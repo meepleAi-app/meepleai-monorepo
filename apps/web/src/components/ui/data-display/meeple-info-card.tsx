@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   Book,
@@ -30,6 +31,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import {
+  formatFileSize,
+  documentTypeLabels,
+  documentTypeColors,
+  getStatusIndicator,
+  isDocumentReady,
+} from '@/components/library/kb-utils';
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { Button } from '@/components/ui/primitives/button';
@@ -72,7 +80,10 @@ type TabType = 'kb' | 'social' | 'stats';
 // Tab configuration
 // ============================================================================
 
-const tabConfig: Record<TabType, { icon: typeof Book; label: string; color: string; bgColor: string }> = {
+const tabConfig: Record<
+  TabType,
+  { icon: typeof Book; label: string; color: string; bgColor: string }
+> = {
   kb: {
     icon: Book,
     label: 'Knowledge Base',
@@ -102,36 +113,7 @@ const linkTypeIcons: Record<string, typeof Globe> = {
   other: Link2,
 };
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-const documentTypeLabels: Record<string, string> = {
-  base: 'Regolamento',
-  expansion: 'Espansione',
-  errata: 'Errata',
-  homerule: 'Regole Casa',
-};
-
-const documentTypeColors: Record<string, string> = {
-  base: 'bg-[hsla(25,95%,38%,0.1)] text-[hsl(25,95%,38%)]',
-  expansion: 'bg-[hsla(168,76%,42%,0.1)] text-[hsl(168,76%,42%)]',
-  errata: 'bg-[hsla(262,83%,62%,0.1)] text-[hsl(262,83%,62%)]',
-  homerule: 'bg-[hsla(210,90%,50%,0.1)] text-[hsl(210,90%,50%)]',
-};
-
-const statusIndicators: Record<string, { label: string; color: string }> = {
-  pending: { label: 'In attesa', color: 'text-amber-600' },
-  processing: { label: 'Elaborazione...', color: 'text-blue-600' },
-  completed: { label: 'Completato', color: 'text-green-600' },
-  failed: { label: 'Errore', color: 'text-red-600' },
-};
+// Helpers imported from @/components/library/kb-utils
 
 // ============================================================================
 // Component
@@ -150,6 +132,8 @@ export function MeepleInfoCard({
   className,
   'data-testid': testId,
 }: MeepleInfoCardProps) {
+  const queryClient = useQueryClient();
+
   // Determine available tabs
   const availableTabs: TabType[] = [];
   if (showKnowledgeBase) availableTabs.push('kb');
@@ -158,7 +142,10 @@ export function MeepleInfoCard({
 
   const [activeTab, setActiveTab] = useState<TabType>(availableTabs[0] || 'kb');
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  const [selectedPdfForPreview, setSelectedPdfForPreview] = useState<{ url: string; name: string } | null>(null);
+  const [selectedPdfForPreview, setSelectedPdfForPreview] = useState<{
+    url: string;
+    name: string;
+  } | null>(null);
 
   // Documents state
   const [documents, setDocuments] = useState<PdfDocumentDto[]>([]);
@@ -205,7 +192,7 @@ export function MeepleInfoCard({
         className={cn(
           'w-full max-w-[420px] flex-shrink-0 overflow-hidden rounded-3xl',
           'border border-[rgba(45,42,38,0.08)] bg-[#FFFDF9]',
-          className,
+          className
         )}
         style={{
           aspectRatio: '3 / 4',
@@ -215,7 +202,7 @@ export function MeepleInfoCard({
       >
         {/* Tabs */}
         <div className="flex border-b border-[rgba(45,42,38,0.08)]">
-          {availableTabs.map((tab) => {
+          {availableTabs.map(tab => {
             // eslint-disable-next-line security/detect-object-injection
             const config = tabConfig[tab];
             const Icon = config.icon;
@@ -229,17 +216,23 @@ export function MeepleInfoCard({
                   'flex flex-1 items-center justify-center gap-2 px-3 py-4 font-quicksand text-sm font-semibold transition-all',
                   isActive
                     ? `border-b-2 text-[${config.color}]`
-                    : 'text-[#6B665C] hover:bg-[rgba(45,42,38,0.04)] hover:text-[#2D2A26]',
+                    : 'text-[#6B665C] hover:bg-[rgba(45,42,38,0.04)] hover:text-[#2D2A26]'
                 )}
                 style={
                   isActive
-                    ? { borderBottomColor: config.color, backgroundColor: config.bgColor, color: config.color }
+                    ? {
+                        borderBottomColor: config.color,
+                        backgroundColor: config.bgColor,
+                        color: config.color,
+                      }
                     : undefined
                 }
                 data-testid={`meeple-info-tab-${tab}`}
               >
                 <Icon className="h-4 w-4" />
-                <span className={availableTabs.length > 2 ? 'hidden sm:inline' : ''}>{config.label}</span>
+                <span className={availableTabs.length > 2 ? 'hidden sm:inline' : ''}>
+                  {config.label}
+                </span>
               </button>
             );
           })}
@@ -251,9 +244,7 @@ export function MeepleInfoCard({
           {activeTab === 'kb' && (
             <div className="flex flex-1 flex-col">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-quicksand text-lg font-bold text-[#2D2A26]">
-                  Documenti PDF
-                </h3>
+                <h3 className="font-quicksand text-lg font-bold text-[#2D2A26]">Documenti PDF</h3>
                 {!readOnly && (
                   <Button
                     size="sm"
@@ -296,8 +287,11 @@ export function MeepleInfoCard({
               {/* Documents list */}
               {!docsLoading && !docsError && documents.length > 0 && (
                 <div className="space-y-3">
-                  {documents.map((doc) => {
-                    const status = statusIndicators[doc.processingStatus] || statusIndicators.pending;
+                  {documents.map(doc => {
+                    const status = getStatusIndicator(
+                      doc.processingState || doc.processingStatus || 'pending'
+                    );
+                    const ready = isDocumentReady(doc);
                     return (
                       <div
                         key={doc.id}
@@ -314,7 +308,7 @@ export function MeepleInfoCard({
                             <span
                               className={cn(
                                 'rounded px-1.5 py-0.5 text-xs font-medium',
-                                documentTypeColors[doc.documentType] || documentTypeColors.base,
+                                documentTypeColors[doc.documentType] || documentTypeColors.base
                               )}
                             >
                               {documentTypeLabels[doc.documentType] || 'Documento'}
@@ -322,7 +316,7 @@ export function MeepleInfoCard({
                             <span className="text-xs text-[#9C958A]">
                               {formatFileSize(doc.fileSizeBytes)}
                             </span>
-                            {doc.processingStatus !== 'completed' && (
+                            {!ready && (
                               <span className={cn('text-xs font-medium', status.color)}>
                                 {status.label}
                               </span>
@@ -400,9 +394,7 @@ export function MeepleInfoCard({
           {activeTab === 'social' && (
             <div className="flex flex-1 flex-col">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="font-quicksand text-lg font-bold text-[#2D2A26]">
-                  Link Utili
-                </h3>
+                <h3 className="font-quicksand text-lg font-bold text-[#2D2A26]">Link Utili</h3>
                 {!readOnly && (
                   <Button
                     size="sm"
@@ -417,7 +409,7 @@ export function MeepleInfoCard({
 
               {socialLinks.length > 0 ? (
                 <div className="space-y-3">
-                  {socialLinks.map((link) => {
+                  {socialLinks.map(link => {
                     const IconComponent = linkTypeIcons[link.type] || Link2;
                     return (
                       <Link
@@ -534,7 +526,7 @@ export function MeepleInfoCard({
                     Sessioni Recenti
                   </h4>
                   <div className="space-y-2">
-                    {recentSessions.slice(0, 5).map((session) => (
+                    {recentSessions.slice(0, 5).map(session => (
                       <div
                         key={session.id}
                         className="flex items-center justify-between rounded-lg bg-[rgba(45,42,38,0.04)] px-4 py-3"
@@ -546,7 +538,7 @@ export function MeepleInfoCard({
                                 'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold',
                                 session.didWin
                                   ? 'bg-[hsla(168,76%,42%,0.15)] text-[hsl(168,76%,42%)]'
-                                  : 'bg-[rgba(45,42,38,0.08)] text-[#9C958A]',
+                                  : 'bg-[rgba(45,42,38,0.08)] text-[#9C958A]'
                               )}
                             >
                               {session.didWin ? 'W' : 'L'}
@@ -580,7 +572,10 @@ export function MeepleInfoCard({
           onClose={() => setIsPdfModalOpen(false)}
           gameId={gameId}
           gameTitle={gameTitle}
-          onUploadSuccess={fetchDocuments}
+          onUploadSuccess={() => {
+            fetchDocuments();
+            queryClient.invalidateQueries({ queryKey: ['library'] });
+          }}
         />
       )}
 
@@ -588,7 +583,7 @@ export function MeepleInfoCard({
       {selectedPdfForPreview && (
         <PdfViewerModal
           open={!!selectedPdfForPreview}
-          onOpenChange={(open) => !open && setSelectedPdfForPreview(null)}
+          onOpenChange={open => !open && setSelectedPdfForPreview(null)}
           pdfUrl={selectedPdfForPreview.url}
           documentName={selectedPdfForPreview.name}
         />

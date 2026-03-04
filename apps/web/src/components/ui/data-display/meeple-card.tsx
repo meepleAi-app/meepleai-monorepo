@@ -87,6 +87,7 @@ import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 import { DocumentStatusBadge } from './meeple-card-features/DocumentStatusBadge';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
 import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
+import { GameBackContent } from './meeple-card-features/GameBackContent';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 // Issue #4689: Navigation footer
@@ -156,6 +157,8 @@ export interface MeepleCardMetadata {
   label?: string;
   /** Alternative: just a value (for icon + value pairs) */
   value?: string;
+  /** Optional click handler (makes metadata chip interactive) */
+  onClick?: () => void;
 }
 
 /**
@@ -396,6 +399,13 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   /** Session back content data (statistics, ranking, timeline) */
   sessionBackData?: import('./meeple-card-features/session-types').SessionBackData;
+
+  // ========== GAME BACK CONTENT ==========
+
+  /** Game back content data (stats, KB preview, quick actions) */
+  gameBackData?: import('./meeple-card-features/GameBackContent').GameBackData;
+  /** Game back content action handlers */
+  gameBackActions?: import('./meeple-card-features/GameBackContent').GameBackActions;
 
   // ========== SNAPSHOT HISTORY + TIME TRAVEL (Issue #4758) ==========
 
@@ -808,12 +818,39 @@ function MetadataChips({
 
   return (
     <div className={cn('flex flex-wrap gap-2', className)}>
-      {metadata.map((item, index) => (
-        <span key={index} className={cn('flex items-center gap-1', chipClass)}>
-          {item.icon && <item.icon className="w-3 h-3 opacity-70" aria-hidden="true" />}
-          <span>{item.label || item.value}</span>
-        </span>
-      ))}
+      {metadata.map((item, index) => {
+        const content = (
+          <>
+            {item.icon && <item.icon className="w-3 h-3 opacity-70" aria-hidden="true" />}
+            <span>{item.label || item.value}</span>
+          </>
+        );
+
+        if (item.onClick) {
+          return (
+            <button
+              key={index}
+              type="button"
+              className={cn(
+                'flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                chipClass
+              )}
+              onClick={e => {
+                e.stopPropagation();
+                item.onClick!();
+              }}
+            >
+              {content}
+            </button>
+          );
+        }
+
+        return (
+          <span key={index} className={cn('flex items-center gap-1', chipClass)}>
+            {content}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -1025,6 +1062,8 @@ export const MeepleCard = React.memo(function MeepleCard({
   onPrevTurn,
   onNextTurn,
   sessionBackData,
+  gameBackData,
+  gameBackActions,
   sessionSnapshots,
   currentSnapshotIndex,
   onSnapshotSelect,
@@ -1726,7 +1765,8 @@ export const MeepleCard = React.memo(function MeepleCard({
 
   // Feature: Wrap with FlipCard if enabled (takes priority over HoverPreview)
   // Session entities can flip with sessionBackData even without flipData
-  if (flippable && (flipData || sessionBackData)) {
+  // Game entities can flip with gameBackData even without flipData
+  if (flippable && (flipData || sessionBackData || gameBackData)) {
     // Session entities use custom back content (Issue #4752)
     const sessionBack =
       entity === 'session' && sessionStatus && sessionPlayers && sessionBackData ? (
@@ -1740,10 +1780,22 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       ) : undefined;
 
+    // Game entities use GameBackContent for stats + KB preview + actions
+    const gameBack =
+      entity === 'game' && gameBackData ? (
+        <GameBackContent
+          data={gameBackData}
+          actions={gameBackActions}
+          entityColor={color}
+          title={title}
+          detailHref={detailHref}
+        />
+      ) : undefined;
+
     return (
       <FlipCard
         flipData={flipData}
-        customBackContent={sessionBack}
+        customBackContent={sessionBack ?? gameBack}
         variant={variant}
         isFlipped={isFlipped}
         onFlip={onFlip}

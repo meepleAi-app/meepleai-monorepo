@@ -44,7 +44,11 @@ const STATUS_LABELS: Record<ShareRequestStatus, string> = {
   Withdrawn: 'Ritirata',
 };
 
-export default function MyProposalsClient() {
+interface MyProposalsClientProps {
+  catalogBasePath?: string;
+}
+
+export default function MyProposalsClient({ catalogBasePath = '/games' }: MyProposalsClientProps) {
   const router = useRouter();
   const { data, isLoading, error } = useShareRequests();
   const { data: rateLimitData } = useRateLimitStatus();
@@ -229,7 +233,7 @@ export default function MyProposalsClient() {
                 <div className="flex gap-2">
                   {proposal.status === 'Approved' && proposal.resultingSharedGameId && (
                     <Button size="sm" asChild>
-                      <Link href={`/games/${proposal.resultingSharedGameId}`}>
+                      <Link href={`${catalogBasePath}/${proposal.resultingSharedGameId}`}>
                         Vedi nel Catalogo
                       </Link>
                     </Button>

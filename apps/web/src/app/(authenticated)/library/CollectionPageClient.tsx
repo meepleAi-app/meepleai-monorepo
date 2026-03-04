@@ -388,6 +388,7 @@ export default function CollectionPageClient() {
                       selectionMode={selectionMode}
                       isSelected={isSelected(game.gameId)}
                       onSelect={handleGameSelect}
+                      flippable={viewMode === 'grid'}
                     />
                   ))}
                 </AnimatePresence>

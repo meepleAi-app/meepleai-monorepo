@@ -4,11 +4,11 @@ import { CommentForm } from '../comments/CommentForm';
 import React from 'react';
 import { t, getTextMatcher } from '@/test-utils/test-i18n';
 
-// Mock next-intl to use test-i18n utility with interpolation support
-vi.mock('next-intl', () => ({
-  useTranslations:
-    (namespace: string) => (key: string, values?: Record<string, string | number>) => {
-      let translation = t(`${namespace}.${key}`);
+// Mock useTranslation to use test-i18n utility
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, string | number>) => {
+      let translation = t(key);
       if (values) {
         Object.entries(values).forEach(([k, v]) => {
           translation = translation.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
@@ -16,6 +16,13 @@ vi.mock('next-intl', () => ({
       }
       return translation;
     },
+    locale: 'it',
+    formatMessage: vi.fn(),
+    formatNumber: vi.fn(),
+    formatDate: vi.fn(),
+    formatTime: vi.fn(),
+    formatRelativeTime: vi.fn(),
+  }),
 }));
 
 // Mock the logger

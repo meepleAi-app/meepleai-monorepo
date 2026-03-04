@@ -24,16 +24,21 @@ internal class BulkUpdateConfigsCommandHandler : ICommandHandler<BulkUpdateConfi
 
     public async Task<IReadOnlyList<ConfigurationDto>> Handle(BulkUpdateConfigsCommand command, CancellationToken cancellationToken)
     {
-        var updatedConfigs = new List<ConfigurationDto>();
+        // Preload all configs in a single query to avoid N+1
+        var ids = command.Updates.Select(u => u.Id).ToList();
+        var configs = await _configurationRepository.GetByIdsAsync(ids, cancellationToken).ConfigureAwait(false);
+        var configLookup = configs.ToDictionary(c => c.Id);
 
+        var missingIds = ids.Where(id => !configLookup.ContainsKey(id)).ToList();
+        if (missingIds.Count > 0)
+        {
+            throw new InvalidOperationException($"Configurations not found: {string.Join(", ", missingIds)}");
+        }
+
+        var updatedConfigs = new List<ConfigurationDto>();
         foreach (var update in command.Updates)
         {
-            var config = await _configurationRepository.GetByIdAsync(update.Id, cancellationToken).ConfigureAwait(false);
-            if (config == null)
-            {
-                throw new InvalidOperationException($"Configuration with ID {update.Id} not found");
-            }
-
+            var config = configLookup[update.Id];
             config.UpdateValue(update.Value, command.UserId);
             await _configurationRepository.UpdateAsync(config, cancellationToken).ConfigureAwait(false);
             updatedConfigs.Add(MapToDto(config));

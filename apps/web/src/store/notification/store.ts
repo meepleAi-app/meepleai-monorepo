@@ -208,9 +208,8 @@ export const useNotificationStore = create<NotificationState>()(
                 removeItem: () => {},
               }
         ),
-        // Only persist notifications and unread count (not loading states)
+        // Only persist unread count (not full notification bodies — list re-fetches on mount)
         partialize: state => ({
-          notifications: state.notifications,
           unreadCount: state.unreadCount,
         }),
       }

@@ -380,13 +380,17 @@ internal static class AnalyticsEndpoints
         if (!authorized) return error!;
 
         // Default to last 30 days if not specified
-        var start = string.IsNullOrWhiteSpace(startDate)
-            ? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30))
-            : DateOnly.Parse(startDate, CultureInfo.InvariantCulture);
+        DateOnly start;
+        if (string.IsNullOrWhiteSpace(startDate))
+            start = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+        else if (!DateOnly.TryParse(startDate, CultureInfo.InvariantCulture, out start))
+            return Results.BadRequest(new { error = $"Invalid startDate format: {startDate}" });
 
-        var end = string.IsNullOrWhiteSpace(endDate)
-            ? DateOnly.FromDateTime(DateTime.UtcNow)
-            : DateOnly.Parse(endDate, CultureInfo.InvariantCulture);
+        DateOnly end;
+        if (string.IsNullOrWhiteSpace(endDate))
+            end = DateOnly.FromDateTime(DateTime.UtcNow);
+        else if (!DateOnly.TryParse(endDate, CultureInfo.InvariantCulture, out end))
+            return Results.BadRequest(new { error = $"Invalid endDate format: {endDate}" });
 
         var query = new GetLlmCostReportQuery
         {

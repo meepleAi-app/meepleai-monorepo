@@ -11,13 +11,20 @@ import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink } from 'lucide-r
 import Image from 'next/image';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
 import { Game, BggGameDetails, api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { createSafeMarkup } from '@/lib/security/sanitize';
 
 interface GameOverviewTabProps {
   game: Game;
@@ -223,7 +230,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                       <h4 className="font-semibold mb-3">Description</h4>
                       <div
                         className="text-sm text-muted-foreground prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: bggDetails.description }}
+                        dangerouslySetInnerHTML={createSafeMarkup(bggDetails.description)}
                       />
                     </div>
                   </>

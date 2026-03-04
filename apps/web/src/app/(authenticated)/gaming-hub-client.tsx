@@ -66,7 +66,7 @@ export function GamingHubClient() {
   const greeting = getGreeting();
 
   return (
-    <div className="py-6 space-y-6 max-w-5xl">
+    <div className="py-6 space-y-6 w-full max-w-screen-xl mx-auto">
       {/* ── 1. Greeting + QuickStats ────────────────────────────── */}
       <motion.section {...fadeUp(0)}>
         <div className="mb-4">
@@ -82,7 +82,7 @@ export function GamingHubClient() {
       </motion.section>
 
       {/* ── 3. Content grid: 2-col on desktop ──────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-6">
         {/* Left column: Recent games */}
         <motion.section {...fadeUp(2)}>
           <RecentGamesSection games={games} isLoading={isLoadingGames} />

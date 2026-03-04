@@ -7,19 +7,42 @@
 
 import { z } from 'zod';
 
-// Notification type (event category)
-export const NotificationTypeSchema = z.enum([
+// Known notification types (for component logic — not used for validation)
+export const KNOWN_NOTIFICATION_TYPES = [
   'pdf_upload_completed',
   'rule_spec_generated',
   'processing_failed',
   'new_comment',
   'shared_link_accessed',
-  'processing_job_completed', // KB indexing complete (Issue #4942)
-]);
+  'processing_job_completed',
+  'share_request_created',
+  'share_request_approved',
+  'share_request_rejected',
+  'share_request_changes_requested',
+  'admin_new_share_request',
+  'admin_shared_game_submitted',
+  'admin_openrouter_daily_summary',
+  'admin_openrouter_rpm_alert',
+  'admin_openrouter_budget_alert',
+  'admin_circuit_breaker_state_changed',
+  'badge_earned',
+  'rate_limit_approaching',
+  'rate_limit_reached',
+  'cooldown_ended',
+  'loan_reminder',
+  'session_terminated',
+  'game_proposal_in_review',
+  'game_proposal_kb_merged',
+  'processing_job_failed',
+  'agent_linked',
+] as const;
+
+// Defensive schema — accepts any string to prevent API breaking on new backend types
+export const NotificationTypeSchema = z.string();
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
 
-// Notification severity levels (matches backend NotificationSeverity)
-export const NotificationSeveritySchema = z.enum(['info', 'success', 'warning', 'error']);
+// Notification severity levels — defensive string to handle future backend additions
+export const NotificationSeveritySchema = z.string();
 export type NotificationSeverity = z.infer<typeof NotificationSeveritySchema>;
 
 // Notification DTO matching backend contract

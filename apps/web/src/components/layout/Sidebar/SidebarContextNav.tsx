@@ -71,7 +71,7 @@ function SidebarLink({
         'transition-colors duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1',
         isActive
-          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25,95%,42%)] font-semibold'
+          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
           : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
         isCollapsed && 'justify-center px-2'
       )}

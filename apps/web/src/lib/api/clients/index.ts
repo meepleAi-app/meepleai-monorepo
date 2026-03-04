@@ -32,3 +32,5 @@ export * from './dashboardClient'; // ISSUE-3316, ISSUE-3319
 export * from './knowledgeBaseClient'; // ISSUE-4065
 export * from './ragExecutionClient'; // ISSUE-4459
 export * from './entityLinksClient'; // ISSUE-5129
+export * from './liveSessionsClient'; // ISSUE-5041 — Sessions Redesign
+export * from './sessionTrackingClient'; // ISSUE-5041 — Sessions Redesign

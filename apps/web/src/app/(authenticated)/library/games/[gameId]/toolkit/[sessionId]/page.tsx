@@ -187,8 +187,8 @@ export default function GameSpecificSessionPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Session Header */}
       <SessionHeader
-        session={activeSession}
-        onPause={activeSession.status === 'Active' ? handlePause : undefined}
+        session={activeSession as unknown as import('@/components/session/types').Session}
+        onPause={activeSession.status === 'InProgress' ? handlePause : undefined}
         onFinalize={handleFinalize}
       />
 
@@ -209,7 +209,9 @@ export default function GameSpecificSessionPage() {
                   <CardTitle className="text-sm">Scoring Rules</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{template.scoringRules}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {template.scoringRules}
+                  </p>
                 </CardContent>
               </Card>
             )}

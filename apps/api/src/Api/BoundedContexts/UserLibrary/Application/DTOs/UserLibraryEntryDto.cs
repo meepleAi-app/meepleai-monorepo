@@ -25,8 +25,13 @@ internal record UserLibraryEntryDto(
     bool HasKb = false,              // Issue #4998: true if >= 1 PDF fully indexed in RAG (ProcessingState.Ready)
     int KbCardCount = 0,             // Issue #4998: total PDF documents linked to this game
     int KbIndexedCount = 0,          // Issue #4998: PDF documents with ProcessingState.Ready
-    int KbProcessingCount = 0,       // Issue #4998: PDF documents currently in pipeline (not Ready/Failed/Pending)
+    int KbProcessingCount = 0,       // Issue #4998: PDF documents currently in pipeline (not Ready/Failed)
     bool AgentIsOwned = true,        // Issue #4998: current user owns the agent for this game (always true in library context)
+    int? MinPlayers = null,          // Game metadata from SharedGame for card back
+    int? MaxPlayers = null,
+    int? PlayingTimeMinutes = null,
+    decimal? ComplexityRating = null,
+    decimal? AverageRating = null,
     Guid? PrivateGameId = null,      // Issue #3663: Private game reference
     bool IsPrivateGame = false,      // Issue #3663: Computed flag
     bool CanProposeToCatalog = false  // Issue #3663: Can propose private game to catalog

@@ -110,8 +110,7 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbIndexedCount = g.Count(p => string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal)),
                     KbProcessingCount = g.Count(p =>
                         !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Pending), StringComparison.Ordinal)),
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal)),
                 });
 
         // Private game PDFs: PrivateGameId IS NOT NULL. Keyed by PrivateGameId.
@@ -126,8 +125,7 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbIndexedCount = g.Count(p => string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal)),
                     KbProcessingCount = g.Count(p =>
                         !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Pending), StringComparison.Ordinal)),
+                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal)),
                 });
 
         // Batch load: Get all SharedGames in a single query (prevents N+1).
@@ -163,7 +161,12 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbCardCount: kbStats?.KbCardCount ?? 0,
                     KbIndexedCount: kbStats?.KbIndexedCount ?? 0,
                     KbProcessingCount: kbStats?.KbProcessingCount ?? 0,
-                    AgentIsOwned: true // Always true in library context: user owns all their library agents
+                    AgentIsOwned: true, // Always true in library context: user owns all their library agents
+                    MinPlayers: sharedGame.MinPlayers,
+                    MaxPlayers: sharedGame.MaxPlayers,
+                    PlayingTimeMinutes: sharedGame.PlayingTimeMinutes,
+                    ComplexityRating: sharedGame.ComplexityRating,
+                    AverageRating: sharedGame.AverageRating
                 ));
             }
             // Check PrivateGame entries (batch-loaded above)

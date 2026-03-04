@@ -1625,15 +1625,37 @@ export const MeepleCard = React.memo(function MeepleCard({
           )}
           data-testid="meeple-card-footer"
         >
-          {metadata.map((item, index) => (
-            <span
-              key={index}
-              className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
-            >
-              {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
-              <span className="font-nunito">{item.label || item.value}</span>
-            </span>
-          ))}
+          {metadata.map((item, index) => {
+            const chipContent = (
+              <>
+                {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span className="font-nunito">{item.label || item.value}</span>
+              </>
+            );
+            if (item.onClick) {
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={e => {
+                    e.stopPropagation();
+                    item.onClick!();
+                  }}
+                >
+                  {chipContent}
+                </button>
+              );
+            }
+            return (
+              <span
+                key={index}
+                className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
+              >
+                {chipContent}
+              </span>
+            );
+          })}
         </div>
       )}
 

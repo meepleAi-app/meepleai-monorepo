@@ -28,7 +28,11 @@ import type { SearchSharedGamesParams } from '@/lib/api';
 /**
  * Inner component that uses useSearchParams (requires Suspense boundary)
  */
-export function CatalogContent() {
+interface CatalogContentProps {
+  gameDetailBasePath?: string;
+}
+
+export function CatalogContent({ gameDetailBasePath = '/games' }: CatalogContentProps) {
   const router = useRouter();
 
   // URL-synced filter and pagination state (#2876)
@@ -84,9 +88,9 @@ export function CatalogContent() {
   // Navigate to game detail page
   const handleGameClick = useCallback(
     (gameId: string) => {
-      router.push(`/games/${gameId}`);
+      router.push(`${gameDetailBasePath}/${gameId}`);
     },
-    [router]
+    [router, gameDetailBasePath]
   );
 
   // Handlers - update URL params (resets page to 1 for filter changes)

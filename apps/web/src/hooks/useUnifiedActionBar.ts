@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -133,9 +133,8 @@ export function useUnifiedActionBar(): UseUnifiedActionBarReturn {
   // Get context actions for current context
   const { visibleContextActions, overflowContextActions } = useMemo(() => {
     // Use registered actions from context or fallback to config
-    const contextActions = actionBar.actions.length > 0
-      ? actionBar.actions
-      : getActionsForContext(context);
+    const contextActions =
+      actionBar.actions.length > 0 ? actionBar.actions : getActionsForContext(context);
 
     const slots = getContextActionSlots(breakpoint);
     const visible = contextActions.slice(0, slots).map(actionToUnified);
@@ -209,9 +208,7 @@ export function useUnifiedActionBar(): UseUnifiedActionBarReturn {
  * });
  * ```
  */
-export function useUnifiedActionBarListener(
-  callback: (action: string, itemId: string) => void
-) {
+export function useUnifiedActionBarListener(callback: (action: string, itemId: string) => void) {
   const handleAction = useCallback(
     (event: Event) => {
       const customEvent = event as CustomEvent<{ action: string; itemId: string }>;
@@ -221,7 +218,7 @@ export function useUnifiedActionBarListener(
   );
 
   // Use effect to add/remove listener
-  useMemo(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       window.addEventListener('actionbar:action', handleAction);
       return () => {

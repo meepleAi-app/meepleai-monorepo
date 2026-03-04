@@ -186,7 +186,7 @@ internal static class BggImportQueueEndpoints
         var command = new EnqueueBggBatchFromJsonCommand
         {
             JsonContent = request.JsonContent,
-            UserId = userId != null ? Guid.Parse(userId) : Guid.Empty
+            UserId = userId != null && Guid.TryParse(userId, out var userGuid) ? userGuid : Guid.Empty
         };
 
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);

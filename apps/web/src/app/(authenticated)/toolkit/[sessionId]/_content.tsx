@@ -295,8 +295,8 @@ export function ActiveSessionPageContent() {
   const header = (
     <>
       <SessionHeader
-        session={activeSession}
-        onPause={activeSession.status === 'Active' ? handlePause : undefined}
+        session={activeSession as unknown as import('@/components/session/types').Session}
+        onPause={activeSession.status === 'InProgress' ? handlePause : undefined}
         onFinalize={handleFinalize}
       />
       <TurnIndicatorBar

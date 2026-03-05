@@ -40,7 +40,8 @@ export type TagPresetKey =
   // Agent type tags
   | 'tutor'
   | 'arbitro'
-  | 'decisore'
+  | 'stratega'
+  | 'narratore'
   // Agent skill tags
   | 'rules-qa'
   | 'move-validation'
@@ -163,10 +164,10 @@ export const agentTagPresets: Record<string, TagConfig> = {
     icon: Scale,
     description: 'Validazione mosse e regolamento',
   },
-  decisore: {
-    key: 'decisore',
-    label: 'Decisore',
-    abbr: 'Dec',
+  stratega: {
+    key: 'stratega',
+    label: 'Stratega',
+    abbr: 'Str',
     color: 'violet',
     bgClass: 'bg-violet-500 dark:bg-violet-600',
     textClass: 'text-white',

@@ -27,21 +27,29 @@ interface ToolsStrategyStepProps {
 // Available tools in the platform
 const AVAILABLE_TOOLS = [
   { id: 'web_search', name: 'Web Search', description: 'Search the internet for information' },
-  { id: 'hybrid_search', name: 'Hybrid Search', description: 'Search knowledge base with vector + keyword' },
+  {
+    id: 'hybrid_search',
+    name: 'Hybrid Search',
+    description: 'Search knowledge base with vector + keyword',
+  },
   { id: 'vector_search', name: 'Vector Search', description: 'Semantic similarity search' },
   { id: 'rules_lookup', name: 'Rules Lookup', description: 'Look up specific game rules' },
   { id: 'game_catalog', name: 'Game Catalog', description: 'Access BGG game database' },
   { id: 'move_validator', name: 'Move Validator', description: 'Validate game moves (Arbitro)' },
-  { id: 'strategy_analyzer', name: 'Strategy Analyzer', description: 'Analyze positions (Decisore)' },
+  {
+    id: 'strategy_analyzer',
+    name: 'Strategy Analyzer',
+    description: 'Analyze positions (Stratega)',
+  },
 ] as const;
 
 export function ToolsStrategyStep({ agent, onChange }: ToolsStrategyStepProps) {
-  const selectedToolIds = new Set(agent.tools?.map((t) => t.name) || []);
+  const selectedToolIds = new Set(agent.tools?.map(t => t.name) || []);
 
   const toggleTool = (toolId: string, checked: boolean) => {
     const newTools = checked
       ? [...(agent.tools || []), { name: toolId, settings: {} }]
-      : (agent.tools || []).filter((t) => t.name !== toolId);
+      : (agent.tools || []).filter(t => t.name !== toolId);
 
     onChange({ ...agent, tools: newTools });
   };
@@ -67,13 +75,13 @@ export function ToolsStrategyStep({ agent, onChange }: ToolsStrategyStepProps) {
             <Label htmlFor="strategy-name">Strategy</Label>
             <Select
               value={agent.strategyName || 'HybridSearch'}
-              onValueChange={(value) => onChange({ ...agent, strategyName: value })}
+              onValueChange={value => onChange({ ...agent, strategyName: value })}
             >
               <SelectTrigger id="strategy-name">
                 <SelectValue placeholder="Select strategy" />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_STRATEGIES.map((strategy) => (
+                {AVAILABLE_STRATEGIES.map(strategy => (
                   <SelectItem key={strategy.value} value={strategy.value}>
                     <div>
                       <div className="font-medium">{strategy.label}</div>
@@ -96,7 +104,9 @@ export function ToolsStrategyStep({ agent, onChange }: ToolsStrategyStepProps) {
                   min={1}
                   max={50}
                   value={String(agent.strategyParameters?.topK || 10)}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateStrategyParam('topK', Number(e.target.value))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateStrategyParam('topK', Number(e.target.value))
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Number of documents to retrieve (1-50)
@@ -112,11 +122,11 @@ export function ToolsStrategyStep({ agent, onChange }: ToolsStrategyStepProps) {
                   max={1}
                   step={0.05}
                   value={String(agent.strategyParameters?.minScore || 0.55)}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateStrategyParam('minScore', Number(e.target.value))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateStrategyParam('minScore', Number(e.target.value))
+                  }
                 />
-                <p className="text-xs text-muted-foreground">
-                  Relevance threshold (0.0-1.0)
-                </p>
+                <p className="text-xs text-muted-foreground">Relevance threshold (0.0-1.0)</p>
               </div>
             </div>
           </div>
@@ -127,18 +137,16 @@ export function ToolsStrategyStep({ agent, onChange }: ToolsStrategyStepProps) {
       <Card>
         <CardHeader>
           <CardTitle>Available Tools</CardTitle>
-          <CardDescription>
-            Select tools the agent can use during conversations
-          </CardDescription>
+          <CardDescription>Select tools the agent can use during conversations</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {AVAILABLE_TOOLS.map((tool) => (
+            {AVAILABLE_TOOLS.map(tool => (
               <div key={tool.id} className="flex items-start space-x-3">
                 <Checkbox
                   id={tool.id}
                   checked={selectedToolIds.has(tool.id)}
-                  onCheckedChange={(checked) => toggleTool(tool.id, !!checked)}
+                  onCheckedChange={checked => toggleTool(tool.id, !!checked)}
                 />
                 <div className="grid gap-1.5 leading-none">
                   <label

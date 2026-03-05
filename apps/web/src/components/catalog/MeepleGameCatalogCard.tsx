@@ -22,18 +22,21 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { Users, Clock, BarChart2 } from 'lucide-react';
+import { Check, Plus, Users, Clock, BarChart2 } from 'lucide-react';
 
-import { AgentCreationSheet } from '@/components/agent/config';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
-import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleCard,
+  type MeepleCardVariant,
+  type MeepleEntityType,
+} from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import { getNavigationLinks } from '@/config/entity-navigation';
+import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick-actions';
+import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
-import { useEntityActions } from '@/hooks/use-entity-actions';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================
@@ -67,7 +70,7 @@ export interface MeepleGameCatalogCardProps {
  * Format complexity as stars (e.g., "●●●○○")
  */
 function formatComplexity(complexity: number | null | undefined): string {
-  if (!complexity) return 'N/A';
+  if (complexity == null) return 'N/A';
   const filled = Math.round(complexity);
   const empty = 5 - filled;
   return '●'.repeat(filled) + '○'.repeat(empty);
@@ -111,10 +114,6 @@ export function MeepleGameCatalogCard({
   className,
   libraryStatus,
 }: MeepleGameCatalogCardProps) {
-  // Issue #4777: Agent creation sheet state
-  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
-  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
-
   // Issue #4822: Open wizard instead of direct add
   const { openWizard } = useAddGameWizard();
   const handleAddToCollection = useCallback(() => {
@@ -147,12 +146,37 @@ export function MeepleGameCatalogCard({
   const status = libraryStatus || individualStatus;
   const inLibrary = status?.inLibrary || false;
 
-  // Issue #4040: Entity-specific quick actions
-  const entityActions = useEntityActions({
-    entity: 'game',
-    id: game.id,
-    onAddToCollection: handleAddToCollection,
-  });
+  // Catalog-specific quick actions: only "Add to library"
+  const catalogQuickActions: QuickAction[] = useMemo(
+    () => [
+      inLibrary
+        ? {
+            icon: Check,
+            label: 'Gioco gia nella tua libreria',
+            onClick: () => {},
+            disabled: true,
+            disabledTooltip: 'Gioco gia nella tua libreria',
+          }
+        : {
+            icon: Plus,
+            label: 'Aggiungi alla libreria',
+            onClick: handleAddToCollection,
+          },
+    ],
+    [inLibrary, handleAddToCollection]
+  );
+
+  // Catalog nav footer: only "Regolamento" link to detail page
+  const catalogNavLinks: ResolvedNavigationLink[] = useMemo(
+    () => [
+      {
+        entity: 'document' as MeepleEntityType,
+        label: 'Regolamento',
+        href: `/games/${game.id}`,
+      },
+    ],
+    [game.id]
+  );
 
   // Build metadata array
   const metadata = [
@@ -176,7 +200,7 @@ export function MeepleGameCatalogCard({
   if (game.bggId) {
     subtitleParts.push(`BGG: ${game.bggId}`);
   }
-  const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : undefined;
+  const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : 'N/A';
 
   // Build actions for featured variant
   const showActions = variant === 'featured' || variant === 'hero';
@@ -215,50 +239,31 @@ export function MeepleGameCatalogCard({
     : undefined;
 
   return (
-    <>
-      <MeepleCard
-        id={game.id}
-        entity="game"
-        variant={variant}
-        title={game.title}
-        subtitle={subtitle}
-        imageUrl={game.imageUrl || undefined}
-        rating={game.averageRating || undefined}
-        ratingMax={10}
-        metadata={metadata}
-        badge={badge}
-        actions={actions}
-        loading={isLoadingStatus}
-        onClick={onClick ? () => onClick(game.id) : undefined}
-        flippable={flippable && !!game.description}
-        flipData={flipData}
-        flipTrigger="button"
-        className={className}
-        // Epic #4688: Navigation footer
-        navigateTo={getNavigationLinks('game', { id: game.id })}
-        // Issue #4777, #4999: Agent action footer
-        // When not in library: show "Aggiungi" CTA via !hasKb + onAddToCollection
-        // When in library: suppress footer (hasAgent=undefined)
-        hasAgent={inLibrary ? undefined : false}
-        hasKb={inLibrary ? undefined : false}
-        onAddToCollection={inLibrary ? undefined : handleAddToCollection}
-        onCreateAgent={handleCreateAgent}
-        data-testid={`catalog-game-card-${game.id}`}
-        // Issue #4040: New action system
-        entityQuickActions={entityActions.quickActions}
-        showInfoButton
-        infoHref={`/games/${game.id}`}
-        infoTooltip="Vai al dettaglio"
-      />
-
-      {/* Issue #4777: Agent creation wizard */}
-      <AgentCreationSheet
-        isOpen={agentSheetOpen}
-        onClose={() => setAgentSheetOpen(false)}
-        initialGameId={game.id}
-        initialGameTitle={game.title}
-      />
-    </>
+    <MeepleCard
+      id={game.id}
+      entity="game"
+      variant={variant}
+      title={game.title}
+      subtitle={subtitle}
+      imageUrl={game.imageUrl || undefined}
+      rating={game.averageRating ?? 0}
+      ratingMax={10}
+      metadata={metadata}
+      badge={badge}
+      actions={actions}
+      loading={isLoadingStatus}
+      onClick={onClick ? () => onClick(game.id) : undefined}
+      flippable={flippable && !!game.description}
+      flipData={flipData}
+      flipTrigger="button"
+      className={className}
+      navigateTo={catalogNavLinks}
+      data-testid={`catalog-game-card-${game.id}`}
+      entityQuickActions={catalogQuickActions}
+      showInfoButton
+      infoHref={`/games/${game.id}`}
+      infoTooltip="Vai al dettaglio"
+    />
   );
 }
 

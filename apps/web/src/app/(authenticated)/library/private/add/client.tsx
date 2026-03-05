@@ -14,15 +14,16 @@
 
 import { useState, useCallback } from 'react';
 
+import { Bot, Check, FileText, Gamepad2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { GameCreationStep } from '@/app/(authenticated)/admin/wizard/steps/GameCreationStep';
 import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
 import { toast } from '@/components/layout';
 import { PdfProcessingStatus } from '@/components/library/PdfProcessingStatus';
-import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 // Reuse refactored admin wizard steps
 
@@ -81,10 +82,22 @@ export function UserWizardClient({
   const router = useRouter();
   const { t } = useTranslation();
 
-  const STEPS: { id: WizardStep; label: string; icon: string }[] = [
-    { id: 'game', label: t('privateGames.steps.createGame'), icon: '🎮' },
-    { id: 'pdf', label: t('privateGames.steps.uploadPdf'), icon: '📄' },
-    { id: 'agent', label: t('privateGames.steps.configAgent'), icon: '🤖' },
+  const STEPS: { id: WizardStep; label: string; icon: React.ReactNode }[] = [
+    {
+      id: 'game',
+      label: t('privateGames.steps.createGame'),
+      icon: <Gamepad2 className="h-4.5 w-4.5" />,
+    },
+    {
+      id: 'pdf',
+      label: t('privateGames.steps.uploadPdf'),
+      icon: <FileText className="h-4.5 w-4.5" />,
+    },
+    {
+      id: 'agent',
+      label: t('privateGames.steps.configAgent'),
+      icon: <Bot className="h-4.5 w-4.5" />,
+    },
   ];
 
   const [state, setState] = useState<UserWizardState>({
@@ -109,7 +122,11 @@ export function UserWizardClient({
   // Step 1: Skip PDF (go directly to complete)
   const handleSkipPdf = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto alla tua libreria!`);
-    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+    if (onComplete) {
+      onComplete();
+    } else {
+      router.push('/library/private');
+    }
   }, [onComplete, router, state.gameName]);
 
   // Step 2: PDF uploaded
@@ -131,26 +148,42 @@ export function UserWizardClient({
       setState(prev => ({ ...prev, currentStep: 'agent' }));
     } else {
       toast.success(`Gioco "${state.gameName}" aggiunto con PDF!`);
-      if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+      if (onComplete) {
+        onComplete();
+      } else {
+        router.push('/library/private');
+      }
     }
   }, [state.isCatalogGame, state.gameName, onComplete, router]);
 
   // Step 2: Skip PDF from upload step
   const handleSkipPdfStep = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto senza PDF!`);
-    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+    if (onComplete) {
+      onComplete();
+    } else {
+      router.push('/library/private');
+    }
   }, [onComplete, router, state.gameName]);
 
   // Step 3: Agent configured
   const handleAgentConfigured = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto con agente RAG!`);
-    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+    if (onComplete) {
+      onComplete();
+    } else {
+      router.push('/library/private');
+    }
   }, [onComplete, router, state.gameName]);
 
   // Step 3: Skip agent
   const handleSkipAgent = useCallback(() => {
     toast.success(`Gioco "${state.gameName}" aggiunto con PDF!`);
-    if (onComplete) { onComplete(); } else { router.push('/library/private'); }
+    if (onComplete) {
+      onComplete();
+    } else {
+      router.push('/library/private');
+    }
   }, [onComplete, router, state.gameName]);
 
   // Back navigation
@@ -169,8 +202,19 @@ export function UserWizardClient({
 
   const currentStepIndex = STEPS.findIndex(s => s.id === state.currentStep);
 
+  // Filter visible steps (hide agent if no PDF and not on agent step)
+  const visibleSteps = STEPS.filter(
+    step => !(step.id === 'agent' && !state.pdfId && state.currentStep !== 'agent')
+  );
+
   return (
-    <div className={onCancel ? 'px-4 py-4' : 'min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'}>
+    <div
+      className={
+        onCancel
+          ? 'px-5 py-5'
+          : 'min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800'
+      }
+    >
       <div className={onCancel ? '' : 'max-w-4xl mx-auto px-4 py-8'}>
         {/* Header — hidden when embedded in drawer (drawer owns header) */}
         {!onCancel && (
@@ -183,57 +227,56 @@ export function UserWizardClient({
                 {t('privateGames.addToLibrarySubtitle')}
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => router.push('/library/private')}
-            >
+            <Button variant="outline" onClick={() => router.push('/library/private')}>
               {t('privateGames.cancelWizard')}
             </Button>
           </div>
         )}
 
         {/* Step Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {STEPS.map((step, index) => {
+        <div className={cn('mb-6', onCancel && 'px-2')}>
+          <div className="flex items-center">
+            {visibleSteps.map((step, index) => {
+              const globalIndex = STEPS.findIndex(s => s.id === step.id);
               const isActive = step.id === state.currentStep;
-              const isCompleted = index < currentStepIndex;
-
-              // Skip agent step indicator if no PDF
-              if (step.id === 'agent' && !state.pdfId && state.currentStep !== 'agent') {
-                return null;
-              }
+              const isCompleted = globalIndex < currentStepIndex;
 
               return (
-                <div
-                  key={step.id}
-                  className={`flex-1 ${index < STEPS.length - 1 ? 'relative' : ''}`}
-                >
-                  <div className="flex flex-col items-center">
+                <div key={step.id} className="flex items-center flex-1 last:flex-initial">
+                  {/* Step node */}
+                  <div className="flex flex-col items-center gap-1.5">
                     <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-2 transition-colors ${
-                        isActive
-                          ? 'bg-blue-600 text-white'
-                          : isCompleted
-                            ? 'bg-green-600 text-white'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                      }`}
+                      className={cn(
+                        'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300',
+                        isCompleted && 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30',
+                        isActive &&
+                          'bg-amber-500 text-white shadow-md shadow-amber-500/30 ring-4 ring-amber-500/15',
+                        !isActive && !isCompleted && 'bg-muted text-muted-foreground/50'
+                      )}
                     >
-                      {isCompleted ? '✓' : step.icon}
+                      {isCompleted ? <Check className="h-4 w-4 stroke-[3]" /> : step.icon}
                     </div>
-                    <span className={`text-sm font-medium ${
-                      isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-slate-500'
-                    }`}>
+                    <span
+                      className={cn(
+                        'text-xs font-medium text-center max-w-[80px] leading-tight',
+                        isActive && 'text-amber-600 dark:text-amber-400',
+                        isCompleted && 'text-emerald-600 dark:text-emerald-400',
+                        !isActive && !isCompleted && 'text-muted-foreground/50'
+                      )}
+                    >
                       {step.label}
                     </span>
                   </div>
-                  {index < STEPS.length - 1 && (
-                    <div
-                      className={`absolute top-6 left-1/2 w-full h-0.5 ${
-                        isCompleted ? 'bg-green-600' : 'bg-slate-200 dark:bg-slate-700'
-                      }`}
-                      style={{ transform: 'translateX(50%)' }}
-                    />
+                  {/* Connector line */}
+                  {index < visibleSteps.length - 1 && (
+                    <div className="flex-1 mx-3 mb-5">
+                      <div
+                        className={cn(
+                          'h-0.5 rounded-full transition-colors duration-300',
+                          isCompleted ? 'bg-emerald-500' : 'bg-muted'
+                        )}
+                      />
+                    </div>
                   )}
                 </div>
               );
@@ -242,7 +285,12 @@ export function UserWizardClient({
         </div>
 
         {/* Step Content */}
-        <Card className="p-6">
+        <div
+          className={cn(
+            'rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm p-5',
+            onCancel && 'border-border/40'
+          )}
+        >
           {state.currentStep === 'game' && (
             <GameCreationStep
               pdfId={null}
@@ -258,9 +306,8 @@ export function UserWizardClient({
           {state.currentStep === 'pdf' && state.gameId && !showProcessing && (
             <PdfUploadStep
               {...(state.isCatalogGame
-                ? { gameId: state.gameId }        // shared catalog game → 'gameId' field
-                : { privateGameId: state.gameId } // manually created PrivateGame → 'privateGameId' field
-              )}
+                ? { gameId: state.gameId } // shared catalog game → 'gameId' field
+                : { privateGameId: state.gameId })} // manually created PrivateGame → 'privateGameId' field
               isPrivate
               onComplete={handlePdfUploaded}
               onSkip={handleSkipPdfStep}
@@ -290,27 +337,31 @@ export function UserWizardClient({
               />
             </div>
           )}
-        </Card>
+        </div>
 
         {/* Progress Summary */}
-        {state.gameId && (
-          <Card className="mt-6 p-4 bg-slate-100 dark:bg-slate-700/50">
-            <h3 className="text-sm font-semibold mb-2">{t('privateGames.progress')}</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+        {state.gameId && (state.gameName || state.pdfFileName) && (
+          <div className="mt-4 rounded-lg border border-border/40 bg-muted/30 px-4 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              {t('privateGames.progress')}
+            </h3>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               {state.gameName && (
-                <div>
-                  <span className="text-slate-500">Game:</span>{' '}
-                  <span className="font-medium">{state.gameName}</span>
+                <div className="flex items-center gap-1.5">
+                  <Gamepad2 className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="font-medium text-foreground">{state.gameName}</span>
                 </div>
               )}
               {state.pdfFileName && (
-                <div>
-                  <span className="text-slate-500">PDF:</span>{' '}
-                  <span className="font-medium">{state.pdfFileName}</span>
+                <div className="flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="font-medium text-foreground truncate max-w-[180px]">
+                    {state.pdfFileName}
+                  </span>
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         )}
       </div>
     </div>

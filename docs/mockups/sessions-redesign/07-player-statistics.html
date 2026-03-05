@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Player Statistics</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        quicksand: ['Quicksand', 'sans-serif'],
+        nunito: ['Nunito', 'sans-serif'],
+      },
+      colors: {
+        background: 'hsl(30 25% 97%)',
+        foreground: 'hsl(30 15% 15%)',
+        card: '#ffffff',
+        'card-border': 'hsl(30 15% 85%)',
+        primary: 'hsl(25 95% 38%)',
+        'primary-light': 'hsl(25 95% 53%)',
+        secondary: 'hsl(142 76% 28%)',
+        accent: 'hsl(271 91% 55%)',
+        'accent-active': 'hsl(262 83% 62%)',
+        muted: 'hsl(30 20% 90%)',
+        'muted-fg': 'hsl(30 12% 35%)',
+        'entity-session': 'hsl(240 60% 55%)',
+        'entity-game': 'hsl(25 95% 45%)',
+        'entity-player': 'hsl(262 83% 58%)',
+        ring: 'hsl(25 95% 53%)',
+      }
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: hsl(30 25% 97%);
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+  .font-quicksand { font-family: 'Quicksand', sans-serif; }
+  .warm-shadow { box-shadow: 0 4px 16px rgba(180,130,80,0.12); }
+  .warm-shadow-sm { box-shadow: 0 2px 8px rgba(180,130,80,0.08); }
+
+  .bar-animate { transition: width 0.8s cubic-bezier(0.32,0.72,0,1); }
+
+  /* Calendar heatmap — orange heat scale */
+  .heat-0 { background: hsl(30 20% 93%); }
+  .heat-1 { background: hsl(25 80% 85%); }
+  .heat-2 { background: hsl(25 90% 72%); }
+  .heat-3 { background: hsl(25 95% 58%); }
+  .heat-4 { background: hsl(25 95% 45%); }
+</style>
+</head>
+<body class="min-h-screen text-foreground">
+
+<!-- MOBILE FRAME -->
+<div class="mx-auto" style="max-width: 375px; min-height: 100vh;">
+
+  <!-- TOP NAVBAR — h-14, sticky, bg-background/95, backdrop-blur, border-b -->
+  <header class="sticky top-0 z-50 h-14 flex items-center justify-between px-4 border-b" style="background: hsla(30,25%,97%,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-color: hsl(30 15% 85%);">
+    <button class="w-10 h-10 flex items-center justify-center rounded-xl" style="min-height: 44px; min-width: 44px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-foreground"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <h1 class="font-quicksand font-bold text-base text-foreground">Statistiche</h1>
+    <div class="flex items-center gap-1">
+      <button class="w-10 h-10 flex items-center justify-center rounded-xl" style="min-height: 44px; min-width: 44px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted-fg"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background: hsl(262 83% 58%);">M</div>
+    </div>
+  </header>
+
+  <!-- MINI NAV — h-12, sticky below navbar, bg-white/60, backdrop-blur-xl, border-b, horizontal tabs -->
+  <nav class="sticky z-40 h-12 flex items-center gap-1 px-4 border-b overflow-x-auto" style="top: 56px; background: hsla(0,0%,100%,0.6); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-color: hsl(30 15% 85%);">
+    <button class="shrink-0 h-8 px-4 rounded-lg text-sm font-semibold font-quicksand text-white" style="background: hsl(262 83% 62%); min-height: 32px;">Panoramica</button>
+    <button class="shrink-0 h-8 px-4 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:bg-muted" style="min-height: 32px;">Per Gioco</button>
+    <button class="shrink-0 h-8 px-4 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:bg-muted" style="min-height: 32px;">Rivali</button>
+  </nav>
+
+  <!-- MAIN CONTENT — px-4 pt-4 pb-24 -->
+  <main class="px-4 pt-4 pb-24">
+
+    <!-- BIG STATS ROW — 4 KPIs -->
+    <div class="bg-card rounded-2xl border p-4 mb-4 warm-shadow" style="border-color: hsl(30 15% 85%);">
+      <div class="grid grid-cols-4 gap-2">
+        <div class="text-center">
+          <span class="text-2xl font-quicksand font-bold text-foreground block">47</span>
+          <span class="text-[10px] text-muted-fg uppercase tracking-wider font-medium">Sessioni</span>
+        </div>
+        <div class="text-center border-l" style="border-color: hsl(30 15% 88%);">
+          <span class="text-2xl font-quicksand font-bold block" style="color: hsl(142 76% 28%);">62%</span>
+          <span class="text-[10px] text-muted-fg uppercase tracking-wider font-medium">Vittorie</span>
+        </div>
+        <div class="text-center border-l" style="border-color: hsl(30 15% 88%);">
+          <span class="text-2xl font-quicksand font-bold text-foreground block">89h</span>
+          <span class="text-[10px] text-muted-fg uppercase tracking-wider font-medium">Giocate</span>
+        </div>
+        <div class="text-center border-l" style="border-color: hsl(30 15% 88%);">
+          <span class="text-2xl font-quicksand font-bold block" style="color: hsl(25 95% 45%);">12</span>
+          <span class="text-[10px] text-muted-fg uppercase tracking-wider font-medium">Giochi</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- WIN/LOSS TREND — last 10 sessions -->
+    <div class="bg-card rounded-2xl border p-4 mb-4 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+      <h3 class="font-quicksand font-semibold text-sm text-muted-fg mb-3">Ultime 10 Sessioni</h3>
+      <div class="flex items-center justify-center gap-1.5 mb-2.5">
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(142 76% 40%);">W</div>
+          <span class="text-[9px] text-muted-fg">Catan</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(142 76% 40%);">W</div>
+          <span class="text-[9px] text-muted-fg">TTR</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(0 72% 55%);">L</div>
+          <span class="text-[9px] text-muted-fg">Wing</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(142 76% 40%);">W</div>
+          <span class="text-[9px] text-muted-fg">Catan</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(142 76% 40%);">W</div>
+          <span class="text-[9px] text-muted-fg">7W</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(0 72% 55%);">L</div>
+          <span class="text-[9px] text-muted-fg">Azul</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(142 76% 40%);">W</div>
+          <span class="text-[9px] text-muted-fg">Catan</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(0 72% 55%);">L</div>
+          <span class="text-[9px] text-muted-fg">Root</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(142 76% 40%);">W</div>
+          <span class="text-[9px] text-muted-fg">TTR</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style="background: hsl(142 76% 40%);">W</div>
+          <span class="text-[9px] text-muted-fg">Catan</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 justify-center">
+        <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm" style="background: hsl(142 76% 40%);"></div><span class="text-[10px] text-muted-fg">Vittoria (7)</span></div>
+        <div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-sm" style="background: hsl(0 72% 55%);"></div><span class="text-[10px] text-muted-fg">Sconfitta (3)</span></div>
+      </div>
+    </div>
+
+    <!-- MOST PLAYED GAMES — horizontal bar chart -->
+    <div class="bg-card rounded-2xl border p-4 mb-4 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+      <h3 class="font-quicksand font-semibold text-sm text-muted-fg mb-3">Giochi Piu Giocati</h3>
+      <div class="space-y-2.5">
+        <!-- Catan -->
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs text-foreground font-medium w-20 truncate">Catan</span>
+          <div class="flex-1 h-7 rounded-lg overflow-hidden relative" style="background: hsl(30 20% 93%);">
+            <div class="bar-animate absolute inset-y-0 left-0 rounded-r-lg" style="width: 80%; background: linear-gradient(90deg, hsl(25 95% 45%), hsl(25 95% 55%));"></div>
+            <span class="absolute inset-y-0 right-2 flex items-center text-[10px] text-muted-fg font-medium">16</span>
+          </div>
+          <span class="text-[11px] font-bold w-10 text-right" style="color: hsl(142 76% 28%);">75%</span>
+        </div>
+        <!-- Ticket to Ride -->
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs text-foreground font-medium w-20 truncate">Ticket to Ride</span>
+          <div class="flex-1 h-7 rounded-lg overflow-hidden relative" style="background: hsl(30 20% 93%);">
+            <div class="bar-animate absolute inset-y-0 left-0 rounded-r-lg" style="width: 50%; background: linear-gradient(90deg, hsl(25 95% 45%), hsl(25 95% 55%));"></div>
+            <span class="absolute inset-y-0 right-2 flex items-center text-[10px] text-muted-fg font-medium">10</span>
+          </div>
+          <span class="text-[11px] font-bold w-10 text-right" style="color: hsl(142 76% 28%);">60%</span>
+        </div>
+        <!-- Wingspan -->
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs text-foreground font-medium w-20 truncate">Wingspan</span>
+          <div class="flex-1 h-7 rounded-lg overflow-hidden relative" style="background: hsl(30 20% 93%);">
+            <div class="bar-animate absolute inset-y-0 left-0 rounded-r-lg" style="width: 35%; background: linear-gradient(90deg, hsl(25 95% 45%), hsl(25 95% 55%));"></div>
+            <span class="absolute inset-y-0 right-2 flex items-center text-[10px] text-muted-fg font-medium">7</span>
+          </div>
+          <span class="text-[11px] font-bold w-10 text-right" style="color: hsl(25 95% 45%);">43%</span>
+        </div>
+        <!-- 7 Wonders -->
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs text-foreground font-medium w-20 truncate">7 Wonders</span>
+          <div class="flex-1 h-7 rounded-lg overflow-hidden relative" style="background: hsl(30 20% 93%);">
+            <div class="bar-animate absolute inset-y-0 left-0 rounded-r-lg" style="width: 25%; background: linear-gradient(90deg, hsl(25 95% 45%), hsl(25 95% 55%));"></div>
+            <span class="absolute inset-y-0 right-2 flex items-center text-[10px] text-muted-fg font-medium">5</span>
+          </div>
+          <span class="text-[11px] font-bold w-10 text-right" style="color: hsl(142 76% 28%);">80%</span>
+        </div>
+        <!-- Azul -->
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs text-foreground font-medium w-20 truncate">Azul</span>
+          <div class="flex-1 h-7 rounded-lg overflow-hidden relative" style="background: hsl(30 20% 93%);">
+            <div class="bar-animate absolute inset-y-0 left-0 rounded-r-lg" style="width: 20%; background: linear-gradient(90deg, hsl(25 95% 45%), hsl(25 95% 55%));"></div>
+            <span class="absolute inset-y-0 right-2 flex items-center text-[10px] text-muted-fg font-medium">4</span>
+          </div>
+          <span class="text-[11px] font-bold w-10 text-right" style="color: hsl(0 72% 50%);">25%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIVAL STATS -->
+    <div class="bg-card rounded-2xl border p-4 mb-4 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+      <h3 class="font-quicksand font-semibold text-sm text-muted-fg mb-3">I Tuoi Rivali</h3>
+      <div class="space-y-3">
+        <!-- Lucia -->
+        <div class="flex items-center gap-3 p-2.5 rounded-xl" style="background: hsl(30 25% 96%);">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background: hsl(172 66% 40%); min-width: 40px;">L</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-foreground block">Lucia</span>
+            <span class="text-[10px] text-muted-fg">28 partite insieme</span>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="flex items-center gap-1">
+              <span class="text-xs font-bold" style="color: hsl(142 76% 28%);">18</span>
+              <span class="text-[10px] text-muted-fg">-</span>
+              <span class="text-xs font-bold" style="color: hsl(0 72% 50%);">10</span>
+            </div>
+            <span class="text-[10px] font-medium" style="color: hsl(142 76% 28%);">64% WR</span>
+          </div>
+        </div>
+        <!-- Anna -->
+        <div class="flex items-center gap-3 p-2.5 rounded-xl" style="background: hsl(30 25% 96%);">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background: hsl(346 77% 50%); min-width: 40px;">A</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-foreground block">Anna</span>
+            <span class="text-[10px] text-muted-fg">22 partite insieme</span>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="flex items-center gap-1">
+              <span class="text-xs font-bold" style="color: hsl(142 76% 28%);">13</span>
+              <span class="text-[10px] text-muted-fg">-</span>
+              <span class="text-xs font-bold" style="color: hsl(0 72% 50%);">9</span>
+            </div>
+            <span class="text-[10px] font-medium" style="color: hsl(142 76% 28%);">59% WR</span>
+          </div>
+        </div>
+        <!-- Giulia -->
+        <div class="flex items-center gap-3 p-2.5 rounded-xl" style="background: hsl(30 25% 96%);">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background: hsl(25 95% 45%); min-width: 40px;">G</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-foreground block">Giulia</span>
+            <span class="text-[10px] text-muted-fg">15 partite insieme</span>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="flex items-center gap-1">
+              <span class="text-xs font-bold" style="color: hsl(142 76% 28%);">8</span>
+              <span class="text-[10px] text-muted-fg">-</span>
+              <span class="text-xs font-bold" style="color: hsl(0 72% 50%);">7</span>
+            </div>
+            <span class="text-[10px] font-medium" style="color: hsl(25 95% 45%);">53% WR</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR HEATMAP — GitHub-style, orange heat -->
+    <div class="bg-card rounded-2xl border p-4 mb-4 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-quicksand font-semibold text-sm text-muted-fg">Calendario Attivita</h3>
+        <span class="text-[10px] text-muted-fg">Ultimi 3 mesi</span>
+      </div>
+      <!-- Month labels -->
+      <div class="flex justify-between mb-1.5 px-5">
+        <span class="text-[9px] text-muted-fg">Gen</span>
+        <span class="text-[9px] text-muted-fg">Feb</span>
+        <span class="text-[9px] text-muted-fg">Mar</span>
+      </div>
+      <!-- Grid -->
+      <div class="flex gap-[3px]">
+        <!-- Day labels -->
+        <div class="flex flex-col gap-[3px] mr-1">
+          <span class="text-[8px] text-muted-fg h-[14px] flex items-center">L</span>
+          <span class="text-[8px] text-muted-fg h-[14px] flex items-center">M</span>
+          <span class="text-[8px] text-muted-fg h-[14px] flex items-center">M</span>
+          <span class="text-[8px] text-muted-fg h-[14px] flex items-center">G</span>
+          <span class="text-[8px] text-muted-fg h-[14px] flex items-center">V</span>
+          <span class="text-[8px] text-muted-fg h-[14px] flex items-center">S</span>
+          <span class="text-[8px] text-muted-fg h-[14px] flex items-center">D</span>
+        </div>
+        <!-- Weeks -->
+        <div class="flex gap-[3px] flex-1 overflow-x-auto">
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div><div class="w-[14px] h-[14px] rounded-sm heat-3"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-4"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-3"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div><div class="w-[14px] h-[14px] rounded-sm heat-4"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-3"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-4"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-3"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-4"></div><div class="w-[14px] h-[14px] rounded-sm heat-2"></div></div>
+          <div class="flex flex-col gap-[3px]"><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div><div class="w-[14px] h-[14px] rounded-sm heat-3"></div><div class="w-[14px] h-[14px] rounded-sm heat-1"></div><div class="w-[14px] h-[14px] rounded-sm heat-0"></div></div>
+        </div>
+      </div>
+      <!-- Legend -->
+      <div class="flex items-center justify-end gap-1 mt-2.5">
+        <span class="text-[9px] text-muted-fg">Meno</span>
+        <div class="w-[10px] h-[10px] rounded-sm heat-0"></div>
+        <div class="w-[10px] h-[10px] rounded-sm heat-1"></div>
+        <div class="w-[10px] h-[10px] rounded-sm heat-2"></div>
+        <div class="w-[10px] h-[10px] rounded-sm heat-3"></div>
+        <div class="w-[10px] h-[10px] rounded-sm heat-4"></div>
+        <span class="text-[9px] text-muted-fg">Piu</span>
+      </div>
+    </div>
+
+    <!-- ACHIEVEMENT BADGES -->
+    <div class="bg-card rounded-2xl border p-4 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+      <h3 class="font-quicksand font-semibold text-sm text-muted-fg mb-3">Traguardi</h3>
+      <div class="space-y-3">
+        <!-- Streak -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style="background: hsl(25 90% 93%);">&#128293;</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-foreground block">5 Vittorie di Fila</span>
+            <p class="text-[11px] text-muted-fg">Serie vincente consecutiva a Catan</p>
+          </div>
+          <div class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold text-white" style="background: hsl(25 95% 45%);">&#10003;</div>
+        </div>
+        <!-- Dice -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style="background: hsl(271 80% 94%);">&#127919;</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-foreground block">Media Dadi 4.2</span>
+            <p class="text-[11px] text-muted-fg">Sopra la media del 14%</p>
+          </div>
+          <div class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold text-white" style="background: hsl(262 83% 58%);">&#10003;</div>
+        </div>
+        <!-- Night owl -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style="background: hsl(240 50% 94%);">&#127769;</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-foreground block">Notturno</span>
+            <p class="text-[11px] text-muted-fg">12 sessioni dopo le 22:00</p>
+          </div>
+          <div class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold text-white" style="background: hsl(240 60% 55%);">&#10003;</div>
+        </div>
+        <!-- Locked achievement -->
+        <div class="flex items-center gap-3 opacity-40">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0" style="background: hsl(30 20% 90%);">&#127956;</div>
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-semibold text-foreground block">Maratoneta</span>
+            <p class="text-[11px] text-muted-fg">10 sessioni da 3+ ore (7/10)</p>
+          </div>
+          <div class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border" style="border-color: hsl(30 15% 80%); color: hsl(30 12% 55%);">7/10</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+</body>
+</html>

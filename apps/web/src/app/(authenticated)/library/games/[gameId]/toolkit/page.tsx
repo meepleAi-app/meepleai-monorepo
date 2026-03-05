@@ -95,16 +95,20 @@ export default function GameToolkitLandingPage() {
     }
 
     try {
-      await createSession({
-        participants: validParticipants.map(name => ({ displayName: name.trim() })),
-        sessionDate: new Date(),
+      const sessionId = await createSession({
+        gameId,
+        gameName: game?.name,
       });
 
-      const activeSession = useSessionStore.getState().activeSession;
-      if (activeSession) {
-        toast.success(`${game?.name || 'Game'} session started!`);
-        router.push(`/library/games/${gameId}/toolkit/${activeSession.id}`);
+      // Add players after session creation
+      const store = useSessionStore.getState();
+      for (const name of validParticipants) {
+        await store.addPlayer({ displayName: name.trim() });
       }
+      await store.startSession();
+
+      toast.success(`${game?.name || 'Game'} session started!`);
+      router.push(`/library/games/${gameId}/toolkit/${sessionId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start session');
     }
@@ -204,7 +208,9 @@ export default function GameToolkitLandingPage() {
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Scoring Rules
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{template.scoringRules}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {template.scoringRules}
+                  </p>
                 </div>
 
                 <div>

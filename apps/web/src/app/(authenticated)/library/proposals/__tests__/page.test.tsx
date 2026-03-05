@@ -33,12 +33,6 @@ vi.mock('@/components/library/LibraryNavTabs', () => ({
   LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 
-// Mock LibraryNavConfig — returns null in production (only sets nav context via useEffect)
-// Provide a visible element so the test can assert it is rendered (Issue #5054)
-vi.mock('../../NavConfig', () => ({
-  LibraryNavConfig: () => <div data-testid="library-nav-config" />,
-}));
-
 // Mock MyProposalsClient to isolate page-level testing
 vi.mock('../MyProposalsClient', () => ({
   default: () => <div data-testid="my-proposals-client">Proposals Content</div>,
@@ -114,16 +108,5 @@ describe('MyProposalsPage', () => {
     renderWithQuery(<MyProposalsPage />);
 
     expect(await screen.findByTestId('my-proposals-client')).toBeInTheDocument();
-  });
-
-  it('should render LibraryNavConfig when authenticated (Issue #5054)', async () => {
-    mockGetCurrentUser.mockResolvedValue({
-      success: true,
-      user: { id: '1', email: 'test@test.com', role: 'User' },
-    });
-
-    renderWithQuery(<MyProposalsPage />);
-
-    expect(await screen.findByTestId('library-nav-config')).toBeInTheDocument();
   });
 });

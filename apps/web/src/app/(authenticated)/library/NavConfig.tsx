@@ -6,8 +6,7 @@
  * Tabs: Collection · Games · Wishlist · Proposals (with icons + badge counts)
  * ActionBar: Add Game (primary) · Import BGG · Import PDF · Filter
  *
- * Include in library/page.tsx:
- *   <LibraryNavConfig />
+ * Mounted in library/layout.tsx — single mount point for all /library sub-routes.
  */
 
 import { useEffect } from 'react';

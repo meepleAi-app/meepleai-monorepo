@@ -2,14 +2,21 @@
  * Library Section Layout
  * Issue #5039 — User Route Consolidation
  *
- * Pure passthrough — all MiniNav tabs and ActionBar actions
- * are registered by LibraryNavConfig (NavConfig.tsx) to avoid duplication.
+ * Mounts LibraryNavConfig here so ALL /library sub-routes
+ * (detail pages, wishlist, propose, etc.) get proper nav initialization.
  */
 
 'use client';
 
 import { type ReactNode } from 'react';
 
+import { LibraryNavConfig } from './NavConfig';
+
 export default function LibraryLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <LibraryNavConfig />
+      {children}
+    </>
+  );
 }

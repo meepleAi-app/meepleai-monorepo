@@ -55,7 +55,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/share-requests',
+        '/api/v1/share-requests?pageNumber=1',
         expect.any(Object)
       );
     });
@@ -75,7 +75,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
       await client.getUserShareRequests({ page: 2, pageSize: 20 });
 
       expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('page=2'),
+        expect.stringContaining('pageNumber=2'),
         expect.any(Object)
       );
       expect(mockHttpClient.get).toHaveBeenCalledWith(
@@ -317,9 +317,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
 
       const client = createShareRequestsClient({ httpClient: mockHttpClient });
 
-      await expect(client.getRateLimitStatus()).rejects.toThrow(
-        'Failed to get rate limit status'
-      );
+      await expect(client.getRateLimitStatus()).rejects.toThrow('Failed to get rate limit status');
     });
   });
 });

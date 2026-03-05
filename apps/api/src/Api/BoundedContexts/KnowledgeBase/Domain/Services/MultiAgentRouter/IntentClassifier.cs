@@ -65,6 +65,18 @@ internal sealed class IntentClassifier
             new("new to", 0.7), new("first time", 0.7), new("walkthrough", 0.8),
         },
         ["validate", "legal move", "best move", "analyze position"]),
+
+        new(AgentIntent.Narrative, new WeightedKeyword[]
+        {
+            // Primary - EN
+            new("tell me about", 1.0), new("story", 0.95), new("lore", 0.95),
+            new("atmosphere", 0.9), new("setting", 0.85), new("world of", 0.9),
+            new("character", 0.8), new("describe the", 0.75), new("background", 0.7),
+            // Primary - IT
+            new("racconta", 1.0), new("ambientazione", 0.95), new("storia del gioco", 0.95),
+            new("personaggi", 0.85), new("mondo di", 0.9), new("narrazione", 0.9),
+        },
+        ["rule", "legal", "validate", "best move", "strategy", "setup", "how to play"]),
     ];
 
     /// <summary>
@@ -175,7 +187,8 @@ internal enum AgentIntent
     Tutorial,
     RulesQuestion,
     MoveValidation,
-    StrategicAnalysis
+    StrategicAnalysis,
+    Narrative
 }
 
 /// <summary>

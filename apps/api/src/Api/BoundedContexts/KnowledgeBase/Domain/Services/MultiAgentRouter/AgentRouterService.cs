@@ -75,7 +75,8 @@ internal sealed class AgentRouterService
             AgentIntent.Tutorial => "TutorAgent",
             AgentIntent.RulesQuestion => "TutorAgent",
             AgentIntent.MoveValidation => "ArbitroAgent",
-            AgentIntent.StrategicAnalysis => "DecisoreAgent",
+            AgentIntent.StrategicAnalysis => "StrategaAgent",
+            AgentIntent.Narrative => "NarratoreAgent",
             _ => "TutorAgent" // Default fallback
         };
     }
@@ -87,6 +88,7 @@ internal sealed class AgentRouterService
         {
             AgentIntent.MoveValidation => 0.05,
             AgentIntent.StrategicAnalysis => 0.05,
+            AgentIntent.Narrative => 0.03,
             AgentIntent.Tutorial => 0.03,
             _ => 0.0
         };
@@ -98,10 +100,11 @@ internal sealed class AgentRouterService
     {
         return intent switch
         {
-            AgentIntent.Unknown => ["TutorAgent", "ArbitroAgent", "DecisoreAgent"],
+            AgentIntent.Unknown => ["TutorAgent", "ArbitroAgent", "StrategaAgent"],
             AgentIntent.RulesQuestion => ["TutorAgent", "ArbitroAgent"],
             AgentIntent.MoveValidation => ["ArbitroAgent", "TutorAgent"],
-            AgentIntent.StrategicAnalysis => ["DecisoreAgent", "TutorAgent"],
+            AgentIntent.StrategicAnalysis => ["StrategaAgent", "TutorAgent"],
+            AgentIntent.Narrative => ["NarratoreAgent", "TutorAgent"],
             _ => ["TutorAgent"]
         };
     }

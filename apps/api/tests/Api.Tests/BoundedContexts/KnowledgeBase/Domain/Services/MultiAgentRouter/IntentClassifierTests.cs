@@ -213,7 +213,7 @@ public class IntentClassifierTests
         var result = _classifier.ClassifyQuery("validate move");
 
         Assert.NotEmpty(result.AllScores);
-        Assert.Equal(4, result.AllScores.Count); // 4 intent patterns
+        Assert.Equal(5, result.AllScores.Count); // 5 intent patterns
     }
 
     [Fact]

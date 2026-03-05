@@ -285,6 +285,10 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             StreamingEventType.StateUpdate,
             new StreamingStateUpdate($"Starting chat with {agent.Name}", thread.Id));
 
+        // Resolve typology profile for RAG params and prompt differentiation (#5279)
+        var typologyName = ResolveTypologyName(agent);
+        var profile = TypologyProfile.FromName(typologyName);
+
         // RAG Pipeline: Retrieve relevant context from Knowledge Base
         yield return CreateEvent(
             StreamingEventType.StateUpdate,
@@ -348,14 +352,14 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 query = command.UserQuestion,
                 gameId,
                 documentIds = pdfDocumentIds,
-                limit = 10,
-                minScore = 0.6
+                limit = profile.TopK,
+                minScore = profile.MinScore
             });
 
         var searchResult = await _qdrantService.SearchAsync(
             gameId,
             embeddingResult.Embeddings[0],
-            limit: 10,
+            limit: profile.TopK,
             documentIds: pdfDocumentIds, // Use PdfDocumentIds, not VectorDocument IDs
             cancellationToken).ConfigureAwait(false);
 
@@ -372,7 +376,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         // Step 3: Filter results by minimum score, deduplicate, and build context
         // Issue #5254: Duplicate Qdrant points cause identical chunks in results.
         // Deduplicate by (PdfId normalized, ChunkIndex), keeping highest score.
-        var minScore = 0.6; // Configurable threshold
+        var minScore = profile.MinScore;
         var relevantChunks = searchResult.Results
             .Where(r => r.Score >= minScore)
             .OrderByDescending(r => r.Score)
@@ -430,8 +434,11 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             new StreamingStateUpdate("Generating response...", thread.Id));
 
         // Issue #5260: Structured multi-turn prompt template
+        // Issue #5279: Use typology-aware prompt with game name
         var hasHistory = !string.IsNullOrEmpty(chatHistoryContext);
-        var systemPrompt = _chatContextService.BuildSystemPrompt(agent.Name, hasHistory);
+        var gameName = await ResolveGameNameAsync(agent, cancellationToken).ConfigureAwait(false);
+        var systemPrompt = _chatContextService.BuildSystemPrompt(
+            agent.Name, typologyName, gameName, hasHistory);
         var userPrompt = _chatContextService.BuildStructuredUserPrompt(
             command.UserQuestion,
             ragContext,
@@ -698,6 +705,34 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
 
         // No same-tier alternative -> fall back to Ollama
         return AgentDefaults.OllamaFallbackModel;
+    }
+
+    /// <summary>
+    /// Resolves the typology display name from agent type.
+    /// Maps backend AgentType values to frontend typology names.
+    /// </summary>
+    private static string? ResolveTypologyName(Agent agent)
+    {
+        return agent.Type.Value switch
+        {
+            "RAG" => "Tutor",
+            "RulesInterpreter" => "Arbitro",
+            "Confidence" => "Stratega",      // Legacy "Decisore" backend type
+            "Strategist" => "Stratega",       // New backend type
+            "Narrator" => "Narratore",        // New backend type
+            _ => null                         // Custom / unknown -> Custom profile
+        };
+    }
+
+    private async Task<string?> ResolveGameNameAsync(Agent agent, CancellationToken ct)
+    {
+        if (!agent.GameId.HasValue || agent.GameId == Guid.Empty) return null;
+        var gameName = await _dbContext.Games
+            .Where(g => g.Id == agent.GameId.Value)
+            .Select(g => g.Name)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        return gameName;
     }
 
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

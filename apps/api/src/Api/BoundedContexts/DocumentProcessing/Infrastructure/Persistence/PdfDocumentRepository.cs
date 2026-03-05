@@ -148,6 +148,15 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.PdfDocuments.AnyAsync(p =>
+            p.ContentHash == contentHash &&
+            ((gameId.HasValue && p.GameId == gameId) ||
+             (privateGameId.HasValue && p.PrivateGameId == privateGameId)),
+            cancellationToken).ConfigureAwait(false);
+    }
+
     private static PdfDocument MapToDomain(Api.Infrastructure.Entities.PdfDocumentEntity entity)
     {
         var fileName = new FileName(entity.FileName);
@@ -212,7 +221,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             extractingStartedAt: entity.ExtractingStartedAt, // Issue #4219
             chunkingStartedAt: entity.ChunkingStartedAt, // Issue #4219
             embeddingStartedAt: entity.EmbeddingStartedAt, // Issue #4219
-            indexingStartedAt: entity.IndexingStartedAt // Issue #4219
+            indexingStartedAt: entity.IndexingStartedAt, // Issue #4219
+            contentHash: entity.ContentHash
         );
     }
 
@@ -249,7 +259,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ExtractingStartedAt = domain.ExtractingStartedAt, // Issue #4219
             ChunkingStartedAt = domain.ChunkingStartedAt, // Issue #4219
             EmbeddingStartedAt = domain.EmbeddingStartedAt, // Issue #4219
-            IndexingStartedAt = domain.IndexingStartedAt // Issue #4219
+            IndexingStartedAt = domain.IndexingStartedAt, // Issue #4219
+            ContentHash = domain.ContentHash
         };
     }
 }

@@ -109,5 +109,17 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.IndexingStartedAt)
             .HasColumnName("indexing_started_at")
             .IsRequired(false);
+
+        // PDF deduplication: SHA-256 content hash
+        builder.Property(e => e.ContentHash)
+            .HasMaxLength(64)
+            .HasColumnName("content_hash")
+            .IsRequired(false);
+
+        builder.HasIndex(e => new { e.ContentHash, e.GameId })
+            .HasDatabaseName("ix_pdf_documents_content_hash_game_id");
+
+        builder.HasIndex(e => new { e.ContentHash, e.PrivateGameId })
+            .HasDatabaseName("ix_pdf_documents_content_hash_private_game_id");
     }
 }

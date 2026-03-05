@@ -35,6 +35,18 @@ public sealed record AgentType
     /// </summary>
     public static AgentType ConversationAgent => new("Conversation", "Manages chat threads and conversation context");
 
+    /// <summary>
+    /// Strategist agent: Strategic advisor for tactical analysis and move suggestions.
+    /// Issue #5280: Agent Typology Differentiation.
+    /// </summary>
+    public static AgentType Strategist => new("Strategist", "Strategic advisor for tactical analysis and move suggestions");
+
+    /// <summary>
+    /// Narrator agent: Storyteller for immersive game narrative and lore.
+    /// Issue #5280: Agent Typology Differentiation.
+    /// </summary>
+    public static AgentType Narrator => new("Narrator", "Storyteller for immersive game narrative and lore");
+
     public string Value { get; }
     public string Description { get; }
 
@@ -68,6 +80,9 @@ public sealed record AgentType
             "CONFIDENCE" => ConfidenceAgent,
             "RULESINTERPRETER" => RulesInterpreter,
             "CONVERSATION" => ConversationAgent,
+            "STRATEGIST" => Strategist,
+            "NARRATOR" => Narrator,
+            "DECISORE" => Strategist, // Backward-compatible alias
             _ => throw new ArgumentException($"Unknown AgentType: {value}", nameof(value))
         };
     }

@@ -35,7 +35,6 @@ import { usePlayHistory } from '@/lib/hooks/use-play-records';
 import {
   usePlayRecordsStore,
   selectFilters,
-  selectViewPreferences,
   selectHasActiveFilters,
 } from '@/lib/stores/play-records-store';
 
@@ -48,10 +47,16 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const filters = usePlayRecordsStore(selectFilters);
-  const { viewMode, sortBy, sidebarOpen } = usePlayRecordsStore(selectViewPreferences);
+  const viewMode = usePlayRecordsStore(state => state.viewMode);
+  const sortBy = usePlayRecordsStore(state => state.sortBy);
+  const sidebarOpen = usePlayRecordsStore(state => state.sidebarOpen);
   const hasActiveFilters = usePlayRecordsStore(selectHasActiveFilters);
 
-  const { setFilter, resetFilters, setViewMode, setSortBy, toggleSidebar } = usePlayRecordsStore();
+  const setFilter = usePlayRecordsStore(state => state.setFilter);
+  const resetFilters = usePlayRecordsStore(state => state.resetFilters);
+  const setViewMode = usePlayRecordsStore(state => state.setViewMode);
+  const setSortBy = usePlayRecordsStore(state => state.setSortBy);
+  const toggleSidebar = usePlayRecordsStore(state => state.toggleSidebar);
 
   // Fetch play history
   const { data, isLoading, error } = usePlayHistory({

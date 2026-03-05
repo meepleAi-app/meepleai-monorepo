@@ -14,6 +14,7 @@ import React, { useState, useCallback } from 'react';
 
 import {
   ArrowLeft,
+  BookOpen,
   Bot,
   Check,
   Download,
@@ -21,6 +22,8 @@ import {
   Pencil,
   Settings,
   Share2,
+  Shield,
+  Target,
   Trash2,
   X,
 } from 'lucide-react';
@@ -53,9 +56,38 @@ export interface ChatThreadHeaderProps {
   onShare?: () => void;
   /** Handler for delete */
   onDelete?: () => void;
+  /** Agent typology for badge display */
+  agentType?: string;
   /** Additional CSS classes */
   className?: string;
 }
+
+// ============================================================================
+// Typology Badge Config
+// ============================================================================
+
+const TYPOLOGY_BADGE: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+  Tutor: {
+    label: 'Tutor',
+    color: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
+    icon: BookOpen,
+  },
+  Arbitro: {
+    label: 'Arbitro',
+    color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+    icon: Shield,
+  },
+  Stratega: {
+    label: 'Stratega',
+    color: 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400',
+    icon: Target,
+  },
+  Narratore: {
+    label: 'Narratore',
+    color: 'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400',
+    icon: BookOpen,
+  },
+};
 
 // ============================================================================
 // Component
@@ -72,6 +104,7 @@ export function ChatThreadHeader({
   onExport,
   onShare,
   onDelete,
+  agentType,
   className,
 }: ChatThreadHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -178,6 +211,27 @@ export function ChatThreadHeader({
               {agentName}
             </span>
           )}
+          {agentType &&
+            TYPOLOGY_BADGE[agentType] &&
+            (() => {
+              const badge = TYPOLOGY_BADGE[agentType];
+              const BadgeIcon = badge.icon;
+              return (
+                <>
+                  {(gameName || agentName) && <span>•</span>}
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium',
+                      badge.color
+                    )}
+                    data-testid="typology-badge"
+                  >
+                    <BadgeIcon className="h-2.5 w-2.5" />
+                    {badge.label}
+                  </span>
+                </>
+              );
+            })()}
         </div>
       </div>
 

@@ -29,12 +29,15 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
   const setNavConfig = useSetNavConfig();
   const loadSession = useSessionStore(s => s.loadSession);
   const activeSession = useSessionStore(s => s.activeSession);
+  const scores = useSessionStore(s => s.scores);
 
   const [scoreSheetOpen, setScoreSheetOpen] = useState(false);
 
   // Load session data on mount
   useEffect(() => {
-    loadSession(id);
+    loadSession(id).catch(() => {
+      // Error state is set in the store; child page renders it
+    });
   }, [id, loadSession]);
 
   // Override parent nav with session-specific tabs + action
@@ -58,10 +61,11 @@ export default function SessionDetailLayout({ children, params }: SessionLayoutP
     });
   }, [id, setNavConfig]);
 
-  // Derive scoring context from active session
+  // Derive scoring context from store (same source as page.tsx for consistency)
   const players = activeSession?.players ?? [];
-  const currentRound = Math.max(1, ...(activeSession?.roundScores ?? []).map(s => s.round));
-  const dimensions = activeSession?.scoringConfig?.enabledDimensions ?? ['default'];
+  const roundNumbers = scores.map(s => s.round);
+  const currentRound = roundNumbers.length > 0 ? Math.max(1, ...roundNumbers) : 1;
+  const dimensions = activeSession?.scoringConfig.enabledDimensions ?? ['default'];
 
   return (
     <>

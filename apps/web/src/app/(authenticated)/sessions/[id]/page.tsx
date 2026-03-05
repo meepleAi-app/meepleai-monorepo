@@ -35,37 +35,31 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
   const completeSession = useSessionStore(s => s.completeSession);
   const handleSessionUpdate = useSessionStore(s => s.handleSessionUpdate);
 
-  // SSE callbacks — refresh scores on update, handle lifecycle events
+  // SSE callbacks — use getState() to avoid stale closures and SSE reconnection cascades
   const onScoreUpdate = useCallback(() => {
     loadScores();
   }, [loadScores]);
 
   const onPaused = useCallback(() => {
-    if (activeSession) {
-      handleSessionUpdate({
-        ...activeSession,
-        status: 'Paused' as LiveSessionStatus,
-      });
+    const session = useSessionStore.getState().activeSession;
+    if (session) {
+      handleSessionUpdate({ ...session, status: 'Paused' as LiveSessionStatus });
     }
-  }, [activeSession, handleSessionUpdate]);
+  }, [handleSessionUpdate]);
 
   const onResumed = useCallback(() => {
-    if (activeSession) {
-      handleSessionUpdate({
-        ...activeSession,
-        status: 'InProgress' as LiveSessionStatus,
-      });
+    const session = useSessionStore.getState().activeSession;
+    if (session) {
+      handleSessionUpdate({ ...session, status: 'InProgress' as LiveSessionStatus });
     }
-  }, [activeSession, handleSessionUpdate]);
+  }, [handleSessionUpdate]);
 
   const onFinalized = useCallback(() => {
-    if (activeSession) {
-      handleSessionUpdate({
-        ...activeSession,
-        status: 'Completed' as LiveSessionStatus,
-      });
+    const session = useSessionStore.getState().activeSession;
+    if (session) {
+      handleSessionUpdate({ ...session, status: 'Completed' as LiveSessionStatus });
     }
-  }, [activeSession, handleSessionUpdate]);
+  }, [handleSessionUpdate]);
 
   // Connect SSE
   const { isConnected } = useSessionSync({
@@ -100,7 +94,8 @@ export default function SessionScoreboardPage({ params }: SessionPageProps) {
 
   const session = toSession(activeSession);
   const scoreboardData = toScoreboardData(activeSession, scores, null);
-  const currentRound = Math.max(1, ...scores.map(s => s.round), 0);
+  const roundNumbers = scores.map(s => s.round);
+  const currentRound = roundNumbers.length > 0 ? Math.max(1, ...roundNumbers) : 1;
 
   const handlePause = () => {
     if (activeSession.status === 'Paused') {

@@ -289,6 +289,23 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         var typologyName = ResolveTypologyName(agent);
         var profile = TypologyProfile.FromName(typologyName);
 
+        // Debug: emit typology profile event (#5281)
+        yield return CreateEvent(
+            StreamingEventType.DebugTypologyProfile,
+            new
+            {
+                typology = profile.Name,
+                description = profile.Description,
+                topK = profile.TopK,
+                minScore = profile.MinScore,
+                searchStrategy = profile.SearchStrategy,
+                temperature = profile.Temperature,
+                maxTokens = profile.MaxTokens,
+                promptPreview = profile.SystemPromptTemplate.Length > 200
+                    ? string.Concat(profile.SystemPromptTemplate.AsSpan(0, 197), "...")
+                    : profile.SystemPromptTemplate
+            });
+
         // RAG Pipeline: Retrieve relevant context from Knowledge Base
         yield return CreateEvent(
             StreamingEventType.StateUpdate,
@@ -353,7 +370,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 gameId,
                 documentIds = pdfDocumentIds,
                 limit = profile.TopK,
-                minScore = profile.MinScore
+                minScore = profile.MinScore,
+                typology = profile.Name
             });
 
         var searchResult = await _qdrantService.SearchAsync(
@@ -458,7 +476,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 userPromptPreview = userPrompt.Length > 500 ? string.Concat(userPrompt.AsSpan(0, 497), "...") : userPrompt,
                 estimatedPromptTokens,
                 hasRagContext = !string.IsNullOrEmpty(ragContext),
-                contextChunkCount = relevantChunks.Count
+                contextChunkCount = relevantChunks.Count,
+                typology = profile.Name,
+                typologyTemperature = profile.Temperature
             });
 
         // Budget Display System: Check user budget and fallback to free model if exhausted
@@ -588,7 +608,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 promptTokens = llmResult.Usage.PromptTokens,
                 completionTokens = llmResult.Usage.CompletionTokens,
                 totalTokens = tokenCount,
-                confidence = retrievalConfidence
+                confidence = retrievalConfidence,
+                typology = profile.Name
             });
 
         yield return CreateEvent(

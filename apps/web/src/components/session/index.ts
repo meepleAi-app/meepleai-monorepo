@@ -2,7 +2,13 @@
 
 export { LiveIndicator } from './LiveIndicator';
 export { LiveScoreSheet } from './LiveScoreSheet';
-export * from './adapters';
+export {
+  playerColorToHex,
+  toSession,
+  toParticipant,
+  toScoreEntry,
+  toScoreboardData,
+} from './adapters';
 
 export { SessionHeader } from './SessionHeader';
 export { ToolRail, BASE_TOOLS } from './ToolRail';

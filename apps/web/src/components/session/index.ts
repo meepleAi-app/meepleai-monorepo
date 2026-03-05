@@ -1,5 +1,9 @@
 // Session Toolkit Components - Barrel Export
 
+export { LiveIndicator } from './LiveIndicator';
+export { LiveScoreSheet } from './LiveScoreSheet';
+export * from './adapters';
+
 export { SessionHeader } from './SessionHeader';
 export { ToolRail, BASE_TOOLS } from './ToolRail';
 export { SessionToolLayout } from './SessionToolLayout';
@@ -63,4 +67,11 @@ export type {
   WhiteboardSSEEvent,
 } from './types';
 
-export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS, WHITEBOARD_COLORS, TOKEN_COLORS, THICKNESS_VALUES } from './types';
+export {
+  DICE_TYPES,
+  CARD_SUITS,
+  DEFAULT_WHEEL_COLORS,
+  WHITEBOARD_COLORS,
+  TOKEN_COLORS,
+  THICKNESS_VALUES,
+} from './types';

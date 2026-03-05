@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Active Session: Chat</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        quicksand: ['Quicksand', 'sans-serif'],
+        nunito: ['Nunito', 'sans-serif'],
+      },
+      colors: {
+        background: 'hsl(30 25% 97%)',
+        foreground: 'hsl(30 15% 15%)',
+        card: '#ffffff',
+        'card-border': 'hsl(30 15% 85%)',
+        primary: 'hsl(25 95% 38%)',
+        'primary-light': 'hsl(25 95% 53%)',
+        secondary: 'hsl(142 76% 28%)',
+        accent: 'hsl(271 91% 55%)',
+        'accent-light': 'hsl(262 83% 62%)',
+        muted: 'hsl(30 20% 90%)',
+        'muted-fg': 'hsl(30 12% 35%)',
+        'entity-session': 'hsl(240 60% 55%)',
+        'entity-game': 'hsl(25 95% 45%)',
+        'entity-player': 'hsl(262 83% 58%)',
+        ring: 'hsl(25 95% 53%)',
+      }
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: hsl(30 25% 97%);
+    background-image: repeating-linear-gradient(
+      87deg,
+      transparent,
+      transparent 3px,
+      rgba(139, 105, 20, 0.02) 3px,
+      rgba(139, 105, 20, 0.02) 6px
+    );
+  }
+  .font-quicksand { font-family: 'Quicksand', sans-serif; }
+
+  /* Glass morphism */
+  .glass { background: rgba(255,255,255,0.70); backdrop-filter: blur(12px); }
+  .glass-bright { background: rgba(255,255,255,0.60); backdrop-filter: blur(20px); }
+
+  /* Warm shadow */
+  .warm-shadow { box-shadow: 0 2px 12px rgba(180,130,80,0.12); }
+  .warm-shadow-lg { box-shadow: 0 4px 24px rgba(180,130,80,0.15); }
+
+  /* Message bubbles */
+  .msg-self {
+    background: hsl(25 95% 95%);
+    border: 1px solid hsl(25 80% 85%);
+  }
+  .msg-other {
+    background: #ffffff;
+    border: 1px solid hsl(30 15% 88%);
+  }
+  .msg-ai {
+    background: linear-gradient(135deg, hsl(271 91% 97%), hsl(262 83% 95%));
+    border: 1px solid hsl(271 60% 85%);
+  }
+  .msg-system {
+    background: transparent;
+  }
+
+  /* Live dot animation */
+  @keyframes live-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .live-dot { animation: live-dot 1.5s ease-in-out infinite; }
+
+  /* MiniNav active tab */
+  .mini-tab { transition: all 0.15s ease; }
+  .mini-tab.active { color: hsl(262 83% 62%); border-bottom-color: hsl(262 83% 62%); }
+
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }
+</style>
+</head>
+<body class="min-h-screen flex flex-col" style="color: hsl(30 15% 15%);">
+
+<!-- Wrapper: mobile 375px centered -->
+<div class="mx-auto w-full max-w-[375px] min-h-screen flex flex-col relative" style="background-color: hsl(30 25% 97%); background-image: repeating-linear-gradient(87deg, transparent, transparent 3px, rgba(139,105,20,0.02) 3px, rgba(139,105,20,0.02) 6px);">
+
+  <!-- TOP NAVBAR — h-14, sticky, backdrop-blur -->
+  <header class="sticky top-0 z-50 h-14 flex items-center px-4 border-b" style="background: hsla(30, 25%, 97%, 0.95); backdrop-filter: blur(12px); border-color: hsl(30 15% 85%);">
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <!-- Back button -->
+      <button class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: hsl(30 20% 90%);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: hsl(30 12% 35%);"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <!-- Game info -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-md" style="background: hsl(25 95% 93%); color: hsl(25 95% 38%);">Catan</span>
+          <span class="w-1.5 h-1.5 rounded-full live-dot" style="background: hsl(142 76% 42%);"></span>
+        </div>
+      </div>
+      <!-- Session code -->
+      <span class="text-[11px] font-mono font-bold tracking-wider px-2 py-1 rounded-lg" style="background: hsl(240 60% 95%); color: hsl(240 60% 55%);">K7X2M9</span>
+      <!-- Notification bell -->
+      <button class="w-9 h-9 rounded-xl flex items-center justify-center relative" style="background: hsl(30 20% 90%);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: hsl(30 12% 35%);"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center" style="background: hsl(0 84% 60%);">2</span>
+      </button>
+      <!-- Avatar -->
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style="background: hsl(25 95% 45%);">M</div>
+    </div>
+  </header>
+
+  <!-- MININAV — h-12, sticky below navbar, horizontal tabs -->
+  <nav class="sticky z-40 h-12 flex items-center gap-1 px-3 border-b overflow-x-auto" style="top: 56px; background: rgba(255,255,255,0.60); backdrop-filter: blur(20px); border-color: hsl(30 15% 85%);">
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Punteggi</button>
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Strumenti</button>
+    <button class="mini-tab active shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 relative" style="color: hsl(262 83% 62%); border-bottom-color: hsl(262 83% 62%);">
+      Chat
+      <!-- Unread badge -->
+      <span class="absolute -top-0 right-0 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center" style="background: hsl(0 84% 60%);">3</span>
+    </button>
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Note</button>
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Dettagli</button>
+  </nav>
+
+  <!-- CHAT MESSAGES — scrollable content area -->
+  <main class="flex-1 overflow-y-auto px-4 pt-4 pb-40">
+    <div class="space-y-3">
+
+      <!-- System event: session created -->
+      <div class="flex justify-center">
+        <p class="text-xs italic text-center" style="color: hsl(30 12% 55%);">Marco ha creato la sessione -- 1h 23m fa</p>
+      </div>
+
+      <!-- System event: players joined -->
+      <div class="flex justify-center">
+        <p class="text-xs italic text-center" style="color: hsl(30 12% 55%);">Lucia, Anna e Giulia si sono uniti</p>
+      </div>
+
+      <!-- Other player message: Lucia -->
+      <div class="flex gap-2.5 items-end">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style="background: hsl(174 60% 40%);">L</div>
+        <div class="msg-other rounded-2xl rounded-bl-md px-3.5 py-2.5 max-w-[80%] warm-shadow">
+          <p class="text-xs font-semibold mb-0.5" style="color: hsl(174 60% 35%);">Lucia</p>
+          <p class="text-sm" style="color: hsl(30 15% 25%);">Chi parte per primo? Tiriamo i dadi?</p>
+          <p class="text-[10px] mt-1 text-right" style="color: hsl(30 12% 65%);">1h 20m fa</p>
+        </div>
+      </div>
+
+      <!-- Self message -->
+      <div class="flex gap-2.5 items-end justify-end">
+        <div class="msg-self rounded-2xl rounded-br-md px-3.5 py-2.5 max-w-[80%] warm-shadow">
+          <p class="text-sm" style="color: hsl(25 50% 20%);">Si, tiriamo! Il piu alto parte</p>
+          <p class="text-[10px] mt-1 text-right" style="color: hsl(25 60% 55%);">1h 19m fa</p>
+        </div>
+      </div>
+
+      <!-- System event: dice roll — Marco -->
+      <div class="flex justify-center">
+        <div class="glass rounded-xl px-3 py-2 flex items-center gap-2 warm-shadow" style="border: 1px solid hsl(30 15% 88%);">
+          <span class="text-base">&#x1F3B2;</span>
+          <p class="text-xs" style="color: hsl(30 12% 45%);"><span class="font-semibold" style="color: hsl(262 83% 50%);">Marco</span> ha tirato 1d6 &rarr; <span class="font-bold" style="color: hsl(25 95% 38%);">5</span></p>
+        </div>
+      </div>
+
+      <!-- System event: dice roll — Lucia -->
+      <div class="flex justify-center">
+        <div class="glass rounded-xl px-3 py-2 flex items-center gap-2 warm-shadow" style="border: 1px solid hsl(30 15% 88%);">
+          <span class="text-base">&#x1F3B2;</span>
+          <p class="text-xs" style="color: hsl(30 12% 45%);"><span class="font-semibold" style="color: hsl(174 60% 35%);">Lucia</span> ha tirato 1d6 &rarr; <span class="font-bold" style="color: hsl(25 95% 38%);">3</span></p>
+        </div>
+      </div>
+
+      <!-- System event: dice roll — 2d6 result -->
+      <div class="flex justify-center">
+        <div class="glass rounded-xl px-3 py-2 flex items-center gap-2 warm-shadow" style="border: 1px solid hsl(30 15% 88%);">
+          <span class="text-base">&#x1F3B2;&#x1F3B2;</span>
+          <p class="text-xs" style="color: hsl(30 12% 45%);"><span class="font-semibold" style="color: hsl(25 95% 45%);">Marco</span> ha tirato 2d6: <span class="font-bold" style="color: hsl(25 95% 38%);">8</span> <span style="color: hsl(30 12% 65%);">(3+5)</span></p>
+        </div>
+      </div>
+
+      <!-- Other player message: Anna -->
+      <div class="flex gap-2.5 items-end">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style="background: hsl(350 65% 55%);">A</div>
+        <div class="msg-other rounded-2xl rounded-bl-md px-3.5 py-2.5 max-w-[80%] warm-shadow">
+          <p class="text-xs font-semibold mb-0.5" style="color: hsl(350 65% 45%);">Anna</p>
+          <p class="text-sm" style="color: hsl(30 15% 25%);">Marco parte! Dai costruisci la tua strada &#x1F604;</p>
+          <p class="text-[10px] mt-1 text-right" style="color: hsl(30 12% 65%);">1h 15m fa</p>
+        </div>
+      </div>
+
+      <!-- AI Agent response -->
+      <div class="flex gap-2.5 items-end">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style="background: linear-gradient(135deg, hsl(271 91% 55%), hsl(240 60% 55%));">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.07A7.001 7.001 0 0 1 7.07 19H6a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h-1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+        </div>
+        <div class="msg-ai rounded-2xl rounded-bl-md px-3.5 py-2.5 max-w-[85%] warm-shadow">
+          <div class="flex items-center gap-1.5 mb-1">
+            <p class="text-xs font-semibold" style="color: hsl(271 91% 45%);">MeepleAI</p>
+            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full text-white" style="background: hsl(271 91% 55%);">AI</span>
+          </div>
+          <p class="text-sm leading-relaxed" style="color: hsl(30 15% 20%);">Nel round iniziale di Catan, ogni giocatore piazza 2 insediamenti e 2 strade. Si parte dal giocatore col numero piu alto e si prosegue in senso orario, poi si torna indietro per il secondo insediamento.</p>
+          <!-- Confidence + citations -->
+          <div class="flex items-center gap-2 mt-2 pt-2" style="border-top: 1px solid hsl(271 40% 90%);">
+            <!-- Confidence bar -->
+            <div class="flex items-center gap-1.5">
+              <div class="w-16 h-1.5 rounded-full overflow-hidden" style="background: hsl(271 30% 90%);">
+                <div class="h-full rounded-full" style="width: 95%; background: hsl(271 91% 55%);"></div>
+              </div>
+              <span class="text-[10px] font-semibold" style="color: hsl(271 60% 50%);">95%</span>
+            </div>
+            <span class="text-[10px]" style="color: hsl(30 12% 70%);">|</span>
+            <span class="text-[10px]" style="color: hsl(271 40% 55%);">Regolamento Catan p.4</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Other player message: Giulia -->
+      <div class="flex gap-2.5 items-end">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style="background: hsl(40 90% 45%);">G</div>
+        <div class="msg-other rounded-2xl rounded-bl-md px-3.5 py-2.5 max-w-[80%] warm-shadow">
+          <p class="text-xs font-semibold mb-0.5" style="color: hsl(40 80% 35%);">Giulia</p>
+          <p class="text-sm" style="color: hsl(30 15% 25%);">Perfetto! Qualcuno ha il monopolio del grano? &#x1F605;</p>
+          <p class="text-[10px] mt-1 text-right" style="color: hsl(30 12% 65%);">3 min fa</p>
+        </div>
+      </div>
+
+      <!-- Self message -->
+      <div class="flex gap-2.5 items-end justify-end">
+        <div class="msg-self rounded-2xl rounded-br-md px-3.5 py-2.5 max-w-[80%] warm-shadow">
+          <p class="text-sm" style="color: hsl(25 50% 20%);">Non ancora, ma ci sto lavorando &#x1F60F;</p>
+          <p class="text-[10px] mt-1 text-right" style="color: hsl(25 60% 55%);">1 min fa</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- CHAT INPUT BAR — fixed above floating action bar -->
+  <div class="absolute bottom-0 inset-x-0 z-40 px-3 py-2.5 border-t" style="background: hsla(30, 25%, 97%, 0.92); backdrop-filter: blur(16px); border-color: hsl(30 15% 88%);">
+    <div class="flex items-end gap-2">
+      <!-- AI agent button -->
+      <button class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style="background: hsl(271 91% 95%); border: 1px solid hsl(271 60% 85%);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: hsl(271 91% 55%);"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.07A7.001 7.001 0 0 1 7.07 19H6a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h-1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+      </button>
+      <!-- Text input -->
+      <div class="flex-1 min-h-[40px] max-h-[100px] rounded-xl px-3 py-2.5 flex items-center" style="background: white; border: 1px solid hsl(30 15% 85%);">
+        <span class="text-sm" style="color: hsl(30 12% 65%);">Scrivi un messaggio...</span>
+      </div>
+      <!-- Send button -->
+      <button class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style="background: hsl(25 95% 38%); box-shadow: 0 2px 8px rgba(180,100,20,0.25);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

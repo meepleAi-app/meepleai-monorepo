@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleAI - Strumenti</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: 'hsl(30 25% 97%)',
+            foreground: 'hsl(30 15% 15%)',
+            card: '#ffffff',
+            'card-border': 'hsl(30 15% 85%)',
+            primary: 'hsl(25 95% 38%)',
+            'primary-hover': 'hsl(25 95% 45%)',
+            secondary: 'hsl(142 76% 28%)',
+            accent: 'hsl(271 91% 55%)',
+            'accent-active': 'hsl(262 83% 62%)',
+            muted: 'hsl(30 20% 90%)',
+            'muted-fg': 'hsl(30 12% 35%)',
+            'entity-session': 'hsl(240 60% 55%)',
+            'entity-game': 'hsl(25 95% 45%)',
+            'entity-player': 'hsl(262 83% 58%)',
+            ring: 'hsl(25 95% 53%)',
+          },
+          fontFamily: {
+            quicksand: ['Quicksand', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Nunito', sans-serif;
+      background-color: hsl(30 25% 97%);
+      background-image:
+        repeating-linear-gradient(90deg, rgba(160,120,70,0.03) 0px, rgba(160,120,70,0.01) 1px, transparent 1px, transparent 20px),
+        repeating-linear-gradient(0deg, rgba(160,120,70,0.02) 0px, rgba(160,120,70,0.01) 1px, transparent 1px, transparent 20px),
+        radial-gradient(ellipse at 50% 0%, rgba(255,200,120,0.08) 0%, transparent 70%);
+    }
+    .warm-shadow { box-shadow: 0 2px 12px rgba(180,130,80,0.12); }
+    .warm-shadow-lg { box-shadow: 0 8px 24px rgba(180,130,80,0.15); }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Quicksand', sans-serif; }
+    .bottom-sheet-overlay { background: rgba(30,25,20,0.45); backdrop-filter: blur(4px); }
+    @keyframes dice-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .dice-result { animation: dice-bounce 0.4s ease-out; }
+  </style>
+</head>
+<body class="min-h-screen text-foreground">
+  <div class="mx-auto max-w-[375px] min-h-screen relative bg-background">
+
+    <!-- === TopNavbar === -->
+    <header class="sticky top-0 z-50 h-14 flex items-center justify-between px-3 border-b border-card-border bg-background/95 backdrop-blur-md">
+      <div class="flex items-center gap-2">
+        <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors" aria-label="Indietro">
+          <svg class="w-5 h-5 text-foreground" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="flex flex-col leading-tight">
+          <span class="font-quicksand font-bold text-sm text-foreground">Catan</span>
+          <span class="text-[11px] text-muted-fg font-mono tracking-wide">K7X2M9</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors relative" aria-label="Notifiche">
+          <svg class="w-5 h-5 text-muted-fg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </button>
+        <div class="w-8 h-8 rounded-full bg-entity-player/20 flex items-center justify-center">
+          <span class="text-xs font-bold text-entity-player">MR</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- === MiniNav === -->
+    <nav class="sticky top-14 z-40 h-12 flex items-center gap-1 px-4 border-b border-card-border bg-white/60 backdrop-blur-xl overflow-x-auto">
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:text-foreground hover:bg-muted transition-colors">
+        Punteggi
+      </button>
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold font-quicksand text-accent-active bg-accent/10">
+        Strumenti
+      </button>
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:text-foreground hover:bg-muted transition-colors">
+        Chat
+      </button>
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:text-foreground hover:bg-muted transition-colors">
+        Note
+      </button>
+    </nav>
+
+    <!-- === Content === -->
+    <main class="px-4 pt-4 pb-24">
+
+      <!-- Tool Grid 2x3 -->
+      <h2 class="font-quicksand font-bold text-base text-foreground mb-3">Strumenti di Gioco</h2>
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <!-- Dadi -->
+        <button onclick="document.getElementById('diceSheet').classList.remove('hidden')" class="bg-white rounded-2xl border border-card-border p-4 warm-shadow flex flex-col items-center gap-2 hover:border-primary/30 transition-colors min-h-[100px]">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <span class="text-xl">&#x1F3B2;</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Dadi</span>
+        </button>
+        <!-- Carte -->
+        <button class="bg-white rounded-2xl border border-card-border p-4 warm-shadow flex flex-col items-center gap-2 hover:border-primary/30 transition-colors min-h-[100px]">
+          <div class="w-10 h-10 rounded-xl bg-entity-session/10 flex items-center justify-center">
+            <span class="text-xl">&#x1F0CF;</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Carte</span>
+        </button>
+        <!-- Moneta -->
+        <button class="bg-white rounded-2xl border border-card-border p-4 warm-shadow flex flex-col items-center gap-2 hover:border-primary/30 transition-colors min-h-[100px]">
+          <div class="w-10 h-10 rounded-xl bg-amber-100/80 flex items-center justify-center">
+            <span class="text-xl">&#x1FA99;</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Moneta</span>
+        </button>
+        <!-- Timer -->
+        <button class="bg-white rounded-2xl border border-card-border p-4 warm-shadow flex flex-col items-center gap-2 hover:border-primary/30 transition-colors min-h-[100px]">
+          <div class="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+            <span class="text-xl">&#x23F1;&#xFE0F;</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Timer</span>
+        </button>
+        <!-- Ruota -->
+        <button class="bg-white rounded-2xl border border-card-border p-4 warm-shadow flex flex-col items-center gap-2 hover:border-primary/30 transition-colors min-h-[100px]">
+          <div class="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+            <span class="text-xl">&#x1F3A1;</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Ruota</span>
+        </button>
+        <!-- Contatore -->
+        <button class="bg-white rounded-2xl border border-card-border p-4 warm-shadow flex flex-col items-center gap-2 hover:border-primary/30 transition-colors min-h-[100px]">
+          <div class="w-10 h-10 rounded-xl bg-entity-game/10 flex items-center justify-center">
+            <span class="text-xl">&#x1F522;</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Contatore</span>
+        </button>
+      </div>
+
+      <!-- Recent Activity Feed -->
+      <h2 class="font-quicksand font-bold text-base text-foreground mb-3">Attivit&agrave; Recente</h2>
+      <div class="space-y-2.5">
+        <!-- Activity 1 -->
+        <div class="bg-white rounded-2xl border border-card-border px-4 py-3 warm-shadow flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <span class="text-base">&#x1F3B2;</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-foreground">Marco</span>
+              <span class="text-xs text-muted-fg">ha tirato 2d6</span>
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-sm font-bold text-primary">
+                &#x1F3B2; 4 + 3 = <span class="text-primary font-extrabold">7</span>
+              </span>
+            </div>
+          </div>
+          <span class="text-[10px] text-muted-fg flex-shrink-0">2m fa</span>
+        </div>
+
+        <!-- Activity 2 -->
+        <div class="bg-white rounded-2xl border border-card-border px-4 py-3 warm-shadow flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-100/80 flex items-center justify-center flex-shrink-0">
+            <span class="text-base">&#x1FA99;</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-foreground">Luca</span>
+              <span class="text-xs text-muted-fg">ha lanciato moneta</span>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-lg bg-amber-100 text-xs font-bold text-amber-800 mt-0.5">
+              Testa
+            </span>
+          </div>
+          <span class="text-[10px] text-muted-fg flex-shrink-0">5m fa</span>
+        </div>
+
+        <!-- Activity 3 -->
+        <div class="bg-white rounded-2xl border border-card-border px-4 py-3 warm-shadow flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <span class="text-base">&#x1F3B2;</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-foreground">Andrea</span>
+              <span class="text-xs text-muted-fg">ha tirato 1d6</span>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-sm font-bold text-primary mt-0.5">
+              &#x1F3B2; <span class="font-extrabold">5</span>
+            </span>
+          </div>
+          <span class="text-[10px] text-muted-fg flex-shrink-0">8m fa</span>
+        </div>
+
+        <!-- Activity 4 -->
+        <div class="bg-white rounded-2xl border border-card-border px-4 py-3 warm-shadow flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <span class="text-base">&#x1F3B2;</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-foreground">Francesca</span>
+              <span class="text-xs text-muted-fg">ha tirato 2d6</span>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-sm font-bold text-primary mt-0.5">
+              &#x1F3B2; 6 + 2 = <span class="font-extrabold">8</span>
+            </span>
+          </div>
+          <span class="text-[10px] text-muted-fg flex-shrink-0">12m fa</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- === FloatingActionBar === -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[340px] max-w-[calc(100%-32px)]">
+      <div class="flex items-center justify-center gap-3 px-4 py-3 bg-white/85 backdrop-blur-md rounded-2xl border border-card-border warm-shadow-lg">
+        <button onclick="document.getElementById('diceSheet').classList.remove('hidden')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors min-h-[44px]">
+          <span>&#x1F3B2;</span>
+          Tira Dadi
+        </button>
+        <button class="flex items-center justify-center w-11 h-11 rounded-xl bg-muted text-muted-fg hover:bg-accent/10 hover:text-accent transition-colors" aria-label="Moneta">
+          <span class="text-lg">&#x1FA99;</span>
+        </button>
+        <button class="flex items-center justify-center w-11 h-11 rounded-xl bg-muted text-muted-fg hover:bg-secondary/10 hover:text-secondary transition-colors" aria-label="Timer">
+          <span class="text-lg">&#x23F1;&#xFE0F;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Bottom Sheet: Dice Roller === -->
+    <div id="diceSheet" class="fixed inset-0 z-50 flex items-end justify-center hidden">
+      <!-- Overlay -->
+      <div class="absolute inset-0 bottom-sheet-overlay" onclick="document.getElementById('diceSheet').classList.add('hidden')"></div>
+      <!-- Sheet -->
+      <div class="relative w-full max-w-[375px] bg-white rounded-t-3xl warm-shadow-lg overflow-hidden">
+        <!-- Handle -->
+        <div class="flex justify-center pt-3 pb-2">
+          <div class="w-10 h-1 rounded-full bg-card-border"></div>
+        </div>
+        <!-- Content -->
+        <div class="px-5 pb-8">
+          <h3 class="font-quicksand font-bold text-base text-foreground mb-4">Lancio Dadi</h3>
+
+          <!-- Dice Type Selector -->
+          <label class="block text-xs font-semibold text-muted-fg mb-2">Tipo di dado</label>
+          <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
+            <button class="flex-shrink-0 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">d4</button>
+            <button class="flex-shrink-0 px-3 py-2 rounded-xl bg-primary/10 border-2 border-primary text-sm font-bold text-primary min-h-[44px]">d6</button>
+            <button class="flex-shrink-0 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">d8</button>
+            <button class="flex-shrink-0 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">d10</button>
+            <button class="flex-shrink-0 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">d12</button>
+            <button class="flex-shrink-0 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">d20</button>
+            <button class="flex-shrink-0 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">d100</button>
+          </div>
+
+          <!-- Count -->
+          <label class="block text-xs font-semibold text-muted-fg mb-2">Quantit&agrave;</label>
+          <div class="flex items-center gap-3 mb-4">
+            <button class="w-11 h-11 rounded-xl bg-muted flex items-center justify-center text-lg font-bold text-muted-fg hover:bg-primary/10 hover:text-primary transition-colors">
+              &minus;
+            </button>
+            <span class="w-12 text-center text-xl font-bold text-foreground">2</span>
+            <button class="w-11 h-11 rounded-xl bg-muted flex items-center justify-center text-lg font-bold text-muted-fg hover:bg-primary/10 hover:text-primary transition-colors">
+              +
+            </button>
+          </div>
+
+          <!-- Formula Preview -->
+          <div class="bg-muted/50 rounded-xl px-4 py-3 mb-4 text-center">
+            <span class="text-sm text-muted-fg">Formula: </span>
+            <span class="text-sm font-bold text-foreground font-mono">2d6</span>
+          </div>
+
+          <!-- Result Display -->
+          <div class="bg-gradient-to-br from-primary/5 to-entity-game/5 rounded-2xl border border-primary/20 p-5 mb-5 text-center">
+            <div class="flex items-center justify-center gap-3 mb-2">
+              <span class="dice-result text-3xl">&#x1F3B2;</span>
+              <span class="dice-result text-3xl" style="animation-delay: 0.1s">&#x1F3B2;</span>
+            </div>
+            <div class="flex items-center justify-center gap-2 mb-1">
+              <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white warm-shadow text-lg font-bold text-primary">4</span>
+              <span class="text-muted-fg font-bold">+</span>
+              <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white warm-shadow text-lg font-bold text-primary">3</span>
+              <span class="text-muted-fg font-bold">=</span>
+              <span class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-white text-xl font-extrabold warm-shadow">7</span>
+            </div>
+          </div>
+
+          <!-- Roll Button -->
+          <button class="w-full py-3.5 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-hover transition-colors min-h-[44px] flex items-center justify-center gap-2">
+            <span class="text-base">&#x1F3B2;</span>
+            Tira!
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

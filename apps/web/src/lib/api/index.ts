@@ -48,6 +48,8 @@ import {
   createKnowledgeBaseClient,
   createRagExecutionClient,
   createEntityLinksClient,
+  createLiveSessionsClient,
+  createSessionTrackingClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -76,6 +78,8 @@ import {
   type KnowledgeBaseClient,
   type RagExecutionClient,
   type EntityLinksClient,
+  type LiveSessionsClient,
+  type SessionTrackingClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -247,6 +251,12 @@ export interface ApiClient {
   /** Entity Relationships (Issue #5129) */
   entityLinks: EntityLinksClient;
 
+  /** Live Sessions — new session lifecycle (Issue #5041) */
+  liveSessions: LiveSessionsClient;
+
+  /** Session Tracking — legacy tools: dice, cards, chat, notes (Issue #5041) */
+  sessionTracking: SessionTrackingClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -325,6 +335,8 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     knowledgeBase: createKnowledgeBaseClient({ httpClient }), // ISSUE-4065
     ragExecution: createRagExecutionClient({ httpClient }), // ISSUE-4459
     entityLinks: createEntityLinksClient({ httpClient }), // ISSUE-5129
+    liveSessions: createLiveSessionsClient({ httpClient }), // ISSUE-5041
+    sessionTracking: createSessionTrackingClient({ httpClient }), // ISSUE-5041
     delete: (path: string) => httpClient.delete(path),
   };
 

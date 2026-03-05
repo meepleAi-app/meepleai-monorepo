@@ -6,7 +6,7 @@
  * Features:
  * - Grid view with MeepleCard entity=agent
  * - Search by name/description
- * - Filter by type (Tutor, Arbitro, Decisore)
+ * - Filter by type (Tutor, Arbitro, Stratega, Narratore)
  * - Sort by usage, rating, name
  */
 
@@ -171,7 +171,8 @@ export default function AgentsPage() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="Tutor">Tutor</SelectItem>
             <SelectItem value="Arbitro">Arbitro</SelectItem>
-            <SelectItem value="Decisore">Decisore</SelectItem>
+            <SelectItem value="Stratega">Stratega</SelectItem>
+            <SelectItem value="Narratore">Narratore</SelectItem>
           </SelectContent>
         </Select>
 

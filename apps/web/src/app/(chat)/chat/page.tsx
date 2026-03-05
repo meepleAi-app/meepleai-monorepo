@@ -40,7 +40,8 @@ const SYSTEM_AGENT_LABELS: Record<string, string> = {
   auto: 'Agente Auto',
   tutor: 'Tutor',
   arbitro: 'Arbitro',
-  decisore: 'Decisore',
+  stratega: 'Stratega',
+  narratore: 'Narratore',
 };
 
 function groupSessionsByAgent(sessions: ChatSessionSummaryDto[]): AgentGroup[] {

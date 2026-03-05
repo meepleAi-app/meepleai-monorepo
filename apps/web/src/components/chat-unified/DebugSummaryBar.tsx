@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Clock, Cpu, Percent, Search } from 'lucide-react';
+import { Clock, Cpu, Percent, Search, Users } from 'lucide-react';
 
 import type { DebugStep } from '@/hooks/useAgentChatStream';
 
@@ -45,6 +45,13 @@ function extractRetrievalResults(steps: DebugStep[]): {
   };
 }
 
+function extractTypology(steps: DebugStep[]): string | null {
+  const s = steps.find(s => s.type === 22); // DebugTypologyProfile
+  if (!s) return null;
+  const p = s.payload as Record<string, unknown>;
+  return typeof p.typology === 'string' ? p.typology : null;
+}
+
 // ─── Metric tile ──────────────────────────────────────────────────────────────
 
 function Metric({
@@ -61,7 +68,9 @@ function Metric({
       <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="flex flex-col min-w-0">
         <span className="text-[10px] text-muted-foreground leading-none">{label}</span>
-        <span className="text-xs font-mono font-semibold leading-none mt-0.5 truncate">{value}</span>
+        <span className="text-xs font-mono font-semibold leading-none mt-0.5 truncate">
+          {value}
+        </span>
       </div>
     </div>
   );
@@ -79,15 +88,13 @@ export function DebugSummaryBar({ steps }: DebugSummaryBarProps) {
   const totalLatencyMs = sumLatency(steps);
   const cost = extractCostUpdate(steps);
   const retrieval = extractRetrievalResults(steps);
+  const typology = extractTypology(steps);
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 rounded-lg bg-muted/40 border border-border/40 divide-x divide-border/40">
+      {typology && <Metric icon={Users} label="Typology" value={typology} />}
       {totalLatencyMs > 0 && (
-        <Metric
-          icon={Clock}
-          label="Total latency"
-          value={`${totalLatencyMs}ms`}
-        />
+        <Metric icon={Clock} label="Total latency" value={`${totalLatencyMs}ms`} />
       )}
       {cost && (
         <>
@@ -105,13 +112,7 @@ export function DebugSummaryBar({ steps }: DebugSummaryBarProps) {
           )}
         </>
       )}
-      {retrieval && (
-        <Metric
-          icon={Search}
-          label="KB chunks"
-          value={retrieval.filteredCount}
-        />
-      )}
+      {retrieval && <Metric icon={Search} label="KB chunks" value={retrieval.filteredCount} />}
       {cost?.model && (
         <div className="px-3 py-1.5">
           <span className="text-[10px] font-mono text-muted-foreground truncate">{cost.model}</span>

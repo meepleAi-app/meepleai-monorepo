@@ -33,6 +33,7 @@ const StreamingEventType = {
   DebugCacheCheck: 19,
   DebugDocumentCheck: 20,
   ModelDowngrade: 21,
+  DebugTypologyProfile: 22,
 } as const;
 
 // Debug step captured from SSE stream (Issue #4916)
@@ -62,6 +63,7 @@ const DEBUG_STEP_NAMES: Record<number, string> = {
   18: 'Search Details',
   19: 'Cache Check',
   20: 'Document Check',
+  22: 'Typology Profile',
 };
 
 export interface AgentChatStreamState {
@@ -99,11 +101,14 @@ export interface ProxyGameContext {
 }
 
 export interface AgentChatStreamCallbacks {
-  onComplete?: (answer: string, metadata: {
-    totalTokens: number;
-    chatThreadId: string | null;
-    followUpQuestions: string[];
-  }) => void;
+  onComplete?: (
+    answer: string,
+    metadata: {
+      totalTokens: number;
+      chatThreadId: string | null;
+      followUpQuestions: string[];
+    }
+  ) => void;
   onError?: (error: string) => void;
 }
 
@@ -140,7 +145,12 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
   }, [stopStreaming]);
 
   const sendMessage = useCallback(
-    (agentId: string, message: string, chatThreadId?: string, proxyGameContext?: ProxyGameContext) => {
+    (
+      agentId: string,
+      message: string,
+      chatThreadId?: string,
+      proxyGameContext?: ProxyGameContext
+    ) => {
       stopStreaming();
 
       // Track request ID to ignore stale completions after agent switch
@@ -157,7 +167,8 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
       abortControllerRef.current = abortController;
 
       // Issue #4780: Use OpenRouter proxy when gameContext is provided and env var is set
-      const useProxy = !!proxyGameContext && process.env.NEXT_PUBLIC_USE_OPENROUTER_PROXY === 'true';
+      const useProxy =
+        !!proxyGameContext && process.env.NEXT_PUBLIC_USE_OPENROUTER_PROXY === 'true';
 
       let url: string;
       let body: Record<string, unknown>;
@@ -276,14 +287,11 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                       statusMessage: null,
                     };
 
-                    callbacksRef.current?.onComplete?.(
-                      finalState.currentAnswer,
-                      {
-                        totalTokens: finalState.totalTokens,
-                        chatThreadId: finalState.chatThreadId,
-                        followUpQuestions: prev.followUpQuestions,
-                      }
-                    );
+                    callbacksRef.current?.onComplete?.(finalState.currentAnswer, {
+                      totalTokens: finalState.totalTokens,
+                      chatThreadId: finalState.chatThreadId,
+                      followUpQuestions: prev.followUpQuestions,
+                    });
 
                     return finalState;
                   });
@@ -338,14 +346,16 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                 case StreamingEventType.DebugCostUpdate:
                 case StreamingEventType.DebugSearchDetails:
                 case StreamingEventType.DebugCacheCheck:
-                case StreamingEventType.DebugDocumentCheck: {
+                case StreamingEventType.DebugDocumentCheck:
+                case StreamingEventType.DebugTypologyProfile: {
                   const payload = event.data as Record<string, unknown>;
                   const step: DebugStep = {
                     type: event.type,
                     name: DEBUG_STEP_NAMES[event.type] ?? `Step ${event.type}`,
                     payload,
                     timestamp: event.timestamp,
-                    latencyMs: typeof payload?.latencyMs === 'number' ? payload.latencyMs : undefined,
+                    latencyMs:
+                      typeof payload?.latencyMs === 'number' ? payload.latencyMs : undefined,
                   };
                   setState(prev => ({
                     ...prev,

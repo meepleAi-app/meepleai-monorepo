@@ -66,9 +66,7 @@ describe('DebugSummaryBar', () => {
 
   it('shows summed latency from steps with latencyMs', () => {
     render(
-      <DebugSummaryBar
-        steps={[makeRetrievalResultsStep(5, 150), makeRetrievalStartStep(50)]}
-      />
+      <DebugSummaryBar steps={[makeRetrievalResultsStep(5, 150), makeRetrievalStartStep(50)]} />
     );
     // 150 + 50 = 200ms total
     expect(screen.getByText('200ms')).toBeInTheDocument();
@@ -76,9 +74,7 @@ describe('DebugSummaryBar', () => {
 
   it('shows token in/out from DebugCostUpdate step', () => {
     render(
-      <DebugSummaryBar
-        steps={[makeCostUpdateStep({ promptTokens: 400, completionTokens: 300 })]}
-      />
+      <DebugSummaryBar steps={[makeCostUpdateStep({ promptTokens: 400, completionTokens: 300 })]} />
     );
     expect(screen.getByText('400 / 300')).toBeInTheDocument();
   });
@@ -101,6 +97,22 @@ describe('DebugSummaryBar', () => {
   it('does not show confidence section when confidence is null', () => {
     render(<DebugSummaryBar steps={[makeCostUpdateStep({ confidence: null })]} />);
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+  });
+
+  it('shows typology name from DebugTypologyProfile step', () => {
+    const typologyStep: DebugStep = {
+      type: 22,
+      name: 'Typology Profile',
+      payload: { typology: 'Tutor', topK: 8, minScore: 0.5, temperature: 0.6 },
+      timestamp: '2026-01-01T12:00:00.000Z',
+    };
+    render(<DebugSummaryBar steps={[typologyStep]} />);
+    expect(screen.getByText('Tutor')).toBeInTheDocument();
+  });
+
+  it('does not show typology when no DebugTypologyProfile step', () => {
+    render(<DebugSummaryBar steps={[makeRetrievalStartStep(100)]} />);
+    expect(screen.queryByText('Typology')).not.toBeInTheDocument();
   });
 
   it('uses last DebugCostUpdate when multiple present', () => {

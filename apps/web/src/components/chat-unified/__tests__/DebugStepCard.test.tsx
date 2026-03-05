@@ -105,6 +105,30 @@ describe('DebugStepCard', () => {
     expect(screen.queryByText(/\[redacted\]/)).not.toBeInTheDocument();
   });
 
+  it('renders TypologyProfileView for type 22 instead of JSON', () => {
+    const step: DebugStep = {
+      type: 22,
+      name: 'Typology Profile',
+      payload: {
+        typology: 'Arbitro',
+        topK: 5,
+        minScore: 0.7,
+        searchStrategy: 'Precise',
+        temperature: 0.3,
+        maxTokens: 1024,
+      },
+      timestamp: '2026-01-01T12:00:00.000Z',
+    };
+
+    render(<DebugStepCard step={step} index={0} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.getByTestId('typology-profile-view')).toBeInTheDocument();
+    expect(screen.getByText('Arbitro Profile')).toBeInTheDocument();
+    expect(screen.getByText(/TopK: 5/)).toBeInTheDocument();
+    expect(screen.getByText(/MinScore: 0.7/)).toBeInTheDocument();
+    expect(screen.getByText(/Temp: 0.3/)).toBeInTheDocument();
+  });
+
   it('renders correct step index for non-zero index', () => {
     render(<DebugStepCard step={makeStep({ name: 'Cost Update', type: 17 })} index={3} />);
     expect(screen.getByText(/4\. Cost Update/i)).toBeInTheDocument();

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modifica Sessione - MeepleAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f6f0; --fg: #3d3020; --fg-muted: #8a7e6d;
+      --primary: #d2691e; --primary-light: #e8944a; --primary-bg: #fff3e8;
+      --secondary: #1a5a2a; --secondary-bg: #e8f5ec;
+      --accent: #8b5cf6; --accent-bg: #f0eaff;
+      --card: #ffffff; --border: #e8e2d6; --border-light: #f0ebe2; --muted-bg: #f0ebe2;
+      --destructive: #dc2626; --destructive-bg: #fef2f2;
+      --shadow-warm-lg: 0 8px 32px rgba(139,90,43,0.12);
+      --radius: 10px; --radius-lg: 16px; --radius-xl: 20px;
+      --font-heading: 'Quicksand', sans-serif; --font-body: 'Nunito', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-body); background: var(--bg); color: var(--fg); min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(210,105,30,0.03) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(139,92,246,0.03) 0%, transparent 50%);
+      pointer-events: none; z-index: -1;
+    }
+    .page-container { max-width: 640px; margin: 0 auto; padding: 24px 32px; }
+
+    /* Header */
+    .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+    .back-btn {
+      width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--card); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; color: var(--fg);
+    }
+    .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .back-btn svg { width: 18px; height: 18px; }
+    .page-header h1 { font-family: var(--font-heading); font-weight: 700; font-size: 26px; }
+    .page-header p { font-size: 14px; color: var(--fg-muted); margin-top: 2px; }
+
+    /* Form Card */
+    .form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      margin-bottom: 20px;
+    }
+    .form-card-title {
+      font-family: var(--font-heading); font-weight: 700; font-size: 17px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .form-card-title svg { width: 18px; height: 18px; color: var(--fg-muted); }
+
+    /* Form */
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+      display: block; font-family: var(--font-heading); font-weight: 600;
+      font-size: 14px; margin-bottom: 8px; color: var(--fg);
+    }
+    .form-input, .form-textarea {
+      width: 100%; padding: 11px 16px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-family: var(--font-body); font-size: 14px; color: var(--fg);
+      background: var(--card); transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-textarea:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(210,105,30,0.1);
+    }
+    .form-textarea { min-height: 120px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-hint { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
+
+    /* Changed indicator */
+    .form-input.changed, .form-textarea.changed {
+      border-color: var(--primary);
+      background: var(--primary-bg);
+    }
+    .changed-label {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; color: var(--primary); font-weight: 600;
+      margin-left: 8px;
+    }
+    .changed-label svg { width: 12px; height: 12px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 24px; border-radius: var(--radius);
+      font-family: var(--font-heading); font-weight: 600; font-size: 14px;
+      cursor: pointer; transition: all 0.2s ease; border: none;
+    }
+    .btn svg { width: 16px; height: 16px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #b85a18; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(210,105,30,0.3); }
+    .btn-outline { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-destructive-outline { background: transparent; color: var(--destructive); border: 1px solid rgba(220,38,38,0.3); }
+    .btn-destructive-outline:hover { background: var(--destructive-bg); border-color: var(--destructive); }
+
+    .form-actions {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 24px; border-top: 1px solid var(--border-light);
+    }
+    .form-actions-right { display: flex; gap: 8px; }
+
+    /* Danger Zone */
+    .danger-zone {
+      background: var(--destructive-bg);
+      border: 1px solid rgba(220,38,38,0.2);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      margin-top: 24px;
+    }
+    .danger-zone h3 {
+      font-family: var(--font-heading); font-weight: 700; font-size: 15px;
+      color: var(--destructive); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .danger-zone h3 svg { width: 16px; height: 16px; }
+    .danger-zone p {
+      font-size: 13px; color: var(--fg-muted); margin-bottom: 16px; line-height: 1.5;
+    }
+    .danger-actions { display: flex; gap: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <button class="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div>
+      <h1>Modifica Sessione</h1>
+      <p>7 Wonders &middot; 1 Marzo 2026</p>
+    </div>
+  </div>
+
+  <!-- General Info Card -->
+  <div class="form-card">
+    <h2 class="form-card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Informazioni Generali
+    </h2>
+
+    <div class="form-group">
+      <label class="form-label">
+        Nome Gioco
+        <span class="changed-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Modificato
+        </span>
+      </label>
+      <input type="text" class="form-input changed" value="7 Wonders Duel">
+      <div class="form-hint">Il gioco originale era "7 Wonders"</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input type="date" class="form-input" value="2026-03-01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ora</label>
+        <input type="time" class="form-input" value="21:00">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Luogo</label>
+      <input type="text" class="form-input" value="Casa Marco" placeholder="es. Casa Marco, Ludoteca Centrale...">
+    </div>
+  </div>
+
+  <!-- Notes Card -->
+  <div class="form-card">
+    <h2 class="form-card-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Note
+    </h2>
+
+    <div class="form-group">
+      <textarea class="form-textarea changed">Partita molto combattuta! Marco ha vinto grazie alla strategia scientifica nelle ultime due ere. Lucia era vicinissima con la sua strategia militare.
+
+Andrea ha imparato bene il gioco per la sua prima volta - bravo!
+
+Prossima volta proviamo con l'espansione Leaders.
+
+EDIT: In realta era 7 Wonders Duel, non il base. Corretto.</textarea>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="form-actions">
+    <button class="btn btn-outline">Annulla</button>
+    <div class="form-actions-right">
+      <button class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salva Modifiche
+      </button>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="danger-zone">
+    <h3>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Zona Pericolosa
+    </h3>
+    <p>Queste azioni sono irreversibili. L'archiviazione nasconde la sessione dalla cronologia. L'eliminazione rimuove permanentemente tutti i dati.</p>
+    <div class="danger-actions">
+      <button class="btn btn-destructive-outline" style="font-size: 13px; padding: 8px 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+        Archivia
+      </button>
+      <button class="btn btn-destructive-outline" style="font-size: 13px; padding: 8px 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Elimina Sessione
+      </button>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

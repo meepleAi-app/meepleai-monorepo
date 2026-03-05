@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuova Partita - MeepleAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f6f0; --bg-warm: #f3efe6; --fg: #3d3020; --fg-muted: #8a7e6d;
+      --primary: #d2691e; --primary-light: #e8944a; --primary-bg: #fff3e8;
+      --secondary: #1a5a2a; --secondary-light: #2d8a47; --secondary-bg: #e8f5ec;
+      --accent: #8b5cf6; --accent-bg: #f0eaff;
+      --card: #ffffff; --border: #e8e2d6; --border-light: #f0ebe2;
+      --muted-bg: #f0ebe2;
+      --shadow-warm: 0 2px 12px rgba(139,90,43,0.08);
+      --shadow-warm-lg: 0 8px 32px rgba(139,90,43,0.12);
+      --radius: 10px; --radius-lg: 16px; --radius-xl: 20px;
+      --font-heading: 'Quicksand', sans-serif; --font-body: 'Nunito', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-body); background: var(--bg); color: var(--fg); min-height: 100vh; }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(210,105,30,0.03) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(139,92,246,0.03) 0%, transparent 50%);
+      pointer-events: none; z-index: -1;
+    }
+
+    .page-container { max-width: 720px; margin: 0 auto; padding: 24px 32px; }
+
+    /* ========== Header ========== */
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .back-btn {
+      width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--card); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; color: var(--fg);
+    }
+    .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .back-btn svg { width: 18px; height: 18px; }
+    .page-header h1 { font-family: var(--font-heading); font-weight: 700; font-size: 26px; }
+    .page-header p { font-size: 14px; color: var(--fg-muted); margin-top: 2px; }
+
+    /* ========== Stepper ========== */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+      padding: 16px 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      margin: 0 12px;
+    }
+    .step.active:not(:last-child)::after {
+      background: linear-gradient(90deg, var(--primary), var(--border));
+    }
+    .step.completed:not(:last-child)::after {
+      background: var(--primary);
+    }
+    .step-number {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-heading); font-weight: 700; font-size: 14px;
+      border: 2px solid var(--border); color: var(--fg-muted);
+      background: var(--card); flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+    .step.active .step-number {
+      border-color: var(--primary); background: var(--primary); color: white;
+    }
+    .step.completed .step-number {
+      border-color: var(--secondary); background: var(--secondary-bg); color: var(--secondary);
+    }
+    .step-label {
+      font-size: 13px; font-weight: 600; color: var(--fg-muted);
+      white-space: nowrap;
+    }
+    .step.active .step-label { color: var(--fg); }
+    .step.completed .step-label { color: var(--secondary); }
+
+    /* ========== Form Card ========== */
+    .form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    .form-card-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    .form-card-subtitle {
+      font-size: 14px;
+      color: var(--fg-muted);
+      margin-bottom: 24px;
+    }
+
+    /* ========== Form Elements ========== */
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+      display: block;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--fg);
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 11px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--fg);
+      background: var(--card);
+      transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(210,105,30,0.1);
+    }
+    .form-input::placeholder { color: var(--fg-muted); opacity: 0.7; }
+    .form-textarea { min-height: 100px; resize: vertical; }
+    .form-hint {
+      font-size: 12px; color: var(--fg-muted); margin-top: 4px;
+    }
+
+    /* Game Type Toggle */
+    .game-type-toggle {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .game-type-option {
+      flex: 1;
+      padding: 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      background: var(--card);
+    }
+    .game-type-option:hover { border-color: var(--primary-light); }
+    .game-type-option.selected {
+      border-color: var(--primary);
+      background: var(--primary-bg);
+    }
+    .game-type-option svg {
+      width: 28px; height: 28px;
+      margin-bottom: 8px;
+      color: var(--fg-muted);
+    }
+    .game-type-option.selected svg { color: var(--primary); }
+    .game-type-option-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+    .game-type-option-desc {
+      font-size: 12px;
+      color: var(--fg-muted);
+    }
+
+    /* Game Search Combobox */
+    .game-search-wrapper { position: relative; }
+    .game-search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-warm-lg);
+      margin-top: 4px;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 20;
+    }
+    .game-result-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .game-result-item:hover { background: var(--muted-bg); }
+    .game-result-item img {
+      width: 40px; height: 40px; border-radius: 8px; object-fit: cover;
+    }
+    .game-result-item-info { flex: 1; }
+    .game-result-item-name {
+      font-weight: 600; font-size: 14px;
+    }
+    .game-result-item-meta {
+      font-size: 12px; color: var(--fg-muted);
+    }
+
+    /* Selected Game */
+    .selected-game {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--primary-bg);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius-lg);
+      margin-bottom: 20px;
+    }
+    .selected-game img {
+      width: 64px; height: 64px; border-radius: 12px; object-fit: cover;
+    }
+    .selected-game-info h4 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .selected-game-info p { font-size: 13px; color: var(--fg-muted); }
+    .selected-game-remove {
+      margin-left: auto;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(210,105,30,0.1);
+      color: var(--primary);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .selected-game-remove svg { width: 14px; height: 14px; }
+
+    /* Date/Time Row */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Visibility Toggle */
+    .visibility-options {
+      display: flex;
+      gap: 12px;
+    }
+    .vis-option {
+      flex: 1;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      transition: all 0.2s;
+    }
+    .vis-option:hover { border-color: var(--primary-light); }
+    .vis-option.selected { border-color: var(--primary); background: var(--primary-bg); }
+    .vis-option svg { width: 20px; height: 20px; color: var(--fg-muted); flex-shrink: 0; }
+    .vis-option.selected svg { color: var(--primary); }
+    .vis-option-text { font-size: 14px; font-weight: 600; }
+    .vis-option-desc { font-size: 12px; color: var(--fg-muted); }
+
+    /* ========== Buttons ========== */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 24px; border-radius: var(--radius);
+      font-family: var(--font-heading); font-weight: 600; font-size: 14px;
+      cursor: pointer; transition: all 0.2s ease; border: none;
+    }
+    .btn svg { width: 16px; height: 16px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #b85a18; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(210,105,30,0.3); }
+    .btn-outline { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-light);
+      margin-top: 8px;
+    }
+
+    /* ========== Scoring Toggle ========== */
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .toggle-group:last-child { border-bottom: none; }
+    .toggle-label { font-weight: 600; font-size: 14px; }
+    .toggle-desc { font-size: 12px; color: var(--fg-muted); }
+    .toggle-switch {
+      width: 44px; height: 24px; border-radius: 12px;
+      background: var(--border); position: relative;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-switch.on { background: var(--primary); }
+    .toggle-switch::after {
+      content: '';
+      position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    .toggle-switch.on::after { transform: translateX(20px); }
+
+    /* ========== Scoring Dimensions ========== */
+    .dimension-list { margin-top: 16px; }
+    .dimension-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--border-light);
+    }
+    .dimension-item:last-child { border-bottom: none; }
+    .dimension-name { flex: 1; }
+    .dimension-name input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+    }
+    .dimension-unit select {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      background: var(--card);
+    }
+    .dimension-remove {
+      width: 28px; height: 28px; border-radius: 6px;
+      border: none; background: transparent; color: var(--fg-muted);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .dimension-remove:hover { background: #fef2f2; color: #dc2626; }
+
+    .add-dimension-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 0; color: var(--primary);
+      font-size: 13px; font-weight: 600;
+      background: none; border: none; cursor: pointer;
+    }
+    .add-dimension-btn:hover { text-decoration: underline; }
+    .add-dimension-btn svg { width: 14px; height: 14px; }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <button class="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div>
+      <h1>Nuova Partita</h1>
+      <p>Registra una sessione di gioco</p>
+    </div>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step completed">
+      <div class="step-number">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <span class="step-label">Gioco</span>
+    </div>
+    <div class="step active">
+      <div class="step-number">2</div>
+      <span class="step-label">Dettagli</span>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <span class="step-label">Giocatori</span>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <span class="step-label">Punteggio</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Game Selection (completed, shown as reference) -->
+  <div class="selected-game">
+    <img src="https://cf.geekdo-images.com/wLW7pFn0--20lEizEz5p3A__imagepage/img/0jek2Z0vEel-4iMb0vMjLRCNM-8=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2338267.jpg" alt="7 Wonders">
+    <div class="selected-game-info">
+      <h4>7 Wonders</h4>
+      <p>2-7 giocatori &middot; 30 min &middot; Complessita 2.3/5</p>
+    </div>
+    <button class="selected-game-remove">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- Step 2: Details Form (active) -->
+  <div class="form-card">
+    <h2 class="form-card-title">Dettagli Sessione</h2>
+    <p class="form-card-subtitle">Quando e dove giocherete?</p>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input type="date" class="form-input" value="2026-03-05">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ora</label>
+        <input type="time" class="form-input" value="20:00">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Luogo (opzionale)</label>
+      <input type="text" class="form-input" placeholder="es. Casa Marco, Ludoteca Centrale...">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Visibilita</label>
+      <div class="visibility-options">
+        <div class="vis-option selected">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div>
+            <div class="vis-option-text">Privata</div>
+            <div class="vis-option-desc">Solo tu puoi vederla</div>
+          </div>
+        </div>
+        <div class="vis-option">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div>
+            <div class="vis-option-text">Gruppo</div>
+            <div class="vis-option-desc">Visibile ai partecipanti</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Note (opzionale)</label>
+      <textarea class="form-textarea" placeholder="Aggiungi commenti, impressioni o note sulla sessione..."></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-outline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Indietro
+      </button>
+      <button class="btn btn-primary">
+        Avanti
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Scoring Config Preview (Step 4 content teaser) -->
+  <div class="form-card" style="opacity: 0.5; pointer-events: none;">
+    <h2 class="form-card-title">Configurazione Punteggio</h2>
+    <p class="form-card-subtitle">Definisci come tracciare i punteggi</p>
+
+    <div class="toggle-group">
+      <div>
+        <div class="toggle-label">Abilita Punteggio</div>
+        <div class="toggle-desc">Registra i punteggi della partita</div>
+      </div>
+      <div class="toggle-switch on"></div>
+    </div>
+
+    <div class="dimension-list">
+      <div class="dimension-item">
+        <div class="dimension-name">
+          <input type="text" value="Punti Vittoria" placeholder="Nome dimensione">
+        </div>
+        <div class="dimension-unit">
+          <select>
+            <option>Punti</option>
+            <option>Euro</option>
+            <option>Risorse</option>
+          </select>
+        </div>
+        <button class="dimension-remove">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="dimension-item">
+        <div class="dimension-name">
+          <input type="text" value="Meraviglie" placeholder="Nome dimensione">
+        </div>
+        <div class="dimension-unit">
+          <select>
+            <option>Punti</option>
+          </select>
+        </div>
+        <button class="dimension-remove">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <button class="add-dimension-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Aggiungi dimensione
+      </button>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

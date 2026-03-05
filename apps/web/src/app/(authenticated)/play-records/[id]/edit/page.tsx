@@ -25,7 +25,10 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { UpdatePlayRecordRequestSchema, type UpdatePlayRecordRequest } from '@/lib/api/schemas/play-records.schemas';
+import {
+  UpdatePlayRecordRequestSchema,
+  type UpdatePlayRecordRequest,
+} from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecord, useUpdateRecord } from '@/lib/hooks/use-play-records';
 
 export default function EditPlayRecordPage() {
@@ -41,7 +44,6 @@ export default function EditPlayRecordPage() {
     resolver: zodResolver(UpdatePlayRecordRequestSchema),
     values: record
       ? {
-          gameName: record.gameName,
           sessionDate: record.sessionDate,
           notes: record.notes || undefined,
           location: record.location || undefined,
@@ -49,7 +51,7 @@ export default function EditPlayRecordPage() {
       : undefined,
   });
 
-  const handleSubmit = form.handleSubmit(async (data) => {
+  const handleSubmit = form.handleSubmit(async data => {
     try {
       await updateRecord.mutateAsync(data);
       toast.success('Session Updated', {
@@ -116,12 +118,7 @@ export default function EditPlayRecordPage() {
     <div className="container mx-auto p-6 space-y-6 max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleCancel}
-          aria-label="Back to details"
-        >
+        <Button variant="ghost" size="icon" onClick={handleCancel} aria-label="Back to details">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
@@ -135,20 +132,6 @@ export default function EditPlayRecordPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <FormField
             control={form.control}
-            name="gameName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Game Name</FormLabel>
-                <FormControl>
-                  <Input {...field} value={field.value || ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="sessionDate"
             render={({ field }) => (
               <FormItem>
@@ -157,7 +140,7 @@ export default function EditPlayRecordPage() {
                   <Input
                     type="datetime-local"
                     value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
-                    onChange={(e) => field.onChange(new Date(e.target.value).toISOString())}
+                    onChange={e => field.onChange(new Date(e.target.value).toISOString())}
                     max={new Date().toISOString().slice(0, 16)}
                   />
                 </FormControl>

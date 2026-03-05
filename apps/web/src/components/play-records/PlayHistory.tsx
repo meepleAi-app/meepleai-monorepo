@@ -51,8 +51,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
   const { viewMode, sortBy, sidebarOpen } = usePlayRecordsStore(selectViewPreferences);
   const hasActiveFilters = usePlayRecordsStore(selectHasActiveFilters);
 
-  const { setFilter, resetFilters, setViewMode, setSortBy, toggleSidebar } =
-    usePlayRecordsStore();
+  const { setFilter, resetFilters, setViewMode, setSortBy, toggleSidebar } = usePlayRecordsStore();
 
   // Fetch play history
   const { data, isLoading, error } = usePlayHistory({
@@ -75,13 +74,25 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
 
   const formatDuration = (duration: string | null): string => {
     if (!duration) return 'N/A';
-    // Parse ISO 8601 duration (e.g., "PT2H30M")
+    // Handle .NET TimeSpan format "HH:MM:SS" or "D.HH:MM:SS"
+    const dotNetMatch = duration.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)$/);
+    if (dotNetMatch) {
+      const days = dotNetMatch[1] ? parseInt(dotNetMatch[1]) : 0;
+      const hours = parseInt(dotNetMatch[2]) + days * 24;
+      const minutes = parseInt(dotNetMatch[3]);
+      const h = hours > 0 ? `${hours}h` : '';
+      const m = minutes > 0 ? `${minutes}m` : '';
+      return [h, m].filter(Boolean).join(' ') || 'N/A';
+    }
+    // Fallback: ISO 8601 duration (e.g., "PT2H30M")
     // eslint-disable-next-line security/detect-unsafe-regex -- ISO 8601 duration, anchored and safe
-    const match = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/);
-    if (!match) return duration;
-    const hours = match[1] ? `${match[1]}h` : '';
-    const minutes = match[2] ? `${match[2]}m` : '';
-    return [hours, minutes].filter(Boolean).join(' ') || 'N/A';
+    const isoMatch = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/);
+    if (isoMatch) {
+      const hours = isoMatch[1] ? `${isoMatch[1]}h` : '';
+      const minutes = isoMatch[2] ? `${isoMatch[2]}m` : '';
+      return [hours, minutes].filter(Boolean).join(' ') || 'N/A';
+    }
+    return duration;
   };
 
   const getStatusColor = (status: string): string => {
@@ -107,7 +118,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
           <h2 className="text-2xl font-bold">Play History</h2>
           <p className="text-muted-foreground">
             Your recorded game sessions
-            {data && ` (${data.total} total)`}
+            {data && ` (${data.totalCount} total)`}
           </p>
         </div>
 
@@ -129,12 +140,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
           >
             <List className="w-4 h-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleSidebar}
-            aria-label="Toggle filters"
-          >
+          <Button variant="outline" size="icon" onClick={toggleSidebar} aria-label="Toggle filters">
             <Filter className="w-4 h-4" />
           </Button>
         </div>
@@ -145,24 +151,28 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
         {sidebarOpen && (
           <>
             <div>
-              <Label htmlFor="search" className="text-sm">Search</Label>
+              <Label htmlFor="search" className="text-sm">
+                Search
+              </Label>
               <div className="relative mt-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Search sessions..."
                   value={filters.searchQuery}
-                  onChange={(e) => setFilter('searchQuery', e.target.value)}
+                  onChange={e => setFilter('searchQuery', e.target.value)}
                   className="pl-9"
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="status" className="text-sm">Status</Label>
+              <Label htmlFor="status" className="text-sm">
+                Status
+              </Label>
               <Select
                 value={filters.status}
-                onValueChange={(value) => setFilter('status', value as PlayRecordStatus | 'all')}
+                onValueChange={value => setFilter('status', value as PlayRecordStatus | 'all')}
               >
                 <SelectTrigger id="status" className="mt-1">
                   <SelectValue />
@@ -178,8 +188,15 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
             </div>
 
             <div>
-              <Label htmlFor="sort" className="text-sm">Sort By</Label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'recent' | 'oldest' | 'game' | 'duration')}>
+              <Label htmlFor="sort" className="text-sm">
+                Sort By
+              </Label>
+              <Select
+                value={sortBy}
+                onValueChange={value =>
+                  setSortBy(value as 'recent' | 'oldest' | 'game' | 'duration')
+                }
+              >
                 <SelectTrigger id="sort" className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -194,12 +211,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
 
             {hasActiveFilters && (
               <div className="flex items-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={resetFilters}
-                  className="w-full"
-                >
+                <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full">
                   <X className="w-4 h-4 mr-2" />
                   Clear Filters
                 </Button>
@@ -255,7 +267,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
               : 'space-y-3'
           }
         >
-          {data.records.map((record) => (
+          {data.records.map(record => (
             <MeepleCard
               key={record.id}
               entity="custom"
@@ -287,7 +299,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
             variant="outline"
             size="sm"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
           >
             Previous
           </Button>
@@ -298,7 +310,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
             variant="outline"
             size="sm"
             disabled={currentPage >= data.totalPages}
-            onClick={() => setCurrentPage((prev) => Math.min(data.totalPages, prev + 1))}
+            onClick={() => setCurrentPage(prev => Math.min(data.totalPages, prev + 1))}
           >
             Next
           </Button>

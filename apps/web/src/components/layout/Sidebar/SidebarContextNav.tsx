@@ -27,12 +27,12 @@ import {
   Users,
   Calendar,
   Library,
-  SlidersHorizontal,
   Layers,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { GamesFilterPanel } from '@/components/catalog/GamesFilterPanel';
 import { cn } from '@/lib/utils';
 
 import { SidebarNav } from './SidebarNav';
@@ -200,69 +200,7 @@ function LibraryPanel({ isCollapsed }: { isCollapsed: boolean }) {
   );
 }
 
-function GamesPanel({ isCollapsed }: { isCollapsed: boolean }) {
-  const pathname = usePathname();
-  return (
-    <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Games catalog navigation">
-      {/* Back to Dashboard */}
-      <SidebarLink
-        href="/dashboard"
-        icon={LayoutDashboard}
-        label="Dashboard"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <hr className="my-1 border-sidebar-border" />
-
-      <SidebarLink
-        href="/games"
-        icon={Gamepad2}
-        label="Tutti i giochi"
-        isActive={pathname === '/games'}
-        isCollapsed={isCollapsed}
-      />
-
-      <SectionLabel label="Filtri rapidi" isCollapsed={isCollapsed} />
-      <SidebarLink
-        href="/games?bggOnly=true"
-        icon={Star}
-        label="Top BGG"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <SidebarLink
-        href="/games?minPlayers=2&maxPlayers=2"
-        icon={Users}
-        label="2 Giocatori"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <SidebarLink
-        href="/games?minPlayers=3&maxPlayers=6"
-        icon={Users}
-        label="3-6 Giocatori"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-
-      <SectionLabel label="Avanzato" isCollapsed={isCollapsed} />
-      <SidebarLink
-        href="/games?sortBy=recent"
-        icon={Clock}
-        label="Aggiunti di recente"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <SidebarLink
-        href="/games"
-        icon={SlidersHorizontal}
-        label="Filtri avanzati"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-    </nav>
-  );
-}
+// GamesPanel replaced by GamesFilterPanel (interactive, URL-synced filters)
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
@@ -300,7 +238,7 @@ export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
         >
           {contextKey === 'dashboard' && <DashboardPanel isCollapsed={isCollapsed} />}
           {contextKey === 'library' && <LibraryPanel isCollapsed={isCollapsed} />}
-          {contextKey === 'games' && <GamesPanel isCollapsed={isCollapsed} />}
+          {contextKey === 'games' && <GamesFilterPanel isCollapsed={isCollapsed} />}
           {contextKey === 'default' && <SidebarNav isCollapsed={isCollapsed} />}
         </motion.div>
       </AnimatePresence>

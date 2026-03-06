@@ -16,8 +16,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Implements SSE streaming for session-based agent chat with game state context.
 /// Issue #3184 (AGT-010): Session-Based Agent Lifecycle.
 /// Issue #4386: SSE Stream → ChatThread Persistence Hook
-/// Note: Minimal LLM response for AGT-010. Full LLM streaming deferred to AGT-011.
-/// ChatThread persistence is active for all messages.
+/// Issue #5313: Wired to real HybridLlmService for LLM streaming.
 /// </summary>
 internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandler<ChatWithSessionAgentCommand, RagStreamingEvent>
 {
@@ -26,6 +25,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAgentPromptBuilder _promptBuilder;
+    private readonly ILlmService _llmService;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
 
     public ChatWithSessionAgentCommandHandler(
@@ -34,6 +34,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         IChatThreadRepository chatThreadRepository,
         IUnitOfWork unitOfWork,
         IAgentPromptBuilder promptBuilder,
+        ILlmService llmService,
         ILogger<ChatWithSessionAgentCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
@@ -41,6 +42,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _promptBuilder = promptBuilder ?? throw new ArgumentNullException(nameof(promptBuilder));
+        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -150,33 +152,57 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
         _logger.LogDebug("Enhanced prompt built: {Prompt}", enhancedPrompt);
 
-        // Minimal response (full LLM streaming deferred to AGT-011)
-        const string placeholderResponse = "Session agent ready. Full LLM streaming coming in AGT-011.";
+        // Use non-streaming LLM call (yield return cannot be used in try-catch blocks)
+        LlmCompletionResult llmResult;
+        try
+        {
+            llmResult = await _llmService.GenerateCompletionAsync(
+                enhancedPrompt,
+                command.UserQuestion,
+                RequestSource.AgentTask,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LLM call failed for session {SessionId}", command.AgentSessionId);
+            llmResult = LlmCompletionResult.CreateFailure("LLM call failed: " + ex.Message);
+        }
+
+        if (!llmResult.Success)
+        {
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(llmResult.ErrorMessage ?? "LLM call failed", "LLM_ERROR"));
+            yield break;
+        }
+
+        var fullResponse = llmResult.Response;
+        var totalTokens = llmResult.Usage.TotalTokens;
 
         yield return CreateEvent(
             StreamingEventType.Token,
-            new StreamingToken(placeholderResponse));
+            new StreamingToken(fullResponse));
 
         // Persist assistant response
         thread.AddAssistantMessageWithMetadata(
-            content: placeholderResponse,
+            content: fullResponse,
             agentType: typology.Name,
-            tokenCount: 1);
+            tokenCount: totalTokens);
 
         await _chatThreadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Persisted session chat to thread {ThreadId}: user msg + assistant msg",
-            thread.Id);
+            "Persisted session chat to thread {ThreadId}: user msg + assistant msg ({Tokens} tokens)",
+            thread.Id, totalTokens);
 
         yield return CreateEvent(
             StreamingEventType.Complete,
             new StreamingComplete(
-                estimatedReadingTimeMinutes: 1,
-                promptTokens: 0,
-                completionTokens: 0,
-                totalTokens: 0,
+                estimatedReadingTimeMinutes: Math.Max(1, fullResponse.Length / 1000),
+                promptTokens: llmResult.Usage.PromptTokens,
+                completionTokens: llmResult.Usage.CompletionTokens,
+                totalTokens: totalTokens,
                 confidence: null,
                 chatThreadId: thread.Id));
     }

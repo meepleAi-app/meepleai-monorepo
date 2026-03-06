@@ -24,7 +24,6 @@ import type {
 
 import type { XYPosition } from '@xyflow/react';
 
-
 // =============================================================================
 // Initial State
 // =============================================================================
@@ -89,7 +88,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         });
       },
 
-      loadPipeline: (pipeline) => {
+      loadPipeline: pipeline => {
         set({
           pipeline: structuredClone(pipeline),
           isDirty: false,
@@ -104,16 +103,22 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         const { pipeline } = get();
         if (!pipeline) return;
 
-        // TODO: Implement actual API call
-        // const response = await fetch('/api/v1/rag/pipelines', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(pipeline),
-        // });
+        const response = await fetch('/api/v1/rag/pipelines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: pipeline.name,
+            description: pipeline.description,
+            pipeline,
+            tags: [],
+          }),
+        });
 
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (!response.ok) {
+          throw new Error('Failed to save pipeline');
+        }
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? { ...state.pipeline, updatedAt: new Date().toISOString() }
             : null,
@@ -154,7 +159,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
 
         get().pushHistory();
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
@@ -176,11 +181,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
 
         get().pushHistory();
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                nodes: state.pipeline.nodes.map((node) =>
+                nodes: state.pipeline.nodes.map(node =>
                   node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
                 ),
                 updatedAt: new Date().toISOString(),
@@ -190,19 +195,19 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         }));
       },
 
-      removeNode: (nodeId) => {
+      removeNode: nodeId => {
         const { pipeline } = get();
         if (!pipeline) return;
 
         get().pushHistory();
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                nodes: state.pipeline.nodes.filter((node) => node.id !== nodeId),
+                nodes: state.pipeline.nodes.filter(node => node.id !== nodeId),
                 edges: state.pipeline.edges.filter(
-                  (edge) => edge.source !== nodeId && edge.target !== nodeId
+                  edge => edge.source !== nodeId && edge.target !== nodeId
                 ),
                 updatedAt: new Date().toISOString(),
               }
@@ -213,11 +218,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
       },
 
       updateNodePosition: (nodeId, position) => {
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                nodes: state.pipeline.nodes.map((node) =>
+                nodes: state.pipeline.nodes.map(node =>
                   node.id === nodeId ? { ...node, position } : node
                 ),
               }
@@ -230,13 +235,16 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         const { pipeline, validateNode } = get();
         if (!pipeline) return;
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                nodes: state.pipeline.nodes.map((node) =>
+                nodes: state.pipeline.nodes.map(node =>
                   node.id === nodeId
-                    ? { ...node, data: { ...node.data, config: { ...node.data.config, ...config } } }
+                    ? {
+                        ...node,
+                        data: { ...node.data, config: { ...node.data.config, ...config } },
+                      }
                     : node
                 ),
                 updatedAt: new Date().toISOString(),
@@ -257,9 +265,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         if (!pipeline) return null;
 
         // Prevent duplicate edges
-        const exists = pipeline.edges.some(
-          (e) => e.source === sourceId && e.target === targetId
-        );
+        const exists = pipeline.edges.some(e => e.source === sourceId && e.target === targetId);
         if (exists) return null;
 
         // Prevent self-loops
@@ -282,7 +288,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
 
         get().pushHistory();
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
@@ -304,14 +310,14 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
 
         get().pushHistory();
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                edges: state.pipeline.edges.map((edge) =>
+                edges: state.pipeline.edges.map(edge =>
                   edge.id === edgeId
-                    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- spread requires assertion
-                    ? { ...edge, data: { ...edge.data, ...data } as PipelineEdgeData }
+                    ? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- spread requires assertion
+                      { ...edge, data: { ...edge.data, ...data } as PipelineEdgeData }
                     : edge
                 ),
                 updatedAt: new Date().toISOString(),
@@ -321,17 +327,17 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         }));
       },
 
-      removeEdge: (edgeId) => {
+      removeEdge: edgeId => {
         const { pipeline } = get();
         if (!pipeline) return;
 
         get().pushHistory();
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                edges: state.pipeline.edges.filter((edge) => edge.id !== edgeId),
+                edges: state.pipeline.edges.filter(edge => edge.id !== edgeId),
                 updatedAt: new Date().toISOString(),
               }
             : null,
@@ -344,11 +350,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
       // Selection
       // =========================================================================
 
-      selectNode: (nodeId) => {
+      selectNode: nodeId => {
         set({ selectedNodeId: nodeId, selectedEdgeId: null });
       },
 
-      selectEdge: (edgeId) => {
+      selectEdge: edgeId => {
         set({ selectedEdgeId: edgeId, selectedNodeId: null });
       },
 
@@ -356,7 +362,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
       // Drag Operations
       // =========================================================================
 
-      startDrag: (plugin) => {
+      startDrag: plugin => {
         set({ isDragging: true, draggedPlugin: plugin });
       },
 
@@ -432,7 +438,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
       // Execution
       // =========================================================================
 
-      runPipeline: async (query) => {
+      runPipeline: async query => {
         const { pipeline } = get();
         if (!pipeline || pipeline.nodes.length === 0) return;
 
@@ -442,7 +448,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
           query,
           startedAt: new Date().toISOString(),
           status: 'running',
-          steps: pipeline.nodes.map((node) => ({
+          steps: pipeline.nodes.map(node => ({
             nodeId: node.id,
             nodeName: node.data.pluginName,
             status: 'pending',
@@ -466,7 +472,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
           const step = trace.steps[i];
 
           // Update step to running
-          set((state) => ({
+          set(state => ({
             executionTrace: state.executionTrace
               ? {
                   ...state.executionTrace,
@@ -479,11 +485,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
           }));
 
           // Simulate execution delay
-          await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 1000));
+          await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
 
           // Update step to success
           const durationMs = 200 + Math.random() * 800;
-          set((state) => ({
+          set(state => ({
             executionTrace: state.executionTrace
               ? {
                   ...state.executionTrace,
@@ -501,7 +507,8 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
                     ...state.executionTrace.metrics,
                     totalLatencyMs: state.executionTrace.metrics.totalLatencyMs + durationMs,
                     nodesExecuted: state.executionTrace.metrics.nodesExecuted + 1,
-                    totalTokens: state.executionTrace.metrics.totalTokens + Math.floor(Math.random() * 500),
+                    totalTokens:
+                      state.executionTrace.metrics.totalTokens + Math.floor(Math.random() * 500),
                   },
                 }
               : null,
@@ -511,8 +518,8 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
           const { stepMode } = get();
           if (stepMode && i < trace.steps.length - 1) {
             // Wait until stepThrough is called
-            await new Promise<void>((resolve) => {
-              const unsubscribe = usePipelineBuilderStore.subscribe((state) => {
+            await new Promise<void>(resolve => {
+              const unsubscribe = usePipelineBuilderStore.subscribe(state => {
                 if (state.currentStepIndex > i || !state.isExecuting) {
                   unsubscribe();
                   resolve();
@@ -523,7 +530,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         }
 
         // Complete execution
-        set((state) => ({
+        set(state => ({
           isExecuting: false,
           executionTrace: state.executionTrace
             ? {
@@ -532,15 +539,14 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
                 completedAt: new Date().toISOString(),
                 metrics: {
                   ...state.executionTrace.metrics,
-                  estimatedCost:
-                    state.executionTrace.metrics.totalTokens * 0.000003, // Simplified cost calc
+                  estimatedCost: state.executionTrace.metrics.totalTokens * 0.000003, // Simplified cost calc
                 },
               }
             : null,
         }));
       },
 
-      runDryRun: async (query) => {
+      runDryRun: async query => {
         // Dry run simulates without actual API calls
         await get().runPipeline(query);
       },
@@ -555,7 +561,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
       },
 
       stopExecution: () => {
-        set((state) => ({
+        set(state => ({
           isExecuting: false,
           executionTrace: state.executionTrace
             ? {
@@ -567,7 +573,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         }));
       },
 
-      setStepMode: (enabled) => {
+      setStepMode: enabled => {
         set({ stepMode: enabled });
       },
 
@@ -587,14 +593,14 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         }
 
         // Validate all nodes
-        pipeline.nodes.forEach((node) => {
+        pipeline.nodes.forEach(node => {
           if (!validateNode(node.id)) {
             errors.push(`Node "${node.data.pluginName}" has validation errors`);
           }
         });
 
         // Validate all edges
-        pipeline.edges.forEach((edge) => {
+        pipeline.edges.forEach(edge => {
           if (!validateEdge(edge.id)) {
             errors.push(`Edge from ${edge.source} to ${edge.target} has validation errors`);
           }
@@ -602,14 +608,14 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
 
         // Check for disconnected nodes (warning only)
         const connectedNodes = new Set<string>();
-        pipeline.edges.forEach((edge) => {
+        pipeline.edges.forEach(edge => {
           connectedNodes.add(edge.source);
           connectedNodes.add(edge.target);
         });
 
         const isValid = errors.length === 0;
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? { ...state.pipeline, isValid, validationErrors: errors }
             : null,
@@ -618,11 +624,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         return isValid;
       },
 
-      validateNode: (nodeId) => {
+      validateNode: nodeId => {
         const { pipeline } = get();
         if (!pipeline) return false;
 
-        const node = pipeline.nodes.find((n) => n.id === nodeId);
+        const node = pipeline.nodes.find(n => n.id === nodeId);
         if (!node) return false;
 
         const errors: string[] = [];
@@ -630,7 +636,7 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         // Validate required config fields
         const { configSchema, config } = node.data;
         if (configSchema.required) {
-          configSchema.required.forEach((field) => {
+          configSchema.required.forEach(field => {
             // eslint-disable-next-line security/detect-object-injection -- field from schema.required array
             const fieldValue = config[field];
             if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
@@ -641,11 +647,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
 
         const isValid = errors.length === 0;
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                nodes: state.pipeline.nodes.map((n) =>
+                nodes: state.pipeline.nodes.map(n =>
                   n.id === nodeId
                     ? {
                         ...n,
@@ -660,11 +666,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         return isValid;
       },
 
-      validateEdge: (edgeId) => {
+      validateEdge: edgeId => {
         const { pipeline } = get();
         if (!pipeline) return false;
 
-        const edge = pipeline.edges.find((e) => e.id === edgeId);
+        const edge = pipeline.edges.find(e => e.id === edgeId);
         if (!edge || !edge.data) return false;
 
         let isValid = true;
@@ -677,11 +683,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
           error = 'Custom condition expression is required';
         }
 
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                edges: state.pipeline.edges.map((e) =>
+                edges: state.pipeline.edges.map(e =>
                   e.id === edgeId
                     ? {
                         ...e,
@@ -713,14 +719,14 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
 
         // Build adjacency list
         const adjacency = new Map<string, string[]>();
-        pipeline.nodes.forEach((node) => adjacency.set(node.id, []));
-        pipeline.edges.forEach((edge) => {
+        pipeline.nodes.forEach(node => adjacency.set(node.id, []));
+        pipeline.edges.forEach(edge => {
           adjacency.get(edge.source)?.push(edge.target);
         });
 
         // Find root nodes (no incoming edges)
-        const hasIncoming = new Set(pipeline.edges.map((e) => e.target));
-        const roots = pipeline.nodes.filter((n) => !hasIncoming.has(n.id));
+        const hasIncoming = new Set(pipeline.edges.map(e => e.target));
+        const roots = pipeline.nodes.filter(n => !hasIncoming.has(n.id));
 
         // BFS layout
         const positions = new Map<string, XYPosition>();
@@ -741,8 +747,8 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
             });
 
             const children = adjacency.get(node.id) || [];
-            children.forEach((childId) => {
-              const childNode = pipeline.nodes.find((n) => n.id === childId);
+            children.forEach(childId => {
+              const childNode = pipeline.nodes.find(n => n.id === childId);
               if (childNode && !visited.has(childId)) {
                 nextLevel.push(childNode);
               }
@@ -754,11 +760,11 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         }
 
         // Update node positions
-        set((state) => ({
+        set(state => ({
           pipeline: state.pipeline
             ? {
                 ...state.pipeline,
-                nodes: state.pipeline.nodes.map((node) => ({
+                nodes: state.pipeline.nodes.map(node => ({
                   ...node,
                   position: positions.get(node.id) || node.position,
                 })),
@@ -773,25 +779,25 @@ export const usePipelineBuilderStore = create<PipelineBuilderStore>()(
         set({ zoomLevel: 1 });
       },
 
-      setZoom: (level) => {
+      setZoom: level => {
         set({ zoomLevel: Math.max(0.1, Math.min(2, level)) });
       },
 
       toggleMiniMap: () => {
-        set((state) => ({ showMiniMap: !state.showMiniMap }));
+        set(state => ({ showMiniMap: !state.showMiniMap }));
       },
 
       toggleGrid: () => {
-        set((state) => ({ showGrid: !state.showGrid }));
+        set(state => ({ showGrid: !state.showGrid }));
       },
 
       toggleLock: () => {
-        set((state) => ({ isLocked: !state.isLocked }));
+        set(state => ({ isLocked: !state.isLocked }));
       },
     }),
     {
       name: 'pipeline-builder-storage',
-      partialize: (state) => ({
+      partialize: state => ({
         pipeline: state.pipeline,
         showMiniMap: state.showMiniMap,
         showGrid: state.showGrid,
@@ -826,11 +832,11 @@ function extractDefaultConfig(schema: PluginNodeData['configSchema']): Record<st
 export const selectPipeline = (state: PipelineBuilderStore) => state.pipeline;
 export const selectSelectedNode = (state: PipelineBuilderStore) => {
   if (!state.pipeline || !state.selectedNodeId) return null;
-  return state.pipeline.nodes.find((n) => n.id === state.selectedNodeId) || null;
+  return state.pipeline.nodes.find(n => n.id === state.selectedNodeId) || null;
 };
 export const selectSelectedEdge = (state: PipelineBuilderStore) => {
   if (!state.pipeline || !state.selectedEdgeId) return null;
-  return state.pipeline.edges.find((e) => e.id === state.selectedEdgeId) || null;
+  return state.pipeline.edges.find(e => e.id === state.selectedEdgeId) || null;
 };
 export const selectIsExecuting = (state: PipelineBuilderStore) => state.isExecuting;
 export const selectExecutionTrace = (state: PipelineBuilderStore) => state.executionTrace;

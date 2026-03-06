@@ -138,6 +138,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatSessionEntity> ChatSessions => Set<ChatSessionEntity>(); // ISSUE-3483: Chat session persistence
     public DbSet<AgentTestResultEntity> AgentTestResults => Set<AgentTestResultEntity>(); // ISSUE-3379: Agent test results persistence
     public DbSet<RagUserConfigEntity> RagUserConfigs => Set<RagUserConfigEntity>(); // ISSUE-5311: Per-user RAG configuration persistence
+    public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.AdminRagStrategy> AdminRagStrategies => Set<BoundedContexts.KnowledgeBase.Domain.Entities.AdminRagStrategy>(); // ISSUE-5314: Admin strategy CRUD
     public DbSet<ArbitroValidationFeedbackEntity> ArbitroValidationFeedbacks => Set<ArbitroValidationFeedbackEntity>(); // ISSUE-4328: Arbitro beta testing feedback
     public DbSet<DecisoreMoveFeedbackEntity> DecisoreMoveFeedbacks => Set<DecisoreMoveFeedbackEntity>(); // ISSUE-4335: Decisore beta testing feedback
     public DbSet<InsightFeedbackEntity> InsightFeedbacks => Set<InsightFeedbackEntity>(); // ISSUE-4124: AI Insights feedback for accuracy tracking

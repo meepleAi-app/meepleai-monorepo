@@ -252,6 +252,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
+        services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

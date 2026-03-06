@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,13 +18,15 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashbo
 [Trait("Feature", "RagDashboard")]
 public class ResetRagConfigCommandHandlerTests
 {
+    private readonly Mock<IRagUserConfigRepository> _mockRepository;
     private readonly Mock<ILogger<ResetRagConfigCommandHandler>> _mockLogger;
     private readonly ResetRagConfigCommandHandler _handler;
 
     public ResetRagConfigCommandHandlerTests()
     {
+        _mockRepository = new Mock<IRagUserConfigRepository>();
         _mockLogger = new Mock<ILogger<ResetRagConfigCommandHandler>>();
-        _handler = new ResetRagConfigCommandHandler(_mockLogger.Object);
+        _handler = new ResetRagConfigCommandHandler(_mockRepository.Object, _mockLogger.Object);
     }
 
     [Fact]

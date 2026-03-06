@@ -1,60 +1,74 @@
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Issue #3304: RAG Dashboard command handlers.
+/// Issue #3304, #5311: RAG Dashboard command handlers with DB persistence.
 /// </summary>
 
 /// <summary>
-/// Handler for SaveRagConfigCommand.
+/// Handler for SaveRagConfigCommand — persists config to database.
 /// </summary>
 internal sealed class SaveRagConfigCommandHandler : ICommandHandler<SaveRagConfigCommand, RagConfigDto>
 {
+    private readonly IRagUserConfigRepository _repository;
     private readonly ILogger<SaveRagConfigCommandHandler> _logger;
 
-    public SaveRagConfigCommandHandler(ILogger<SaveRagConfigCommandHandler> logger)
+    public SaveRagConfigCommandHandler(
+        IRagUserConfigRepository repository,
+        ILogger<SaveRagConfigCommandHandler> logger)
     {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task<RagConfigDto> Handle(SaveRagConfigCommand command, CancellationToken cancellationToken)
+    public async Task<RagConfigDto> Handle(SaveRagConfigCommand command, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
             "Saving RAG config for UserId={UserId}, Strategy={Strategy}",
             command.UserId,
             command.Config.ActiveStrategy);
 
-        // FUTURE: Persist to database when user config persistence is implemented
-        // For now, just return the config as-is (validated)
+        var configJson = JsonSerializer.Serialize(command.Config, JsonSerializerOptions);
+        await _repository.UpsertAsync(command.UserId, configJson, cancellationToken).ConfigureAwait(false);
 
-        return Task.FromResult(command.Config);
+        return command.Config;
     }
+
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
 }
 
 /// <summary>
-/// Handler for ResetRagConfigCommand.
+/// Handler for ResetRagConfigCommand — deletes user config from database and returns defaults.
 /// </summary>
 internal sealed class ResetRagConfigCommandHandler : ICommandHandler<ResetRagConfigCommand, RagConfigDto>
 {
+    private readonly IRagUserConfigRepository _repository;
     private readonly ILogger<ResetRagConfigCommandHandler> _logger;
 
-    public ResetRagConfigCommandHandler(ILogger<ResetRagConfigCommandHandler> logger)
+    public ResetRagConfigCommandHandler(
+        IRagUserConfigRepository repository,
+        ILogger<ResetRagConfigCommandHandler> logger)
     {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task<RagConfigDto> Handle(ResetRagConfigCommand command, CancellationToken cancellationToken)
+    public async Task<RagConfigDto> Handle(ResetRagConfigCommand command, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
             "Resetting RAG config for UserId={UserId}, Strategy={Strategy}",
             command.UserId,
             command.Strategy ?? "all");
 
-        // FUTURE: Delete user config from database when persistence is implemented
-        // For now, return default config
+        await _repository.DeleteByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
         var defaultConfig = new RagConfigDto
         {
@@ -93,6 +107,6 @@ internal sealed class ResetRagConfigCommandHandler : ICommandHandler<ResetRagCon
             ActiveStrategy = command.Strategy ?? "Hybrid"
         };
 
-        return Task.FromResult(defaultConfig);
+        return defaultConfig;
     }
 }

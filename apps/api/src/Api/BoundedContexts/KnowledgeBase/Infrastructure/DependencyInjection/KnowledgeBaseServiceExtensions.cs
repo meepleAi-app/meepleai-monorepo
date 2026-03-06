@@ -20,6 +20,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
@@ -250,6 +251,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
+        services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

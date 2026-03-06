@@ -62,7 +62,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
-        services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>(); // Issue #3184 (AGT-010): Session agent prompt building
+        services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
         // Issue #3436: Tier-Strategy Access Validation Service
         // Scoped - uses ITierStrategyAccessRepository which depends on DbContext

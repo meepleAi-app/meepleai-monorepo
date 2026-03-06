@@ -47,7 +47,7 @@ describe('LibraryFilters', () => {
       render(<LibraryFilters {...defaultProps} />);
 
       expect(screen.getByLabelText('Search library')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Cerca per titolo...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Cerca...')).toBeInTheDocument();
     });
 
     it('renders sort dropdown', () => {
@@ -78,19 +78,19 @@ describe('LibraryFilters', () => {
     it('does not render clear button without active filters', () => {
       render(<LibraryFilters {...defaultProps} />);
 
-      expect(screen.queryByText('Pulisci Filtri')).not.toBeInTheDocument();
+      expect(screen.queryByText('Pulisci')).not.toBeInTheDocument();
     });
 
     it('renders clear button with active search', () => {
       render(<LibraryFilters {...defaultProps} searchQuery="test" />);
 
-      expect(screen.getByText('Pulisci Filtri')).toBeInTheDocument();
+      expect(screen.getByText('Pulisci')).toBeInTheDocument();
     });
 
     it('renders clear button with active favorites filter', () => {
       render(<LibraryFilters {...defaultProps} favoritesOnly={true} />);
 
-      expect(screen.getByText('Pulisci Filtri')).toBeInTheDocument();
+      expect(screen.getByText('Pulisci')).toBeInTheDocument();
     });
   });
 
@@ -185,9 +185,7 @@ describe('LibraryFilters', () => {
     });
 
     it('shows correct aria-pressed for active chips', () => {
-      render(
-        <LibraryFilters {...defaultProps} stateFilter={['Nuovo', 'Wishlist']} />
-      );
+      render(<LibraryFilters {...defaultProps} stateFilter={['Nuovo', 'Wishlist']} />);
 
       expect(screen.getByTestId('filter-chip-all')).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByTestId('filter-chip-nuovo')).toHaveAttribute('aria-pressed', 'true');
@@ -216,7 +214,7 @@ describe('LibraryFilters', () => {
     it('calls onClearFilters when button clicked', () => {
       render(<LibraryFilters {...defaultProps} searchQuery="test" />);
 
-      fireEvent.click(screen.getByText('Pulisci Filtri'));
+      fireEvent.click(screen.getByText('Pulisci'));
 
       expect(mockOnClearFilters).toHaveBeenCalledTimes(1);
     });

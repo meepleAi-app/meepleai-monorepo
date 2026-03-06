@@ -223,6 +223,15 @@
     text-wrap: balance;
   }
 
+  /* Hide scrollbar for horizontal-scroll chip rows on mobile */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* MeepleAI Hover Effects - Issue #2848 */
   .hover-card {
     @apply transition-all duration-300;

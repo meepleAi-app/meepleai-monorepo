@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { KnowledgeBaseTab } from '../KnowledgeBaseTab';
 import * as useGameAgentsModule from '@/hooks/queries/useGameAgents';
+import * as useEmbeddingStatusModule from '@/hooks/useEmbeddingStatus';
 import { api } from '@/lib/api';
 import type { AgentDto, AgentDocumentsDto } from '@/lib/api/schemas';
 
@@ -112,6 +113,18 @@ const mockDocuments2: AgentDocumentsDto = {
 describe('KnowledgeBaseTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock useEmbeddingStatus to return Completed status by default
+    vi.spyOn(useEmbeddingStatusModule, 'useEmbeddingStatus').mockReturnValue({
+      data: { status: 'Completed', progress: 100, totalChunks: 10, processedChunks: 10 },
+      isLoading: false,
+      isPolling: false,
+      isReady: true,
+      isFailed: false,
+      stageLabel: 'Completed',
+      chunkProgress: { processed: 10, total: 10 },
+      error: null,
+      refetch: vi.fn(),
+    } as any);
   });
 
   describe('Loading States', () => {
@@ -176,7 +189,6 @@ describe('KnowledgeBaseTab', () => {
       await waitFor(() => {
         expect(screen.getByText(/No Documents Indexed Yet/i)).toBeInTheDocument();
       });
-
     });
   });
 
@@ -276,7 +288,6 @@ describe('KnowledgeBaseTab', () => {
       await waitFor(() => {
         expect(screen.getByText('Rulebook')).toBeInTheDocument();
       });
-
     });
 
     it('displays active status badge only for active documents', async () => {
@@ -316,9 +327,10 @@ describe('KnowledgeBaseTab', () => {
       renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Knowledge Base Documents/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('heading', { name: /Knowledge Base Documents/i })
+        ).toBeInTheDocument();
       });
-
     });
 
     it('has proper title attributes for truncated text', async () => {
@@ -336,7 +348,6 @@ describe('KnowledgeBaseTab', () => {
         const rulebookName = screen.getByText(/Test Game Rulebook/i);
         expect(rulebookName.closest('p')).toHaveAttribute('title', 'Test Game Rulebook');
       });
-
     });
   });
 
@@ -374,7 +385,6 @@ describe('KnowledgeBaseTab', () => {
         const gridContainer = container.querySelector('.grid');
         expect(gridContainer).toBeInTheDocument();
       });
-
     });
   });
 });

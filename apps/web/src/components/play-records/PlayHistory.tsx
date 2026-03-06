@@ -80,6 +80,7 @@ export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
   const formatDuration = (duration: string | null): string => {
     if (!duration) return 'N/A';
     // Handle .NET TimeSpan format "HH:MM:SS" or "D.HH:MM:SS"
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored regex, no backtracking risk
     const dotNetMatch = duration.match(/^(?:(\d+)\.)?(\d+):(\d+):(\d+)$/);
     if (dotNetMatch) {
       const days = dotNetMatch[1] ? parseInt(dotNetMatch[1]) : 0;

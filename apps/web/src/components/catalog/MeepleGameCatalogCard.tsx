@@ -22,11 +22,32 @@
 
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { Check, Plus, Users, Clock, BarChart2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
+import { mapToIndexingStatus } from '@/components/library/kb-utils';
+
+// Dynamic imports to avoid DOMMatrix SSR error on statically generated /games/catalog
+const KbDrawerSheet = dynamic(
+  () => import('@/components/library/KbDrawerSheet').then(m => m.KbDrawerSheet),
+  { ssr: false }
+);
+const AgentDrawerSheet = dynamic(
+  () => import('@/components/library/AgentDrawerSheet').then(m => m.AgentDrawerSheet),
+  { ssr: false }
+);
+const ChatDrawerSheet = dynamic(
+  () => import('@/components/library/ChatDrawerSheet').then(m => m.ChatDrawerSheet),
+  { ssr: false }
+);
+const SessionDrawerSheet = dynamic(
+  () => import('@/components/library/SessionDrawerSheet').then(m => m.SessionDrawerSheet),
+  { ssr: false }
+);
 import {
   MeepleCard,
   type MeepleCardVariant,
@@ -37,6 +58,7 @@ import type { QuickAction } from '@/components/ui/data-display/meeple-card-quick
 import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
+import { api } from '@/lib/api';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================
@@ -166,16 +188,54 @@ export function MeepleGameCatalogCard({
     [inLibrary, handleAddToCollection]
   );
 
-  // Catalog nav footer: only "Regolamento" link to detail page
+  // Drawer states
+  const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
+  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
+
+  // Fetch KB documents for status badge
+  const { data: kbDocuments } = useQuery({
+    queryKey: ['kb-docs', game.id],
+    queryFn: () => api.documents.getDocumentsByGame(game.id),
+    enabled: inLibrary,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Navigation footer: drawers when in library, link to detail page otherwise
   const catalogNavLinks: ResolvedNavigationLink[] = useMemo(
-    () => [
-      {
-        entity: 'document' as MeepleEntityType,
-        label: 'Regolamento',
-        href: `/games/${game.id}`,
-      },
-    ],
-    [game.id]
+    () =>
+      inLibrary
+        ? [
+            {
+              entity: 'document' as MeepleEntityType,
+              label: 'KB',
+              onClick: () => setKbDrawerOpen(true),
+            },
+            {
+              entity: 'agent' as MeepleEntityType,
+              label: 'Agents',
+              onClick: () => setAgentDrawerOpen(true),
+            },
+            {
+              entity: 'chatSession' as MeepleEntityType,
+              label: 'Chats',
+              onClick: () => setChatDrawerOpen(true),
+            },
+            {
+              entity: 'session' as MeepleEntityType,
+              label: 'Sessions',
+              onClick: () => setSessionDrawerOpen(true),
+            },
+          ]
+        : [
+            {
+              entity: 'document' as MeepleEntityType,
+              label: 'Regolamento',
+              href: `/games/${game.id}`,
+            },
+          ],
+    [game.id, inLibrary]
   );
 
   // Build metadata array
@@ -239,31 +299,64 @@ export function MeepleGameCatalogCard({
     : undefined;
 
   return (
-    <MeepleCard
-      id={game.id}
-      entity="game"
-      variant={variant}
-      title={game.title}
-      subtitle={subtitle}
-      imageUrl={game.imageUrl || undefined}
-      rating={game.averageRating ?? 0}
-      ratingMax={10}
-      metadata={metadata}
-      badge={badge}
-      actions={actions}
-      loading={isLoadingStatus}
-      onClick={onClick ? () => onClick(game.id) : undefined}
-      flippable={flippable && !!game.description}
-      flipData={flipData}
-      flipTrigger="button"
-      className={className}
-      navigateTo={catalogNavLinks}
-      data-testid={`catalog-game-card-${game.id}`}
-      entityQuickActions={catalogQuickActions}
-      showInfoButton
-      infoHref={`/games/${game.id}`}
-      infoTooltip="Vai al dettaglio"
-    />
+    <>
+      <MeepleCard
+        id={game.id}
+        entity="game"
+        variant={variant}
+        title={game.title}
+        subtitle={subtitle}
+        imageUrl={game.imageUrl || undefined}
+        rating={game.averageRating ?? 0}
+        ratingMax={10}
+        metadata={metadata}
+        badge={badge}
+        actions={actions}
+        loading={isLoadingStatus}
+        onClick={onClick ? () => onClick(game.id) : undefined}
+        flippable={flippable && !!game.description}
+        flipData={flipData}
+        flipTrigger="button"
+        className={className}
+        kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
+        navigateTo={catalogNavLinks}
+        data-testid={`catalog-game-card-${game.id}`}
+        entityQuickActions={catalogQuickActions}
+        showInfoButton
+        infoHref={`/games/${game.id}`}
+        infoTooltip="Vai al dettaglio"
+      />
+
+      {/* Drawers — only rendered when user has game in library */}
+      {inLibrary && (
+        <>
+          <KbDrawerSheet
+            open={kbDrawerOpen}
+            onOpenChange={setKbDrawerOpen}
+            gameId={game.id}
+            gameTitle={game.title}
+          />
+          <AgentDrawerSheet
+            open={agentDrawerOpen}
+            onOpenChange={setAgentDrawerOpen}
+            gameId={game.id}
+            gameTitle={game.title}
+          />
+          <ChatDrawerSheet
+            open={chatDrawerOpen}
+            onOpenChange={setChatDrawerOpen}
+            gameId={game.id}
+            gameTitle={game.title}
+          />
+          <SessionDrawerSheet
+            open={sessionDrawerOpen}
+            onOpenChange={setSessionDrawerOpen}
+            gameId={game.id}
+            gameTitle={game.title}
+          />
+        </>
+      )}
+    </>
   );
 }
 

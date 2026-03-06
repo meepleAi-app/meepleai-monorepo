@@ -187,5 +187,8 @@ export function DashboardSessionHero({ lastSession }: DashboardSessionHeroProps)
     return <ActiveSessionHero session={activeSession} />;
   }
 
+  // Don't show the empty hero if the user has never played a session
+  if (!lastSession) return null;
+
   return <EmptySessionHero lastSession={lastSession} />;
 }

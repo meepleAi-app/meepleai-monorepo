@@ -113,6 +113,9 @@ internal static class PdfRulebookSeeder
 
                 var fileSize = new FileInfo(destFile).Length;
 
+                // Estimate page count by scanning PDF for /Type /Page markers
+                var pageCount = EstimatePdfPageCount(destFile);
+
                 // Create PdfDocumentEntity
                 var pdfEntity = new PdfDocumentEntity
                 {
@@ -128,6 +131,7 @@ internal static class PdfRulebookSeeder
                     ProcessingStatus = "completed",
                     ProcessingState = "Ready",
                     ProcessedAt = DateTime.UtcNow,
+                    PageCount = pageCount,
                     IsPublic = true,
                     DocumentType = "base",
                     SortOrder = 0,
@@ -151,6 +155,40 @@ internal static class PdfRulebookSeeder
         logger.LogInformation(
             "PDF rulebook seed completed: {Seeded} seeded, {Skipped} skipped",
             seeded, skipped);
+    }
+
+    /// <summary>
+    /// Estimates page count by scanning PDF binary for /Type /Page markers (excluding /Type /Pages).
+    /// Lightweight alternative to adding a PDF library dependency for the seeder.
+    /// </summary>
+    private static int EstimatePdfPageCount(string filePath)
+    {
+        try
+        {
+            var content = File.ReadAllText(filePath, System.Text.Encoding.Latin1);
+            // Count "/Type /Page" but not "/Type /Pages" (the page tree node)
+            var count = 0;
+            var searchFrom = 0;
+            while (true)
+            {
+                var idx = content.IndexOf("/Type /Page", searchFrom, StringComparison.Ordinal);
+                if (idx < 0) break;
+                var afterIdx = idx + "/Type /Page".Length;
+                // Skip if followed by 's' (i.e. "/Type /Pages")
+                if (afterIdx < content.Length && content[afterIdx] == 's')
+                {
+                    searchFrom = afterIdx;
+                    continue;
+                }
+                count++;
+                searchFrom = afterIdx;
+            }
+            return count > 0 ? count : 1; // Fallback to 1 if scan fails
+        }
+        catch
+        {
+            return 1; // Fallback on error
+        }
     }
 
     /// <summary>

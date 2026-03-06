@@ -2,7 +2,8 @@
  * Admin Dashboard Navigation Configuration
  * Unified Top Nav + Contextual Sidebar navigation system
  *
- * 5 main sections: Overview, Users, Shared Games, Agents, Knowledge Base
+ * 10 main sections: Overview, Users, Shared Games, Agents, Knowledge Base,
+ * Monitor, Configuration, Analytics, Content, AI & Agents
  * Each section has sidebar items that change contextually.
  */
 
@@ -34,6 +35,23 @@ import {
   MessageSquareCodeIcon,
   ListOrderedIcon,
   TrendingUpIcon,
+  MonitorIcon,
+  BellIcon,
+  HardDriveIcon,
+  PlayIcon,
+  PackageIcon,
+  SlidersIcon,
+  FlagIcon,
+  GaugeIcon,
+  ZapIcon,
+  ClipboardListIcon,
+  KeyIcon,
+  GamepadIcon,
+  HelpCircleIcon,
+  CalendarIcon,
+  FlaskConicalIcon,
+  ScrollTextIcon,
+  NetworkIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -276,6 +294,216 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/knowledge-base/settings',
         label: 'Settings',
         icon: SettingsIcon,
+      },
+    ],
+  },
+  {
+    id: 'monitor',
+    label: 'Monitor',
+    icon: MonitorIcon,
+    baseRoute: '/admin/monitor',
+    description: 'System health, alerts, cache, and infrastructure',
+    group: 'core',
+    sidebarItems: [
+      {
+        href: '/admin/monitor?tab=alerts',
+        label: 'Alerts',
+        icon: BellIcon,
+        activePattern: /^\/admin\/monitor(\?tab=alerts)?$/,
+      },
+      {
+        href: '/admin/monitor?tab=cache',
+        label: 'Cache',
+        icon: DatabaseIcon,
+      },
+      {
+        href: '/admin/monitor?tab=infra',
+        label: 'Infrastructure',
+        icon: HardDriveIcon,
+      },
+      {
+        href: '/admin/monitor?tab=services',
+        label: 'Services',
+        icon: ServerIcon,
+      },
+      {
+        href: '/admin/monitor?tab=command',
+        label: 'Command Center',
+        icon: TerminalIcon,
+      },
+      {
+        href: '/admin/monitor?tab=testing',
+        label: 'Testing',
+        icon: PlayIcon,
+      },
+      {
+        href: '/admin/monitor?tab=export',
+        label: 'Bulk Export',
+        icon: PackageIcon,
+      },
+    ],
+  },
+  {
+    id: 'config',
+    label: 'Configuration',
+    icon: SlidersIcon,
+    baseRoute: '/admin/config',
+    description: 'System settings, feature flags, and rate limits',
+    group: 'core',
+    sidebarItems: [
+      {
+        href: '/admin/config?tab=general',
+        label: 'General',
+        icon: SettingsIcon,
+        activePattern: /^\/admin\/config(\?tab=general)?$/,
+      },
+      {
+        href: '/admin/config?tab=limits',
+        label: 'Limits',
+        icon: GaugeIcon,
+      },
+      {
+        href: '/admin/config?tab=flags',
+        label: 'Feature Flags',
+        icon: FlagIcon,
+      },
+      {
+        href: '/admin/config?tab=rate-limits',
+        label: 'Rate Limits',
+        icon: ZapIcon,
+      },
+      {
+        href: '/admin/config?tab=n8n',
+        label: 'n8n',
+        icon: NetworkIcon,
+      },
+      {
+        href: '/admin/config?tab=wizard',
+        label: 'Wizard',
+        icon: WrenchIcon,
+      },
+    ],
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChartIcon,
+    baseRoute: '/admin/analytics',
+    description: 'Usage statistics, audit logs, and reports',
+    group: 'core',
+    sidebarItems: [
+      {
+        href: '/admin/analytics?tab=overview',
+        label: 'Overview',
+        icon: BarChartIcon,
+        activePattern: /^\/admin\/analytics(\?tab=overview)?$/,
+      },
+      {
+        href: '/admin/analytics?tab=ai-usage',
+        label: 'AI Usage',
+        icon: CpuIcon,
+      },
+      {
+        href: '/admin/analytics?tab=audit',
+        label: 'Audit Log',
+        icon: ClipboardListIcon,
+      },
+      {
+        href: '/admin/analytics?tab=reports',
+        label: 'Reports',
+        icon: FileTextIcon,
+      },
+      {
+        href: '/admin/analytics?tab=api-keys',
+        label: 'API Keys',
+        icon: KeyIcon,
+      },
+    ],
+  },
+  {
+    id: 'content',
+    label: 'Content',
+    icon: FileTextIcon,
+    baseRoute: '/admin/content',
+    description: 'Games, shared content, FAQs, and sessions',
+    group: 'core',
+    sidebarItems: [
+      {
+        href: '/admin/content?tab=games',
+        label: 'Games',
+        icon: GamepadIcon,
+        activePattern: /^\/admin\/content(\?tab=games)?$/,
+      },
+      {
+        href: '/admin/content?tab=shared',
+        label: 'Shared Games',
+        icon: ShareIcon,
+      },
+      {
+        href: '/admin/content?tab=faqs',
+        label: 'FAQs',
+        icon: HelpCircleIcon,
+      },
+      {
+        href: '/admin/content?tab=kb',
+        label: 'Knowledge Base',
+        icon: BookOpenIcon,
+      },
+      {
+        href: '/admin/content?tab=sessions',
+        label: 'Sessions',
+        icon: CalendarIcon,
+      },
+    ],
+  },
+  {
+    id: 'ai',
+    label: 'AI & Agents',
+    icon: BrainCircuitIcon,
+    baseRoute: '/admin/ai',
+    description: 'AI agents, definitions, models, prompts, and RAG',
+    group: 'ai',
+    sidebarItems: [
+      {
+        href: '/admin/ai?tab=agents',
+        label: 'Agents',
+        icon: BotIcon,
+        activePattern: /^\/admin\/ai(\?tab=agents)?$/,
+      },
+      {
+        href: '/admin/ai?tab=typologies',
+        label: 'Typologies',
+        icon: TagIcon,
+      },
+      {
+        href: '/admin/ai?tab=definitions',
+        label: 'Definitions',
+        icon: ListOrderedIcon,
+      },
+      {
+        href: '/admin/ai?tab=lab',
+        label: 'AI Lab',
+        icon: FlaskConicalIcon,
+      },
+      {
+        href: '/admin/ai?tab=prompts',
+        label: 'Prompts',
+        icon: ScrollTextIcon,
+      },
+      {
+        href: '/admin/ai?tab=models',
+        label: 'Models',
+        icon: CpuIcon,
+      },
+      {
+        href: '/admin/ai?tab=requests',
+        label: 'Requests',
+        icon: ActivityIcon,
+      },
+      {
+        href: '/admin/ai?tab=rag',
+        label: 'RAG',
+        icon: BrainCircuitIcon,
       },
     ],
   },

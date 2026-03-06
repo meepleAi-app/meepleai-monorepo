@@ -15,6 +15,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// Orchestrates the full RAG prompt assembly pipeline.
 /// Phase 0: embedding → Qdrant search → prompt assembly.
 /// Phase 1: + reranking, query expansion, enhanced confidence scoring.
+/// Phase 2: + chain-of-thought, sentence window, hybrid search (vector + FTS).
 /// </summary>
 internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 {
@@ -22,6 +23,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly IQdrantService _qdrantService;
     private readonly ICrossEncoderReranker _reranker;
     private readonly ILlmService _llmService;
+    private readonly ITextChunkSearchService _textSearch;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
@@ -42,6 +44,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         "not certain", "it might", "it could"
     ];
 
+    // Sentence window
+    private const int SentenceWindowRadius = 1; // ±1 adjacent chunks
+
+    // Hybrid search (RRF)
+    private const int FtsTopK = 10; // Full-text search results to feed into RRF
+    private const int RrfK = 60;    // Standard RRF constant
+
     // Query expansion
     private const string QueryExpansionSystemPrompt =
         "You are a query expansion assistant for board game documentation search. " +
@@ -53,12 +62,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         IQdrantService qdrantService,
         ICrossEncoderReranker reranker,
         ILlmService llmService,
+        ITextChunkSearchService textSearch,
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _textSearch = textSearch ?? throw new ArgumentNullException(nameof(textSearch));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -134,6 +145,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 }
             }
 
+            // Step 2b: Hybrid search — PostgreSQL FTS + RRF fusion (graceful degradation)
+            allChunks = await TryHybridSearchAsync(userQuestion, gameId, allChunks, ct).ConfigureAwait(false);
+
             // Deduplicate by PdfId+ChunkIndex, keep highest score
             var filteredChunks = allChunks
                 .GroupBy(r => $"{r.PdfId}:{r.ChunkIndex}", StringComparer.Ordinal)
@@ -155,6 +169,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
             // Step 3: Rerank if available (graceful degradation)
             filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, ct).ConfigureAwait(false);
+
+            // Step 4: Sentence window expansion — include adjacent chunks for more context
+            filteredChunks = await TrySentenceWindowExpansionAsync(filteredChunks, ct).ConfigureAwait(false);
 
             // Format chunks and track citations
             var sb = new StringBuilder();
@@ -243,6 +260,144 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         }
     }
 
+    private async Task<List<SearchResultItem>> TryHybridSearchAsync(
+        string userQuestion, Guid gameId, List<SearchResultItem> vectorChunks, CancellationToken ct)
+    {
+        try
+        {
+            var ftsResults = await _textSearch.FullTextSearchAsync(gameId, userQuestion, FtsTopK, ct).ConfigureAwait(false);
+            if (ftsResults.Count == 0)
+                return vectorChunks;
+
+            // Convert FTS results to SearchResultItems for RRF fusion
+            var ftsChunks = ftsResults.Select((r, index) => new SearchResultItem
+            {
+                Score = 0f, // Will be replaced by RRF score
+                Text = r.Content,
+                PdfId = r.PdfDocumentId.ToString(),
+                Page = r.PageNumber ?? 0,
+                ChunkIndex = r.ChunkIndex
+            }).ToList();
+
+            // Simple RRF fusion: combine vector and FTS rankings
+            var fusedScores = new Dictionary<string, float>(StringComparer.Ordinal);
+
+            for (int i = 0; i < vectorChunks.Count; i++)
+            {
+                var key = $"{vectorChunks[i].PdfId}:{vectorChunks[i].ChunkIndex}";
+                fusedScores.TryAdd(key, 0f);
+                fusedScores[key] += (float)(1.0 / (RrfK + i + 1));
+            }
+
+            for (int i = 0; i < ftsChunks.Count; i++)
+            {
+                var key = $"{ftsChunks[i].PdfId}:{ftsChunks[i].ChunkIndex}";
+                fusedScores.TryAdd(key, 0f);
+                fusedScores[key] += (float)(1.0 / (RrfK + i + 1));
+            }
+
+            // Merge all unique chunks, assign RRF score
+            var allChunks = vectorChunks
+                .Concat(ftsChunks)
+                .GroupBy(c => $"{c.PdfId}:{c.ChunkIndex}", StringComparer.Ordinal)
+                .Select(g =>
+                {
+                    var best = g.OrderByDescending(c => c.Score).First();
+                    var key = $"{best.PdfId}:{best.ChunkIndex}";
+                    return new SearchResultItem
+                    {
+                        // Use max of original score and normalized RRF score
+                        Score = Math.Max(best.Score, NormalizeRrfScore(fusedScores[key])),
+                        Text = best.Text,
+                        PdfId = best.PdfId,
+                        Page = best.Page,
+                        ChunkIndex = best.ChunkIndex
+                    };
+                })
+                .ToList();
+
+            _logger.LogInformation("Hybrid search: {VectorCount} vector + {FtsCount} FTS → {FusedCount} fused chunks",
+                vectorChunks.Count, ftsResults.Count, allChunks.Count);
+
+            return allChunks;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Hybrid search failed, using vector-only results");
+            return vectorChunks;
+        }
+    }
+
+    private async Task<List<SearchResultItem>> TrySentenceWindowExpansionAsync(
+        List<SearchResultItem> chunks, CancellationToken ct)
+    {
+        if (chunks.Count == 0)
+            return chunks;
+
+        try
+        {
+            var expandedChunks = new List<SearchResultItem>(chunks);
+            var existingKeys = new HashSet<string>(
+                chunks.Select(c => $"{c.PdfId}:{c.ChunkIndex}"),
+                StringComparer.Ordinal);
+
+            foreach (var chunk in chunks)
+            {
+                if (!Guid.TryParse(chunk.PdfId, out var pdfDocumentId))
+                    continue;
+
+                var adjacent = await _textSearch.GetAdjacentChunksAsync(
+                    pdfDocumentId, chunk.ChunkIndex, SentenceWindowRadius, ct).ConfigureAwait(false);
+
+                foreach (var adj in adjacent)
+                {
+                    var key = $"{adj.PdfDocumentId}:{adj.ChunkIndex}";
+                    if (existingKeys.Add(key))
+                    {
+                        expandedChunks.Add(new SearchResultItem
+                        {
+                            Score = chunk.Score * 0.8f, // Adjacent chunks get 80% of parent score
+                            Text = adj.Content,
+                            PdfId = adj.PdfDocumentId.ToString(),
+                            Page = adj.PageNumber ?? chunk.Page,
+                            ChunkIndex = adj.ChunkIndex
+                        });
+                    }
+                }
+            }
+
+            // Re-sort by PdfId then ChunkIndex for coherent reading order
+            var sorted = expandedChunks
+                .OrderByDescending(c => c.Score)
+                .ThenBy(c => c.PdfId, StringComparer.Ordinal)
+                .ThenBy(c => c.ChunkIndex)
+                .ToList();
+
+            if (sorted.Count > chunks.Count)
+            {
+                _logger.LogInformation("Sentence window: expanded {Original} → {Expanded} chunks",
+                    chunks.Count, sorted.Count);
+            }
+
+            return sorted;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Sentence window expansion failed, using original chunks");
+            return chunks;
+        }
+    }
+
+    /// <summary>
+    /// Normalizes RRF score to approximate 0-1 range.
+    /// </summary>
+    private static float NormalizeRrfScore(float rrfScore)
+    {
+        // RRF scores typically range from ~0.016 (1/(60+1)) to ~0.033 (2/(60+1))
+        // Scale to 0-1 range; scores above ~0.025 indicate strong dual-source matches
+        return Math.Min(rrfScore * 30f, 1.0f);
+    }
+
     /// <summary>
     /// Computes confidence score based on RAG chunk quality and response content.
     /// </summary>
@@ -275,6 +430,15 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine("Answer questions accurately based on the game rules and documentation provided below.");
         sb.AppendLine("If the provided context does not contain enough information to answer, say so clearly.");
         sb.AppendLine("Always refer to specific rules when possible.");
+        sb.AppendLine();
+
+        // Chain-of-thought reasoning instructions
+        sb.AppendLine("## Reasoning Approach");
+        sb.AppendLine("Think step-by-step when answering:");
+        sb.AppendLine("1. Identify the relevant rules from the provided context.");
+        sb.AppendLine("2. Quote or reference the specific rule text that applies.");
+        sb.AppendLine("3. Explain how the rule applies to the user's specific situation.");
+        sb.AppendLine("4. State your conclusion clearly.");
         sb.AppendLine();
 
         // RAG context

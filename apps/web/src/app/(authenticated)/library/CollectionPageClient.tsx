@@ -264,22 +264,22 @@ export default function CollectionPageClient() {
   // Loading state with staggered skeleton animations (Issue #2618)
   if (libraryLoading || quotaLoading) {
     return (
-      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
+      <div className="space-y-2 sm:space-y-4">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="hidden sm:block h-24 w-full" />
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-12 sm:h-16 w-full" />
         </motion.div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <motion.div
               key={i}
@@ -301,7 +301,7 @@ export default function CollectionPageClient() {
       libraryError instanceof Error ? libraryError.message : String(libraryError || quotaError);
 
     return (
-      <div className="container mx-auto px-4 py-4">
+      <div className="py-2 sm:py-4">
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
@@ -311,12 +311,12 @@ export default function CollectionPageClient() {
 
   return (
     <>
-      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
-        {/* Quick stats row */}
-        <LibraryQuickStats />
+      <div className="space-y-2 sm:space-y-4">
+        {/* Quick stats row — hidden on mobile for vertical space */}
+        <LibraryQuickStats className="hidden sm:flex" />
 
-        {/* Toolbar: quota badge + view controls */}
-        <div className="flex items-center justify-between gap-2">
+        {/* Toolbar: quota badge + view controls — compact on mobile */}
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
           {quota && (
             <LibraryQuotaBadge
               currentCount={quota.currentCount}
@@ -324,7 +324,7 @@ export default function CollectionPageClient() {
               percentageUsed={quota.percentageUsed}
             />
           )}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {hasGames && <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />}
             {hasGames && (
               <Button
@@ -375,8 +375,8 @@ export default function CollectionPageClient() {
               <motion.div
                 className={
                   viewMode === 'grid'
-                    ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-                    : 'flex flex-col gap-3'
+                    ? 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4'
+                    : 'flex flex-col gap-2 sm:gap-3'
                 }
                 layout
               >

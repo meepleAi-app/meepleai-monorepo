@@ -219,9 +219,9 @@ export function LibraryFilters({
     !sortDescending;
 
   return (
-    <div className={cn('space-y-3 sm:space-y-4', className)}>
+    <div className={cn('space-y-1.5 sm:space-y-4', className)}>
       {/* Search and Sort Row — single row on mobile */}
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-1.5 sm:gap-2">
         {/* Search Input */}
         <div className="flex-1 min-w-0">
           <Label
@@ -231,25 +231,25 @@ export function LibraryFilters({
             Cerca Giochi
           </Label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-2.5 sm:left-3 top-1/2 h-3.5 sm:h-4 w-3.5 sm:w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="library-search"
               type="search"
               placeholder="Cerca..."
               value={localSearch}
               onChange={e => setLocalSearch(e.target.value)}
-              className="pl-9 pr-9 h-9"
+              className="pl-8 sm:pl-9 pr-8 sm:pr-9 h-8 sm:h-9 text-sm"
               aria-label="Search library"
             />
             {localSearch && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                className="absolute right-1 top-1/2 h-6 w-6 sm:h-7 sm:w-7 -translate-y-1/2"
                 onClick={handleSearchClear}
                 aria-label="Clear search"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             )}
           </div>
@@ -269,10 +269,10 @@ export function LibraryFilters({
           >
             <SelectTrigger
               id="library-sort"
-              className="w-[120px] sm:w-[200px] h-9"
+              className="w-[100px] sm:w-[200px] h-8 sm:h-9 text-xs sm:text-sm"
               aria-label="Sort library"
             >
-              <SortAsc className="mr-1.5 h-4 w-4 flex-shrink-0" />
+              <SortAsc className="mr-1 sm:mr-1.5 h-3.5 sm:h-4 w-3.5 sm:w-4 flex-shrink-0" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -294,16 +294,16 @@ export function LibraryFilters({
             variant="outline"
             size="sm"
             onClick={onClearFilters}
-            className="h-9 w-9 p-0 flex-shrink-0 sm:w-auto sm:px-3"
+            className="h-8 sm:h-9 w-8 sm:w-auto p-0 sm:px-3 flex-shrink-0"
           >
-            <X className="h-4 w-4 sm:mr-1" />
+            <X className="h-3.5 sm:h-4 w-3.5 sm:w-4 sm:mr-1" />
             <span className="hidden sm:inline">Pulisci</span>
           </Button>
         )}
       </div>
 
-      {/* Filter Chips Row — horizontal scroll on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-x-visible sm:pb-0 scrollbar-none">
+      {/* Filter Chips Row — horizontal scroll on mobile, edge-to-edge */}
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-x-visible scrollbar-none">
         {filterChips.map(chip => {
           const isActive = isChipActive(chip.id);
           const count = getChipCount(chip.id);
@@ -313,7 +313,7 @@ export function LibraryFilters({
               key={chip.id}
               variant="outline"
               className={cn(
-                'cursor-pointer px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium transition-all flex-shrink-0',
+                'cursor-pointer px-2 py-0.5 sm:px-3 sm:py-1.5 text-[11px] sm:text-sm font-medium transition-all flex-shrink-0',
                 'hover:scale-105',
                 isActive ? chip.activeColor : chip.color
               )}

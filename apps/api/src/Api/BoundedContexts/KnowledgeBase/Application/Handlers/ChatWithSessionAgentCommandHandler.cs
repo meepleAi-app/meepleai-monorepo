@@ -262,9 +262,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 promptTokens: finalUsage?.PromptTokens ?? 0,
                 completionTokens: finalUsage?.CompletionTokens ?? 0,
                 totalTokens: totalTokens,
-                confidence: assembled.Citations.Count > 0
-                    ? assembled.Citations.Average(c => c.RelevanceScore)
-                    : null,
+                confidence: RagPromptAssemblyService.ComputeConfidence(assembled.Citations, responseText),
                 chatThreadId: thread.Id));
     }
 

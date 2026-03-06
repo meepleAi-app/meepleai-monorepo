@@ -1,8 +1,11 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Logging;
 
@@ -10,29 +13,52 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// Orchestrates the full RAG prompt assembly pipeline.
-/// Replaces AgentPromptBuilder with RAG context, chat history, and token budget management.
+/// Phase 0: embedding → Qdrant search → prompt assembly.
+/// Phase 1: + reranking, query expansion, enhanced confidence scoring.
 /// </summary>
 internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
+    private readonly ICrossEncoderReranker _reranker;
+    private readonly ILlmService _llmService;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
-    private const int DefaultTopK = 10;
+    private const int DefaultTopK = 15; // Increased from 10 to feed reranker more candidates
+    private const int RerankedTopK = 5;  // Final chunk count after reranking
     private const float DefaultMinScore = 0.55f;
 
     // Chat history thresholds
     private const int HistoryThreshold = 10;
     internal const int RecentMessageCount = 5;
 
+    // Confidence scoring
+    private const float HighScoreThreshold = 0.8f;
+    private const float ConfidencePenalty = 0.1f;
+    private static readonly string[] HedgeWords = [
+        "forse", "probabilmente", "non sono sicuro", "potrebbe essere",
+        "i'm not sure", "i think", "maybe", "perhaps", "possibly",
+        "not certain", "it might", "it could"
+    ];
+
+    // Query expansion
+    private const string QueryExpansionSystemPrompt =
+        "You are a query expansion assistant for board game documentation search. " +
+        "Given a user question, generate 2-3 alternative phrasings that might match game rules documentation. " +
+        "Return ONLY a JSON array of strings, no other text. Example: [\"alt1\", \"alt2\"]";
+
     public RagPromptAssemblyService(
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
+        ICrossEncoderReranker reranker,
+        ILlmService llmService,
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
+        _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
+        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -77,30 +103,41 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
         try
         {
-            // Generate embedding
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(userQuestion, ct).ConfigureAwait(false);
-            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+            // Step 1: Query expansion (optional, graceful degradation)
+            var queries = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
+
+            // Step 2: Generate embeddings for all queries
+            var allChunks = new List<SearchResultItem>();
+            foreach (var query in queries)
             {
-                _logger.LogWarning("Embedding generation failed: {Error}", embeddingResult.ErrorMessage);
-                return (string.Empty, citations);
+                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, ct).ConfigureAwait(false);
+                if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+                {
+                    if (string.Equals(query, userQuestion, StringComparison.Ordinal))
+                    {
+                        _logger.LogWarning("Embedding generation failed for primary query: {Error}", embeddingResult.ErrorMessage);
+                        return (string.Empty, citations);
+                    }
+                    continue; // Skip failed expansion queries
+                }
+
+                var searchResult = await _qdrantService.SearchAsync(
+                    gameId.ToString(),
+                    embeddingResult.Embeddings[0],
+                    DefaultTopK,
+                    documentIds: null,
+                    ct).ConfigureAwait(false);
+
+                if (searchResult.Success)
+                {
+                    allChunks.AddRange(searchResult.Results);
+                }
             }
 
-            // Search Qdrant
-            var searchResult = await _qdrantService.SearchAsync(
-                gameId.ToString(),
-                embeddingResult.Embeddings[0],
-                DefaultTopK,
-                documentIds: null,
-                ct).ConfigureAwait(false);
-
-            if (!searchResult.Success)
-            {
-                _logger.LogWarning("Qdrant search failed: {Error}", searchResult.ErrorMessage);
-                return (string.Empty, citations);
-            }
-
-            // Filter by minimum score
-            var filteredChunks = searchResult.Results
+            // Deduplicate by PdfId+ChunkIndex, keep highest score
+            var filteredChunks = allChunks
+                .GroupBy(r => $"{r.PdfId}:{r.ChunkIndex}", StringComparer.Ordinal)
+                .Select(g => g.OrderByDescending(r => r.Score).First())
                 .Where(r => r.Score >= DefaultMinScore)
                 .OrderByDescending(r => r.Score)
                 .ToList();
@@ -111,10 +148,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 return (string.Empty, citations);
             }
 
-            _logger.LogInformation("Retrieved {Count} relevant chunks (scores: {MinScore:F2}-{MaxScore:F2})",
-                filteredChunks.Count,
+            _logger.LogInformation("Retrieved {Count} relevant chunks from {QueryCount} queries (scores: {MinScore:F2}-{MaxScore:F2})",
+                filteredChunks.Count, queries.Count,
                 filteredChunks[^1].Score,
                 filteredChunks[0].Score);
+
+            // Step 3: Rerank if available (graceful degradation)
+            filteredChunks = await TryRerankAsync(userQuestion, filteredChunks, ct).ConfigureAwait(false);
 
             // Format chunks and track citations
             var sb = new StringBuilder();
@@ -138,6 +178,92 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             _logger.LogError(ex, "RAG retrieval failed for game {GameId}", gameId);
             return (string.Empty, citations);
         }
+    }
+
+    private async Task<List<string>> ExpandQueryAsync(string userQuestion, CancellationToken ct)
+    {
+        var queries = new List<string> { userQuestion }; // Always include original
+
+        try
+        {
+            var result = await _llmService.GenerateCompletionAsync(
+                QueryExpansionSystemPrompt,
+                userQuestion,
+                RequestSource.RagPipeline,
+                ct).ConfigureAwait(false);
+
+            if (result.Success && !string.IsNullOrWhiteSpace(result.Response))
+            {
+                var expansions = JsonSerializer.Deserialize<List<string>>(result.Response.Trim());
+                if (expansions != null)
+                {
+                    queries.AddRange(expansions.Where(e => !string.IsNullOrWhiteSpace(e)).Take(3));
+                    _logger.LogDebug("Query expanded: original + {ExpansionCount} alternatives", expansions.Count);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Query expansion failed, using original query only");
+        }
+
+        return queries;
+    }
+
+    private async Task<List<SearchResultItem>> TryRerankAsync(
+        string userQuestion, List<SearchResultItem> chunks, CancellationToken ct)
+    {
+        if (chunks.Count <= RerankedTopK)
+            return chunks.Take(RerankedTopK).ToList();
+
+        try
+        {
+            var rerankChunks = chunks.Select(c => new RerankChunk(
+                Id: $"{c.PdfId}:{c.ChunkIndex}",
+                Content: c.Text,
+                OriginalScore: c.Score
+            )).ToList();
+
+            var result = await _reranker.RerankAsync(userQuestion, rerankChunks, RerankedTopK, ct).ConfigureAwait(false);
+
+            _logger.LogInformation("Reranked {Input} → {Output} chunks in {TimeMs:F1}ms",
+                chunks.Count, result.Chunks.Count, result.ProcessingTimeMs);
+
+            // Map reranked results back to SearchResultItems, updating scores
+            var rerankedLookup = result.Chunks.ToDictionary(r => r.Id, StringComparer.Ordinal);
+            return chunks
+                .Where(c => rerankedLookup.ContainsKey($"{c.PdfId}:{c.ChunkIndex}"))
+                .OrderByDescending(c => rerankedLookup[$"{c.PdfId}:{c.ChunkIndex}"].RerankScore)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Reranker failed, using raw Qdrant scores (top {TopK})", RerankedTopK);
+            return chunks.Take(RerankedTopK).ToList();
+        }
+    }
+
+    /// <summary>
+    /// Computes confidence score based on RAG chunk quality and response content.
+    /// </summary>
+    internal static double? ComputeConfidence(List<ChunkCitation> citations, string responseText)
+    {
+        if (citations.Count == 0)
+            return null;
+
+        // Base: average relevance score
+        var confidence = (double)citations.Average(c => c.RelevanceScore);
+
+        // Penalty: no chunks above high score threshold
+        if (!citations.Any(c => c.RelevanceScore >= HighScoreThreshold))
+            confidence -= ConfidencePenalty;
+
+        // Penalty: hedge words in response
+        var lowerResponse = responseText.ToLowerInvariant();
+        if (HedgeWords.Any(hw => lowerResponse.Contains(hw, StringComparison.Ordinal)))
+            confidence -= ConfidencePenalty;
+
+        return Math.Max(0.0, Math.Min(1.0, confidence));
     }
 
     private static string BuildSystemPrompt(string agentTypology, string gameTitle, GameState? gameState, string ragContext)

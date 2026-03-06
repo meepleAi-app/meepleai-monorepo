@@ -15,10 +15,7 @@ import type {
   ModelSelection,
   StrategySpecificSettings,
 } from '@/components/rag-dashboard/config/types';
-import {
-  DEFAULT_RAG_CONFIG,
-  STRATEGY_PRESETS,
-} from '@/components/rag-dashboard/config/types';
+import { DEFAULT_RAG_CONFIG, STRATEGY_PRESETS } from '@/components/rag-dashboard/config/types';
 import type { RetrievalStrategyType } from '@/components/rag-dashboard/retrieval-strategies';
 
 /**
@@ -123,8 +120,8 @@ export const useRagConfigStore = create<RagConfigStore>()(
       saveError: null,
 
       // Actions
-      setGenerationParams: (params) =>
-        set((state) => ({
+      setGenerationParams: params =>
+        set(state => ({
           config: {
             ...state.config,
             generation: { ...state.config.generation, ...params },
@@ -132,8 +129,8 @@ export const useRagConfigStore = create<RagConfigStore>()(
           isDirty: true,
         })),
 
-      setRetrievalParams: (params) =>
-        set((state) => ({
+      setRetrievalParams: params =>
+        set(state => ({
           config: {
             ...state.config,
             retrieval: { ...state.config.retrieval, ...params },
@@ -141,8 +138,8 @@ export const useRagConfigStore = create<RagConfigStore>()(
           isDirty: true,
         })),
 
-      setRerankerSettings: (settings) =>
-        set((state) => ({
+      setRerankerSettings: settings =>
+        set(state => ({
           config: {
             ...state.config,
             reranker: { ...state.config.reranker, ...settings },
@@ -150,8 +147,8 @@ export const useRagConfigStore = create<RagConfigStore>()(
           isDirty: true,
         })),
 
-      setModelSelection: (selection) =>
-        set((state) => ({
+      setModelSelection: selection =>
+        set(state => ({
           config: {
             ...state.config,
             models: { ...state.config.models, ...selection },
@@ -159,8 +156,8 @@ export const useRagConfigStore = create<RagConfigStore>()(
           isDirty: true,
         })),
 
-      setStrategySpecific: (settings) =>
-        set((state) => ({
+      setStrategySpecific: settings =>
+        set(state => ({
           config: {
             ...state.config,
             strategySpecific: { ...state.config.strategySpecific, ...settings },
@@ -169,7 +166,7 @@ export const useRagConfigStore = create<RagConfigStore>()(
         })),
 
       setActiveStrategy: (strategy, applyPreset = false) => {
-        set((state) => ({
+        set(state => ({
           config: {
             ...state.config,
             activeStrategy: strategy,
@@ -182,14 +179,14 @@ export const useRagConfigStore = create<RagConfigStore>()(
         }
       },
 
-      applyPreset: (strategy) => {
+      applyPreset: strategy => {
         // Validate strategy key before accessing preset
         if (!Object.hasOwn(STRATEGY_PRESETS, strategy)) return;
         // eslint-disable-next-line security/detect-object-injection -- key validated above
         const preset = STRATEGY_PRESETS[strategy];
         if (!preset) return;
 
-        set((state) => ({
+        set(state => ({
           config: {
             ...state.config,
             ...preset,
@@ -213,18 +210,14 @@ export const useRagConfigStore = create<RagConfigStore>()(
         set({ isSaving: true, saveError: null });
 
         try {
-          const { config: _config } = get();
+          const { config } = get();
 
-          // TODO: Replace with actual API call when backend is ready
-          // const response = await fetch('/api/v1/rag/config', {
-          //   method: 'PUT',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify(_config),
-          // });
-          // if (!response.ok) throw new Error('Failed to save configuration');
-
-          // Simulate API call
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          const response = await fetch('/api/v1/rag-dashboard/config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config),
+          });
+          if (!response.ok) throw new Error('Failed to save configuration');
 
           set({ isDirty: false, isSaving: false });
         } catch (error) {
@@ -239,18 +232,11 @@ export const useRagConfigStore = create<RagConfigStore>()(
         set({ isSaving: true, saveError: null });
 
         try {
-          // TODO: Replace with actual API call when backend is ready
-          // const response = await fetch('/api/v1/rag/config');
-          // if (!response.ok) throw new Error('Failed to load configuration');
-          // const config = await response.json();
+          const response = await fetch('/api/v1/rag-dashboard/config');
+          if (!response.ok) throw new Error('Failed to load configuration');
+          const config = (await response.json()) as RagConfig;
 
-          // Simulate API call - returns defaults for now
-          await new Promise((resolve) => setTimeout(resolve, 300));
-
-          // In real implementation, would set the loaded config
-          // set({ config, isDirty: false, isSaving: false });
-
-          set({ isSaving: false });
+          set({ config, isDirty: false, isSaving: false });
         } catch (error) {
           set({
             saveError: error instanceof Error ? error.message : 'Failed to load configuration',
@@ -263,7 +249,7 @@ export const useRagConfigStore = create<RagConfigStore>()(
     }),
     {
       name: 'rag-config-storage',
-      partialize: (state) => ({ config: state.config }),
+      partialize: state => ({ config: state.config }),
     }
   )
 );

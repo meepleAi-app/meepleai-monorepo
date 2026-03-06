@@ -1,41 +1,83 @@
 /**
  * Admin Analytics Hub
  * Issue #5040 — Consolidate Admin Routes
+ * Issue #5051 — Admin Analytics Migration
  *
  * Canonical entry for all analytics admin pages.
  * Tabs: overview · ai-usage · audit · reports · api-keys
- *
- * TODO (Issue #5051): Migrate full content with tab-based layout + ActionBar.
  */
+
+import { Suspense } from 'react';
 
 import Link from 'next/link';
 
+import { AiUsageTab } from './AiUsageTab';
+import { ApiKeysTab } from './ApiKeysTab';
+import { AuditLogTab } from './AuditLogTab';
 import { AdminAnalyticsNavConfig } from './NavConfig';
+import { OverviewTab } from './OverviewTab';
+import { ReportsTab } from './ReportsTab';
 
 interface AdminAnalyticsPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
 }
 
 const TABS = [
-  { id: 'overview',  label: 'Overview',   href: '/admin/analytics?tab=overview' },
-  { id: 'ai-usage',  label: 'AI Usage',   href: '/admin/analytics?tab=ai-usage' },
-  { id: 'audit',     label: 'Audit Log',  href: '/admin/analytics?tab=audit' },
-  { id: 'reports',   label: 'Reports',    href: '/admin/analytics?tab=reports' },
-  { id: 'api-keys',  label: 'API Keys',   href: '/admin/analytics?tab=api-keys' },
+  { id: 'overview', label: 'Overview', href: '/admin/analytics?tab=overview' },
+  { id: 'ai-usage', label: 'AI Usage', href: '/admin/analytics?tab=ai-usage' },
+  { id: 'audit', label: 'Audit Log', href: '/admin/analytics?tab=audit' },
+  { id: 'reports', label: 'Reports', href: '/admin/analytics?tab=reports' },
+  { id: 'api-keys', label: 'API Keys', href: '/admin/analytics?tab=api-keys' },
 ] as const;
 
-/** Old sub-page links available while full migration is pending */
-const SUB_PAGES = [
-  { label: 'Analytics Overview', href: '/admin/analytics' },
-  { label: 'AI Usage',           href: '/admin/ai-usage' },
-  { label: 'Audit Log',          href: '/admin/audit-log' },
-  { label: 'Reports',            href: '/admin/reports' },
-  { label: 'API Keys',           href: '/admin/api-keys' },
-];
+type TabId = (typeof TABS)[number]['id'];
+
+function TabSkeleton() {
+  return (
+    <div className="h-[600px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
+  );
+}
+
+function renderTabContent(tab: TabId) {
+  switch (tab) {
+    case 'overview':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <OverviewTab />
+        </Suspense>
+      );
+    case 'ai-usage':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <AiUsageTab />
+        </Suspense>
+      );
+    case 'audit':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <AuditLogTab />
+        </Suspense>
+      );
+    case 'reports':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <ReportsTab />
+        </Suspense>
+      );
+    case 'api-keys':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <ApiKeysTab />
+        </Suspense>
+      );
+    default:
+      return null;
+  }
+}
 
 export default async function AdminAnalyticsPage({ searchParams }: AdminAnalyticsPageProps) {
   const params = await searchParams;
-  const tab = params.tab ?? 'overview';
+  const tab = (params.tab ?? 'overview') as TabId;
 
   return (
     <div className="space-y-6">
@@ -51,7 +93,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
 
       {/* Tab bar */}
       <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map((t) => (
+        {TABS.map(t => (
           <Link
             key={t.id}
             href={t.href}
@@ -66,29 +108,8 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
         ))}
       </div>
 
-      {/* Placeholder — full content migrated in Issue #5051 */}
-      <div className="rounded-lg border border-dashed border-border/60 p-8 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Tab: <span className="font-mono">{tab}</span>
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Full tab content will be available after Issue #5051 (Admin Analytics Migration).
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Access via individual pages below until migration is complete:
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {SUB_PAGES.map((p) => (
-            <Link
-              key={p.href}
-              href={p.href}
-              className="rounded-md border border-border/60 px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-            >
-              {p.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+      {/* Tab content */}
+      {renderTabContent(tab)}
     </div>
   );
 }

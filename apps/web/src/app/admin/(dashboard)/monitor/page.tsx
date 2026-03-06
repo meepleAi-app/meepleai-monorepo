@@ -1,47 +1,107 @@
 /**
  * Admin Monitor Hub
  * Issue #5040 — Consolidate Admin Routes
+ * Issue #5053 — Admin Monitor Migration
  *
  * Canonical entry for all system monitoring admin pages.
  * Tabs: alerts · cache · infra · services · command · testing · export
- *
- * TODO (Issue #5053): Migrate full content with tab-based layout + ActionBar.
  */
+
+import { Suspense } from 'react';
 
 import Link from 'next/link';
 
+import { AlertsTab } from './AlertsTab';
+import { CacheTab } from './CacheTab';
+import { CommandCenterTab } from './CommandCenterTab';
+import { InfrastructureTab } from './InfrastructureTab';
 import { AdminMonitorNavConfig } from './NavConfig';
+import { TestingTab } from './TestingTab';
 
 interface AdminMonitorPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
 }
 
 const TABS = [
-  { id: 'alerts',   label: 'Alerts',          href: '/admin/monitor?tab=alerts' },
-  { id: 'cache',    label: 'Cache',           href: '/admin/monitor?tab=cache' },
-  { id: 'infra',    label: 'Infrastructure',  href: '/admin/monitor?tab=infra' },
-  { id: 'services', label: 'Services',        href: '/admin/monitor?tab=services' },
-  { id: 'command',  label: 'Command Center',  href: '/admin/monitor?tab=command' },
-  { id: 'testing',  label: 'Testing',         href: '/admin/monitor?tab=testing' },
-  { id: 'export',   label: 'Bulk Export',     href: '/admin/monitor?tab=export' },
+  { id: 'alerts', label: 'Alerts', href: '/admin/monitor?tab=alerts' },
+  { id: 'cache', label: 'Cache', href: '/admin/monitor?tab=cache' },
+  { id: 'infra', label: 'Infrastructure', href: '/admin/monitor?tab=infra' },
+  { id: 'services', label: 'Services', href: '/admin/monitor?tab=services' },
+  { id: 'command', label: 'Command Center', href: '/admin/monitor?tab=command' },
+  { id: 'testing', label: 'Testing', href: '/admin/monitor?tab=testing' },
+  { id: 'export', label: 'Bulk Export', href: '/admin/monitor?tab=export' },
 ] as const;
 
-/** Old sub-page links available while full migration is pending */
-const SUB_PAGES = [
-  { label: 'Alerts',          href: '/admin/alerts' },
-  { label: 'Alert Config',    href: '/admin/alerts/config' },
-  { label: 'Alert Rules',     href: '/admin/alert-rules' },
-  { label: 'Cache',           href: '/admin/cache' },
-  { label: 'Infrastructure',  href: '/admin/infrastructure' },
-  { label: 'Services',        href: '/admin/services' },
-  { label: 'Command Center',  href: '/admin/command-center' },
-  { label: 'Testing',         href: '/admin/testing' },
-  { label: 'Bulk Export',     href: '/admin/bulk-export' },
-];
+type TabId = (typeof TABS)[number]['id'];
+
+function TabSkeleton() {
+  return (
+    <div className="h-[600px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
+  );
+}
+
+function ComingSoonTab({ label, description }: { label: string; description: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border/60 p-16 text-center">
+      <p className="text-base font-semibold text-foreground">{label}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function renderTabContent(tab: TabId) {
+  switch (tab) {
+    case 'alerts':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <AlertsTab />
+        </Suspense>
+      );
+    case 'cache':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <CacheTab />
+        </Suspense>
+      );
+    case 'infra':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <InfrastructureTab />
+        </Suspense>
+      );
+    case 'services':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <InfrastructureTab />
+        </Suspense>
+      );
+    case 'command':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <CommandCenterTab />
+        </Suspense>
+      );
+    case 'testing':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <TestingTab />
+        </Suspense>
+      );
+    case 'export':
+      return (
+        <ComingSoonTab
+          label="Bulk Export"
+          description="Export users, audit logs, and API keys in bulk."
+        />
+      );
+    default:
+      return null;
+  }
+}
 
 export default async function AdminMonitorPage({ searchParams }: AdminMonitorPageProps) {
   const params = await searchParams;
-  const tab = params.tab ?? 'alerts';
+  const tab = (params.tab ?? 'alerts') as TabId;
 
   return (
     <div className="space-y-6">
@@ -57,7 +117,7 @@ export default async function AdminMonitorPage({ searchParams }: AdminMonitorPag
 
       {/* Tab bar */}
       <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map((t) => (
+        {TABS.map(t => (
           <Link
             key={t.id}
             href={t.href}
@@ -72,29 +132,8 @@ export default async function AdminMonitorPage({ searchParams }: AdminMonitorPag
         ))}
       </div>
 
-      {/* Placeholder — full content migrated in Issue #5053 */}
-      <div className="rounded-lg border border-dashed border-border/60 p-8 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Tab: <span className="font-mono">{tab}</span>
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Full tab content will be available after Issue #5053 (Admin Monitor Migration).
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Access via individual pages below until migration is complete:
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {SUB_PAGES.map((p) => (
-            <Link
-              key={p.href}
-              href={p.href}
-              className="rounded-md border border-border/60 px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-            >
-              {p.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+      {/* Tab content */}
+      {renderTabContent(tab)}
     </div>
   );
 }

@@ -59,7 +59,7 @@ describe('DashboardSessionHero', () => {
 
     render(<DashboardSessionHero />);
 
-    expect(screen.getByText('🟢 Sessione attiva')).toBeInTheDocument();
+    expect(screen.getByText('Sessione attiva')).toBeInTheDocument();
     expect(screen.getByText(/4 giocatori/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Riprendi/ })).toHaveAttribute(
       'href',
@@ -95,13 +95,31 @@ describe('DashboardSessionHero', () => {
     expect(screen.getByText('Sessione in corso')).toBeInTheDocument();
   });
 
-  it('renders empty state when no active sessions', () => {
+  it('renders nothing when no active sessions and no last session', () => {
     (useActiveSessions as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { sessions: [], total: 0, page: 1, pageSize: 1 },
       isLoading: false,
     });
 
-    render(<DashboardSessionHero />);
+    const { container } = render(<DashboardSessionHero />);
+
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders empty state when no active sessions but has last session', () => {
+    (useActiveSessions as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { sessions: [], total: 0, page: 1, pageSize: 1 },
+      isLoading: false,
+    });
+
+    const lastSession = {
+      id: 's-recent',
+      gameName: 'Azul',
+      sessionDate: new Date().toISOString(),
+      playerCount: 3,
+    };
+
+    render(<DashboardSessionHero lastSession={lastSession as never} />);
 
     expect(screen.getByText('Nessuna sessione in corso')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Nuova sessione/ })).toHaveAttribute(
@@ -133,14 +151,16 @@ describe('DashboardSessionHero', () => {
     );
   });
 
-  it('hides "Riprendi ultima" CTA when no last session', () => {
+  it('hides "Riprendi ultima" CTA in empty state when lastSession is undefined', () => {
     (useActiveSessions as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { sessions: [], total: 0, page: 1, pageSize: 1 },
       isLoading: false,
     });
 
-    render(<DashboardSessionHero />);
+    // With no lastSession, the component returns null entirely
+    const { container } = render(<DashboardSessionHero />);
 
+    expect(container.firstChild).toBeNull();
     expect(screen.queryByText(/Riprendi ultima/)).not.toBeInTheDocument();
   });
 });

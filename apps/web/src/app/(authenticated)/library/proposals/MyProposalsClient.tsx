@@ -247,11 +247,11 @@ export default function MyProposalsClient({ catalogBasePath = '/games' }: MyProp
           ))}
 
           {/* Pagination info */}
-          {data.totalCount > data.items.length && (
+          {data.total > data.items.length && (
             <Card className="bg-muted/50">
               <CardContent className="py-4">
                 <p className="text-sm text-center text-muted-foreground">
-                  Mostrate {data.items.length} di {data.totalCount} proposte
+                  Mostrate {data.items.length} di {data.total} proposte
                 </p>
               </CardContent>
             </Card>

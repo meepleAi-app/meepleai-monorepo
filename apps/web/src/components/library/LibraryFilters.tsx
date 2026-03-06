@@ -212,15 +212,22 @@ export function LibraryFilters({
   };
 
   const hasActiveFilters =
-    searchQuery || favoritesOnly || stateFilter.length > 0 || sortBy !== 'addedAt' || !sortDescending;
+    searchQuery ||
+    favoritesOnly ||
+    stateFilter.length > 0 ||
+    sortBy !== 'addedAt' ||
+    !sortDescending;
 
   return (
-    <div className={cn('space-y-4', className)}>
-      {/* Search and Sort Row */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end">
+    <div className={cn('space-y-3 sm:space-y-4', className)}>
+      {/* Search and Sort Row — single row on mobile */}
+      <div className="flex items-end gap-2">
         {/* Search Input */}
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="library-search" className="text-sm font-medium">
+        <div className="flex-1 min-w-0">
+          <Label
+            htmlFor="library-search"
+            className="sr-only sm:not-sr-only text-sm font-medium sm:mb-2 sm:block"
+          >
             Cerca Giochi
           </Label>
           <div className="relative">
@@ -228,10 +235,10 @@ export function LibraryFilters({
             <Input
               id="library-search"
               type="search"
-              placeholder="Cerca per titolo..."
+              placeholder="Cerca..."
               value={localSearch}
               onChange={e => setLocalSearch(e.target.value)}
-              className="pl-9 pr-9"
+              className="pl-9 pr-9 h-9"
               aria-label="Search library"
             />
             {localSearch && (
@@ -249,16 +256,23 @@ export function LibraryFilters({
         </div>
 
         {/* Sort Dropdown */}
-        <div className="space-y-2">
-          <Label htmlFor="library-sort" className="text-sm font-medium">
+        <div className="flex-shrink-0">
+          <Label
+            htmlFor="library-sort"
+            className="sr-only sm:not-sr-only text-sm font-medium sm:mb-2 sm:block"
+          >
             Ordina
           </Label>
           <Select
             value={`${sortBy}-${sortDescending ? 'desc' : 'asc'}`}
             onValueChange={handleSortChange}
           >
-            <SelectTrigger id="library-sort" className="w-[200px]" aria-label="Sort library">
-              <SortAsc className="mr-2 h-4 w-4" />
+            <SelectTrigger
+              id="library-sort"
+              className="w-[120px] sm:w-[200px] h-9"
+              aria-label="Sort library"
+            >
+              <SortAsc className="mr-1.5 h-4 w-4 flex-shrink-0" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -276,15 +290,20 @@ export function LibraryFilters({
 
         {/* Clear Filters */}
         {hasActiveFilters && (
-          <Button variant="outline" size="sm" onClick={onClearFilters} className="md:mb-0">
-            <X className="mr-1 h-3 w-3" />
-            Pulisci Filtri
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearFilters}
+            className="h-9 w-9 p-0 flex-shrink-0 sm:w-auto sm:px-3"
+          >
+            <X className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Pulisci</span>
           </Button>
         )}
       </div>
 
-      {/* Filter Chips Row */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filter Chips Row — horizontal scroll on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-x-visible sm:pb-0 scrollbar-none">
         {filterChips.map(chip => {
           const isActive = isChipActive(chip.id);
           const count = getChipCount(chip.id);
@@ -294,7 +313,7 @@ export function LibraryFilters({
               key={chip.id}
               variant="outline"
               className={cn(
-                'cursor-pointer px-3 py-1.5 text-sm font-medium transition-all',
+                'cursor-pointer px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm font-medium transition-all flex-shrink-0',
                 'hover:scale-105',
                 isActive ? chip.activeColor : chip.color
               )}

@@ -264,7 +264,7 @@ export default function CollectionPageClient() {
   // Loading state with staggered skeleton animations (Issue #2618)
   if (libraryLoading || quotaLoading) {
     return (
-      <div className="container mx-auto px-4 py-4 space-y-4">
+      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -311,12 +311,12 @@ export default function CollectionPageClient() {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-4 space-y-4">
+      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
         {/* Quick stats row */}
         <LibraryQuickStats />
 
         {/* Toolbar: quota badge + view controls */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           {quota && (
             <LibraryQuotaBadge
               currentCount={quota.currentCount}
@@ -324,12 +324,17 @@ export default function CollectionPageClient() {
               percentageUsed={quota.percentageUsed}
             />
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {hasGames && <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />}
             {hasGames && (
-              <Button variant="outline" size="sm" onClick={() => setShareModalOpen(true)}>
-                <Share2 className="mr-2 h-4 w-4" />
-                Condividi
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShareModalOpen(true)}
+                className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+              >
+                <Share2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Condividi</span>
               </Button>
             )}
             {hasGames && (
@@ -337,9 +342,10 @@ export default function CollectionPageClient() {
                 variant={selectionMode ? 'secondary' : 'outline'}
                 size="sm"
                 onClick={toggleSelectionMode}
+                className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
               >
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {selectionMode ? 'Annulla' : 'Seleziona'}
+                <CheckSquare className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{selectionMode ? 'Annulla' : 'Seleziona'}</span>
               </Button>
             )}
           </div>

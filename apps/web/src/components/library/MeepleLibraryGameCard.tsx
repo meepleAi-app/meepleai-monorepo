@@ -61,13 +61,15 @@ import type {
   GameBackData,
   GameBackActions,
 } from '@/components/ui/data-display/meeple-card-features/GameBackContent';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
 
-import { getDocumentStatus } from './kb-utils';
+import { AgentDrawerSheet } from './AgentDrawerSheet';
+import { ChatDrawerSheet } from './ChatDrawerSheet';
+import { getDocumentStatus, mapToIndexingStatus } from './kb-utils';
 import { KbDrawerSheet } from './KbDrawerSheet';
+import { SessionDrawerSheet } from './SessionDrawerSheet';
 
 // ============================================================================
 // Types
@@ -176,8 +178,11 @@ export function MeepleLibraryGameCard({
   const [agentSheetOpen, setAgentSheetOpen] = useState(false);
   const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
-  // KB Drawer state
+  // Drawer states
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
+  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
 
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
@@ -187,11 +192,11 @@ export function MeepleLibraryGameCard({
   // Favorite toggle mutation
   const toggleFavoriteMutation = useToggleLibraryFavorite();
 
-  // Fetch KB documents for card back — shared key with KbDrawerSheet for cache consistency
+  // Fetch KB documents — shared key with KbDrawerSheet for cache consistency
   const { data: kbDocuments } = useQuery({
     queryKey: ['kb-docs', game.gameId],
     queryFn: () => api.documents.getDocumentsByGame(game.gameId),
-    enabled: !!flippable && !!game.hasKb,
+    enabled: !!game.hasKb || game.kbProcessingCount > 0,
     staleTime: 2 * 60 * 1000, // 2 min (matches KbDrawerSheet)
   });
 
@@ -410,8 +415,23 @@ export function MeepleLibraryGameCard({
         gameBackActions={gameBackActions}
         detailHref={`/library/games/${game.gameId}`}
         className={className}
-        // Epic #4688: Navigation footer
-        navigateTo={getNavigationLinks('game', { id: game.gameId })}
+        // KB status badge from real document data
+        kbCards={kbDocuments?.map(d => ({ status: mapToIndexingStatus(d) }))}
+        // Navigation footer: open drawers instead of navigating
+        navigateTo={[
+          { entity: 'document' as const, label: 'KB', onClick: () => setKbDrawerOpen(true) },
+          { entity: 'agent' as const, label: 'Agents', onClick: () => setAgentDrawerOpen(true) },
+          {
+            entity: 'chatSession' as const,
+            label: 'Chats',
+            onClick: () => setChatDrawerOpen(true),
+          },
+          {
+            entity: 'session' as const,
+            label: 'Sessions',
+            onClick: () => setSessionDrawerOpen(true),
+          },
+        ]}
         // Issue #4777, #4999: Agent action footer
         hasAgent={agentConfigured}
         hasKb={game.hasKb}
@@ -432,6 +452,30 @@ export function MeepleLibraryGameCard({
       <KbDrawerSheet
         open={kbDrawerOpen}
         onOpenChange={setKbDrawerOpen}
+        gameId={game.gameId}
+        gameTitle={game.gameTitle}
+      />
+
+      {/* Agent Drawer */}
+      <AgentDrawerSheet
+        open={agentDrawerOpen}
+        onOpenChange={setAgentDrawerOpen}
+        gameId={game.gameId}
+        gameTitle={game.gameTitle}
+      />
+
+      {/* Chat Drawer */}
+      <ChatDrawerSheet
+        open={chatDrawerOpen}
+        onOpenChange={setChatDrawerOpen}
+        gameId={game.gameId}
+        gameTitle={game.gameTitle}
+      />
+
+      {/* Session Drawer */}
+      <SessionDrawerSheet
+        open={sessionDrawerOpen}
+        onOpenChange={setSessionDrawerOpen}
         gameId={game.gameId}
         gameTitle={game.gameTitle}
       />

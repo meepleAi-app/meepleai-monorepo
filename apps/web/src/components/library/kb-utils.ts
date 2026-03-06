@@ -51,6 +51,34 @@ export function getDocumentStatus(doc: {
 }
 
 /**
+ * Map processingState (PascalCase) to DocumentIndexingStatus for MeepleCard kbCards prop.
+ */
+export function mapToIndexingStatus(doc: {
+  processingState?: string;
+  processingStatus?: string;
+}): 'processing' | 'indexed' | 'failed' | 'none' {
+  const state = doc.processingState || doc.processingStatus || '';
+  switch (state) {
+    case 'Ready':
+    case 'completed':
+      return 'indexed';
+    case 'Failed':
+    case 'failed':
+      return 'failed';
+    case 'Extracting':
+    case 'Chunking':
+    case 'Embedding':
+    case 'Indexing':
+    case 'Uploading':
+    case 'Pending':
+    case 'processing':
+      return 'processing';
+    default:
+      return 'none';
+  }
+}
+
+/**
  * Check if a document is ready/completed.
  */
 export function isDocumentReady(doc: {

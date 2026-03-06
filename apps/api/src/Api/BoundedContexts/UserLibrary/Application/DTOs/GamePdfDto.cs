@@ -11,6 +11,7 @@ namespace Api.BoundedContexts.UserLibrary.Application.DTOs;
 /// <param name="UploadedAt">When PDF was uploaded/added</param>
 /// <param name="Source">Source type: "Custom" (user-uploaded) or "Catalog" (from shared game)</param>
 /// <param name="Language">Language code (IT, EN, etc.)</param>
+/// <param name="ProcessingState">Pipeline state: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed</param>
 public record GamePdfDto(
     string Id,
     string Name,
@@ -18,5 +19,6 @@ public record GamePdfDto(
     long FileSizeBytes,
     DateTime UploadedAt,
     string Source,
-    string? Language = null
+    string? Language = null,
+    string ProcessingState = "Pending"
 );

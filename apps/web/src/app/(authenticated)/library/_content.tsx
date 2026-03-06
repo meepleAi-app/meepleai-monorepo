@@ -31,12 +31,12 @@ import { AddGameDrawerController } from './AddGameDrawer';
 
 export function LibraryLoadingSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-16 w-full" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="space-y-2 sm:space-y-6">
+      <Skeleton className="hidden sm:block h-24 w-full" />
+      <Skeleton className="h-12 sm:h-16 w-full" />
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-64 w-full rounded-lg" />
+          <Skeleton key={i} className="h-48 sm:h-64 w-full rounded-lg" />
         ))}
       </div>
     </div>

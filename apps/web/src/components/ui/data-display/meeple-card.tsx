@@ -515,7 +515,7 @@ const coverVariants = cva('relative overflow-hidden', {
 const contentVariants = cva('', {
   variants: {
     variant: {
-      grid: 'flex-1 flex flex-col px-3.5 py-3',
+      grid: 'flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3',
       list: 'flex-1 min-w-0 py-1',
       compact: 'flex-1 min-w-0',
       featured: 'flex-1 flex flex-col px-5 py-4',
@@ -615,14 +615,14 @@ function VerticalTagStack({
   return (
     <TooltipProvider delayDuration={300}>
       <div
-        className="absolute top-2 left-2.5 z-10 flex flex-col gap-1.5"
+        className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
         data-testid="meeple-card-tag-stack"
       >
         {/* Entity type badge (highest priority) */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span
-              className="max-w-[80px] truncate px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[6px] shadow-sm cursor-default"
+              className="max-w-[60px] sm:max-w-[80px] truncate px-1.5 sm:px-2 py-px sm:py-0.5 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[5px] sm:rounded-[6px] shadow-sm cursor-default"
               style={{ backgroundColor: `hsl(${color})` }}
             >
               {name}
@@ -681,11 +681,12 @@ function CoverImage({
 
   // v2: Entity-specific aspect ratios (Issue #4604)
   // chatSession uses shorter 4:3 ratio (like playing card), others use tall 7:10
+  // Mobile: shorter aspect ratios for 2-col grid density
   const aspectRatioClass =
     variant === 'grid'
       ? entity === 'chatSession'
         ? 'aspect-[4/3]'
-        : 'aspect-[7/10]'
+        : 'aspect-square sm:aspect-[7/10]'
       : variant === 'featured'
         ? entity === 'chatSession'
           ? 'aspect-[3/1]'
@@ -814,7 +815,7 @@ function MetadataChips({
   const isHero = variant === 'hero';
   const chipClass = isHero
     ? 'text-white/90 text-sm'
-    : 'text-muted-foreground text-xs bg-muted px-2 py-0.5 rounded-md';
+    : 'text-muted-foreground text-[10px] sm:text-xs bg-muted px-1.5 sm:px-2 py-px sm:py-0.5 rounded-md';
 
   return (
     <div className={cn('flex flex-wrap gap-2', className)}>
@@ -1399,7 +1400,7 @@ export const MeepleCard = React.memo(function MeepleCard({
                   ? 'text-base'
                   : variant === 'compact'
                     ? 'text-sm'
-                    : 'text-[0.95rem] mb-0.5',
+                    : 'text-[0.8rem] sm:text-[0.95rem] mb-0.5',
             variant !== 'hero' && 'text-card-foreground',
             variant === 'grid' && 'truncate',
             variant === 'list' && 'line-clamp-2'
@@ -1415,7 +1416,7 @@ export const MeepleCard = React.memo(function MeepleCard({
               variant === 'hero'
                 ? 'text-white/85 text-sm mb-2'
                 : variant === 'grid'
-                  ? 'text-muted-foreground text-[0.78rem] mt-px mb-1 truncate'
+                  ? 'text-muted-foreground text-[0.7rem] sm:text-[0.78rem] mt-px mb-0.5 sm:mb-1 truncate'
                   : 'text-muted-foreground text-sm mb-2',
               variant === 'compact' && 'text-xs mb-0'
             )}

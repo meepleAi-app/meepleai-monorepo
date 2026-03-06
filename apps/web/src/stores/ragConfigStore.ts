@@ -17,6 +17,7 @@ import type {
 } from '@/components/rag-dashboard/config/types';
 import { DEFAULT_RAG_CONFIG, STRATEGY_PRESETS } from '@/components/rag-dashboard/config/types';
 import type { RetrievalStrategyType } from '@/components/rag-dashboard/retrieval-strategies';
+import { api } from '@/lib/api';
 
 /**
  * RAG Configuration Store State
@@ -211,14 +212,7 @@ export const useRagConfigStore = create<RagConfigStore>()(
 
         try {
           const { config } = get();
-
-          const response = await fetch('/api/v1/rag-dashboard/config', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(config),
-          });
-          if (!response.ok) throw new Error('Failed to save configuration');
-
+          await api.knowledgeBase.saveRagConfig(config as RagConfig);
           set({ isDirty: false, isSaving: false });
         } catch (error) {
           set({
@@ -232,11 +226,12 @@ export const useRagConfigStore = create<RagConfigStore>()(
         set({ isSaving: true, saveError: null });
 
         try {
-          const response = await fetch('/api/v1/rag-dashboard/config');
-          if (!response.ok) throw new Error('Failed to load configuration');
-          const config = (await response.json()) as RagConfig;
-
-          set({ config, isDirty: false, isSaving: false });
+          const config = await api.knowledgeBase.getRagConfig();
+          if (config) {
+            set({ config: config as RagConfig, isDirty: false, isSaving: false });
+          } else {
+            set({ isSaving: false });
+          }
         } catch (error) {
           set({
             saveError: error instanceof Error ? error.message : 'Failed to load configuration',

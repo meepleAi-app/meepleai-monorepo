@@ -36,7 +36,7 @@ export function LibraryNavConfig() {
   const { data: proposals } = useShareRequests({ status: 'Pending', pageSize: 1 });
 
   const collectionCount = quota?.currentCount;
-  const pendingProposals = proposals?.totalCount || undefined;
+  const pendingProposals = proposals?.total || undefined;
 
   useEffect(() => {
     setNavConfig({

@@ -43,10 +43,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
         items: [mockShareRequest],
         page: 1,
         pageSize: 10,
-        totalCount: 1,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPreviousPage: false,
+        total: 1,
       };
       vi.mocked(mockHttpClient.get).mockResolvedValue(mockResponse);
 
@@ -65,10 +62,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
         items: [],
         page: 2,
         pageSize: 20,
-        totalCount: 25,
-        totalPages: 2,
-        hasNextPage: false,
-        hasPreviousPage: true,
+        total: 25,
       });
 
       const client = createShareRequestsClient({ httpClient: mockHttpClient });
@@ -89,10 +83,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
         items: [],
         page: 1,
         pageSize: 10,
-        totalCount: 0,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPreviousPage: false,
+        total: 0,
       });
 
       const client = createShareRequestsClient({ httpClient: mockHttpClient });
@@ -111,7 +102,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
       const result = await client.getUserShareRequests();
 
       expect(result.items).toEqual([]);
-      expect(result.totalCount).toBe(0);
+      expect(result.total).toBe(0);
     });
 
     it('should handle multiple status types', async () => {
@@ -123,10 +114,7 @@ describe('ShareRequestsClient - Issue #3026', () => {
         items: pendingRequests,
         page: 1,
         pageSize: 10,
-        totalCount: 2,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPreviousPage: false,
+        total: 2,
       });
 
       const client = createShareRequestsClient({ httpClient: mockHttpClient });

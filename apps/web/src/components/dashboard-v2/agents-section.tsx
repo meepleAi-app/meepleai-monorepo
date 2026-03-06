@@ -8,7 +8,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { ArrowRight, Bot, Plus } from 'lucide-react';
+import { ArrowRight, Bot } from 'lucide-react';
 import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -82,24 +82,6 @@ function AgentCard({ agent }: { agent: AgentDto }) {
   );
 }
 
-// ─── CTA card ────────────────────────────────────────────────────────────────
-
-function CreateAgentCard() {
-  return (
-    <Link
-      href="/agents/new"
-      className="flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-border hover:border-[hsl(38,92%,50%)] hover:bg-[hsl(38,92%,95%)] dark:hover:bg-[hsl(38,30%,15%)] transition-colors group"
-    >
-      <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-muted group-hover:bg-[hsl(38,92%,50%)] transition-colors shrink-0">
-        <Plus className="h-4 w-4 text-muted-foreground group-hover:text-white transition-colors" />
-      </div>
-      <p className="text-xs font-bold font-quicksand text-muted-foreground group-hover:text-[hsl(38,92%,35%)] transition-colors">
-        Crea nuovo agente
-      </p>
-    </Link>
-  );
-}
-
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
 function AgentCardSkeleton() {
@@ -133,7 +115,6 @@ export function AgentsDashboardSection() {
             {agents.map(agent => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
-            <CreateAgentCard />
           </>
         )}
       </div>

@@ -24,6 +24,7 @@ internal static class KnowledgeBaseEndpoints
 {
     public static RouteGroupBuilder MapKnowledgeBaseEndpoints(this RouteGroupBuilder group)
     {
+        MapStatusEndpoint(group);
         MapSearchEndpoint(group);
         MapAskEndpoint(group);
         MapChatLookupEndpoints(group);
@@ -36,6 +37,19 @@ internal static class KnowledgeBaseEndpoints
         MapContextEngineeringEndpoints(group);
 
         return group;
+    }
+
+    private static void MapStatusEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4065: RAG readiness polling endpoint
+        group.MapGet("/knowledge-base/{gameId:guid}/status", HandleGetKnowledgeBaseStatus)
+            .WithName("GetKnowledgeBaseStatus")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get embedding status for a game")
+            .WithDescription("Returns the embedding pipeline status (Pending, Extracting, Chunking, Embedding, Completed, Failed) for the most recent PDF of a game.")
+            .Produces<KnowledgeBaseStatusDto>()
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     private static void MapSearchEndpoint(RouteGroupBuilder group)
@@ -166,6 +180,29 @@ internal static class KnowledgeBaseEndpoints
         .ProducesProblem(404)
         .ProducesProblem(403)
         .ProducesProblem(500);
+    }
+
+    private static async Task<IResult> HandleGetKnowledgeBaseStatus(
+        Guid gameId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        logger.LogDebug("GetKnowledgeBaseStatus for game {GameId} by user {UserId}",
+            gameId, session!.User!.Id);
+
+        var query = new GetKnowledgeBaseStatusQuery(gameId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (result is null)
+        {
+            return Results.NotFound(new { error = "Knowledge base status not found" });
+        }
+
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleSearch(

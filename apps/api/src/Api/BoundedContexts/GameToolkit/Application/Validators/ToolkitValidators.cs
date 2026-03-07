@@ -174,6 +174,44 @@ internal class ClearStateTemplateCommandValidator : AbstractValidator<ClearState
     }
 }
 
+internal class SubmitTemplateForReviewCommandValidator : AbstractValidator<SubmitTemplateForReviewCommand>
+{
+    public SubmitTemplateForReviewCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.UserId).NotEmpty().WithMessage("UserId is required");
+    }
+}
+
+internal class ApproveTemplateCommandValidator : AbstractValidator<ApproveTemplateCommand>
+{
+    public ApproveTemplateCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.AdminUserId).NotEmpty().WithMessage("AdminUserId is required");
+    }
+}
+
+internal class RejectTemplateCommandValidator : AbstractValidator<RejectTemplateCommand>
+{
+    public RejectTemplateCommandValidator()
+    {
+        RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
+        RuleFor(x => x.AdminUserId).NotEmpty().WithMessage("AdminUserId is required");
+        RuleFor(x => x.Notes).NotEmpty().WithMessage("Rejection notes are required");
+    }
+}
+
+internal class CloneFromTemplateCommandValidator : AbstractValidator<CloneFromTemplateCommand>
+{
+    public CloneFromTemplateCommandValidator()
+    {
+        RuleFor(x => x.TemplateId).NotEmpty().WithMessage("TemplateId is required");
+        RuleFor(x => x.GameId).NotEmpty().WithMessage("GameId is required");
+        RuleFor(x => x.UserId).NotEmpty().WithMessage("UserId is required");
+    }
+}
+
 internal sealed class GenerateToolkitFromKbCommandValidator
     : AbstractValidator<GenerateToolkitFromKbCommand>
 {

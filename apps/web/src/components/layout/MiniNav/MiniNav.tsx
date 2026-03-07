@@ -30,6 +30,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/primitives/button';
 import { useNavigation } from '@/context/NavigationContext';
+import { usePrefersReducedMotion } from '@/hooks/useResponsive';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
@@ -92,6 +93,7 @@ export function MiniNav({ className }: MiniNavProps) {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
+  const prefersReducedMotion = usePrefersReducedMotion();
   const showArrows = miniNavTabs.length > ARROW_THRESHOLD;
 
   // ── Scroll state tracking ─────────────────────────────────────────────────
@@ -129,17 +131,23 @@ export function MiniNav({ className }: MiniNavProps) {
     const activeEl = tabEls[activeIndex] as HTMLElement | undefined;
     if (!activeEl) return;
 
-    activeEl.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  }, [pathname, search, miniNavTabs]);
+    activeEl.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
+  }, [pathname, search, miniNavTabs, prefersReducedMotion]);
 
   // ── Arrow scroll handlers ─────────────────────────────────────────────────
 
+  const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
+
   function scrollLeft() {
-    scrollRef.current?.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' });
+    scrollRef.current?.scrollBy({ left: -SCROLL_STEP, behavior: scrollBehavior });
   }
 
   function scrollRight() {
-    scrollRef.current?.scrollBy({ left: SCROLL_STEP, behavior: 'smooth' });
+    scrollRef.current?.scrollBy({ left: SCROLL_STEP, behavior: scrollBehavior });
   }
 
   // ── Guard: no tabs → render nothing ──────────────────────────────────────

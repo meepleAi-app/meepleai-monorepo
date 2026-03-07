@@ -85,7 +85,7 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
     >
       {/* Secondary / ghost actions first (left side) */}
       {otherActions.map(action => (
-        <ActionButton key={action.id} action={action} compact />
+        <ActionButton key={action.id} action={action} compact isMobile={isMobile} />
       ))}
 
       {/* Divider if both groups present */}
@@ -95,7 +95,7 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
 
       {/* Primary actions (right side, filled) */}
       {primaryActions.map(action => (
-        <ActionButton key={action.id} action={action} />
+        <ActionButton key={action.id} action={action} isMobile={isMobile} />
       ))}
     </div>
   );
@@ -113,12 +113,14 @@ function ActionButton({ action, compact = false, isMobile = false }: ActionButto
   const [showTooltip, setShowTooltip] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const Icon = action.icon;
   const isPrimary = action.variant === 'primary';
   const isDestructive = action.variant === 'destructive';
   const isDisabled = action.disabled;
   const tooltipId = `action-tooltip-${action.id}`;
+  const showInlineLabel = isMobile && compact;
 
   const tooltipText =
     isDisabled && action.disabledTooltip
@@ -154,7 +156,13 @@ function ActionButton({ action, compact = false, isMobile = false }: ActionButto
   }
 
   return (
-    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <button
         type="button"
         aria-label={action.label}
@@ -248,7 +256,7 @@ function ActionButton({ action, compact = false, isMobile = false }: ActionButto
             'bg-foreground text-background',
             'text-xs font-medium font-nunito whitespace-nowrap',
             'pointer-events-none',
-            'animate-in fade-in-0 zoom-in-95 duration-100'
+            !prefersReducedMotion && 'animate-in fade-in-0 zoom-in-95 duration-100'
           )}
         >
           {tooltipText || action.disabledTooltip}

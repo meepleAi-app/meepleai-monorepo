@@ -51,6 +51,7 @@ import { MiniNav } from '../MiniNav';
 import { MobileBreadcrumb } from '../MobileBreadcrumb';
 import { MobileTabBar } from '../MobileTabBar';
 import { Sidebar } from '../Sidebar/Sidebar';
+import { SmartFAB } from '../SmartFAB';
 import { TopNavbar } from '../TopNavbar';
 
 // ─── LayoutShell ──────────────────────────────────────────────────────────────
@@ -141,6 +142,9 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
 
         {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ───── */}
         <FloatingActionBar />
+
+        {/* ── SmartFAB: context-aware primary action (mobile only) ────────── */}
+        <SmartFAB />
       </div>
 
       {/* ── Level 0: MobileTabBar (persistent mobile navigation) ───────── */}

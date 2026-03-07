@@ -25,6 +25,8 @@
 import { useRef, useState } from 'react';
 
 import { useNavigation } from '@/context/NavigationContext';
+import { useResponsive, usePrefersReducedMotion } from '@/hooks/useResponsive';
+import { useScrollDirection } from '@/hooks/useScrollDirection';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
@@ -36,12 +38,18 @@ export interface FloatingActionBarProps {
 
 export function FloatingActionBar({ className }: FloatingActionBarProps) {
   const { actionBarActions } = useNavigation();
+  const { isMobile } = useResponsive();
+  const scrollDirection = useScrollDirection({ threshold: 50 });
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   // Only render visible actions
   const visibleActions = actionBarActions.filter(a => !a.hidden);
 
   // Hide when no actions configured
   if (visibleActions.length === 0) return null;
+
+  // Auto-hide on scroll down (mobile only)
+  const isHiddenByScroll = isMobile && scrollDirection === 'down';
 
   // Separate primary from secondary for visual hierarchy
   const primaryActions = visibleActions.filter(a => a.variant === 'primary');
@@ -50,9 +58,9 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
   return (
     <div
       data-testid={NAV_TEST_IDS.floatingActionBar}
+      aria-hidden={isHiddenByScroll}
       className={cn(
-        // Positioning: fixed bottom-center
-        // On mobile: above MobileTabBar (72px + 1.5rem gap)
+        // Positioning: fixed bottom-center, above MobileTabBar on mobile
         'fixed left-1/2 -translate-x-1/2 z-50',
         'bottom-[calc(72px+1.5rem)] md:bottom-6',
         // Shape
@@ -65,6 +73,11 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
         'flex items-center gap-1 p-1.5',
         // Fade-in animation
         'animate-in fade-in-0 slide-in-from-bottom-4 duration-300',
+        // Auto-hide on scroll (mobile only)
+        isHiddenByScroll &&
+          (prefersReducedMotion ? 'invisible' : 'translate-y-[calc(100%+24px)] opacity-0'),
+        // Smooth transition for show/hide
+        !prefersReducedMotion && 'transition-[transform,opacity] duration-200 ease-in-out',
         className
       )}
       role="toolbar"

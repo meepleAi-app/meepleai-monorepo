@@ -9,7 +9,9 @@
 
 import { Suspense } from 'react';
 
-import Link from 'next/link';
+import { Settings, Gauge, Flag, ShieldCheck, Workflow, Wand2 } from 'lucide-react';
+
+import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 
 import { FeatureFlagsWrapper } from './FeatureFlagsWrapper';
 import { GeneralTab } from './GeneralTab';
@@ -21,28 +23,40 @@ interface AdminConfigPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
 }
 
-const TABS = [
-  { id: 'general', label: 'General', href: '/admin/config?tab=general' },
-  { id: 'limits', label: 'Limits', href: '/admin/config?tab=limits' },
-  { id: 'flags', label: 'Feature Flags', href: '/admin/config?tab=flags' },
-  { id: 'rate-limits', label: 'Rate Limits', href: '/admin/config?tab=rate-limits' },
-  { id: 'n8n', label: 'n8n', href: '/admin/config?tab=n8n' },
-  { id: 'wizard', label: 'Wizard', href: '/admin/config?tab=wizard' },
+const TABS: readonly HubTab[] = [
+  { id: 'general', label: 'General', href: '/admin/config?tab=general', icon: <Settings /> },
+  { id: 'limits', label: 'Limits', href: '/admin/config?tab=limits', icon: <Gauge /> },
+  { id: 'flags', label: 'Feature Flags', href: '/admin/config?tab=flags', icon: <Flag /> },
+  {
+    id: 'rate-limits',
+    label: 'Rate Limits',
+    href: '/admin/config?tab=rate-limits',
+    icon: <ShieldCheck />,
+  },
+  { id: 'n8n', label: 'n8n', href: '/admin/config?tab=n8n', icon: <Workflow /> },
+  { id: 'wizard', label: 'Wizard', href: '/admin/config?tab=wizard', icon: <Wand2 /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
 function TabSkeleton() {
   return (
-    <div className="h-[600px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
+    <div className="space-y-3 pt-2">
+      <div className="h-10 w-48 rounded-lg bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+        ))}
+      </div>
+    </div>
   );
 }
 
 function ComingSoonTab({ label, description }: { label: string; description: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-border/60 p-16 text-center">
-      <p className="text-base font-semibold text-foreground">{label}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-2xl border border-dashed border-border/50 bg-white/30 dark:bg-zinc-800/20 backdrop-blur-sm">
+      <p className="font-quicksand text-sm font-semibold text-foreground">{label}</p>
+      <p className="mt-1.5 max-w-sm text-xs text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -97,36 +111,20 @@ export default async function AdminConfigPage({ searchParams }: AdminConfigPageP
   const tab = (params.tab ?? 'general') as TabId;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <AdminConfigNavConfig />
       <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Configuration
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-0.5 text-sm text-muted-foreground">
           System settings, feature flags, rate limits, and integrations.
         </p>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map(t => (
-          <Link
-            key={t.id}
-            href={t.href}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      <AdminHubTabBar tabs={TABS} activeTab={tab} />
 
-      {/* Tab content */}
-      {renderTabContent(tab)}
+      <div className="pt-1">{renderTabContent(tab)}</div>
     </div>
   );
 }

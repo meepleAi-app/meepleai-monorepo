@@ -47,7 +47,7 @@ describe('AgentsTab', () => {
 
   it('shows empty state when no agents', async () => {
     render(<AgentsTab />);
-    expect(await screen.findByText(/No agents found/)).toBeInTheDocument();
+    expect(await screen.findByText('No agents found')).toBeInTheDocument();
   });
 
   it('renders link to full catalog', () => {
@@ -64,7 +64,7 @@ describe('TypologiesTab', () => {
 
   it('shows empty state when no typologies', async () => {
     render(<TypologiesTab />);
-    expect(await screen.findByText('No typologies found.')).toBeInTheDocument();
+    expect(await screen.findByText('No typologies found')).toBeInTheDocument();
   });
 });
 
@@ -105,7 +105,7 @@ describe('PromptsTab', () => {
 
   it('shows empty state when no prompts', async () => {
     render(<PromptsTab />);
-    expect(await screen.findByText('No prompt templates found.')).toBeInTheDocument();
+    expect(await screen.findByText('No prompt templates found')).toBeInTheDocument();
   });
 });
 
@@ -117,7 +117,7 @@ describe('ModelsTab', () => {
 
   it('shows empty state when no models', async () => {
     render(<ModelsTab />);
-    expect(await screen.findByText('No AI models configured.')).toBeInTheDocument();
+    expect(await screen.findByText('No AI models configured')).toBeInTheDocument();
   });
 });
 
@@ -129,7 +129,7 @@ describe('RequestsTab', () => {
 
   it('shows empty state when no requests', async () => {
     render(<RequestsTab />);
-    expect(await screen.findByText('No AI requests found.')).toBeInTheDocument();
+    expect(await screen.findByText('No AI requests found')).toBeInTheDocument();
   });
 
   it('renders refresh button', () => {

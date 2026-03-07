@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 
-import { Bot, ExternalLink } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import Link from 'next/link';
 
+import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { api } from '@/lib/api';
 
 interface AgentSummary {
@@ -22,7 +23,6 @@ export function AgentsTab() {
     api.admin
       .getStats()
       .then(stats => {
-        // Extract agent summary data from admin stats
         setAgents(
           (stats as Record<string, unknown>)?.agents
             ? ((stats as Record<string, unknown>).agents as AgentSummary[])
@@ -34,25 +34,25 @@ export function AgentsTab() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
             Agent Catalog
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Browse and manage AI agents.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Browse and manage AI agents.</p>
         </div>
         <Link
           href="/admin/agents"
-          className="inline-flex items-center gap-1.5 rounded-md border border-border/60 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors self-start sm:self-auto"
         >
-          Full Catalog <ExternalLink className="h-3.5 w-3.5" />
+          Full Catalog
         </Link>
       </div>
 
       {loading ? (
-        <div className="grid gap-3">
-          {[1, 2, 3].map(i => (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[1, 2, 3, 4].map(i => (
             <div
               key={i}
               className="h-16 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse"
@@ -60,34 +60,39 @@ export function AgentsTab() {
           ))}
         </div>
       ) : agents.length > 0 ? (
-        <div className="grid gap-3">
+        <div className="grid gap-2 sm:grid-cols-2">
           {agents.map(agent => (
             <Link
               key={agent.id}
               href={`/admin/agents/definitions/${agent.id}`}
-              className="flex items-center gap-4 rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-4 hover:border-primary/40 transition-colors"
+              className="flex items-center gap-3 rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
             >
-              <Bot className="h-5 w-5 text-primary" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Bot className="h-4 w-4 text-primary" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">{agent.name}</p>
+                <p className="text-sm font-medium text-foreground truncate">{agent.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {agent.totalChats} chats &middot; {agent.status}
+                  {agent.totalChats} chats · {agent.status}
                 </p>
               </div>
             </Link>
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/60 p-12 text-center">
-          <Bot className="mx-auto h-8 w-8 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            No agents found. Visit the{' '}
-            <Link href="/admin/agents" className="text-primary hover:underline">
-              full catalog
-            </Link>{' '}
-            to create one.
-          </p>
-        </div>
+        <AdminHubEmptyState
+          icon={<Bot />}
+          title="No agents found"
+          description="Visit the full catalog to create your first AI agent."
+          action={
+            <Link
+              href="/admin/agents"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Open Catalog
+            </Link>
+          }
+        />
       )}
     </div>
   );

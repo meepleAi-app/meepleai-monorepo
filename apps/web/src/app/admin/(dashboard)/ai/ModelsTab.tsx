@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 import { Cpu, Star, Settings } from 'lucide-react';
 
+import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { AiModelDto } from '@/lib/api/schemas';
@@ -26,7 +27,6 @@ export function ModelsTab() {
   const handleSetPrimary = async (modelId: string) => {
     try {
       await api.admin.setPrimaryModel({ modelId });
-      // Refresh
       const data = await api.admin.getAiModels();
       const items = (data as Record<string, unknown>)?.items;
       setModels(Array.isArray(items) ? (items as AiModelDto[]) : []);
@@ -36,12 +36,12 @@ export function ModelsTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
           AI Models
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-0.5">
           Configure LLM providers, routing rules, and cost tracking.
         </p>
       </div>
@@ -60,7 +60,7 @@ export function ModelsTab() {
           {models.map(m => (
             <div
               key={m.id}
-              className="relative rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-4"
+              className="relative rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4"
             >
               {m.isPrimary && (
                 <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
@@ -68,19 +68,23 @@ export function ModelsTab() {
                 </span>
               )}
               <div className="flex items-start gap-3">
-                <Cpu className="mt-0.5 h-5 w-5 text-primary shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground truncate">{m.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {m.provider} &middot; {m.modelIdentifier}
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Cpu className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground truncate pr-16 sm:pr-20">
+                    {m.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {m.provider} · {m.modelIdentifier}
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <span
-                      className={`inline-block h-2 w-2 rounded-full ${
+                      className={`inline-block h-1.5 w-1.5 rounded-full ${
                         m.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'
                       }`}
                     />
-                    <span className="text-[10px] text-muted-foreground">{m.status}</span>
+                    <span className="text-[10px] text-muted-foreground capitalize">{m.status}</span>
                   </div>
                 </div>
               </div>
@@ -103,10 +107,11 @@ export function ModelsTab() {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/60 p-12 text-center">
-          <Cpu className="mx-auto h-8 w-8 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">No AI models configured.</p>
-        </div>
+        <AdminHubEmptyState
+          icon={<Cpu />}
+          title="No AI models configured"
+          description="Add and configure LLM providers to enable AI-powered features."
+        />
       )}
     </div>
   );

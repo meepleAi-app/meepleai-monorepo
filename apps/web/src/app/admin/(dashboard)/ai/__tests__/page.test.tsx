@@ -15,6 +15,23 @@ vi.mock('../ModelsTab', () => ({ ModelsTab: () => <div data-testid="models-tab" 
 vi.mock('../RequestsTab', () => ({ RequestsTab: () => <div data-testid="requests-tab" /> }));
 vi.mock('../RagTab', () => ({ RagTab: () => <div data-testid="rag-tab" /> }));
 vi.mock('../NavConfig', () => ({ AdminAiNavConfig: () => null }));
+vi.mock('@/components/admin/layout/AdminHubTabBar', () => ({
+  AdminHubTabBar: ({
+    tabs,
+    activeTab,
+  }: {
+    tabs: Array<{ id: string; label: string; href: string }>;
+    activeTab: string;
+  }) => (
+    <div data-testid="hub-tab-bar">
+      {tabs.map((t: { id: string; label: string; href: string }) => (
+        <a key={t.id} href={t.href} data-active={activeTab === t.id ? 'true' : 'false'}>
+          {t.label}
+        </a>
+      ))}
+    </div>
+  ),
+}));
 
 import AdminAiPage from '../page';
 
@@ -106,6 +123,6 @@ describe('AdminAiPage', () => {
     });
     render(page);
     const modelsLink = screen.getByText('Models').closest('a');
-    expect(modelsLink?.className).toContain('bg-primary');
+    expect(modelsLink?.getAttribute('data-active')).toBe('true');
   });
 });

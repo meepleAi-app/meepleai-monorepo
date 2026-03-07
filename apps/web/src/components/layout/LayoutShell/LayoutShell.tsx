@@ -48,6 +48,7 @@ import { useImpersonationStore } from '@/store/impersonation';
 
 import { FloatingActionBar } from '../FloatingActionBar';
 import { MiniNav } from '../MiniNav';
+import { MobileBreadcrumb } from '../MobileBreadcrumb';
 import { MobileTabBar } from '../MobileTabBar';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { TopNavbar } from '../TopNavbar';
@@ -116,6 +117,9 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
         <Suspense>
           <MiniNav />
         </Suspense>
+
+        {/* ── Mobile Breadcrumb (below MiniNav, mobile only) ───────────── */}
+        <MobileBreadcrumb />
 
         {/* ── Main content ─────────────────────────────────────────────────── */}
         <main

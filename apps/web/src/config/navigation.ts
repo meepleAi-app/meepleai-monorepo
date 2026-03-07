@@ -7,7 +7,7 @@
  * - components/layout/UnifiedHeader.tsx (desktop header)
  * - components/layout/Navbar/Navbar.tsx (old desktop nav)
  * - components/layout/Navbar/HamburgerMenu.tsx (old mobile menu)
- * - components/layout/BottomNav.tsx (deprecated mobile nav)
+ * - components/layout/BottomNav.tsx (removed)
  *
  * Consumers should use the `useNavigationItems` hook, NOT import directly.
  */
@@ -270,11 +270,7 @@ export function filterNavItemsByRole(
       if (minRole === 'admin') {
         if (roleLower !== 'admin' && roleLower !== 'superadmin') return false;
       } else if (minRole === 'editor') {
-        if (
-          roleLower !== 'editor' &&
-          roleLower !== 'admin' &&
-          roleLower !== 'superadmin'
-        )
+        if (roleLower !== 'editor' && roleLower !== 'admin' && roleLower !== 'superadmin')
           return false;
       }
     }
@@ -287,27 +283,19 @@ export function filterNavItemsByRole(
  * Get navigation items for a specific breakpoint (for ActionBar).
  * Returns items sorted by priority, limited to max for breakpoint.
  */
-export function getNavItemsForBreakpoint(
-  breakpoint: 'mobile' | 'tablet' | 'desktop'
-): NavItem[] {
+export function getNavItemsForBreakpoint(breakpoint: 'mobile' | 'tablet' | 'desktop'): NavItem[] {
   // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
-  return [...NAV_ITEMS]
-    .sort((a, b) => a.priority - b.priority)
-    .slice(0, max);
+  return [...NAV_ITEMS].sort((a, b) => a.priority - b.priority).slice(0, max);
 }
 
 /**
  * Get overflow navigation items for a specific breakpoint.
  */
-export function getOverflowNavItems(
-  breakpoint: 'mobile' | 'tablet' | 'desktop'
-): NavItem[] {
+export function getOverflowNavItems(breakpoint: 'mobile' | 'tablet' | 'desktop'): NavItem[] {
   // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
-  return [...NAV_ITEMS]
-    .sort((a, b) => a.priority - b.priority)
-    .slice(max);
+  return [...NAV_ITEMS].sort((a, b) => a.priority - b.priority).slice(max);
 }
 
 /**
@@ -339,9 +327,7 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
 /**
  * Get context action slots available for a breakpoint.
  */
-export function getContextActionSlots(
-  breakpoint: 'mobile' | 'tablet' | 'desktop'
-): number {
+export function getContextActionSlots(breakpoint: 'mobile' | 'tablet' | 'desktop'): number {
   // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   return TOTAL_SLOTS[breakpoint] - MAX_NAV_ITEMS[breakpoint] - 1;
 }
@@ -354,8 +340,9 @@ export function getContextActionSlots(
  * Legacy NAV_ITEMS for ActionBar (string-based icons).
  * ActionBar uses icon name strings, not LucideIcon components.
  */
-export const NAV_ITEMS: NavItem[] = UNIFIED_NAV_ITEMS
-  .filter(item => item.visibility?.authOnly || !item.visibility) // ActionBar only for auth users
+export const NAV_ITEMS: NavItem[] = UNIFIED_NAV_ITEMS.filter(
+  item => item.visibility?.authOnly || !item.visibility
+) // ActionBar only for auth users
   .filter(item => !item.visibility?.anonOnly)
   .filter(item => ['dashboard', 'library', 'catalog'].includes(item.id)) // ActionBar subset (3 items + central FAB)
   .map(item => ({

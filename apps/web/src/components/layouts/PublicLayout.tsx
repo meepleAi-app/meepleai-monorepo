@@ -4,7 +4,7 @@
  *
  * Layout wrapper per pagine pubbliche dell'applicazione.
  * - Authenticated users: Sidebar (desktop) + compact header (mobile) + ActionBar
- * - Unauthenticated users: UnifiedHeader (all sizes) + BottomNav (mobile)
+ * - Unauthenticated users: UnifiedHeader (all sizes)
  *
  * Features:
  * - Container responsive

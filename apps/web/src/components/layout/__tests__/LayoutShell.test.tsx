@@ -67,6 +67,10 @@ vi.mock('@/components/layout/FloatingActionBar', () => ({
   FloatingActionBar: () => <div data-testid="floating-action-bar" />,
 }));
 
+vi.mock('@/components/layout/MobileBreadcrumb', () => ({
+  MobileBreadcrumb: () => <div data-testid="mobile-breadcrumb" />,
+}));
+
 vi.mock('@/components/layout/MobileTabBar', () => ({
   MobileTabBar: () => <div data-testid="mobile-tab-bar" />,
 }));

@@ -106,11 +106,13 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
 interface ActionButtonProps {
   action: ReturnType<typeof useNavigation>['actionBarActions'][number];
   compact?: boolean;
+  isMobile?: boolean;
 }
 
-function ActionButton({ action, compact = false }: ActionButtonProps) {
+function ActionButton({ action, compact = false, isMobile = false }: ActionButtonProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const Icon = action.icon;
   const isPrimary = action.variant === 'primary';
@@ -126,13 +128,24 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
         : action.label;
 
   function handleMouseEnter() {
-    if (!tooltipText) return;
+    if (isMobile || !tooltipText) return;
     timeoutRef.current = setTimeout(() => setShowTooltip(true), 400);
   }
 
   function handleMouseLeave() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setShowTooltip(false);
+  }
+
+  // Long-press for disabled tooltip on mobile
+  function handleTouchStart() {
+    if (!isMobile || !isDisabled || !action.disabledTooltip) return;
+    longPressRef.current = setTimeout(() => setShowTooltip(true), 500);
+  }
+
+  function handleTouchEnd() {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+    if (showTooltip) setTimeout(() => setShowTooltip(false), 2000);
   }
 
   function handleClick() {
@@ -150,13 +163,15 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
         onClick={handleClick}
         className={cn(
           // Base layout
-          'relative flex items-center gap-2',
+          'relative flex items-center',
           'rounded-xl',
           'transition-all duration-150',
+          // Mobile compact: vertical layout (icon + label below)
+          showInlineLabel ? 'flex-col gap-0.5 px-2.5 py-1.5' : 'gap-2',
           // Primary variant
           isPrimary && [
             'bg-primary text-primary-foreground',
-            'px-4 py-2',
+            !showInlineLabel && 'px-4 py-2',
             'text-sm font-semibold font-nunito',
             'hover:bg-primary/90 active:scale-95',
             isDisabled && 'opacity-50 cursor-not-allowed hover:bg-primary',
@@ -164,14 +179,14 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
           // Secondary variant
           action.variant === 'secondary' && [
             'bg-muted text-foreground',
-            'p-2.5',
+            !showInlineLabel && 'p-2.5',
             'hover:bg-muted/80 active:scale-95',
             isDisabled && 'opacity-50 cursor-not-allowed hover:bg-muted',
           ],
           // Destructive variant
           isDestructive && [
             'bg-destructive/10 text-destructive',
-            'p-2.5',
+            !showInlineLabel && 'p-2.5',
             'hover:bg-destructive/20 active:scale-95',
             isDisabled && 'opacity-50 cursor-not-allowed hover:bg-destructive/10',
           ],
@@ -189,8 +204,18 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
       >
         <Icon className={cn('shrink-0', isPrimary ? 'h-4 w-4' : 'h-4 w-4')} />
 
-        {/* Show label for primary or non-compact */}
-        {(isPrimary || !compact) && (
+        {/* Mobile compact: inline label below icon (like iOS tab bar) */}
+        {showInlineLabel && (
+          <span
+            className="text-[10px] font-medium font-nunito leading-none whitespace-nowrap"
+            data-testid={`action-label-${action.id}`}
+          >
+            {action.label}
+          </span>
+        )}
+
+        {/* Desktop: show label for primary or non-compact */}
+        {!showInlineLabel && (isPrimary || !compact) && (
           <span className="text-sm font-semibold font-nunito whitespace-nowrap">
             {action.label}
           </span>
@@ -212,8 +237,8 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
         )}
       </button>
 
-      {/* Tooltip */}
-      {showTooltip && tooltipText && (
+      {/* Tooltip — desktop hover or mobile long-press for disabled */}
+      {showTooltip && (tooltipText || (isMobile && isDisabled && action.disabledTooltip)) && (
         <div
           id={tooltipId}
           role="tooltip"
@@ -226,7 +251,7 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
             'animate-in fade-in-0 zoom-in-95 duration-100'
           )}
         >
-          {tooltipText}
+          {tooltipText || action.disabledTooltip}
           {/* Arrow */}
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-foreground" />
         </div>

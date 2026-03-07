@@ -46,6 +46,8 @@ export { SessionPhotoGallery } from './SessionPhotoGallery';
 export type { SessionPhotoGalleryProps, SessionAttachmentDetail } from './SessionPhotoGallery';
 export { ResumePhotoReview } from './ResumePhotoReview';
 export type { ResumePhotoReviewProps } from './ResumePhotoReview';
+export { CameraToolContent } from './CameraToolContent';
+export type { CameraToolContentProps } from './CameraToolContent';
 
 export type {
   Participant,

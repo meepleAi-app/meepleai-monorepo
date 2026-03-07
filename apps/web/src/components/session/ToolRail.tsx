@@ -2,7 +2,15 @@
 
 import React, { useState } from 'react';
 
-import { ChevronLeft, ChevronRight, Dices, LayoutGrid, PenLine, RotateCcw } from 'lucide-react';
+import {
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Dices,
+  LayoutGrid,
+  PenLine,
+  RotateCcw,
+} from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -12,6 +20,8 @@ export interface ToolItem {
   shortLabel: string;
   icon: React.ReactNode;
   type: 'base' | 'custom';
+  /** Optional numeric badge (e.g. photo count). */
+  badge?: number;
 }
 
 /**
@@ -46,6 +56,13 @@ export const BASE_TOOLS: ToolItem[] = [
     label: 'Lavagna',
     shortLabel: 'Lav.',
     icon: <PenLine className="w-5 h-5" aria-hidden="true" />,
+  },
+  {
+    id: 'camera',
+    type: 'base',
+    label: 'Foto',
+    shortLabel: 'Foto',
+    icon: <Camera className="w-5 h-5" aria-hidden="true" />,
   },
 ];
 
@@ -83,20 +100,26 @@ function ToolButton({
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
         isActive
           ? 'bg-amber-100 dark:bg-amber-900/40 border border-amber-400 dark:border-amber-600 text-amber-800 dark:text-amber-200 shadow-sm'
-          : 'border border-transparent text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800',
+          : 'border border-transparent text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
       )}
     >
       <span
         className={cn(
-          'flex-shrink-0',
-          isActive ? 'text-amber-700 dark:text-amber-300' : 'text-stone-500 dark:text-stone-400',
+          'relative flex-shrink-0',
+          isActive ? 'text-amber-700 dark:text-amber-300' : 'text-stone-500 dark:text-stone-400'
         )}
       >
         {tool.icon}
+        {tool.badge != null && tool.badge > 0 && (
+          <span
+            className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold px-1 leading-none"
+            data-testid={`tool-badge-${tool.id}`}
+          >
+            {tool.badge > 99 ? '99+' : tool.badge}
+          </span>
+        )}
       </span>
-      {showLabel && (
-        <span className="text-sm font-medium truncate leading-none">{tool.label}</span>
-      )}
+      {showLabel && <span className="text-sm font-medium truncate leading-none">{tool.label}</span>}
       {isActive && (
         <span
           aria-hidden="true"
@@ -156,7 +179,7 @@ export function ToolRail({
           'transition-[width] duration-200 ease-in-out',
           'bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700',
           'h-full min-h-0 overflow-y-auto overflow-x-hidden',
-          className,
+          className
         )}
         aria-label="Strumenti sessione"
       >
@@ -170,7 +193,7 @@ export function ToolRail({
             'text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
             'transition-colors duration-150',
-            isCollapsed ? 'self-center' : 'self-end',
+            isCollapsed ? 'self-center' : 'self-end'
           )}
         >
           {isCollapsed ? (
@@ -202,11 +225,7 @@ export function ToolRail({
         {/* Separator + custom tools */}
         {customTools.length > 0 && (
           <>
-            <div
-              className="flex items-center px-2 my-3"
-              title="Tool custom"
-              aria-hidden="true"
-            >
+            <div className="flex items-center px-2 my-3" title="Tool custom" aria-hidden="true">
               <div className="flex-1 h-px bg-stone-200 dark:bg-stone-700" />
               {!isCollapsed && (
                 <span className="px-2 text-xs text-stone-400 dark:text-stone-500 font-medium uppercase tracking-wider">
@@ -242,7 +261,7 @@ export function ToolRail({
         className={cn(
           'md:hidden fixed bottom-0 left-0 right-0 z-30',
           'bg-stone-50 dark:bg-stone-900 border-t border-stone-200 dark:border-stone-700',
-          'shadow-[0_-2px_8px_rgba(0,0,0,0.08)]',
+          'shadow-[0_-2px_8px_rgba(0,0,0,0.08)]'
         )}
         aria-label="Strumenti sessione"
       >
@@ -267,18 +286,24 @@ export function ToolRail({
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
                 activeTool === tool.id
                   ? 'text-amber-700 dark:text-amber-300'
-                  : 'text-stone-500 dark:text-stone-400',
+                  : 'text-stone-500 dark:text-stone-400'
               )}
             >
               <span
                 className={cn(
                   'relative flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-150',
-                  activeTool === tool.id
-                    ? 'bg-amber-100 dark:bg-amber-900/40'
-                    : 'bg-transparent',
+                  activeTool === tool.id ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-transparent'
                 )}
               >
                 {tool.icon}
+                {tool.badge != null && tool.badge > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 flex items-center justify-center min-w-[14px] h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-bold px-0.5 leading-none"
+                    data-testid={`tool-badge-${tool.id}`}
+                  >
+                    {tool.badge > 99 ? '99+' : tool.badge}
+                  </span>
+                )}
               </span>
               <span className="text-[10px] font-medium leading-none truncate max-w-[52px]">
                 {tool.shortLabel}

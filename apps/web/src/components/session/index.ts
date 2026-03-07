@@ -36,6 +36,12 @@ export { CounterTool } from './CounterTool';
 export type { CounterToolProps } from './CounterTool';
 export { WhiteboardTool } from './WhiteboardTool';
 export type { WhiteboardToolProps } from './WhiteboardTool';
+export { PhotoUploadModal } from './PhotoUploadModal';
+export type {
+  PhotoUploadModalProps,
+  SessionAttachmentDto,
+  AttachmentType,
+} from './PhotoUploadModal';
 
 export type {
   Participant,

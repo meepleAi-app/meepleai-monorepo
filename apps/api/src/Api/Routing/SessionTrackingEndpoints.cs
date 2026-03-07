@@ -1876,6 +1876,51 @@ internal static class SessionTrackingEndpoints
         .WithDescription("Persists the runtime state for a single widget (turn count, scores, resources etc.). Auto-creates the state record on first save. Issue #5148.")
         .WithOpenApi();
     }
+
+    internal static RouteGroupBuilder MapSessionStatisticsEndpoints(this RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/session-statistics", async (
+            HttpContext httpContext, IMediator mediator, [FromQuery] int? monthsBack) =>
+        {
+            var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var parsedUserId))
+                return Results.Unauthorized();
+
+            var query = new Api.BoundedContexts.SessionTracking.Application.Queries.GetSessionStatisticsQuery(
+                parsedUserId, monthsBack ?? 6);
+            var result = await mediator.Send(query).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthorization()
+        .Produces<Api.BoundedContexts.SessionTracking.Application.DTOs.SessionStatisticsDto>(200)
+        .Produces(401)
+        .WithName("GetSessionStatistics")
+        .WithTags("SessionStatistics")
+        .WithSummary("Get aggregated session statistics for the current user")
+        .WithOpenApi();
+
+        group.MapGet("/game-sessions/session-statistics/game/{gameId:guid}", async (
+            Guid gameId, HttpContext httpContext, IMediator mediator) =>
+        {
+            var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var parsedUserId))
+                return Results.Unauthorized();
+
+            var query = new Api.BoundedContexts.SessionTracking.Application.Queries.GetGameStatisticsQuery(
+                parsedUserId, gameId);
+            var result = await mediator.Send(query).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthorization()
+        .Produces<Api.BoundedContexts.SessionTracking.Application.DTOs.GameStatisticsDto>(200)
+        .Produces(401)
+        .WithName("GetGameStatistics")
+        .WithTags("SessionStatistics")
+        .WithSummary("Get statistics for a specific game for the current user")
+        .WithOpenApi();
+
+        return group;
+    }
 }
 
 /// <summary>

@@ -7,6 +7,7 @@ import { ChevronRight, RotateCcw, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { useWidgetSync } from '@/lib/hooks/useWidgetSync';
 
 import { WidgetCard } from './WidgetCard';
 
@@ -15,9 +16,17 @@ interface Player {
   name: string;
 }
 
+interface TurnManagerState {
+  players: Player[];
+  currentIndex: number;
+  round: number;
+}
+
 interface TurnManagerWidgetProps {
   isEnabled: boolean;
   players?: Player[];
+  sessionId?: string;
+  toolkitId?: string;
   onToggle?: (enabled: boolean) => void;
   onStateChange?: (stateJson: string) => void;
   'data-testid'?: string;
@@ -30,6 +39,8 @@ interface TurnManagerWidgetProps {
 export function TurnManagerWidget({
   isEnabled,
   players: initialPlayers,
+  sessionId,
+  toolkitId,
   onToggle,
   onStateChange,
   'data-testid': testId,
@@ -44,11 +55,30 @@ export function TurnManagerWidget({
   const [round, setRound] = useState(1);
   const [newPlayerName, setNewPlayerName] = useState('');
 
+  const { broadcastState, isConnected } = useWidgetSync({
+    sessionId,
+    toolkitId,
+    widgetType: 'TurnManager',
+    enabled: !!sessionId && !!toolkitId,
+    onRemoteUpdate: (stateJson: string) => {
+      try {
+        const remote: TurnManagerState = JSON.parse(stateJson);
+        setPlayers(remote.players);
+        setCurrentIndex(remote.currentIndex);
+        setRound(remote.round);
+      } catch {
+        // Ignore malformed remote state
+      }
+    },
+  });
+
   const persistState = useCallback(
     (ps: Player[], idx: number, r: number) => {
-      onStateChange?.(JSON.stringify({ players: ps, currentIndex: idx, round: r }));
+      const stateJson = JSON.stringify({ players: ps, currentIndex: idx, round: r });
+      onStateChange?.(stateJson);
+      broadcastState(stateJson);
     },
-    [onStateChange]
+    [onStateChange, broadcastState]
   );
 
   const nextTurn = useCallback(() => {

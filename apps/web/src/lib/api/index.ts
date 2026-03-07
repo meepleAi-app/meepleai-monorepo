@@ -50,6 +50,8 @@ import {
   createEntityLinksClient,
   createLiveSessionsClient,
   createSessionTrackingClient,
+  createGameToolkitClient,
+  createSessionStatisticsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -80,6 +82,8 @@ import {
   type EntityLinksClient,
   type LiveSessionsClient,
   type SessionTrackingClient,
+  type GameToolkitClient,
+  type SessionStatisticsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -257,6 +261,12 @@ export interface ApiClient {
   /** Session Tracking — legacy tools: dice, cards, chat, notes (Issue #5041) */
   sessionTracking: SessionTrackingClient;
 
+  /** Game Toolkit AI Generation */
+  gameToolkit: GameToolkitClient;
+
+  /** Session Analytics Dashboard (P4) */
+  sessionStatistics: SessionStatisticsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -337,6 +347,8 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     entityLinks: createEntityLinksClient({ httpClient }), // ISSUE-5129
     liveSessions: createLiveSessionsClient({ httpClient }), // ISSUE-5041
     sessionTracking: createSessionTrackingClient({ httpClient }), // ISSUE-5041
+    gameToolkit: createGameToolkitClient({ httpClient }), // AI Toolkit Generation
+    sessionStatistics: createSessionStatisticsClient({ httpClient }), // P4: Session Analytics
     delete: (path: string) => httpClient.delete(path),
   };
 

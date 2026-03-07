@@ -173,3 +173,28 @@ internal class ClearStateTemplateCommandValidator : AbstractValidator<ClearState
         RuleFor(x => x.ToolkitId).NotEmpty().WithMessage("ToolkitId is required");
     }
 }
+
+internal sealed class GenerateToolkitFromKbCommandValidator
+    : AbstractValidator<GenerateToolkitFromKbCommand>
+{
+    public GenerateToolkitFromKbCommandValidator()
+    {
+        RuleFor(x => x.GameId).NotEmpty();
+        RuleFor(x => x.UserId).NotEmpty();
+    }
+}
+
+internal sealed class ApplyAiToolkitSuggestionCommandValidator
+    : AbstractValidator<ApplyAiToolkitSuggestionCommand>
+{
+    public ApplyAiToolkitSuggestionCommandValidator()
+    {
+        RuleFor(x => x.GameId).NotEmpty().WithMessage("GameId is required");
+        RuleFor(x => x.UserId).NotEmpty().WithMessage("UserId is required");
+        RuleFor(x => x.Suggestion).NotNull().WithMessage("Suggestion is required");
+        RuleFor(x => x.Suggestion.ToolkitName)
+            .NotEmpty().MaximumLength(200)
+            .When(x => x.Suggestion is not null)
+            .WithMessage("ToolkitName is required (max 200 chars)");
+    }
+}

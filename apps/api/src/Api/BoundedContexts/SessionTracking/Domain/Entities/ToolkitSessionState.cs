@@ -56,10 +56,18 @@ public sealed class ToolkitSessionState
     /// <summary>
     /// Updates the state JSON for a single widget. Creates entry if it doesn't exist.
     /// </summary>
+    /// <summary>Maximum size in characters for a single widget state blob (500 KB).</summary>
+    private const int MaxWidgetStateLength = 512_000;
+
     public void UpdateWidgetState(string widgetType, string stateJson)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(widgetType);
         ArgumentException.ThrowIfNullOrWhiteSpace(stateJson);
+
+        if (stateJson.Length > MaxWidgetStateLength)
+            throw new ArgumentException(
+                $"Widget state exceeds maximum size (500KB). Current: {stateJson.Length / 1024}KB",
+                nameof(stateJson));
 
         var states = JsonSerializer.Deserialize<Dictionary<string, string>>(_widgetStatesJson, JsonOptions)
                      ?? new Dictionary<string, string>(StringComparer.Ordinal);

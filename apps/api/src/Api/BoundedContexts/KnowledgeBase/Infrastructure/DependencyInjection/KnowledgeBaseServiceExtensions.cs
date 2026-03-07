@@ -255,8 +255,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
         services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
 
-        // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
-        services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();
+        // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
+        services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
         services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
     }

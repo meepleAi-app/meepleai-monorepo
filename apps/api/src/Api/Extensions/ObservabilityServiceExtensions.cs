@@ -28,8 +28,7 @@ internal static class ObservabilityServiceExtensions
 
     private static readonly string[] PostgresTags = new[] { "db", "sql", HealthCheckTags.Core, HealthCheckTags.Critical };
     private static readonly string[] RedisTags = new[] { "cache", "redis", HealthCheckTags.Core, HealthCheckTags.Critical };
-    private static readonly string[] QdrantTags = new[] { "vector", "qdrant", HealthCheckTags.Core, HealthCheckTags.Critical };
-    private static readonly string[] QdrantCollectionTags = new[] { "vector", "qdrant", "collection", HealthCheckTags.Core, HealthCheckTags.Critical };
+    // Qdrant health check tags removed — pgvector is now the sole vector store (no separate health check needed)
     private static readonly string[] N8nTags = new[] { "automation", "workflow" };
     private static readonly string[] SharedCatalogTags = new[] { "database", "fts", "shared-catalog" };
     private static readonly string[] ConfigurationTags = new[] { "configuration", "startup" };
@@ -229,7 +228,6 @@ internal static class ObservabilityServiceExtensions
     {
         // S1075: Default URLs extracted to const
 #pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback values
-        const string DefaultQdrantUrl = "http://localhost:6333";
         const string DefaultN8nUrl = "http://n8n:5678";
 #pragma warning restore S1075
 
@@ -247,7 +245,6 @@ internal static class ObservabilityServiceExtensions
             ? $"{redisHost}:{redisPort}"
             : $"{redisHost}:{redisPort},password={redisPassword}";
 
-        var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
         var n8nUrl = configuration["N8N_URL"] ?? DefaultN8nUrl;
 
         builder
@@ -255,13 +252,7 @@ internal static class ObservabilityServiceExtensions
                 healthCheckRedisConnectionString,
                 name: "redis",
                 tags: RedisTags)
-            .AddUrlGroup(
-                new Uri($"{healthCheckQdrantUrl}/healthz"),
-                name: "qdrant",
-                tags: QdrantTags)
-            .AddCheck<QdrantHealthCheck>(
-                "qdrant-collection",
-                tags: QdrantCollectionTags)
+            // Qdrant health checks removed — pgvector is the sole vector store (health covered by Postgres check)
             .AddCheck<Api.Infrastructure.HealthChecks.SharedGameCatalogHealthCheck>(
                 "shared-catalog-fts",
                 failureStatus: HealthStatus.Degraded,

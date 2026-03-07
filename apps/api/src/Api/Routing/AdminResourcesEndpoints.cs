@@ -134,30 +134,16 @@ internal static class AdminResourcesEndpoints
         .ProducesProblem(401)
         .ProducesProblem(403);
 
-        // Rebuild Vector Index (Level 2: DANGER)
-        group.MapPost("/resources/vectors/rebuild", async (
+        // Rebuild Vector Index — disabled (Qdrant replaced by pgvector)
+        group.MapPost("/resources/vectors/rebuild", (
             HttpContext context,
-            IMediator mediator,
             string collectionName,
-            bool confirmed = false,
-            CancellationToken ct = default) =>
+            bool confirmed = false) =>
         {
             var sessionResult = context.RequireAdminSession();
             if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
 
-            try
-            {
-                var success = await mediator.Send(new RebuildVectorIndexCommand(collectionName, confirmed), ct).ConfigureAwait(false);
-                return Results.Ok(new { success, message = $"Vector index for {collectionName} rebuilt successfully" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
+            return Results.BadRequest(new { error = "Vector index rebuild not available — Qdrant replaced by pgvector" });
         })
         .WithName("RebuildVectorIndex")
         .WithTags("Admin", "Resources", "Dangerous")

@@ -42,6 +42,8 @@ export type {
   SessionAttachmentDto,
   AttachmentType,
 } from './PhotoUploadModal';
+export { SessionPhotoGallery } from './SessionPhotoGallery';
+export type { SessionPhotoGalleryProps, SessionAttachmentDetail } from './SessionPhotoGallery';
 
 export type {
   Participant,

@@ -1,10 +1,11 @@
 /**
  * SmartFAB Tests
- * Issue #6 from mobile-first-ux-epic.md
+ * Issues #6, #11, #12 from mobile-first-ux-epic.md
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 import { SmartFAB } from '../SmartFAB';
@@ -70,9 +71,14 @@ function withActions() {
 describe('SmartFAB', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
     noActions();
     mockUseScrollDirection.mockReturnValue(null);
     mockPathname.mockReturnValue('/dashboard');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('Context-aware actions', () => {
@@ -150,23 +156,23 @@ describe('SmartFAB', () => {
     it('hides during scroll down', () => {
       mockUseScrollDirection.mockReturnValue('down');
       render(<SmartFAB />);
-      const fab = screen.getByTestId('smart-fab');
-      expect(fab.className).toContain('opacity-0');
+      const wrapper = screen.getByTestId('smart-fab-wrapper');
+      expect(wrapper.className).toContain('opacity-0');
     });
 
     it('shows during scroll up', () => {
       mockUseScrollDirection.mockReturnValue('up');
       render(<SmartFAB />);
-      const fab = screen.getByTestId('smart-fab');
-      expect(fab.className).not.toContain('opacity-0');
+      const wrapper = screen.getByTestId('smart-fab-wrapper');
+      expect(wrapper.className).not.toContain('opacity-0');
     });
   });
 
   describe('Design', () => {
     it('has mobile-only class', () => {
       render(<SmartFAB />);
-      const fab = screen.getByTestId('smart-fab');
-      expect(fab.className).toContain('md:hidden');
+      const wrapper = screen.getByTestId('smart-fab-wrapper');
+      expect(wrapper.className).toContain('md:hidden');
     });
 
     it('has primary color and round shape', () => {
@@ -183,10 +189,10 @@ describe('SmartFAB', () => {
       expect(fab.className).toContain('w-14');
     });
 
-    it('positions above MobileTabBar', () => {
+    it('positions above MobileTabBar with safe area', () => {
       render(<SmartFAB />);
-      const fab = screen.getByTestId('smart-fab');
-      expect(fab.className).toContain('bottom-[calc(72px+1rem)]');
+      const wrapper = screen.getByTestId('smart-fab-wrapper');
+      expect(wrapper.className).toContain('bottom-[calc(72px+1rem+env(safe-area-inset-bottom))]');
     });
   });
 
@@ -216,6 +222,91 @@ describe('SmartFAB', () => {
       render(<SmartFAB />);
       const fab = screen.getByTestId('smart-fab');
       expect(fab.tagName).toBe('BUTTON');
+    });
+  });
+
+  describe('QuickMenu (Issue #11)', () => {
+    it('shows indicator dot when secondary actions available', () => {
+      mockPathname.mockReturnValue('/dashboard');
+      render(<SmartFAB />);
+      expect(screen.getByTestId('quick-menu-indicator')).toBeInTheDocument();
+    });
+
+    it('does not show indicator when no secondary actions', () => {
+      mockPathname.mockReturnValue('/chat');
+      render(<SmartFAB />);
+      expect(screen.queryByTestId('quick-menu-indicator')).not.toBeInTheDocument();
+    });
+
+    it('opens QuickMenu on long press', () => {
+      mockPathname.mockReturnValue('/dashboard');
+      render(<SmartFAB />);
+
+      const fab = screen.getByTestId('smart-fab');
+      fireEvent.mouseDown(fab);
+
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(screen.getByTestId('quick-menu')).toBeInTheDocument();
+      expect(screen.getByTestId('quick-menu-backdrop')).toBeInTheDocument();
+    });
+
+    it('renders secondary action items in QuickMenu', () => {
+      mockPathname.mockReturnValue('/dashboard');
+      render(<SmartFAB />);
+
+      const fab = screen.getByTestId('smart-fab');
+      fireEvent.mouseDown(fab);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      // Dashboard has 2 secondary actions
+      expect(screen.getByTestId('quick-menu-item-0')).toBeInTheDocument();
+      expect(screen.getByTestId('quick-menu-item-1')).toBeInTheDocument();
+    });
+
+    it('QuickMenu items have correct labels', () => {
+      mockPathname.mockReturnValue('/dashboard');
+      render(<SmartFAB />);
+
+      const fab = screen.getByTestId('smart-fab');
+      fireEvent.mouseDown(fab);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(screen.getByLabelText('Nuova sessione')).toBeInTheDocument();
+      expect(screen.getByLabelText('Libreria')).toBeInTheDocument();
+    });
+
+    it('does not open QuickMenu on short press', () => {
+      mockPathname.mockReturnValue('/dashboard');
+      render(<SmartFAB />);
+
+      const fab = screen.getByTestId('smart-fab');
+      fireEvent.mouseDown(fab);
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      fireEvent.mouseUp(fab);
+
+      expect(screen.queryByTestId('quick-menu')).not.toBeInTheDocument();
+    });
+
+    it('QuickMenu has role=menu', () => {
+      mockPathname.mockReturnValue('/dashboard');
+      render(<SmartFAB />);
+
+      const fab = screen.getByTestId('smart-fab');
+      fireEvent.mouseDown(fab);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(screen.getByRole('menu')).toBeInTheDocument();
     });
   });
 });

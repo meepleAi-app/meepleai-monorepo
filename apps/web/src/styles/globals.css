@@ -305,7 +305,7 @@
   }
 }
 
-/* Accessibility - Reduce Motion Support (Issue #2848, #2905) */
+/* Accessibility - Reduce Motion Support (Issue #2848, #2905, Mobile UX Epic Issue 8) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -313,12 +313,29 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable smooth scrolling on html/body */
+  html,
+  body {
+    scroll-behavior: auto !important;
   }
 
   .animate-pulse-meeple,
   .animate-pulse-slow,
   .animate-bounce-slow {
     animation: none !important;
+  }
+
+  /* Tailwind animate-in / slide-in / fade-in utility classes */
+  .animate-in,
+  .fade-in-0,
+  .slide-in-from-bottom-4,
+  .slide-in-from-top-4 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   .hover-card:hover,

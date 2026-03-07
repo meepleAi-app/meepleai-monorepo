@@ -48,6 +48,8 @@ export { ResumePhotoReview } from './ResumePhotoReview';
 export type { ResumePhotoReviewProps } from './ResumePhotoReview';
 export { CameraToolContent } from './CameraToolContent';
 export type { CameraToolContentProps } from './CameraToolContent';
+export { PauseSessionDialog } from './PauseSessionDialog';
+export type { PauseSessionDialogProps } from './PauseSessionDialog';
 
 export type {
   Participant,

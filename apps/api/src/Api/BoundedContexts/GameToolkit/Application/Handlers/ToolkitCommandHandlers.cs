@@ -518,6 +518,9 @@ internal class SubmitTemplateForReviewCommandHandler : ICommandHandler<SubmitTem
         var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
 
+        if (toolkit.CreatedByUserId != command.UserId)
+            throw new ForbiddenException("Only the toolkit creator can submit it for review.");
+
         toolkit.SubmitForReview();
 
         await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);

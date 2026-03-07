@@ -83,7 +83,7 @@ function TemplateCard({
         )}
       </div>
 
-      <Button size="sm" className="mt-auto w-full" onClick={() => onClone(template.id)}>
+      <Button size="sm" className="mt-auto w-full" disabled title="Coming soon">
         <Copy className="mr-1.5 h-3.5 w-3.5" />
         Use This Template
       </Button>
@@ -99,10 +99,8 @@ export default function ToolkitTemplatesPage() {
     queryFn: () => api.gameToolkit.getApprovedTemplates(category === 'All' ? undefined : category),
   });
 
-  const handleClone = (templateId: string) => {
-    // TODO: open modal to select game, then call cloneFromTemplate
-    // For now this is a placeholder — Phase 1 focuses on the browsing UI
-    alert(`Clone template ${templateId} — select a game first`);
+  const handleClone = (_templateId: string) => {
+    // Clone modal will be implemented when game selection UX is ready
   };
 
   return (

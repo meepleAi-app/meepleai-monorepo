@@ -86,6 +86,20 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
         return true;
     }
 
+    public async Task<IReadOnlyList<SessionAttachment>> GetExpiredAttachmentsAsync(
+        DateTime cutoffDate, int batchSize, CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.SessionAttachments
+            .AsNoTracking()
+            .Where(a => a.CreatedAt < cutoffDate)
+            .OrderBy(a => a.CreatedAt)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

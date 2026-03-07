@@ -59,6 +59,9 @@ internal static class GameManagementServiceExtensions
         // Issue #5361: Session attachment service (upload, thumbnail, S3)
         services.AddScoped<ISessionAttachmentService, SessionAttachmentService>();
 
+        // Issue #5366: Session attachment cleanup background job
+        services.AddHostedService<SessionAttachmentCleanupJob>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

@@ -1,18 +1,14 @@
 /**
- * Tests for Sidebar component - Issue #4936 (updated)
+ * Tests for Sidebar component - Issue #4936 + Issue #15 (Sidebar Strategy Rework)
  *
- * Validates rendering, collapsed mode, navigation, user section, and accessibility.
- *
- * Changes from original (Issue #3479):
- * - Logo removed from sidebar (now in UniversalNavbar) → logo tests removed
- * - SidebarNav replaced by SidebarContextNav → context-aware test routes
- * - Default nav tested with non-contextual route (e.g. /sessions)
- * - Dashboard/Library/Games contexts tested with respective routes
+ * Validates the two-zone sidebar layout:
+ *   Zone 1: Fixed primary navigation (always visible)
+ *   Zone 2: Contextual panel (route-specific, animated)
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
@@ -37,7 +33,9 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
   useRouter: vi.fn(() => ({
     push: vi.fn(),
+    replace: vi.fn(),
   })),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 // Mock useCurrentUser hook
@@ -55,6 +53,13 @@ vi.mock('@/actions/auth', () => ({
   logoutAction: vi.fn(() => Promise.resolve({ success: true })),
 }));
 
+// Mock GamesFilterPanel (uses useSearchParams, router, etc.)
+vi.mock('@/components/catalog/GamesFilterPanel', () => ({
+  GamesFilterPanel: ({ isCollapsed }: { isCollapsed: boolean }) => (
+    <div data-testid="games-filter-panel">{!isCollapsed && <span>Filtri giochi</span>}</div>
+  ),
+}));
+
 const mockUsePathname = usePathname as Mock;
 const mockUseCurrentUser = useCurrentUser as Mock;
 
@@ -66,7 +71,6 @@ describe('Sidebar', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default to a non-contextual route so SidebarNav (standard) renders
     mockUsePathname.mockReturnValue('/sessions');
     mockUseCurrentUser.mockReturnValue({
       data: { id: '1', email: 'test@test.com', role: 'User', displayName: 'Test User' },
@@ -90,54 +94,113 @@ describe('Sidebar', () => {
       expect(screen.getByTestId('sidebar-user')).toBeInTheDocument();
     });
 
-    it('renders standard navigation items on non-contextual routes (not profile)', () => {
-      // /sessions → default context → SidebarNav renders
+    it('renders fixed nav zone', () => {
       render(<Sidebar {...defaultProps} />);
-      expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
-      expect(screen.getByTestId('nav-chat')).toBeInTheDocument();
-      expect(screen.getByTestId('nav-catalog')).toBeInTheDocument();
-      // Profile should NOT be in sidebar nav (hideFromMainNav)
-      expect(screen.queryByTestId('nav-profile')).not.toBeInTheDocument();
-    });
-
-    it('renders Strumenti group with agents and sessions on non-contextual routes', () => {
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('Strumenti')).toBeInTheDocument();
-      expect(screen.getByTestId('nav-agents')).toBeInTheDocument();
-      expect(screen.getByTestId('nav-sessions')).toBeInTheDocument();
+      expect(screen.getByTestId('sidebar-fixed-nav')).toBeInTheDocument();
     });
   });
 
-  describe('Context-Sensitive Navigation', () => {
-    it('renders DashboardPanel when on /dashboard route', () => {
-      mockUsePathname.mockReturnValue('/dashboard');
+  describe('Fixed Nav Zone (always visible)', () => {
+    it('shows primary navigation links on any route', () => {
       render(<Sidebar {...defaultProps} />);
-      // DashboardPanel shows context-specific links
-      expect(screen.getByText('Overview')).toBeInTheDocument();
-      expect(screen.getByText('Sessioni recenti')).toBeInTheDocument();
-      expect(screen.getByText('La mia collezione')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('Libreria')).toBeInTheDocument();
+      expect(screen.getByText('Scopri')).toBeInTheDocument();
+      expect(screen.getByText('Chat AI')).toBeInTheDocument();
+      expect(screen.getByText('Sessioni')).toBeInTheDocument();
+      expect(screen.getByText('Giocatori')).toBeInTheDocument();
     });
 
-    it('renders LibraryPanel when on /library route', () => {
+    it('shows fixed nav on dashboard route too', () => {
+      mockUsePathname.mockReturnValue('/dashboard');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByTestId('sidebar-fixed-nav')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('Libreria')).toBeInTheDocument();
+    });
+
+    it('shows fixed nav on library route too', () => {
+      mockUsePathname.mockReturnValue('/library');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByTestId('sidebar-fixed-nav')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    });
+
+    it('highlights active link based on pathname', () => {
+      mockUsePathname.mockReturnValue('/dashboard');
+      render(<Sidebar {...defaultProps} />);
+      const dashboardLink = screen.getByText('Dashboard').closest('a');
+      expect(dashboardLink).toHaveClass('font-semibold');
+    });
+
+    it('highlights library link on library sub-routes', () => {
+      mockUsePathname.mockReturnValue('/library/wishlist');
+      render(<Sidebar {...defaultProps} />);
+      // "Libreria" appears in both fixed nav and contextual section label
+      const libraryLinks = screen.getAllByText('Libreria');
+      const fixedNavLink = libraryLinks[0].closest('a');
+      expect(fixedNavLink).toHaveClass('font-semibold');
+    });
+
+    it('hides text labels when collapsed', () => {
+      render(<Sidebar {...defaultProps} isCollapsed={true} />);
+      expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
+      expect(screen.queryByText('Libreria')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Contextual Zone', () => {
+    it('shows dashboard shortcuts on /dashboard', () => {
+      mockUsePathname.mockReturnValue('/dashboard');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByText('Sessioni recenti')).toBeInTheDocument();
+      expect(screen.getByText('Wishlist')).toBeInTheDocument();
+    });
+
+    it('shows library filters on /library', () => {
       mockUsePathname.mockReturnValue('/library');
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
       expect(screen.getByText('Preferiti')).toBeInTheDocument();
-      expect(screen.getByText('Wishlist')).toBeInTheDocument();
+      expect(screen.getByText('Archiviati')).toBeInTheDocument();
     });
 
-    it('renders GamesPanel when on /games route', () => {
-      mockUsePathname.mockReturnValue('/games');
+    it('shows library filters on /library sub-routes', () => {
+      mockUsePathname.mockReturnValue('/library/wishlist');
       render(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
-      expect(screen.getByText('Top BGG')).toBeInTheDocument();
+      expect(screen.getByText('Giochi privati')).toBeInTheDocument();
     });
 
-    it('renders standard SidebarNav on non-contextual routes (/admin)', () => {
-      mockUsePathname.mockReturnValue('/admin/overview');
+    it('shows games filter panel on /games', () => {
+      mockUsePathname.mockReturnValue('/games');
       render(<Sidebar {...defaultProps} />);
-      // Standard nav should show
-      expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
+      expect(screen.getByTestId('games-filter-panel')).toBeInTheDocument();
+    });
+
+    it('shows no contextual zone on non-contextual routes', () => {
+      mockUsePathname.mockReturnValue('/sessions');
+      render(<Sidebar {...defaultProps} />);
+      // No contextual section labels
+      expect(screen.queryByText('Accesso rapido')).not.toBeInTheDocument();
+      expect(screen.queryByText('Preferiti')).not.toBeInTheDocument();
+      expect(screen.queryByText('Archiviati')).not.toBeInTheDocument();
+    });
+
+    it('shows divider between zones only when contextual zone is active', () => {
+      mockUsePathname.mockReturnValue('/dashboard');
+      const { container } = render(<Sidebar {...defaultProps} />);
+      // There should be an <hr> divider between zones
+      const hrs = container.querySelectorAll('hr.border-sidebar-border');
+      expect(hrs.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('shows no divider on non-contextual routes', () => {
+      mockUsePathname.mockReturnValue('/sessions');
+      const { container } = render(<Sidebar {...defaultProps} />);
+      // No divider between zones (only SidebarUser border-t exists)
+      const contextDividers = container.querySelectorAll('.flex-1.overflow-y-auto > hr');
+      expect(contextDividers.length).toBe(0);
     });
   });
 
@@ -147,18 +210,6 @@ describe('Sidebar', () => {
       const sidebar = screen.getByTestId('sidebar');
       expect(sidebar).toHaveClass('w-[220px]');
     });
-
-    it('shows text labels next to icons in standard nav', () => {
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('Chat')).toBeInTheDocument();
-      expect(screen.getByText('Scopri')).toBeInTheDocument();
-    });
-
-    it('shows Strumenti group label in standard nav', () => {
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('Strumenti')).toBeInTheDocument();
-    });
   });
 
   describe('Collapsed Mode', () => {
@@ -166,16 +217,6 @@ describe('Sidebar', () => {
       render(<Sidebar {...defaultProps} isCollapsed={true} />);
       const sidebar = screen.getByTestId('sidebar');
       expect(sidebar).toHaveClass('w-[60px]');
-    });
-
-    it('hides text labels when collapsed (standard nav)', () => {
-      render(<Sidebar {...defaultProps} isCollapsed={true} />);
-      expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
-    });
-
-    it('hides Strumenti group label when collapsed', () => {
-      render(<Sidebar {...defaultProps} isCollapsed={true} />);
-      expect(screen.queryByText('Strumenti')).not.toBeInTheDocument();
     });
   });
 
@@ -203,34 +244,6 @@ describe('Sidebar', () => {
     });
   });
 
-  describe('Library Context', () => {
-    it('shows library sub-items when on /library route', () => {
-      mockUsePathname.mockReturnValue('/library');
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('Tutti i giochi')).toBeInTheDocument();
-      expect(screen.getByText('Preferiti')).toBeInTheDocument();
-      expect(screen.getByText('Wishlist')).toBeInTheDocument();
-      expect(screen.getByText('Archiviati')).toBeInTheDocument();
-    });
-
-    it('shows standard library toggle on non-contextual route', () => {
-      mockUsePathname.mockReturnValue('/sessions');
-      render(<Sidebar {...defaultProps} />);
-      expect(screen.getByTestId('sidebar-library-toggle')).toBeInTheDocument();
-    });
-
-    it('expands library children on toggle click (standard nav)', async () => {
-      const user = userEvent.setup();
-      render(<Sidebar {...defaultProps} />);
-
-      await user.click(screen.getByTestId('sidebar-library-toggle'));
-
-      expect(screen.getByTestId('sidebar-library-private')).toBeInTheDocument();
-      expect(screen.getByTestId('sidebar-library-collection')).toBeInTheDocument();
-      expect(screen.getByTestId('sidebar-library-wishlist')).toBeInTheDocument();
-    });
-  });
-
   describe('User Section', () => {
     it('shows notification bell', () => {
       render(<Sidebar {...defaultProps} />);
@@ -239,7 +252,7 @@ describe('Sidebar', () => {
 
     it('shows user avatar with initial', () => {
       render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('T')).toBeInTheDocument(); // "Test User" → "T"
+      expect(screen.getByText('T')).toBeInTheDocument();
     });
 
     it('opens user dropdown on avatar click', async () => {
@@ -300,9 +313,14 @@ describe('Sidebar', () => {
       expect(sidebar).toHaveClass('hidden', 'md:flex');
     });
 
-    it('nav items meet WCAG touch target (min-h-[44px]) in standard nav', () => {
+    it('fixed nav has aria-label', () => {
       render(<Sidebar {...defaultProps} />);
-      const dashboardLink = screen.getByTestId('nav-dashboard');
+      expect(screen.getByRole('navigation', { name: /primary navigation/i })).toBeInTheDocument();
+    });
+
+    it('nav items meet WCAG touch target (min-h-[44px])', () => {
+      render(<Sidebar {...defaultProps} />);
+      const dashboardLink = screen.getByText('Dashboard').closest('a');
       expect(dashboardLink).toHaveClass('min-h-[44px]');
     });
   });

@@ -27,6 +27,7 @@ import { useRef, useState } from 'react';
 import { useNavigation } from '@/context/NavigationContext';
 import { useResponsive, usePrefersReducedMotion } from '@/hooks/useResponsive';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
+import { useVirtualKeyboard } from '@/hooks/useVirtualKeyboard';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
@@ -41,12 +42,13 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
   const { isMobile } = useResponsive();
   const scrollDirection = useScrollDirection({ threshold: 50 });
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { isKeyboardOpen } = useVirtualKeyboard();
 
   // Only render visible actions
   const visibleActions = actionBarActions.filter(a => !a.hidden);
 
-  // Hide when no actions configured
-  if (visibleActions.length === 0) return null;
+  // Hide when no actions configured or keyboard is open
+  if (visibleActions.length === 0 || isKeyboardOpen) return null;
 
   // Auto-hide on scroll down (mobile only)
   const isHiddenByScroll = isMobile && scrollDirection === 'down';

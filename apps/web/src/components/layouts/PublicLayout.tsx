@@ -19,7 +19,7 @@
 import { ReactNode } from 'react';
 
 import { UnifiedActionBar, UnifiedActionBarSpacer } from '@/components/layout/ActionBar';
-import { BottomNav } from '@/components/layout/BottomNav';
+import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
@@ -62,9 +62,7 @@ export function PublicLayout({
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Sidebar for authenticated users on desktop */}
-      {isAuthenticated && (
-        <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />
-      )}
+      {isAuthenticated && <Sidebar isCollapsed={isCollapsed} onToggle={toggle} />}
 
       {/* Header: mobile-only for authenticated (sidebar handles desktop), all sizes for guests */}
       <div className={isAuthenticated ? 'md:hidden' : undefined}>
@@ -76,11 +74,12 @@ export function PublicLayout({
         id="main-content"
         className={cn(
           'flex-1 w-full',
-          // Bottom padding for mobile bottom nav (unauthenticated uses BottomNav)
-          !isAuthenticated && 'pb-20 md:pb-0',
+          // Bottom padding for mobile MobileTabBar (72px + gap)
+          'pb-24 md:pb-0',
           // Desktop sidebar offset for authenticated users
           isAuthenticated && (isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]'),
-          isAuthenticated && 'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none',
+          isAuthenticated &&
+            'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none',
           className
         )}
       >
@@ -92,21 +91,23 @@ export function PublicLayout({
         className={cn(
           'hidden md:block',
           isAuthenticated && (isCollapsed ? 'md:ml-[60px]' : 'md:ml-[220px]'),
-          isAuthenticated && 'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none'
+          isAuthenticated &&
+            'transition-[margin-left] duration-200 ease-in-out motion-reduce:transition-none'
         )}
       >
         <PublicFooter showNewsletter={showNewsletter} />
       </div>
 
-      {/* Bottom Navigation (mobile only) */}
-      {isAuthenticated ? (
+      {/* Action Bar (authenticated only) */}
+      {isAuthenticated && (
         <>
           <UnifiedActionBar />
           <UnifiedActionBarSpacer />
         </>
-      ) : (
-        <BottomNav />
       )}
+
+      {/* MobileTabBar (persistent mobile navigation, auth-gated internally) */}
+      <MobileTabBar />
     </div>
   );
 }

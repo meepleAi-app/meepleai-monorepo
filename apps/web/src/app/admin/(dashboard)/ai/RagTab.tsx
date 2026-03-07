@@ -1,78 +1,64 @@
 'use client';
 
-import { BrainCircuit, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
+import { BrainCircuit, Bug, Database, Layers, MessageSquare, Workflow } from 'lucide-react';
+
+import { AdminHubQuickLink } from '@/components/admin/layout/AdminHubQuickLink';
 
 export function RagTab() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
           RAG Pipeline
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-0.5">
           Retrieval-Augmented Generation pipeline configuration and monitoring.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <RagLink
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <AdminHubQuickLink
           href="/admin/agents/pipeline"
+          icon={<Workflow />}
           label="Pipeline Explorer"
           description="Visual pipeline diagram with step-by-step execution trace"
+          accent="bg-amber-500/10 text-amber-600 dark:text-amber-400"
         />
-        <RagLink
+        <AdminHubQuickLink
           href="/admin/agents/debug"
+          icon={<Bug />}
           label="Debug Console"
           description="Waterfall chart, confidence scoring, and retrieval analysis"
+          accent="bg-rose-500/10 text-rose-600 dark:text-rose-400"
         />
-        <RagLink
+        <AdminHubQuickLink
           href="/admin/agents/strategy"
+          icon={<BrainCircuit />}
           label="Strategy Config"
           description="Configure tier-based strategy mapping and model routing"
+          accent="bg-violet-500/10 text-violet-600 dark:text-violet-400"
         />
-        <RagLink
+        <AdminHubQuickLink
           href="/admin/knowledge-base"
+          icon={<Database />}
           label="Knowledge Base"
           description="Documents, vectors, and embedding service management"
         />
-        <RagLink
+        <AdminHubQuickLink
           href="/admin/knowledge-base/vectors"
+          icon={<Layers />}
           label="Vector Collections"
           description="Qdrant collections, point counts, and collection health"
+          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
         />
-        <RagLink
+        <AdminHubQuickLink
           href="/admin/agents/debug-chat"
+          icon={<MessageSquare />}
           label="Debug Chat"
           description="Interactive RAG-instrumented chat with full pipeline trace"
+          accent="bg-blue-500/10 text-blue-600 dark:text-blue-400"
         />
       </div>
     </div>
-  );
-}
-
-function RagLink({
-  href,
-  label,
-  description,
-}: {
-  href: string;
-  label: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-start gap-3 rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-4 hover:border-primary/40 transition-colors"
-    >
-      <BrainCircuit className="mt-0.5 h-5 w-5 text-primary shrink-0 group-hover:scale-110 transition-transform" />
-      <div>
-        <div className="flex items-center gap-1.5">
-          <p className="font-medium text-sm text-foreground">{label}</p>
-          <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-    </Link>
   );
 }

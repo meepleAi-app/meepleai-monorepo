@@ -1,76 +1,51 @@
 'use client';
 
-import { ExternalLink, FlaskConical } from 'lucide-react';
-import Link from 'next/link';
+import { Bug, FlaskConical, MessageSquare, Workflow } from 'lucide-react';
+
+import { AdminHubQuickLink } from '@/components/admin/layout/AdminHubQuickLink';
 
 export function AiLabTab() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
-            AI Lab
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Test AI agents, run playground sessions, and experiment with prompts.
-          </p>
-        </div>
+    <div className="space-y-5">
+      <div>
+        <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
+          AI Lab
+        </h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Test AI agents, run playground sessions, and experiment with prompts.
+        </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <LabLink
+      <div className="grid gap-3 sm:grid-cols-2">
+        <AdminHubQuickLink
           href="/admin/agents/definitions/playground"
-          icon={<FlaskConical className="h-5 w-5" />}
+          icon={<FlaskConical />}
           label="Agent Playground"
           description="Interactive chat testing with any agent definition"
+          accent="bg-violet-500/10 text-violet-600 dark:text-violet-400"
         />
-        <LabLink
+        <AdminHubQuickLink
           href="/admin/agents/debug-chat"
-          icon={<FlaskConical className="h-5 w-5" />}
+          icon={<MessageSquare />}
           label="Debug Chat"
           description="Send RAG-instrumented queries with full pipeline trace"
+          accent="bg-blue-500/10 text-blue-600 dark:text-blue-400"
         />
-        <LabLink
+        <AdminHubQuickLink
           href="/admin/agents/debug"
-          icon={<FlaskConical className="h-5 w-5" />}
+          icon={<Bug />}
           label="Debug Console"
           description="RAG pipeline debug console with waterfall visualization"
+          accent="bg-rose-500/10 text-rose-600 dark:text-rose-400"
         />
-        <LabLink
+        <AdminHubQuickLink
           href="/admin/agents/pipeline"
-          icon={<FlaskConical className="h-5 w-5" />}
+          icon={<Workflow />}
           label="Pipeline Explorer"
           description="Visual RAG pipeline diagram with step timings"
+          accent="bg-amber-500/10 text-amber-600 dark:text-amber-400"
         />
       </div>
     </div>
-  );
-}
-
-function LabLink({
-  href,
-  icon,
-  label,
-  description,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-start gap-3 rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-4 hover:border-primary/40 transition-colors"
-    >
-      <div className="text-primary mt-0.5 group-hover:scale-110 transition-transform">{icon}</div>
-      <div>
-        <div className="flex items-center gap-1.5">
-          <p className="font-medium text-sm text-foreground">{label}</p>
-          <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-    </Link>
   );
 }

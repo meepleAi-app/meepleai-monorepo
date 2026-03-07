@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 
 import { Activity, RefreshCw } from 'lucide-react';
 
+import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface AiRequestRow {
   id: string;
@@ -39,17 +41,22 @@ export function RequestsTab() {
   }, [page]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
             AI Requests
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Recent LLM API calls with latency, tokens, and cost breakdown.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => fetchRequests(page)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fetchRequests(page)}
+          className="self-start sm:self-auto"
+        >
           <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
         </Button>
       </div>
@@ -59,13 +66,38 @@ export function RequestsTab() {
           {[1, 2, 3, 4, 5].map(i => (
             <div
               key={i}
-              className="h-14 rounded-lg bg-white/40 dark:bg-zinc-800/40 animate-pulse"
+              className="h-14 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse"
             />
           ))}
         </div>
       ) : requests.length > 0 ? (
         <>
-          <div className="rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+          {/* Mobile: card layout */}
+          <div className="space-y-2 md:hidden">
+            {requests.map((r, idx) => (
+              <div
+                key={r.id ?? idx}
+                className="rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs text-foreground truncate max-w-[60%]">
+                    {r.model ?? '—'}
+                  </span>
+                  <StatusBadge status={r.status} />
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground truncate">{r.endpoint ?? '—'}</p>
+                <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="tabular-nums">
+                    {r.tokenCount?.toLocaleString() ?? '—'} tokens
+                  </span>
+                  <span className="tabular-nums">{r.latencyMs ? `${r.latencyMs}ms` : '—'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden md:block rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200/60 dark:border-zinc-700/40 bg-muted/30">
@@ -104,16 +136,8 @@ export function RequestsTab() {
                     <td className="px-4 py-2.5 text-xs text-right text-muted-foreground tabular-nums">
                       {r.latencyMs ? `${r.latencyMs}ms` : '—'}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-right text-foreground">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          r.status === 'Success'
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                        }`}
-                      >
-                        {r.status}
-                      </span>
+                    <td className="px-4 py-2.5 text-xs text-right">
+                      <StatusBadge status={r.status} />
                     </td>
                   </tr>
                 ))}
@@ -121,6 +145,7 @@ export function RequestsTab() {
             </table>
           </div>
 
+          {/* Pagination */}
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
@@ -130,7 +155,7 @@ export function RequestsTab() {
             >
               Previous
             </Button>
-            <span className="text-xs text-muted-foreground">Page {page}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">Page {page}</span>
             <Button
               variant="outline"
               size="sm"
@@ -142,11 +167,27 @@ export function RequestsTab() {
           </div>
         </>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/60 p-12 text-center">
-          <Activity className="mx-auto h-8 w-8 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">No AI requests found.</p>
-        </div>
+        <AdminHubEmptyState
+          icon={<Activity />}
+          title="No AI requests found"
+          description="AI request logs will appear here once agents start processing queries."
+        />
       )}
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-block rounded-full px-2 py-0.5 text-[10px] font-medium',
+        status === 'Success'
+          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+          : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+      )}
+    >
+      {status}
+    </span>
   );
 }

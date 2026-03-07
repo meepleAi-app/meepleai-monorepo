@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { Tag, Check, Trash2 } from 'lucide-react';
 
+import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
@@ -57,18 +58,18 @@ export function TypologiesTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h2 className="font-quicksand text-lg font-semibold tracking-tight text-foreground">
           Agent Typologies
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-0.5">
           Manage agent classification types and approval workflow.
         </p>
       </div>
 
       {loading ? (
-        <div className="grid gap-3">
+        <div className="grid gap-2">
           {[1, 2, 3].map(i => (
             <div
               key={i}
@@ -77,29 +78,33 @@ export function TypologiesTab() {
           ))}
         </div>
       ) : typologies.length > 0 ? (
-        <div className="grid gap-3">
+        <div className="grid gap-2">
           {typologies.map(t => (
             <div
               key={t.id}
-              className="flex items-start gap-4 rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-4"
+              className="flex flex-col gap-3 sm:flex-row sm:items-start rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4"
             >
-              <Tag className="mt-0.5 h-5 w-5 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-foreground">{t.name}</p>
-                  {t.isApproved ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                      <Check className="h-3 w-3" /> Approved
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                      Pending
-                    </span>
-                  )}
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Tag className="h-4 w-4 text-primary" />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.description}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium text-foreground">{t.name}</p>
+                    {t.isApproved ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                        <Check className="h-3 w-3" /> Approved
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.description}</p>
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1 shrink-0 self-end sm:self-start">
                 {!t.isApproved && (
                   <Button
                     variant="ghost"
@@ -123,10 +128,11 @@ export function TypologiesTab() {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/60 p-12 text-center">
-          <Tag className="mx-auto h-8 w-8 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">No typologies found.</p>
-        </div>
+        <AdminHubEmptyState
+          icon={<Tag />}
+          title="No typologies found"
+          description="Agent typologies will appear here once they are created."
+        />
       )}
     </div>
   );

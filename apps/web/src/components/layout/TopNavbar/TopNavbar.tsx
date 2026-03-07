@@ -19,6 +19,7 @@ import { logoutAction } from '@/actions/auth';
 import { NotificationBell } from '@/components/notifications';
 import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
 import { useAuthUser } from '@/hooks/useAuthUser';
+import { useScrollState } from '@/hooks/useScrollState';
 import { cn } from '@/lib/utils';
 
 import { MobileNavDrawer } from '../MobileNavDrawer';
@@ -144,16 +145,7 @@ export interface TopNavbarProps {
 
 export function TopNavbar({ className }: TopNavbarProps) {
   const { user } = useAuthUser();
-  const [scrolled, setScrolled] = useState(false);
-
-  // Shadow on scroll
-  useEffect(() => {
-    function onScroll() {
-      setScrolled(window.scrollY > 4);
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const { isScrolled: scrolled } = useScrollState({ scrolledThreshold: 4 });
 
   return (
     <>

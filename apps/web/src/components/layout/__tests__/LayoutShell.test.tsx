@@ -71,6 +71,10 @@ vi.mock('@/components/layout/MobileTabBar', () => ({
   MobileTabBar: () => <div data-testid="mobile-tab-bar" />,
 }));
 
+vi.mock('@/hooks/useBottomPadding', () => ({
+  useBottomPadding: () => 'pb-24',
+}));
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function renderShell(props: Partial<LayoutShellProps> = {}) {

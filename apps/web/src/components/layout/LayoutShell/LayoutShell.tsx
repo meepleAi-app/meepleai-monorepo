@@ -41,6 +41,7 @@ import { type ReactNode, Suspense } from 'react';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
+import { useBottomPadding } from '@/hooks/useBottomPadding';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
@@ -84,6 +85,7 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
   const { isImpersonating, impersonatedUser, isLoading, endImpersonation } =
     useImpersonationStore();
   const { isCollapsed, toggle } = useSidebarState();
+  const bottomPadding = useBottomPadding();
 
   return (
     <div className="min-h-screen flex flex-col bg-background" data-testid="layout-shell">
@@ -123,9 +125,8 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
             'flex-1',
             // Horizontal padding unless fullWidth
             !fullWidth && 'px-4 sm:px-6 lg:px-8',
-            // Bottom padding: mobile clears MobileTabBar (72px) + FloatingActionBar + gap
-            // Desktop clears only FloatingActionBar pill
-            'pb-36 md:pb-24',
+            // Dynamic bottom padding based on visible bottom bars
+            bottomPadding,
             // Top spacing
             'pt-4',
             className

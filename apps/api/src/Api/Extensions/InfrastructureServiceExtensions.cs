@@ -272,23 +272,7 @@ internal static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true
         });
 
-        // Qdrant client with optimized settings
-        services.AddHttpClient("Qdrant", client =>
-        {
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-            var qdrantUrl = configuration["QdrantUrl"] ?? "http://localhost:6333";
-#pragma warning restore S1075
-            client.BaseAddress = new Uri(qdrantUrl);
-            var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
-            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-        })
-        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
-            MaxConnectionsPerServer = 30, // Higher for vector DB operations
-            EnableMultipleHttp2Connections = true
-        });
+        // Qdrant HttpClient removed — pgvector is the sole vector store (no external Qdrant needed)
 
         // ADR-016 Phase 2: HuggingFace embedding client
         services.AddHttpClient("HuggingFace", client =>

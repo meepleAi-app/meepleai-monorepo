@@ -65,7 +65,7 @@ internal static class SecretDefinitions
         ),
 
         ["qdrant"] = new(
-            SecretLevel.Critical,
+            SecretLevel.Optional, // Qdrant replaced by pgvector — secret no longer required
             "QDRANT_API_KEY"
         ),
 
@@ -84,7 +84,7 @@ internal static class SecretDefinitions
         ),
 
         ["embedding-service"] = new(
-            SecretLevel.Critical,
+            SecretLevel.Optional, // Embedding via Ollama — Python service no longer required
             "EMBEDDING_SERVICE_API_KEY"
         ),
 
@@ -97,7 +97,7 @@ internal static class SecretDefinitions
         ),
 
         ["unstructured-service"] = new(
-            SecretLevel.Important,
+            SecretLevel.Optional, // PDF extraction via Docnet — Python service no longer required
             "UNSTRUCTURED_API_KEY"
         ),
 

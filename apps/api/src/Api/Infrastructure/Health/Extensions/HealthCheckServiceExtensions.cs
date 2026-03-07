@@ -17,8 +17,9 @@ public static class HealthCheckServiceExtensions
     public static IHealthChecksBuilder AddComprehensiveHealthChecks(this IHealthChecksBuilder builder)
     {
         // Core Infrastructure (Critical)
-        // PostgreSQL, Redis, Qdrant already registered in ObservabilityServiceExtensions
-        // with tags: "db", "cache", "vector" - we add critical tag in ObservabilityServiceExtensions
+        // PostgreSQL, Redis already registered in ObservabilityServiceExtensions
+        // with tags: "db", "cache" - we add critical tag in ObservabilityServiceExtensions
+        // Note: Qdrant removed — pgvector is the sole vector store (covered by Postgres health check)
 
         // AI Services
         builder.AddCheck<OpenRouterHealthCheck>(

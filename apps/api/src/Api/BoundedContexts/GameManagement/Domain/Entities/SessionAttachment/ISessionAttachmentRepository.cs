@@ -19,5 +19,7 @@ internal interface ISessionAttachmentRepository
 
     Task AddAsync(SessionAttachment attachment, CancellationToken cancellationToken = default);
 
+    Task<bool> SoftDeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

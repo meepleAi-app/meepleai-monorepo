@@ -72,6 +72,20 @@ internal sealed class SessionAttachmentRepository : ISessionAttachmentRepository
         await _dbContext.SessionAttachments.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<bool> SoftDeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.SessionAttachments
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (entity == null)
+            return false;
+
+        entity.IsDeleted = true;
+        entity.DeletedAt = DateTime.UtcNow;
+        return true;
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

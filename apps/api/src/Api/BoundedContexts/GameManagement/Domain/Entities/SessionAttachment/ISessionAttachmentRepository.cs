@@ -21,5 +21,8 @@ internal interface ISessionAttachmentRepository
 
     Task<bool> SoftDeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<SessionAttachment>> GetExpiredAttachmentsAsync(
+        DateTime cutoffDate, int batchSize, CancellationToken cancellationToken = default);
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

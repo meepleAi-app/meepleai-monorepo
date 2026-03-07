@@ -16,4 +16,10 @@ internal interface IGameToolkitRepository : IRepository<Domain.Entities.GameTool
 
     Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetPublishedAsync(
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetApprovedTemplatesAsync(
+        Domain.Enums.TemplateCategory? category, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetPendingReviewAsync(
+        CancellationToken cancellationToken = default);
 }

@@ -20,7 +20,7 @@
  * Shows "Accesso negato" if the current user is not the owner.
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import {
   ChevronLeft,
@@ -36,10 +36,13 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { AiToolkitGenerator } from '@/components/toolkit/AiToolkitGenerator';
 import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { useApiClient } from '@/lib/api/context';
+import type { AiToolkitSuggestion } from '@/lib/api/schemas/toolkit.schemas';
 import { usePrivateToolkitEditor } from '@/lib/hooks/usePrivateToolkitEditor';
 import type {
   CardToolDto,
@@ -706,6 +709,7 @@ function ToolListItem({
 
 function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: string }) {
   const router = useRouter();
+  const { gameToolkit: gameToolkitClient } = useApiClient();
   const {
     toolkit,
     isLoading,
@@ -729,6 +733,45 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
   const [showCardForm, setShowCardForm] = useState(false);
   const [showTimerForm, setShowTimerForm] = useState(false);
   const [showCounterForm, setShowCounterForm] = useState(false);
+
+  // AI generator state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [showAiGenerator, setShowAiGenerator] = useState(true);
+
+  const handleAiGenerate = useCallback(
+    async (gameId: string): Promise<AiToolkitSuggestion> => {
+      setIsGenerating(true);
+      try {
+        return await gameToolkitClient.generateToolkitFromKb(gameId);
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    [gameToolkitClient]
+  );
+
+  const handleAiApply = useCallback(
+    async (suggestion: AiToolkitSuggestion): Promise<void> => {
+      setIsApplying(true);
+      try {
+        await gameToolkitClient.applyAiSuggestion(privateGameId, toolkit?.id ?? null, suggestion);
+        toast.success('Suggerimento AI applicato');
+        // Reload page to reflect the new toolkit state
+        router.refresh();
+      } catch (err) {
+        toast.error("Errore nell'applicazione del suggerimento AI");
+        throw err;
+      } finally {
+        setIsApplying(false);
+      }
+    },
+    [gameToolkitClient, privateGameId, toolkit?.id, router]
+  );
+
+  const handleAiDismiss = useCallback(() => {
+    setShowAiGenerator(false);
+  }, []);
 
   const handleBack = () => router.push('/library/private');
 
@@ -894,6 +937,18 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
     <div className="container mx-auto p-6 max-w-4xl space-y-6">
       {header}
       {errorBanner}
+
+      {/* AI Toolkit Generator */}
+      {showAiGenerator && (
+        <AiToolkitGenerator
+          gameId={privateGameId}
+          onGenerate={handleAiGenerate}
+          onApply={handleAiApply}
+          onDismiss={handleAiDismiss}
+          isGenerating={isGenerating}
+          isApplying={isApplying}
+        />
+      )}
 
       {/* 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

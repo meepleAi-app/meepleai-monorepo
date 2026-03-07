@@ -489,6 +489,7 @@ v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
+v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard

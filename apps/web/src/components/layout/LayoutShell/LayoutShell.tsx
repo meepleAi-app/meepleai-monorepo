@@ -47,6 +47,7 @@ import { useImpersonationStore } from '@/store/impersonation';
 
 import { FloatingActionBar } from '../FloatingActionBar';
 import { MiniNav } from '../MiniNav';
+import { MobileTabBar } from '../MobileTabBar';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { TopNavbar } from '../TopNavbar';
 
@@ -122,8 +123,9 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
             'flex-1',
             // Horizontal padding unless fullWidth
             !fullWidth && 'px-4 sm:px-6 lg:px-8',
-            // Bottom padding to clear FloatingActionBar pill (h≈52px + gap-6 = 80px)
-            'pb-24',
+            // Bottom padding: mobile clears MobileTabBar (72px) + FloatingActionBar + gap
+            // Desktop clears only FloatingActionBar pill
+            'pb-36 md:pb-24',
             // Top spacing
             'pt-4',
             className
@@ -135,6 +137,9 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
         {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ───── */}
         <FloatingActionBar />
       </div>
+
+      {/* ── Level 0: MobileTabBar (persistent mobile navigation) ───────── */}
+      <MobileTabBar />
 
       {/* Card Stack Panel — "Carte in Mano" */}
       <CardStackPanel />

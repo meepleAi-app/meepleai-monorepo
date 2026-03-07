@@ -38,21 +38,23 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
   const { actionBarActions } = useNavigation();
 
   // Only render visible actions
-  const visibleActions = actionBarActions.filter((a) => !a.hidden);
+  const visibleActions = actionBarActions.filter(a => !a.hidden);
 
   // Hide when no actions configured
   if (visibleActions.length === 0) return null;
 
   // Separate primary from secondary for visual hierarchy
-  const primaryActions = visibleActions.filter((a) => a.variant === 'primary');
-  const otherActions = visibleActions.filter((a) => a.variant !== 'primary');
+  const primaryActions = visibleActions.filter(a => a.variant === 'primary');
+  const otherActions = visibleActions.filter(a => a.variant !== 'primary');
 
   return (
     <div
       data-testid={NAV_TEST_IDS.floatingActionBar}
       className={cn(
         // Positioning: fixed bottom-center
-        'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
+        // On mobile: above MobileTabBar (72px + 1.5rem gap)
+        'fixed left-1/2 -translate-x-1/2 z-50',
+        'bottom-[calc(72px+1.5rem)] md:bottom-6',
         // Shape
         'rounded-2xl',
         // Glassmorphism card
@@ -69,7 +71,7 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
       aria-label="Azioni contestuali"
     >
       {/* Secondary / ghost actions first (left side) */}
-      {otherActions.map((action) => (
+      {otherActions.map(action => (
         <ActionButton key={action.id} action={action} compact />
       ))}
 
@@ -79,7 +81,7 @@ export function FloatingActionBar({ className }: FloatingActionBarProps) {
       )}
 
       {/* Primary actions (right side, filled) */}
-      {primaryActions.map((action) => (
+      {primaryActions.map(action => (
         <ActionButton key={action.id} action={action} />
       ))}
     </div>
@@ -103,11 +105,12 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
   const isDisabled = action.disabled;
   const tooltipId = `action-tooltip-${action.id}`;
 
-  const tooltipText = isDisabled && action.disabledTooltip
-    ? action.disabledTooltip
-    : !compact
-      ? undefined
-      : action.label;
+  const tooltipText =
+    isDisabled && action.disabledTooltip
+      ? action.disabledTooltip
+      : !compact
+        ? undefined
+        : action.label;
 
   function handleMouseEnter() {
     if (!tooltipText) return;
@@ -125,11 +128,7 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
   }
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       <button
         type="button"
         aria-label={action.label}
@@ -164,12 +163,15 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
             isDisabled && 'opacity-50 cursor-not-allowed hover:bg-destructive/10',
           ],
           // Ghost (default for compact)
-          !isPrimary && !isDestructive && action.variant !== 'secondary' && [
-            'text-foreground/70',
-            'p-2.5',
-            'hover:bg-muted hover:text-foreground active:scale-95',
-            isDisabled && 'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground/70',
-          ]
+          !isPrimary &&
+            !isDestructive &&
+            action.variant !== 'secondary' && [
+              'text-foreground/70',
+              'p-2.5',
+              'hover:bg-muted hover:text-foreground active:scale-95',
+              isDisabled &&
+                'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground/70',
+            ]
         )}
       >
         <Icon className={cn('shrink-0', isPrimary ? 'h-4 w-4' : 'h-4 w-4')} />
@@ -192,9 +194,7 @@ function ActionButton({ action, compact = false }: ActionButtonProps) {
               'bg-primary text-primary-foreground'
             )}
           >
-            {typeof action.badge === 'number' && action.badge > 99
-              ? '99+'
-              : action.badge}
+            {typeof action.badge === 'number' && action.badge > 99 ? '99+' : action.badge}
           </span>
         )}
       </button>

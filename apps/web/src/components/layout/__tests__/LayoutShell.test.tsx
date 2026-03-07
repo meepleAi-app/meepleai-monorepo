@@ -67,6 +67,10 @@ vi.mock('@/components/layout/FloatingActionBar', () => ({
   FloatingActionBar: () => <div data-testid="floating-action-bar" />,
 }));
 
+vi.mock('@/components/layout/MobileTabBar', () => ({
+  MobileTabBar: () => <div data-testid="mobile-tab-bar" />,
+}));
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function renderShell(props: Partial<LayoutShellProps> = {}) {

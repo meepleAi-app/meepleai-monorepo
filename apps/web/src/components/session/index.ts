@@ -44,6 +44,8 @@ export type {
 } from './PhotoUploadModal';
 export { SessionPhotoGallery } from './SessionPhotoGallery';
 export type { SessionPhotoGalleryProps, SessionAttachmentDetail } from './SessionPhotoGallery';
+export { ResumePhotoReview } from './ResumePhotoReview';
+export type { ResumePhotoReviewProps } from './ResumePhotoReview';
 
 export type {
   Participant,

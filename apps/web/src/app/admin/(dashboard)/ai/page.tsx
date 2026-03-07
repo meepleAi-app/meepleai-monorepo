@@ -1,16 +1,25 @@
 /**
  * Admin AI Hub
  * Issue #5040 — Consolidate Admin Routes
+ * Issue #5048 — Admin AI Hub Migration
  *
  * Canonical entry for all AI/agent-related admin pages.
  * Tabs: agents · typologies · definitions · lab · prompts · models · requests · rag
- *
- * TODO (Issue #5048): Migrate full content with tab-based layout + ActionBar.
  */
+
+import { Suspense } from 'react';
 
 import Link from 'next/link';
 
+import { AgentsTab } from './AgentsTab';
+import { AiLabTab } from './AiLabTab';
+import { DefinitionsTab } from './DefinitionsTab';
+import { ModelsTab } from './ModelsTab';
 import { AdminAiNavConfig } from './NavConfig';
+import { PromptsTab } from './PromptsTab';
+import { RagTab } from './RagTab';
+import { RequestsTab } from './RequestsTab';
+import { TypologiesTab } from './TypologiesTab';
 
 interface AdminAiPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
@@ -27,23 +36,72 @@ const TABS = [
   { id: 'rag', label: 'RAG', href: '/admin/ai?tab=rag' },
 ] as const;
 
-/** Old sub-page links available while full migration is pending */
-const SUB_PAGES = [
-  { label: 'Agent Catalog', href: '/admin/agents' },
-  { label: 'Agent Definitions', href: '/admin/agents/definitions' },
-  { label: 'Agent Typologies', href: '/admin/agent-typologies' },
-  { label: 'AI Lab', href: '/admin/ai-lab' },
-  { label: 'Prompts', href: '/admin/prompts' },
-  { label: 'AI Models', href: '/admin/ai-models' },
-  { label: 'AI Requests', href: '/admin/ai-requests' },
-  { label: 'RAG', href: '/admin/rag' },
-  { label: 'RAG Executions', href: '/admin/rag-executions' },
-  { label: 'Strategies', href: '/admin/strategies' },
-];
+type TabId = (typeof TABS)[number]['id'];
+
+function TabSkeleton() {
+  return (
+    <div className="h-[600px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
+  );
+}
+
+function renderTabContent(tab: TabId) {
+  switch (tab) {
+    case 'agents':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <AgentsTab />
+        </Suspense>
+      );
+    case 'typologies':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <TypologiesTab />
+        </Suspense>
+      );
+    case 'definitions':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <DefinitionsTab />
+        </Suspense>
+      );
+    case 'lab':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <AiLabTab />
+        </Suspense>
+      );
+    case 'prompts':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <PromptsTab />
+        </Suspense>
+      );
+    case 'models':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <ModelsTab />
+        </Suspense>
+      );
+    case 'requests':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <RequestsTab />
+        </Suspense>
+      );
+    case 'rag':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <RagTab />
+        </Suspense>
+      );
+    default:
+      return null;
+  }
+}
 
 export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
   const params = await searchParams;
-  const tab = params.tab ?? 'agents';
+  const tab = (params.tab ?? 'agents') as TabId;
 
   return (
     <div className="space-y-6">
@@ -74,29 +132,8 @@ export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
         ))}
       </div>
 
-      {/* Placeholder — full content migrated in Issue #5048 */}
-      <div className="rounded-lg border border-dashed border-border/60 p-8 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Tab: <span className="font-mono">{tab}</span>
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Full tab content will be available after Issue #5048 (Admin Page Migrations).
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Access via individual pages below until migration is complete:
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {SUB_PAGES.map(p => (
-            <Link
-              key={p.href}
-              href={p.href}
-              className="rounded-md border border-border/60 px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-            >
-              {p.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+      {/* Tab content */}
+      {renderTabContent(tab)}
     </div>
   );
 }

@@ -56,6 +56,9 @@ internal static class GameManagementServiceExtensions
         // Issue #3891: Register play record permission checker
         services.AddScoped<PlayRecordPermissionChecker>();
 
+        // Issue #5361: Session attachment service (upload, thumbnail, S3)
+        services.AddScoped<ISessionAttachmentService, SessionAttachmentService>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

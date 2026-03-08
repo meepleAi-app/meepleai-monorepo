@@ -12,6 +12,7 @@ import { Suspense } from 'react';
 import { Bell, Database, HardDrive, Layers, Terminal, TestTube, Download } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { AlertsTab } from './AlertsTab';
 import { CacheTab } from './CacheTab';
@@ -130,6 +131,7 @@ export default async function AdminMonitorPage({ searchParams }: AdminMonitorPag
       </div>
 
       <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="monitor" defaultTab="alerts" />
 
       <div className="pt-1">{renderTabContent(tab)}</div>
     </div>

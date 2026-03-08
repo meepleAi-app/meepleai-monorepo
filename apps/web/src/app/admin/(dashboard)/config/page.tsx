@@ -12,6 +12,7 @@ import { Suspense } from 'react';
 import { Settings, Gauge, Flag, ShieldCheck } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { FeatureFlagsWrapper } from './FeatureFlagsWrapper';
 import { GeneralTab } from './GeneralTab';
@@ -98,6 +99,7 @@ export default async function AdminConfigPage({ searchParams }: AdminConfigPageP
       </div>
 
       <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="config" defaultTab="general" />
 
       <div className="pt-1">{renderTabContent(tab)}</div>
     </div>

@@ -97,9 +97,7 @@ describe('SessionStatsPage', () => {
     mockGetStatistics.mockResolvedValue(null);
     renderWithQuery(<SessionStatsPage />);
 
-    expect(
-      await screen.findByText(/No session data available/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/No session data available/)).toBeInTheDocument();
   });
 
   it('handles empty games list', async () => {

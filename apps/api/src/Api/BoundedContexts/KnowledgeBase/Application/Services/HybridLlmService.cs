@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -1082,15 +1083,16 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <summary>
-    /// Hardcoded fallback for backward compatibility
+    /// Fallback model when no DB configuration exists.
+    /// Uses AgentDefaults.DefaultModel (reads OPENROUTER_DEFAULT_MODEL env var).
     /// </summary>
     private static string GetHardcodedDefaultModel(string providerName)
     {
         return providerName.ToLowerInvariant() switch
         {
-            "ollama" => "llama3.3:70b", // Free tier default
-            "openrouter" => "meta-llama/llama-3.3-70b-instruct:free", // Free tier default
-            _ => "llama3.3:70b" // Safe default
+            "ollama" => AgentDefaults.OllamaFallbackModel,
+            "openrouter" => AgentDefaults.DefaultModel,
+            _ => AgentDefaults.OllamaFallbackModel
         };
     }
 

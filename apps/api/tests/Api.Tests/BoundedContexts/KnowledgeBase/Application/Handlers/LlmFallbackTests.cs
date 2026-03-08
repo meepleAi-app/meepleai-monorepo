@@ -96,7 +96,7 @@ public sealed class LlmFallbackTests : IDisposable
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var freeModel = AgentDefaults.DefaultFreeModel;
+        var freeModel = AgentDefaults.DefaultModel;
         SeedAgent(agentId, freeModel);
 
         var callCount = 0;
@@ -142,7 +142,7 @@ public sealed class LlmFallbackTests : IDisposable
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var freeModel = AgentDefaults.DefaultFreeModel;
+        var freeModel = AgentDefaults.DefaultModel;
         SeedAgent(agentId, freeModel);
 
         var callCount = 0;
@@ -310,7 +310,7 @@ public sealed class LlmFallbackTests : IDisposable
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var model = AgentDefaults.DefaultFreeModel;
+        var model = AgentDefaults.DefaultModel;
         SeedAgent(agentId, model);
 
         var callCount = 0;
@@ -350,7 +350,7 @@ public sealed class LlmFallbackTests : IDisposable
     {
         // Arrange
         var agentId = Guid.NewGuid();
-        var model = AgentDefaults.DefaultFreeModel;
+        var model = AgentDefaults.DefaultModel;
         SeedAgent(agentId, model);
 
         _mockLlmService
@@ -386,7 +386,7 @@ public sealed class LlmFallbackTests : IDisposable
     {
         // Arrange: Use a free model and ensure all 3 attempts fail except the fallback
         var agentId = Guid.NewGuid();
-        var freeModel = AgentDefaults.DefaultFreeModel;
+        var freeModel = AgentDefaults.DefaultModel;
         SeedAgent(agentId, freeModel);
 
         var callCount = 0;

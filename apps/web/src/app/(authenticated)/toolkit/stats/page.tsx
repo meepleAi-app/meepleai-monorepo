@@ -1,14 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  BarChart3,
-  Clock,
-  Gamepad2,
-  Trophy,
-  TrendingUp,
-  Loader2,
-} from 'lucide-react';
+import { BarChart3, Clock, Gamepad2, Trophy, TrendingUp, Loader2 } from 'lucide-react';
+
 import { api } from '@/lib/api';
 
 export default function SessionStatsPage() {
@@ -34,10 +28,7 @@ export default function SessionStatsPage() {
     );
   }
 
-  const maxMonthly = Math.max(
-    ...data.monthlyActivity.map((m) => m.sessionCount),
-    1,
-  );
+  const maxMonthly = Math.max(...data.monthlyActivity.map(m => m.sessionCount), 1);
 
   return (
     <div className="space-y-8 p-6">
@@ -49,16 +40,11 @@ export default function SessionStatsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
-        data-testid="kpi-cards"
-      >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3" data-testid="kpi-cards">
         <div className="rounded-xl border bg-white/70 p-5 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Gamepad2 className="h-5 w-5 text-amber-600" />
-            <span className="text-sm text-muted-foreground">
-              Total Sessions
-            </span>
+            <span className="text-sm text-muted-foreground">Total Sessions</span>
           </div>
           <p className="mt-2 text-3xl font-bold" data-testid="total-sessions">
             {data.totalSessions}
@@ -68,9 +54,7 @@ export default function SessionStatsPage() {
         <div className="rounded-xl border bg-white/70 p-5 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Trophy className="h-5 w-5 text-amber-600" />
-            <span className="text-sm text-muted-foreground">
-              Games Played
-            </span>
+            <span className="text-sm text-muted-foreground">Games Played</span>
           </div>
           <p className="mt-2 text-3xl font-bold" data-testid="total-games">
             {data.totalGamesPlayed}
@@ -80,9 +64,7 @@ export default function SessionStatsPage() {
         <div className="rounded-xl border bg-white/70 p-5 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Clock className="h-5 w-5 text-amber-600" />
-            <span className="text-sm text-muted-foreground">
-              Avg Duration
-            </span>
+            <span className="text-sm text-muted-foreground">Avg Duration</span>
           </div>
           <p className="mt-2 text-3xl font-bold" data-testid="avg-duration">
             {data.averageSessionDuration}
@@ -93,14 +75,9 @@ export default function SessionStatsPage() {
       {/* Most Played Games */}
       {data.mostPlayedGames.length > 0 && (
         <div>
-          <h2 className="mb-3 font-quicksand text-lg font-semibold">
-            Most Played Games
-          </h2>
-          <div
-            className="space-y-2"
-            data-testid="most-played-list"
-          >
-            {data.mostPlayedGames.map((game) => (
+          <h2 className="mb-3 font-quicksand text-lg font-semibold">Most Played Games</h2>
+          <div className="space-y-2" data-testid="most-played-list">
+            {data.mostPlayedGames.map(game => (
               <div
                 key={game.gameId}
                 className="flex items-center justify-between rounded-lg border bg-white/50 px-4 py-3"
@@ -118,22 +95,11 @@ export default function SessionStatsPage() {
       {/* Monthly Activity */}
       {data.monthlyActivity.length > 0 && (
         <div>
-          <h2 className="mb-3 font-quicksand text-lg font-semibold">
-            Monthly Activity
-          </h2>
-          <div
-            className="flex items-end gap-2"
-            data-testid="monthly-chart"
-            style={{ height: 160 }}
-          >
-            {data.monthlyActivity.map((month) => (
-              <div
-                key={month.month}
-                className="flex flex-1 flex-col items-center gap-1"
-              >
-                <span className="text-xs font-medium">
-                  {month.sessionCount}
-                </span>
+          <h2 className="mb-3 font-quicksand text-lg font-semibold">Monthly Activity</h2>
+          <div className="flex items-end gap-2" data-testid="monthly-chart" style={{ height: 160 }}>
+            {data.monthlyActivity.map(month => (
+              <div key={month.month} className="flex flex-1 flex-col items-center gap-1">
+                <span className="text-xs font-medium">{month.sessionCount}</span>
                 <div
                   className="w-full rounded-t bg-amber-500"
                   style={{
@@ -141,9 +107,7 @@ export default function SessionStatsPage() {
                     minHeight: 4,
                   }}
                 />
-                <span className="text-[10px] text-muted-foreground">
-                  {month.month.slice(5)}
-                </span>
+                <span className="text-[10px] text-muted-foreground">{month.month.slice(5)}</span>
               </div>
             ))}
           </div>
@@ -153,9 +117,7 @@ export default function SessionStatsPage() {
       {/* Recent Score Trends */}
       {data.recentScoreTrends.length > 0 && (
         <div>
-          <h2 className="mb-3 font-quicksand text-lg font-semibold">
-            Recent Scores
-          </h2>
+          <h2 className="mb-3 font-quicksand text-lg font-semibold">Recent Scores</h2>
           <div className="space-y-1" data-testid="score-trends">
             {data.recentScoreTrends.slice(0, 10).map((score, i) => (
               <div
@@ -166,9 +128,7 @@ export default function SessionStatsPage() {
                   <TrendingUp className="h-3 w-3 text-emerald-600" />
                   {score.gameName}
                 </span>
-                <span className="font-mono font-semibold">
-                  {score.finalScore}
-                </span>
+                <span className="font-mono font-semibold">{score.finalScore}</span>
               </div>
             ))}
           </div>

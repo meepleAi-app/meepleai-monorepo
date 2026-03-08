@@ -58,7 +58,7 @@ internal sealed class GetAgentConfigurationQueryHandler
             return new AgentConfigurationDto(
                 Id: Guid.Empty,
                 AgentId: request.AgentId,
-                LlmModel: AgentDefaults.DefaultFreeModel,
+                LlmModel: AgentDefaults.DefaultModel,
                 LlmProvider: AgentDefaults.DefaultLlmProvider.ToString(),
                 Temperature: AgentDefaults.DefaultTemperature,
                 MaxTokens: AgentDefaults.DefaultMaxTokens,

@@ -124,7 +124,8 @@ internal class CreateDocumentCollectionCommandHandler : ICommandHandler<CreateDo
                     ProgressPercentage: pdfDoc.ProgressPercentage,
                     RetryCount: pdfDoc.RetryCount,
                     MaxRetries: pdfDoc.MaxRetries,
-                    DocumentCategory: pdfDoc.DocumentCategory.ToString()
+                    DocumentCategory: pdfDoc.DocumentCategory.ToString(),
+                    BaseDocumentId: pdfDoc.BaseDocumentId
                 ) : null
             ));
         }

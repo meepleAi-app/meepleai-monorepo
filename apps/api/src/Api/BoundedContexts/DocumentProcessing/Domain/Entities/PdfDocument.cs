@@ -61,6 +61,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #5443: Document classification for pipeline routing
     public DocumentCategory DocumentCategory { get; private set; }
 
+    // Issue #5444: Self-referential FK for expansion/errata linkage to base rulebook
+    public Guid? BaseDocumentId { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -160,7 +163,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         DateTime? embeddingStartedAt = null,
         DateTime? indexingStartedAt = null,
         string? contentHash = null,
-        DocumentCategory? documentCategory = null)
+        DocumentCategory? documentCategory = null,
+        Guid? baseDocumentId = null)
     {
         var document = new PdfDocument
         {
@@ -210,7 +214,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ContentHash = contentHash,
 
             // Issue #5443: Document classification for pipeline routing
-            DocumentCategory = documentCategory ?? DocumentCategory.Rulebook
+            DocumentCategory = documentCategory ?? DocumentCategory.Rulebook,
+
+            // Issue #5444: Base document linkage
+            BaseDocumentId = baseDocumentId
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -493,6 +500,30 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         ContentHash = hash;
     }
 
+    /// <summary>
+    /// Links this document to a base rulebook document.
+    /// Issue #5444: Expansion/errata documents can reference their base rulebook.
+    /// </summary>
+    public void LinkToBaseDocument(Guid baseDocumentId)
+    {
+        if (baseDocumentId == Guid.Empty)
+            throw new ArgumentException("Base document ID cannot be empty", nameof(baseDocumentId));
+
+        if (baseDocumentId == Id)
+            throw new ArgumentException("A document cannot reference itself as base document", nameof(baseDocumentId));
+
+        BaseDocumentId = baseDocumentId;
+    }
+
+    /// <summary>
+    /// Removes the link to a base document.
+    /// Issue #5444: Allows unlinking from base rulebook.
+    /// </summary>
+    public void UnlinkBaseDocument()
+    {
+        BaseDocumentId = null;
+    }
+
     // Issue #2029: Update detected language after processing
     public void UpdateLanguage(LanguageCode languageCode)
     {
@@ -603,6 +634,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
             // Issue #5443: Copy document category
             DocumentCategory = source.DocumentCategory,
+
+            // Issue #5444: Copy base document linkage
+            BaseDocumentId = source.BaseDocumentId,
 
             // Issue #4219: Copy timing fields for accurate metrics
             UploadingStartedAt = source.UploadingStartedAt,

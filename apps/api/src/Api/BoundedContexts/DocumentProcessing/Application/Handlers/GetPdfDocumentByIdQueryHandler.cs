@@ -42,7 +42,8 @@ internal class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentById
             CanRetry: doc.CanRetry(),
             ErrorCategory: doc.ErrorCategory?.ToString(),
             ProcessingError: doc.ProcessingError,
-            DocumentCategory: doc.DocumentCategory.ToString()
+            DocumentCategory: doc.DocumentCategory.ToString(),
+            BaseDocumentId: doc.BaseDocumentId
         );
     }
 }

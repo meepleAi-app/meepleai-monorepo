@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Middleware.Exceptions;
@@ -107,14 +108,18 @@ internal sealed class AnalyzeRulebookCommandHandler
                 command.PdfDocumentId);
         }
 
-        // 3. Route to sync/async based on content size (Issue #2454)
-        var isLargeRulebook = rulebookContent.Length > _options.LargeRulebookThreshold;
+        // 3. Route to sync/async based on content complexity (Issue #5451)
+        var complexity = ContentComplexityScore.ComputeFromText(rulebookContent);
 
-        if (isLargeRulebook)
+        _logger.LogInformation(
+            "Content complexity for PDF {PdfId}: {Complexity}",
+            command.PdfDocumentId, complexity);
+
+        if (complexity.Decision == RoutingDecision.Background)
         {
             _logger.LogInformation(
-                "Large rulebook detected ({Length} chars > {Threshold}), scheduling background analysis",
-                rulebookContent.Length, _options.LargeRulebookThreshold);
+                "Complex rulebook detected (score={Score:F4} > 0.4), scheduling background analysis",
+                complexity.Score);
 
             return await ScheduleBackgroundAnalysisAsync(
                 command.SharedGameId,
@@ -126,8 +131,8 @@ internal sealed class AnalyzeRulebookCommandHandler
         }
 
         _logger.LogInformation(
-            "Small rulebook ({Length} chars <= {Threshold}), using synchronous analysis",
-            rulebookContent.Length, _options.LargeRulebookThreshold);
+            "Simple rulebook (score={Score:F4} <= 0.4), using synchronous analysis",
+            complexity.Score);
 
         // 3b. Synchronous analysis for small rulebooks (existing MVP flow)
         var analysisResult = await _rulebookAnalyzer.AnalyzeAsync(

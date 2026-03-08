@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/primitives/button';
 
 import { BulkActionsBar } from './bulk-actions-bar';
 import { JobDetailPanel } from './job-detail-panel';
+import { MetricsDashboard } from './metrics-dashboard';
 import { QueueCapacityIndicator } from './queue-capacity-indicator';
 import { QueueControlBar } from './queue-control-bar';
 import { QueueFiltersBar } from './queue-filters';
@@ -122,6 +123,9 @@ export function QueueDashboardClient({ gameId }: { gameId?: string }) {
           <JobDetailPanel job={jobDetail} isLoading={isDetailLoading} />
         </div>
       </div>
+
+      {/* Metrics Dashboard */}
+      <MetricsDashboard />
     </div>
   );
 }

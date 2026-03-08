@@ -180,6 +180,36 @@ export async function getQueueStatus(): Promise<QueueStatusDto> {
   return result!;
 }
 
+// ── Dashboard Metrics (Issue #5459) ──────────────────────────────────
+
+export interface PhaseTimingDto {
+  phase: string;
+  avgDurationSeconds: number;
+  minDurationSeconds: number;
+  maxDurationSeconds: number;
+  sampleCount: number;
+}
+
+export interface DashboardMetricsDto {
+  phaseTimings: PhaseTimingDto[];
+  totalProcessed: number;
+  totalFailed: number;
+  failureRatePercent: number;
+  avgTotalDurationSeconds: number;
+  period: string;
+}
+
+export type MetricsPeriod = '24h' | '7d' | '30d';
+
+export async function getDashboardMetrics(
+  period: MetricsPeriod = '24h'
+): Promise<DashboardMetricsDto> {
+  const result = await apiClient.get<DashboardMetricsDto>(
+    `/api/v1/admin/queue/metrics?period=${period}`
+  );
+  return result!;
+}
+
 // ── React Query Hooks ──────────────────────────────────────────────────
 
 export function useQueueList(filters: QueueFilters, sseConnected: boolean = false) {
@@ -239,5 +269,14 @@ export function useQueueStatus() {
     queryFn: getQueueStatus,
     staleTime: 10_000,
     refetchInterval: 15_000,
+  });
+}
+
+export function useDashboardMetrics(period: MetricsPeriod = '24h') {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'metrics', period],
+    queryFn: () => getDashboardMetrics(period),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 }

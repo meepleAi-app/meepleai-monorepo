@@ -7,9 +7,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain;
 internal static class AgentDefaults
 {
     /// <summary>
-    /// Default free-tier model (zero cost via OpenRouter).
+    /// Default OpenRouter model. Reads from OPENROUTER_DEFAULT_MODEL env var at startup.
+    /// Falls back to the paid Llama 3.3 70B model (not the :free variant which is rate-limited).
     /// </summary>
-    public const string DefaultFreeModel = "meta-llama/llama-3.3-70b-instruct:free";
+    public static readonly string DefaultModel =
+        Environment.GetEnvironmentVariable("OPENROUTER_DEFAULT_MODEL")
+        ?? "meta-llama/llama-3.3-70b-instruct";
 
     /// <summary>
     /// Default LLM provider: 0 = OpenRouter, 1 = Ollama.

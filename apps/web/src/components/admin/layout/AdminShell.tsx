@@ -11,6 +11,7 @@ import { NavigationProvider } from '@/context/NavigationContext';
 import { cn } from '@/lib/utils';
 
 import { AdminContextualSidebar } from './AdminContextualSidebar';
+import { AdminErrorBoundary } from './AdminErrorBoundary';
 import { AdminMobileNav } from './AdminMobileNav';
 import { AdminMobileTabBar } from './AdminMobileTabBar';
 import { AdminTopNav } from './AdminTopNav';
@@ -65,7 +66,7 @@ export function AdminShell({ children, badges = {}, userName, userEmail }: Admin
               />
 
               <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {children}
+                <AdminErrorBoundary>{children}</AdminErrorBoundary>
               </div>
 
               {/* NavActionBar (L3) — contextual actions registered by admin hub pages */}

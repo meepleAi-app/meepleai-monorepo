@@ -2,7 +2,9 @@
     email admin@meepleai.com
 }
 
-localhost, :80 {
+# Production: set SITE_ADDRESS env var (e.g. meepleai.com)
+# Development: defaults to localhost:80
+{$SITE_ADDRESS:localhost, :80} {
     handle /api/* {
         reverse_proxy api:8080
     }

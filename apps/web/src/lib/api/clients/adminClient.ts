@@ -181,6 +181,7 @@ import {
   type GetLedgerSummaryParams,
   type ExportLedgerParams,
 } from '../schemas/financial-ledger.schemas';
+import * as MechanicExtractorSchemas from '../schemas/mechanic-extractor.schemas';
 import {
   ResourceForecastEstimationResultSchema,
   ResourceForecastsResponseSchema,
@@ -198,6 +199,7 @@ import {
 } from '../schemas/tier-strategy.schemas';
 
 import type { HttpClient } from '../core/httpClient';
+import type * as MechanicExtractorTypes from '../schemas/mechanic-extractor.schemas';
 
 // ============================================================================
 // Route Constants — import in tests to avoid magic strings
@@ -2443,6 +2445,83 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         ImportBggExpansionsResponseSchema
       );
       if (!result) throw new Error('Failed to import BGG expansions');
+      return result;
+    },
+
+    // ========== Mechanic Extractor (Variant C Workflow) ==========
+
+    /**
+     * Get existing mechanic draft for a game+PDF pair.
+     * GET /api/v1/admin/mechanic-extractor/draft?sharedGameId=...&pdfDocumentId=...
+     */
+    async getMechanicDraft(
+      sharedGameId: string,
+      pdfDocumentId: string
+    ): Promise<MechanicExtractorTypes.MechanicDraftDto | null> {
+      return httpClient.get(
+        `/api/v1/admin/mechanic-extractor/draft?sharedGameId=${sharedGameId}&pdfDocumentId=${pdfDocumentId}`,
+        MechanicExtractorSchemas.MechanicDraftDtoSchema
+      );
+    },
+
+    /**
+     * Save (create or update) a mechanic draft — auto-save.
+     * POST /api/v1/admin/mechanic-extractor/draft
+     */
+    async saveMechanicDraft(
+      request: MechanicExtractorTypes.SaveMechanicDraftRequest
+    ): Promise<MechanicExtractorTypes.MechanicDraftDto> {
+      const result = await httpClient.post(
+        '/api/v1/admin/mechanic-extractor/draft',
+        request,
+        MechanicExtractorSchemas.MechanicDraftDtoSchema
+      );
+      if (!result) throw new Error('Failed to save mechanic draft');
+      return result;
+    },
+
+    /**
+     * Request AI assistance for a draft section.
+     * POST /api/v1/admin/mechanic-extractor/ai-assist
+     * CRITICAL: Only sends human notes to AI, never PDF content.
+     */
+    async aiAssistMechanicDraft(
+      request: MechanicExtractorTypes.AiAssistRequest
+    ): Promise<MechanicExtractorTypes.AiAssistResultDto> {
+      const result = await httpClient.post(
+        '/api/v1/admin/mechanic-extractor/ai-assist',
+        request,
+        MechanicExtractorSchemas.AiAssistResultDtoSchema
+      );
+      if (!result) throw new Error('AI assist failed');
+      return result;
+    },
+
+    /**
+     * Accept an AI-generated draft for a section.
+     * POST /api/v1/admin/mechanic-extractor/accept-draft
+     */
+    async acceptMechanicDraft(
+      request: MechanicExtractorTypes.AcceptDraftRequest
+    ): Promise<MechanicExtractorTypes.MechanicDraftDto> {
+      const result = await httpClient.post(
+        '/api/v1/admin/mechanic-extractor/accept-draft',
+        request,
+        MechanicExtractorSchemas.MechanicDraftDtoSchema
+      );
+      if (!result) throw new Error('Failed to accept draft');
+      return result;
+    },
+
+    /**
+     * Finalize a mechanic draft into a RulebookAnalysis entry.
+     * POST /api/v1/admin/mechanic-extractor/finalize
+     */
+    async finalizeMechanicAnalysis(
+      request: MechanicExtractorTypes.FinalizeRequest
+    ): Promise<unknown> {
+      const result = await httpClient.post('/api/v1/admin/mechanic-extractor/finalize', request);
+      if (!result) throw new Error('Failed to finalize mechanic analysis');
       return result;
     },
   };

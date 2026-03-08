@@ -61,6 +61,9 @@ internal static class AdministrationServiceExtensions
         // Issue #3693: Batch Job System repositories
         services.AddScoped<IBatchJobRepository, BatchJobRepository>();
 
+        // MVP Stack Optimization: Vector re-embedding service (e5-large → mxbai-embed-large migration)
+        services.AddScoped<VectorReembeddingService>();
+
         // ISSUE-2528: Orphaned task cleanup configuration and service
         services.Configure<OrphanedTaskCleanupOptions>(
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));

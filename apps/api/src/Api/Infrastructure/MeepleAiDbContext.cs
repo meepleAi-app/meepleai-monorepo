@@ -119,6 +119,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
+    public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management

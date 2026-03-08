@@ -428,6 +428,19 @@ function mapRawToPdfDocumentDto(raw: Record<string, unknown>): PdfDocumentDto {
     canRetry: Boolean(raw.canRetry ?? false),
     errorCategory: raw.errorCategory != null ? String(raw.errorCategory) : null,
     processingError: raw.processingError != null ? String(raw.processingError) : null,
+    documentCategory:
+      (raw.documentCategory as
+        | 'Rulebook'
+        | 'Expansion'
+        | 'Errata'
+        | 'QuickStart'
+        | 'Reference'
+        | 'PlayerAid'
+        | 'Other') ?? 'Rulebook',
+    baseDocumentId: raw.baseDocumentId != null ? String(raw.baseDocumentId) : null,
+    isActiveForRag: Boolean(raw.isActiveForRag ?? true),
+    hasAcceptedDisclaimer: Boolean(raw.hasAcceptedDisclaimer ?? false),
+    versionLabel: raw.versionLabel != null ? String(raw.versionLabel) : null,
   };
 }
 

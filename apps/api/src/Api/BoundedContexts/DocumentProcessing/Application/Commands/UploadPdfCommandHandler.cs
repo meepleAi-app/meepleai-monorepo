@@ -589,7 +589,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             DocumentCategory: pdfDoc.DocumentCategory,
             BaseDocumentId: pdfDoc.BaseDocumentId,
             IsActiveForRag: pdfDoc.IsActiveForRag,
-            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue
+            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue,
+            VersionLabel: pdfDoc.VersionLabel
         ));
     }
 
@@ -1492,7 +1493,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             DocumentCategory: pdfDoc.DocumentCategory,
             BaseDocumentId: pdfDoc.BaseDocumentId,
             IsActiveForRag: pdfDoc.IsActiveForRag,
-            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue
+            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue,
+            VersionLabel: pdfDoc.VersionLabel
         );
 
         return new PdfUploadResult(true, "PDF upload started successfully", documentDto);

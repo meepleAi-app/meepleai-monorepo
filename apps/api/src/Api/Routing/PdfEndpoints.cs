@@ -160,6 +160,12 @@ internal static class PdfEndpoints
         .RequireSession()
         .RequireAuthorization()
         .WithName("SetActiveForRag");
+
+        // Issue #5447: Reclassify document (category, base document, version label)
+        group.MapPatch("/documents/{pdfId:guid}/classify", HandleReclassifyDocument)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("ReclassifyDocument");
     }
 
     private static void MapProcessingStateEndpoints(RouteGroupBuilder group)
@@ -817,6 +823,24 @@ internal static class PdfEndpoints
         return Results.Ok(new { success = true, message = result.Message, isActive = request.IsActive });
     }
 
+    private static async Task<IResult> HandleReclassifyDocument(
+        Guid pdfId,
+        [FromBody] ReclassifyDocumentRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ReclassifyDocumentCommand(pdfId, request.Category, request.BaseDocumentId, request.VersionLabel), ct)
+            .ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            return Results.NotFound(new { error = result.Message });
+        }
+
+        return Results.Ok(new { success = true, message = result.Message, pdfId = result.PdfId });
+    }
+
     // Helpers
     private static (string gameId, PdfUploadMetadata? metadata, string? error) ParseUploadMetadata(IFormCollection form)
     {
@@ -1287,4 +1311,5 @@ internal record InitChunkedUploadRequest(Guid? GameId, string FileName, long Tot
 internal record CompleteChunkedUploadRequest(Guid SessionId);
 internal record SetPdfVisibilityRequest(bool IsPublic);
 internal record SetActiveForRagRequest(bool IsActive); // Issue #5446
+internal record ReclassifyDocumentRequest(string Category, Guid? BaseDocumentId, string? VersionLabel); // Issue #5447
 internal record ExtractBggGamesRequest(string PdfFilePath); // ISSUE-2513

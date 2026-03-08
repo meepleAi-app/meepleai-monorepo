@@ -45,7 +45,8 @@ internal class GetPdfDocumentByIdQueryHandler : IQueryHandler<GetPdfDocumentById
             DocumentCategory: doc.DocumentCategory.ToString(),
             BaseDocumentId: doc.BaseDocumentId,
             IsActiveForRag: doc.IsActiveForRag,
-            HasAcceptedDisclaimer: doc.HasAcceptedDisclaimer
+            HasAcceptedDisclaimer: doc.HasAcceptedDisclaimer,
+            VersionLabel: doc.VersionLabel
         );
     }
 }

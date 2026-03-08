@@ -107,7 +107,7 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
             "rulebook-analysis"
         };
 
-    private static RulebookAnalysisDto MapToDto(Domain.Entities.RulebookAnalysis analysis)
+    internal static RulebookAnalysisDto MapToDto(Domain.Entities.RulebookAnalysis analysis)
     {
         var victoryConditionsDto = analysis.VictoryConditions is not null
             ? new VictoryConditionsDto(
@@ -123,6 +123,14 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
 
         var phaseDtos = analysis.GamePhases
             .Select(p => new GamePhaseDto(p.Name, p.Description, p.Order, p.IsOptional))
+            .ToList();
+
+        var keyConceptDtos = analysis.KeyConcepts
+            .Select(kc => new KeyConceptDto(kc.Term, kc.Definition, kc.Category))
+            .ToList();
+
+        var generatedFaqDtos = analysis.GeneratedFaqs
+            .Select(f => new GeneratedFaqDto(f.Question, f.Answer, f.SourceSection, f.Confidence, f.Tags))
             .ToList();
 
         return new RulebookAnalysisDto(
@@ -141,6 +149,11 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
             analysis.IsActive,
             analysis.Source,
             analysis.AnalyzedAt,
-            analysis.CreatedBy);
+            analysis.CreatedBy,
+            keyConceptDtos,
+            generatedFaqDtos,
+            analysis.GameStateSchemaJson,
+            analysis.CompletionStatus.ToString(),
+            analysis.MissingSections.ToList());
     }
 }

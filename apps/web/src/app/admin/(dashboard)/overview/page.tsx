@@ -1,6 +1,8 @@
 import { BarChart3, Users, Gamepad2, BookOpen } from 'lucide-react';
 import { type Metadata } from 'next';
 
+import { QuickActionsWidget } from '@/components/admin/overview/QuickActionsWidget';
+
 export const metadata: Metadata = {
   title: 'Overview',
   description: 'Admin dashboard overview with platform stats and quick actions',
@@ -49,14 +51,7 @@ export default function OverviewPage() {
         <StatCard icon={BookOpen} label="Knowledge Base" description="Documents and vectors" />
       </div>
 
-      <div className="rounded-2xl border border-dashed border-border/50 bg-white/30 dark:bg-zinc-800/20 backdrop-blur-sm p-8 text-center">
-        <p className="font-quicksand text-sm font-semibold text-foreground">
-          Dashboard widgets will be connected to live data
-        </p>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          Use the sidebar navigation to access specific admin sections.
-        </p>
-      </div>
+      <QuickActionsWidget />
     </div>
   );
 }

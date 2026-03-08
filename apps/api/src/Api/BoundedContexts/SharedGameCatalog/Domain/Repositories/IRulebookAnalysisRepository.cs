@@ -57,4 +57,19 @@ public interface IRulebookAnalysisRepository
     /// Gets the extracted text content from a PDF document.
     /// </summary>
     Task<string> GetPdfTextAsync(Guid pdfDocumentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all SharedGame+PDF pairs where the PDF has extracted text ready for analysis.
+    /// </summary>
+    Task<List<GamePdfPair>> GetGamePdfPairsWithReadyTextAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the set of "SharedGameId:PdfDocumentId" keys that have an active analysis.
+    /// </summary>
+    Task<HashSet<string>> GetActiveAnalysisKeysAsync(CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Represents a SharedGame paired with a PDF document that has extracted text.
+/// </summary>
+public record GamePdfPair(Guid SharedGameId, string GameTitle, Guid PdfDocumentId);

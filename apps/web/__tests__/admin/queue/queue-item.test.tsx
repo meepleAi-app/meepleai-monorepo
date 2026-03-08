@@ -12,12 +12,26 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi } from 'vitest';
 import { DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
 
+vi.mock('@/lib/api/client', () => ({
+  apiClient: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    patch: vi.fn(),
+  },
+}));
+
 import { QueueItem } from '@/app/admin/(dashboard)/knowledge-base/queue/components/queue-item';
-import type { ProcessingJobDto, JobStatus } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
+import type {
+  ProcessingJobDto,
+  JobStatus,
+} from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 
 function makeJob(overrides: Partial<ProcessingJobDto> = {}): ProcessingJobDto {
   return {
@@ -39,13 +53,19 @@ function makeJob(overrides: Partial<ProcessingJobDto> = {}): ProcessingJobDto {
   };
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
 function renderQueueItem(job: ProcessingJobDto, isSelected = false, onSelect = vi.fn()) {
   return render(
-    <DndContext>
-      <SortableContext items={[job.id]}>
-        <QueueItem job={job} isSelected={isSelected} onSelect={onSelect} />
-      </SortableContext>
-    </DndContext>,
+    <QueryClientProvider client={queryClient}>
+      <DndContext>
+        <SortableContext items={[job.id]}>
+          <QueueItem job={job} isSelected={isSelected} onSelect={onSelect} />
+        </SortableContext>
+      </DndContext>
+    </QueryClientProvider>
   );
 }
 
@@ -60,7 +80,7 @@ describe('QueueItem', () => {
   describe('Status Badges', () => {
     const statuses: JobStatus[] = ['Queued', 'Processing', 'Completed', 'Failed', 'Cancelled'];
 
-    it.each(statuses)('should display badge for %s status', (status) => {
+    it.each(statuses)('should display badge for %s status', status => {
       renderQueueItem(makeJob({ status }));
       expect(screen.getByText(status)).toBeInTheDocument();
     });

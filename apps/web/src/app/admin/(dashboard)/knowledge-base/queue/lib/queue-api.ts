@@ -111,6 +111,75 @@ export async function enqueuePdf(
   });
 }
 
+// ── New API functions (Issue #5458) ───────────────────────────────────
+
+export type ProcessingPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
+
+export interface QueueConfigDto {
+  isPaused: boolean;
+  maxConcurrentWorkers: number;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface QueueStatusDto {
+  queueDepth: number;
+  backpressureThreshold: number;
+  isUnderPressure: boolean;
+  isPaused: boolean;
+  maxConcurrentWorkers: number;
+  estimatedWaitMinutes: number;
+}
+
+export interface BulkReindexResult {
+  enqueuedCount: number;
+  skippedCount: number;
+  errors: { jobId: string; reason: string }[];
+}
+
+export interface PdfTextResult {
+  id: string;
+  fileName: string;
+  extractedText: string | null;
+  processingStatus: string;
+  processedAt: string | null;
+  pageCount: number | null;
+  characterCount: number | null;
+  processingError: string | null;
+}
+
+export async function bumpPriority(jobId: string, newPriority: ProcessingPriority): Promise<void> {
+  await apiClient.patch(`/api/v1/admin/queue/${jobId}/priority`, { newPriority });
+}
+
+export async function getQueueConfig(): Promise<QueueConfigDto> {
+  const result = await apiClient.get<QueueConfigDto>('/api/v1/admin/queue/config');
+  return result!;
+}
+
+export async function updateQueueConfig(
+  isPaused?: boolean,
+  maxConcurrentWorkers?: number
+): Promise<void> {
+  await apiClient.patch('/api/v1/admin/queue/config', { isPaused, maxConcurrentWorkers });
+}
+
+export async function bulkReindexFailed(): Promise<BulkReindexResult> {
+  const result = await apiClient.post<BulkReindexResult>('/api/v1/admin/queue/reindex-failed');
+  return result!;
+}
+
+export async function getExtractedText(pdfDocumentId: string): Promise<PdfTextResult | null> {
+  return await apiClient.get<PdfTextResult>(
+    `/api/v1/admin/queue/documents/${pdfDocumentId}/extracted-text`
+  );
+}
+
+export async function getQueueStatus(): Promise<QueueStatusDto> {
+  const result = await apiClient.get<QueueStatusDto>('/api/v1/admin/queue/status');
+  return result!;
+}
+
 // ── React Query Hooks ──────────────────────────────────────────────────
 
 export function useQueueList(filters: QueueFilters, sseConnected: boolean = false) {
@@ -152,5 +221,23 @@ export function useQueueStats() {
       staleTime: 15_000,
       refetchInterval: 30_000,
     })),
+  });
+}
+
+export function useQueueConfig() {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'config'],
+    queryFn: getQueueConfig,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useQueueStatus() {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'status'],
+    queryFn: getQueueStatus,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
 }

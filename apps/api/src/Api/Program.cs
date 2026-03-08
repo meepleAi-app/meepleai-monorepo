@@ -578,6 +578,7 @@ v1Api.MapAdminKBSettingsEndpoints();   // KB settings read-only (Issue #4881)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
+v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
 v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API

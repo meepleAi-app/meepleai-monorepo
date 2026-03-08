@@ -37,6 +37,7 @@ import {
   bulkReindexFailed,
   getExtractedText,
   getQueueStatus,
+  getDashboardMetrics,
 } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 
 describe('Queue API Functions', () => {
@@ -194,6 +195,47 @@ describe('Queue API Functions', () => {
       const result = await getQueueStatus();
       expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/status');
       expect(result).toEqual(status);
+    });
+  });
+
+  // Issue #5459: Dashboard metrics API
+  describe('getDashboardMetrics', () => {
+    it('should GET metrics with default period (24h)', async () => {
+      const metrics = {
+        phaseTimings: [
+          {
+            phase: 'TextExtraction',
+            avgDurationSeconds: 12.5,
+            minDurationSeconds: 3.2,
+            maxDurationSeconds: 45.0,
+            sampleCount: 10,
+          },
+        ],
+        totalProcessed: 50,
+        totalFailed: 5,
+        failureRatePercent: 9.1,
+        avgTotalDurationSeconds: 45.3,
+        period: '24h',
+      };
+      mockGet.mockResolvedValue(metrics);
+      const result = await getDashboardMetrics();
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/metrics?period=24h');
+      expect(result).toEqual(metrics);
+    });
+
+    it('should GET metrics with custom period', async () => {
+      const metrics = {
+        phaseTimings: [],
+        totalProcessed: 200,
+        totalFailed: 15,
+        failureRatePercent: 7.0,
+        avgTotalDurationSeconds: 0,
+        period: '30d',
+      };
+      mockGet.mockResolvedValue(metrics);
+      const result = await getDashboardMetrics('30d');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/metrics?period=30d');
+      expect(result).toEqual(metrics);
     });
   });
 });

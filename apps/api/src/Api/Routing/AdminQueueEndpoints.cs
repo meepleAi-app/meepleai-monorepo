@@ -117,6 +117,12 @@ internal static class AdminQueueEndpoints
             .WithName("GetQueueStatus")
             .Produces<QueueStatusDto>(200)
             .WithSummary("Get queue status with depth, ETA, and backpressure info");
+
+        // Issue #5459: Dashboard metrics with period filtering
+        group.MapGet("/metrics", HandleGetDashboardMetrics)
+            .WithName("GetDashboardMetrics")
+            .Produces<DashboardMetricsDto>(200)
+            .WithSummary("Get processing metrics for dashboard (period: 24h, 7d, 30d)");
     }
 
     private static async Task<IResult> HandleEnqueue(
@@ -331,6 +337,15 @@ internal static class AdminQueueEndpoints
         CancellationToken ct)
     {
         var result = await mediator.Send(new GetQueueStatusQuery(), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetDashboardMetrics(
+        [FromQuery] string? period,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetDashboardMetricsQuery(period ?? "24h"), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 }

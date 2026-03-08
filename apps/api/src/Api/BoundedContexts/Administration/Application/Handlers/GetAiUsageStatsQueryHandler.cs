@@ -55,13 +55,7 @@ internal class GetAiUsageStatsQueryHandler : IQueryHandler<GetAiUsageStatsQuery,
                 var totalTokens = usageByModel.Sum(x => x.Tokens);
                 if (totalTokens == 0)
                 {
-                    // Return mock data for empty state (Issue #2790 - donut chart requirement)
-                    return
-                    [
-                        new AiUsageStatsDto("Claude", 0, 45.0),
-                        new AiUsageStatsDto("GPT-4", 0, 30.0),
-                        new AiUsageStatsDto("Local", 0, 25.0)
-                    ];
+                    return [];
                 }
 
                 var result = usageByModel

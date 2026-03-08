@@ -147,6 +147,20 @@ internal class ProcessingJobRepository : RepositoryBase, IProcessingJobRepositor
         return (entities.Select(MapToDomain).ToList(), total);
     }
 
+    public async Task<IReadOnlyList<ProcessingJob>> GetAllByStatusAsync(JobStatus status, CancellationToken cancellationToken = default)
+    {
+        var statusStr = status.ToString();
+        var entities = await DbContext.ProcessingJobs
+            .Include(j => j.Steps)
+                .ThenInclude(s => s.LogEntries)
+            .Where(j => j.Status == statusStr)
+            .OrderBy(j => j.CreatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task<ProcessingJob?> DequeueNextAsync(CancellationToken cancellationToken = default)
     {
         // Priority DESC (higher = more important), then FIFO within same priority

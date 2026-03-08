@@ -16,6 +16,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.StructuredRetrieval;
 // Note: ITierStrategyAccessService is in Api.BoundedContexts.KnowledgeBase.Domain.Services namespace
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
@@ -76,6 +77,11 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #2405: Ledger Mode Handler + State Parser
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.LedgerModeHandler>();
         services.AddScoped<IStateParser, NaturalLanguageStateParser>();
+
+        // Issue #5453: Structured RAG fusion — query intent classification + structured retrieval
+        services.AddSingleton<StructuredQueryIntentClassifier>();
+        services.AddScoped<IStructuredRetrievalService, Infrastructure.Services.StructuredRetrievalService>();
+        services.AddSingleton<StructuredRagFusionService>();
 
         // ISSUE-3491: Context Engineering Framework
         services.AddSingleton<ITokenEstimator, SimpleTokenEstimator>();

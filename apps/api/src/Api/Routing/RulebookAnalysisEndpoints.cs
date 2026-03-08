@@ -53,6 +53,17 @@ internal static class RulebookAnalysisEndpoints
             .WithDescription("Returns all active rulebook analyses for a game including mechanics, victory conditions, FAQ, glossary, and completion status.")
             .Produces<List<RulebookAnalysisDto>>(StatusCodes.Status200OK);
 
+        // GET /api/v1/admin/analysis/{id}/compare/{otherId}
+        // Issue #5461: Analysis comparison tool
+        group.MapGet("/admin/analysis/{id:guid}/compare/{otherId:guid}", HandleCompareAnalyses)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("CompareAnalyses")
+            .WithSummary("Compare two rulebook analyses side by side")
+            .WithDescription("Returns a diff of two analyses showing added/removed mechanics, FAQ changes, and confidence score delta.")
+            .Produces<AnalysisComparisonDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+
         return group;
     }
 
@@ -101,6 +112,24 @@ internal static class RulebookAnalysisEndpoints
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleCompareAnalyses(
+        IMediator mediator,
+        Guid id,
+        Guid otherId,
+        CancellationToken ct)
+    {
+        try
+        {
+            var query = new CompareAnalysesQuery(id, otherId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Results.NotFound(ex.Message);
+        }
     }
 
     private static async Task<IResult> HandleGetActiveAnalysis(

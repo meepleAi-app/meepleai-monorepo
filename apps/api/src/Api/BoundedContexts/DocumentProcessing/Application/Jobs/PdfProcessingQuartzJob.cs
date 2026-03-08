@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
@@ -45,12 +46,35 @@ public sealed class PdfProcessingQuartzJob : IJob
 
         try
         {
-            // Pick the highest-priority queued job
+            // Issue #5455: Check queue configuration (IsPaused, concurrency limits)
+            var queueConfig = await _dbContext.ProcessingQueueConfigs
+                .FirstOrDefaultAsync(c => c.Id == ProcessingQueueConfig.SingletonId, ct)
+                .ConfigureAwait(false);
+
+            if (queueConfig is { IsPaused: true })
+            {
+                _logger.LogDebug("Queue is paused, skipping job pickup");
+                return;
+            }
+
+            // Check concurrent worker limit
+            var maxWorkers = queueConfig?.MaxConcurrentWorkers ?? ProcessingQueueConfig.DefaultMaxConcurrentWorkers;
+            var currentProcessing = await _dbContext.ProcessingJobs
+                .CountAsync(j => j.Status == nameof(JobStatus.Processing), ct)
+                .ConfigureAwait(false);
+
+            if (currentProcessing >= maxWorkers)
+            {
+                _logger.LogDebug("Max concurrent workers reached ({Current}/{Max}), skipping", currentProcessing, maxWorkers);
+                return;
+            }
+
+            // Pick the highest-priority queued job (priority DESC = higher value first, then FIFO)
             // AsTracking: Override global NoTracking (PERF-06) so SaveChangesAsync persists mutations
             var jobEntity = await _dbContext.ProcessingJobs
                 .AsTracking()
                 .Where(j => j.Status == nameof(JobStatus.Queued))
-                .OrderBy(j => j.Priority)
+                .OrderByDescending(j => j.Priority)
                 .ThenBy(j => j.CreatedAt)
                 .FirstOrDefaultAsync(ct).ConfigureAwait(false);
 

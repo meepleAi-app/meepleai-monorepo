@@ -181,6 +181,10 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
         var commonQuestions = JsonSerializer.Deserialize<List<string>>(entity.CommonQuestionsJson) ?? new List<string>();
 
+        var keyConcepts = JsonSerializer.Deserialize<List<KeyConceptDto>>(entity.KeyConceptsJson)?
+            .Select(kc => new KeyConcept(kc.Term, kc.Definition, kc.Category))
+            .ToList() ?? new List<KeyConcept>();
+
         return new RulebookAnalysis(
             entity.Id,
             entity.SharedGameId,
@@ -197,7 +201,8 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             entity.IsActive,
             (GenerationSource)entity.Source,
             entity.AnalyzedAt,
-            entity.CreatedBy);
+            entity.CreatedBy,
+            keyConcepts);
     }
 
     private static RulebookAnalysisEntity MapToEntity(RulebookAnalysis analysis)
@@ -230,6 +235,8 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             ResourcesJson = JsonSerializer.Serialize(resourceDtos),
             GamePhasesJson = JsonSerializer.Serialize(phaseDtos),
             CommonQuestionsJson = JsonSerializer.Serialize(analysis.CommonQuestions.ToList()),
+            KeyConceptsJson = JsonSerializer.Serialize(
+                analysis.KeyConcepts.Select(kc => new KeyConceptDto(kc.Term, kc.Definition, kc.Category)).ToList()),
             ConfidenceScore = analysis.ConfidenceScore,
             Version = analysis.Version,
             IsActive = analysis.IsActive,
@@ -248,4 +255,5 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
     private sealed record ResourceDto(string Name, string Type, string? Usage, bool IsLimited);
     private sealed record GamePhaseDto(string Name, string Description, int Order, bool IsOptional);
+    private sealed record KeyConceptDto(string Term, string Definition, string Category);
 }

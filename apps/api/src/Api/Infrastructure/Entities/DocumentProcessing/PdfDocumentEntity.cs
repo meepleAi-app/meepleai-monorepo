@@ -83,6 +83,11 @@ public class PdfDocumentEntity
     public Guid? BaseDocumentId { get; set; }
     public PdfDocumentEntity? BaseDocument { get; set; }
 
+    // Issue #5446: Copyright disclaimer and RAG active toggle
+    public DateTime? CopyrightDisclaimerAcceptedAt { get; set; }
+    public Guid? CopyrightDisclaimerAcceptedBy { get; set; }
+    public bool IsActiveForRag { get; set; } = true;
+
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 

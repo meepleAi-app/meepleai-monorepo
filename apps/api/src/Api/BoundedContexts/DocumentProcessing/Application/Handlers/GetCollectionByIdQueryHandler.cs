@@ -77,7 +77,9 @@ internal class GetCollectionByIdQueryHandler : IQueryHandler<GetCollectionByIdQu
                     RetryCount: pdfDoc.RetryCount,
                     MaxRetries: pdfDoc.MaxRetries,
                     DocumentCategory: pdfDoc.DocumentCategory.ToString(),
-                    BaseDocumentId: pdfDoc.BaseDocumentId
+                    BaseDocumentId: pdfDoc.BaseDocumentId,
+                    IsActiveForRag: pdfDoc.IsActiveForRag,
+                    HasAcceptedDisclaimer: pdfDoc.HasAcceptedDisclaimer
                 ) : null
             ));
         }

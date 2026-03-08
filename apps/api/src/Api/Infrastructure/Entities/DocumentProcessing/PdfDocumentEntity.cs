@@ -79,6 +79,10 @@ public class PdfDocumentEntity
     // Issue #5443: Document classification for pipeline routing
     public string DocumentCategory { get; set; } = "Rulebook"; // DocumentCategory enum stored as string
 
+    // Issue #5444: Self-referential FK for expansion/errata linkage to base rulebook
+    public Guid? BaseDocumentId { get; set; }
+    public PdfDocumentEntity? BaseDocument { get; set; }
+
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 

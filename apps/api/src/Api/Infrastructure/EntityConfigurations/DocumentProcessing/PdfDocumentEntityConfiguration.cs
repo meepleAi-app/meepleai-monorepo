@@ -120,6 +120,19 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => e.DocumentCategory)
             .HasDatabaseName("ix_pdf_documents_document_category");
 
+        // Issue #5444: Self-referential FK for expansion/errata linkage
+        builder.Property(e => e.BaseDocumentId)
+            .HasColumnName("base_document_id")
+            .IsRequired(false);
+
+        builder.HasOne(e => e.BaseDocument)
+            .WithMany()
+            .HasForeignKey(e => e.BaseDocumentId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(e => e.BaseDocumentId)
+            .HasDatabaseName("ix_pdf_documents_base_document_id");
+
         // PDF deduplication: SHA-256 content hash
         builder.Property(e => e.ContentHash)
             .HasMaxLength(64)

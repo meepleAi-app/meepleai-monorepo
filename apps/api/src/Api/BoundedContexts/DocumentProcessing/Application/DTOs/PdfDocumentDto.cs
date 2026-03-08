@@ -23,5 +23,6 @@ internal record PdfDocumentDto(
     bool CanRetry = false,           // Issue #5186: true if state=Failed && retryCount < maxRetries
     string? ErrorCategory = null,    // Issue #5186: "Network"|"Parsing"|"Quota"|"Service"|"Unknown"
     string? ProcessingError = null,  // Issue #5186: human-readable error message
-    string DocumentCategory = "Rulebook" // Issue #5443: pipeline routing category
+    string DocumentCategory = "Rulebook", // Issue #5443: pipeline routing category
+    Guid? BaseDocumentId = null // Issue #5444: linked base rulebook for expansion/errata
 );

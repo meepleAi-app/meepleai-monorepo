@@ -185,6 +185,10 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             .Select(kc => new KeyConcept(kc.Term, kc.Definition, kc.Category))
             .ToList() ?? new List<KeyConcept>();
 
+        var generatedFaqs = JsonSerializer.Deserialize<List<GeneratedFaqDto>>(entity.GeneratedFaqsJson)?
+            .Select(f => new GeneratedFaq(f.Question, f.Answer, f.SourceSection, f.Confidence, f.Tags))
+            .ToList() ?? new List<GeneratedFaq>();
+
         return new RulebookAnalysis(
             entity.Id,
             entity.SharedGameId,
@@ -202,7 +206,8 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             (GenerationSource)entity.Source,
             entity.AnalyzedAt,
             entity.CreatedBy,
-            keyConcepts);
+            keyConcepts,
+            generatedFaqs);
     }
 
     private static RulebookAnalysisEntity MapToEntity(RulebookAnalysis analysis)
@@ -237,6 +242,8 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             CommonQuestionsJson = JsonSerializer.Serialize(analysis.CommonQuestions.ToList()),
             KeyConceptsJson = JsonSerializer.Serialize(
                 analysis.KeyConcepts.Select(kc => new KeyConceptDto(kc.Term, kc.Definition, kc.Category)).ToList()),
+            GeneratedFaqsJson = JsonSerializer.Serialize(
+                analysis.GeneratedFaqs.Select(f => new GeneratedFaqDto(f.Question, f.Answer, f.SourceSection, f.Confidence, f.Tags)).ToList()),
             ConfidenceScore = analysis.ConfidenceScore,
             Version = analysis.Version,
             IsActive = analysis.IsActive,
@@ -256,4 +263,5 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
     private sealed record ResourceDto(string Name, string Type, string? Usage, bool IsLimited);
     private sealed record GamePhaseDto(string Name, string Description, int Order, bool IsOptional);
     private sealed record KeyConceptDto(string Term, string Definition, string Category);
+    private sealed record GeneratedFaqDto(string Question, string Answer, string SourceSection, decimal Confidence, List<string> Tags);
 }

@@ -64,6 +64,12 @@ public class RulebookAnalysisEntity
     public string KeyConceptsJson { get; set; } = "[]";
 
     /// <summary>
+    /// Generated FAQ entries from rulebook analysis (stored as JSON array).
+    /// Issue #5449: GenerateQuestions FAQ generation.
+    /// </summary>
+    public string GeneratedFaqsJson { get; set; } = "[]";
+
+    /// <summary>
     /// AI confidence score (0-1).
     /// </summary>
     public decimal ConfidenceScore { get; set; }

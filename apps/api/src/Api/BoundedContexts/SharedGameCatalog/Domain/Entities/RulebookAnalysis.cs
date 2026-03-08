@@ -10,6 +10,17 @@ namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 public record KeyConcept(string Term, string Definition, string Category);
 
 /// <summary>
+/// A generated FAQ entry from rulebook analysis.
+/// Issue #5449: GenerateQuestions FAQ generation.
+/// </summary>
+public record GeneratedFaq(
+    string Question,
+    string Answer,
+    string SourceSection,
+    decimal Confidence,
+    List<string> Tags);
+
+/// <summary>
 /// Entity representing a structured analysis of a rulebook PDF.
 /// Contains extracted game information like mechanics, victory conditions, resources, and phases.
 /// Supports multi-versioning with one active analysis per game.
@@ -27,6 +38,7 @@ public sealed class RulebookAnalysis : Entity<Guid>
     private List<GamePhase> _gamePhases = new();
     private List<string> _commonQuestions = new();
     private List<KeyConcept> _keyConcepts = new();
+    private List<GeneratedFaq> _generatedFaqs = new();
     private decimal _confidenceScore;
     private readonly string _version = string.Empty;
     private bool _isActive;
@@ -91,6 +103,12 @@ public sealed class RulebookAnalysis : Entity<Guid>
     public IReadOnlyList<KeyConcept> KeyConcepts => _keyConcepts.AsReadOnly();
 
     /// <summary>
+    /// Gets the list of generated FAQ entries from rulebook analysis.
+    /// Issue #5449: GenerateQuestions FAQ generation.
+    /// </summary>
+    public IReadOnlyList<GeneratedFaq> GeneratedFaqs => _generatedFaqs.AsReadOnly();
+
+    /// <summary>
     /// Gets the AI confidence score (0-1) for this analysis.
     /// </summary>
     public decimal ConfidenceScore => _confidenceScore;
@@ -147,7 +165,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         GenerationSource source,
         DateTime analyzedAt,
         Guid createdBy,
-        List<KeyConcept>? keyConcepts = null) : base(id)
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -160,6 +179,7 @@ public sealed class RulebookAnalysis : Entity<Guid>
         _gamePhases = gamePhases;
         _commonQuestions = commonQuestions;
         _keyConcepts = keyConcepts ?? new List<KeyConcept>();
+        _generatedFaqs = generatedFaqs ?? new List<GeneratedFaq>();
         _confidenceScore = confidenceScore;
         _version = version;
         _isActive = isActive;
@@ -184,7 +204,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         decimal confidenceScore,
         Guid createdBy,
         string? version = null,
-        List<KeyConcept>? keyConcepts = null)
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null)
     {
         ValidateCreateParameters(sharedGameId, pdfDocumentId, gameTitle, createdBy);
 
@@ -212,7 +233,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
             GenerationSource.AI,
             DateTime.UtcNow,
             createdBy,
-            keyConcepts);
+            keyConcepts,
+            generatedFaqs);
     }
 
     /// <summary>
@@ -230,7 +252,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         List<string> commonQuestions,
         Guid createdBy,
         string? version = null,
-        List<KeyConcept>? keyConcepts = null)
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null)
     {
         ValidateCreateParameters(sharedGameId, pdfDocumentId, gameTitle, createdBy);
 
@@ -255,7 +278,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
             GenerationSource.Manual,
             DateTime.UtcNow,
             createdBy,
-            keyConcepts);
+            keyConcepts,
+            generatedFaqs);
     }
 
     /// <summary>
@@ -284,7 +308,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         List<Resource> resources,
         List<GamePhase> gamePhases,
         List<string> commonQuestions,
-        List<KeyConcept>? keyConcepts = null)
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null)
     {
         if (string.IsNullOrWhiteSpace(summary))
             throw new ArgumentException("Summary cannot be empty", nameof(summary));
@@ -296,6 +321,7 @@ public sealed class RulebookAnalysis : Entity<Guid>
         _gamePhases = gamePhases ?? new List<GamePhase>();
         _commonQuestions = commonQuestions ?? new List<string>();
         _keyConcepts = keyConcepts ?? new List<KeyConcept>();
+        _generatedFaqs = generatedFaqs ?? new List<GeneratedFaq>();
         _source = GenerationSource.Manual; // Mark as manually edited
         _confidenceScore = 0.0m; // Clear confidence after manual edit
     }

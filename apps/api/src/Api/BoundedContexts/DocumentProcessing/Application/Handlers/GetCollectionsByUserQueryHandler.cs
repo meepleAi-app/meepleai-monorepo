@@ -75,7 +75,8 @@ internal class GetCollectionsByUserQueryHandler : IQueryHandler<GetCollectionsBy
                     DocumentCategory: pdfDoc.DocumentCategory.ToString(),
                     BaseDocumentId: pdfDoc.BaseDocumentId,
                     IsActiveForRag: pdfDoc.IsActiveForRag,
-                    HasAcceptedDisclaimer: pdfDoc.HasAcceptedDisclaimer
+                    HasAcceptedDisclaimer: pdfDoc.HasAcceptedDisclaimer,
+                    VersionLabel: pdfDoc.VersionLabel
                 ) : null
             ));
         }

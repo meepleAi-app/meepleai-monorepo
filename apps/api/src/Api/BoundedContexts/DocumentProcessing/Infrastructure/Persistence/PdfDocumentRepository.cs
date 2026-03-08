@@ -230,7 +230,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             baseDocumentId: entity.BaseDocumentId, // Issue #5444
             copyrightDisclaimerAcceptedAt: entity.CopyrightDisclaimerAcceptedAt, // Issue #5446
             copyrightDisclaimerAcceptedBy: entity.CopyrightDisclaimerAcceptedBy, // Issue #5446
-            isActiveForRag: entity.IsActiveForRag // Issue #5446
+            isActiveForRag: entity.IsActiveForRag, // Issue #5446
+            versionLabel: entity.VersionLabel // Issue #5447
         );
     }
 
@@ -273,7 +274,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             BaseDocumentId = domain.BaseDocumentId, // Issue #5444
             CopyrightDisclaimerAcceptedAt = domain.CopyrightDisclaimerAcceptedAt, // Issue #5446
             CopyrightDisclaimerAcceptedBy = domain.CopyrightDisclaimerAcceptedBy, // Issue #5446
-            IsActiveForRag = domain.IsActiveForRag // Issue #5446
+            IsActiveForRag = domain.IsActiveForRag, // Issue #5446
+            VersionLabel = domain.VersionLabel // Issue #5447
         };
     }
 }

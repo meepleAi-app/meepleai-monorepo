@@ -88,6 +88,9 @@ public class PdfDocumentEntity
     public Guid? CopyrightDisclaimerAcceptedBy { get; set; }
     public bool IsActiveForRag { get; set; } = true;
 
+    // Issue #5447: User-editable version label
+    public string? VersionLabel { get; set; }
+
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 

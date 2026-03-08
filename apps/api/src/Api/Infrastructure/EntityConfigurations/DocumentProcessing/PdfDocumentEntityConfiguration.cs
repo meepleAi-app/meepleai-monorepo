@@ -150,6 +150,12 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => e.IsActiveForRag)
             .HasDatabaseName("ix_pdf_documents_is_active_for_rag");
 
+        // Issue #5447: User-editable version label
+        builder.Property(e => e.VersionLabel)
+            .HasMaxLength(100)
+            .HasColumnName("version_label")
+            .IsRequired(false);
+
         // PDF deduplication: SHA-256 content hash
         builder.Property(e => e.ContentHash)
             .HasMaxLength(64)

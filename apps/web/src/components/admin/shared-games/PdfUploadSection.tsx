@@ -291,6 +291,11 @@ export function PdfUploadSection({
           canRetry: false,
           errorCategory: null,
           processingError: null,
+          documentCategory: 'Rulebook',
+          baseDocumentId: null,
+          isActiveForRag: true,
+          hasAcceptedDisclaimer: false,
+          versionLabel: null,
         });
       }
     } catch (err) {

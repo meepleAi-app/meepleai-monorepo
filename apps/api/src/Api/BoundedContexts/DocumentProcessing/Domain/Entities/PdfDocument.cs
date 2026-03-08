@@ -69,6 +69,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public Guid? CopyrightDisclaimerAcceptedBy { get; private set; }
     public bool IsActiveForRag { get; private set; } = true;
 
+    // Issue #5447: User-editable version label (e.g., "2nd Edition", "v1.3 Errata")
+    public string? VersionLabel { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -172,7 +175,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         Guid? baseDocumentId = null,
         DateTime? copyrightDisclaimerAcceptedAt = null,
         Guid? copyrightDisclaimerAcceptedBy = null,
-        bool isActiveForRag = true)
+        bool isActiveForRag = true,
+        string? versionLabel = null)
     {
         var document = new PdfDocument
         {
@@ -230,7 +234,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             // Issue #5446: Copyright disclaimer and RAG toggle
             CopyrightDisclaimerAcceptedAt = copyrightDisclaimerAcceptedAt,
             CopyrightDisclaimerAcceptedBy = copyrightDisclaimerAcceptedBy,
-            IsActiveForRag = isActiveForRag
+            IsActiveForRag = isActiveForRag,
+
+            // Issue #5447: Version label
+            VersionLabel = versionLabel
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -565,6 +572,34 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// </summary>
     public bool HasAcceptedDisclaimer => CopyrightDisclaimerAcceptedAt.HasValue;
 
+    /// <summary>
+    /// Sets the user-editable version label.
+    /// Issue #5447: e.g., "2nd Edition", "v1.3 Errata".
+    /// </summary>
+    public void SetVersionLabel(string? versionLabel)
+    {
+        if (versionLabel is not null && versionLabel.Length > 100)
+            throw new ArgumentException("Version label cannot exceed 100 characters", nameof(versionLabel));
+
+        VersionLabel = versionLabel?.Trim();
+    }
+
+    /// <summary>
+    /// Reclassifies the document with new category, base document link, and version label.
+    /// Issue #5447: Admin can reclassify documents post-upload.
+    /// </summary>
+    public void Reclassify(DocumentCategory category, Guid? baseDocumentId, string? versionLabel)
+    {
+        DocumentCategory = category;
+
+        if (baseDocumentId.HasValue)
+            LinkToBaseDocument(baseDocumentId.Value);
+        else
+            UnlinkBaseDocument();
+
+        SetVersionLabel(versionLabel);
+    }
+
     // Issue #2029: Update detected language after processing
     public void UpdateLanguage(LanguageCode languageCode)
     {
@@ -683,6 +718,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             CopyrightDisclaimerAcceptedAt = source.CopyrightDisclaimerAcceptedAt,
             CopyrightDisclaimerAcceptedBy = source.CopyrightDisclaimerAcceptedBy,
             IsActiveForRag = source.IsActiveForRag,
+
+            // Issue #5447: Copy version label
+            VersionLabel = source.VersionLabel,
 
             // Issue #4219: Copy timing fields for accurate metrics
             UploadingStartedAt = source.UploadingStartedAt,

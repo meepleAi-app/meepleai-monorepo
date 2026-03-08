@@ -133,6 +133,23 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => e.BaseDocumentId)
             .HasDatabaseName("ix_pdf_documents_base_document_id");
 
+        // Issue #5446: Copyright disclaimer and RAG active toggle
+        builder.Property(e => e.CopyrightDisclaimerAcceptedAt)
+            .HasColumnName("copyright_disclaimer_accepted_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.CopyrightDisclaimerAcceptedBy)
+            .HasColumnName("copyright_disclaimer_accepted_by")
+            .IsRequired(false);
+
+        builder.Property(e => e.IsActiveForRag)
+            .IsRequired()
+            .HasColumnName("is_active_for_rag")
+            .HasDefaultValue(true);
+
+        builder.HasIndex(e => e.IsActiveForRag)
+            .HasDatabaseName("ix_pdf_documents_is_active_for_rag");
+
         // PDF deduplication: SHA-256 content hash
         builder.Property(e => e.ContentHash)
             .HasMaxLength(64)

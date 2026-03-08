@@ -227,7 +227,10 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
                 && Enum.TryParse<DocumentCategory>(entity.DocumentCategory, ignoreCase: true, out var parsedCategory)
                     ? parsedCategory
                     : DocumentCategory.Rulebook, // Issue #5443
-            baseDocumentId: entity.BaseDocumentId // Issue #5444
+            baseDocumentId: entity.BaseDocumentId, // Issue #5444
+            copyrightDisclaimerAcceptedAt: entity.CopyrightDisclaimerAcceptedAt, // Issue #5446
+            copyrightDisclaimerAcceptedBy: entity.CopyrightDisclaimerAcceptedBy, // Issue #5446
+            isActiveForRag: entity.IsActiveForRag // Issue #5446
         );
     }
 
@@ -267,7 +270,10 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             IndexingStartedAt = domain.IndexingStartedAt, // Issue #4219
             ContentHash = domain.ContentHash,
             DocumentCategory = domain.DocumentCategory.ToString(), // Issue #5443
-            BaseDocumentId = domain.BaseDocumentId // Issue #5444
+            BaseDocumentId = domain.BaseDocumentId, // Issue #5444
+            CopyrightDisclaimerAcceptedAt = domain.CopyrightDisclaimerAcceptedAt, // Issue #5446
+            CopyrightDisclaimerAcceptedBy = domain.CopyrightDisclaimerAcceptedBy, // Issue #5446
+            IsActiveForRag = domain.IsActiveForRag // Issue #5446
         };
     }
 }

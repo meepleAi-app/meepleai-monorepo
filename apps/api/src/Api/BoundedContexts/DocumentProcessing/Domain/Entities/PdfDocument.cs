@@ -64,6 +64,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #5444: Self-referential FK for expansion/errata linkage to base rulebook
     public Guid? BaseDocumentId { get; private set; }
 
+    // Issue #5446: Copyright disclaimer and RAG active toggle
+    public DateTime? CopyrightDisclaimerAcceptedAt { get; private set; }
+    public Guid? CopyrightDisclaimerAcceptedBy { get; private set; }
+    public bool IsActiveForRag { get; private set; } = true;
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -164,7 +169,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         DateTime? indexingStartedAt = null,
         string? contentHash = null,
         DocumentCategory? documentCategory = null,
-        Guid? baseDocumentId = null)
+        Guid? baseDocumentId = null,
+        DateTime? copyrightDisclaimerAcceptedAt = null,
+        Guid? copyrightDisclaimerAcceptedBy = null,
+        bool isActiveForRag = true)
     {
         var document = new PdfDocument
         {
@@ -217,7 +225,12 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             DocumentCategory = documentCategory ?? DocumentCategory.Rulebook,
 
             // Issue #5444: Base document linkage
-            BaseDocumentId = baseDocumentId
+            BaseDocumentId = baseDocumentId,
+
+            // Issue #5446: Copyright disclaimer and RAG toggle
+            CopyrightDisclaimerAcceptedAt = copyrightDisclaimerAcceptedAt,
+            CopyrightDisclaimerAcceptedBy = copyrightDisclaimerAcceptedBy,
+            IsActiveForRag = isActiveForRag
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -524,6 +537,34 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         BaseDocumentId = null;
     }
 
+    /// <summary>
+    /// Accepts the copyright disclaimer for this document.
+    /// Issue #5446: Required before processing starts.
+    /// </summary>
+    public void AcceptCopyrightDisclaimer(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User ID cannot be empty", nameof(userId));
+
+        CopyrightDisclaimerAcceptedAt = DateTime.UtcNow;
+        CopyrightDisclaimerAcceptedBy = userId;
+    }
+
+    /// <summary>
+    /// Sets whether this document is active for RAG search.
+    /// Issue #5446: Deactivated docs remain in Qdrant but excluded from search.
+    /// </summary>
+    public void SetActiveForRag(bool isActive)
+    {
+        IsActiveForRag = isActive;
+    }
+
+    /// <summary>
+    /// Checks if the copyright disclaimer has been accepted.
+    /// Issue #5446: Upload blocked until disclaimer accepted (admin exempt).
+    /// </summary>
+    public bool HasAcceptedDisclaimer => CopyrightDisclaimerAcceptedAt.HasValue;
+
     // Issue #2029: Update detected language after processing
     public void UpdateLanguage(LanguageCode languageCode)
     {
@@ -637,6 +678,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
             // Issue #5444: Copy base document linkage
             BaseDocumentId = source.BaseDocumentId,
+
+            // Issue #5446: Copy disclaimer and RAG state
+            CopyrightDisclaimerAcceptedAt = source.CopyrightDisclaimerAcceptedAt,
+            CopyrightDisclaimerAcceptedBy = source.CopyrightDisclaimerAcceptedBy,
+            IsActiveForRag = source.IsActiveForRag,
 
             // Issue #4219: Copy timing fields for accurate metrics
             UploadingStartedAt = source.UploadingStartedAt,

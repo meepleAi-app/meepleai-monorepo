@@ -43,7 +43,9 @@ internal class GetPdfDocumentsByGameQueryHandler : IQueryHandler<GetPdfDocuments
             ErrorCategory: doc.ErrorCategory?.ToString(),
             ProcessingError: doc.ProcessingError,
             DocumentCategory: doc.DocumentCategory.ToString(),
-            BaseDocumentId: doc.BaseDocumentId
+            BaseDocumentId: doc.BaseDocumentId,
+            IsActiveForRag: doc.IsActiveForRag,
+            HasAcceptedDisclaimer: doc.HasAcceptedDisclaimer
         );
     }
 }

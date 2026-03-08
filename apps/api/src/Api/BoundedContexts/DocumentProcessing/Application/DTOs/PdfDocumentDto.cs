@@ -24,5 +24,7 @@ internal record PdfDocumentDto(
     string? ErrorCategory = null,    // Issue #5186: "Network"|"Parsing"|"Quota"|"Service"|"Unknown"
     string? ProcessingError = null,  // Issue #5186: human-readable error message
     string DocumentCategory = "Rulebook", // Issue #5443: pipeline routing category
-    Guid? BaseDocumentId = null // Issue #5444: linked base rulebook for expansion/errata
+    Guid? BaseDocumentId = null, // Issue #5444: linked base rulebook for expansion/errata
+    bool IsActiveForRag = true, // Issue #5446: whether document is included in RAG search
+    bool HasAcceptedDisclaimer = false // Issue #5446: whether copyright disclaimer was accepted
 );

@@ -55,6 +55,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; private set; }
 
+    // PDF deduplication: SHA-256 hash of file content
+    public string? ContentHash { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -148,7 +151,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         DateTime? extractingStartedAt = null,
         DateTime? chunkingStartedAt = null,
         DateTime? embeddingStartedAt = null,
-        DateTime? indexingStartedAt = null)
+        DateTime? indexingStartedAt = null,
+        string? contentHash = null)
     {
         var document = new PdfDocument
         {
@@ -192,7 +196,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ExtractingStartedAt = extractingStartedAt,
             ChunkingStartedAt = chunkingStartedAt,
             EmbeddingStartedAt = embeddingStartedAt,
-            IndexingStartedAt = indexingStartedAt
+            IndexingStartedAt = indexingStartedAt,
+
+            // PDF deduplication
+            ContentHash = contentHash
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -464,6 +471,15 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             "failed" => PdfProcessingState.Failed,
             _ => PdfProcessingState.Pending
         };
+    }
+
+    /// <summary>
+    /// Sets the SHA-256 content hash for deduplication.
+    /// </summary>
+    public void SetContentHash(string hash)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+        ContentHash = hash;
     }
 
     // Issue #2029: Update detected language after processing

@@ -33,6 +33,13 @@ public class GameToolkitEntity
     public string? StateTemplate { get; set; }
     public string? AgentConfig { get; set; }
 
+    // Template marketplace
+    public int TemplateStatus { get; set; }
+    public bool IsTemplate { get; set; }
+    public string? ReviewNotes { get; set; }
+    public Guid? ReviewedByUserId { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+
     // Concurrency
     public byte[] RowVersion { get; set; } = default!;
 

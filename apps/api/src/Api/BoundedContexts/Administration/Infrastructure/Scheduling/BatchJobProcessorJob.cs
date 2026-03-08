@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -13,13 +14,16 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 internal sealed class BatchJobProcessorJob : IJob
 {
     private readonly IBatchJobRepository _repository;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<BatchJobProcessorJob> _logger;
 
     public BatchJobProcessorJob(
         IBatchJobRepository repository,
+        IServiceProvider serviceProvider,
         ILogger<BatchJobProcessorJob> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -68,23 +72,28 @@ internal sealed class BatchJobProcessorJob : IJob
 
     private async Task ExecuteJobAsync(BatchJob job, CancellationToken ct)
     {
-        // Simulate progress updates
-        for (var p = 0; p <= 100; p += 20)
+        switch (job.Type)
         {
-            job.UpdateProgress(p);
-            await _repository.UpdateAsync(job, ct).ConfigureAwait(false);
-            await Task.Delay(1000, ct).ConfigureAwait(false);
-        }
+            case JobType.VectorReembedding:
+                await ExecuteVectorReembeddingAsync(job, ct).ConfigureAwait(false);
+                break;
 
-        // Job-specific logic (placeholder)
-        await (job.Type switch
-        {
-            JobType.ResourceForecast => Task.CompletedTask,
-            JobType.CostAnalysis => Task.CompletedTask,
-            JobType.DataCleanup => Task.CompletedTask,
-            JobType.BggSync => Task.CompletedTask,
-            JobType.AgentBenchmark => Task.CompletedTask,
-            _ => throw new NotSupportedException($"Job type {job.Type} not supported")
-        }).ConfigureAwait(false);
+            default:
+                // Placeholder progress for other job types
+                for (var p = 0; p <= 100; p += 20)
+                {
+                    job.UpdateProgress(p);
+                    await _repository.UpdateAsync(job, ct).ConfigureAwait(false);
+                    await Task.Delay(1000, ct).ConfigureAwait(false);
+                }
+                break;
+        }
+    }
+
+    private async Task ExecuteVectorReembeddingAsync(BatchJob job, CancellationToken ct)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var reembeddingService = scope.ServiceProvider.GetRequiredService<VectorReembeddingService>();
+        await reembeddingService.ExecuteAsync(job, ct).ConfigureAwait(false);
     }
 }

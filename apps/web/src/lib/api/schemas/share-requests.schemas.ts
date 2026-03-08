@@ -72,14 +72,12 @@ export const CreateShareRequestResponseSchema = z.object({
 export type CreateShareRequestResponse = z.infer<typeof CreateShareRequestResponseSchema>;
 
 // Paginated Share Requests Response
+// Backend PagedResult<T> returns: { items, total, page, pageSize }
 export const PaginatedShareRequestsResponseSchema = z.object({
   items: z.array(UserShareRequestDtoSchema),
   page: z.number().int().positive(),
   pageSize: z.number().int().positive(),
-  totalCount: z.number().int().nonnegative(),
-  totalPages: z.number().int().nonnegative(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean(),
+  total: z.number().int().nonnegative(),
 });
 
 export type PaginatedShareRequestsResponse = z.infer<typeof PaginatedShareRequestsResponseSchema>;

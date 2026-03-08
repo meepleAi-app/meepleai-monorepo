@@ -301,6 +301,10 @@ internal static class ConfigurationEndpoints
         logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
             session!.User!.Id, request.Updates.Count);
 
+        var invalidIds = request.Updates.Where(u => !Guid.TryParse(u.Id, out _)).Select(u => u.Id).ToList();
+        if (invalidIds.Count > 0)
+            return Results.BadRequest(new { error = $"Invalid configuration IDs: {string.Join(", ", invalidIds)}" });
+
         var updates = request.Updates.Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
             Id: Guid.Parse(u.Id),
             Value: u.Value

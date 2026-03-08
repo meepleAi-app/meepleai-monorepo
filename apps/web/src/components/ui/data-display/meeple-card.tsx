@@ -87,6 +87,7 @@ import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 import { DocumentStatusBadge } from './meeple-card-features/DocumentStatusBadge';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
 import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
+import { GameBackContent } from './meeple-card-features/GameBackContent';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 // Issue #4689: Navigation footer
@@ -156,6 +157,8 @@ export interface MeepleCardMetadata {
   label?: string;
   /** Alternative: just a value (for icon + value pairs) */
   value?: string;
+  /** Optional click handler (makes metadata chip interactive) */
+  onClick?: () => void;
 }
 
 /**
@@ -397,6 +400,13 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   /** Session back content data (statistics, ranking, timeline) */
   sessionBackData?: import('./meeple-card-features/session-types').SessionBackData;
 
+  // ========== GAME BACK CONTENT ==========
+
+  /** Game back content data (stats, KB preview, quick actions) */
+  gameBackData?: import('./meeple-card-features/GameBackContent').GameBackData;
+  /** Game back content action handlers */
+  gameBackActions?: import('./meeple-card-features/GameBackContent').GameBackActions;
+
   // ========== SNAPSHOT HISTORY + TIME TRAVEL (Issue #4758) ==========
 
   /** Session snapshots for history slider */
@@ -505,7 +515,7 @@ const coverVariants = cva('relative overflow-hidden', {
 const contentVariants = cva('', {
   variants: {
     variant: {
-      grid: 'flex-1 flex flex-col px-3.5 py-3',
+      grid: 'flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3',
       list: 'flex-1 min-w-0 py-1',
       compact: 'flex-1 min-w-0',
       featured: 'flex-1 flex flex-col px-5 py-4',
@@ -605,14 +615,14 @@ function VerticalTagStack({
   return (
     <TooltipProvider delayDuration={300}>
       <div
-        className="absolute top-2 left-2.5 z-10 flex flex-col gap-1.5"
+        className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2.5 z-10 flex flex-col gap-1 sm:gap-1.5"
         data-testid="meeple-card-tag-stack"
       >
         {/* Entity type badge (highest priority) */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span
-              className="max-w-[80px] truncate px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[6px] shadow-sm cursor-default"
+              className="max-w-[60px] sm:max-w-[80px] truncate px-1.5 sm:px-2 py-px sm:py-0.5 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[5px] sm:rounded-[6px] shadow-sm cursor-default"
               style={{ backgroundColor: `hsl(${color})` }}
             >
               {name}
@@ -671,11 +681,12 @@ function CoverImage({
 
   // v2: Entity-specific aspect ratios (Issue #4604)
   // chatSession uses shorter 4:3 ratio (like playing card), others use tall 7:10
+  // Mobile: shorter aspect ratios for 2-col grid density
   const aspectRatioClass =
     variant === 'grid'
       ? entity === 'chatSession'
         ? 'aspect-[4/3]'
-        : 'aspect-[7/10]'
+        : 'aspect-square sm:aspect-[7/10]'
       : variant === 'featured'
         ? entity === 'chatSession'
           ? 'aspect-[3/1]'
@@ -804,16 +815,43 @@ function MetadataChips({
   const isHero = variant === 'hero';
   const chipClass = isHero
     ? 'text-white/90 text-sm'
-    : 'text-muted-foreground text-xs bg-muted px-2 py-0.5 rounded-md';
+    : 'text-muted-foreground text-[10px] sm:text-xs bg-muted px-1.5 sm:px-2 py-px sm:py-0.5 rounded-md';
 
   return (
     <div className={cn('flex flex-wrap gap-2', className)}>
-      {metadata.map((item, index) => (
-        <span key={index} className={cn('flex items-center gap-1', chipClass)}>
-          {item.icon && <item.icon className="w-3 h-3 opacity-70" aria-hidden="true" />}
-          <span>{item.label || item.value}</span>
-        </span>
-      ))}
+      {metadata.map((item, index) => {
+        const content = (
+          <>
+            {item.icon && <item.icon className="w-3 h-3 opacity-70" aria-hidden="true" />}
+            <span>{item.label || item.value}</span>
+          </>
+        );
+
+        if (item.onClick) {
+          return (
+            <button
+              key={index}
+              type="button"
+              className={cn(
+                'flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                chipClass
+              )}
+              onClick={e => {
+                e.stopPropagation();
+                item.onClick!();
+              }}
+            >
+              {content}
+            </button>
+          );
+        }
+
+        return (
+          <span key={index} className={cn('flex items-center gap-1', chipClass)}>
+            {content}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -1025,6 +1063,8 @@ export const MeepleCard = React.memo(function MeepleCard({
   onPrevTurn,
   onNextTurn,
   sessionBackData,
+  gameBackData,
+  gameBackActions,
   sessionSnapshots,
   currentSnapshotIndex,
   onSnapshotSelect,
@@ -1360,7 +1400,7 @@ export const MeepleCard = React.memo(function MeepleCard({
                   ? 'text-base'
                   : variant === 'compact'
                     ? 'text-sm'
-                    : 'text-[0.95rem] mb-0.5',
+                    : 'text-[0.8rem] sm:text-[0.95rem] mb-0.5',
             variant !== 'hero' && 'text-card-foreground',
             variant === 'grid' && 'truncate',
             variant === 'list' && 'line-clamp-2'
@@ -1376,7 +1416,7 @@ export const MeepleCard = React.memo(function MeepleCard({
               variant === 'hero'
                 ? 'text-white/85 text-sm mb-2'
                 : variant === 'grid'
-                  ? 'text-muted-foreground text-[0.78rem] mt-px mb-1 truncate'
+                  ? 'text-muted-foreground text-[0.7rem] sm:text-[0.78rem] mt-px mb-0.5 sm:mb-1 truncate'
                   : 'text-muted-foreground text-sm mb-2',
               variant === 'compact' && 'text-xs mb-0'
             )}
@@ -1586,15 +1626,37 @@ export const MeepleCard = React.memo(function MeepleCard({
           )}
           data-testid="meeple-card-footer"
         >
-          {metadata.map((item, index) => (
-            <span
-              key={index}
-              className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
-            >
-              {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
-              <span className="font-nunito">{item.label || item.value}</span>
-            </span>
-          ))}
+          {metadata.map((item, index) => {
+            const chipContent = (
+              <>
+                {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span className="font-nunito">{item.label || item.value}</span>
+              </>
+            );
+            if (item.onClick) {
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={e => {
+                    e.stopPropagation();
+                    item.onClick!();
+                  }}
+                >
+                  {chipContent}
+                </button>
+              );
+            }
+            return (
+              <span
+                key={index}
+                className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
+              >
+                {chipContent}
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -1726,7 +1788,8 @@ export const MeepleCard = React.memo(function MeepleCard({
 
   // Feature: Wrap with FlipCard if enabled (takes priority over HoverPreview)
   // Session entities can flip with sessionBackData even without flipData
-  if (flippable && (flipData || sessionBackData)) {
+  // Game entities can flip with gameBackData even without flipData
+  if (flippable && (flipData || sessionBackData || gameBackData)) {
     // Session entities use custom back content (Issue #4752)
     const sessionBack =
       entity === 'session' && sessionStatus && sessionPlayers && sessionBackData ? (
@@ -1740,10 +1803,22 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       ) : undefined;
 
+    // Game entities use GameBackContent for stats + KB preview + actions
+    const gameBack =
+      entity === 'game' && gameBackData ? (
+        <GameBackContent
+          data={gameBackData}
+          actions={gameBackActions}
+          entityColor={color}
+          title={title}
+          detailHref={detailHref}
+        />
+      ) : undefined;
+
     return (
       <FlipCard
         flipData={flipData}
-        customBackContent={sessionBack}
+        customBackContent={sessionBack ?? gameBack}
         variant={variant}
         isFlipped={isFlipped}
         onFlip={onFlip}

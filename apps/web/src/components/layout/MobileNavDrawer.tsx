@@ -8,7 +8,7 @@
  * - Hamburger button triggers drawer from left
  * - Role-filtered navigation items (via unified hook)
  * - Libreria expandable section with children
- * - Active link purple highlighting
+ * - Active link warm orange highlighting
  * - Close on link click or outside tap
  * - 300ms smooth animation
  * - Focus trap and keyboard navigation
@@ -103,9 +103,9 @@ export function MobileNavDrawer({ className }: MobileNavDrawerProps) {
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
                   'transition-colors duration-200',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                   active
-                    ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
+                    ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
                 onClick={handleLinkClick}
@@ -129,9 +129,9 @@ export function MobileNavDrawer({ className }: MobileNavDrawerProps) {
                 className={cn(
                   'flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium',
                   'transition-colors duration-200',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                   isLibraryActive
-                    ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
+                    ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
                 data-testid={NAV_TEST_IDS.mobileLibraryToggle}
@@ -170,9 +170,9 @@ export function MobileNavDrawer({ className }: MobileNavDrawerProps) {
                         className={cn(
                           'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm',
                           'transition-colors duration-200',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                           active
-                            ? 'bg-[hsl(262_83%_62%/0.1)] text-[hsl(262_83%_62%)] font-medium'
+                            ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-medium'
                             : 'text-muted-foreground hover:text-primary hover:bg-muted/50'
                         )}
                         onClick={handleLinkClick}
@@ -206,9 +206,9 @@ export function MobileNavDrawer({ className }: MobileNavDrawerProps) {
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
                       'transition-colors duration-200',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                       active
-                        ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
+                        ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                         : 'text-muted-foreground hover:text-primary hover:bg-muted'
                     )}
                     onClick={handleLinkClick}

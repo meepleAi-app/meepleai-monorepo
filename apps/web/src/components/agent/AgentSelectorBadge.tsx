@@ -1,11 +1,11 @@
 /**
  * ISSUE-3777: Agent Selector Badge
- * Shows current active agent (Tutor/Arbitro/Decisore) with click-to-switch
+ * Shows current active agent (Tutor/Arbitro/Stratega/Narratore) with click-to-switch
  */
 
 'use client';
 
-import { BookOpen, Scale, Trophy } from 'lucide-react';
+import { BookOpen, Scale, Target } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -42,12 +42,19 @@ const AGENT_CONFIG: Record<
       'bg-yellow-500/10 text-yellow-600 border-yellow-500/20 dark:bg-yellow-500/20 dark:text-yellow-400',
     description: 'Move validation and rules arbitration',
   },
-  decisore: {
-    icon: Trophy,
-    label: 'Decisore',
+  stratega: {
+    icon: Target,
+    label: 'Stratega',
     color:
       'bg-purple-500/10 text-purple-600 border-purple-500/20 dark:bg-purple-500/20 dark:text-purple-400',
     description: 'Strategic analysis and move suggestions',
+  },
+  narratore: {
+    icon: BookOpen,
+    label: 'Narratore',
+    color:
+      'bg-green-500/10 text-green-600 border-green-500/20 dark:bg-green-500/20 dark:text-green-400',
+    description: 'Lore, atmosphere, and immersive storytelling',
   },
 };
 

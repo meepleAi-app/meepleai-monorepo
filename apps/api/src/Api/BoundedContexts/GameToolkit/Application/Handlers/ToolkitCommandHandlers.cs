@@ -495,3 +495,145 @@ internal class ClearStateTemplateCommandHandler : ICommandHandler<ClearStateTemp
         return ToolkitMapper.ToDto(toolkit);
     }
 }
+
+// ========================================================================
+// Template marketplace handlers
+// ========================================================================
+
+internal class SubmitTemplateForReviewCommandHandler : ICommandHandler<SubmitTemplateForReviewCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public SubmitTemplateForReviewCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(SubmitTemplateForReviewCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        if (toolkit.CreatedByUserId != command.UserId)
+            throw new ForbiddenException("Only the toolkit creator can submit it for review.");
+
+        toolkit.SubmitForReview();
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class ApproveTemplateCommandHandler : ICommandHandler<ApproveTemplateCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public ApproveTemplateCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(ApproveTemplateCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        toolkit.ApproveTemplate(command.AdminUserId, command.Notes);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class RejectTemplateCommandHandler : ICommandHandler<RejectTemplateCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public RejectTemplateCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(RejectTemplateCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
+
+        toolkit.RejectTemplate(command.AdminUserId, command.Notes);
+
+        await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(toolkit);
+    }
+}
+
+internal class CloneFromTemplateCommandHandler : ICommandHandler<CloneFromTemplateCommand, GameToolkitDto>
+{
+    private readonly IGameToolkitRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public CloneFromTemplateCommandHandler(IGameToolkitRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<GameToolkitDto> Handle(CloneFromTemplateCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var template = await _repository.GetByIdAsync(command.TemplateId, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("GameToolkit template", command.TemplateId.ToString());
+
+        if (template.TemplateStatus != Domain.Enums.TemplateStatus.Approved)
+            throw new Middleware.Exceptions.ConflictException("Can only clone from approved templates.");
+
+        var clone = new Domain.Entities.GameToolkit(
+            id: Guid.NewGuid(),
+            gameId: command.GameId,
+            name: $"{template.Name} (from template)",
+            createdByUserId: command.UserId);
+
+        // Copy all tools from template
+        foreach (var dice in template.DiceTools)
+            clone.AddDiceTool(new DiceToolConfig(dice.Name, dice.DiceType, dice.Quantity, dice.CustomFaces, dice.IsInteractive, dice.Color));
+        foreach (var card in template.CardTools)
+            clone.AddCardTool(new CardToolConfig(card.Name, card.DeckType, card.CardCount, card.Shuffleable,
+                card.DefaultZone, card.DefaultOrientation, card.CardEntries.ToList(),
+                card.AllowDraw, card.AllowDiscard, card.AllowPeek, card.AllowReturnToDeck));
+        foreach (var timer in template.TimerTools)
+            clone.AddTimerTool(new TimerToolConfig(timer.Name, timer.DurationSeconds, timer.TimerType,
+                timer.AutoStart, timer.Color, timer.IsPerPlayer, timer.WarningThresholdSeconds));
+        foreach (var counter in template.CounterTools)
+            clone.AddCounterTool(new CounterToolConfig(counter.Name, counter.MinValue, counter.MaxValue,
+                counter.DefaultValue, counter.IsPerPlayer, counter.Icon, counter.Color));
+
+        if (template.ScoringTemplate != null)
+            clone.SetScoringTemplate(new ScoringTemplateConfig(
+                template.ScoringTemplate.Dimensions, template.ScoringTemplate.DefaultUnit, template.ScoringTemplate.ScoreType));
+        if (template.TurnTemplate != null)
+            clone.SetTurnTemplate(new TurnTemplateConfig(template.TurnTemplate.TurnOrderType, template.TurnTemplate.Phases));
+
+        await _repository.AddAsync(clone, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return ToolkitMapper.ToDto(clone);
+    }
+}

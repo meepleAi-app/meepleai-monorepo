@@ -88,16 +88,18 @@ export const useImpersonationStore = create<ImpersonationStore>((set, get) => ({
 
     try {
       // Store original session token from cookie (for restoration)
-      const originalToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('session_token='))
-        ?.split('=')[1] || null;
+      const originalToken =
+        document.cookie
+          .split('; ')
+          .find(row => row.startsWith('session_token='))
+          ?.split('=')[1] || null;
 
       // Call API to start impersonation
       const response = await api.admin.impersonateUser(userId);
 
       // Set the new session token cookie
-      document.cookie = `session_token=${response.sessionToken}; path=/; samesite=strict`;
+      // TODO: Migrate to backend HttpOnly Set-Cookie header for full cookie security
+      document.cookie = `session_token=${response.sessionToken}; path=/; samesite=strict; secure; max-age=3600`;
 
       set({
         isImpersonating: true,
@@ -123,10 +125,14 @@ export const useImpersonationStore = create<ImpersonationStore>((set, get) => ({
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start impersonation';
-      logger.error('Failed to start impersonation', err instanceof Error ? err : new Error(errorMessage), {
-        component: 'ImpersonationStore',
-        metadata: { userId },
-      });
+      logger.error(
+        'Failed to start impersonation',
+        err instanceof Error ? err : new Error(errorMessage),
+        {
+          component: 'ImpersonationStore',
+          metadata: { userId },
+        }
+      );
       set({ isLoading: false, error: errorMessage });
       return false;
     }
@@ -146,7 +152,7 @@ export const useImpersonationStore = create<ImpersonationStore>((set, get) => ({
 
       // Restore original session token
       if (state.originalSessionToken) {
-        document.cookie = `session_token=${state.originalSessionToken}; path=/; samesite=strict`;
+        document.cookie = `session_token=${state.originalSessionToken}; path=/; samesite=strict; secure; max-age=3600`;
       } else {
         // Clear session cookie if no original token
         document.cookie = 'session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
@@ -165,9 +171,13 @@ export const useImpersonationStore = create<ImpersonationStore>((set, get) => ({
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to end impersonation';
-      logger.error('Failed to end impersonation', err instanceof Error ? err : new Error(errorMessage), {
-        component: 'ImpersonationStore',
-      });
+      logger.error(
+        'Failed to end impersonation',
+        err instanceof Error ? err : new Error(errorMessage),
+        {
+          component: 'ImpersonationStore',
+        }
+      );
       set({ isLoading: false, error: errorMessage });
       return false;
     }

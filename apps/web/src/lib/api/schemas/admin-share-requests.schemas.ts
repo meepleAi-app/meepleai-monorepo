@@ -197,14 +197,12 @@ export const ActiveReviewDtoSchema = z.object({
 export type ActiveReviewDto = z.infer<typeof ActiveReviewDtoSchema>;
 
 // Paginated Admin Share Requests Response
+// Backend PagedResult<T> returns: { items, total, page, pageSize }
 export const PaginatedAdminShareRequestsResponseSchema = z.object({
   items: z.array(AdminShareRequestDtoSchema),
   page: z.number().int().positive(),
   pageSize: z.number().int().positive(),
-  totalCount: z.number().int().nonnegative(),
-  totalPages: z.number().int().nonnegative(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean(),
+  total: z.number().int().nonnegative(),
 });
 
 export type PaginatedAdminShareRequestsResponse = z.infer<

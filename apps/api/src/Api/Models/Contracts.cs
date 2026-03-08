@@ -76,7 +76,8 @@ internal enum StreamingEventType
     DebugSearchDetails = 18,    // Vector/keyword/fused result breakdown
     DebugCacheCheck = 19,       // Cache hit/miss with timing
     DebugDocumentCheck = 20,    // Document readiness check result
-    ModelDowngrade = 21         // LLM fallback notification (model was downgraded)
+    ModelDowngrade = 21,        // LLM fallback notification (model was downgraded)
+    DebugTypologyProfile = 22   // Typology profile used for this query
 }
 
 internal record RagStreamingEvent(

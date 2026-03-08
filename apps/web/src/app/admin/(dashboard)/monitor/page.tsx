@@ -1,100 +1,131 @@
 /**
  * Admin Monitor Hub
  * Issue #5040 — Consolidate Admin Routes
+ * Issue #5053 — Admin Monitor Migration
  *
  * Canonical entry for all system monitoring admin pages.
- * Tabs: alerts · cache · infra · services · command · testing · export
- *
- * TODO (Issue #5053): Migrate full content with tab-based layout + ActionBar.
+ * Tabs: alerts · cache · infra · command · testing · export · email
  */
 
-import Link from 'next/link';
+import { Suspense } from 'react';
 
+import { Bell, Database, HardDrive, Terminal, TestTube, Download, Mail } from 'lucide-react';
+
+import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
+
+import { AlertsTab } from './AlertsTab';
+import { BulkExportTab } from './BulkExportTab';
+import { CacheTab } from './CacheTab';
+import { CommandCenterTab } from './CommandCenterTab';
+import { EmailManagementTab } from './EmailManagementTab';
+import { InfrastructureTab } from './InfrastructureTab';
 import { AdminMonitorNavConfig } from './NavConfig';
+import { TestingTab } from './TestingTab';
 
 interface AdminMonitorPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
 }
 
-const TABS = [
-  { id: 'alerts',   label: 'Alerts',          href: '/admin/monitor?tab=alerts' },
-  { id: 'cache',    label: 'Cache',           href: '/admin/monitor?tab=cache' },
-  { id: 'infra',    label: 'Infrastructure',  href: '/admin/monitor?tab=infra' },
-  { id: 'services', label: 'Services',        href: '/admin/monitor?tab=services' },
-  { id: 'command',  label: 'Command Center',  href: '/admin/monitor?tab=command' },
-  { id: 'testing',  label: 'Testing',         href: '/admin/monitor?tab=testing' },
-  { id: 'export',   label: 'Bulk Export',     href: '/admin/monitor?tab=export' },
+const TABS: readonly HubTab[] = [
+  { id: 'alerts', label: 'Alerts', href: '/admin/monitor?tab=alerts', icon: <Bell /> },
+  { id: 'cache', label: 'Cache', href: '/admin/monitor?tab=cache', icon: <Database /> },
+  { id: 'infra', label: 'Infrastructure', href: '/admin/monitor?tab=infra', icon: <HardDrive /> },
+  {
+    id: 'command',
+    label: 'Command Center',
+    href: '/admin/monitor?tab=command',
+    icon: <Terminal />,
+  },
+  { id: 'testing', label: 'Testing', href: '/admin/monitor?tab=testing', icon: <TestTube /> },
+  { id: 'export', label: 'Bulk Export', href: '/admin/monitor?tab=export', icon: <Download /> },
+  { id: 'email', label: 'Email', href: '/admin/monitor?tab=email', icon: <Mail /> },
 ] as const;
 
-/** Old sub-page links available while full migration is pending */
-const SUB_PAGES = [
-  { label: 'Alerts',          href: '/admin/alerts' },
-  { label: 'Alert Config',    href: '/admin/alerts/config' },
-  { label: 'Alert Rules',     href: '/admin/alert-rules' },
-  { label: 'Cache',           href: '/admin/cache' },
-  { label: 'Infrastructure',  href: '/admin/infrastructure' },
-  { label: 'Services',        href: '/admin/services' },
-  { label: 'Command Center',  href: '/admin/command-center' },
-  { label: 'Testing',         href: '/admin/testing' },
-  { label: 'Bulk Export',     href: '/admin/bulk-export' },
-];
+type TabId = (typeof TABS)[number]['id'];
+
+function TabSkeleton() {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="h-10 w-48 rounded-lg bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function renderTabContent(tab: TabId) {
+  switch (tab) {
+    case 'alerts':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <AlertsTab />
+        </Suspense>
+      );
+    case 'cache':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <CacheTab />
+        </Suspense>
+      );
+    case 'infra':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <InfrastructureTab />
+        </Suspense>
+      );
+    case 'command':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <CommandCenterTab />
+        </Suspense>
+      );
+    case 'testing':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <TestingTab />
+        </Suspense>
+      );
+    case 'export':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <BulkExportTab />
+        </Suspense>
+      );
+    case 'email':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <EmailManagementTab />
+        </Suspense>
+      );
+    default:
+      return null;
+  }
+}
 
 export default async function AdminMonitorPage({ searchParams }: AdminMonitorPageProps) {
   const params = await searchParams;
-  const tab = params.tab ?? 'alerts';
+  const tab = (params.tab ?? 'alerts') as TabId;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <AdminMonitorNavConfig />
       <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Monitor
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-0.5 text-sm text-muted-foreground">
           System health, alerts, cache management, infrastructure, and operations.
         </p>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map((t) => (
-          <Link
-            key={t.id}
-            href={t.href}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="monitor" defaultTab="alerts" />
 
-      {/* Placeholder — full content migrated in Issue #5053 */}
-      <div className="rounded-lg border border-dashed border-border/60 p-8 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Tab: <span className="font-mono">{tab}</span>
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Full tab content will be available after Issue #5053 (Admin Monitor Migration).
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Access via individual pages below until migration is complete:
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {SUB_PAGES.map((p) => (
-            <Link
-              key={p.href}
-              href={p.href}
-              className="rounded-md border border-border/60 px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-            >
-              {p.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <div className="pt-1">{renderTabContent(tab)}</div>
     </div>
   );
 }

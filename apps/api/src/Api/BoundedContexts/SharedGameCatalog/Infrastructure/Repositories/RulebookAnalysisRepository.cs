@@ -116,6 +116,31 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
         return pdfDocument?.ExtractedText ?? string.Empty;
     }
 
+    public async Task<List<GamePdfPair>> GetGamePdfPairsWithReadyTextAsync(CancellationToken cancellationToken = default)
+    {
+        var pairs = await _context.SharedGames
+            .AsNoTracking()
+            .Where(g => !g.IsDeleted)
+            .Join(
+                _context.PdfDocuments.Where(p => p.ProcessingState == "Ready" && p.ExtractedText != null && p.ExtractedText != ""),
+                g => g.Id, p => p.SharedGameId,
+                (g, p) => new GamePdfPair(g.Id, g.Title, p.Id))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return pairs;
+    }
+
+    public async Task<HashSet<string>> GetActiveAnalysisKeysAsync(CancellationToken cancellationToken = default)
+    {
+        var activeKeys = await _context.RulebookAnalyses
+            .AsNoTracking()
+            .Where(a => a.IsActive)
+            .Select(a => a.SharedGameId + ":" + a.PdfDocumentId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return new HashSet<string>(activeKeys, StringComparer.Ordinal);
+    }
+
     // Mapping methods
 
     private static RulebookAnalysis MapToDomain(RulebookAnalysisEntity entity)

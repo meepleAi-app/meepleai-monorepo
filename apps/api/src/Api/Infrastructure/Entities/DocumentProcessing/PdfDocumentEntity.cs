@@ -73,6 +73,9 @@ public class PdfDocumentEntity
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; set; }
 
+    // PDF deduplication: SHA-256 hash of file content
+    public string? ContentHash { get; set; }
+
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 

@@ -1,66 +1,77 @@
 /**
  * Achievements Page (Issue #4117)
- * Display user achievements with filtering and progress tracking
+ * Display user achievements with filtering and progress tracking.
+ * Issue #5322: Replace mock data with real API.
  */
 
 'use client';
 
 import React, { useState } from 'react';
 
-import { Trophy, Lock, TrendingUp } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Trophy, Lock, TrendingUp, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { apiClient } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
-// TODO: Replace with API
-interface Achievement {
+interface AchievementDto {
   id: string;
+  code: string;
   name: string;
   description: string;
-  icon: string;
-  status: 'earned' | 'locked' | 'in-progress';
-  progress?: number;
-  total?: number;
-  earnedAt?: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  iconUrl: string;
+  points: number;
+  rarity: string;
+  category: string;
+  threshold: number;
+  progress: number | null;
+  isUnlocked: boolean;
+  unlockedAt: string | null;
 }
 
-const mockAchievements: Achievement[] = [
-  {
-    id: '1',
-    name: 'First Game',
-    description: 'Play your first game',
-    icon: '🎮',
-    status: 'earned',
-    earnedAt: '2026-01-15',
-    rarity: 'common',
-  },
-  {
-    id: '2',
-    name: 'Collector',
-    description: 'Own 10 games',
-    icon: '📚',
-    status: 'in-progress',
-    progress: 7,
-    total: 10,
-    rarity: 'rare',
-  },
-  {
-    id: '3',
-    name: 'Master Player',
-    description: 'Win 50 games',
-    icon: '👑',
-    status: 'locked',
-    rarity: 'epic',
-  },
-];
+type AchievementFilter = 'all' | 'earned' | 'locked' | 'in-progress';
+
+function getStatus(a: AchievementDto): 'earned' | 'locked' | 'in-progress' {
+  if (a.isUnlocked) return 'earned';
+  if (a.progress != null && a.progress > 0) return 'in-progress';
+  return 'locked';
+}
+
+function getIcon(a: AchievementDto): string {
+  if (a.iconUrl) return a.iconUrl;
+  switch (a.category.toLowerCase()) {
+    case 'gameplay':
+      return '🎮';
+    case 'collection':
+      return '📚';
+    case 'social':
+      return '🤝';
+    default:
+      return '🏆';
+  }
+}
 
 export default function AchievementsPage() {
-  const [filter, setFilter] = useState<'all' | 'earned' | 'locked' | 'in-progress'>('all');
+  const [filter, setFilter] = useState<AchievementFilter>('all');
 
-  const filteredAchievements = mockAchievements.filter(
-    a => filter === 'all' || a.status === filter
-  );
+  const {
+    data: achievements,
+    isLoading,
+    error,
+  } = useQuery<AchievementDto[]>({
+    queryKey: ['achievements'],
+    queryFn: async () => {
+      const res = await apiClient.get<AchievementDto[]>('/api/v1/achievements');
+      return res ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const filtered = (achievements ?? []).filter(a => {
+    if (filter === 'all') return true;
+    return getStatus(a) === filter;
+  });
 
   return (
     <div className="container mx-auto py-8">
@@ -71,103 +82,126 @@ export default function AchievementsPage() {
 
       {/* Filters */}
       <div className="flex gap-2 mb-6">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          onClick={() => setFilter('all')}
-          size="sm"
-        >
-          All
-        </Button>
-        <Button
-          variant={filter === 'earned' ? 'default' : 'outline'}
-          onClick={() => setFilter('earned')}
-          size="sm"
-        >
-          Earned
-        </Button>
-        <Button
-          variant={filter === 'in-progress' ? 'default' : 'outline'}
-          onClick={() => setFilter('in-progress')}
-          size="sm"
-        >
-          In Progress
-        </Button>
-        <Button
-          variant={filter === 'locked' ? 'default' : 'outline'}
-          onClick={() => setFilter('locked')}
-          size="sm"
-        >
-          Locked
-        </Button>
-      </div>
-
-      {/* Achievement Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAchievements.map(achievement => (
-          <div
-            key={achievement.id}
-            className={cn(
-              'p-6 rounded-xl border transition-all',
-              achievement.status === 'earned' && 'bg-card border-primary/50',
-              achievement.status === 'locked' && 'bg-muted/50 border-border opacity-60',
-              achievement.status === 'in-progress' && 'bg-card border-amber-500/50'
-            )}
+        {(['all', 'earned', 'in-progress', 'locked'] as const).map(f => (
+          <Button
+            key={f}
+            variant={filter === f ? 'default' : 'outline'}
+            onClick={() => setFilter(f)}
+            size="sm"
           >
-            <div className="flex items-start gap-4 mb-4">
-              <div className="text-4xl">{achievement.icon}</div>
-              <div className="flex-1">
-                <h3 className="font-bold text-lg mb-1">{achievement.name}</h3>
-                <p className="text-sm text-muted-foreground">{achievement.description}</p>
-              </div>
-              {achievement.status === 'earned' && (
-                <Trophy className="h-5 w-5 text-primary" />
-              )}
-              {achievement.status === 'locked' && <Lock className="h-5 w-5 text-muted-foreground" />}
-              {achievement.status === 'in-progress' && (
-                <TrendingUp className="h-5 w-5 text-amber-500" />
-              )}
-            </div>
-
-            {/* Progress bar for in-progress */}
-            {achievement.status === 'in-progress' && achievement.progress && achievement.total && (
-              <div className="mb-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span>Progress</span>
-                  <span>
-                    {achievement.progress}/{achievement.total}
-                  </span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-500 transition-all"
-                    style={{ width: `${(achievement.progress / achievement.total) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Earned date */}
-            {achievement.status === 'earned' && achievement.earnedAt && (
-              <p className="text-xs text-muted-foreground">Earned {achievement.earnedAt}</p>
-            )}
-
-            {/* Rarity badge */}
-            <div className="mt-3">
-              <span
-                className={cn(
-                  'text-xs px-2 py-1 rounded',
-                  achievement.rarity === 'common' && 'bg-gray-100 text-gray-700',
-                  achievement.rarity === 'rare' && 'bg-blue-100 text-blue-700',
-                  achievement.rarity === 'epic' && 'bg-purple-100 text-purple-700',
-                  achievement.rarity === 'legendary' && 'bg-amber-100 text-amber-700'
-                )}
-              >
-                {achievement.rarity}
-              </span>
-            </div>
-          </div>
+            {f === 'all'
+              ? 'All'
+              : f === 'earned'
+                ? 'Earned'
+                : f === 'in-progress'
+                  ? 'In Progress'
+                  : 'Locked'}
+          </Button>
         ))}
       </div>
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="text-center py-16 text-muted-foreground">
+          <p>Failed to load achievements. Please try again later.</p>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && !error && filtered.length === 0 && (
+        <div className="text-center py-16 text-muted-foreground">
+          <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium">
+            {filter === 'all' ? 'No achievements available yet' : `No ${filter} achievements`}
+          </p>
+          <p className="text-sm mt-1">Start playing games to unlock achievements!</p>
+        </div>
+      )}
+
+      {/* Achievement Grid */}
+      {!isLoading && !error && filtered.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map(achievement => {
+            const status = getStatus(achievement);
+            const icon = getIcon(achievement);
+            return (
+              <div
+                key={achievement.id}
+                className={cn(
+                  'p-6 rounded-xl border transition-all',
+                  status === 'earned' && 'bg-card border-primary/50',
+                  status === 'locked' && 'bg-muted/50 border-border opacity-60',
+                  status === 'in-progress' && 'bg-card border-amber-500/50'
+                )}
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="text-4xl">{icon}</div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg mb-1">{achievement.name}</h3>
+                    <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                  </div>
+                  {status === 'earned' && <Trophy className="h-5 w-5 text-primary" />}
+                  {status === 'locked' && <Lock className="h-5 w-5 text-muted-foreground" />}
+                  {status === 'in-progress' && <TrendingUp className="h-5 w-5 text-amber-500" />}
+                </div>
+
+                {/* Progress bar */}
+                {status === 'in-progress' &&
+                  achievement.progress != null &&
+                  achievement.threshold > 0 && (
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span>Progress</span>
+                        <span>
+                          {achievement.progress}/{achievement.threshold}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 transition-all"
+                          style={{
+                            width: `${Math.min((achievement.progress / achievement.threshold) * 100, 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                {/* Earned date */}
+                {status === 'earned' && achievement.unlockedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Earned {new Date(achievement.unlockedAt).toLocaleDateString()}
+                  </p>
+                )}
+
+                {/* Rarity badge */}
+                <div className="mt-3">
+                  <span
+                    className={cn(
+                      'text-xs px-2 py-1 rounded',
+                      achievement.rarity.toLowerCase() === 'common' && 'bg-gray-100 text-gray-700',
+                      achievement.rarity.toLowerCase() === 'rare' && 'bg-blue-100 text-blue-700',
+                      achievement.rarity.toLowerCase() === 'epic' &&
+                        'bg-purple-100 text-purple-700',
+                      achievement.rarity.toLowerCase() === 'legendary' &&
+                        'bg-amber-100 text-amber-700'
+                    )}
+                  >
+                    {achievement.rarity}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

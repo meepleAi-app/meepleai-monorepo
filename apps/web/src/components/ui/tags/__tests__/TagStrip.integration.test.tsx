@@ -21,10 +21,37 @@ describe('TagStrip Integration with MeepleCard', () => {
 
   // Standalone TagStrip expects Tag[] objects
   const standaloneTags: Tag[] = [
-    { id: 'new', label: 'New', icon: Sparkles, bgColor: 'hsl(142 76% 36%)', color: 'hsl(0 0% 100%)', tooltip: 'Recently added' },
-    { id: 'sale', label: 'Sale', icon: TagIcon, bgColor: 'hsl(0 84% 60%)', color: 'hsl(0 0% 100%)', tooltip: 'On sale now' },
-    { id: 'owned', label: 'Owned', icon: CheckCircle, bgColor: 'hsl(221 83% 53%)', color: 'hsl(0 0% 100%)', tooltip: 'In your collection' },
-    { id: 'wishlisted', label: 'Wishlist', icon: Heart, bgColor: 'hsl(350 89% 60%)', color: 'hsl(0 0% 100%)' },
+    {
+      id: 'new',
+      label: 'New',
+      icon: Sparkles,
+      bgColor: 'hsl(142 76% 36%)',
+      color: 'hsl(0 0% 100%)',
+      tooltip: 'Recently added',
+    },
+    {
+      id: 'sale',
+      label: 'Sale',
+      icon: TagIcon,
+      bgColor: 'hsl(0 84% 60%)',
+      color: 'hsl(0 0% 100%)',
+      tooltip: 'On sale now',
+    },
+    {
+      id: 'owned',
+      label: 'Owned',
+      icon: CheckCircle,
+      bgColor: 'hsl(221 83% 53%)',
+      color: 'hsl(0 0% 100%)',
+      tooltip: 'In your collection',
+    },
+    {
+      id: 'wishlisted',
+      label: 'Wishlist',
+      icon: Heart,
+      bgColor: 'hsl(350 89% 60%)',
+      color: 'hsl(0 0% 100%)',
+    },
   ];
 
   it('renders tags within MeepleCard grid variant', () => {
@@ -69,12 +96,7 @@ describe('TagStrip Integration with MeepleCard', () => {
 
   it('renders tags on list variant', () => {
     render(
-      <MeepleCard
-        entity="game"
-        variant="list"
-        title="Wingspan"
-        tags={meepleCardTags.slice(0, 2)}
-      />
+      <MeepleCard entity="game" variant="list" title="Wingspan" tags={meepleCardTags.slice(0, 2)} />
     );
 
     const tagStrip = screen.getByTestId('tag-strip');
@@ -84,13 +106,7 @@ describe('TagStrip Integration with MeepleCard', () => {
   it('renders agent capability tags correctly', () => {
     const agentTags: TagPresetKey[] = ['rag', 'vision'];
 
-    render(
-      <MeepleCard
-        entity="agent"
-        title="Rules Expert"
-        tags={agentTags}
-      />
-    );
+    render(<MeepleCard entity="agent" title="Rules Expert" tags={agentTags} />);
 
     expect(screen.getByText('RAG')).toBeInTheDocument();
     expect(screen.getByText('Vision')).toBeInTheDocument();
@@ -115,49 +131,26 @@ describe('TagStrip Integration with MeepleCard', () => {
   });
 
   it('does not render tag strip when tags array is empty', () => {
-    render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={[]}
-      />
-    );
+    render(<MeepleCard entity="game" title="Wingspan" tags={[]} />);
 
     expect(screen.queryByTestId('tag-strip')).not.toBeInTheDocument();
   });
 
   it('does not render tag strip when tags prop is undefined', () => {
-    render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-      />
-    );
+    render(<MeepleCard entity="game" title="Wingspan" />);
 
     expect(screen.queryByTestId('tag-strip')).not.toBeInTheDocument();
   });
 
   it('tag badges render with correct test IDs', () => {
-    render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={['new']}
-      />
-    );
+    render(<MeepleCard entity="game" title="Wingspan" tags={['new']} />);
 
     const tagBadge = screen.getByTestId('tag-badge-new');
     expect(tagBadge).toBeInTheDocument();
   });
 
   it('tag icons render correctly', () => {
-    render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={['new']}
-      />
-    );
+    render(<MeepleCard entity="game" title="Wingspan" tags={['new']} />);
 
     const tagBadge = screen.getByTestId('tag-badge-new');
     const icon = tagBadge.querySelector('svg');
@@ -191,11 +184,7 @@ describe('TagStrip Integration with MeepleCard', () => {
 
     render(
       <div onClick={handleCardClick}>
-        <MeepleCard
-          entity="game"
-          title="Wingspan"
-          tags={meepleCardTags.slice(0, 3)}
-        />
+        <MeepleCard entity="game" title="Wingspan" tags={meepleCardTags.slice(0, 3)} />
       </div>
     );
 
@@ -208,7 +197,11 @@ describe('TagStrip Integration with MeepleCard', () => {
 
   it('renders correctly in all 5 MeepleCard variants', () => {
     const variants: Array<'grid' | 'list' | 'compact' | 'featured' | 'hero'> = [
-      'grid', 'list', 'compact', 'featured', 'hero'
+      'grid',
+      'list',
+      'compact',
+      'featured',
+      'hero',
     ];
 
     variants.forEach(variant => {
@@ -231,12 +224,7 @@ describe('TagStrip Integration with MeepleCard', () => {
   it('tag strip does not render when MeepleCard entity does not support tags', () => {
     // Some entity types might not show tags (e.g., compact player cards)
     render(
-      <MeepleCard
-        entity="player"
-        variant="compact"
-        title="Marco Rossi"
-        tags={meepleCardTags}
-      />
+      <MeepleCard entity="player" variant="compact" title="Marco Rossi" tags={meepleCardTags} />
     );
 
     // Implementation detail: MeepleCard decides whether to render tags
@@ -245,26 +233,14 @@ describe('TagStrip Integration with MeepleCard', () => {
   });
 
   it('tag strip works with dynamic tag updates', async () => {
-    const { rerender } = render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={['new']}
-      />
-    );
+    const { rerender } = render(<MeepleCard entity="game" title="Wingspan" tags={['new']} />);
 
     // Initially 1 tag
     expect(screen.getByText('New')).toBeInTheDocument();
     expect(screen.queryByText('Sale')).not.toBeInTheDocument();
 
     // Update tags
-    rerender(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={['new', 'sale']}
-      />
-    );
+    rerender(<MeepleCard entity="game" title="Wingspan" tags={['new', 'sale']} />);
 
     // Now 2 tags
     expect(screen.getByText('New')).toBeInTheDocument();
@@ -272,13 +248,7 @@ describe('TagStrip Integration with MeepleCard', () => {
   });
 
   it('tag accessibility: tag strip has role="list"', () => {
-    render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={meepleCardTags.slice(0, 3)}
-      />
-    );
+    render(<MeepleCard entity="game" title="Wingspan" tags={meepleCardTags.slice(0, 3)} />);
 
     const tagStrip = screen.getByTestId('tag-strip');
     expect(tagStrip).toHaveAttribute('role', 'list');
@@ -304,13 +274,7 @@ describe('TagStrip Integration with MeepleCard', () => {
       })),
     });
 
-    render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={meepleCardTags.slice(0, 3)}
-      />
-    );
+    render(<MeepleCard entity="game" title="Wingspan" tags={meepleCardTags.slice(0, 3)} />);
 
     // Tags still render (no crash with reduced motion)
     expect(screen.getByText('New')).toBeInTheDocument();
@@ -319,19 +283,21 @@ describe('TagStrip Integration with MeepleCard', () => {
   it('tag performance: renders many tags without lag', () => {
     // Use available preset keys for performance test
     const manyPresetTags: TagPresetKey[] = [
-      'new', 'sale', 'owned', 'wishlist', 'rag', 'vision', 'code', 'tutor', 'arbitro', 'decisore'
+      'new',
+      'sale',
+      'owned',
+      'wishlist',
+      'rag',
+      'vision',
+      'code',
+      'tutor',
+      'arbitro',
+      'stratega',
     ];
 
     const start = performance.now();
 
-    render(
-      <MeepleCard
-        entity="game"
-        title="Wingspan"
-        tags={manyPresetTags}
-        maxVisibleTags={3}
-      />
-    );
+    render(<MeepleCard entity="game" title="Wingspan" tags={manyPresetTags} maxVisibleTags={3} />);
 
     const duration = performance.now() - start;
 
@@ -384,9 +350,7 @@ describe('TagStrip Integration with MeepleCard', () => {
     });
 
     it('tag strip right position works correctly', () => {
-      const { container } = render(
-        <TagStrip tags={standaloneTags.slice(0, 2)} position="right" />
-      );
+      const { container } = render(<TagStrip tags={standaloneTags.slice(0, 2)} position="right" />);
 
       const strip = container.querySelector('[aria-label="Entity tags"]');
 

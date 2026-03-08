@@ -1,16 +1,15 @@
 /**
- * SidebarContextNav - Issue #4936
- * Context-sensitive sidebar navigation panel.
+ * SidebarContextNav - Issue #4936 + Issue #15 (Sidebar Strategy Rework)
  *
- * Renders different content based on current route, with fade/slide animation.
- * Integrates with AnimatePresence (framer-motion) for smooth transitions.
+ * Split into two zones:
+ *   1. Fixed Nav Zone — always-visible primary navigation links
+ *   2. Contextual Zone — route-specific panels with animated transitions
  *
- * Context map:
- *   /dashboard  → DashboardPanel (quick links + stats hints)
- *   /library/*  → LibraryPanel  (collection filters)
- *   /admin/*    → AdminPanel    (admin menu — delegated to SidebarNav)
- *   /games/*    → GamesPanel    (catalog filters)
- *   default     → SidebarNav    (standard navigation)
+ * Context map (contextual zone):
+ *   /dashboard  -> DashboardPanel (quick links + stats hints)
+ *   /library/*  -> LibraryPanel  (collection filters)
+ *   /games/*    -> GamesPanel    (catalog filters)
+ *   default     -> null (no contextual panel)
  */
 
 'use client';
@@ -27,15 +26,15 @@ import {
   Users,
   Calendar,
   Library,
-  SlidersHorizontal,
   Layers,
+  MessageSquare,
+  Play,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { GamesFilterPanel } from '@/components/catalog/GamesFilterPanel';
 import { cn } from '@/lib/utils';
-
-import { SidebarNav } from './SidebarNav';
 
 import type { Variants } from 'framer-motion';
 
@@ -71,7 +70,7 @@ function SidebarLink({
         'transition-colors duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1',
         isActive
-          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25,95%,42%)] font-semibold'
+          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
           : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
         isCollapsed && 'justify-center px-2'
       )}
@@ -91,19 +90,49 @@ function SectionLabel({ label, isCollapsed }: { label: string; isCollapsed: bool
   );
 }
 
-// ─── Context panels ──────────────────────────────────────────────────────────
+// ─── Fixed Nav Zone ──────────────────────────────────────────────────────────
 
-function DashboardPanel({ isCollapsed }: { isCollapsed: boolean }) {
+function FixedNavZone({ isCollapsed }: { isCollapsed: boolean }) {
+  const pathname = usePathname();
+
+  const primaryLinks = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/library', icon: Library, label: 'Libreria' },
+    { href: '/games', icon: Gamepad2, label: 'Scopri' },
+    { href: '/chat', icon: MessageSquare, label: 'Chat AI' },
+    { href: '/sessions', icon: Play, label: 'Sessioni' },
+    { href: '/players', icon: Users, label: 'Giocatori' },
+  ];
+
+  return (
+    <nav
+      className="flex flex-col gap-0.5 px-2 py-3"
+      aria-label="Primary navigation"
+      data-testid="sidebar-fixed-nav"
+    >
+      {primaryLinks.map(link => (
+        <SidebarLink
+          key={link.href}
+          href={link.href}
+          icon={link.icon}
+          label={link.label}
+          isActive={
+            link.href === '/dashboard' ? pathname === '/dashboard' : pathname?.startsWith(link.href)
+          }
+          isCollapsed={isCollapsed}
+        />
+      ))}
+    </nav>
+  );
+}
+
+// ─── Contextual panels ──────────────────────────────────────────────────────
+
+function DashboardContextPanel({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Dashboard navigation">
-      <SidebarLink
-        href="/dashboard"
-        icon={LayoutDashboard}
-        label="Overview"
-        isActive={pathname === '/dashboard'}
-        isCollapsed={isCollapsed}
-      />
+    <nav className="flex flex-col gap-0.5 px-2 py-1" aria-label="Dashboard shortcuts">
+      <SectionLabel label="Accesso rapido" isCollapsed={isCollapsed} />
       <SidebarLink
         href="/play-records"
         icon={Clock}
@@ -112,46 +141,21 @@ function DashboardPanel({ isCollapsed }: { isCollapsed: boolean }) {
         isCollapsed={isCollapsed}
       />
       <SidebarLink
-        href="/library"
-        icon={Library}
-        label="La mia collezione"
-        isActive={pathname?.startsWith('/library')}
-        isCollapsed={isCollapsed}
-      />
-
-      <SectionLabel label="Accesso rapido" isCollapsed={isCollapsed} />
-      <SidebarLink
-        href="/games"
-        icon={Gamepad2}
-        label="Catalogo giochi"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <SidebarLink
-        href="/players"
-        icon={Users}
-        label="Giocatori"
-        isActive={pathname?.startsWith('/players')}
+        href="/library/wishlist"
+        icon={Star}
+        label="Wishlist"
+        isActive={pathname?.startsWith('/library/wishlist')}
         isCollapsed={isCollapsed}
       />
     </nav>
   );
 }
 
-function LibraryPanel({ isCollapsed }: { isCollapsed: boolean }) {
+function LibraryContextPanel({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Library navigation">
-      {/* Back to Dashboard */}
-      <SidebarLink
-        href="/dashboard"
-        icon={LayoutDashboard}
-        label="Dashboard"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <hr className="my-1 border-sidebar-border" />
-
+    <nav className="flex flex-col gap-0.5 px-2 py-1" aria-label="Library filters">
+      <SectionLabel label="Libreria" isCollapsed={isCollapsed} />
       <SidebarLink
         href="/library"
         icon={BookOpen}
@@ -200,70 +204,6 @@ function LibraryPanel({ isCollapsed }: { isCollapsed: boolean }) {
   );
 }
 
-function GamesPanel({ isCollapsed }: { isCollapsed: boolean }) {
-  const pathname = usePathname();
-  return (
-    <nav className="flex flex-col gap-0.5 px-2 py-3" aria-label="Games catalog navigation">
-      {/* Back to Dashboard */}
-      <SidebarLink
-        href="/dashboard"
-        icon={LayoutDashboard}
-        label="Dashboard"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <hr className="my-1 border-sidebar-border" />
-
-      <SidebarLink
-        href="/games"
-        icon={Gamepad2}
-        label="Tutti i giochi"
-        isActive={pathname === '/games'}
-        isCollapsed={isCollapsed}
-      />
-
-      <SectionLabel label="Filtri rapidi" isCollapsed={isCollapsed} />
-      <SidebarLink
-        href="/games?bggOnly=true"
-        icon={Star}
-        label="Top BGG"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <SidebarLink
-        href="/games?minPlayers=2&maxPlayers=2"
-        icon={Users}
-        label="2 Giocatori"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <SidebarLink
-        href="/games?minPlayers=3&maxPlayers=6"
-        icon={Users}
-        label="3-6 Giocatori"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-
-      <SectionLabel label="Avanzato" isCollapsed={isCollapsed} />
-      <SidebarLink
-        href="/games?sortBy=recent"
-        icon={Clock}
-        label="Aggiunti di recente"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-      <SidebarLink
-        href="/games"
-        icon={SlidersHorizontal}
-        label="Filtri avanzati"
-        isActive={false}
-        isCollapsed={isCollapsed}
-      />
-    </nav>
-  );
-}
-
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export interface SidebarContextNavProps {
@@ -271,16 +211,14 @@ export interface SidebarContextNavProps {
 }
 
 /**
- * Determines the context key for the current pathname.
- * Used as AnimatePresence key to trigger re-animation on context change.
+ * Determines the context key for the contextual zone.
  */
-function getContextKey(pathname: string | null): string {
-  if (!pathname) return 'default';
+function getContextKey(pathname: string | null): string | null {
+  if (!pathname) return null;
   if (pathname === '/dashboard') return 'dashboard';
   if (pathname.startsWith('/library')) return 'library';
   if (pathname.startsWith('/games')) return 'games';
-  // Admin keeps using SidebarNav (standard)
-  return 'default';
+  return null;
 }
 
 export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
@@ -288,22 +226,31 @@ export function SidebarContextNav({ isCollapsed }: SidebarContextNavProps) {
   const contextKey = getContextKey(pathname);
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={contextKey}
-          variants={PANEL_VARIANTS}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          className="h-full"
-        >
-          {contextKey === 'dashboard' && <DashboardPanel isCollapsed={isCollapsed} />}
-          {contextKey === 'library' && <LibraryPanel isCollapsed={isCollapsed} />}
-          {contextKey === 'games' && <GamesPanel isCollapsed={isCollapsed} />}
-          {contextKey === 'default' && <SidebarNav isCollapsed={isCollapsed} />}
-        </motion.div>
-      </AnimatePresence>
+    <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
+      {/* Zone 1: Fixed primary navigation — always visible */}
+      <FixedNavZone isCollapsed={isCollapsed} />
+
+      {/* Divider between zones (only if contextual zone is active) */}
+      {contextKey && <hr className="mx-3 border-sidebar-border" />}
+
+      {/* Zone 2: Contextual — changes based on route */}
+      <div className="flex-1 overflow-y-auto">
+        <AnimatePresence mode="wait" initial={false}>
+          {contextKey && (
+            <motion.div
+              key={contextKey}
+              variants={PANEL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+            >
+              {contextKey === 'dashboard' && <DashboardContextPanel isCollapsed={isCollapsed} />}
+              {contextKey === 'library' && <LibraryContextPanel isCollapsed={isCollapsed} />}
+              {contextKey === 'games' && <GamesFilterPanel isCollapsed={isCollapsed} />}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

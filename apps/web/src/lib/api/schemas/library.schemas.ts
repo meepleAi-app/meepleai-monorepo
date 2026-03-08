@@ -16,16 +16,14 @@ export const GameStateTypeSchema = z.enum(VALID_GAME_STATES);
 export type GameStateType = z.infer<typeof GameStateTypeSchema>;
 
 // Defensive schema that falls back to 'Owned' for unknown values (prevents API breaking on new states)
-export const GameStateTypeWithFallbackSchema = z
-  .string()
-  .transform((val) => {
-    if (VALID_GAME_STATES.includes(val as GameStateType)) {
-      return val as GameStateType;
-    }
-    // Log unknown state for debugging, fallback to 'Owned'
-    console.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
-    return 'Owned' as GameStateType;
-  });
+export const GameStateTypeWithFallbackSchema = z.string().transform(val => {
+  if (VALID_GAME_STATES.includes(val as GameStateType)) {
+    return val as GameStateType;
+  }
+  // Log unknown state for debugging, fallback to 'Owned'
+  console.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
+  return 'Owned' as GameStateType;
+});
 
 // User library entry DTO matching backend contract
 // Issue #4998: Replaced hasPdfDocuments with KB-aware fields
@@ -44,11 +42,16 @@ export const UserLibraryEntrySchema = z.object({
   currentState: GameStateTypeWithFallbackSchema,
   stateChangedAt: z.string().datetime().nullable().optional(),
   stateNotes: z.string().nullable().optional(),
-  hasKb: z.boolean().default(false),              // true if >= 1 PDF fully indexed in RAG
-  kbCardCount: z.number().int().nonnegative().default(0),      // total PDF documents linked
-  kbIndexedCount: z.number().int().nonnegative().default(0),   // PDFs with ProcessingState.Ready
+  hasKb: z.boolean().default(false), // true if >= 1 PDF fully indexed in RAG
+  kbCardCount: z.number().int().nonnegative().default(0), // total PDF documents linked
+  kbIndexedCount: z.number().int().nonnegative().default(0), // PDFs with ProcessingState.Ready
   kbProcessingCount: z.number().int().nonnegative().default(0), // PDFs currently in pipeline
-  agentIsOwned: z.boolean().default(true),         // always true in library context
+  agentIsOwned: z.boolean().default(true), // always true in library context
+  minPlayers: z.number().int().nullable().optional(),
+  maxPlayers: z.number().int().nullable().optional(),
+  playingTimeMinutes: z.number().int().nullable().optional(),
+  complexityRating: z.number().nullable().optional(),
+  averageRating: z.number().nullable().optional(),
 });
 
 export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;
@@ -329,7 +332,11 @@ export const PREDEFINED_LABELS = {
   FAMILY: { id: 'a1b2c3d4-1111-1111-1111-111111111111', name: 'Family', color: '#22c55e' },
   STRATEGY: { id: 'a1b2c3d4-2222-2222-2222-222222222222', name: 'Strategy', color: '#3b82f6' },
   PARTY: { id: 'a1b2c3d4-3333-3333-3333-333333333333', name: 'Party', color: '#f59e0b' },
-  COOPERATIVE: { id: 'a1b2c3d4-4444-4444-4444-444444444444', name: 'Cooperative', color: '#8b5cf6' },
+  COOPERATIVE: {
+    id: 'a1b2c3d4-4444-4444-4444-444444444444',
+    name: 'Cooperative',
+    color: '#8b5cf6',
+  },
   SOLO: { id: 'a1b2c3d4-5555-5555-5555-555555555555', name: 'Solo', color: '#ec4899' },
   FILLER: { id: 'a1b2c3d4-6666-6666-6666-666666666666', name: 'Filler', color: '#6b7280' },
   CLASSIC: { id: 'a1b2c3d4-7777-7777-7777-777777777777', name: 'Classic', color: '#78716c' },

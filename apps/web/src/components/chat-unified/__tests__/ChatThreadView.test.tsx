@@ -101,14 +101,16 @@ vi.mock('@/components/agent/AgentSelector', () => ({
       <option value="auto">Auto</option>
       <option value="tutor">Tutor</option>
       <option value="arbitro">Arbitro</option>
-      <option value="decisore">Decisore</option>
+      <option value="stratega">Stratega</option>
+      <option value="narratore">Narratore</option>
     </select>
   ),
   AGENT_NAMES: {
     auto: 'Auto (Orchestrator)',
     tutor: 'Tutor',
     arbitro: 'Arbitro',
-    decisore: 'Decisore',
+    stratega: 'Stratega',
+    narratore: 'Narratore',
   },
 }));
 

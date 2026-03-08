@@ -4,12 +4,7 @@
  * Defines the library section sub-navigation tabs.
  */
 
-import {
-  type LucideIcon,
-  BookOpenIcon,
-  Gamepad2,
-  Heart,
-} from 'lucide-react';
+import { type LucideIcon, BookOpenIcon, Gamepad2, Heart, SendHorizontal } from 'lucide-react';
 
 /**
  * Tab definition for library section navigation
@@ -31,7 +26,7 @@ export interface LibraryTab {
  *
  * Tabs use ?tab= query params on /library instead of sub-routes.
  * Default (/library, no tab param) renders Collection (shared catalog).
- * "Proposte" moved to /discover?tab=proposals (community section).
+ * Proposals tab added for inline share request management.
  */
 export const LIBRARY_TABS: LibraryTab[] = [
   {
@@ -52,6 +47,12 @@ export const LIBRARY_TABS: LibraryTab[] = [
     icon: Heart,
     href: '/library?tab=wishlist',
   },
+  {
+    id: 'proposals',
+    label: 'Proposals',
+    icon: SendHorizontal,
+    href: '/library?tab=proposals',
+  },
 ];
 
 /**
@@ -68,6 +69,7 @@ export function getActiveLibraryTab(pathname: string, search?: string): string {
 
   if (tab === 'private') return 'private';
   if (tab === 'wishlist') return 'wishlist';
+  if (tab === 'proposals') return 'proposals';
   if (pathname === '/library') return 'collection';
   return 'collection';
 }

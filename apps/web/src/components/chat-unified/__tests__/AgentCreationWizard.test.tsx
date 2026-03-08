@@ -8,7 +8,7 @@
  * 3. Renders game cards from library data
  * 4. Shows empty state when library is empty
  * 5. Advances to step 2 on Avanti after game selection
- * 6. Renders all 3 agent type options in step 2
+ * 6. Renders all 4 agent type options in step 2
  * 7. Advances to step 3 after agent type selected + Avanti
  * 8. Shows PDF list in step 3
  * 9. Shows empty state when no PDFs available
@@ -143,9 +143,7 @@ describe('AgentCreationWizard', () => {
   it('shows empty state when library is empty', async () => {
     mockGetLibrary.mockResolvedValue(makeLibraryResponse([]));
     render(<AgentCreationWizard />);
-    await waitFor(() =>
-      expect(screen.getByTestId(WIZARD_TESTID.LibraryEmpty)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByTestId(WIZARD_TESTID.LibraryEmpty)).toBeInTheDocument());
   });
 
   // ── Step 2 ────────────────────────────────────────────────────────────────
@@ -155,15 +153,25 @@ describe('AgentCreationWizard', () => {
     await advanceToStep2();
     expect(screen.getByText(WIZARD_AGENT_TYPE.Tutor)).toBeInTheDocument();
     expect(screen.getByText(WIZARD_AGENT_TYPE.Arbitro)).toBeInTheDocument();
-    expect(screen.getByText(WIZARD_AGENT_TYPE.Decisore)).toBeInTheDocument();
+    expect(screen.getByText(WIZARD_AGENT_TYPE.Stratega)).toBeInTheDocument();
+    expect(screen.getByText(WIZARD_AGENT_TYPE.Narratore)).toBeInTheDocument();
   });
 
-  it('renders all 3 agent type option buttons in step 2', async () => {
+  it('renders all 4 agent type option buttons in step 2', async () => {
     render(<AgentCreationWizard />);
     await advanceToStep2();
-    expect(screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(WIZARD_AGENT_TYPE.Tutor))).toBeInTheDocument();
-    expect(screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(WIZARD_AGENT_TYPE.Arbitro))).toBeInTheDocument();
-    expect(screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(WIZARD_AGENT_TYPE.Decisore))).toBeInTheDocument();
+    expect(
+      screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(WIZARD_AGENT_TYPE.Tutor))
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(WIZARD_AGENT_TYPE.Arbitro))
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(WIZARD_AGENT_TYPE.Stratega))
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(WIZARD_TESTID.AgentTypeBtn(WIZARD_AGENT_TYPE.Narratore))
+    ).toBeInTheDocument();
   });
 
   // ── Step 3 ────────────────────────────────────────────────────────────────
@@ -171,26 +179,20 @@ describe('AgentCreationWizard', () => {
   it('advances to step 3 (name & KB) when agent type is selected', async () => {
     render(<AgentCreationWizard />);
     await advanceToStep3();
-    await waitFor(() =>
-      expect(screen.getByTestId(WIZARD_TESTID.NameInput)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByTestId(WIZARD_TESTID.NameInput)).toBeInTheDocument());
   });
 
   it('shows PDF list after loading in step 3', async () => {
     render(<AgentCreationWizard />);
     await advanceToStep3();
-    await waitFor(() =>
-      expect(screen.getByText('Catan Rulebook.pdf')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText('Catan Rulebook.pdf')).toBeInTheDocument());
   });
 
   it('shows empty state when no PDFs available for the game', async () => {
     mockGetGamePdfs.mockResolvedValue([]);
     render(<AgentCreationWizard />);
     await advanceToStep3();
-    await waitFor(() =>
-      expect(screen.getByTestId(WIZARD_TESTID.PdfsEmpty)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByTestId(WIZARD_TESTID.PdfsEmpty)).toBeInTheDocument());
   });
 
   // ── Navigation ────────────────────────────────────────────────────────────
@@ -212,9 +214,7 @@ describe('AgentCreationWizard', () => {
     fireEvent.change(nameInput, { target: { value: 'Il mio Tutor di Catan' } });
     fireEvent.click(screen.getByRole('button', { name: WIZARD_BTN.Next }));
     // Step 4: review should show the game title (exact text) and agent type
-    await waitFor(() =>
-      expect(screen.getByText(GAME_TITLE)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText(GAME_TITLE)).toBeInTheDocument());
     expect(screen.getByText(WIZARD_AGENT_TYPE.Tutor)).toBeInTheDocument();
   });
 
@@ -223,7 +223,8 @@ describe('AgentCreationWizard', () => {
   it.each([
     [WIZARD_AGENT_TYPE.Tutor, 'RAG'],
     [WIZARD_AGENT_TYPE.Arbitro, 'RulesInterpreter'],
-    [WIZARD_AGENT_TYPE.Decisore, 'Confidence'],
+    [WIZARD_AGENT_TYPE.Stratega, 'Strategist'],
+    [WIZARD_AGENT_TYPE.Narratore, 'Narrator'],
   ] as const)('maps %s to backend type %s on submit', async (wizardType, expectedBackendType) => {
     render(<AgentCreationWizard />);
     await advanceToStep2();

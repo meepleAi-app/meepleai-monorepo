@@ -174,7 +174,7 @@ const POC_FEATURES: FeatureCategory[] = [
         name: 'Mode Handlers',
         description: 'ChatMode, PlayerMode, LedgerMode specializzati',
         status: 'implemented',
-        details: 'Decisore (chess AI), Arbitro (rules validation)',
+        details: 'Stratega (strategic analysis), Arbitro (rules validation)',
       },
       {
         name: 'Agent Definitions (Admin)',
@@ -630,19 +630,23 @@ export function PocStatus({ className }: PocStatusProps) {
                 • <strong>Hybrid Search + Reranking</strong>: Vector + Keyword + RRF + Cross-Encoder
               </li>
               <li>
-                • <strong>LLM Orchestration</strong>: Ollama + OpenRouter, circuit breaker, fallback chain
+                • <strong>LLM Orchestration</strong>: Ollama + OpenRouter, circuit breaker, fallback
+                chain
               </li>
               <li>
-                • <strong>Multi-Agent System</strong>: Router + Intent Classifier + State Coordination
+                • <strong>Multi-Agent System</strong>: Router + Intent Classifier + State
+                Coordination
               </li>
               <li>
-                • <strong>Validation Pipeline</strong>: 5-layer (confidence, citation, hallucination, consensus, accuracy)
+                • <strong>Validation Pipeline</strong>: 5-layer (confidence, citation,
+                hallucination, consensus, accuracy)
               </li>
               <li>
                 • <strong>PDF Pipeline</strong>: 7-state processing, S3 storage, retry mechanism
               </li>
               <li>
-                • <strong>Admin Observability</strong>: Execution history, replay, strategy builder, tier config
+                • <strong>Admin Observability</strong>: Execution history, replay, strategy builder,
+                tier config
               </li>
               <li>
                 • <strong>Cost Management</strong>: Per-token pricing, budget alerts, usage stats

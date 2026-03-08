@@ -30,6 +30,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/primitives/button';
 import { useNavigation } from '@/context/NavigationContext';
+import { usePrefersReducedMotion } from '@/hooks/useResponsive';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
@@ -92,6 +93,7 @@ export function MiniNav({ className }: MiniNavProps) {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
+  const prefersReducedMotion = usePrefersReducedMotion();
   const showArrows = miniNavTabs.length > ARROW_THRESHOLD;
 
   // ── Scroll state tracking ─────────────────────────────────────────────────
@@ -129,17 +131,23 @@ export function MiniNav({ className }: MiniNavProps) {
     const activeEl = tabEls[activeIndex] as HTMLElement | undefined;
     if (!activeEl) return;
 
-    activeEl.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  }, [pathname, search, miniNavTabs]);
+    activeEl.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
+  }, [pathname, search, miniNavTabs, prefersReducedMotion]);
 
   // ── Arrow scroll handlers ─────────────────────────────────────────────────
 
+  const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
+
   function scrollLeft() {
-    scrollRef.current?.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' });
+    scrollRef.current?.scrollBy({ left: -SCROLL_STEP, behavior: scrollBehavior });
   }
 
   function scrollRight() {
-    scrollRef.current?.scrollBy({ left: SCROLL_STEP, behavior: 'smooth' });
+    scrollRef.current?.scrollBy({ left: SCROLL_STEP, behavior: scrollBehavior });
   }
 
   // ── Guard: no tabs → render nothing ──────────────────────────────────────
@@ -151,10 +159,12 @@ export function MiniNav({ className }: MiniNavProps) {
   return (
     <div
       className={cn(
-        'relative flex items-stretch',
-        'h-12 md:h-12',
-        'border-b border-border/50',
-        'bg-background/95 backdrop-blur-sm',
+        'sticky top-14 z-30',
+        'flex items-stretch',
+        'h-12',
+        'border-b border-white/20 dark:border-border/40',
+        'bg-white/60 dark:bg-card/60 backdrop-blur-xl',
+        'shadow-sm',
         className
       )}
       data-testid={NAV_TEST_IDS.miniNav}
@@ -184,7 +194,7 @@ export function MiniNav({ className }: MiniNavProps) {
         role="tablist"
         aria-label="Section navigation"
         className={cn(
-          'flex flex-1 items-stretch overflow-x-auto',
+          'flex flex-1 items-center gap-0.5 overflow-x-auto',
           // Hide scrollbar on all browsers
           'scrollbar-none',
           '[&::-webkit-scrollbar]:hidden',

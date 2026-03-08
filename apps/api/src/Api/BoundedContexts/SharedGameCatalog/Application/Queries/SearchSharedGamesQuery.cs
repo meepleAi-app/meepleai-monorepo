@@ -16,6 +16,8 @@ internal record SearchSharedGamesQuery(
     int? MinPlayers,
     int? MaxPlayers,
     int? MaxPlayingTime,
+    decimal? MinComplexity,
+    decimal? MaxComplexity,
     GameStatus? Status,
     int PageNumber = 1,
     int PageSize = 20,

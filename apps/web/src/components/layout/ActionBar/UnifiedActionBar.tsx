@@ -8,7 +8,7 @@
  * - Overflow menu for extra items
  *
  * Desktop navigation is handled by UnifiedHeader.
- * This component replaces both BottomNav and SmartFAB.
+ * This component replaces the deprecated BottomNav and SmartFAB.
  */
 
 'use client';

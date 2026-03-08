@@ -1,6 +1,8 @@
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.Extensions;
+using MediatR;
 using System.Text.Json;
 
 namespace Api.Routing;
@@ -27,6 +29,7 @@ internal static class BatchJobLogsEndpoints
     private static async Task HandleStreamLogs(
         Guid id,
         HttpContext context,
+        IMediator mediator,
         IBatchJobRepository repository,
         CancellationToken ct)
     {
@@ -37,13 +40,21 @@ internal static class BatchJobLogsEndpoints
             return;
         }
 
+        // Initial job lookup via CQRS
+        var initialJob = await mediator.Send(new GetBatchJobByIdQuery(id), ct).ConfigureAwait(false);
+        if (initialJob == null)
+        {
+            context.Response.StatusCode = 404;
+            return;
+        }
+
         context.Response.Headers.Append("Content-Type", "text/event-stream");
         context.Response.Headers.Append("Cache-Control", "no-cache");
         context.Response.Headers.Append("Connection", "keep-alive");
 
         await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
 
-        // Stream logs while job is running
+        // Stream logs while job is running (repository for polling loop is acceptable)
         while (!ct.IsCancellationRequested)
         {
             var job = await repository.GetByIdAsync(id, ct).ConfigureAwait(false);

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Post-Session Summary</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        quicksand: ['Quicksand', 'sans-serif'],
+        nunito: ['Nunito', 'sans-serif'],
+      },
+      colors: {
+        background: 'hsl(30 25% 97%)',
+        foreground: 'hsl(30 15% 15%)',
+        card: '#ffffff',
+        'card-border': 'hsl(30 15% 85%)',
+        primary: 'hsl(25 95% 38%)',
+        'primary-light': 'hsl(25 95% 53%)',
+        secondary: 'hsl(142 76% 28%)',
+        accent: 'hsl(271 91% 55%)',
+        'accent-active': 'hsl(262 83% 62%)',
+        muted: 'hsl(30 20% 90%)',
+        'muted-fg': 'hsl(30 12% 35%)',
+        'entity-session': 'hsl(240 60% 55%)',
+        'entity-game': 'hsl(25 95% 45%)',
+        'entity-player': 'hsl(262 83% 58%)',
+        ring: 'hsl(25 95% 53%)',
+      }
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: hsl(30 25% 97%);
+    background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+  .font-quicksand { font-family: 'Quicksand', sans-serif; }
+  .warm-shadow { box-shadow: 0 4px 16px rgba(180,130,80,0.12); }
+  .warm-shadow-sm { box-shadow: 0 2px 8px rgba(180,130,80,0.08); }
+  .warm-shadow-lg { box-shadow: 0 8px 32px rgba(180,130,80,0.16); }
+
+  @keyframes crown-bounce {
+    0%,100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-6px) rotate(3deg); }
+  }
+  .crown-bounce { animation: crown-bounce 2s ease-in-out infinite; }
+
+  @keyframes float-up {
+    0% { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .float-up { animation: float-up 0.5s ease-out both; }
+  .float-up-1 { animation-delay: 0.1s; }
+  .float-up-2 { animation-delay: 0.2s; }
+  .float-up-3 { animation-delay: 0.3s; }
+  .float-up-4 { animation-delay: 0.4s; }
+
+  .timeline-line { position: relative; }
+  .timeline-line::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: hsl(30 15% 85%);
+  }
+</style>
+</head>
+<body class="min-h-screen text-foreground">
+
+<!-- MOBILE FRAME -->
+<div class="mx-auto" style="max-width: 375px; min-height: 100vh;">
+
+  <!-- TOP NAVBAR — h-14, sticky, bg-background/95, backdrop-blur, border-b -->
+  <header class="sticky top-0 z-50 h-14 flex items-center justify-between px-4 border-b" style="background: hsla(30,25%,97%,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-color: hsl(30 15% 85%);">
+    <button class="w-10 h-10 flex items-center justify-center rounded-xl" style="min-height: 44px; min-width: 44px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-foreground"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <h1 class="font-quicksand font-bold text-base text-foreground">Riepilogo Sessione</h1>
+    <div class="flex items-center gap-1">
+      <button class="w-10 h-10 flex items-center justify-center rounded-xl" style="min-height: 44px; min-width: 44px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted-fg"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background: hsl(262 83% 58%);">M</div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT — px-4 pt-4 pb-24 -->
+  <main class="px-4 pt-4 pb-24">
+
+    <!-- WINNER ANNOUNCEMENT CARD -->
+    <div class="float-up bg-card rounded-2xl border p-6 mb-4 text-center relative overflow-hidden warm-shadow-lg" style="border-color: hsl(30 15% 85%);">
+      <!-- Celebration background gradient -->
+      <div class="absolute inset-0" style="background: linear-gradient(135deg, hsl(25 95% 95%) 0%, hsl(40 90% 96%) 50%, hsl(45 90% 95%) 100%);"></div>
+      <div class="absolute -top-8 -left-8 w-32 h-32 rounded-full" style="background: hsla(25, 95%, 53%, 0.08);"></div>
+      <div class="absolute -bottom-6 -right-6 w-28 h-28 rounded-full" style="background: hsla(262, 83%, 58%, 0.06);"></div>
+
+      <div class="relative z-10">
+        <div class="crown-bounce text-5xl mb-3">&#128081;</div>
+        <div class="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-3 text-white" style="background: hsl(262 83% 58%); box-shadow: 0 0 0 4px hsla(25,95%,53%,0.3), 0 8px 24px rgba(180,130,80,0.2);">M</div>
+        <h2 class="font-quicksand font-bold text-2xl text-foreground mb-1">Marco vince!</h2>
+        <p class="text-muted-fg text-sm">48 punti &middot; Catan</p>
+      </div>
+    </div>
+
+    <!-- SESSION INFO PILLS -->
+    <div class="float-up float-up-1 flex gap-2 justify-center mb-5 flex-wrap">
+      <div class="bg-card rounded-full px-3.5 py-2 flex items-center gap-1.5 border warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span class="text-xs text-muted-fg font-medium">1h 45m</span>
+      </div>
+      <div class="bg-card rounded-full px-3.5 py-2 flex items-center gap-1.5 border warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-entity-player"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="text-xs text-muted-fg font-medium">4 giocatori</span>
+      </div>
+      <div class="bg-card rounded-full px-3.5 py-2 flex items-center gap-1.5 border warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-entity-session"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="text-xs text-muted-fg font-medium">4 Mar 2026</span>
+      </div>
+      <div class="bg-card rounded-full px-3.5 py-2 flex items-center gap-1.5 border warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <span class="text-sm">&#127922;</span>
+        <span class="text-xs text-muted-fg font-medium">8 round</span>
+      </div>
+    </div>
+
+    <!-- FINAL SCOREBOARD -->
+    <div class="float-up float-up-2 bg-card rounded-2xl border overflow-hidden mb-5 warm-shadow" style="border-color: hsl(30 15% 85%);">
+      <div class="px-4 py-3 border-b" style="border-color: hsl(30 15% 85%); background: hsl(30 20% 95%);">
+        <h3 class="font-quicksand font-semibold text-sm text-muted-fg">Classifica Finale</h3>
+      </div>
+      <!-- 1st -->
+      <div class="flex items-center px-4 py-3 border-b" style="border-color: hsl(30 15% 90%); background: hsl(40 80% 96%);">
+        <span class="text-lg w-8">&#129351;</span>
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold mr-3 text-white" style="background: hsl(262 83% 58%);">M</div>
+        <span class="flex-1 text-sm font-semibold text-foreground">Marco</span>
+        <span class="text-lg font-quicksand font-bold text-primary">48</span>
+      </div>
+      <!-- 2nd -->
+      <div class="flex items-center px-4 py-3 border-b" style="border-color: hsl(30 15% 90%);">
+        <span class="text-lg w-8">&#129352;</span>
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold mr-3 text-white" style="background: hsl(172 66% 40%);">L</div>
+        <span class="flex-1 text-sm font-semibold text-foreground">Lucia</span>
+        <span class="text-lg font-quicksand font-bold text-muted-fg">42</span>
+      </div>
+      <!-- 3rd -->
+      <div class="flex items-center px-4 py-3 border-b" style="border-color: hsl(30 15% 90%);">
+        <span class="text-lg w-8">&#129353;</span>
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold mr-3 text-white" style="background: hsl(346 77% 50%);">A</div>
+        <span class="flex-1 text-sm font-semibold text-foreground">Anna</span>
+        <span class="text-lg font-quicksand font-bold text-muted-fg">38</span>
+      </div>
+      <!-- 4th -->
+      <div class="flex items-center px-4 py-3">
+        <span class="text-sm text-muted-fg w-8 text-center font-semibold">4&#176;</span>
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold mr-3 text-white" style="background: hsl(25 95% 45%);">G</div>
+        <span class="flex-1 text-sm font-semibold text-foreground">Giulia</span>
+        <span class="text-lg font-quicksand font-bold text-muted-fg">35</span>
+      </div>
+    </div>
+
+    <!-- STATS HIGHLIGHTS 2x2 -->
+    <div class="float-up float-up-3 grid grid-cols-2 gap-3 mb-5">
+      <div class="bg-card rounded-2xl border p-4 text-center warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <span class="text-2xl mb-1 block">&#127919;</span>
+        <span class="text-xl font-quicksand font-bold text-primary">12</span>
+        <p class="text-[11px] text-muted-fg mt-0.5">Miglior Round</p>
+        <p class="text-[10px] font-medium" style="color: hsl(262 83% 58%);">Marco &middot; R3</p>
+      </div>
+      <div class="bg-card rounded-2xl border p-4 text-center warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <span class="text-2xl mb-1 block">&#127922;</span>
+        <span class="text-xl font-quicksand font-bold text-primary">23</span>
+        <p class="text-[11px] text-muted-fg mt-0.5">Totale Dadi</p>
+        <p class="text-[10px] font-medium" style="color: hsl(172 66% 40%);">Lucia ne ha fatti 8</p>
+      </div>
+      <div class="bg-card rounded-2xl border p-4 text-center warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <span class="text-2xl mb-1 block">&#128172;</span>
+        <span class="text-xl font-quicksand font-bold text-primary">45</span>
+        <p class="text-[11px] text-muted-fg mt-0.5">Messaggi Chat</p>
+        <p class="text-[10px] font-medium" style="color: hsl(346 77% 50%);">Anna la piu attiva</p>
+      </div>
+      <div class="bg-card rounded-2xl border p-4 text-center warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+        <span class="text-2xl mb-1 block">&#128200;</span>
+        <span class="text-xl font-quicksand font-bold text-primary">+8</span>
+        <p class="text-[11px] text-muted-fg mt-0.5">Rimonta Piu Grande</p>
+        <p class="text-[10px] font-medium" style="color: hsl(25 95% 45%);">Giulia &middot; R4&#8594;R5</p>
+      </div>
+    </div>
+
+    <!-- SESSION TIMELINE -->
+    <div class="float-up float-up-4 mb-6">
+      <h3 class="font-quicksand font-semibold text-sm text-muted-fg mb-3">Timeline della Sessione</h3>
+      <div class="timeline-line space-y-3 pl-1">
+
+        <!-- Start -->
+        <div class="flex gap-3 relative">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style="background: hsl(142 76% 93%); border: 2px solid hsl(142 76% 70%);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: hsl(142 76% 28%);"><polygon points="5 3 19 12 5 21"/></svg>
+          </div>
+          <div class="bg-card rounded-xl border px-3 py-2 flex-1 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+            <p class="text-xs text-foreground font-medium">Sessione iniziata</p>
+            <p class="text-[10px] text-muted-fg">20:30</p>
+          </div>
+        </div>
+
+        <!-- Dice -->
+        <div class="flex gap-3 relative">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style="background: hsl(25 95% 93%); border: 2px solid hsl(25 95% 70%);">
+            <span class="text-xs">&#127922;</span>
+          </div>
+          <div class="bg-card rounded-xl border px-3 py-2 flex-1 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+            <p class="text-xs text-foreground"><span class="font-semibold" style="color: hsl(262 83% 58%);">Marco</span> tira il dado piu alto &mdash; parte primo</p>
+            <p class="text-[10px] text-muted-fg">20:32</p>
+          </div>
+        </div>
+
+        <!-- Score lead -->
+        <div class="flex gap-3 relative">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style="background: hsl(40 90% 92%); border: 2px solid hsl(40 80% 65%);">
+            <span class="text-xs">&#127942;</span>
+          </div>
+          <div class="bg-card rounded-xl border px-3 py-2 flex-1 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+            <p class="text-xs text-foreground"><span class="font-semibold" style="color: hsl(262 83% 58%);">Marco</span> prende il comando al Round 3 con 14 punti</p>
+            <p class="text-[10px] text-muted-fg">21:15</p>
+          </div>
+        </div>
+
+        <!-- AI question -->
+        <div class="flex gap-3 relative">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style="background: hsl(271 91% 94%); border: 2px solid hsl(271 91% 75%);">
+            <span class="text-xs">&#129302;</span>
+          </div>
+          <div class="bg-card rounded-xl border px-3 py-2 flex-1 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+            <p class="text-xs text-foreground">MeepleAI risponde a 3 domande sulle regole</p>
+            <p class="text-[10px] text-muted-fg">21:30</p>
+          </div>
+        </div>
+
+        <!-- Comeback -->
+        <div class="flex gap-3 relative">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style="background: hsl(25 95% 93%); border: 2px solid hsl(25 95% 70%);">
+            <span class="text-xs">&#128200;</span>
+          </div>
+          <div class="bg-card rounded-xl border px-3 py-2 flex-1 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+            <p class="text-xs text-foreground"><span class="font-semibold" style="color: hsl(25 95% 45%);">Giulia</span> rimonta epica: +8 punti in un round!</p>
+            <p class="text-[10px] text-muted-fg">22:00</p>
+          </div>
+        </div>
+
+        <!-- Chat -->
+        <div class="flex gap-3 relative">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style="background: hsl(240 60% 94%); border: 2px solid hsl(240 60% 75%);">
+            <span class="text-xs">&#128172;</span>
+          </div>
+          <div class="bg-card rounded-xl border px-3 py-2 flex-1 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+            <p class="text-xs text-foreground">Chat attiva: 45 messaggi scambiati</p>
+            <p class="text-[10px] text-muted-fg">22:10</p>
+          </div>
+        </div>
+
+        <!-- End -->
+        <div class="flex gap-3 relative">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10" style="background: hsl(0 72% 93%); border: 2px solid hsl(0 72% 68%);">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="color: hsl(0 72% 50%);"><rect width="14" height="14" x="5" y="5" rx="2"/></svg>
+          </div>
+          <div class="bg-card rounded-xl border px-3 py-2 flex-1 warm-shadow-sm" style="border-color: hsl(30 15% 85%);">
+            <p class="text-xs text-foreground">Sessione terminata &mdash; <span class="font-bold text-primary">Marco vince!</span></p>
+            <p class="text-[10px] text-muted-fg">22:15</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FLOATING ACTION BAR — fixed bottom-center, pill, bg-card/85, backdrop-blur, rounded-2xl, shadow-lg -->
+  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50" style="max-width: 343px; width: calc(100% - 32px);">
+    <div class="flex items-center gap-3 px-4 py-3 rounded-2xl border" style="background: hsla(0,0%,100%,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-color: hsl(30 15% 85%); box-shadow: 0 8px 32px rgba(180,130,80,0.16);">
+      <button class="flex-1 h-11 rounded-xl border-2 font-quicksand font-semibold text-sm flex items-center justify-center gap-2" style="border-color: hsl(30 15% 80%); color: hsl(30 12% 35%); min-height: 44px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Esporta PDF
+      </button>
+      <button class="flex-1 h-11 rounded-xl font-quicksand font-bold text-sm text-white flex items-center justify-center gap-2" style="background: hsl(25 95% 38%); min-height: 44px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        Gioca Ancora
+      </button>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

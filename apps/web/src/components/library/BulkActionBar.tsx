@@ -1,5 +1,5 @@
 /**
- * BulkActionBar Component (Issue #2613, #2868)
+ * BulkActionBar Component (Issue #2613, #2868, Mobile UX #18)
  *
  * Floating action bar for bulk operations in library.
  * Shows when items are selected, with actions:
@@ -8,8 +8,8 @@
  * - Remove from library
  * - Export selected
  *
- * Responsive: Fixed bottom on mobile (above BottomNav), full width on desktop.
- * Style: Orange background with white border (Issue #2868)
+ * Responsive: Fixed bottom on mobile (with safe area insets), full width on desktop.
+ * Style: Glassmorphism design with design system tokens
  */
 
 'use client';
@@ -41,11 +41,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { useUpdateLibraryEntry, useUpdateGameState } from '@/hooks/queries/useLibrary';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api/schemas/library.schemas';
-import {
-  exportLibrary,
-  type ExportFormat,
-  type ExportScope,
-} from '@/lib/export/libraryExport';
+import { exportLibrary, type ExportFormat, type ExportScope } from '@/lib/export/libraryExport';
 
 import { BulkRemoveDialog } from './BulkRemoveDialog';
 
@@ -121,7 +117,7 @@ export function BulkActionBar({
 
       onClearSelection();
     } catch (_error) {
-      toast.error('Errore durante l\'aggiornamento');
+      toast.error("Errore durante l'aggiornamento");
     } finally {
       setIsFavoriting(false);
     }
@@ -133,9 +129,7 @@ export function BulkActionBar({
     setIsChangingState(true);
     try {
       const results = await Promise.allSettled(
-        selectedIds.map(gameId =>
-          updateGameState.mutateAsync({ gameId, request: { newState } })
-        )
+        selectedIds.map(gameId => updateGameState.mutateAsync({ gameId, request: { newState } }))
       );
 
       const successCount = results.filter(r => r.status === 'fulfilled').length;
@@ -171,7 +165,7 @@ export function BulkActionBar({
       const formatLabel = format === 'csv' ? 'CSV' : 'JSON';
       toast.success(`${selectedGames.length} giochi esportati (${formatLabel})`);
     } catch (_error) {
-      toast.error('Errore durante l\'esportazione');
+      toast.error("Errore durante l'esportazione");
     } finally {
       setIsExporting(false);
     }
@@ -193,29 +187,32 @@ export function BulkActionBar({
 
   return (
     <>
-      {/* Floating Action Bar - Orange with white border (Issue #2868) */}
-      <div className="fixed bottom-20 md:bottom-4 left-0 right-0 z-50 px-4">
+      {/* Floating Action Bar - Glassmorphism design (Mobile UX #18) */}
+      <div
+        data-testid="bulk-action-bar"
+        className="fixed left-0 right-0 z-50 px-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] md:bottom-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-300"
+      >
         <div className="mx-auto max-w-4xl">
-          <div className="bg-orange-500 border-2 border-white rounded-lg shadow-lg p-3 flex items-center justify-between gap-3">
+          <div className="bg-card/85 backdrop-blur-md backdrop-saturate-150 border border-border/60 rounded-2xl shadow-lg shadow-black/10 p-3 flex items-center justify-between gap-3">
             {/* Left: Selection info */}
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onClearSelection}
-                className="h-8 w-8 p-0 text-white hover:bg-orange-600 hover:text-white"
+                className="h-8 w-8 p-0 text-foreground/70 hover:bg-muted"
                 aria-label="Esci dalla selezione"
               >
                 <X className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium text-white">
+              <span className="text-sm font-medium text-foreground font-nunito">
                 {selectedCount} selezionati
               </span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleToggleSelectAll}
-                className="hidden sm:flex text-white hover:bg-orange-600 hover:text-white"
+                className="hidden sm:flex text-foreground/70 hover:bg-muted"
               >
                 {allSelected ? (
                   <>
@@ -240,7 +237,7 @@ export function BulkActionBar({
                     variant="secondary"
                     size="sm"
                     disabled={isChangingState}
-                    className="hidden sm:flex bg-white text-orange-600 hover:bg-orange-100"
+                    className="hidden sm:flex bg-muted text-foreground hover:bg-muted/80"
                   >
                     {isChangingState ? (
                       <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -278,7 +275,7 @@ export function BulkActionBar({
                     variant="secondary"
                     size="icon"
                     disabled={isChangingState}
-                    className="sm:hidden h-8 w-8 bg-white text-orange-600 hover:bg-orange-100"
+                    className="sm:hidden h-8 w-8 min-w-[44px] min-h-[44px] bg-muted text-foreground hover:bg-muted/80"
                     aria-label="Cambia Stato"
                   >
                     {isChangingState ? (
@@ -314,7 +311,7 @@ export function BulkActionBar({
                 size="sm"
                 onClick={handleBulkFavorite}
                 disabled={isFavoriting}
-                className="hidden sm:flex bg-white text-orange-600 hover:bg-orange-100"
+                className="hidden sm:flex bg-muted text-foreground hover:bg-muted/80"
               >
                 {isFavoriting ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -330,7 +327,7 @@ export function BulkActionBar({
                 size="icon"
                 onClick={handleBulkFavorite}
                 disabled={isFavoriting}
-                className="sm:hidden h-8 w-8 bg-white text-orange-600 hover:bg-orange-100"
+                className="sm:hidden h-8 w-8 min-w-[44px] min-h-[44px] bg-muted text-foreground hover:bg-muted/80"
                 aria-label="Segna come preferiti"
               >
                 {isFavoriting ? (
@@ -347,7 +344,7 @@ export function BulkActionBar({
                     variant="secondary"
                     size="sm"
                     disabled={isExporting}
-                    className="hidden sm:flex bg-white text-orange-600 hover:bg-orange-100"
+                    className="hidden sm:flex bg-muted text-foreground hover:bg-muted/80"
                   >
                     {isExporting ? (
                       <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -386,7 +383,7 @@ export function BulkActionBar({
                     variant="secondary"
                     size="icon"
                     disabled={isExporting}
-                    className="sm:hidden h-8 w-8 bg-white text-orange-600 hover:bg-orange-100"
+                    className="sm:hidden h-8 w-8 min-w-[44px] min-h-[44px] bg-muted text-foreground hover:bg-muted/80"
                     aria-label="Esporta"
                   >
                     {isExporting ? (
@@ -418,7 +415,7 @@ export function BulkActionBar({
                 variant="secondary"
                 size="sm"
                 onClick={() => setShowRemoveDialog(true)}
-                className="hidden sm:flex bg-white text-red-600 hover:bg-red-100"
+                className="hidden sm:flex bg-destructive/10 text-destructive hover:bg-destructive/20"
               >
                 <Trash2 className="mr-1 h-4 w-4" />
                 Rimuovi
@@ -428,7 +425,7 @@ export function BulkActionBar({
                 variant="secondary"
                 size="icon"
                 onClick={() => setShowRemoveDialog(true)}
-                className="sm:hidden h-8 w-8 bg-white text-red-600 hover:bg-red-100"
+                className="sm:hidden h-8 w-8 min-w-[44px] min-h-[44px] bg-destructive/10 text-destructive hover:bg-destructive/20"
                 aria-label="Rimuovi"
               >
                 <Trash2 className="h-4 w-4" />

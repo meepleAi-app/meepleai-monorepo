@@ -16,11 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/overlays/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import {
   DASHBOARD_SECTIONS,
@@ -51,18 +47,20 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
     setTheme(theme === 'dark' ? 'light' : 'dark');
   }, [theme, setTheme]);
 
-  const coreSections = DASHBOARD_SECTIONS.filter((s) => s.group === 'core');
-  const aiSections = DASHBOARD_SECTIONS.filter((s) => s.group === 'ai');
+  const sections = DASHBOARD_SECTIONS;
 
   /** Count total badges for a section */
-  const getSectionBadgeCount = useCallback((section: DashboardSection): number => {
-    return section.sidebarItems.reduce((total, item) => {
-      if (item.badgeKey && badges[item.badgeKey]) {
-        return total + badges[item.badgeKey];
-      }
-      return total;
-    }, 0);
-  }, [badges]);
+  const getSectionBadgeCount = useCallback(
+    (section: DashboardSection): number => {
+      return section.sidebarItems.reduce((total, item) => {
+        if (item.badgeKey && badges[item.badgeKey]) {
+          return total + badges[item.badgeKey];
+        }
+        return total;
+      }, 0);
+    },
+    [badges]
+  );
 
   return (
     <header
@@ -77,10 +75,7 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
     >
       <div className="flex items-center h-14 px-4 lg:px-6">
         {/* Logo / Brand */}
-        <Link
-          href="/admin/overview"
-          className="flex items-center gap-2 mr-6 shrink-0"
-        >
+        <Link href="/admin/overview" className="flex items-center gap-2 mr-6 shrink-0">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
             <span className="text-white font-quicksand font-bold text-sm">M</span>
           </div>
@@ -91,41 +86,7 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
 
         {/* Section Tabs */}
         <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Admin sections">
-          {/* Core sections */}
-          {coreSections.map((section) => {
-            const isActive = isSectionActive(section, pathname);
-            const badgeCount = getSectionBadgeCount(section);
-            const Icon = section.icon;
-            if (!Icon) return null;
-
-            return (
-              <Link
-                key={section.id}
-                href={section.baseRoute}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-                  isActive
-                    ? 'bg-amber-100/80 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200'
-                    : 'text-muted-foreground hover:bg-slate-100/80 dark:hover:bg-zinc-800/80 hover:text-foreground'
-                )}
-                data-testid={`admin-topnav-${section.id}`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="hidden lg:inline">{section.label}</span>
-                {badgeCount > 0 && (
-                  <Badge variant="destructive" className="h-5 min-w-[20px] text-xs px-1.5">
-                    {badgeCount > 99 ? '99+' : badgeCount}
-                  </Badge>
-                )}
-              </Link>
-            );
-          })}
-
-          {/* Separator */}
-          <div className="h-6 w-px bg-slate-200/80 dark:bg-zinc-700/80 mx-1" />
-
-          {/* AI sections */}
-          {aiSections.map((section) => {
+          {sections.map(section => {
             const isActive = isSectionActive(section, pathname);
             const badgeCount = getSectionBadgeCount(section);
             const Icon = section.icon;
@@ -172,27 +133,17 @@ export function AdminTopNav({ badges = {}, userName, userEmail }: AdminTopNavPro
                   aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
                   data-testid="admin-theme-toggle"
                 >
-                  {theme === 'dark' ? (
-                    <Sun className="h-4 w-4" />
-                  ) : (
-                    <Moon className="h-4 w-4" />
-                  )}
+                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              </TooltipContent>
+              <TooltipContent>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</TooltipContent>
             </Tooltip>
           )}
 
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 gap-2 px-2"
-                data-testid="admin-user-menu"
-              >
+              <Button variant="ghost" className="h-8 gap-2 px-2" data-testid="admin-user-menu">
                 <div className="h-6 w-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                   <UserIcon className="h-3 w-3 text-white" />
                 </div>

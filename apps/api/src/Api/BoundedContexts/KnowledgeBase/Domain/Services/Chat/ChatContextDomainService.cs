@@ -188,6 +188,23 @@ internal class ChatContextDomainService
     }
 
     /// <summary>
+    /// Builds system prompt using typology-specific template.
+    /// Issue #5278: Typology-aware system prompts.
+    /// </summary>
+    public virtual string BuildSystemPrompt(
+        string agentName,
+        string? typologyName,
+        string? gameName,
+        bool hasConversationHistory)
+    {
+        if (string.IsNullOrWhiteSpace(agentName))
+            throw new ArgumentException("Agent name cannot be empty", nameof(agentName));
+
+        var profile = TypologyProfile.FromName(typologyName);
+        return profile.BuildSystemPrompt(agentName, gameName, hasConversationHistory);
+    }
+
+    /// <summary>
     /// Builds the complete structured user prompt with RAG context and conversation history.
     /// Issue #5260: Structured prompt template for multi-turn conversations.
     /// </summary>

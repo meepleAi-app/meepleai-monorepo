@@ -20,9 +20,7 @@ import type { UserGameDto } from '@/lib/api/dashboard-client';
 function SectionHeader({ onViewAll }: { onViewAll?: () => void }) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <h3 className="font-quicksand text-sm font-bold text-foreground">
-        🎲 Giochi recenti
-      </h3>
+      <h3 className="font-quicksand text-sm font-bold text-foreground">🎲 Giochi recenti</h3>
       <Link
         href="/library"
         className="flex items-center gap-1 text-xs font-semibold font-nunito text-muted-foreground hover:text-foreground transition-colors"
@@ -46,24 +44,18 @@ function GameListCard({ game }: { game: UserGameDto }) {
     : null;
 
   const playersLabel =
-    game.minPlayers && game.maxPlayers
-      ? `${game.minPlayers}–${game.maxPlayers} giocatori`
-      : null;
+    game.minPlayers && game.maxPlayers ? `${game.minPlayers}–${game.maxPlayers} giocatori` : null;
 
   return (
     <Link
-      href={`/library/${game.id}`}
+      href="/library"
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-surface hover:bg-accent/40 transition-colors group"
       style={{ borderLeftWidth: 3, borderLeftColor: 'hsl(25,95%,45%)' }}
     >
       {/* Thumbnail */}
       <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0 flex items-center justify-center">
         {game.thumbnailUrl ? (
-          <img
-            src={game.thumbnailUrl}
-            alt={game.title}
-            className="w-full h-full object-cover"
-          />
+          <img src={game.thumbnailUrl} alt={game.title} className="w-full h-full object-cover" />
         ) : (
           <Gamepad2 className="h-5 w-5 text-muted-foreground" />
         )}
@@ -75,11 +67,7 @@ function GameListCard({ game }: { game: UserGameDto }) {
           {game.title}
         </p>
         <p className="text-xs text-muted-foreground font-nunito mt-0.5 truncate">
-          {[
-            game.playCount > 0 ? `${game.playCount} partite` : null,
-            lastPlayedLabel,
-            playersLabel,
-          ]
+          {[game.playCount > 0 ? `${game.playCount} partite` : null, lastPlayedLabel, playersLabel]
             .filter(Boolean)
             .join(' · ')}
         </p>
@@ -156,7 +144,7 @@ export function RecentGamesSection({ games, isLoading }: RecentGamesSectionProps
         ) : recent.length === 0 ? (
           <EmptyGames />
         ) : (
-          recent.map((game) => <GameListCard key={game.id} game={game} />)
+          recent.map(game => <GameListCard key={game.id} game={game} />)
         )}
       </div>
     </section>

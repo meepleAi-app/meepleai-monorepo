@@ -46,9 +46,7 @@ internal static class AdminPdfManagementEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var command = new BulkDeletePdfsCommand(
-            request.PdfIds.Select(id => Guid.Parse(id)).ToList()
-        );
+        var command = new BulkDeletePdfsCommand(request.PdfIds);
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -91,4 +89,4 @@ internal static class AdminPdfManagementEndpoints
     }
 }
 
-internal record BulkDeletePdfsRequest(List<string> PdfIds);
+internal record BulkDeletePdfsRequest(List<Guid> PdfIds);

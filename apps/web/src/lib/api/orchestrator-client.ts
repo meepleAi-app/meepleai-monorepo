@@ -5,7 +5,7 @@
 
 // ========== Types ==========
 
-export type AgentType = 'tutor' | 'arbitro' | 'decisore';
+export type AgentType = 'tutor' | 'arbitro' | 'stratega' | 'narratore';
 
 export interface ExecuteWorkflowRequest {
   game_id: string;
@@ -69,7 +69,8 @@ export async function requestAgentSwitch(
   const switchQueries: Record<AgentType, string> = {
     tutor: 'Switch to Tutor to explain the rules',
     arbitro: 'Switch to Arbitro to validate moves',
-    decisore: 'Switch to Decisore for strategic analysis',
+    stratega: 'Switch to Stratega for strategic analysis',
+    narratore: 'Switch to Narratore for lore and atmosphere',
   };
 
   return executeWorkflow({

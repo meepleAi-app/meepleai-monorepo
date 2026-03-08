@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Extensions;
@@ -97,6 +98,19 @@ internal static class AdminQueueEndpoints
             .WithName("UpdateQueueConfig")
             .Produces(204)
             .WithSummary("Update queue configuration (pause/resume, concurrency)");
+
+        // Issue #5456: Bulk reindex failed documents
+        group.MapPost("/reindex-failed", HandleBulkReindexFailed)
+            .WithName("BulkReindexFailed")
+            .Produces<BulkReindexResult>(200)
+            .WithSummary("Re-queue all failed documents as Low priority");
+
+        // Issue #5456: Extracted text preview
+        group.MapGet("/documents/{pdfDocumentId:guid}/extracted-text", HandleGetExtractedText)
+            .WithName("GetExtractedText")
+            .Produces<PdfTextResult>(200)
+            .Produces(404)
+            .WithSummary("Preview extracted text for a document before embedding");
     }
 
     private static async Task<IResult> HandleEnqueue(
@@ -283,6 +297,27 @@ internal static class AdminQueueEndpoints
             new UpdateQueueConfigCommand(userId, request.IsPaused, request.MaxConcurrentWorkers), ct)
             .ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleBulkReindexFailed(
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (_, session, _) = context.RequireAdminSession();
+        var userId = session.User!.Id;
+
+        var result = await mediator.Send(new BulkReindexFailedCommand(userId), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetExtractedText(
+        Guid pdfDocumentId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetPdfTextQuery(pdfDocumentId), ct).ConfigureAwait(false);
+        return result is null ? Results.NotFound() : Results.Ok(result);
     }
 }
 

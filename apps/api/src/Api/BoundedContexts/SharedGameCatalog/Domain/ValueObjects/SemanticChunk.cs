@@ -12,6 +12,18 @@ public sealed record SemanticChunk
     public int EndCharIndex { get; init; }
     public List<string> ContextHeaders { get; init; } = [];
 
+    /// <summary>
+    /// Whether this chunk contains a critical section (Victory Conditions, Setup, Turn Structure).
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public bool IsCriticalSection { get; init; }
+
+    /// <summary>
+    /// The critical section type if this is a critical chunk.
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public CriticalSectionType? CriticalSectionType { get; init; }
+
     private SemanticChunk() { }
 
     public static SemanticChunk Create(
@@ -20,7 +32,9 @@ public sealed record SemanticChunk
         int startCharIndex,
         int endCharIndex,
         string? sectionHeader = null,
-        List<string>? contextHeaders = null)
+        List<string>? contextHeaders = null,
+        bool isCriticalSection = false,
+        CriticalSectionType? criticalSectionType = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(chunkIndex);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
@@ -34,9 +48,22 @@ public sealed record SemanticChunk
             SectionHeader = sectionHeader,
             StartCharIndex = startCharIndex,
             EndCharIndex = endCharIndex,
-            ContextHeaders = contextHeaders ?? []
+            ContextHeaders = contextHeaders ?? [],
+            IsCriticalSection = isCriticalSection,
+            CriticalSectionType = criticalSectionType
         };
     }
 
     public int CharacterCount => Content.Length;
+}
+
+/// <summary>
+/// Types of critical sections in rulebook analysis.
+/// Issue #5452: Critical section quality gate.
+/// </summary>
+public enum CriticalSectionType
+{
+    VictoryConditions,
+    Setup,
+    TurnStructure
 }

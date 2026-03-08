@@ -40,6 +40,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
     private List<KeyConcept> _keyConcepts = new();
     private List<GeneratedFaq> _generatedFaqs = new();
     private string? _gameStateSchemaJson;
+    private AnalysisCompletionStatus _completionStatus = AnalysisCompletionStatus.Complete;
+    private List<string> _missingSections = new();
     private decimal _confidenceScore;
     private readonly string _version = string.Empty;
     private bool _isActive;
@@ -117,6 +119,18 @@ public sealed class RulebookAnalysis : Entity<Guid>
     public string? GameStateSchemaJson => _gameStateSchemaJson;
 
     /// <summary>
+    /// Gets the analysis completion status based on critical section coverage.
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public AnalysisCompletionStatus CompletionStatus => _completionStatus;
+
+    /// <summary>
+    /// Gets the list of missing critical sections (if PartiallyComplete).
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public IReadOnlyList<string> MissingSections => _missingSections.AsReadOnly();
+
+    /// <summary>
     /// Gets the AI confidence score (0-1) for this analysis.
     /// </summary>
     public decimal ConfidenceScore => _confidenceScore;
@@ -175,7 +189,9 @@ public sealed class RulebookAnalysis : Entity<Guid>
         Guid createdBy,
         List<KeyConcept>? keyConcepts = null,
         List<GeneratedFaq>? generatedFaqs = null,
-        string? gameStateSchemaJson = null) : base(id)
+        string? gameStateSchemaJson = null,
+        AnalysisCompletionStatus completionStatus = AnalysisCompletionStatus.Complete,
+        List<string>? missingSections = null) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -190,6 +206,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         _keyConcepts = keyConcepts ?? new List<KeyConcept>();
         _generatedFaqs = generatedFaqs ?? new List<GeneratedFaq>();
         _gameStateSchemaJson = gameStateSchemaJson;
+        _completionStatus = completionStatus;
+        _missingSections = missingSections ?? new List<string>();
         _confidenceScore = confidenceScore;
         _version = version;
         _isActive = isActive;
@@ -294,6 +312,16 @@ public sealed class RulebookAnalysis : Entity<Guid>
             keyConcepts,
             generatedFaqs,
             gameStateSchemaJson);
+    }
+
+    /// <summary>
+    /// Marks this analysis as partially complete with missing critical sections.
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public void MarkAsPartiallyComplete(List<string> missingSections)
+    {
+        _completionStatus = AnalysisCompletionStatus.PartiallyComplete;
+        _missingSections = missingSections ?? new List<string>();
     }
 
     /// <summary>

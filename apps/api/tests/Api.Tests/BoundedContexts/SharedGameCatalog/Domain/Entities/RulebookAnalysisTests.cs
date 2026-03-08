@@ -667,4 +667,162 @@ public sealed class RulebookAnalysisTests
     }
 
     #endregion
+
+    #region GeneratedFaqs Tests (Issue #5449)
+
+    [Fact]
+    public void CreateFromAI_WithGeneratedFaqs_StoresFaqs()
+    {
+        // Arrange
+        var faqs = new List<GeneratedFaq>
+        {
+            new("How do you win?", "Score the most victory points by end of round 10.", "Scoring", 0.92m, new List<string> { "scoring", "setup" }),
+            new("What happens on a tie?", "The player with more resources wins.", "Tiebreaker", 0.85m, new List<string> { "scoring", "resources" })
+        };
+
+        // Act
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid(),
+            generatedFaqs: faqs);
+
+        // Assert
+        analysis.GeneratedFaqs.Should().HaveCount(2);
+        analysis.GeneratedFaqs[0].Question.Should().Be("How do you win?");
+        analysis.GeneratedFaqs[0].Answer.Should().Contain("victory points");
+        analysis.GeneratedFaqs[0].SourceSection.Should().Be("Scoring");
+        analysis.GeneratedFaqs[0].Confidence.Should().Be(0.92m);
+        analysis.GeneratedFaqs[0].Tags.Should().Contain("scoring");
+    }
+
+    [Fact]
+    public void CreateFromAI_WithoutGeneratedFaqs_DefaultsToEmptyList()
+    {
+        // Act
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid());
+
+        // Assert
+        analysis.GeneratedFaqs.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CreateManual_WithGeneratedFaqs_StoresFaqs()
+    {
+        // Arrange
+        var faqs = new List<GeneratedFaq>
+        {
+            new("How to setup?", "Place the board and deal 5 cards.", "Setup", 0.95m, new List<string> { "setup" })
+        };
+
+        // Act
+        var analysis = RulebookAnalysis.CreateManual(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), Guid.NewGuid(),
+            generatedFaqs: faqs);
+
+        // Assert
+        analysis.GeneratedFaqs.Should().HaveCount(1);
+        analysis.GeneratedFaqs[0].Question.Should().Be("How to setup?");
+    }
+
+    [Fact]
+    public void UpdateContent_WithGeneratedFaqs_UpdatesFaqs()
+    {
+        // Arrange
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Original",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid());
+        analysis.GeneratedFaqs.Should().BeEmpty();
+
+        var faqs = new List<GeneratedFaq>
+        {
+            new("How many players?", "2-4 players supported.", "Overview", 0.99m, new List<string> { "setup", "players" })
+        };
+
+        // Act
+        analysis.UpdateContent(
+            "Updated Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(),
+            generatedFaqs: faqs);
+
+        // Assert
+        analysis.GeneratedFaqs.Should().HaveCount(1);
+        analysis.GeneratedFaqs[0].Tags.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void UpdateContent_WithNullGeneratedFaqs_ClearsFaqs()
+    {
+        // Arrange
+        var initial = new List<GeneratedFaq>
+        {
+            new("Q?", "A.", "Section", 0.8m, new List<string> { "tag" })
+        };
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid(),
+            generatedFaqs: initial);
+        analysis.GeneratedFaqs.Should().HaveCount(1);
+
+        // Act
+        analysis.UpdateContent(
+            "Updated",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>());
+
+        // Assert
+        analysis.GeneratedFaqs.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GeneratedFaqs_ReturnsReadOnlyCollection()
+    {
+        // Arrange
+        var faqs = new List<GeneratedFaq>
+        {
+            new("Q1?", "A1.", "S1", 0.9m, new List<string> { "t1" }),
+            new("Q2?", "A2.", "S2", 0.8m, new List<string> { "t2" })
+        };
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid(),
+            generatedFaqs: faqs);
+
+        // Assert
+        analysis.GeneratedFaqs.Should().HaveCount(2);
+        analysis.GeneratedFaqs.Should().BeAssignableTo<IReadOnlyList<GeneratedFaq>>();
+    }
+
+    [Fact]
+    public void InternalConstructor_WithGeneratedFaqs_ReconstitutesCorrectly()
+    {
+        // Arrange
+        var faqs = new List<GeneratedFaq>
+        {
+            new("How to score?", "Collect sets of cards.", "Scoring", 0.88m, new List<string> { "scoring", "cards" })
+        };
+
+        // Act
+        var analysis = new RulebookAnalysis(
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.85m, "1.0", true, GenerationSource.AI, DateTime.UtcNow, Guid.NewGuid(),
+            generatedFaqs: faqs);
+
+        // Assert
+        analysis.GeneratedFaqs.Should().HaveCount(1);
+        analysis.GeneratedFaqs[0].Question.Should().Be("How to score?");
+        analysis.GeneratedFaqs[0].Tags.Should().Contain("cards");
+    }
+
+    #endregion
 }

@@ -73,6 +73,13 @@ internal sealed class RulebookAnalysisEntityConfiguration : IEntityTypeConfigura
             .HasDefaultValue("[]")
             .IsRequired();
 
+        // Issue #5449: Generated FAQ entries
+        builder.Property(a => a.GeneratedFaqsJson)
+            .HasColumnName("generated_faqs_json")
+            .HasColumnType("jsonb")
+            .HasDefaultValue("[]")
+            .IsRequired();
+
         builder.Property(a => a.ConfidenceScore)
             .HasColumnName("confidence_score")
             .HasPrecision(5, 4) // 0.0000 to 1.0000

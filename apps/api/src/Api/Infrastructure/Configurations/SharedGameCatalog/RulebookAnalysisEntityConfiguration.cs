@@ -80,6 +80,11 @@ internal sealed class RulebookAnalysisEntityConfiguration : IEntityTypeConfigura
             .HasDefaultValue("[]")
             .IsRequired();
 
+        // Issue #5450: Game state tracking schema
+        builder.Property(a => a.GameStateSchemaJson)
+            .HasColumnName("game_state_schema_json")
+            .HasColumnType("jsonb");
+
         builder.Property(a => a.ConfidenceScore)
             .HasColumnName("confidence_score")
             .HasPrecision(5, 4) // 0.0000 to 1.0000

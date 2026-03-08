@@ -70,6 +70,12 @@ public class RulebookAnalysisEntity
     public string GeneratedFaqsJson { get; set; } = "[]";
 
     /// <summary>
+    /// Game state tracking schema as JSON Schema string.
+    /// Issue #5450: ExtractStateSchema game state tracking.
+    /// </summary>
+    public string? GameStateSchemaJson { get; set; }
+
+    /// <summary>
     /// AI confidence score (0-1).
     /// </summary>
     public decimal ConfidenceScore { get; set; }

@@ -825,4 +825,115 @@ public sealed class RulebookAnalysisTests
     }
 
     #endregion
+
+    #region GameStateSchemaJson Tests
+
+    [Fact]
+    public void CreateFromAI_WithGameStateSchema_StoresSchema()
+    {
+        // Arrange
+        var schema = """{"type":"object","properties":{"playerResources":{"type":"object"}}}""";
+
+        // Act
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", "Trading game",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.85m, Guid.NewGuid(),
+            gameStateSchemaJson: schema);
+
+        // Assert
+        analysis.GameStateSchemaJson.Should().Be(schema);
+    }
+
+    [Fact]
+    public void CreateFromAI_WithoutGameStateSchema_DefaultsToNull()
+    {
+        // Act
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", "Trading game",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.85m, Guid.NewGuid());
+
+        // Assert
+        analysis.GameStateSchemaJson.Should().BeNull();
+    }
+
+    [Fact]
+    public void CreateManual_WithGameStateSchema_StoresSchema()
+    {
+        // Arrange
+        var schema = """{"type":"object","properties":{"score":{"type":"integer"}}}""";
+
+        // Act
+        var analysis = RulebookAnalysis.CreateManual(
+            Guid.NewGuid(), Guid.NewGuid(), "Chess", "Classic strategy",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), Guid.NewGuid(),
+            gameStateSchemaJson: schema);
+
+        // Assert
+        analysis.GameStateSchemaJson.Should().Be(schema);
+    }
+
+    [Fact]
+    public void UpdateContent_WithGameStateSchema_UpdatesSchema()
+    {
+        // Arrange
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", "Trading game",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.85m, Guid.NewGuid());
+
+        var schema = """{"type":"object","properties":{"turn":{"type":"integer"}}}""";
+
+        // Act
+        analysis.UpdateContent(
+            "Updated summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(),
+            gameStateSchemaJson: schema);
+
+        // Assert
+        analysis.GameStateSchemaJson.Should().Be(schema);
+    }
+
+    [Fact]
+    public void UpdateContent_WithNullGameStateSchema_ClearsSchema()
+    {
+        // Arrange
+        var schema = """{"type":"object"}""";
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Catan", "Trading game",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.85m, Guid.NewGuid(),
+            gameStateSchemaJson: schema);
+
+        // Act
+        analysis.UpdateContent(
+            "Updated summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>());
+
+        // Assert
+        analysis.GameStateSchemaJson.Should().BeNull();
+    }
+
+    [Fact]
+    public void Constructor_WithGameStateSchema_ReconstitutesCorrectly()
+    {
+        // Arrange
+        var schema = """{"type":"object","properties":{"resources":{"type":"array"}}}""";
+
+        // Act
+        var analysis = new RulebookAnalysis(
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.85m, "1.0", true, GenerationSource.AI, DateTime.UtcNow, Guid.NewGuid(),
+            gameStateSchemaJson: schema);
+
+        // Assert
+        analysis.GameStateSchemaJson.Should().Be(schema);
+    }
+
+    #endregion
 }

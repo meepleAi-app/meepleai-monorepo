@@ -504,4 +504,167 @@ public sealed class RulebookAnalysisTests
     }
 
     #endregion
+
+    #region KeyConcepts Tests (Issue #5448)
+
+    [Fact]
+    public void CreateFromAI_WithKeyConcepts_StoresKeyConcepts()
+    {
+        // Arrange
+        var keyConcepts = new List<KeyConcept>
+        {
+            new("Worker Placement", "A mechanic where players place workers on action spaces", "Mechanic"),
+            new("Victory Points", "Points earned to win the game", "Rule"),
+            new("Meeple", "A wooden playing piece representing a person", "Component")
+        };
+
+        // Act
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid(),
+            keyConcepts: keyConcepts);
+
+        // Assert
+        analysis.KeyConcepts.Should().HaveCount(3);
+        analysis.KeyConcepts[0].Term.Should().Be("Worker Placement");
+        analysis.KeyConcepts[0].Definition.Should().Contain("action spaces");
+        analysis.KeyConcepts[0].Category.Should().Be("Mechanic");
+        analysis.KeyConcepts[2].Term.Should().Be("Meeple");
+        analysis.KeyConcepts[2].Category.Should().Be("Component");
+    }
+
+    [Fact]
+    public void CreateFromAI_WithoutKeyConcepts_DefaultsToEmptyList()
+    {
+        // Act
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid());
+
+        // Assert
+        analysis.KeyConcepts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CreateManual_WithKeyConcepts_StoresKeyConcepts()
+    {
+        // Arrange
+        var keyConcepts = new List<KeyConcept>
+        {
+            new("Resource", "Items collected during gameplay", "Component")
+        };
+
+        // Act
+        var analysis = RulebookAnalysis.CreateManual(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), Guid.NewGuid(),
+            keyConcepts: keyConcepts);
+
+        // Assert
+        analysis.KeyConcepts.Should().HaveCount(1);
+        analysis.KeyConcepts[0].Term.Should().Be("Resource");
+    }
+
+    [Fact]
+    public void UpdateContent_WithKeyConcepts_UpdatesKeyConcepts()
+    {
+        // Arrange
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Original",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid());
+        analysis.KeyConcepts.Should().BeEmpty();
+
+        var keyConcepts = new List<KeyConcept>
+        {
+            new("Tile", "A hex-shaped piece placed on the board", "Component"),
+            new("Phase", "A distinct section of a game turn", "Rule")
+        };
+
+        // Act
+        analysis.UpdateContent(
+            "Updated Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(),
+            keyConcepts);
+
+        // Assert
+        analysis.KeyConcepts.Should().HaveCount(2);
+        analysis.KeyConcepts[0].Term.Should().Be("Tile");
+        analysis.KeyConcepts[1].Category.Should().Be("Rule");
+    }
+
+    [Fact]
+    public void UpdateContent_WithNullKeyConcepts_ClearsKeyConcepts()
+    {
+        // Arrange
+        var initial = new List<KeyConcept> { new("Term", "Def", "Cat") };
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid(),
+            keyConcepts: initial);
+        analysis.KeyConcepts.Should().HaveCount(1);
+
+        // Act
+        analysis.UpdateContent(
+            "Updated",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>());
+
+        // Assert
+        analysis.KeyConcepts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void KeyConcepts_ReturnsReadOnlyCollection()
+    {
+        // Arrange
+        var keyConcepts = new List<KeyConcept>
+        {
+            new("Dice Roll", "Rolling dice to determine outcomes", "Action"),
+            new("Draw", "Taking a card from a deck", "Action")
+        };
+        var analysis = RulebookAnalysis.CreateFromAI(
+            Guid.NewGuid(), Guid.NewGuid(), "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.9m, Guid.NewGuid(),
+            keyConcepts: keyConcepts);
+
+        // Assert
+        analysis.KeyConcepts.Should().HaveCount(2);
+        analysis.KeyConcepts.Should().BeAssignableTo<IReadOnlyList<KeyConcept>>();
+    }
+
+    [Fact]
+    public void InternalConstructor_WithKeyConcepts_ReconstitutesCorrectly()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var createdBy = Guid.NewGuid();
+        var analyzedAt = DateTime.UtcNow;
+        var keyConcepts = new List<KeyConcept>
+        {
+            new("Token", "A small piece representing a game element", "Component")
+        };
+
+        // Act
+        var analysis = new RulebookAnalysis(
+            id, sharedGameId, pdfId, "Game", "Summary",
+            new List<string>(), null, new List<Resource>(), new List<GamePhase>(),
+            new List<string>(), 0.85m, "1.0", true, GenerationSource.AI, analyzedAt, createdBy,
+            keyConcepts);
+
+        // Assert
+        analysis.Id.Should().Be(id);
+        analysis.KeyConcepts.Should().HaveCount(1);
+        analysis.KeyConcepts[0].Term.Should().Be("Token");
+    }
+
+    #endregion
 }

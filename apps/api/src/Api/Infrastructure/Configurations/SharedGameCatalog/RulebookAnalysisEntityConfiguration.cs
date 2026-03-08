@@ -66,6 +66,13 @@ internal sealed class RulebookAnalysisEntityConfiguration : IEntityTypeConfigura
             .HasDefaultValue("[]")
             .IsRequired();
 
+        // Issue #5448: Key concepts / glossary terms
+        builder.Property(a => a.KeyConceptsJson)
+            .HasColumnName("key_concepts_json")
+            .HasColumnType("jsonb")
+            .HasDefaultValue("[]")
+            .IsRequired();
+
         builder.Property(a => a.ConfidenceScore)
             .HasColumnName("confidence_score")
             .HasPrecision(5, 4) // 0.0000 to 1.0000

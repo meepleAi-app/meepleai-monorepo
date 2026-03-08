@@ -58,6 +58,12 @@ public class RulebookAnalysisEntity
     public string CommonQuestionsJson { get; set; } = "[]";
 
     /// <summary>
+    /// Key concepts / glossary terms extracted from rulebook (stored as JSON array).
+    /// Issue #5448: ExtractKeyConcepts glossary extraction.
+    /// </summary>
+    public string KeyConceptsJson { get; set; } = "[]";
+
+    /// <summary>
     /// AI confidence score (0-1).
     /// </summary>
     public decimal ConfidenceScore { get; set; }

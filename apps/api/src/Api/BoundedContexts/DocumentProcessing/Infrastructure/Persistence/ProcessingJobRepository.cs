@@ -41,8 +41,8 @@ internal class ProcessingJobRepository : RepositoryBase, IProcessingJobRepositor
     {
         var entities = await DbContext.ProcessingJobs
             .Include(j => j.Steps)
-            .OrderBy(j => j.Priority)
-            .ThenByDescending(j => j.CreatedAt)
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -137,14 +137,36 @@ internal class ProcessingJobRepository : RepositoryBase, IProcessingJobRepositor
         var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
 
         var entities = await query
-            .OrderBy(j => j.Priority)
-            .ThenByDescending(j => j.CreatedAt)
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return (entities.Select(MapToDomain).ToList(), total);
+    }
+
+    public async Task<ProcessingJob?> DequeueNextAsync(CancellationToken cancellationToken = default)
+    {
+        // Priority DESC (higher = more important), then FIFO within same priority
+        var entity = await DbContext.ProcessingJobs
+            .Include(j => j.Steps)
+                .ThenInclude(s => s.LogEntries)
+            .Where(j => j.Status == nameof(JobStatus.Queued))
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<int> CountProcessingAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.ProcessingJobs
+            .CountAsync(j => j.Status == nameof(JobStatus.Processing), cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static ProcessingJob MapToDomain(ProcessingJobEntity entity)

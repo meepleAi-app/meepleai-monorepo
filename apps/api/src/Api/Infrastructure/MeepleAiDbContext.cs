@@ -70,6 +70,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ProcessingJobEntity> ProcessingJobs => Set<ProcessingJobEntity>(); // ISSUE-4730: Processing queue management
     public DbSet<ProcessingStepEntity> ProcessingSteps => Set<ProcessingStepEntity>(); // ISSUE-4730: Processing queue steps
     public DbSet<StepLogEntryEntity> StepLogEntries => Set<StepLogEntryEntity>(); // ISSUE-4730: Processing step log entries
+    public DbSet<ProcessingQueueConfigEntity> ProcessingQueueConfigs => Set<ProcessingQueueConfigEntity>(); // ISSUE-5455: Queue configuration
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();

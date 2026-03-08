@@ -17,6 +17,8 @@ import {
 import { Badge } from '@/components/ui/data-display/badge';
 import { cn } from '@/lib/utils';
 
+import { QueueItemActions } from './queue-item-actions';
+
 import type { ProcessingJobDto, JobStatus } from '../lib/queue-api';
 
 interface QueueItemProps {
@@ -139,6 +141,9 @@ export function QueueItem({ job, isSelected, onSelect }: QueueItemProps) {
             )}
           </div>
         </button>
+
+        {/* Actions dropdown */}
+        <QueueItemActions job={job} />
       </div>
     </div>
   );

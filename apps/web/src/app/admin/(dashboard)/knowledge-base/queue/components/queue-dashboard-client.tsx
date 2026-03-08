@@ -8,7 +8,10 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
 
+import { BulkActionsBar } from './bulk-actions-bar';
 import { JobDetailPanel } from './job-detail-panel';
+import { QueueCapacityIndicator } from './queue-capacity-indicator';
+import { QueueControlBar } from './queue-control-bar';
 import { QueueFiltersBar } from './queue-filters';
 import { QueueList } from './queue-list';
 import { QueueStatsBar } from './queue-stats-bar';
@@ -85,10 +88,19 @@ export function QueueDashboardClient({ gameId }: { gameId?: string }) {
         </div>
       </div>
 
+      {/* Queue Control Bar (Pause/Resume, Workers, Backpressure) */}
+      <QueueControlBar />
+
+      {/* Capacity Indicator */}
+      <QueueCapacityIndicator />
+
       {/* Stats Bar */}
       <QueueStatsBar />
 
-      {/* Filters */}
+      {/* Bulk Actions + Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <BulkActionsBar />
+      </div>
       <QueueFiltersBar filters={filters} onFiltersChange={setFilters} />
 
       {/* Main Content: List (40%) + Detail (60%) */}

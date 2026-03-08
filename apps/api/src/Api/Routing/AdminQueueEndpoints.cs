@@ -111,6 +111,12 @@ internal static class AdminQueueEndpoints
             .Produces<PdfTextResult>(200)
             .Produces(404)
             .WithSummary("Preview extracted text for a document before embedding");
+
+        // Issue #5457: Queue status with backpressure info
+        group.MapGet("/status", HandleGetQueueStatus)
+            .WithName("GetQueueStatus")
+            .Produces<QueueStatusDto>(200)
+            .WithSummary("Get queue status with depth, ETA, and backpressure info");
     }
 
     private static async Task<IResult> HandleEnqueue(
@@ -318,6 +324,14 @@ internal static class AdminQueueEndpoints
     {
         var result = await mediator.Send(new GetPdfTextQuery(pdfDocumentId), ct).ConfigureAwait(false);
         return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetQueueStatus(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetQueueStatusQuery(), ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 }
 

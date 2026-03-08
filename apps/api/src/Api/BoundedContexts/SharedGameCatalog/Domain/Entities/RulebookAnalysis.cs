@@ -39,6 +39,7 @@ public sealed class RulebookAnalysis : Entity<Guid>
     private List<string> _commonQuestions = new();
     private List<KeyConcept> _keyConcepts = new();
     private List<GeneratedFaq> _generatedFaqs = new();
+    private string? _gameStateSchemaJson;
     private decimal _confidenceScore;
     private readonly string _version = string.Empty;
     private bool _isActive;
@@ -109,6 +110,13 @@ public sealed class RulebookAnalysis : Entity<Guid>
     public IReadOnlyList<GeneratedFaq> GeneratedFaqs => _generatedFaqs.AsReadOnly();
 
     /// <summary>
+    /// Gets the game state schema as a JSON Schema string.
+    /// Used by frontend for game state display during live sessions.
+    /// Issue #5450: ExtractStateSchema game state tracking.
+    /// </summary>
+    public string? GameStateSchemaJson => _gameStateSchemaJson;
+
+    /// <summary>
     /// Gets the AI confidence score (0-1) for this analysis.
     /// </summary>
     public decimal ConfidenceScore => _confidenceScore;
@@ -166,7 +174,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         DateTime analyzedAt,
         Guid createdBy,
         List<KeyConcept>? keyConcepts = null,
-        List<GeneratedFaq>? generatedFaqs = null) : base(id)
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -180,6 +189,7 @@ public sealed class RulebookAnalysis : Entity<Guid>
         _commonQuestions = commonQuestions;
         _keyConcepts = keyConcepts ?? new List<KeyConcept>();
         _generatedFaqs = generatedFaqs ?? new List<GeneratedFaq>();
+        _gameStateSchemaJson = gameStateSchemaJson;
         _confidenceScore = confidenceScore;
         _version = version;
         _isActive = isActive;
@@ -205,7 +215,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         Guid createdBy,
         string? version = null,
         List<KeyConcept>? keyConcepts = null,
-        List<GeneratedFaq>? generatedFaqs = null)
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null)
     {
         ValidateCreateParameters(sharedGameId, pdfDocumentId, gameTitle, createdBy);
 
@@ -234,7 +245,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
             DateTime.UtcNow,
             createdBy,
             keyConcepts,
-            generatedFaqs);
+            generatedFaqs,
+            gameStateSchemaJson);
     }
 
     /// <summary>
@@ -253,7 +265,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         Guid createdBy,
         string? version = null,
         List<KeyConcept>? keyConcepts = null,
-        List<GeneratedFaq>? generatedFaqs = null)
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null)
     {
         ValidateCreateParameters(sharedGameId, pdfDocumentId, gameTitle, createdBy);
 
@@ -279,7 +292,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
             DateTime.UtcNow,
             createdBy,
             keyConcepts,
-            generatedFaqs);
+            generatedFaqs,
+            gameStateSchemaJson);
     }
 
     /// <summary>
@@ -309,7 +323,8 @@ public sealed class RulebookAnalysis : Entity<Guid>
         List<GamePhase> gamePhases,
         List<string> commonQuestions,
         List<KeyConcept>? keyConcepts = null,
-        List<GeneratedFaq>? generatedFaqs = null)
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null)
     {
         if (string.IsNullOrWhiteSpace(summary))
             throw new ArgumentException("Summary cannot be empty", nameof(summary));
@@ -322,6 +337,7 @@ public sealed class RulebookAnalysis : Entity<Guid>
         _commonQuestions = commonQuestions ?? new List<string>();
         _keyConcepts = keyConcepts ?? new List<KeyConcept>();
         _generatedFaqs = generatedFaqs ?? new List<GeneratedFaq>();
+        _gameStateSchemaJson = gameStateSchemaJson;
         _source = GenerationSource.Manual; // Mark as manually edited
         _confidenceScore = 0.0m; // Clear confidence after manual edit
     }

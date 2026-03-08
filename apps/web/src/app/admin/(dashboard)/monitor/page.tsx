@@ -4,12 +4,12 @@
  * Issue #5053 — Admin Monitor Migration
  *
  * Canonical entry for all system monitoring admin pages.
- * Tabs: alerts · cache · infra · services · command · testing · export
+ * Tabs: alerts · cache · infra · command · testing · export
  */
 
 import { Suspense } from 'react';
 
-import { Bell, Database, HardDrive, Layers, Terminal, TestTube, Download } from 'lucide-react';
+import { Bell, Database, HardDrive, Terminal, TestTube, Download } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
@@ -30,7 +30,6 @@ const TABS: readonly HubTab[] = [
   { id: 'alerts', label: 'Alerts', href: '/admin/monitor?tab=alerts', icon: <Bell /> },
   { id: 'cache', label: 'Cache', href: '/admin/monitor?tab=cache', icon: <Database /> },
   { id: 'infra', label: 'Infrastructure', href: '/admin/monitor?tab=infra', icon: <HardDrive /> },
-  { id: 'services', label: 'Services', href: '/admin/monitor?tab=services', icon: <Layers /> },
   {
     id: 'command',
     label: 'Command Center',
@@ -71,12 +70,6 @@ function renderTabContent(tab: TabId) {
         </Suspense>
       );
     case 'infra':
-      return (
-        <Suspense fallback={<TabSkeleton />}>
-          <InfrastructureTab />
-        </Suspense>
-      );
-    case 'services':
       return (
         <Suspense fallback={<TabSkeleton />}>
           <InfrastructureTab />

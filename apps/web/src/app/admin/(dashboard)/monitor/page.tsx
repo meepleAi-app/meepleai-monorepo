@@ -15,6 +15,7 @@ import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubT
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { AlertsTab } from './AlertsTab';
+import { BulkExportTab } from './BulkExportTab';
 import { CacheTab } from './CacheTab';
 import { CommandCenterTab } from './CommandCenterTab';
 import { InfrastructureTab } from './InfrastructureTab';
@@ -51,15 +52,6 @@ function TabSkeleton() {
           <div key={i} className="h-24 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
         ))}
       </div>
-    </div>
-  );
-}
-
-function ComingSoonTab({ label, description }: { label: string; description: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-2xl border border-dashed border-border/50 bg-white/30 dark:bg-zinc-800/20 backdrop-blur-sm">
-      <p className="font-quicksand text-sm font-semibold text-foreground">{label}</p>
-      <p className="mt-1.5 max-w-sm text-xs text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -104,10 +96,9 @@ function renderTabContent(tab: TabId) {
       );
     case 'export':
       return (
-        <ComingSoonTab
-          label="Bulk Export"
-          description="Export users, audit logs, and API keys in bulk."
-        />
+        <Suspense fallback={<TabSkeleton />}>
+          <BulkExportTab />
+        </Suspense>
       );
     default:
       return null;

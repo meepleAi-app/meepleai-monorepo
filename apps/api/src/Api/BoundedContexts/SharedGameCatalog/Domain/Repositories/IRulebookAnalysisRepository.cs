@@ -59,6 +59,12 @@ public interface IRulebookAnalysisRepository
     Task<string> GetPdfTextAsync(Guid pdfDocumentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the document category string for a PDF document.
+    /// Issue #5443: Used for pipeline routing gate.
+    /// </summary>
+    Task<string?> GetPdfDocumentCategoryAsync(Guid pdfDocumentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all SharedGame+PDF pairs where the PDF has extracted text ready for analysis.
     /// </summary>
     Task<List<GamePdfPair>> GetGamePdfPairsWithReadyTextAsync(CancellationToken cancellationToken = default);

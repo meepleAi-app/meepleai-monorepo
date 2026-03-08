@@ -222,7 +222,11 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             chunkingStartedAt: entity.ChunkingStartedAt, // Issue #4219
             embeddingStartedAt: entity.EmbeddingStartedAt, // Issue #4219
             indexingStartedAt: entity.IndexingStartedAt, // Issue #4219
-            contentHash: entity.ContentHash
+            contentHash: entity.ContentHash,
+            documentCategory: !string.IsNullOrWhiteSpace(entity.DocumentCategory)
+                && Enum.TryParse<DocumentCategory>(entity.DocumentCategory, ignoreCase: true, out var parsedCategory)
+                    ? parsedCategory
+                    : DocumentCategory.Rulebook // Issue #5443
         );
     }
 
@@ -260,7 +264,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ChunkingStartedAt = domain.ChunkingStartedAt, // Issue #4219
             EmbeddingStartedAt = domain.EmbeddingStartedAt, // Issue #4219
             IndexingStartedAt = domain.IndexingStartedAt, // Issue #4219
-            ContentHash = domain.ContentHash
+            ContentHash = domain.ContentHash,
+            DocumentCategory = domain.DocumentCategory.ToString() // Issue #5443
         };
     }
 }

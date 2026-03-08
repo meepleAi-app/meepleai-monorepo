@@ -317,7 +317,7 @@ jobs:
 
       - name: Upload performance reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: k6-performance-reports-${{ github.run_number }}
           path: tests/k6/reports/
@@ -325,7 +325,7 @@ jobs:
 
       - name: Archive API logs
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: k6-api-logs-${{ github.run_number }}
           path: api.log
@@ -386,7 +386,7 @@ jobs:
           NODE_ENV: production
 
       - name: Upload Next.js Build Artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: nextjs-build-lighthouse-${{ github.sha }}
           path: |
@@ -429,7 +429,7 @@ jobs:
 
       - name: Upload Lighthouse CI Results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci/

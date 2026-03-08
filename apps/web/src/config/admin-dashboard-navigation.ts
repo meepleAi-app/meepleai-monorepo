@@ -47,11 +47,8 @@ import {
   ClipboardListIcon,
   KeyIcon,
   GamepadIcon,
-  HelpCircleIcon,
-  CalendarIcon,
   FlaskConicalIcon,
   ScrollTextIcon,
-  NetworkIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -348,7 +345,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Configuration',
     icon: SlidersIcon,
     baseRoute: '/admin/config',
-    description: 'System settings, feature flags, and rate limits',
+    description: 'System settings, feature flags, rate limits, and general configuration',
     group: 'core',
     sidebarItems: [
       {
@@ -371,16 +368,6 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/config?tab=rate-limits',
         label: 'Rate Limits',
         icon: ZapIcon,
-      },
-      {
-        href: '/admin/config?tab=n8n',
-        label: 'n8n',
-        icon: NetworkIcon,
-      },
-      {
-        href: '/admin/config?tab=wizard',
-        label: 'Wizard',
-        icon: WrenchIcon,
       },
     ],
   },
@@ -425,7 +412,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Content',
     icon: FileTextIcon,
     baseRoute: '/admin/content',
-    description: 'Games, shared content, FAQs, and sessions',
+    description: 'Games, shared content, and knowledge base',
     group: 'core',
     sidebarItems: [
       {
@@ -440,19 +427,9 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: ShareIcon,
       },
       {
-        href: '/admin/content?tab=faqs',
-        label: 'FAQs',
-        icon: HelpCircleIcon,
-      },
-      {
         href: '/admin/content?tab=kb',
         label: 'Knowledge Base',
         icon: BookOpenIcon,
-      },
-      {
-        href: '/admin/content?tab=sessions',
-        label: 'Sessions',
-        icon: CalendarIcon,
       },
     ],
   },

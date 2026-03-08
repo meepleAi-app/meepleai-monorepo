@@ -4,12 +4,12 @@
  * Issue #5052 — Admin Config Migration
  *
  * Canonical entry for all system configuration admin pages.
- * Tabs: general · limits · flags · rate-limits · n8n · wizard
+ * Tabs: general · limits · flags · rate-limits
  */
 
 import { Suspense } from 'react';
 
-import { Settings, Gauge, Flag, ShieldCheck, Workflow, Wand2 } from 'lucide-react';
+import { Settings, Gauge, Flag, ShieldCheck } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 
@@ -33,8 +33,6 @@ const TABS: readonly HubTab[] = [
     href: '/admin/config?tab=rate-limits',
     icon: <ShieldCheck />,
   },
-  { id: 'n8n', label: 'n8n', href: '/admin/config?tab=n8n', icon: <Workflow /> },
-  { id: 'wizard', label: 'Wizard', href: '/admin/config?tab=wizard', icon: <Wand2 /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -48,15 +46,6 @@ function TabSkeleton() {
           <div key={i} className="h-24 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
         ))}
       </div>
-    </div>
-  );
-}
-
-function ComingSoonTab({ label, description }: { label: string; description: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-2xl border border-dashed border-border/50 bg-white/30 dark:bg-zinc-800/20 backdrop-blur-sm">
-      <p className="font-quicksand text-sm font-semibold text-foreground">{label}</p>
-      <p className="mt-1.5 max-w-sm text-xs text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -87,20 +76,6 @@ function renderTabContent(tab: TabId) {
           <RateLimitsTab />
         </Suspense>
       );
-    case 'n8n':
-      return (
-        <ComingSoonTab
-          label="n8n Integration"
-          description="Manage n8n workflow templates, webhooks, and automation triggers."
-        />
-      );
-    case 'wizard':
-      return (
-        <ComingSoonTab
-          label="Configuration Wizard"
-          description="Step-by-step guided setup for initial platform configuration."
-        />
-      );
     default:
       return null;
   }
@@ -118,7 +93,7 @@ export default async function AdminConfigPage({ searchParams }: AdminConfigPageP
           Configuration
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          System settings, feature flags, rate limits, and integrations.
+          System settings, feature flags, and rate limits.
         </p>
       </div>
 

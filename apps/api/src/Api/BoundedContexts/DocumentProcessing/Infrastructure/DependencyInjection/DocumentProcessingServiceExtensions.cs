@@ -70,6 +70,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #4212: Processing metrics and ETA calculation service
         services.AddScoped<IProcessingMetricsService, ProcessingMetricsService>();
 
+        // Issue #5445: Language detection for PDF pipeline routing
+        services.AddSingleton<ILanguageDetector, LanguageDetector>();
+
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
         services.AddScoped<IPdfValidator, DocnetPdfValidator>(); // PDF-09: DDD validation adapter

@@ -38,6 +38,7 @@ import {
   getExtractedText,
   getQueueStatus,
   getDashboardMetrics,
+  getActiveAlerts,
 } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 
 describe('Queue API Functions', () => {
@@ -236,6 +237,31 @@ describe('Queue API Functions', () => {
       const result = await getDashboardMetrics('30d');
       expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/metrics?period=30d');
       expect(result).toEqual(metrics);
+    });
+  });
+
+  // Issue #5460: Active alerts API
+  describe('getActiveAlerts', () => {
+    it('should GET active alerts', async () => {
+      const alerts = [
+        {
+          type: 'DocumentStuck',
+          severity: 'Warning',
+          message: "Document 'rules.pdf' stuck for 15.3 minutes",
+          detectedAt: '2026-03-08T22:00:00Z',
+          data: { jobId: 'j1', pdfDocumentId: 'p1', fileName: 'rules.pdf', stuckMinutes: 15.3 },
+        },
+      ];
+      mockGet.mockResolvedValue(alerts);
+      const result = await getActiveAlerts();
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/alerts');
+      expect(result).toEqual(alerts);
+    });
+
+    it('should return empty array when no alerts', async () => {
+      mockGet.mockResolvedValue(null);
+      const result = await getActiveAlerts();
+      expect(result).toEqual([]);
     });
   });
 });

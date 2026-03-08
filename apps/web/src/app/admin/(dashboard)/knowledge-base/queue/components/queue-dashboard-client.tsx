@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { BulkActionsBar } from './bulk-actions-bar';
 import { JobDetailPanel } from './job-detail-panel';
 import { MetricsDashboard } from './metrics-dashboard';
+import { QueueAlertsBanner } from './queue-alerts-banner';
 import { QueueCapacityIndicator } from './queue-capacity-indicator';
 import { QueueControlBar } from './queue-control-bar';
 import { QueueFiltersBar } from './queue-filters';
@@ -88,6 +89,9 @@ export function QueueDashboardClient({ gameId }: { gameId?: string }) {
           </Link>
         </div>
       </div>
+
+      {/* Proactive Alerts Banner (Issue #5460) */}
+      <QueueAlertsBanner />
 
       {/* Queue Control Bar (Pause/Resume, Workers, Backpressure) */}
       <QueueControlBar />

@@ -2,6 +2,7 @@ import { BarChart3, Users, Gamepad2, BookOpen } from 'lucide-react';
 import { type Metadata } from 'next';
 
 import { QuickActionsWidget } from '@/components/admin/overview/QuickActionsWidget';
+import { SystemHealthCard } from '@/components/admin/overview/SystemHealthCard';
 
 export const metadata: Metadata = {
   title: 'Overview',
@@ -51,7 +52,12 @@ export default function OverviewPage() {
         <StatCard icon={BookOpen} label="Knowledge Base" description="Documents and vectors" />
       </div>
 
-      <QuickActionsWidget />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <QuickActionsWidget />
+        </div>
+        <SystemHealthCard />
+      </div>
     </div>
   );
 }

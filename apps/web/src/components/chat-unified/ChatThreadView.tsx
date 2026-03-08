@@ -22,8 +22,11 @@ import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useVoicePreferencesStore } from '@/store/voice/store';
 import type { Citation } from '@/types';
 import { isAdminOrAbove } from '@/types/auth';
 
@@ -31,6 +34,10 @@ import { ChatThreadHeader } from './ChatThreadHeader';
 import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
+import { TtsSpeakerButton } from './TtsSpeakerButton';
+import { VoiceMicButton } from './VoiceMicButton';
+import { VoiceSettingsPopover } from './VoiceSettingsPopover';
+import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
 
 // ============================================================================
 // Types
@@ -86,6 +93,51 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
 
+  // Voice input/output
+  const voicePrefs = useVoicePreferencesStore();
+  const lastMessageWasVoiceRef = useRef(false);
+  const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
+
+  const {
+    state: voiceState,
+    interimText,
+    finalText,
+    startListening,
+    stopListening,
+    cancelListening,
+    isSupported: isVoiceSupported,
+  } = useVoiceInput({
+    language: voicePrefs.language,
+    autoSend: voicePrefs.autoSend,
+    onTranscript: text => {
+      if (voicePrefs.autoSend && text.trim()) {
+        lastMessageWasVoiceRef.current = true;
+        handleSendRef.current?.(text);
+      }
+    },
+  });
+
+  const {
+    speak,
+    stop: stopSpeaking,
+    isSpeaking,
+    isSupported: isTtsSupported,
+    availableVoices,
+  } = useVoiceOutput({
+    language: voicePrefs.language,
+    preferredVoiceURI: voicePrefs.voiceURI ?? undefined,
+    rate: voicePrefs.rate,
+  });
+
+  const handleVoiceTap = useCallback(() => {
+    if (voiceState === 'listening') {
+      stopListening();
+    } else if (voiceState === 'idle' || voiceState === 'error') {
+      if (isSpeaking) stopSpeaking();
+      startListening();
+    }
+  }, [voiceState, isSpeaking, stopListening, startListening, stopSpeaking]);
+
   // SSE Streaming (Issue #4364)
   const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
     onComplete: (answer, metadata) => {
@@ -97,6 +149,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         followUpQuestions: metadata.followUpQuestions,
       };
       setMessages(prev => [...prev, assistantMessage]);
+      // TTS: auto-speak response when last message was voice-initiated
+      if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current) {
+        speak(answer);
+        lastMessageWasVoiceRef.current = false;
+      }
       setIsSending(false);
     },
     onError: errorMsg => {
@@ -259,6 +316,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     },
     [inputValue, isSending, threadId, thread?.agentId, thread?.agentTypology, game, sendViaSSE]
   );
+
+  // Keep ref in sync for voice onTranscript callback
+  handleSendRef.current = handleSendMessage;
 
   // Title change
   const handleTitleChange = useCallback(
@@ -530,6 +590,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                     data-testid={`message-${msg.role}`}
                   >
                     <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+                    {msg.role === 'assistant' && isTtsSupported && voicePrefs.ttsEnabled && (
+                      <TtsSpeakerButton
+                        text={msg.content}
+                        isSpeaking={isSpeaking}
+                        onSpeak={speak}
+                        onStop={stopSpeaking}
+                      />
+                    )}
                     {msg.citations && msg.citations.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {msg.citations.map((c, i) => (
@@ -616,6 +684,22 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             </div>
           )}
 
+          {/* Voice transcript overlay */}
+          {voiceState !== 'idle' && (
+            <VoiceTranscriptOverlay
+              interimText={interimText}
+              finalText={finalText}
+              state={voiceState}
+              onEdit={text => setInputValue(text)}
+              onSend={() => {
+                lastMessageWasVoiceRef.current = true;
+                handleSendMessage(finalText);
+              }}
+              onCancel={cancelListening}
+              autoSend={voicePrefs.autoSend}
+            />
+          )}
+
           {/* Input */}
           <div
             className="border-t border-border/50 dark:border-border/30 p-4 bg-background/95 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none"
@@ -637,6 +721,26 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 disabled={isSending || streamState.isStreaming}
                 data-testid="message-input"
               />
+              <VoiceMicButton
+                state={voiceState}
+                onTap={handleVoiceTap}
+                disabled={!isVoiceSupported || isSending || streamState.isStreaming}
+                size="md"
+              />
+              {isVoiceSupported && (
+                <VoiceSettingsPopover
+                  preferences={voicePrefs}
+                  onPreferencesChange={updates => {
+                    if (updates.ttsEnabled !== undefined)
+                      voicePrefs.setTtsEnabled(updates.ttsEnabled);
+                    if (updates.autoSend !== undefined) voicePrefs.setAutoSend(updates.autoSend);
+                    if (updates.language !== undefined) voicePrefs.setLanguage(updates.language);
+                    if (updates.voiceURI !== undefined) voicePrefs.setVoiceURI(updates.voiceURI);
+                    if (updates.rate !== undefined) voicePrefs.setRate(updates.rate);
+                  }}
+                  availableVoices={availableVoices}
+                />
+              )}
               <button
                 onClick={() => void handleSendMessage()}
                 disabled={!inputValue.trim() || isSending || streamState.isStreaming}

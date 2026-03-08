@@ -44,6 +44,7 @@ import {
   ZapIcon,
   ClipboardListIcon,
   KeyIcon,
+  MailIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -317,6 +318,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/monitor?tab=export',
         label: 'Bulk Export',
         icon: PackageIcon,
+      },
+      {
+        href: '/admin/monitor?tab=email',
+        label: 'Email',
+        icon: MailIcon,
       },
       // Config items
       {

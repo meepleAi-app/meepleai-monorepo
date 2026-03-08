@@ -4,12 +4,12 @@
  * Issue #5053 — Admin Monitor Migration
  *
  * Canonical entry for all system monitoring admin pages.
- * Tabs: alerts · cache · infra · command · testing · export
+ * Tabs: alerts · cache · infra · command · testing · export · email
  */
 
 import { Suspense } from 'react';
 
-import { Bell, Database, HardDrive, Terminal, TestTube, Download } from 'lucide-react';
+import { Bell, Database, HardDrive, Terminal, TestTube, Download, Mail } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
@@ -18,6 +18,7 @@ import { AlertsTab } from './AlertsTab';
 import { BulkExportTab } from './BulkExportTab';
 import { CacheTab } from './CacheTab';
 import { CommandCenterTab } from './CommandCenterTab';
+import { EmailManagementTab } from './EmailManagementTab';
 import { InfrastructureTab } from './InfrastructureTab';
 import { AdminMonitorNavConfig } from './NavConfig';
 import { TestingTab } from './TestingTab';
@@ -38,6 +39,7 @@ const TABS: readonly HubTab[] = [
   },
   { id: 'testing', label: 'Testing', href: '/admin/monitor?tab=testing', icon: <TestTube /> },
   { id: 'export', label: 'Bulk Export', href: '/admin/monitor?tab=export', icon: <Download /> },
+  { id: 'email', label: 'Email', href: '/admin/monitor?tab=email', icon: <Mail /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -91,6 +93,12 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <BulkExportTab />
+        </Suspense>
+      );
+    case 'email':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <EmailManagementTab />
         </Suspense>
       );
     default:

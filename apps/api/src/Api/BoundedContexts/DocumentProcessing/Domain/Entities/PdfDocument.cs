@@ -58,6 +58,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // PDF deduplication: SHA-256 hash of file content
     public string? ContentHash { get; private set; }
 
+    // Issue #5443: Document classification for pipeline routing
+    public DocumentCategory DocumentCategory { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -84,7 +87,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         LanguageCode? language = null,
         Guid? collectionId = null,
         DocumentType? documentType = null,
-        int sortOrder = 0) : base(id)
+        int sortOrder = 0,
+        DocumentCategory documentCategory = DocumentCategory.Rulebook) : base(id)
     {
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("File path cannot be empty", nameof(filePath));
@@ -111,6 +115,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         CollectionId = collectionId;
         DocumentType = documentType ?? ValueObjects.DocumentType.Base; // Default to base
         SortOrder = sortOrder;
+
+        // Issue #5443: Document classification for pipeline routing
+        DocumentCategory = documentCategory;
     }
 
     /// <summary>
@@ -152,7 +159,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         DateTime? chunkingStartedAt = null,
         DateTime? embeddingStartedAt = null,
         DateTime? indexingStartedAt = null,
-        string? contentHash = null)
+        string? contentHash = null,
+        DocumentCategory? documentCategory = null)
     {
         var document = new PdfDocument
         {
@@ -199,7 +207,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             IndexingStartedAt = indexingStartedAt,
 
             // PDF deduplication
-            ContentHash = contentHash
+            ContentHash = contentHash,
+
+            // Issue #5443: Document classification for pipeline routing
+            DocumentCategory = documentCategory ?? DocumentCategory.Rulebook
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -589,6 +600,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             SharedGameId = sharedGameId,
             ContributorId = contributorId,
             SourceDocumentId = source.Id, // Track lineage
+
+            // Issue #5443: Copy document category
+            DocumentCategory = source.DocumentCategory,
 
             // Issue #4219: Copy timing fields for accurate metrics
             UploadingStartedAt = source.UploadingStartedAt,

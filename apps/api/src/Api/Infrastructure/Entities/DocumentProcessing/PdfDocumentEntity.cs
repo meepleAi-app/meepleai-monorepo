@@ -76,6 +76,9 @@ public class PdfDocumentEntity
     // PDF deduplication: SHA-256 hash of file content
     public string? ContentHash { get; set; }
 
+    // Issue #5443: Document classification for pipeline routing
+    public string DocumentCategory { get; set; } = "Rulebook"; // DocumentCategory enum stored as string
+
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 

@@ -75,7 +75,8 @@ internal class GetCollectionByGameQueryHandler : IQueryHandler<GetCollectionByGa
                     ProcessingState: pdfDoc.ProcessingState.ToString(),
                     ProgressPercentage: pdfDoc.ProgressPercentage,
                     RetryCount: pdfDoc.RetryCount,
-                    MaxRetries: pdfDoc.MaxRetries
+                    MaxRetries: pdfDoc.MaxRetries,
+                    DocumentCategory: pdfDoc.DocumentCategory.ToString()
                 ) : null
             ));
         }

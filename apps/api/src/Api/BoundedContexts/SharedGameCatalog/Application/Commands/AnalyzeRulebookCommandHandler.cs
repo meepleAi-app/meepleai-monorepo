@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -74,6 +75,24 @@ internal sealed class AnalyzeRulebookCommandHandler
         if (game is null)
         {
             throw new InvalidOperationException($"Shared game with ID {command.SharedGameId} not found");
+        }
+
+        // Issue #5443: Gate - only analyzable document categories enter the pipeline
+        var categoryString = await _analysisRepository.GetPdfDocumentCategoryAsync(
+            command.PdfDocumentId,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!string.IsNullOrWhiteSpace(categoryString)
+            && Enum.TryParse<DocumentCategory>(categoryString, ignoreCase: true, out var category)
+            && !category.IsAnalyzable())
+        {
+            _logger.LogInformation(
+                "PDF {PdfId} has category {Category} which is not analyzable. Skipping analysis.",
+                command.PdfDocumentId, categoryString);
+
+            throw new ConflictException(
+                $"Document category '{categoryString}' is not eligible for rulebook analysis. " +
+                $"Only Rulebook, Expansion, and Errata documents can be analyzed.");
         }
 
         // 2. Get PDF document text content

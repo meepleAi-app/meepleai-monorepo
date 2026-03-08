@@ -116,6 +116,16 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
         return pdfDocument?.ExtractedText ?? string.Empty;
     }
 
+    public async Task<string?> GetPdfDocumentCategoryAsync(Guid pdfDocumentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.DocumentCategory)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<List<GamePdfPair>> GetGamePdfPairsWithReadyTextAsync(CancellationToken cancellationToken = default)
     {
         var pairs = await _context.SharedGames

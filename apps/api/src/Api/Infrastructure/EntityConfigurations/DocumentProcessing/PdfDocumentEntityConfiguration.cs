@@ -110,6 +110,16 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("indexing_started_at")
             .IsRequired(false);
 
+        // Issue #5443: Document classification for pipeline routing
+        builder.Property(e => e.DocumentCategory)
+            .IsRequired()
+            .HasMaxLength(32)
+            .HasColumnName("document_category")
+            .HasDefaultValue("Rulebook");
+
+        builder.HasIndex(e => e.DocumentCategory)
+            .HasDatabaseName("ix_pdf_documents_document_category");
+
         // PDF deduplication: SHA-256 content hash
         builder.Property(e => e.ContentHash)
             .HasMaxLength(64)

@@ -125,6 +125,9 @@ internal static class DocumentProcessingServiceExtensions
         // Stale PDF recovery: runs once on startup to reprocess stuck PDFs
         services.AddHostedService<StalePdfRecoveryService>();
 
+        // Issue #5460: Queue monitoring for proactive alerts (stuck docs, depth, failure rate)
+        services.AddHostedService<ProcessingQueueMonitorService>();
+
         // Issue #4208: Register Quartz job for automatic PDF retry (every 5 minutes)
         RegisterRetryFailedPdfsJob(services);
 

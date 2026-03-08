@@ -123,6 +123,12 @@ internal static class AdminQueueEndpoints
             .WithName("GetDashboardMetrics")
             .Produces<DashboardMetricsDto>(200)
             .WithSummary("Get processing metrics for dashboard (period: 24h, 7d, 30d)");
+
+        // Issue #5460: Active alerts for the processing queue
+        group.MapGet("/alerts", HandleGetActiveAlerts)
+            .WithName("GetActiveAlerts")
+            .Produces<IReadOnlyList<QueueAlertDto>>(200)
+            .WithSummary("Get currently active queue alerts (stuck docs, depth, failure rate)");
     }
 
     private static async Task<IResult> HandleEnqueue(
@@ -346,6 +352,14 @@ internal static class AdminQueueEndpoints
         CancellationToken ct)
     {
         var result = await mediator.Send(new GetDashboardMetricsQuery(period ?? "24h"), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetActiveAlerts(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetActiveAlertsQuery(), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 }

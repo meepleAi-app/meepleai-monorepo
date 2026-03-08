@@ -21,6 +21,11 @@ internal enum QueueStreamEventType
     JobRetried,
     QueueReordered,
 
+    // Alert events (Issue #5460)
+    AlertDocumentStuck,
+    AlertQueueDepthHigh,
+    AlertHighFailureRate,
+
     // Connection management
     Heartbeat
 }

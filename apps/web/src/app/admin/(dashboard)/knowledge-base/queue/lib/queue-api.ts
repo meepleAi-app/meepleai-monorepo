@@ -199,6 +199,24 @@ export interface DashboardMetricsDto {
   period: string;
 }
 
+// ── Queue Alerts (Issue #5460) ────────────────────────────────────────
+
+export type QueueAlertType = 'DocumentStuck' | 'QueueDepthHigh' | 'HighFailureRate';
+export type QueueAlertSeverity = 'Warning' | 'Critical';
+
+export interface QueueAlertDto {
+  type: QueueAlertType;
+  severity: QueueAlertSeverity;
+  message: string;
+  detectedAt: string;
+  data: unknown;
+}
+
+export async function getActiveAlerts(): Promise<QueueAlertDto[]> {
+  const result = await apiClient.get<QueueAlertDto[]>('/api/v1/admin/queue/alerts');
+  return result ?? [];
+}
+
 export type MetricsPeriod = '24h' | '7d' | '30d';
 
 export async function getDashboardMetrics(
@@ -269,6 +287,15 @@ export function useQueueStatus() {
     queryFn: getQueueStatus,
     staleTime: 10_000,
     refetchInterval: 15_000,
+  });
+}
+
+export function useActiveAlerts() {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'alerts'],
+    queryFn: getActiveAlerts,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 }
 

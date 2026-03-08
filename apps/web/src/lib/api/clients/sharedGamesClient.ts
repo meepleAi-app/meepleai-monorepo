@@ -26,6 +26,7 @@ import {
   BulkImportResultSchema,
   BggSearchResultSchema,
   BggDuplicateCheckResultSchema,
+  RulebookAnalysisDtoSchema,
   type SharedGameDetail,
   type PagedSharedGames,
   type GameCategory,
@@ -52,6 +53,7 @@ import {
   type BggDuplicateCheckResult,
   type UpdateFromBggRequest,
   type BatchApprovalResult,
+  type RulebookAnalysisDto,
 } from '../schemas/shared-games.schemas';
 
 export interface CreateSharedGamesClientParams {
@@ -295,10 +297,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * @param note - Optional approval note
      * @returns Result with success/failure counts and errors
      */
-    async batchApprove(
-      gameIds: string[],
-      note?: string
-    ): Promise<BatchApprovalResult> {
+    async batchApprove(gameIds: string[], note?: string): Promise<BatchApprovalResult> {
       return httpClient.post(`/api/v1/admin/shared-games/batch-approve`, {
         gameIds,
         note,
@@ -315,10 +314,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * @param reason - Reason for rejection (required)
      * @returns Result with success/failure counts and errors
      */
-    async batchReject(
-      gameIds: string[],
-      reason: string
-    ): Promise<BatchApprovalResult> {
+    async batchReject(gameIds: string[], reason: string): Promise<BatchApprovalResult> {
       return httpClient.post(`/api/v1/admin/shared-games/batch-reject`, {
         gameIds,
         reason,
@@ -340,8 +336,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
 
       if (params.pageNumber !== undefined)
         queryParams.set('pageNumber', params.pageNumber.toString());
-      if (params.pageSize !== undefined)
-        queryParams.set('pageSize', params.pageSize.toString());
+      if (params.pageSize !== undefined) queryParams.set('pageSize', params.pageSize.toString());
 
       const queryString = queryParams.toString();
       const path = `/api/v1/admin/shared-games/pending-approvals${queryString ? `?${queryString}` : ''}`;
@@ -608,7 +603,9 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         `/api/v1/admin/shared-games/bgg/check-duplicate/${bggId}`,
         BggDuplicateCheckResultSchema
       );
-      return result ?? { isDuplicate: false, existingGameId: null, existingGame: null, bggData: null };
+      return (
+        result ?? { isDuplicate: false, existingGameId: null, existingGame: null, bggData: null }
+      );
     },
 
     /**
@@ -761,6 +758,23 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       return result ?? [];
     },
 
+    // ========== Rulebook Analysis (Issue #5454) ==========
+
+    /**
+     * Get all active rulebook analyses for a game (PUBLIC)
+     * GET /api/v1/shared-games/{gameId}/analysis
+     *
+     * @param gameId - Game UUID
+     * @returns List of active rulebook analyses
+     */
+    async getGameAnalysis(gameId: string): Promise<RulebookAnalysisDto[]> {
+      const result = await httpClient.get(
+        `/api/v1/shared-games/${gameId}/analysis`,
+        z.array(RulebookAnalysisDtoSchema)
+      );
+      return result ?? [];
+    },
+
     // ========== Admin PDF Upload (Issue #4922 + #4926) ==========
 
     /**
@@ -787,7 +801,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         const xhr = new XMLHttpRequest();
 
         if (onProgress) {
-          xhr.upload.addEventListener('progress', (e) => {
+          xhr.upload.addEventListener('progress', e => {
             if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
           });
         }

@@ -554,3 +554,94 @@ export const BggUpdatableFields = [
 ] as const;
 
 export type BggUpdatableField = (typeof BggUpdatableFields)[number];
+
+// ========== Rulebook Analysis (Issue #5454) ==========
+
+/**
+ * Victory conditions DTO
+ */
+export const VictoryConditionsDtoSchema = z.object({
+  primary: z.string(),
+  alternatives: z.array(z.string()),
+  isPointBased: z.boolean(),
+  targetPoints: z.number().nullable(),
+});
+
+export type VictoryConditionsDto = z.infer<typeof VictoryConditionsDtoSchema>;
+
+/**
+ * Resource DTO
+ */
+export const ResourceDtoSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  usage: z.string(),
+  isLimited: z.boolean(),
+});
+
+export type ResourceDto = z.infer<typeof ResourceDtoSchema>;
+
+/**
+ * Game phase DTO
+ */
+export const GamePhaseDtoSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  order: z.number().int(),
+  isOptional: z.boolean(),
+});
+
+export type GamePhaseDto = z.infer<typeof GamePhaseDtoSchema>;
+
+/**
+ * Key concept DTO (glossary)
+ */
+export const KeyConceptDtoSchema = z.object({
+  term: z.string(),
+  definition: z.string(),
+  category: z.string(),
+});
+
+export type KeyConceptDto = z.infer<typeof KeyConceptDtoSchema>;
+
+/**
+ * Generated FAQ DTO
+ */
+export const GeneratedFaqDtoSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+  sourceSection: z.string(),
+  confidence: z.number(),
+  tags: z.array(z.string()),
+});
+
+export type GeneratedFaqDto = z.infer<typeof GeneratedFaqDtoSchema>;
+
+/**
+ * Rulebook analysis DTO — full structured analysis result
+ */
+export const RulebookAnalysisDtoSchema = z.object({
+  id: z.string().uuid(),
+  sharedGameId: z.string().uuid(),
+  pdfDocumentId: z.string().uuid(),
+  gameTitle: z.string(),
+  summary: z.string(),
+  keyMechanics: z.array(z.string()),
+  victoryConditions: VictoryConditionsDtoSchema.nullable(),
+  resources: z.array(ResourceDtoSchema),
+  gamePhases: z.array(GamePhaseDtoSchema),
+  commonQuestions: z.array(z.string()),
+  confidenceScore: z.number(),
+  version: z.number().int(),
+  isActive: z.boolean(),
+  source: z.string().uuid(),
+  analyzedAt: z.string(),
+  createdBy: z.string().uuid(),
+  keyConcepts: z.array(KeyConceptDtoSchema),
+  generatedFaqs: z.array(GeneratedFaqDtoSchema),
+  gameStateSchemaJson: z.string().nullable(),
+  completionStatus: z.string(),
+  missingSections: z.array(z.string()).nullable(),
+});
+
+export type RulebookAnalysisDto = z.infer<typeof RulebookAnalysisDtoSchema>;

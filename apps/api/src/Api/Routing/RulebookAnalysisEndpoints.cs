@@ -44,7 +44,26 @@ internal static class RulebookAnalysisEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
 
+        // GET /api/v1/shared-games/{gameId}/analysis
+        // Issue #5454: Game-level analysis results endpoint
+        group.MapGet("/shared-games/{gameId:guid}/analysis", HandleGetGameAnalysis)
+            .AllowAnonymous()
+            .WithName("GetGameAnalysis")
+            .WithSummary("Get all active rulebook analyses for a game")
+            .WithDescription("Returns all active rulebook analyses for a game including mechanics, victory conditions, FAQ, glossary, and completion status.")
+            .Produces<List<RulebookAnalysisDto>>(StatusCodes.Status200OK);
+
         return group;
+    }
+
+    private static async Task<IResult> HandleGetGameAnalysis(
+        IMediator mediator,
+        Guid gameId,
+        CancellationToken ct)
+    {
+        var query = new GetGameAnalysisQuery(gameId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleAnalyzeRulebook(

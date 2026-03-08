@@ -208,7 +208,9 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             entity.CreatedBy,
             keyConcepts,
             generatedFaqs,
-            entity.GameStateSchemaJson);
+            entity.GameStateSchemaJson,
+            (AnalysisCompletionStatus)entity.CompletionStatus,
+            JsonSerializer.Deserialize<List<string>>(entity.MissingSectionsJson) ?? new List<string>());
     }
 
     private static RulebookAnalysisEntity MapToEntity(RulebookAnalysis analysis)
@@ -246,6 +248,8 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             GeneratedFaqsJson = JsonSerializer.Serialize(
                 analysis.GeneratedFaqs.Select(f => new GeneratedFaqDto(f.Question, f.Answer, f.SourceSection, f.Confidence, f.Tags)).ToList()),
             GameStateSchemaJson = analysis.GameStateSchemaJson,
+            CompletionStatus = (int)analysis.CompletionStatus,
+            MissingSectionsJson = JsonSerializer.Serialize(analysis.MissingSections.ToList()),
             ConfidenceScore = analysis.ConfidenceScore,
             Version = analysis.Version,
             IsActive = analysis.IsActive,

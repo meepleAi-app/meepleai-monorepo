@@ -85,6 +85,18 @@ internal sealed class RulebookAnalysisEntityConfiguration : IEntityTypeConfigura
             .HasColumnName("game_state_schema_json")
             .HasColumnType("jsonb");
 
+        // Issue #5452: Critical section quality gate
+        builder.Property(a => a.CompletionStatus)
+            .HasColumnName("completion_status")
+            .HasDefaultValue(0) // Complete by default
+            .IsRequired();
+
+        builder.Property(a => a.MissingSectionsJson)
+            .HasColumnName("missing_sections_json")
+            .HasColumnType("jsonb")
+            .HasDefaultValue("[]")
+            .IsRequired();
+
         builder.Property(a => a.ConfidenceScore)
             .HasColumnName("confidence_score")
             .HasPrecision(5, 4) // 0.0000 to 1.0000

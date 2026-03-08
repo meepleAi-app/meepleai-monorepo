@@ -76,6 +76,18 @@ public class RulebookAnalysisEntity
     public string? GameStateSchemaJson { get; set; }
 
     /// <summary>
+    /// Analysis completion status (0=Complete, 1=PartiallyComplete, 2=Failed).
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public int CompletionStatus { get; set; }
+
+    /// <summary>
+    /// Missing critical sections as JSON array (when PartiallyComplete).
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public string MissingSectionsJson { get; set; } = "[]";
+
+    /// <summary>
     /// AI confidence score (0-1).
     /// </summary>
     public decimal ConfidenceScore { get; set; }

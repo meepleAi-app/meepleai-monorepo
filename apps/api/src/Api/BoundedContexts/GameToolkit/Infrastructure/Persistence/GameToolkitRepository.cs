@@ -87,6 +87,40 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetApprovedTemplatesAsync(
+        TemplateCategory? category, CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.Set<GameToolkitEntity>()
+            .AsNoTracking()
+            .Where(t => t.IsTemplate && t.TemplateStatus == (int)Domain.Enums.TemplateStatus.Approved);
+
+        if (category.HasValue)
+        {
+            var categoryStr = category.Value.ToString();
+            query = query.Where(t => t.StateTemplate != null && t.StateTemplate.Contains(categoryStr));
+        }
+
+        var entities = await query
+            .OrderBy(t => t.Name)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<Domain.Entities.GameToolkit>> GetPendingReviewAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.Set<GameToolkitEntity>()
+            .AsNoTracking()
+            .Where(t => t.IsTemplate && t.TemplateStatus == (int)Domain.Enums.TemplateStatus.PendingReview)
+            .OrderBy(t => t.UpdatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task AddAsync(Domain.Entities.GameToolkit toolkit, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(toolkit);
@@ -145,6 +179,11 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         SetPrivateProperty(toolkit, "CreatedAt", entity.CreatedAt);
         SetPrivateProperty(toolkit, "UpdatedAt", entity.UpdatedAt);
         SetPrivateProperty(toolkit, "AgentConfig", entity.AgentConfig);
+        SetPrivateProperty(toolkit, "TemplateStatus", (Domain.Enums.TemplateStatus)entity.TemplateStatus);
+        SetPrivateProperty(toolkit, "IsTemplate", entity.IsTemplate);
+        SetPrivateProperty(toolkit, "ReviewNotes", entity.ReviewNotes);
+        SetPrivateProperty(toolkit, "ReviewedByUserId", entity.ReviewedByUserId);
+        SetPrivateProperty(toolkit, "ReviewedAt", entity.ReviewedAt);
 
         // Initialize backing fields for collections (GetUninitializedObject leaves them null)
         // Base class AggregateRoot<Guid> needs _domainEvents initialized for ClearDomainEvents/AddDomainEvent
@@ -249,6 +288,11 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             CreatedAt = toolkit.CreatedAt,
             UpdatedAt = toolkit.UpdatedAt,
             AgentConfig = toolkit.AgentConfig,
+            TemplateStatus = (int)toolkit.TemplateStatus,
+            IsTemplate = toolkit.IsTemplate,
+            ReviewNotes = toolkit.ReviewNotes,
+            ReviewedByUserId = toolkit.ReviewedByUserId,
+            ReviewedAt = toolkit.ReviewedAt,
             DiceToolsJson = toolkit.DiceTools.Count > 0
                 ? JsonSerializer.Serialize(toolkit.DiceTools.Select(d => new DiceToolJsonModel
                 {

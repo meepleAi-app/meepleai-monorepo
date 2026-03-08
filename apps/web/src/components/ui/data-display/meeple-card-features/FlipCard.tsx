@@ -146,9 +146,7 @@ function BackContent({
   const isCompact = variant === 'compact' || variant === 'list';
 
   return (
-    <div className={cn(
-      'flex h-full flex-col overflow-hidden',
-    )}>
+    <div className={cn('flex h-full flex-col overflow-hidden')}>
       {/* Entity-colored header — v2 (Issue #4607) */}
       {!isCompact && (
         <div
@@ -159,7 +157,8 @@ function BackContent({
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.12]"
             style={{
-              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px)',
+              backgroundImage:
+                'repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px)',
             }}
             aria-hidden="true"
           />
@@ -170,156 +169,177 @@ function BackContent({
       )}
 
       {/* Content area */}
-      <div className={cn(
-        'flex flex-1 flex-col overflow-y-auto',
-        isCompact ? 'p-3 pl-5' : 'px-5 py-4',
-      )}>
-      {/* Compact header fallback */}
-      {isCompact && (
-        <div className="mb-2">
-          <h2 className="font-quicksand text-sm font-bold text-card-foreground">
-            {title || 'Informazioni'}
-          </h2>
-        </div>
-      )}
-
-      {/* Description */}
-      {flipData.description && (
-        <div className={isCompact ? 'mb-2' : 'mb-3'}>
-          <h3 className={cn(
-            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
-            isCompact ? 'text-xs' : 'text-xs',
-          )}>
-            Descrizione
-          </h3>
-          <p className={cn(
-            'font-nunito leading-relaxed text-card-foreground/80',
-            isCompact ? 'text-xs' : 'text-sm',
-            config.descriptionLines,
-          )}>
-            {flipData.description}
-          </p>
-        </div>
-      )}
-
-      {/* Categories */}
-      {config.maxCategories > 0 && flipData.categories && flipData.categories.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-3'}>
-          <h3 className={cn(
-            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
-            isCompact ? 'text-xs' : 'text-xs',
-          )}>
-            <Tag className="h-3 w-3" />
-            Categorie
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
-            {flipData.categories.slice(0, config.maxCategories).map((cat) => (
-              <span
-                key={cat.id}
-                className="rounded-md px-2 py-0.5 font-nunito text-xs font-medium"
-                style={{
-                  backgroundColor: `hsla(${entityColor}, 0.1)`,
-                  color: `hsl(${entityColor})`,
-                }}
-              >
-                {cat.name}
-              </span>
-            ))}
+      <div
+        className={cn('flex flex-1 flex-col overflow-y-auto', isCompact ? 'p-3 pl-5' : 'px-5 py-4')}
+      >
+        {/* Compact header fallback */}
+        {isCompact && (
+          <div className="mb-2">
+            <h2 className="font-quicksand text-sm font-bold text-card-foreground">
+              {title || 'Informazioni'}
+            </h2>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Mechanics */}
-      {config.maxMechanics > 0 && flipData.mechanics && flipData.mechanics.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-3'}>
-          <h3 className={cn(
-            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
-            isCompact ? 'text-xs' : 'text-xs',
-          )}>
-            <Cog className="h-3 w-3" />
-            Meccaniche
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
-            {flipData.mechanics.slice(0, config.maxMechanics).map((mech) => (
-              <span
-                key={mech.id}
-                className="rounded-md bg-muted px-2 py-0.5 font-nunito text-xs font-medium text-muted-foreground"
-              >
-                {mech.name}
-              </span>
-            ))}
+        {/* Description */}
+        {flipData.description && (
+          <div className={isCompact ? 'mb-2' : 'mb-3'}>
+            <h3
+              className={cn(
+                'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+                isCompact ? 'text-xs' : 'text-xs'
+              )}
+            >
+              Descrizione
+            </h3>
+            <p
+              className={cn(
+                'font-nunito leading-relaxed text-card-foreground/80',
+                isCompact ? 'text-xs' : 'text-sm',
+                config.descriptionLines
+              )}
+            >
+              {flipData.description}
+            </p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Designers */}
-      {config.showDesigners && flipData.designers && flipData.designers.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-3'}>
-          <h3 className={cn(
-            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
-            isCompact ? 'text-xs' : 'text-xs',
-          )}>
-            <User className="h-3 w-3" />
-            Designer
-          </h3>
-          <p className={cn('font-nunito text-card-foreground/80', isCompact ? 'text-xs' : 'text-sm')}>
-            {flipData.designers.map((d) => d.name).join(', ')}
-          </p>
-        </div>
-      )}
+        {/* Categories */}
+        {config.maxCategories > 0 && flipData.categories && flipData.categories.length > 0 && (
+          <div className={isCompact ? 'mb-2' : 'mb-3'}>
+            <h3
+              className={cn(
+                'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+                isCompact ? 'text-xs' : 'text-xs'
+              )}
+            >
+              <Tag className="h-3 w-3" />
+              Categorie
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {flipData.categories.slice(0, config.maxCategories).map(cat => (
+                <span
+                  key={cat.id}
+                  className="rounded-md px-2 py-0.5 font-nunito text-xs font-medium"
+                  style={{
+                    backgroundColor: `hsla(${entityColor}, 0.1)`,
+                    color: `hsl(${entityColor})`,
+                  }}
+                >
+                  {cat.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
-      {/* Publishers */}
-      {config.showPublishers && flipData.publishers && flipData.publishers.length > 0 && (
-        <div className={isCompact ? 'mb-2' : 'mb-3'}>
-          <h3 className={cn(
-            'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
-            isCompact ? 'text-xs' : 'text-xs',
-          )}>
-            <Paintbrush className="h-3 w-3" />
-            Editori
-          </h3>
-          <p className={cn('font-nunito text-card-foreground/80', isCompact ? 'text-xs' : 'text-sm')}>
-            {flipData.publishers.map((p) => p.name).join(', ')}
-          </p>
-        </div>
-      )}
+        {/* Mechanics */}
+        {config.maxMechanics > 0 && flipData.mechanics && flipData.mechanics.length > 0 && (
+          <div className={isCompact ? 'mb-2' : 'mb-3'}>
+            <h3
+              className={cn(
+                'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+                isCompact ? 'text-xs' : 'text-xs'
+              )}
+            >
+              <Cog className="h-3 w-3" />
+              Meccaniche
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {flipData.mechanics.slice(0, config.maxMechanics).map(mech => (
+                <span
+                  key={mech.id}
+                  className="rounded-md bg-muted px-2 py-0.5 font-nunito text-xs font-medium text-muted-foreground"
+                >
+                  {mech.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
-      {/* Complexity + Min Age row */}
-      {(flipData.complexityRating || flipData.minAge) && !isCompact && (
-        <div className="mb-3 flex items-center gap-3">
-          {flipData.complexityRating && (
-            <span className="rounded-md bg-muted px-2 py-1 font-nunito text-xs text-muted-foreground">
-              Peso: {flipData.complexityRating.toFixed(2)} / 5
-            </span>
-          )}
-          {config.showMinAge && flipData.minAge && (
-            <span className="rounded-md bg-muted px-2 py-1 font-nunito text-xs text-muted-foreground">
-              Età: {flipData.minAge}+
-            </span>
-          )}
-        </div>
-      )}
+        {/* Designers */}
+        {config.showDesigners && flipData.designers && flipData.designers.length > 0 && (
+          <div className={isCompact ? 'mb-2' : 'mb-3'}>
+            <h3
+              className={cn(
+                'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+                isCompact ? 'text-xs' : 'text-xs'
+              )}
+            >
+              <User className="h-3 w-3" />
+              Designer
+            </h3>
+            <p
+              className={cn(
+                'font-nunito text-card-foreground/80',
+                isCompact ? 'text-xs' : 'text-sm'
+              )}
+            >
+              {flipData.designers.map(d => d.name).join(', ')}
+            </p>
+          </div>
+        )}
 
-      {/* Detail page link */}
-      {detailHref && (
-        <div className="mt-auto pt-2">
-          <Link
-            href={detailHref}
-            className={cn(
-              'inline-flex items-center gap-1.5 font-nunito font-medium',
-              'transition-colors duration-200',
-              isCompact ? 'text-xs' : 'text-sm',
+        {/* Publishers */}
+        {config.showPublishers && flipData.publishers && flipData.publishers.length > 0 && (
+          <div className={isCompact ? 'mb-2' : 'mb-3'}>
+            <h3
+              className={cn(
+                'mb-1 flex items-center gap-2 font-quicksand font-semibold uppercase tracking-wider text-muted-foreground',
+                isCompact ? 'text-xs' : 'text-xs'
+              )}
+            >
+              <Paintbrush className="h-3 w-3" />
+              Editori
+            </h3>
+            <p
+              className={cn(
+                'font-nunito text-card-foreground/80',
+                isCompact ? 'text-xs' : 'text-sm'
+              )}
+            >
+              {flipData.publishers.map(p => p.name).join(', ')}
+            </p>
+          </div>
+        )}
+
+        {/* Complexity + Min Age row */}
+        {(flipData.complexityRating || flipData.minAge) && !isCompact && (
+          <div className="mb-3 flex items-center gap-3">
+            {flipData.complexityRating && (
+              <span className="rounded-md bg-muted px-2 py-1 font-nunito text-xs text-muted-foreground">
+                Peso: {flipData.complexityRating.toFixed(2)} / 5
+              </span>
             )}
-            style={{
-              color: `hsl(${entityColor})`,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ExternalLink className={cn(isCompact ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
-            Vai alla pagina
-          </Link>
-        </div>
-      )}
+            {config.showMinAge && flipData.minAge && (
+              <span className="rounded-md bg-muted px-2 py-1 font-nunito text-xs text-muted-foreground">
+                Età: {flipData.minAge}+
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Detail page link */}
+        {detailHref && (
+          <div className="mt-auto pt-2">
+            <Link
+              href={detailHref}
+              className={cn(
+                'inline-flex items-center gap-1.5 font-nunito font-medium',
+                'transition-colors duration-200',
+                isCompact ? 'text-xs' : 'text-sm'
+              )}
+              style={{
+                color: `hsl(${entityColor})`,
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <ExternalLink className={cn(isCompact ? 'h-3 w-3' : 'h-3.5 w-3.5')} />
+              Vai alla pagina
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -369,7 +389,7 @@ export function FlipCard({
         handleFlip();
       }
     },
-    [handleFlip],
+    [handleFlip]
   );
 
   // For list/compact variants, measure front height and apply as minHeight
@@ -395,25 +415,23 @@ export function FlipCard({
   // Touch devices: always show flip button (no card-level click)
   // Desktop: click anywhere on card to flip (no button)
   const isTouchDevice = useMediaQuery('(pointer: coarse)');
-  const isCardMode = isTouchDevice ? false : (flipTrigger === 'card');
+  const isCardMode = isTouchDevice ? false : flipTrigger === 'card';
 
   return (
     <div
-      className={cn(
-        isCardMode && 'cursor-pointer',
-        isHero && 'w-full max-w-[420px]',
-        className,
-      )}
+      className={cn(isCardMode && 'cursor-pointer', isHero && 'w-full max-w-[420px]', className)}
       style={{
         perspective: '1200px',
       }}
-      {...(isCardMode ? {
-        role: 'button' as const,
-        tabIndex: 0,
-        'aria-label': `Premi Invio o clicca per ${flipped ? 'vedere il fronte' : 'vedere i dettagli sul retro'}`,
-        onClick: handleFlip,
-        onKeyDown: handleKeyDown,
-      } : {})}
+      {...(isCardMode
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            'aria-label': `Premi Invio o clicca per ${flipped ? 'vedere il fronte' : 'vedere i dettagli sul retro'}`,
+            onClick: handleFlip,
+            onKeyDown: handleKeyDown,
+          }
+        : {})}
       data-testid="meeple-card-flip-container"
     >
       <motion.div
@@ -423,7 +441,7 @@ export function FlipCard({
           ...(isHero ? { aspectRatio: '3 / 4' } : {}),
           ...(isRowBased && containerHeight ? { minHeight: containerHeight } : {}),
         }}
-        animate={{ rotateY: flipped ? 180 : 0 }}
+        animate={{ rotateY: flipped ? 180 : 0, scale: flipped ? 1.02 : 1 }}
         transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
       >
         {/* Front */}
@@ -432,7 +450,7 @@ export function FlipCard({
           className={cn(
             'relative',
             isHero || isRowBased ? 'absolute inset-0' : 'relative',
-            isHero && '[&>*]:h-full [&>*]:w-full',
+            isHero && '[&>*]:h-full [&>*]:w-full'
           )}
           style={{
             backfaceVisibility: 'hidden',
@@ -453,9 +471,9 @@ export function FlipCard({
                 'text-muted-foreground hover:text-foreground',
                 'shadow-sm hover:shadow-md',
                 'transition-all duration-200 hover:scale-110',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
               )}
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 handleFlip();
               }}
@@ -473,7 +491,7 @@ export function FlipCard({
             'absolute inset-0 overflow-hidden',
             isRowBased ? 'rounded-xl' : 'rounded-2xl',
             'border bg-card',
-            'flex flex-col',
+            'flex flex-col'
           )}
           style={{
             backfaceVisibility: 'hidden',
@@ -485,15 +503,16 @@ export function FlipCard({
           data-testid="meeple-card-back"
           {...(isCardMode ? { onClick: handleFlip } : {})}
         >
-          {customBackContent ?? (flipData ? (
-            <BackContent
-              flipData={flipData}
-              variant={variant}
-              detailHref={detailHref}
-              entityColor={entityColor}
-              title={title}
-            />
-          ) : null)}
+          {customBackContent ??
+            (flipData ? (
+              <BackContent
+                flipData={flipData}
+                variant={variant}
+                detailHref={detailHref}
+                entityColor={entityColor}
+                title={title}
+              />
+            ) : null)}
           {/* Flip-back button on back face (touch/button mode only) */}
           {!isCardMode && (
             <button
@@ -506,9 +525,9 @@ export function FlipCard({
                 'text-muted-foreground hover:text-foreground',
                 'shadow-sm hover:shadow-md',
                 'transition-all duration-200 hover:scale-110',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
               )}
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 handleFlip();
               }}

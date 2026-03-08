@@ -27,25 +27,23 @@ import {
   MessageSquare,
   Link as LinkIcon,
   ChevronRight,
+  Shield,
+  Trophy,
+  Clock,
+  Bot,
+  BarChart3,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Separator } from '@/components/ui/navigation/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/navigation/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { NotificationDto, NotificationSeverity, NotificationType } from '@/lib/api';
+import type { NotificationDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import {
-  useNotificationStore,
-  selectNotifications,
-} from '@/store/notification/store';
+import { useNotificationStore, selectNotifications } from '@/store/notification/store';
 
 // ============================================================================
 // NotificationCenter Props
@@ -304,7 +302,7 @@ function getSeverityConfig(severity: string): {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
 } {
-  switch (severity as NotificationSeverity) {
+  switch (severity) {
     case 'success':
       return { icon: CheckCircle2, color: 'text-green-600 dark:text-green-400' };
     case 'info':
@@ -319,17 +317,41 @@ function getSeverityConfig(severity: string): {
 }
 
 function getTypeIcon(type: string): React.ComponentType<{ className?: string }> {
-  switch (type as NotificationType) {
+  switch (type) {
     case 'pdf_upload_completed':
     case 'rule_spec_generated':
     case 'processing_job_completed':
+    case 'processing_job_failed':
       return FileCheck;
     case 'new_comment':
       return MessageSquare;
     case 'shared_link_accessed':
+    case 'share_request_created':
+    case 'share_request_approved':
+    case 'share_request_rejected':
+    case 'share_request_changes_requested':
       return LinkIcon;
     case 'processing_failed':
       return XCircle;
+    case 'badge_earned':
+      return Trophy;
+    case 'agent_linked':
+      return Bot;
+    case 'rate_limit_approaching':
+    case 'rate_limit_reached':
+    case 'cooldown_ended':
+      return Zap;
+    case 'loan_reminder':
+    case 'session_terminated':
+      return Clock;
+    case 'admin_openrouter_daily_summary':
+    case 'admin_openrouter_rpm_alert':
+    case 'admin_openrouter_budget_alert':
+      return BarChart3;
+    case 'admin_circuit_breaker_state_changed':
+    case 'admin_new_share_request':
+    case 'admin_shared_game_submitted':
+      return Shield;
     default:
       return Info;
   }

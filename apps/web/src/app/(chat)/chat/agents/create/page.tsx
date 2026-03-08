@@ -3,7 +3,7 @@
  *
  * 4-step wizard for users to create their own custom AI agents:
  * 1. Select a game from library
- * 2. Choose agent type (Tutor / Arbitro / Decisore)
+ * 2. Choose agent type (Tutor / Arbitro / Stratega / Narratore)
  * 3. Name the agent + pick knowledge base PDFs
  * 4. Review & confirm
  */

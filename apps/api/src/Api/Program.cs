@@ -383,9 +383,7 @@ using (var scope = app.Services.CreateScope())
     {
         await db.Database.MigrateAsync().ConfigureAwait(false);
 
-        // AI-01: Initialize Qdrant collection
-        var qdrant = scope.ServiceProvider.GetRequiredService<IQdrantService>();
-        await qdrant.EnsureCollectionExistsAsync().ConfigureAwait(false);
+        // Qdrant initialization removed — pgvector is the sole vector store
 
         // Validate embedding configuration consistency
         var embedding = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
@@ -481,6 +479,7 @@ v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
+v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
 v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
 v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
 v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints
@@ -489,6 +488,7 @@ v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
+v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizard
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
@@ -571,13 +571,14 @@ v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #
 v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
 v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
 v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
-v1Api.MapAdminQdrantEndpoints();       // Qdrant admin operations (Issue #4877)
+// Qdrant admin endpoints removed — pgvector is the sole vector store
 v1Api.MapAdminEmbeddingEndpoints();    // Embedding service dashboard (Issue #4878)
 v1Api.MapAdminPipelineEndpoints();     // Pipeline health overview (Issue #4879)
 v1Api.MapAdminKBSettingsEndpoints();   // KB settings read-only (Issue #4881)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
+v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
 v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
@@ -586,6 +587,7 @@ v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 v1Api.MapKnowledgeBaseEndpoints();
 v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 v1Api.MapRagDashboardEndpoints();   // Issue #3304: RAG Dashboard configuration and metrics
+v1Api.MapRagPipelineEndpoints();   // Issue #5312: User-facing RAG pipeline CRUD
 v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strategies endpoint
 
 // Issue #866: Agent management endpoints

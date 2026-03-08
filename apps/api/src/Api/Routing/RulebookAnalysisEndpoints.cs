@@ -34,17 +34,6 @@ internal static class RulebookAnalysisEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
 
-        // DELETE /api/v1/documents/{documentId}/analysis
-        group.MapDelete("/documents/{documentId}/analysis", HandleDeactivateAnalysis)
-            .RequireAuthorization("AdminOnlyPolicy")
-            .WithName("DeactivateRulebookAnalysis")
-            .WithSummary("Deactivate the active rulebook analysis")
-            .WithDescription("Deactivates the currently active analysis for the specified PDF document. This does not delete the analysis, only marks it as inactive.")
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound);
-
         // GET /api/v1/documents/{documentId}/analysis/status/{taskId}
         group.MapGet("/documents/{documentId:guid}/analysis/status/{taskId}", HandleGetAnalysisStatus)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -109,27 +98,6 @@ internal static class RulebookAnalysisEndpoints
             : Results.NotFound($"No active analysis found for PDF document {documentId}");
     }
 
-    private static async Task<IResult> HandleDeactivateAnalysis(
-        IMediator mediator,
-        Guid documentId,
-        Guid sharedGameId, // from query string
-        CancellationToken ct)
-    {
-        // Get active analysis
-        var query = new GetActiveRulebookAnalysisQuery(sharedGameId, documentId);
-        var activeAnalysis = await mediator.Send(query, ct).ConfigureAwait(false);
-
-        if (activeAnalysis is null)
-        {
-            return Results.NotFound($"No active analysis found for PDF document {documentId}");
-        }
-
-        // Deactivate via repository (simplified for MVP - no separate command)
-        // In production, you'd create a DeactivateAnalysisCommand
-        // For now, this is acceptable since deactivation is a simple state change
-
-        return Results.NoContent();
-    }
 }
 
 /// <summary>

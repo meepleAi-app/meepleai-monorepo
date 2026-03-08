@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleAI - Scoreboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: 'hsl(30 25% 97%)',
+            foreground: 'hsl(30 15% 15%)',
+            card: '#ffffff',
+            'card-border': 'hsl(30 15% 85%)',
+            primary: 'hsl(25 95% 38%)',
+            'primary-hover': 'hsl(25 95% 45%)',
+            secondary: 'hsl(142 76% 28%)',
+            accent: 'hsl(271 91% 55%)',
+            'accent-active': 'hsl(262 83% 62%)',
+            muted: 'hsl(30 20% 90%)',
+            'muted-fg': 'hsl(30 12% 35%)',
+            'entity-session': 'hsl(240 60% 55%)',
+            'entity-game': 'hsl(25 95% 45%)',
+            'entity-player': 'hsl(262 83% 58%)',
+            ring: 'hsl(25 95% 53%)',
+          },
+          fontFamily: {
+            quicksand: ['Quicksand', 'sans-serif'],
+            nunito: ['Nunito', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Nunito', sans-serif;
+      background-color: hsl(30 25% 97%);
+      background-image:
+        repeating-linear-gradient(90deg, rgba(160,120,70,0.03) 0px, rgba(160,120,70,0.01) 1px, transparent 1px, transparent 20px),
+        repeating-linear-gradient(0deg, rgba(160,120,70,0.02) 0px, rgba(160,120,70,0.01) 1px, transparent 1px, transparent 20px),
+        radial-gradient(ellipse at 50% 0%, rgba(255,200,120,0.08) 0%, transparent 70%);
+    }
+    .warm-shadow { box-shadow: 0 2px 12px rgba(180,130,80,0.12); }
+    .warm-shadow-lg { box-shadow: 0 8px 24px rgba(180,130,80,0.15); }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Quicksand', sans-serif; }
+    .bottom-sheet-overlay { background: rgba(30,25,20,0.45); backdrop-filter: blur(4px); }
+  </style>
+</head>
+<body class="min-h-screen text-foreground">
+  <div class="mx-auto max-w-[375px] min-h-screen relative bg-background">
+
+    <!-- === TopNavbar === -->
+    <header class="sticky top-0 z-50 h-14 flex items-center justify-between px-3 border-b border-card-border bg-background/95 backdrop-blur-md">
+      <div class="flex items-center gap-2">
+        <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors" aria-label="Indietro">
+          <svg class="w-5 h-5 text-foreground" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="flex flex-col leading-tight">
+          <span class="font-quicksand font-bold text-sm text-foreground">Catan</span>
+          <span class="text-[11px] text-muted-fg font-mono tracking-wide">K7X2M9</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors relative" aria-label="Notifiche">
+          <svg class="w-5 h-5 text-muted-fg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </button>
+        <div class="w-8 h-8 rounded-full bg-entity-player/20 flex items-center justify-center">
+          <span class="text-xs font-bold text-entity-player">MR</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- === MiniNav === -->
+    <nav class="sticky top-14 z-40 h-12 flex items-center gap-1 px-4 border-b border-card-border bg-white/60 backdrop-blur-xl overflow-x-auto">
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold font-quicksand text-accent-active bg-accent/10">
+        Punteggi
+      </button>
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:text-foreground hover:bg-muted transition-colors">
+        Strumenti
+      </button>
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:text-foreground hover:bg-muted transition-colors">
+        Chat
+      </button>
+      <button class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium font-quicksand text-muted-fg hover:text-foreground hover:bg-muted transition-colors">
+        Note
+      </button>
+    </nav>
+
+    <!-- === Content === -->
+    <main class="px-4 pt-4 pb-24">
+
+      <!-- Live Indicator -->
+      <div class="flex items-center justify-center gap-3 mb-5">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          Live
+        </span>
+        <span class="text-sm font-medium text-muted-fg">Round 5 &middot; 1h 23m</span>
+      </div>
+
+      <!-- Podium Top 3 -->
+      <div class="flex items-end justify-center gap-2 mb-6 px-2">
+        <!-- 2nd Place -->
+        <div class="flex flex-col items-center w-24">
+          <div class="w-12 h-12 rounded-full bg-primary/15 border-3 border-gray-300 flex items-center justify-center mb-1 relative">
+            <span class="text-sm font-bold text-primary">LC</span>
+            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-600">2</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Luca</span>
+          <div class="w-full mt-1.5 rounded-t-lg bg-gray-200/80 h-16 flex items-center justify-center">
+            <span class="text-lg font-bold text-gray-700">38</span>
+          </div>
+        </div>
+        <!-- 1st Place -->
+        <div class="flex flex-col items-center w-28">
+          <div class="w-14 h-14 rounded-full bg-entity-player/15 border-3 border-amber-400 flex items-center justify-center mb-1 relative">
+            <span class="text-base font-bold text-entity-player">MR</span>
+            <span class="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center text-[11px] font-bold text-amber-900">1</span>
+          </div>
+          <span class="text-xs font-bold text-foreground">Marco</span>
+          <div class="w-full mt-1.5 rounded-t-lg bg-amber-100/80 h-24 flex items-center justify-center">
+            <span class="text-2xl font-bold text-amber-800">45</span>
+          </div>
+        </div>
+        <!-- 3rd Place -->
+        <div class="flex flex-col items-center w-24">
+          <div class="w-12 h-12 rounded-full bg-secondary/15 border-3 border-amber-600/50 flex items-center justify-center mb-1 relative">
+            <span class="text-sm font-bold text-secondary">AG</span>
+            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-700/30 flex items-center justify-center text-[10px] font-bold text-amber-800">3</span>
+          </div>
+          <span class="text-xs font-semibold text-foreground">Andrea</span>
+          <div class="w-full mt-1.5 rounded-t-lg bg-amber-50/80 h-12 flex items-center justify-center">
+            <span class="text-lg font-bold text-amber-700">31</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Table -->
+      <div class="bg-white rounded-2xl border border-card-border warm-shadow overflow-hidden">
+        <!-- Table Header -->
+        <div class="grid grid-cols-[1fr_repeat(5,40px)_50px] items-center gap-0 px-3 py-2.5 bg-muted/50 border-b border-card-border">
+          <span class="text-xs font-semibold text-muted-fg">Giocatore</span>
+          <span class="text-[10px] font-semibold text-muted-fg text-center">R1</span>
+          <span class="text-[10px] font-semibold text-muted-fg text-center">R2</span>
+          <span class="text-[10px] font-semibold text-muted-fg text-center">R3</span>
+          <span class="text-[10px] font-semibold text-muted-fg text-center">R4</span>
+          <span class="text-[10px] font-semibold text-muted-fg text-center">R5</span>
+          <span class="text-xs font-bold text-foreground text-center">Tot</span>
+        </div>
+
+        <!-- Row 1 - Leader -->
+        <div class="grid grid-cols-[1fr_repeat(5,40px)_50px] items-center gap-0 px-3 py-2.5 border-b border-card-border/50 bg-amber-50/30">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-entity-player/15 flex items-center justify-center flex-shrink-0">
+              <span class="text-[10px] font-bold text-entity-player">MR</span>
+            </div>
+            <span class="text-xs font-semibold text-foreground truncate">Marco</span>
+          </div>
+          <span class="text-xs text-center text-foreground">8</span>
+          <span class="text-xs text-center text-foreground">10</span>
+          <span class="text-xs text-center text-foreground">12</span>
+          <span class="text-xs text-center text-foreground">9</span>
+          <span class="text-xs text-center text-foreground">6</span>
+          <span class="text-sm font-bold text-center text-amber-800 bg-amber-100 rounded-lg py-0.5">45</span>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="grid grid-cols-[1fr_repeat(5,40px)_50px] items-center gap-0 px-3 py-2.5 border-b border-card-border/50">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+              <span class="text-[10px] font-bold text-primary">LC</span>
+            </div>
+            <span class="text-xs font-semibold text-foreground truncate">Luca</span>
+          </div>
+          <span class="text-xs text-center text-foreground">7</span>
+          <span class="text-xs text-center text-foreground">9</span>
+          <span class="text-xs text-center text-foreground">8</span>
+          <span class="text-xs text-center text-foreground">7</span>
+          <span class="text-xs text-center text-foreground">7</span>
+          <span class="text-sm font-bold text-center text-foreground">38</span>
+        </div>
+
+        <!-- Row 3 -->
+        <div class="grid grid-cols-[1fr_repeat(5,40px)_50px] items-center gap-0 px-3 py-2.5 border-b border-card-border/50">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-secondary/15 flex items-center justify-center flex-shrink-0">
+              <span class="text-[10px] font-bold text-secondary">AG</span>
+            </div>
+            <span class="text-xs font-semibold text-foreground truncate">Andrea</span>
+          </div>
+          <span class="text-xs text-center text-foreground">6</span>
+          <span class="text-xs text-center text-foreground">5</span>
+          <span class="text-xs text-center text-foreground">8</span>
+          <span class="text-xs text-center text-foreground">6</span>
+          <span class="text-xs text-center text-foreground">6</span>
+          <span class="text-sm font-bold text-center text-foreground">31</span>
+        </div>
+
+        <!-- Row 4 -->
+        <div class="grid grid-cols-[1fr_repeat(5,40px)_50px] items-center gap-0 px-3 py-2.5">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">
+              <span class="text-[10px] font-bold text-accent">FB</span>
+            </div>
+            <span class="text-xs font-semibold text-foreground truncate">Francesca</span>
+          </div>
+          <span class="text-xs text-center text-foreground">5</span>
+          <span class="text-xs text-center text-foreground">7</span>
+          <span class="text-xs text-center text-foreground">4</span>
+          <span class="text-xs text-center text-foreground">6</span>
+          <span class="text-xs text-center text-foreground">5</span>
+          <span class="text-sm font-bold text-center text-foreground">27</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- === FloatingActionBar === -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[340px] max-w-[calc(100%-32px)]">
+      <div class="flex items-center justify-center gap-3 px-4 py-3 bg-white/85 backdrop-blur-md rounded-2xl border border-card-border warm-shadow-lg">
+        <button onclick="document.getElementById('scoreSheet').classList.remove('hidden')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-entity-session text-white text-sm font-bold hover:opacity-90 transition-opacity min-h-[44px]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Aggiungi Punteggio
+        </button>
+        <button class="flex items-center justify-center w-11 h-11 rounded-xl bg-muted text-muted-fg hover:bg-primary/10 hover:text-primary transition-colors" aria-label="Cronologia">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Bottom Sheet: Score Input === -->
+    <div id="scoreSheet" class="fixed inset-0 z-50 flex items-end justify-center">
+      <!-- Overlay -->
+      <div class="absolute inset-0 bottom-sheet-overlay" onclick="document.getElementById('scoreSheet').classList.add('hidden')"></div>
+      <!-- Sheet -->
+      <div class="relative w-full max-w-[375px] bg-white rounded-t-3xl warm-shadow-lg overflow-hidden">
+        <!-- Handle -->
+        <div class="flex justify-center pt-3 pb-2">
+          <div class="w-10 h-1 rounded-full bg-card-border"></div>
+        </div>
+        <!-- Content -->
+        <div class="px-5 pb-8">
+          <h3 class="font-quicksand font-bold text-base text-foreground mb-4">Aggiungi Punteggio</h3>
+
+          <!-- Player Selector -->
+          <label class="block text-xs font-semibold text-muted-fg mb-1.5">Giocatore</label>
+          <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
+            <button class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl bg-entity-player/10 border-2 border-entity-player text-sm font-semibold text-entity-player min-h-[44px]">
+              <div class="w-6 h-6 rounded-full bg-entity-player/20 flex items-center justify-center"><span class="text-[9px] font-bold">MR</span></div>
+              Marco
+            </button>
+            <button class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">
+              <div class="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center"><span class="text-[9px] font-bold text-primary">LC</span></div>
+              Luca
+            </button>
+            <button class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">
+              <div class="w-6 h-6 rounded-full bg-secondary/15 flex items-center justify-center"><span class="text-[9px] font-bold text-secondary">AG</span></div>
+              Andrea
+            </button>
+            <button class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl bg-muted border-2 border-transparent text-sm font-medium text-muted-fg hover:border-card-border min-h-[44px]">
+              <div class="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center"><span class="text-[9px] font-bold text-accent">FB</span></div>
+              Francesca
+            </button>
+          </div>
+
+          <!-- Round & Category -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-xs font-semibold text-muted-fg mb-1.5">Round</label>
+              <select class="w-full h-11 px-3 rounded-xl border border-card-border bg-white text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-ring">
+                <option>Round 5</option>
+                <option>Round 4</option>
+                <option>Round 3</option>
+                <option>Round 2</option>
+                <option>Round 1</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-muted-fg mb-1.5">Categoria</label>
+              <select class="w-full h-11 px-3 rounded-xl border border-card-border bg-white text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-ring">
+                <option>Generale</option>
+                <option>Risorse</option>
+                <option>Edifici</option>
+                <option>Bonus</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Score Value -->
+          <label class="block text-xs font-semibold text-muted-fg mb-1.5">Punteggio</label>
+          <div class="flex items-center gap-3 mb-5">
+            <button class="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-lg font-bold text-muted-fg hover:bg-primary/10 hover:text-primary transition-colors">
+              &minus;
+            </button>
+            <input type="number" value="6" class="flex-1 h-12 text-center text-2xl font-bold text-foreground bg-white border border-card-border rounded-xl focus:outline-none focus:ring-2 focus:ring-ring">
+            <button class="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-lg font-bold text-muted-fg hover:bg-primary/10 hover:text-primary transition-colors">
+              +
+            </button>
+          </div>
+
+          <!-- Submit -->
+          <button class="w-full py-3 rounded-xl bg-entity-session text-white font-bold text-sm hover:opacity-90 transition-opacity min-h-[44px]">
+            Conferma Punteggio
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

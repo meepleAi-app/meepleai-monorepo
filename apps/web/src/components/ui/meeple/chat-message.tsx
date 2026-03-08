@@ -35,7 +35,7 @@ export interface ChatMessageProps {
   /** Message content text */
   content: string;
   /** ISSUE-3777: Agent type that generated this message */
-  agentType?: 'tutor' | 'arbitro' | 'decisore';
+  agentType?: 'tutor' | 'arbitro' | 'stratega' | 'narratore';
   /** AI confidence score (0-100) - only for assistant messages */
   confidence?: number;
   /** Citations for the message - only for assistant messages */
@@ -261,7 +261,8 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                 <span className="text-xs text-muted-foreground">
                   {agentType === 'tutor' && '📚 Tutor'}
                   {agentType === 'arbitro' && '⚖️ Arbitro'}
-                  {agentType === 'decisore' && '♟️ Decisore'}
+                  {agentType === 'stratega' && '🎯 Stratega'}
+                  {agentType === 'narratore' && '📖 Narratore'}
                 </span>
               </div>
             )}
@@ -277,7 +278,11 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
             {isAssistant && citations && citations.length > 0 && !isTyping && (
               <div className="mt-3 flex flex-wrap gap-2" role="list">
                 {citations.map(citation => (
-                  <ChatCitationLink key={citation.id} citation={citation} onClick={onCitationClick} />
+                  <ChatCitationLink
+                    key={citation.id}
+                    citation={citation}
+                    onClick={onCitationClick}
+                  />
                 ))}
               </div>
             )}

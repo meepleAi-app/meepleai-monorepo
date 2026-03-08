@@ -119,6 +119,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
+    public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
@@ -137,6 +138,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<StrategyModelMappingEntity> StrategyModelMappings => Set<StrategyModelMappingEntity>(); // ISSUE-3438: Strategy-model mapping
     public DbSet<ChatSessionEntity> ChatSessions => Set<ChatSessionEntity>(); // ISSUE-3483: Chat session persistence
     public DbSet<AgentTestResultEntity> AgentTestResults => Set<AgentTestResultEntity>(); // ISSUE-3379: Agent test results persistence
+    public DbSet<RagUserConfigEntity> RagUserConfigs => Set<RagUserConfigEntity>(); // ISSUE-5311: Per-user RAG configuration persistence
+    public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.AdminRagStrategy> AdminRagStrategies => Set<BoundedContexts.KnowledgeBase.Domain.Entities.AdminRagStrategy>(); // ISSUE-5314: Admin strategy CRUD
     public DbSet<ArbitroValidationFeedbackEntity> ArbitroValidationFeedbacks => Set<ArbitroValidationFeedbackEntity>(); // ISSUE-4328: Arbitro beta testing feedback
     public DbSet<DecisoreMoveFeedbackEntity> DecisoreMoveFeedbacks => Set<DecisoreMoveFeedbackEntity>(); // ISSUE-4335: Decisore beta testing feedback
     public DbSet<InsightFeedbackEntity> InsightFeedbacks => Set<InsightFeedbackEntity>(); // ISSUE-4124: AI Insights feedback for accuracy tracking
@@ -176,6 +179,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<TurnOrderEntity> TurnOrders => Set<TurnOrderEntity>(); // ISSUE-4970: TurnOrder base toolkit
     public DbSet<WhiteboardStateEntity> WhiteboardStates => Set<WhiteboardStateEntity>(); // ISSUE-4971: Whiteboard base toolkit
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity> SessionMedia => Set<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>(); // ISSUE-4760
+    public DbSet<SessionAttachmentEntity> SessionAttachments => Set<SessionAttachmentEntity>(); // ISSUE-5360: Session photo attachments
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
     // Issue #4220: Notification preferences
@@ -251,6 +255,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(); // ISSUE-4755
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.TurnOrder.TurnOrder>(); // ISSUE-4970
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.WhiteboardState.WhiteboardState>(); // ISSUE-4971
+        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.SessionAttachment.SessionAttachment>(); // ISSUE-5360
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionPlayer>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveSessionTeam>(); // ISSUE-4747
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916

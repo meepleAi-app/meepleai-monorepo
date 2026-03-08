@@ -214,4 +214,53 @@ public class AgentTypeTests
         act.Should().Throw<ArgumentException>()
             .WithMessage("*AgentType description cannot be empty*");
     }
+
+    // ========================================================================
+    // Strategist and Narrator types — Issue #5280
+    // ========================================================================
+
+    [Fact]
+    public void Strategist_HasCorrectProperties()
+    {
+        var agentType = AgentType.Strategist;
+        agentType.Value.Should().Be("Strategist");
+        agentType.Description.Should().Contain("Strategic");
+    }
+
+    [Fact]
+    public void Narrator_HasCorrectProperties()
+    {
+        var agentType = AgentType.Narrator;
+        agentType.Value.Should().Be("Narrator");
+        agentType.Description.Should().Contain("narrative");
+    }
+
+    [Theory]
+    [InlineData("STRATEGIST")]
+    [InlineData("strategist")]
+    [InlineData("Strategist")]
+    public void Parse_ValidStrategistValue_ReturnsStrategist(string value)
+    {
+        var agentType = AgentType.Parse(value);
+        agentType.Should().Be(AgentType.Strategist);
+    }
+
+    [Theory]
+    [InlineData("NARRATOR")]
+    [InlineData("narrator")]
+    public void Parse_ValidNarratorValue_ReturnsNarrator(string value)
+    {
+        var agentType = AgentType.Parse(value);
+        agentType.Should().Be(AgentType.Narrator);
+    }
+
+    [Theory]
+    [InlineData("DECISORE")]
+    [InlineData("decisore")]
+    [InlineData("Decisore")]
+    public void Parse_DecisoreAlias_ReturnsStrategist(string value)
+    {
+        var agentType = AgentType.Parse(value);
+        agentType.Should().Be(AgentType.Strategist);
+    }
 }

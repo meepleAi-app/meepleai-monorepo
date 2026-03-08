@@ -178,6 +178,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: null,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null,
             PageNumber: 1,
             PageSize: 20);
@@ -205,6 +207,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: null,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null);
 
         // Act
@@ -232,6 +236,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: 3,
             MaxPlayers: null,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null);
 
         // Act
@@ -257,6 +263,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: 2,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null);
 
         // Act
@@ -285,6 +293,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: null,
             MaxPlayingTime: 60,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null);
 
         // Act
@@ -331,6 +341,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: null,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: GameStatus.Draft);
 
         // Act
@@ -359,6 +371,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: null,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null,
             SortBy: "YearPublished",
             SortDescending: false);
@@ -385,6 +399,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: null,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null,
             SortBy: "AverageRating",
             SortDescending: true);
@@ -415,6 +431,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
             MinPlayers: null,
             MaxPlayers: null,
             MaxPlayingTime: null,
+            MinComplexity: null,
+            MaxComplexity: null,
             Status: null,
             PageNumber: 1,
             PageSize: 2);

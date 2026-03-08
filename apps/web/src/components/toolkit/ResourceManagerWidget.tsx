@@ -6,6 +6,7 @@ import { Boxes, Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { useWidgetSync } from '@/lib/hooks/useWidgetSync';
 
 import { WidgetCard } from './WidgetCard';
 
@@ -18,6 +19,8 @@ interface Resource {
 
 interface ResourceManagerWidgetProps {
   isEnabled: boolean;
+  sessionId?: string;
+  toolkitId?: string;
   onToggle?: (enabled: boolean) => void;
   onStateChange?: (stateJson: string) => void;
   'data-testid'?: string;
@@ -29,6 +32,8 @@ interface ResourceManagerWidgetProps {
  */
 export function ResourceManagerWidget({
   isEnabled,
+  sessionId,
+  toolkitId,
   onToggle,
   onStateChange,
   'data-testid': testId,
@@ -39,9 +44,29 @@ export function ResourceManagerWidget({
   ]);
   const [newResourceName, setNewResourceName] = useState('');
 
+  const { broadcastState } = useWidgetSync({
+    sessionId,
+    toolkitId,
+    widgetType: 'ResourceManager',
+    debounceMs: 500, // Higher debounce for rapid counter clicks
+    enabled: !!sessionId && !!toolkitId,
+    onRemoteUpdate: (stateJson: string) => {
+      try {
+        const remote: { resources: Resource[] } = JSON.parse(stateJson);
+        setResources(remote.resources);
+      } catch {
+        // Ignore malformed remote state
+      }
+    },
+  });
+
   const persist = useCallback(
-    (r: Resource[]) => onStateChange?.(JSON.stringify({ resources: r })),
-    [onStateChange]
+    (r: Resource[]) => {
+      const stateJson = JSON.stringify({ resources: r });
+      onStateChange?.(stateJson);
+      broadcastState(stateJson);
+    },
+    [onStateChange, broadcastState]
   );
 
   const updateCount = useCallback(

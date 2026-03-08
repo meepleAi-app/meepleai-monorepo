@@ -1,11 +1,9 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
 import { useState } from 'react';
 
-import { ActivityFeed, type ActivityEvent } from '@/components/admin/ActivityFeed';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { Input } from '@/components/ui/primitives/input';
+import { Clock, User, Gamepad2, FileText, Settings, Bot, Shield, AlertCircle } from 'lucide-react';
+
 import {
   Select,
   SelectContent,
@@ -13,69 +11,128 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { adminDashboardClient } from '@/lib/api/clients/adminDashboardClient';
 
 /**
- * Activity Feed Page
+ * Admin Activity Log Page
  * Route: /admin/overview/activity
  *
- * Shows timeline of recent admin events (user registrations, game approvals,
- * agent invocations, config changes).
- *
- * Issue: #4628
+ * Shows timeline of recent admin events. Backend API not yet connected —
+ * displays placeholder entries until audit log endpoint is implemented.
  */
 
-export default function ActivityFeedPage() {
+interface ActivityEntry {
+  id: string;
+  action: string;
+  target: string;
+  category: string;
+  timestamp: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const PLACEHOLDER_ENTRIES: ActivityEntry[] = [
+  {
+    id: '1',
+    action: 'Approved shared game',
+    target: 'Azul',
+    category: 'games',
+    timestamp: '2 minutes ago',
+    icon: Gamepad2,
+  },
+  {
+    id: '2',
+    action: 'Created agent definition',
+    target: 'Wingspan Helper',
+    category: 'agents',
+    timestamp: '15 minutes ago',
+    icon: Bot,
+  },
+  {
+    id: '3',
+    action: 'Updated feature flag',
+    target: 'enable-rag-v2',
+    category: 'system',
+    timestamp: '1 hour ago',
+    icon: Settings,
+  },
+  {
+    id: '4',
+    action: 'Reindexed document',
+    target: 'Catan Rules PDF',
+    category: 'documents',
+    timestamp: '2 hours ago',
+    icon: FileText,
+  },
+  {
+    id: '5',
+    action: 'Changed user role',
+    target: 'user@example.com → Admin',
+    category: 'users',
+    timestamp: '3 hours ago',
+    icon: Shield,
+  },
+  {
+    id: '6',
+    action: 'Cleared cache',
+    target: 'KB vector cache',
+    category: 'system',
+    timestamp: '5 hours ago',
+    icon: Settings,
+  },
+  {
+    id: '7',
+    action: 'Registered new user',
+    target: 'player@boardgame.io',
+    category: 'users',
+    timestamp: '6 hours ago',
+    icon: User,
+  },
+  {
+    id: '8',
+    action: 'Imported game from BGG',
+    target: 'Terraforming Mars',
+    category: 'games',
+    timestamp: '1 day ago',
+    icon: Gamepad2,
+  },
+];
+
+const CATEGORY_COLORS: Record<string, string> = {
+  users: 'text-blue-600 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-900/30',
+  games: 'text-amber-600 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-900/30',
+  agents: 'text-purple-600 dark:text-purple-400 bg-purple-100/80 dark:bg-purple-900/30',
+  documents: 'text-emerald-600 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/30',
+  system: 'text-slate-600 dark:text-slate-400 bg-slate-100/80 dark:bg-slate-700/30',
+};
+
+export default function ActivityLogPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<string>('24h');
-  const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [_loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<string>('7d');
 
-  useEffect(() => {
-    async function fetchActivity() {
-      try {
-        const data = await adminDashboardClient.getUserActivityLog();
-        // Transform API data to ActivityEvent format
-        const transformedEvents: ActivityEvent[] =
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data.activities?.map((a: any) => ({
-            id: a.id,
-            eventType: a.actionType,
-            description: `${a.action}: ${a.target}`,
-            timestamp: a.timestamp,
-            severity: a.status === 'success' ? 'Info' : 'Warning',
-            userEmail: a.userEmail,
-            entityType:
-              a.actionType === 'login' ? 'user' : a.actionType === 'approve' ? 'game' : 'system',
-          })) || [];
-        setEvents(transformedEvents);
-      } catch (error) {
-        console.error('Failed to fetch activity:', error);
-        setEvents([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchActivity();
-  }, []);
-
-  const filteredEvents =
-    typeFilter === 'all' ? events : events.filter(e => e.entityType === typeFilter);
+  const filtered =
+    typeFilter === 'all'
+      ? PLACEHOLDER_ENTRIES
+      : PLACEHOLDER_ENTRIES.filter(e => e.category === typeFilter);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-2xl font-quicksand font-bold text-foreground">Activity Feed</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Recent admin events and system activity
+        <h1 className="font-quicksand text-2xl font-bold text-foreground">Activity Log</h1>
+        <p className="text-sm text-muted-foreground mt-1">Recent admin actions and system events</p>
+      </div>
+
+      {/* Info banner */}
+      <div className="flex items-center gap-2 rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-amber-50/50 dark:bg-amber-900/10 px-4 py-3">
+        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          Showing placeholder data. Activity log will display real events once the audit API is
+          connected.
         </p>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 flex-wrap">
+      <div className="flex gap-3 flex-wrap">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="Activity type" />
           </SelectTrigger>
           <SelectContent>
@@ -89,32 +146,57 @@ export default function ActivityFeedPage() {
         </Select>
 
         <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="24h">Last 24 Hours</SelectItem>
             <SelectItem value="7d">Last 7 Days</SelectItem>
             <SelectItem value="30d">Last 30 Days</SelectItem>
-            <SelectItem value="custom">Custom Range</SelectItem>
           </SelectContent>
         </Select>
-
-        <Input type="search" placeholder="Search activities..." className="w-64" />
       </div>
 
-      {/* Activity Timeline */}
-      <Suspense
-        fallback={
-          <div className="space-y-4">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
+      {/* Timeline */}
+      <div className="relative space-y-0">
+        {/* Vertical line */}
+        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-slate-200/80 dark:bg-zinc-700/60" />
+
+        {filtered.map(entry => {
+          const Icon = entry.icon;
+          const colorClass = CATEGORY_COLORS[entry.category] ?? CATEGORY_COLORS.system;
+
+          return (
+            <div key={entry.id} className="relative flex items-start gap-4 py-3 pl-0">
+              {/* Icon dot */}
+              <div
+                className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  {entry.action} <span className="font-semibold">&ldquo;{entry.target}&rdquo;</span>
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <Clock className="h-3 w-3 text-muted-foreground/60" />
+                  <span className="text-xs text-muted-foreground">{entry.timestamp}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filtered.length === 0 && (
+          <div className="py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              No activities match the selected filter.
+            </p>
           </div>
-        }
-      >
-        <ActivityFeed events={filteredEvents} />
-      </Suspense>
+        )}
+      </div>
     </div>
   );
 }

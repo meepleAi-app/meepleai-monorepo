@@ -311,5 +311,44 @@ public class ChatContextDomainServiceTests
         var act = () => _service.BuildStructuredUserPrompt("", "rag", "history");
         act.Should().Throw<ArgumentException>();
     }
+
+    // ========================================================================
+    // BuildSystemPrompt (typology-aware overload) — Issue #5278
+    // ========================================================================
+
+    [Fact]
+    public void BuildSystemPrompt_WithTypology_UsesTypologyTemplate()
+    {
+        var prompt = _service.BuildSystemPrompt("TestAgent", "Tutor", "Catan", hasConversationHistory: false);
+        prompt.Should().Contain("Tutor");
+        prompt.Should().Contain("TestAgent");
+        prompt.Should().Contain("Catan");
+    }
+
+    [Fact]
+    public void BuildSystemPrompt_WithNullTypology_FallsBackToCustom()
+    {
+        var prompt = _service.BuildSystemPrompt("TestAgent", null, "Catan", hasConversationHistory: false);
+        prompt.Should().Contain("TestAgent");
+        prompt.Should().Contain("Catan");
+    }
+
+    [Fact]
+    public void BuildSystemPrompt_OldOverload_StillWorks()
+    {
+        var prompt = _service.BuildSystemPrompt("TestAgent", hasConversationHistory: false);
+        prompt.Should().Contain("TestAgent");
+    }
+
+    [Theory]
+    [InlineData("Tutor", "spiega")]
+    [InlineData("Arbitro", "verdetto")]
+    [InlineData("Stratega", "tattico")]
+    [InlineData("Narratore", "evocativo")]
+    public void BuildSystemPrompt_EachTypology_HasDistinctKeywords(string typology, string keyword)
+    {
+        var prompt = _service.BuildSystemPrompt("Agent", typology, "TestGame", false);
+        prompt.ToLowerInvariant().Should().Contain(keyword);
+    }
 }
 

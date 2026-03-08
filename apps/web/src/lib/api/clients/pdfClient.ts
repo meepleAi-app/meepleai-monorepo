@@ -88,7 +88,7 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
         xhr.withCredentials = true;
 
         if (onProgress) {
-          xhr.upload.onprogress = (event) => {
+          xhr.upload.onprogress = event => {
             if (event.lengthComputable) {
               const percent = Math.round((event.loaded / event.total) * 100);
               onProgress(percent);
@@ -106,11 +106,18 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
             }
           } else {
             let message = `Upload failed (${xhr.status})`;
+            let errorCode: string | undefined;
             try {
               const err = JSON.parse(xhr.responseText);
+              errorCode = err.error;
               message = err.detail || err.title || err.message || message;
-            } catch { /* use default message */ }
-            reject(new Error(message));
+            } catch {
+              /* use default message */
+            }
+            const error = new Error(message);
+            (error as Error & { statusCode?: number; errorCode?: string }).statusCode = xhr.status;
+            (error as Error & { statusCode?: number; errorCode?: string }).errorCode = errorCode;
+            reject(error);
           }
         };
 
@@ -175,7 +182,9 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
         try {
           const err = await response.json();
           message = err.detail || err.title || err.message || message;
-        } catch { /* use default */ }
+        } catch {
+          /* use default */
+        }
         throw new Error(message);
       }
 
@@ -190,10 +199,11 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     async completeChunkedUpload(
       sessionId: string
     ): Promise<{ success: boolean; documentId: string; fileName: string }> {
-      const result = await httpClient.post<{ success: boolean; documentId: string; fileName: string }>(
-        '/api/v1/ingest/pdf/chunked/complete',
-        { sessionId }
-      );
+      const result = await httpClient.post<{
+        success: boolean;
+        documentId: string;
+        fileName: string;
+      }>('/api/v1/ingest/pdf/chunked/complete', { sessionId });
       return result ?? { success: false, documentId: '', fileName: '' };
     },
 
@@ -201,9 +211,7 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      * Get the status of a chunked upload session.
      * GET /api/v1/ingest/pdf/chunked/{sessionId}/status
      */
-    async getChunkedUploadStatus(
-      sessionId: string
-    ): Promise<ChunkedUploadStatusResult | null> {
+    async getChunkedUploadStatus(sessionId: string): Promise<ChunkedUploadStatusResult | null> {
       return httpClient.get<ChunkedUploadStatusResult>(
         `/api/v1/ingest/pdf/chunked/${encodeURIComponent(sessionId)}/status`
       );
@@ -276,11 +284,17 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      * Bulk delete PDF documents (admin)
      */
     async bulkDeletePdfs(pdfIds: string[]): Promise<BulkDeleteResult> {
-      const result = await httpClient.post<BulkDeleteResult>(
-        '/api/v1/admin/pdfs/bulk/delete',
-        { pdfIds }
+      const result = await httpClient.post<BulkDeleteResult>('/api/v1/admin/pdfs/bulk/delete', {
+        pdfIds,
+      });
+      return (
+        result ?? {
+          totalRequested: pdfIds.length,
+          successCount: 0,
+          failedCount: pdfIds.length,
+          items: [],
+        }
       );
-      return result ?? { totalRequested: pdfIds.length, successCount: 0, failedCount: pdfIds.length, items: [] };
     },
 
     /**
@@ -288,20 +302,29 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      */
     async getStorageHealth(): Promise<PdfStorageHealth> {
       const result = await httpClient.get<PdfStorageHealth>('/api/v1/admin/pdfs/storage/health');
-      return result ?? {
-        postgres: { totalDocuments: 0, totalChunks: 0, estimatedChunksSizeMB: 0 },
-        qdrant: { vectorCount: 0, memoryBytes: 0, memoryFormatted: '0 B', isAvailable: false },
-        fileStorage: { totalFiles: 0, totalSizeBytes: 0, totalSizeFormatted: '0 B', sizeByState: {} },
-        overallHealth: 'critical',
-        measuredAt: new Date().toISOString(),
-      };
+      return (
+        result ?? {
+          postgres: { totalDocuments: 0, totalChunks: 0, estimatedChunksSizeMB: 0 },
+          qdrant: { vectorCount: 0, memoryBytes: 0, memoryFormatted: '0 B', isAvailable: false },
+          fileStorage: {
+            totalFiles: 0,
+            totalSizeBytes: 0,
+            totalSizeFormatted: '0 B',
+            sizeByState: {},
+          },
+          overallHealth: 'critical',
+          measuredAt: new Date().toISOString(),
+        }
+      );
     },
 
     /**
      * Get PDF status distribution (admin)
      */
     async getStatusDistribution(): Promise<PdfStatusDistribution> {
-      const result = await httpClient.get<PdfStatusDistribution>('/api/v1/admin/pdfs/analytics/distribution');
+      const result = await httpClient.get<PdfStatusDistribution>(
+        '/api/v1/admin/pdfs/analytics/distribution'
+      );
       return result ?? { countByState: {}, totalDocuments: 0, topBySize: [] };
     },
 

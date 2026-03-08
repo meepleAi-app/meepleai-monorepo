@@ -241,7 +241,7 @@ export default function PrivateGamesClient() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-4 space-y-4">
       {/* Journey Progress Banner — pass the most recently created private game so Steps 2-5 evaluate.
           Sort by createdAt desc (independent of the user's display sort order) so the banner always
           tracks the game the user most recently added, not whichever game is first in the current
@@ -261,16 +261,12 @@ export default function PrivateGamesClient() {
         );
       })()}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t('privateGames.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('privateGames.manageCollection')} (
-            {t('privateGames.subtitle', { count: totalCount })})
-          </p>
-        </div>
-        <Button onClick={() => setAddDrawerOpen(true)} data-testid="add-private-game-btn">
+      {/* Compact header — subtitle + add button */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {t('privateGames.manageCollection')} ({t('privateGames.subtitle', { count: totalCount })})
+        </p>
+        <Button size="sm" onClick={() => setAddDrawerOpen(true)} data-testid="add-private-game-btn">
           <Plus className="h-4 w-4 mr-2" />
           {t('privateGames.addGame')}
         </Button>

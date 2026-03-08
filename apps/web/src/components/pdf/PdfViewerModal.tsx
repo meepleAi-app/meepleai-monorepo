@@ -5,22 +5,18 @@
 
 'use client';
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
+  import.meta.url
 ).toString();
 
 export interface PdfViewerModalProps {
@@ -40,25 +36,57 @@ export function PdfViewerModal({
 }: PdfViewerModalProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
   }, []);
 
-  // Reset to initial page when modal opens
+  // Fetch PDF as blob with credentials to bypass pdfjs worker cookie issues.
+  // AbortController cancels in-flight downloads when modal closes or URL changes.
   useEffect(() => {
-    if (open) {
-      setCurrentPage(initialPage);
+    if (!open || !pdfUrl) {
+      setPdfBlob(null);
+      setLoadError(null);
+      return;
     }
-  }, [open, initialPage]);
 
-  const goToPage = useCallback((page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, numPages)));
-  }, [numPages]);
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError(null);
+    setNumPages(0);
+    setCurrentPage(initialPage);
 
-  // Stable reference — prevents react-pdf from cancelling the load task on every render
-  const pdfOptions = useMemo(() => ({ withCredentials: true }), []);
+    fetch(pdfUrl, { credentials: 'include', signal: controller.signal })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        return res.blob();
+      })
+      .then(blob => {
+        setPdfBlob(blob);
+        setLoading(false);
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          setLoadError(err.message);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [open, pdfUrl, initialPage]);
+
+  const goToPage = useCallback(
+    (page: number) => {
+      setCurrentPage(Math.max(1, Math.min(page, numPages)));
+    },
+    [numPages]
+  );
 
   if (!open) return null;
 
@@ -69,8 +97,24 @@ export function PdfViewerModal({
           <DialogTitle>{documentName}</DialogTitle>
         </DialogHeader>
 
+        {/* Loading state */}
+        {loading && (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {/* Error state */}
+        {loadError && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-red-600">
+            <AlertCircle className="h-8 w-8" />
+            <p className="text-sm font-medium">Errore nel caricamento del PDF</p>
+            <p className="text-xs text-muted-foreground">{loadError}</p>
+          </div>
+        )}
+
         {/* Navigation controls */}
-        {numPages > 0 && (
+        {!loading && !loadError && numPages > 0 && (
           <div className="flex items-center justify-center gap-4 py-2 border-b">
             <button
               onClick={() => goToPage(currentPage - 1)}
@@ -92,11 +136,14 @@ export function PdfViewerModal({
           </div>
         )}
 
-        <div ref={containerRef} className="flex-1 overflow-auto flex justify-center">
-          <Document file={pdfUrl} options={pdfOptions} onLoadSuccess={onDocumentLoadSuccess}>
-            <Page pageNumber={currentPage} width={800} />
-          </Document>
-        </div>
+        {/* PDF viewer */}
+        {!loading && !loadError && pdfBlob && (
+          <div ref={containerRef} className="flex-1 overflow-auto flex justify-center">
+            <Document file={pdfBlob} onLoadSuccess={onDocumentLoadSuccess}>
+              <Page pageNumber={currentPage} width={800} />
+            </Document>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

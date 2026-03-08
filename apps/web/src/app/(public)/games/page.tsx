@@ -42,6 +42,31 @@ interface SearchParams {
   view?: 'grid' | 'list' | 'carousel';
   search?: string;
   page?: string;
+  // Filter params
+  minPlayers?: string;
+  maxPlayers?: string;
+  maxPlayingTime?: string;
+  minComplexity?: string;
+  maxComplexity?: string;
+  categoryIds?: string; // comma-separated GUIDs from URL
+  mechanicIds?: string; // comma-separated GUIDs from URL
+  sortBy?: string;
+  sortDesc?: string; // "true" or absent
+}
+
+interface FetchGamesParams {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  minPlayers?: number;
+  maxPlayers?: number;
+  maxPlayingTime?: number;
+  minComplexity?: number;
+  maxComplexity?: number;
+  categoryIds?: string[];
+  mechanicIds?: string[];
+  sortBy?: string;
+  sortDescending?: boolean;
 }
 
 /** Raw API response from shared-games endpoint */
@@ -53,6 +78,7 @@ interface SharedGamesApiItem {
   maxPlayers: number | null;
   playingTimeMinutes: number | null;
   bggId: number | null;
+  complexityRating?: number | null;
   createdAt: string;
   imageUrl?: string | null;
   thumbnailUrl?: string | null;
@@ -108,7 +134,7 @@ function mapApiItemToGame(item: SharedGamesApiItem): SharedGame {
     maxPlayers: item.maxPlayers ?? 8,
     playingTimeMinutes: item.playingTimeMinutes ?? 60,
     minAge: 0, // Not provided by API
-    complexityRating: null,
+    complexityRating: item.complexityRating ?? null,
     averageRating: item.averageRating ?? null,
     imageUrl: item.imageUrl ?? '',
     thumbnailUrl: item.thumbnailUrl ?? '',
@@ -118,21 +144,26 @@ function mapApiItemToGame(item: SharedGamesApiItem): SharedGame {
   };
 }
 
-async function fetchGames(
-  search?: string,
-  page: number = 1,
-  pageSize: number = 20
-): Promise<PaginatedResponse> {
+async function fetchGames(params: FetchGamesParams): Promise<PaginatedResponse> {
   try {
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    params.set('page', page.toString());
-    params.set('pageSize', pageSize.toString());
+    const sp = new URLSearchParams();
+    if (params.search) sp.set('search', params.search);
+    sp.set('pageNumber', (params.page ?? 1).toString());
+    sp.set('pageSize', (params.pageSize ?? 20).toString());
+    if (params.minPlayers) sp.set('minPlayers', params.minPlayers.toString());
+    if (params.maxPlayers) sp.set('maxPlayers', params.maxPlayers.toString());
+    if (params.maxPlayingTime) sp.set('maxPlayingTime', params.maxPlayingTime.toString());
+    if (params.minComplexity) sp.set('minComplexity', params.minComplexity.toString());
+    if (params.maxComplexity) sp.set('maxComplexity', params.maxComplexity.toString());
+    if (params.sortBy) sp.set('sortBy', params.sortBy);
+    if (params.sortDescending) sp.set('sortDescending', 'true');
+    // Backend expects repeated params for arrays: categoryIds=x&categoryIds=y
+    params.categoryIds?.forEach(id => sp.append('categoryIds', id));
+    params.mechanicIds?.forEach(id => sp.append('mechanicIds', id));
 
-    // Use shared-games endpoint for public catalog
-    const url = `${API_BASE}/api/v1/shared-games?${params.toString()}`;
+    const url = `${API_BASE}/api/v1/shared-games?${sp.toString()}`;
     const response = await fetch(url, {
-      next: { revalidate: 60 }, // Cache for 60 seconds
+      next: { revalidate: 60 },
     });
 
     if (!response.ok) {
@@ -141,7 +172,6 @@ async function fetchGames(
 
     const data: SharedGamesApiResponse = await response.json();
 
-    // Transform API response to expected format with proper type mapping
     return {
       games: data.items.map(mapApiItemToGame),
       total: data.total,
@@ -174,8 +204,21 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   const search = params.search || '';
   const currentPage = parseInt(params.page || '1', 10);
 
-  // Fetch games server-side
-  const { games, total, totalPages } = await fetchGames(search, currentPage, 20);
+  // Fetch games server-side with all filter params
+  const { games, total, totalPages } = await fetchGames({
+    search: search || undefined,
+    page: currentPage,
+    pageSize: 20,
+    minPlayers: params.minPlayers ? parseInt(params.minPlayers, 10) : undefined,
+    maxPlayers: params.maxPlayers ? parseInt(params.maxPlayers, 10) : undefined,
+    maxPlayingTime: params.maxPlayingTime ? parseInt(params.maxPlayingTime, 10) : undefined,
+    minComplexity: params.minComplexity ? parseFloat(params.minComplexity) : undefined,
+    maxComplexity: params.maxComplexity ? parseFloat(params.maxComplexity) : undefined,
+    categoryIds: params.categoryIds?.split(',').filter(Boolean) || undefined,
+    mechanicIds: params.mechanicIds?.split(',').filter(Boolean) || undefined,
+    sortBy: params.sortBy || undefined,
+    sortDescending: params.sortDesc === 'true',
+  });
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">

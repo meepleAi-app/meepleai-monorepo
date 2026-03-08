@@ -2,7 +2,7 @@
  * Admin Dashboard Navigation Configuration
  * Unified Top Nav + Contextual Sidebar navigation system
  *
- * 5 main sections: Overview, Users, Shared Games, Agents, Knowledge Base
+ * 6 main sections: Overview, Content, AI, Users, System, Analytics
  * Each section has sidebar items that change contextually.
  */
 
@@ -10,7 +10,6 @@ import {
   type LucideIcon,
   LayoutDashboardIcon,
   UsersIcon,
-  ShareIcon,
   BotIcon,
   BookOpenIcon,
   ActivityIcon,
@@ -34,6 +33,18 @@ import {
   MessageSquareCodeIcon,
   ListOrderedIcon,
   TrendingUpIcon,
+  MonitorIcon,
+  BellIcon,
+  HardDriveIcon,
+  PlayIcon,
+  PackageIcon,
+  SlidersIcon,
+  FlagIcon,
+  GaugeIcon,
+  ZapIcon,
+  ClipboardListIcon,
+  KeyIcon,
+  MailIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -66,13 +77,14 @@ export interface DashboardSection {
   description: string;
   /** Sidebar items for this section */
   sidebarItems: DashboardSidebarItem[];
-  /** Visual group: 'core' or 'ai' */
+  /** Visual group (kept for backwards compatibility, all sections render flat) */
   group: 'core' | 'ai';
 }
 
 // ─── Navigation Definition ───────────────────────────────────────────────────
 
 export const DASHBOARD_SECTIONS: DashboardSection[] = [
+  // ── 1. Overview ──────────────────────────────────────────────────────────
   {
     id: 'overview',
     label: 'Overview',
@@ -99,40 +111,18 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
       },
     ],
   },
+
+  // ── 2. Content (merged: Shared Games + Knowledge Base + Content hub) ─────
   {
-    id: 'users',
-    label: 'Users',
-    icon: UsersIcon,
-    baseRoute: '/admin/users',
-    description: 'User management, roles, and activity',
-    group: 'core',
-    sidebarItems: [
-      {
-        href: '/admin/users',
-        label: 'All Users',
-        icon: UsersIcon,
-        activePattern: /^\/admin\/users$/,
-      },
-      {
-        href: '/admin/users/roles',
-        label: 'Roles & Permissions',
-        icon: ShieldIcon,
-      },
-      {
-        href: '/admin/users/activity',
-        label: 'Activity Log',
-        icon: ActivityIcon,
-      },
-    ],
-  },
-  {
-    id: 'shared-games',
-    label: 'Shared Games',
-    icon: ShareIcon,
+    id: 'content',
+    label: 'Content',
+    icon: FileTextIcon,
     baseRoute: '/admin/shared-games',
-    description: 'Game catalog, approvals, and categories',
+    additionalRoutes: ['/admin/content', '/admin/knowledge-base', '/admin/games'],
+    description: 'Games, documents, vectors, and RAG pipeline',
     group: 'core',
     sidebarItems: [
+      // Games
       {
         href: '/admin/shared-games/all',
         label: 'All Games',
@@ -154,14 +144,44 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Import Wizard',
         icon: UploadIcon,
       },
+      // Knowledge Base
+      {
+        href: '/admin/knowledge-base',
+        label: 'KB Overview',
+        icon: BookOpenIcon,
+        activePattern: /^\/admin\/knowledge-base$/,
+      },
+      {
+        href: '/admin/knowledge-base/documents',
+        label: 'Documents',
+        icon: ListOrderedIcon,
+      },
+      {
+        href: '/admin/knowledge-base/queue',
+        label: 'Processing Queue',
+        icon: ActivityIcon,
+      },
+      {
+        href: '/admin/knowledge-base/vectors',
+        label: 'Vector Collections',
+        icon: DatabaseIcon,
+      },
+      {
+        href: '/admin/knowledge-base/upload',
+        label: 'Upload & Process',
+        icon: UploadIcon,
+      },
     ],
   },
+
+  // ── 3. AI (merged: Agents + AI & Agents hub) ────────────────────────────
   {
-    id: 'agents',
-    label: 'Agents',
-    icon: BotIcon,
+    id: 'ai',
+    label: 'AI',
+    icon: BrainCircuitIcon,
     baseRoute: '/admin/agents',
-    description: 'AI agents, models, and analytics',
+    additionalRoutes: ['/admin/ai'],
+    description: 'AI agents, models, RAG, and analytics',
     group: 'ai',
     sidebarItems: [
       {
@@ -172,7 +192,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
       },
       {
         href: '/admin/agents/definitions',
-        label: 'Agent Definitions',
+        label: 'Definitions',
         icon: ListIcon,
         activePattern: /^\/admin\/agents\/definitions/,
       },
@@ -180,11 +200,6 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/agents/builder',
         label: 'Agent Builder',
         icon: WrenchIcon,
-      },
-      {
-        href: '/admin/agents/analytics',
-        label: 'Analytics',
-        icon: BarChartIcon,
       },
       {
         href: '/admin/agents/models',
@@ -226,56 +241,148 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Usage & Costs',
         icon: TrendingUpIcon,
       },
+      {
+        href: '/admin/agents/analytics',
+        label: 'Analytics',
+        icon: BarChartIcon,
+      },
     ],
   },
+
+  // ── 4. Users ─────────────────────────────────────────────────────────────
   {
-    id: 'knowledge-base',
-    label: 'Knowledge Base',
-    icon: BookOpenIcon,
-    baseRoute: '/admin/knowledge-base',
-    description: 'Documents, vectors, and RAG pipeline',
-    group: 'ai',
+    id: 'users',
+    label: 'Users',
+    icon: UsersIcon,
+    baseRoute: '/admin/users',
+    description: 'User management, roles, and activity',
+    group: 'core',
     sidebarItems: [
       {
-        href: '/admin/knowledge-base',
-        label: 'Overview',
-        icon: FileTextIcon,
-        activePattern: /^\/admin\/knowledge-base$/,
+        href: '/admin/users',
+        label: 'All Users',
+        icon: UsersIcon,
+        activePattern: /^\/admin\/users$/,
       },
       {
-        href: '/admin/knowledge-base/documents',
-        label: 'Documents',
-        icon: ListOrderedIcon,
+        href: '/admin/users/roles',
+        label: 'Roles & Permissions',
+        icon: ShieldIcon,
       },
       {
-        href: '/admin/knowledge-base/queue',
-        label: 'Processing Queue',
+        href: '/admin/users/activity',
+        label: 'Activity Log',
         icon: ActivityIcon,
       },
+    ],
+  },
+
+  // ── 5. System (merged: Monitor + Configuration) ──────────────────────────
+  {
+    id: 'system',
+    label: 'System',
+    icon: MonitorIcon,
+    baseRoute: '/admin/monitor',
+    additionalRoutes: ['/admin/config'],
+    description: 'Monitoring, alerts, cache, and system configuration',
+    group: 'core',
+    sidebarItems: [
+      // Monitor items
       {
-        href: '/admin/knowledge-base/vectors',
-        label: 'Vector Collections',
+        href: '/admin/monitor?tab=alerts',
+        label: 'Alerts',
+        icon: BellIcon,
+        activePattern: /^\/admin\/monitor(\?tab=alerts)?$/,
+      },
+      {
+        href: '/admin/monitor?tab=cache',
+        label: 'Cache',
         icon: DatabaseIcon,
       },
       {
-        href: '/admin/knowledge-base/embedding',
-        label: 'Embedding Service',
+        href: '/admin/monitor?tab=infra',
+        label: 'Infrastructure',
+        icon: HardDriveIcon,
+      },
+      {
+        href: '/admin/monitor?tab=command',
+        label: 'Command Center',
+        icon: TerminalIcon,
+      },
+      {
+        href: '/admin/monitor?tab=testing',
+        label: 'Testing',
+        icon: PlayIcon,
+      },
+      {
+        href: '/admin/monitor?tab=export',
+        label: 'Bulk Export',
+        icon: PackageIcon,
+      },
+      {
+        href: '/admin/monitor?tab=email',
+        label: 'Email',
+        icon: MailIcon,
+      },
+      // Config items
+      {
+        href: '/admin/config?tab=general',
+        label: 'General Config',
+        icon: SlidersIcon,
+        activePattern: /^\/admin\/config(\?tab=general)?$/,
+      },
+      {
+        href: '/admin/config?tab=limits',
+        label: 'Limits',
+        icon: GaugeIcon,
+      },
+      {
+        href: '/admin/config?tab=flags',
+        label: 'Feature Flags',
+        icon: FlagIcon,
+      },
+      {
+        href: '/admin/config?tab=rate-limits',
+        label: 'Rate Limits',
+        icon: ZapIcon,
+      },
+    ],
+  },
+
+  // ── 6. Analytics ─────────────────────────────────────────────────────────
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChartIcon,
+    baseRoute: '/admin/analytics',
+    description: 'Usage statistics, audit logs, and reports',
+    group: 'core',
+    sidebarItems: [
+      {
+        href: '/admin/analytics?tab=overview',
+        label: 'Overview',
+        icon: BarChartIcon,
+        activePattern: /^\/admin\/analytics(\?tab=overview)?$/,
+      },
+      {
+        href: '/admin/analytics?tab=ai-usage',
+        label: 'AI Usage',
         icon: CpuIcon,
       },
       {
-        href: '/admin/knowledge-base/upload',
-        label: 'Upload & Process',
-        icon: UploadIcon,
+        href: '/admin/analytics?tab=audit',
+        label: 'Audit Log',
+        icon: ClipboardListIcon,
       },
       {
-        href: '/admin/knowledge-base/pipeline',
-        label: 'RAG Pipeline',
-        icon: BrainCircuitIcon,
+        href: '/admin/analytics?tab=reports',
+        label: 'Reports',
+        icon: FileTextIcon,
       },
       {
-        href: '/admin/knowledge-base/settings',
-        label: 'Settings',
-        icon: SettingsIcon,
+        href: '/admin/analytics?tab=api-keys',
+        label: 'API Keys',
+        icon: KeyIcon,
       },
     ],
   },

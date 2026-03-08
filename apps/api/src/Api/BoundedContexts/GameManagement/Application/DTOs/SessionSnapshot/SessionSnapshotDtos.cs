@@ -16,7 +16,8 @@ internal sealed record SessionSnapshotDto(
     int TurnIndex,
     int? PhaseIndex,
     DateTime Timestamp,
-    Guid? CreatedByPlayerId);
+    Guid? CreatedByPlayerId,
+    int AttachmentCount = 0);
 
 /// <summary>
 /// DTO for a reconstructed session state at a given snapshot index.

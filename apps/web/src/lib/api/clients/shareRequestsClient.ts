@@ -27,7 +27,9 @@ export interface ShareRequestsClient {
   /**
    * Get paginated list of user's share requests
    */
-  getUserShareRequests(params?: GetUserShareRequestsParams): Promise<PaginatedShareRequestsResponse>;
+  getUserShareRequests(
+    params?: GetUserShareRequestsParams
+  ): Promise<PaginatedShareRequestsResponse>;
 
   /**
    * Get a specific share request by ID
@@ -58,9 +60,8 @@ export function createShareRequestsClient({
     ): Promise<PaginatedShareRequestsResponse> {
       const queryParams = new URLSearchParams();
 
-      if (params?.page !== undefined) {
-        queryParams.append('page', String(params.page));
-      }
+      // pageNumber is required by the backend
+      queryParams.append('pageNumber', String(params?.page ?? 1));
 
       if (params?.pageSize !== undefined) {
         queryParams.append('pageSize', String(params.pageSize));
@@ -84,10 +85,7 @@ export function createShareRequestsClient({
           items: [],
           page: 1,
           pageSize: 10,
-          totalCount: 0,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPreviousPage: false,
+          total: 0,
         }
       );
     },

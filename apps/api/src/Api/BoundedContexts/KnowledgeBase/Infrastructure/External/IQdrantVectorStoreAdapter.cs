@@ -47,6 +47,6 @@ internal interface IQdrantVectorStoreAdapter
     /// </summary>
     Task EnsureCollectionExistsAsync(
         Guid gameId,
-        int vectorDimension = 1536,
+        int vectorDimension = 1024,
         CancellationToken cancellationToken = default);
 }

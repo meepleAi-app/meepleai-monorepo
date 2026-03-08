@@ -52,6 +52,7 @@ export function WhiteboardWidget({
   const [strokeSize, setStrokeSize] = useState('4');
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getCtx = useCallback(() => canvasRef.current?.getContext('2d') ?? null, []);
 
@@ -62,6 +63,12 @@ export function WhiteboardWidget({
     if (!ctx) return;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
   }, []);
 
   const getPos = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -103,13 +110,32 @@ export function WhiteboardWidget({
     [isDrawing, getCtx, getPos, tool, color, strokeSize]
   );
 
+  const debouncedSave = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.toBlob(
+        blob => {
+          if (!blob) return;
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            onStateChange?.(JSON.stringify({ imageData: reader.result as string, format: 'webp' }));
+          };
+          reader.readAsDataURL(blob);
+        },
+        'image/webp',
+        0.5
+      );
+    }, 3000);
+  }, [onStateChange]);
+
   const stopDraw = useCallback(() => {
     if (!isDrawing) return;
     setIsDrawing(false);
     lastPoint.current = null;
-    const dataUrl = canvasRef.current?.toDataURL('image/png') ?? '';
-    onStateChange?.(JSON.stringify({ imageData: dataUrl }));
-  }, [isDrawing, onStateChange]);
+    debouncedSave();
+  }, [isDrawing, debouncedSave]);
 
   const clear = useCallback(() => {
     const canvas = canvasRef.current;
@@ -117,7 +143,8 @@ export function WhiteboardWidget({
     if (!canvas || !ctx) return;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    onStateChange?.(JSON.stringify({ imageData: '' }));
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    onStateChange?.(JSON.stringify({ imageData: '', format: 'webp' }));
   }, [onStateChange]);
 
   const download = useCallback(() => {

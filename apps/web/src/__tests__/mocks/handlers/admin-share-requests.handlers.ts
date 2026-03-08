@@ -210,19 +210,18 @@ export const adminShareRequestsHandlers = [
     let filtered = [...shareRequests];
 
     if (status) {
-      filtered = filtered.filter((req) => req.status === status);
+      filtered = filtered.filter(req => req.status === status);
     }
 
     if (contributionType) {
-      filtered = filtered.filter((req) => req.contributionType === contributionType);
+      filtered = filtered.filter(req => req.contributionType === contributionType);
     }
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
-        (req) =>
-          req.gameTitle.toLowerCase().includes(term) ||
-          req.userName.toLowerCase().includes(term)
+        req =>
+          req.gameTitle.toLowerCase().includes(term) || req.userName.toLowerCase().includes(term)
       );
     }
 
@@ -241,8 +240,7 @@ export const adminShareRequestsHandlers = [
     }
 
     // Paginate
-    const totalCount = filtered.length;
-    const totalPages = Math.ceil(totalCount / pageSize);
+    const total = filtered.length;
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const items = filtered.slice(startIndex, endIndex);
@@ -251,10 +249,7 @@ export const adminShareRequestsHandlers = [
       items,
       page,
       pageSize,
-      totalCount,
-      totalPages,
-      hasNextPage: page < totalPages,
-      hasPreviousPage: page > 1,
+      total,
     };
 
     return HttpResponse.json(response, {
@@ -327,7 +322,7 @@ export const adminShareRequestsHandlers = [
     };
 
     // Update request status
-    const reqIndex = shareRequests.findIndex((r) => r.id === id);
+    const reqIndex = shareRequests.findIndex(r => r.id === id);
     if (reqIndex !== -1) {
       shareRequests[reqIndex] = {
         ...shareRequests[reqIndex],
@@ -388,7 +383,7 @@ export const adminShareRequestsHandlers = [
     delete lockState[id as string];
 
     // Update request status back to Pending
-    const reqIndex = shareRequests.findIndex((r) => r.id === id);
+    const reqIndex = shareRequests.findIndex(r => r.id === id);
     if (reqIndex !== -1) {
       shareRequests[reqIndex] = {
         ...shareRequests[reqIndex],
@@ -446,11 +441,14 @@ export const adminShareRequestsHandlers = [
     // Check lock
     const lock = lockState[id as string];
     if (!lock?.isLocked || lock.lockedByAdminId !== 'admin-1') {
-      return HttpResponse.json({ error: 'You must acquire the review lock first' }, { status: 403 });
+      return HttpResponse.json(
+        { error: 'You must acquire the review lock first' },
+        { status: 403 }
+      );
     }
 
     // Approve request
-    const reqIndex = shareRequests.findIndex((r) => r.id === id);
+    const reqIndex = shareRequests.findIndex(r => r.id === id);
     if (reqIndex !== -1) {
       shareRequests[reqIndex] = {
         ...shareRequests[reqIndex],
@@ -511,11 +509,14 @@ export const adminShareRequestsHandlers = [
     // Check lock
     const lock = lockState[id as string];
     if (!lock?.isLocked || lock.lockedByAdminId !== 'admin-1') {
-      return HttpResponse.json({ error: 'You must acquire the review lock first' }, { status: 403 });
+      return HttpResponse.json(
+        { error: 'You must acquire the review lock first' },
+        { status: 403 }
+      );
     }
 
     // Reject request
-    const reqIndex = shareRequests.findIndex((r) => r.id === id);
+    const reqIndex = shareRequests.findIndex(r => r.id === id);
     if (reqIndex !== -1) {
       shareRequests[reqIndex] = {
         ...shareRequests[reqIndex],
@@ -578,11 +579,14 @@ export const adminShareRequestsHandlers = [
       // Check lock
       const lock = lockState[id as string];
       if (!lock?.isLocked || lock.lockedByAdminId !== 'admin-1') {
-        return HttpResponse.json({ error: 'You must acquire the review lock first' }, { status: 403 });
+        return HttpResponse.json(
+          { error: 'You must acquire the review lock first' },
+          { status: 403 }
+        );
       }
 
       // Request changes
-      const reqIndex = shareRequests.findIndex((r) => r.id === id);
+      const reqIndex = shareRequests.findIndex(r => r.id === id);
       if (reqIndex !== -1) {
         shareRequests[reqIndex] = {
           ...shareRequests[reqIndex],
@@ -705,7 +709,7 @@ export const resetAdminShareRequestsState = () => {
   ];
 
   // Clear lock state
-  Object.keys(lockState).forEach((key) => delete lockState[key]);
+  Object.keys(lockState).forEach(key => delete lockState[key]);
 };
 
 /**

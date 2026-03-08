@@ -1,38 +1,66 @@
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
-// Issue #3304: RAG Dashboard query handlers.
+// Issue #3304, #5311: RAG Dashboard query handlers with DB persistence.
 
 #region Configuration Query Handlers
 
 /// <summary>
-/// Handler for GetRagConfigQuery.
+/// Handler for GetRagConfigQuery — loads from database or returns defaults.
 /// </summary>
 internal sealed class GetRagConfigQueryHandler : IQueryHandler<GetRagConfigQuery, RagConfigDto>
 {
+    private readonly IRagUserConfigRepository _repository;
     private readonly ILogger<GetRagConfigQueryHandler> _logger;
 
-    public GetRagConfigQueryHandler(ILogger<GetRagConfigQueryHandler> logger)
+    public GetRagConfigQueryHandler(
+        IRagUserConfigRepository repository,
+        ILogger<GetRagConfigQueryHandler> logger)
     {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task<RagConfigDto> Handle(GetRagConfigQuery query, CancellationToken cancellationToken)
+    public async Task<RagConfigDto> Handle(GetRagConfigQuery query, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
             "Getting RAG config for UserId={UserId}, Strategy={Strategy}",
             query.UserId,
             query.Strategy ?? "default");
 
-        // FUTURE: Load from database when user config persistence is implemented
-        var config = GetDefaultConfig(query.Strategy);
+        if (query.UserId.HasValue)
+        {
+            var entity = await _repository.GetByUserIdAsync(query.UserId.Value, cancellationToken)
+                .ConfigureAwait(false);
 
-        return Task.FromResult(config);
+            if (entity is not null)
+            {
+                try
+                {
+                    var config = JsonSerializer.Deserialize<RagConfigDto>(entity.ConfigJson, JsonSerializerOptions);
+                    if (config is not null)
+                        return config;
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize RAG config for user {UserId}, returning defaults", query.UserId);
+                }
+            }
+        }
+
+        return GetDefaultConfig(query.Strategy);
     }
+
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
 
     private static RagConfigDto GetDefaultConfig(string? strategy) => new()
     {

@@ -20,6 +20,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
@@ -61,7 +62,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
-        services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>(); // Issue #3184 (AGT-010): Session agent prompt building
+        services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
+        services.AddScoped<ITextChunkSearchService, Infrastructure.Services.TextChunkSearchService>(); // Phase 2: PostgreSQL FTS + adjacent chunk retrieval
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
         // Issue #3436: Tier-Strategy Access Validation Service
         // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
@@ -250,9 +252,11 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
+        services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
+        services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
 
-        // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
-        services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();
+        // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
+        services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
         services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
     }

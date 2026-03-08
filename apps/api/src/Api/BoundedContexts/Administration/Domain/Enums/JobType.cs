@@ -6,5 +6,6 @@ public enum JobType
     CostAnalysis = 1,
     DataCleanup = 2,
     BggSync = 3,
-    AgentBenchmark = 4
+    AgentBenchmark = 4,
+    VectorReembedding = 5
 }

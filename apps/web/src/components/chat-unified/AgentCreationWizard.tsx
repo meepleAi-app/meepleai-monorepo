@@ -3,7 +3,7 @@
  *
  * Steps:
  * 1. GameCollectionPicker  — select a game from user's library
- * 2. AgentTypePicker       — choose agent personality: Tutor / Arbitro / Decisore
+ * 2. AgentTypePicker       — choose agent personality: Tutor / Arbitro / Stratega / Narratore
  * 3. AgentNameAndKbStep    — give agent a name + pick KB PDFs
  * 4. AgentCreationReview   — summary + confirm creation
  *
@@ -87,11 +87,18 @@ const AGENT_TYPES: AgentTypeOption[] = [
     color: 'blue',
   },
   {
-    id: WIZARD_AGENT_TYPE.Decisore,
-    label: WIZARD_AGENT_TYPE.Decisore,
+    id: WIZARD_AGENT_TYPE.Stratega,
+    label: WIZARD_AGENT_TYPE.Stratega,
     description: 'Fornisce consigli strategici e tattici per la partita',
     icon: Target,
     color: 'green',
+  },
+  {
+    id: WIZARD_AGENT_TYPE.Narratore,
+    label: WIZARD_AGENT_TYPE.Narratore,
+    description: 'Racconta ambientazione, lore e atmosfera del gioco',
+    icon: BookOpen,
+    color: 'purple',
   },
 ];
 

@@ -12,6 +12,7 @@ import { Suspense } from 'react';
 import { BarChart3, BrainCircuit, ScrollText, FileBarChart, Key } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { AiUsageTab } from './AiUsageTab';
 import { ApiKeysTab } from './ApiKeysTab';
@@ -106,6 +107,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
       </div>
 
       <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="analytics" defaultTab="overview" />
 
       <div className="pt-1">{renderTabContent(tab)}</div>
     </div>

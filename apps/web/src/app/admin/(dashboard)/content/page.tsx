@@ -12,6 +12,7 @@ import { Suspense } from 'react';
 import { Gamepad2, Share2, Database } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { KnowledgeBaseTab } from './KnowledgeBaseTab';
 import { AdminContentNavConfig } from './NavConfig';
@@ -84,6 +85,7 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
       </div>
 
       <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="content" defaultTab="shared" />
 
       <div className="pt-1">{renderTabContent(tab)}</div>
     </div>

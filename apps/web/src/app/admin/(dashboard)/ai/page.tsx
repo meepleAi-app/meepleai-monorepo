@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { AgentsTab } from './AgentsTab';
 import { AiLabTab } from './AiLabTab';
@@ -142,6 +143,7 @@ export default async function AdminAiPage({ searchParams }: AdminAiPageProps) {
 
       {/* Tab bar — scrollable on mobile, wraps on desktop */}
       <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="ai" defaultTab="agents" />
 
       {/* Tab content */}
       <div className="pt-1">{renderTabContent(tab)}</div>

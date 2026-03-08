@@ -53,6 +53,7 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<PdfTextProcessingDomainService>(); // DDD-PHASE4: Text processing business rules
         services.AddScoped<PdfQualityValidationDomainService>(); // BGAI-012: Quality threshold enforcement
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>(); // User tier-based upload quotas
+        services.AddScoped<IQueueBackpressureService, QueueBackpressureService>(); // Issue #5457: Backpressure
         services.AddScoped<CitationPriorityService>(); // ISSUE-2051: Citation priority and deduplication
 
         // Issue #3653: Private PDF progress streaming service (singleton for in-memory subscriber management)

@@ -18,6 +18,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// Unit tests for HybridLlmService free-tier routing behaviors (Issues #5087-#5089).
+/// Issue #5487: Updated to use ILlmProviderSelector + ICircuitBreakerRegistry.
 ///
 /// Verifies three protection mechanisms:
 /// 1. AutomatedTest requests always route to Ollama, bypassing OpenRouter entirely.
@@ -34,14 +35,18 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     private readonly Mock<ILlmRoutingStrategy> _routingStrategyMock = new();
     private readonly Mock<IAiModelConfigurationRepository> _modelConfigMock = new();
     private readonly Mock<IFreeModelQuotaTracker> _quotaTrackerMock = new();
+    private readonly Mock<ICircuitBreakerRegistry> _circuitBreakerRegistryMock = new();
     private readonly ILogger<HybridLlmService> _logger;
+    private readonly ILogger<LlmProviderSelector> _selectorLogger;
 
     private const string OllamaModel = "llama3.3:70b";
     private const string OpenRouterModel = "meta-llama/llama-3.3-70b-instruct:free";
 
     public HybridLlmServiceFreeTierRoutingTests()
     {
-        _logger = new LoggerFactory().CreateLogger<HybridLlmService>();
+        var loggerFactory = new LoggerFactory();
+        _logger = loggerFactory.CreateLogger<HybridLlmService>();
+        _selectorLogger = loggerFactory.CreateLogger<LlmProviderSelector>();
 
         _ollamaMock.Setup(c => c.ProviderName).Returns("Ollama");
         _ollamaMock.Setup(c => c.SupportsModel(It.IsAny<string>())).Returns(true);
@@ -63,25 +68,46 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
                 It.IsAny<string>(), It.IsAny<RateLimitErrorType>(),
                 It.IsAny<long?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        // Circuit breaker registry allows all requests by default
+        _circuitBreakerRegistryMock
+            .Setup(r => r.AllowsRequests(It.IsAny<string>()))
+            .Returns(true);
+        _circuitBreakerRegistryMock
+            .Setup(r => r.GetState(It.IsAny<string>()))
+            .Returns(CircuitState.Closed);
     }
 
-    private HybridLlmService CreateSut() =>
-        new HybridLlmService(
-            new[] { _ollamaMock.Object, _openRouterMock.Object },
-            _routingStrategyMock.Object,
-            _logger,
-            Options.Create(new AiProviderSettings
+    private HybridLlmService CreateSut()
+    {
+        var clients = new[] { _ollamaMock.Object, _openRouterMock.Object };
+        var aiSettings = Options.Create(new AiProviderSettings
+        {
+            PreferredProvider = "",
+            Providers = new Dictionary<string, ProviderConfig>
             {
-                PreferredProvider = "",
-                Providers = new Dictionary<string, ProviderConfig>
-                {
-                    ["Ollama"] = new() { Enabled = true, BaseUrl = "http://meepleai-ollama:11434", Models = [OllamaModel] },
-                    ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = [OpenRouterModel] }
-                },
-                FallbackChain = ["Ollama", "OpenRouter"]
-            }),
+                ["Ollama"] = new() { Enabled = true, BaseUrl = "http://meepleai-ollama:11434", Models = [OllamaModel] },
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = [OpenRouterModel] }
+            },
+            FallbackChain = ["Ollama", "OpenRouter"]
+        });
+
+        var selector = new LlmProviderSelector(
+            clients,
+            _routingStrategyMock.Object,
+            _circuitBreakerRegistryMock.Object,
+            aiSettings,
             _modelConfigMock.Object,
+            _selectorLogger,
             freeModelQuotaTracker: _quotaTrackerMock.Object);
+
+        return new HybridLlmService(
+            clients,
+            selector,
+            _circuitBreakerRegistryMock.Object,
+            _logger,
+            freeModelQuotaTracker: _quotaTrackerMock.Object);
+    }
 
     private static LlmCompletionResult SuccessResult(string provider) =>
         LlmCompletionResult.CreateSuccess(

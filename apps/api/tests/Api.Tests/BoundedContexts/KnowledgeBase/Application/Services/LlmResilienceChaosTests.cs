@@ -18,6 +18,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// Chaos/resilience tests for LLM subsystem failure paths (Issue #5482).
+/// Issue #5487: Updated to use ILlmProviderSelector + ICircuitBreakerRegistry.
 ///
 /// Tests verify correct behavior under simulated failure scenarios:
 /// 1. Circuit breaker opens after consecutive failures → fallback activates
@@ -37,14 +38,18 @@ public sealed class LlmResilienceChaosTests
     private readonly Mock<ILlmRoutingStrategy> _routingStrategyMock = new();
     private readonly Mock<IAiModelConfigurationRepository> _modelConfigMock = new();
     private readonly Mock<IFreeModelQuotaTracker> _quotaTrackerMock = new();
+    private readonly Mock<ICircuitBreakerRegistry> _circuitBreakerRegistryMock = new();
     private readonly ILogger<HybridLlmService> _logger;
+    private readonly ILogger<LlmProviderSelector> _selectorLogger;
 
     private const string OllamaModel = "llama3.3:70b";
     private const string OpenRouterModel = "meta-llama/llama-3.3-70b-instruct:free";
 
     public LlmResilienceChaosTests()
     {
-        _logger = new LoggerFactory().CreateLogger<HybridLlmService>();
+        var loggerFactory = new LoggerFactory();
+        _logger = loggerFactory.CreateLogger<HybridLlmService>();
+        _selectorLogger = loggerFactory.CreateLogger<LlmProviderSelector>();
 
         _ollamaMock.Setup(c => c.ProviderName).Returns("Ollama");
         _ollamaMock.Setup(c => c.SupportsModel(It.IsAny<string>())).Returns(true);
@@ -64,25 +69,50 @@ public sealed class LlmResilienceChaosTests
                 It.IsAny<string>(), It.IsAny<RateLimitErrorType>(),
                 It.IsAny<long?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        // Circuit breaker registry allows all requests by default
+        _circuitBreakerRegistryMock
+            .Setup(r => r.AllowsRequests(It.IsAny<string>()))
+            .Returns(true);
+        _circuitBreakerRegistryMock
+            .Setup(r => r.GetState(It.IsAny<string>()))
+            .Returns(CircuitState.Closed);
     }
 
-    private HybridLlmService CreateSut() =>
-        new(
-            new[] { _ollamaMock.Object, _openRouterMock.Object },
-            _routingStrategyMock.Object,
-            _logger,
-            Options.Create(new AiProviderSettings
+    private IOptions<AiProviderSettings> CreateDefaultAiSettings() =>
+        Options.Create(new AiProviderSettings
+        {
+            PreferredProvider = "",
+            Providers = new Dictionary<string, ProviderConfig>
             {
-                PreferredProvider = "",
-                Providers = new Dictionary<string, ProviderConfig>
-                {
-                    ["Ollama"] = new() { Enabled = true, BaseUrl = "http://meepleai-ollama:11434", Models = [OllamaModel] },
-                    ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = [OpenRouterModel] }
-                },
-                FallbackChain = ["Ollama", "OpenRouter"]
-            }),
+                ["Ollama"] = new() { Enabled = true, BaseUrl = "http://meepleai-ollama:11434", Models = [OllamaModel] },
+                ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = [OpenRouterModel] }
+            },
+            FallbackChain = ["Ollama", "OpenRouter"]
+        });
+
+    private HybridLlmService CreateSut(IEmergencyOverrideService? emergencyOverrideService = null)
+    {
+        var clients = new[] { _ollamaMock.Object, _openRouterMock.Object };
+        var aiSettings = CreateDefaultAiSettings();
+
+        var selector = new LlmProviderSelector(
+            clients,
+            _routingStrategyMock.Object,
+            _circuitBreakerRegistryMock.Object,
+            aiSettings,
             _modelConfigMock.Object,
+            _selectorLogger,
+            freeModelQuotaTracker: _quotaTrackerMock.Object,
+            emergencyOverrideService: emergencyOverrideService);
+
+        return new HybridLlmService(
+            clients,
+            selector,
+            _circuitBreakerRegistryMock.Object,
+            _logger,
             freeModelQuotaTracker: _quotaTrackerMock.Object);
+    }
 
     private static LlmCompletionResult SuccessResult(string provider) =>
         LlmCompletionResult.CreateSuccess(
@@ -363,23 +393,7 @@ public sealed class LlmResilienceChaosTests
                 It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SuccessResult("Ollama"));
 
-        var sut = new HybridLlmService(
-            new[] { _ollamaMock.Object, _openRouterMock.Object },
-            _routingStrategyMock.Object,
-            _logger,
-            Options.Create(new AiProviderSettings
-            {
-                PreferredProvider = "",
-                Providers = new Dictionary<string, ProviderConfig>
-                {
-                    ["Ollama"] = new() { Enabled = true, BaseUrl = "http://meepleai-ollama:11434", Models = [OllamaModel] },
-                    ["OpenRouter"] = new() { Enabled = true, BaseUrl = "https://openrouter.ai/api/v1", Models = [OpenRouterModel] }
-                },
-                FallbackChain = ["Ollama", "OpenRouter"]
-            }),
-            _modelConfigMock.Object,
-            emergencyOverrideService: emergencyMock.Object);
-
+        var sut = CreateSut(emergencyOverrideService: emergencyMock.Object);
         var result = await sut.GenerateCompletionAsync("sys", "user");
 
         Assert.True(result.Success);

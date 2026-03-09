@@ -12,6 +12,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands.Emergency
 /// <summary>
 /// Unit tests for ActivateEmergencyOverrideCommandHandler and
 /// DeactivateEmergencyOverrideCommandHandler (Issue #5476).
+/// Issue #5487: Updated to use ICircuitBreakerRegistry directly instead of ILlmService.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
@@ -19,17 +20,16 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands.Emergency
 public sealed class ActivateEmergencyOverrideCommandHandlerTests
 {
     private readonly Mock<IEmergencyOverrideService> _overrideServiceMock = new();
-    private readonly Mock<ILlmService> _llmServiceMock = new();
+    private readonly Mock<ICircuitBreakerRegistry> _circuitBreakerRegistryMock = new();
     private readonly Mock<IFreeModelQuotaTracker> _quotaTrackerMock = new();
     private readonly Mock<ILogger<ActivateEmergencyOverrideCommandHandler>> _loggerMock = new();
 
     private ActivateEmergencyOverrideCommandHandler CreateHandler(
-        ILlmService? llmService = null,
         IFreeModelQuotaTracker? quotaTracker = null)
     {
         return new ActivateEmergencyOverrideCommandHandler(
             _overrideServiceMock.Object,
-            llmService ?? _llmServiceMock.Object,
+            _circuitBreakerRegistryMock.Object,
             _loggerMock.Object,
             quotaTracker);
     }
@@ -65,6 +65,20 @@ public sealed class ActivateEmergencyOverrideCommandHandlerTests
         Assert.True(result.Success);
         Assert.Contains("force-ollama-only", result.Message, StringComparison.Ordinal);
         Assert.Contains("60", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Handle_ResetCircuitBreaker_CallsRegistry()
+    {
+        var handler = CreateHandler();
+        var command = new ActivateEmergencyOverrideCommand(
+            "reset-circuit-breaker", 5, "Reset needed", Guid.NewGuid(), "OpenRouter");
+
+        await handler.Handle(command, CancellationToken.None);
+
+        _circuitBreakerRegistryMock.Verify(
+            r => r.ResetCircuitBreaker("OpenRouter"),
+            Times.Once);
     }
 
     [Fact]

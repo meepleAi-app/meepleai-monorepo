@@ -9,23 +9,24 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.EmergencyOverri
 /// Issue #5476: Handles emergency override activation.
 /// Delegates to EmergencyOverrideService for Redis storage and audit logging.
 /// Special actions (reset-circuit-breaker, flush-quota-cache) perform immediate side effects.
+/// Issue #5487: Uses ICircuitBreakerRegistry directly instead of casting ILlmService.
 /// </summary>
 internal class ActivateEmergencyOverrideCommandHandler
     : ICommandHandler<ActivateEmergencyOverrideCommand, EmergencyOverrideResult>
 {
     private readonly IEmergencyOverrideService _overrideService;
-    private readonly ILlmService _llmService;
+    private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
     private readonly IFreeModelQuotaTracker? _quotaTracker;
     private readonly ILogger<ActivateEmergencyOverrideCommandHandler> _logger;
 
     public ActivateEmergencyOverrideCommandHandler(
         IEmergencyOverrideService overrideService,
-        ILlmService llmService,
+        ICircuitBreakerRegistry circuitBreakerRegistry,
         ILogger<ActivateEmergencyOverrideCommandHandler> logger,
         IFreeModelQuotaTracker? quotaTracker = null)
     {
         _overrideService = overrideService;
-        _llmService = llmService;
+        _circuitBreakerRegistry = circuitBreakerRegistry;
         _logger = logger;
         _quotaTracker = quotaTracker;
     }
@@ -47,13 +48,10 @@ internal class ActivateEmergencyOverrideCommandHandler
         switch (request.Action)
         {
             case "reset-circuit-breaker":
-                if (_llmService is HybridLlmService hybrid)
-                {
-                    hybrid.ResetCircuitBreaker(request.TargetProvider);
-                    _logger.LogWarning(
-                        "Circuit breaker reset for provider {Provider} by admin {AdminId}",
-                        request.TargetProvider ?? "ALL", request.AdminUserId);
-                }
+                _circuitBreakerRegistry.ResetCircuitBreaker(request.TargetProvider);
+                _logger.LogWarning(
+                    "Circuit breaker reset for provider {Provider} by admin {AdminId}",
+                    request.TargetProvider ?? "ALL", request.AdminUserId);
                 break;
 
             case "flush-quota-cache":

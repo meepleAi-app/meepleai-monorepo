@@ -33,6 +33,7 @@ import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
+import { RuleSourceCard } from './RuleSourceCard';
 import { ResponseMetaBadge } from './ResponseMetaBadge';
 import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
 import { DebugSummaryBar } from './DebugSummaryBar';
@@ -608,14 +609,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                       />
                     )}
                     {msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {msg.citations.map((c, i) => (
-                          <CitationBadge
-                            key={`${c.documentId}-${c.pageNumber}-${i}`}
-                            citation={c}
-                          />
-                        ))}
-                      </div>
+                      <RuleSourceCard
+                        citations={msg.citations}
+                        gameTitle={game?.title}
+                      />
                     )}
                     {isLastAssistant && streamState.strategyTier && (
                       <div className="mt-2">

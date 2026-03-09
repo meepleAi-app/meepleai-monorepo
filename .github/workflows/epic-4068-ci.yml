@@ -460,7 +460,7 @@ jobs:
           pnpm audit --prod --audit-level=high
 
       - name: Install Snyk CLI
-        run: npm install -g snyk
+        run: sudo npm install -g snyk
 
       - name: Snyk Test
         run: snyk test apps/web --severity-threshold=high

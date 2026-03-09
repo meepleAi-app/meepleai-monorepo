@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 
 namespace Api.BoundedContexts.Authentication.Application.Queries.ValidateShareLink;

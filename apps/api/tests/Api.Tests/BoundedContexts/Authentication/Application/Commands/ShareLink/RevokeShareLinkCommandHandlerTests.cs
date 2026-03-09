@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands.RevokeShareLink;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Caching.Distributed;

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Domain.Services;
-using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
+using Api.SharedKernel.Constants;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Observability;
 using Microsoft.Extensions.Logging;

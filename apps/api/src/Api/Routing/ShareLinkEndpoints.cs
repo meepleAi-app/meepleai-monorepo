@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.Commands.CreateShareLink;
 using Api.BoundedContexts.Authentication.Application.Commands.RevokeShareLink;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSharedThread;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetSharedThread;

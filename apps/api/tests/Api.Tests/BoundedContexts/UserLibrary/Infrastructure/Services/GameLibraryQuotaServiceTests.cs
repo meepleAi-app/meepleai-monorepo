@@ -7,8 +7,8 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
-using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
-using UserTier = Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
+using UserTier = Api.SharedKernel.Domain.ValueObjects.UserTier;
 
 namespace Api.Tests.BoundedContexts.UserLibrary.Infrastructure.Services;
 

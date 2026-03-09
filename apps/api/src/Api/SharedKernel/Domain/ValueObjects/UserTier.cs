@@ -1,7 +1,6 @@
 using Api.SharedKernel.Domain.Exceptions;
-using Api.SharedKernel.Domain.ValueObjects;
 
-namespace Api.BoundedContexts.Authentication.Domain.ValueObjects;
+namespace Api.SharedKernel.Domain.ValueObjects;
 
 /// <summary>
 /// Represents a user subscription tier in the system.

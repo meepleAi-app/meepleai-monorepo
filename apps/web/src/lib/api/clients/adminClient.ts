@@ -114,6 +114,9 @@ import {
   type ChatAnalyticsDto,
   ModelPerformanceDtoSchema,
   type ModelPerformanceDto,
+  LlmSystemConfigDtoSchema,
+  type LlmSystemConfigDto,
+  type UpdateLlmSystemConfigRequest,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -2522,6 +2525,37 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     ): Promise<unknown> {
       const result = await httpClient.post('/api/v1/admin/mechanic-extractor/finalize', request);
       if (!result) throw new Error('Failed to finalize mechanic analysis');
+      return result;
+    },
+
+    // ========== LLM System Configuration (Issue #5495) ==========
+
+    /**
+     * Get current LLM system configuration (DB or appsettings defaults).
+     * GET /api/v1/admin/llm/config
+     */
+    async getLlmSystemConfig(): Promise<LlmSystemConfigDto> {
+      const result = await httpClient.get<LlmSystemConfigDto>(
+        '/api/v1/admin/llm/config',
+        LlmSystemConfigDtoSchema
+      );
+      if (!result) throw new Error('Failed to fetch LLM system config');
+      return result;
+    },
+
+    /**
+     * Update LLM system configuration (upserts in DB, invalidates cache).
+     * PUT /api/v1/admin/llm/config
+     */
+    async updateLlmSystemConfig(
+      request: UpdateLlmSystemConfigRequest
+    ): Promise<LlmSystemConfigDto> {
+      const result = await httpClient.put<LlmSystemConfigDto>(
+        '/api/v1/admin/llm/config',
+        request,
+        LlmSystemConfigDtoSchema
+      );
+      if (!result) throw new Error('Failed to update LLM system config');
       return result;
     },
   };

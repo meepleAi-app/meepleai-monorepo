@@ -428,5 +428,20 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithCronSchedule("0 0 8 * * ?")
                 .WithDescription("Runs daily at 8 AM UTC to send yesterday's OpenRouter usage digest to all admins"));
         });
+
+        // Issue #5511: GDPR pseudonymization of UserId in LLM request logs after 7 days
+        services.AddOptions<LlmRequestLogPseudonymizationOptions>();
+        services.AddQuartz(q =>
+        {
+            q.AddJob<LlmRequestLogPseudonymizationJob>(opts => opts
+                .WithIdentity("llm-log-pseudonymization-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("llm-log-pseudonymization-job", "knowledge-base")
+                .WithIdentity("llm-log-pseudonymization-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 2 * * ?")
+                .WithDescription("Runs daily at 2 AM UTC to pseudonymize UserId in logs older than 7 days"));
+        });
     }
 }

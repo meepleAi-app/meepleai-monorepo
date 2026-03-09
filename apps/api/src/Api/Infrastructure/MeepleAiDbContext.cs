@@ -73,6 +73,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ProcessingQueueConfigEntity> ProcessingQueueConfigs => Set<ProcessingQueueConfigEntity>(); // ISSUE-5455: Queue configuration
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
+    public DbSet<BoundedContexts.Administration.Domain.Entities.UserAiConsent> UserAiConsents => Set<BoundedContexts.Administration.Domain.Entities.UserAiConsent>(); // ISSUE-5512: GDPR AI consent
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();

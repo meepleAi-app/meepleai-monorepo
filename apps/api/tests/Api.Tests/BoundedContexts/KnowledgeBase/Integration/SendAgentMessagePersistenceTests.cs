@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -95,6 +96,8 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             mockQueryRewriter.Object,
             Mock.Of<IConversationSummarizer>(),
             consentCheckMock.Object,
+            Mock.Of<IGameSessionOrchestratorService>(),
+            Mock.Of<IHybridCacheService>(),
             Mock.Of<ILogger<SendAgentMessageCommandHandler>>());
 
         // Seed a test user (FK requirement)

@@ -52,6 +52,16 @@ internal static class MeepleAiMetrics
         description: "Confidence score distribution for RAG responses");
 
     /// <summary>
+    /// Histogram for RAG Time-To-First-Token (TTFT) in milliseconds.
+    /// Issue #5541: SLO metric — measures from request start to first LLM token.
+    /// Includes embedding + vector search + prompt building + LLM first token.
+    /// </summary>
+    public static readonly Histogram<double> RagFirstTokenLatency = Meter.CreateHistogram<double>(
+        name: "meepleai.rag.first_token_latency",
+        unit: "ms",
+        description: "RAG Time-To-First-Token latency in milliseconds (request start → first LLM response)");
+
+    /// <summary>
     /// Counter for RAG errors by type
     /// </summary>
     public static readonly Counter<long> RagErrorsTotal = Meter.CreateCounter<long>(

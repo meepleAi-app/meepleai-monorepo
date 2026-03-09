@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Services;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;

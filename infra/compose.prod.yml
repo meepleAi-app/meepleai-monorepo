@@ -205,41 +205,6 @@ services:
           cpus: '1'
           memory: 2G
 
-  jaeger:
-    restart: always
-    environment:
-      SPAN_STORAGE_TYPE: "badger"
-      BADGER_EPHEMERAL: "false"  # Use persistent storage in production
-      BADGER_DIRECTORY_VALUE: /badger/data
-      BADGER_DIRECTORY_KEY: /badger/key
-    volumes:
-      - jaeger-prod:/badger
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
-
-  seq:
-    restart: always
-    environment:
-      ACCEPT_EULA: "Y"
-      SEQ_FIRSTRUN_ADMINPASSWORDHASH: ${SEQ_PASSWORD_HASH:?SEQ_PASSWORD_HASH is required}
-      SEQ_CACHE_SYSTEMRAMTARGET: "0.5"
-    volumes:
-      - seqdata-prod:/data
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
-
   alertmanager:
     restart: always
     deploy:
@@ -264,14 +229,10 @@ volumes:
     name: meepleai-qdrantdata-prod
   redisdata-prod:
     name: meepleai-redisdata-prod
-  seqdata-prod:
-    name: meepleai-seqdata-prod
   prometheus-prod:
     name: meepleai-prometheus-prod
   grafana-prod:
     name: meepleai-grafana-prod
-  jaeger-prod:
-    name: meepleai-jaeger-prod
 
 # ============================================================================
 # Production Secrets (must be configured)

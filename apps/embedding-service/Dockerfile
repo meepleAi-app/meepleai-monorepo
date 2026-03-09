@@ -7,7 +7,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -22,6 +22,13 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 # Copy application code
 COPY main.py .
+
+# Create non-root user for security
+RUN groupadd -r embedding && useradd -r -g embedding -m embedding \
+    && chown -R embedding:embedding /app
+
+# Switch to non-root user
+USER embedding
 
 # Expose port
 EXPOSE 8000

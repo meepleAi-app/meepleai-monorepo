@@ -59,7 +59,7 @@ services:
         reservations:
           cpus: '0.5'
           memory: 256M
-    command: ["sh","-c","redis-server --appendonly yes --requirepass $$REDIS_PASSWORD --maxmemory 400mb --maxmemory-policy allkeys-lru"]
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $${REDIS_PASSWORD} --maxmemory 400mb --maxmemory-policy allkeys-lru"]
 
   # Embedding Service: Reduced from 4G
   # all-MiniLM-L6-v2 model: 90MB + ~1GB batch processing

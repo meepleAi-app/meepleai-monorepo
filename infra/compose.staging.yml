@@ -92,17 +92,6 @@ services:
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheus-staging:/prometheus
 
-  jaeger:
-    restart: unless-stopped
-
-  seq:
-    restart: unless-stopped
-    environment:
-      ACCEPT_EULA: "Y"
-      SEQ_FIRSTRUN_ADMINPASSWORDHASH: ${SEQ_PASSWORD_HASH:-}
-    volumes:
-      - seqdata-staging:/data
-
   alertmanager:
     restart: unless-stopped
 
@@ -119,8 +108,6 @@ volumes:
     name: meepleai-qdrantdata-staging
   redisdata-staging:
     name: meepleai-redisdata-staging
-  seqdata-staging:
-    name: meepleai-seqdata-staging
   prometheus-staging:
     name: meepleai-prometheus-staging
   grafana-staging:

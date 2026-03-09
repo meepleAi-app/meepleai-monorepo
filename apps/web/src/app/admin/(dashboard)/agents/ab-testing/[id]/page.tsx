@@ -374,7 +374,7 @@ export function AbTestEvaluationPageInner({ id }: { id: string }) {
                   Run Another Test
                 </Button>
               </Link>
-              <Link href="/admin/agents/analytics">
+              <Link href="/admin/agents/ab-testing/results">
                 <Button variant="outline">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   View Analytics

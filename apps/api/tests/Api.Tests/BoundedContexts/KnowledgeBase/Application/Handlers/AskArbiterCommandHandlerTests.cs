@@ -325,7 +325,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
     #region Handler Integration Tests
 
     [Fact]
-    public async Task Handle_AgentNotFound_ThrowsInvalidOperationException()
+    public async Task Handle_AgentNotFound_ThrowsNotFoundException()
     {
         // Arrange
         _mockAgentRepository
@@ -335,7 +335,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         var command = CreateCommand();
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<Api.Middleware.Exceptions.NotFoundException>(
             () => _handler.Handle(command, CancellationToken.None));
     }
 

@@ -92,13 +92,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ArgumentNullException.ThrowIfNull(gameTitle);
         ArgumentNullException.ThrowIfNull(userQuestion);
 
-        // Step 0: Resolve expansion game IDs (Issue #5588)
+        // Step 0: Resolve expansion game IDs once (Issue #5588)
         var expansionGameIds = await _expansionResolver
             .GetExpansionGameIdsAsync(gameId, ct).ConfigureAwait(false);
         var hasExpansions = expansionGameIds.Count > 0;
 
-        // Step 1: Retrieve RAG context (includes expansion boost)
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, ct).ConfigureAwait(false);
+        // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
+        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, ct).ConfigureAwait(false);
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority)
         var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions);
@@ -119,15 +119,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     }
 
     private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
-        string userQuestion, Guid gameId, CancellationToken ct)
+        string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, CancellationToken ct)
     {
         var citations = new List<ChunkCitation>();
 
         try
         {
-            // Issue #5588: Resolve expansion game IDs for score boosting
-            var expansionGameIds = await _expansionResolver
-                .GetExpansionGameIdsAsync(gameId, ct).ConfigureAwait(false);
+            // Issue #5588: Use pre-resolved expansion game IDs for score boosting
             var expansionGameIdStrings = new HashSet<string>(
                 expansionGameIds.Select(id => id.ToString()),
                 StringComparer.OrdinalIgnoreCase);

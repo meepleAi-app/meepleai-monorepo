@@ -156,18 +156,10 @@ internal sealed class GameSessionOrchestratorService : IGameSessionOrchestratorS
 
         try
         {
-            var kbCardGameIds = new List<Guid>();
-
-            foreach (var gameId in allGameIds)
-            {
-                var docs = await _vectorDocumentRepository.GetByGameIdAsync(gameId, ct).ConfigureAwait(false);
-                if (docs.Count > 0)
-                {
-                    kbCardGameIds.Add(gameId);
-                }
-            }
-
-            return kbCardGameIds;
+            // Single batch query instead of N+1 per-game lookups (Issue #5578)
+            return await _vectorDocumentRepository
+                .GetGameIdsWithDocumentsAsync(allGameIds, ct)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {

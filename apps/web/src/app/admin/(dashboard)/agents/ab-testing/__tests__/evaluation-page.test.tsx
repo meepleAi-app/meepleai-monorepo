@@ -247,4 +247,84 @@ describe('AbTestEvaluationPage', () => {
       expect(screen.getByText('A/B test session not found.')).toBeInTheDocument();
     });
   });
+
+  it('shows error alert when evaluation submit fails', async () => {
+    mockEvaluateAbTest.mockRejectedValue(new Error('Budget exhausted'));
+
+    renderWithQuery(<AbTestEvaluationPageInner id={SESSION_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Variant A')).toBeInTheDocument();
+    });
+
+    const allStarButtons = screen.getAllByRole('button', { name: /star/i });
+    for (let i = 0; i < 8; i++) {
+      await user.click(allStarButtons[i * 5 + 2]);
+    }
+
+    const submitButton = screen.getByRole('button', { name: /submit evaluation/i });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Budget exhausted')).toBeInTheDocument();
+    });
+  });
+
+  it('sends correct evaluation payload on submit', async () => {
+    mockEvaluateAbTest.mockResolvedValue(MOCK_REVEALED);
+
+    renderWithQuery(<AbTestEvaluationPageInner id={SESSION_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Variant A')).toBeInTheDocument();
+    });
+
+    const allStarButtons = screen.getAllByRole('button', { name: /star/i });
+    for (let i = 0; i < 8; i++) {
+      await user.click(allStarButtons[i * 5 + 2]); // 3 stars for each
+    }
+
+    const submitButton = screen.getByRole('button', { name: /submit evaluation/i });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockEvaluateAbTest).toHaveBeenCalledWith(
+        SESSION_ID,
+        expect.objectContaining({
+          evaluations: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'A',
+              accuracy: 3,
+              completeness: 3,
+              clarity: 3,
+              tone: 3,
+            }),
+            expect.objectContaining({
+              label: 'B',
+              accuracy: 3,
+              completeness: 3,
+              clarity: 3,
+              tone: 3,
+            }),
+          ]),
+        })
+      );
+    });
+  });
+
+  it('shows results title for already-evaluated session', async () => {
+    mockGetAbTest.mockResolvedValue({
+      ...MOCK_SESSION,
+      status: 'Evaluated',
+    });
+
+    renderWithQuery(<AbTestEvaluationPageInner id={SESSION_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('A/B Test Results')).toBeInTheDocument();
+    });
+
+    // Scoring UI should be hidden
+    expect(screen.queryByRole('button', { name: /submit evaluation/i })).not.toBeInTheDocument();
+  });
 });

@@ -197,4 +197,43 @@ describe('AbTestAnalyticsPage', () => {
     const newTestLink = screen.getByText('New Test').closest('a');
     expect(newTestLink).toHaveAttribute('href', '/admin/agents/ab-testing/new');
   });
+
+  it('clears date filters when Clear button clicked', async () => {
+    renderWithQuery(<AbTestAnalyticsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Tests')).toBeInTheDocument();
+    });
+
+    const fromInput = screen.getByLabelText('From');
+    await user.type(fromInput, '2026-01-01');
+
+    await waitFor(() => {
+      expect(screen.getByText('Clear')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Clear'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Clear')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows validation warning for invalid date range', async () => {
+    renderWithQuery(<AbTestAnalyticsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Tests')).toBeInTheDocument();
+    });
+
+    const fromInput = screen.getByLabelText('From');
+    const toInput = screen.getByLabelText('To');
+
+    await user.type(toInput, '2026-01-01');
+    await user.type(fromInput, '2026-12-31');
+
+    await waitFor(() => {
+      expect(screen.getByText('From date must be before To date')).toBeInTheDocument();
+    });
+  });
 });

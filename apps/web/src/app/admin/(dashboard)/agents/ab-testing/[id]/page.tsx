@@ -109,6 +109,7 @@ export function AbTestEvaluationPageInner({ id }: { id: string }) {
         })),
       }),
     onSuccess: data => {
+      setError(null);
       setRevealedData(data);
       queryClient.invalidateQueries({ queryKey: ['abTest', id] });
     },

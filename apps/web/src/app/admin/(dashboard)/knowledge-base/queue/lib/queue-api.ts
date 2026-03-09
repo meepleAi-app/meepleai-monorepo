@@ -1,4 +1,5 @@
 import { useQuery, useQueries } from '@tanstack/react-query';
+
 import { apiClient } from '@/lib/api/client';
 
 // ── Types matching backend DTOs ────────────────────────────────────────
@@ -100,11 +101,131 @@ export async function reorderQueue(orderedJobIds: string[]): Promise<void> {
   await apiClient.put('/api/v1/admin/queue/reorder', { orderedJobIds });
 }
 
-export async function enqueuePdf(pdfDocumentId: string, priority: number = 0): Promise<{ jobId: string }> {
+export async function enqueuePdf(
+  pdfDocumentId: string,
+  priority: number = 0
+): Promise<{ jobId: string }> {
   return await apiClient.post<{ jobId: string }>('/api/v1/admin/queue/enqueue', {
     pdfDocumentId,
     priority,
   });
+}
+
+// ── New API functions (Issue #5458) ───────────────────────────────────
+
+export type ProcessingPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
+
+export interface QueueConfigDto {
+  isPaused: boolean;
+  maxConcurrentWorkers: number;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface QueueStatusDto {
+  queueDepth: number;
+  backpressureThreshold: number;
+  isUnderPressure: boolean;
+  isPaused: boolean;
+  maxConcurrentWorkers: number;
+  estimatedWaitMinutes: number;
+}
+
+export interface BulkReindexResult {
+  enqueuedCount: number;
+  skippedCount: number;
+  errors: { jobId: string; reason: string }[];
+}
+
+export interface PdfTextResult {
+  id: string;
+  fileName: string;
+  extractedText: string | null;
+  processingStatus: string;
+  processedAt: string | null;
+  pageCount: number | null;
+  characterCount: number | null;
+  processingError: string | null;
+}
+
+export async function bumpPriority(jobId: string, newPriority: ProcessingPriority): Promise<void> {
+  await apiClient.patch(`/api/v1/admin/queue/${jobId}/priority`, { newPriority });
+}
+
+export async function getQueueConfig(): Promise<QueueConfigDto> {
+  const result = await apiClient.get<QueueConfigDto>('/api/v1/admin/queue/config');
+  return result!;
+}
+
+export async function updateQueueConfig(
+  isPaused?: boolean,
+  maxConcurrentWorkers?: number
+): Promise<void> {
+  await apiClient.patch('/api/v1/admin/queue/config', { isPaused, maxConcurrentWorkers });
+}
+
+export async function bulkReindexFailed(): Promise<BulkReindexResult> {
+  const result = await apiClient.post<BulkReindexResult>('/api/v1/admin/queue/reindex-failed');
+  return result!;
+}
+
+export async function getExtractedText(pdfDocumentId: string): Promise<PdfTextResult | null> {
+  return await apiClient.get<PdfTextResult>(
+    `/api/v1/admin/queue/documents/${pdfDocumentId}/extracted-text`
+  );
+}
+
+export async function getQueueStatus(): Promise<QueueStatusDto> {
+  const result = await apiClient.get<QueueStatusDto>('/api/v1/admin/queue/status');
+  return result!;
+}
+
+// ── Dashboard Metrics (Issue #5459) ──────────────────────────────────
+
+export interface PhaseTimingDto {
+  phase: string;
+  avgDurationSeconds: number;
+  minDurationSeconds: number;
+  maxDurationSeconds: number;
+  sampleCount: number;
+}
+
+export interface DashboardMetricsDto {
+  phaseTimings: PhaseTimingDto[];
+  totalProcessed: number;
+  totalFailed: number;
+  failureRatePercent: number;
+  avgTotalDurationSeconds: number;
+  period: string;
+}
+
+// ── Queue Alerts (Issue #5460) ────────────────────────────────────────
+
+export type QueueAlertType = 'DocumentStuck' | 'QueueDepthHigh' | 'HighFailureRate';
+export type QueueAlertSeverity = 'Warning' | 'Critical';
+
+export interface QueueAlertDto {
+  type: QueueAlertType;
+  severity: QueueAlertSeverity;
+  message: string;
+  detectedAt: string;
+  data: unknown;
+}
+
+export async function getActiveAlerts(): Promise<QueueAlertDto[]> {
+  const result = await apiClient.get<QueueAlertDto[]>('/api/v1/admin/queue/alerts');
+  return result ?? [];
+}
+
+export type MetricsPeriod = '24h' | '7d' | '30d';
+
+export async function getDashboardMetrics(
+  period: MetricsPeriod = '24h'
+): Promise<DashboardMetricsDto> {
+  const result = await apiClient.get<DashboardMetricsDto>(
+    `/api/v1/admin/queue/metrics?period=${period}`
+  );
+  return result!;
 }
 
 // ── React Query Hooks ──────────────────────────────────────────────────
@@ -127,7 +248,7 @@ export function useJobDetail(jobId: string | null, sseConnected: boolean = false
     queryFn: () => fetchJobDetail(jobId!),
     enabled: !!jobId,
     staleTime: sseConnected ? 30_000 : 5_000,
-    refetchInterval: (query) => {
+    refetchInterval: query => {
       const data = query.state.data as ProcessingJobDetailDto | null | undefined;
       if (data && TERMINAL_STATUSES.includes(data.status)) return false;
       // When SSE is connected, use longer fallback interval
@@ -142,11 +263,47 @@ const STATS_STATUSES: JobStatus[] = ['Queued', 'Processing', 'Completed', 'Faile
 
 export function useQueueStats() {
   return useQueries({
-    queries: STATS_STATUSES.map((status) => ({
+    queries: STATS_STATUSES.map(status => ({
       queryKey: ['admin', 'queue', 'stats', status],
       queryFn: () => fetchQueue({ status, pageSize: 1 }),
       staleTime: 15_000,
       refetchInterval: 30_000,
     })),
+  });
+}
+
+export function useQueueConfig() {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'config'],
+    queryFn: getQueueConfig,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useQueueStatus() {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'status'],
+    queryFn: getQueueStatus,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useActiveAlerts() {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'alerts'],
+    queryFn: getActiveAlerts,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useDashboardMetrics(period: MetricsPeriod = '24h') {
+  return useQuery({
+    queryKey: ['admin', 'queue', 'metrics', period],
+    queryFn: () => getDashboardMetrics(period),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 }

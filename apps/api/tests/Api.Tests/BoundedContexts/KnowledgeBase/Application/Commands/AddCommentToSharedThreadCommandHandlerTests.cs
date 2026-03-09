@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Application.Queries.ValidateShareLink;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSharedThread;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;

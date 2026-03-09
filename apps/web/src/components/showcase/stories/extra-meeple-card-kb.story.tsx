@@ -8,6 +8,7 @@
 
 import { KbExtraMeepleCard } from '@/components/ui/data-display/extra-meeple-card';
 import type { KbDetailData } from '@/components/ui/data-display/extra-meeple-card';
+
 import type { ShowcaseStory } from '../types';
 
 // ── Showcase prop shape (control-compatible scalars) ──────────────────────────
@@ -71,8 +72,16 @@ export const extraMeepleCardKbStory: ShowcaseStory<KbStoryProps> = {
         <KbExtraMeepleCard
           data={data}
           loading={loading}
-          onDelete={() => { /* showcase: no-op */ }}
-          onRetryIndexing={status === 'failed' ? () => { /* showcase: no-op */ } : undefined}
+          onDelete={() => {
+            /* showcase: no-op */
+          }}
+          onRetryIndexing={
+            status === 'failed'
+              ? () => {
+                  /* showcase: no-op */
+                }
+              : undefined
+          }
         />
       </div>
     );

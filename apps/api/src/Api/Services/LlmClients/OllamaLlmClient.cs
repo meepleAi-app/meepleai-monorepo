@@ -25,7 +25,7 @@ internal class OllamaLlmClient : ILlmClient
     private readonly ILlmCostCalculator _costCalculator;
 
     // Hardcoded defaults for Ollama
-    private const int DefaultTimeoutSeconds = 60;
+    private const int DefaultTimeoutSeconds = 120; // Higher timeout for cold-start model loading
 
     public string ProviderName => "Ollama";
 

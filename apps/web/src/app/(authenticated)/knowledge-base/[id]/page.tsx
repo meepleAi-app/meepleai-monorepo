@@ -14,8 +14,8 @@ import { use, useEffect, useState } from 'react';
 import { ArrowLeft, FileText, Calendar, HardDrive } from 'lucide-react';
 import Link from 'next/link';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
@@ -32,15 +32,11 @@ interface DocumentDetail {
   chunkCount?: number;
 }
 
-export default function KnowledgeBaseDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function KnowledgeBaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: documentId } = use(params);
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, _setError] = useState<string | null>(null);
 
   const navigationLinks = useEntityNavigation('document', {
     id: documentId,
@@ -106,7 +102,12 @@ export default function KnowledgeBaseDetailPage({
             metadata={[
               { icon: FileText, value: 'PDF' },
               ...(document.uploadedAt
-                ? [{ icon: Calendar, value: new Date(document.uploadedAt).toLocaleDateString('it-IT') }]
+                ? [
+                    {
+                      icon: Calendar,
+                      value: new Date(document.uploadedAt).toLocaleDateString('it-IT'),
+                    },
+                  ]
                 : []),
               ...(document.chunkCount
                 ? [{ icon: HardDrive, value: `${document.chunkCount} chunks` }]
@@ -120,9 +121,7 @@ export default function KnowledgeBaseDetailPage({
         <div className="max-w-4xl mx-auto">
           <Card className="border-l-4 border-l-[hsl(210,40%,55%)] shadow-lg">
             <CardHeader>
-              <CardTitle className="font-quicksand text-xl">
-                Dettagli Documento
-              </CardTitle>
+              <CardTitle className="font-quicksand text-xl">Dettagli Documento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4 font-nunito text-sm">
@@ -143,17 +142,15 @@ export default function KnowledgeBaseDetailPage({
                 {document.fileSize && (
                   <div>
                     <span className="text-muted-foreground">Dimensione</span>
-                    <p className="mt-1">
-                      {(document.fileSize / 1024).toFixed(1)} KB
-                    </p>
+                    <p className="mt-1">{(document.fileSize / 1024).toFixed(1)} KB</p>
                   </div>
                 )}
               </div>
 
               <Alert>
                 <AlertDescription className="font-nunito">
-                  Il viewer PDF completo sarà disponibile in una versione futura.
-                  Per ora puoi navigare alle entità correlate tramite i link sopra.
+                  Il viewer PDF completo sarà disponibile in una versione futura. Per ora puoi
+                  navigare alle entità correlate tramite i link sopra.
                 </AlertDescription>
               </Alert>
             </CardContent>

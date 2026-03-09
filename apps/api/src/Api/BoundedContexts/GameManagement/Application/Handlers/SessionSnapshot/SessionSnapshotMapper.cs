@@ -4,7 +4,9 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers.SessionSnapsho
 
 internal static class SessionSnapshotMapper
 {
-    public static SessionSnapshotDto ToDto(Domain.Entities.SessionSnapshot.SessionSnapshot snapshot)
+    public static SessionSnapshotDto ToDto(
+        Domain.Entities.SessionSnapshot.SessionSnapshot snapshot,
+        int attachmentCount = 0)
     {
         return new SessionSnapshotDto(
             Id: snapshot.Id,
@@ -16,6 +18,7 @@ internal static class SessionSnapshotMapper
             TurnIndex: snapshot.TurnIndex,
             PhaseIndex: snapshot.PhaseIndex,
             Timestamp: snapshot.Timestamp,
-            CreatedByPlayerId: snapshot.CreatedByPlayerId);
+            CreatedByPlayerId: snapshot.CreatedByPlayerId,
+            AttachmentCount: attachmentCount);
     }
 }

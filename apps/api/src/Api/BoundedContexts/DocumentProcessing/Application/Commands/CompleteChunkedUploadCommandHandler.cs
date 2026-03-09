@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -29,6 +30,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunkedUploadCommand, CompleteChunkedUploadResult>
 {
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
+    internal const string DuplicateContentErrorMessage = "Un file identico è già stato caricato per questo gioco.";
 
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
@@ -91,7 +93,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 request.SessionId, session!.TotalChunks, session.TotalFileSize);
 
             // Assemble chunks and store in blob storage
-            (bool storageSuccess, BlobStorageResult? storageResult, string? sanitizedFileName) = await AssembleAndStoreFileAsync(
+            (bool storageSuccess, BlobStorageResult? storageResult, string? sanitizedFileName, string? contentHash) = await AssembleAndStoreFileAsync(
                 session, cancellationToken).ConfigureAwait(false);
             if (!storageSuccess)
             {
@@ -104,9 +106,43 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 );
             }
 
+            // Check for duplicate content on the same game
+            if (contentHash != null)
+            {
+                var isDuplicate = await _dbContext.PdfDocuments.AnyAsync(
+                    p => p.ContentHash == contentHash &&
+                         ((session.GameId.HasValue && p.GameId == session.GameId) ||
+                          (session.PrivateGameId.HasValue && p.PrivateGameId == session.PrivateGameId)),
+                    cancellationToken).ConfigureAwait(false);
+
+                if (isDuplicate)
+                {
+                    // Cleanup the stored file (handles both local and S3 storage)
+                    if (storageResult!.FileId != null)
+                    {
+                        try
+                        {
+                            await _blobStorageService.DeleteAsync(
+                                storageResult.FileId,
+                                (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty,
+                                cancellationToken).ConfigureAwait(false);
+                        }
+                        catch { /* best effort cleanup */ }
+                    }
+
+                    return new CompleteChunkedUploadResult(
+                        Success: false,
+                        DocumentId: null,
+                        FileName: sanitizedFileName,
+                        ErrorMessage: DuplicateContentErrorMessage,
+                        MissingChunks: null
+                    );
+                }
+            }
+
             // Create PDF document record and trigger background processing
             var pdfDocId = await CreatePdfRecordAndTriggerProcessingAsync(
-                session, storageResult!, sanitizedFileName!, request.SessionId.ToString(), cancellationToken).ConfigureAwait(false);
+                session, storageResult!, sanitizedFileName!, request.SessionId.ToString(), cancellationToken, contentHash).ConfigureAwait(false);
 
             return new CompleteChunkedUploadResult(
                 Success: true,
@@ -203,7 +239,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     /// Assembles chunks into a single file and stores in blob storage.
     /// Returns (success, storageResult, sanitizedFileName).
     /// </summary>
-    private async Task<(bool success, BlobStorageResult? storageResult, string? sanitizedFileName)> AssembleAndStoreFileAsync(
+    private async Task<(bool success, BlobStorageResult? storageResult, string? sanitizedFileName, string? contentHash)> AssembleAndStoreFileAsync(
         ChunkedUploadSession session,
         CancellationToken cancellationToken)
     {
@@ -219,6 +255,18 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         // Assemble chunks into a single file
         var assembledFilePath = Path.Combine(session.TempDirectory, sanitizedFileName);
         await AssembleChunksAsync(session, assembledFilePath, cancellationToken).ConfigureAwait(false);
+
+        // Compute content hash from assembled local file (before S3 upload)
+        string? contentHash = null;
+        if (File.Exists(assembledFilePath))
+        {
+            var hashStream = new FileStream(assembledFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using (hashStream.ConfigureAwait(false))
+            {
+                var hashBytes = await SHA256.HashDataAsync(hashStream, cancellationToken).ConfigureAwait(false);
+                contentHash = Convert.ToHexStringLower(hashBytes);
+            }
+        }
 
         // Store in blob storage
         BlobStorageResult storageResult;
@@ -238,10 +286,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            return (false, storageResult, sanitizedFileName);
+            return (false, storageResult, sanitizedFileName, null);
         }
 
-        return (true, storageResult, sanitizedFileName);
+        return (true, storageResult, sanitizedFileName, contentHash);
     }
 
     /// <summary>
@@ -252,7 +300,8 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         BlobStorageResult storageResult,
         string sanitizedFileName,
         string sessionId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? contentHash = null)
     {
         // Create PDF document record
         var pdfDoc = new PdfDocumentEntity
@@ -266,7 +315,8 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             ContentType = "application/pdf",
             UploadedByUserId = session.UserId,
             UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
-            ProcessingStatus = "pending"
+            ProcessingStatus = "pending",
+            ContentHash = contentHash
         };
 
         _dbContext.PdfDocuments.Add(pdfDoc);

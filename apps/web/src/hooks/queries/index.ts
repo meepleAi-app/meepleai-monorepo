@@ -189,6 +189,13 @@ export {
 // PDF Processing Status (Issue #4946)
 export { usePdfProcessingStatus, pdfStatusKeys } from './usePdfProcessingStatus';
 
+// AI Models & Agent LLM Configuration
+export {
+  useAvailableModels,
+  useAgentConfiguration,
+  useUpdateAgentConfiguration,
+} from './useModels';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

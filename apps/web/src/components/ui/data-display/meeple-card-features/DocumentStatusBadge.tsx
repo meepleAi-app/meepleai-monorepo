@@ -16,6 +16,7 @@
 'use client';
 
 import { memo } from 'react';
+
 import { CheckCircle2, XCircle, Loader2, MinusCircle } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -103,7 +104,7 @@ export const DocumentStatusBadge = memo(function DocumentStatusBadge({
         size === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs',
         config.containerClass,
         config.textClass,
-        className,
+        className
       )}
       aria-label={`Stato documento: ${config.label}`}
       data-testid={config.testId}
@@ -113,7 +114,7 @@ export const DocumentStatusBadge = memo(function DocumentStatusBadge({
         className={cn(
           size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5',
           config.iconClass,
-          config.animate && 'animate-spin',
+          config.animate && 'animate-spin'
         )}
       />
       {config.label}

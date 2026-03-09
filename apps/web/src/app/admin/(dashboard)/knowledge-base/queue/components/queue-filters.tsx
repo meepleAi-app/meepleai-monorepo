@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import { SearchIcon } from 'lucide-react';
 
-import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
   SelectContent,
@@ -11,8 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-
+import { Input } from '@/components/ui/primitives/input';
 import { useDebounce } from '@/hooks/useDebounce';
+
 import type { QueueFilters } from '../lib/queue-api';
 
 interface QueueFiltersBarProps {
@@ -83,7 +84,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
         <Input
           placeholder="Search by filename..."
           value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
+          onChange={e => setLocalSearch(e.target.value)}
           className="pl-9 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md"
         />
       </div>
@@ -91,7 +92,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
       {/* Status Filter */}
       <Select
         value={filters.status ?? 'all'}
-        onValueChange={(value) =>
+        onValueChange={value =>
           onFiltersChange({
             ...filters,
             status: value === 'all' ? undefined : value,
@@ -103,7 +104,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
-          {STATUS_OPTIONS.map((opt) => (
+          {STATUS_OPTIONS.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
             </SelectItem>
@@ -114,7 +115,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
       {/* Date Filter */}
       <Select
         value={datePreset}
-        onValueChange={(value) => {
+        onValueChange={value => {
           setDatePreset(value);
           const range = getDateRange(value);
           onFiltersChange({ ...filters, ...range, page: 1 });
@@ -124,7 +125,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
           <SelectValue placeholder="Date Range" />
         </SelectTrigger>
         <SelectContent>
-          {DATE_OPTIONS.map((opt) => (
+          {DATE_OPTIONS.map(opt => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
             </SelectItem>

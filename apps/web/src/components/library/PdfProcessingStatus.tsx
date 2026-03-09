@@ -11,11 +11,12 @@
 
 'use client';
 
-import { CheckCircle2, Circle, Loader2, XCircle, Info } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle, Info, Loader2, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { usePdfProcessingStatus } from '@/hooks/queries/usePdfProcessingStatus';
 import { useTranslation } from '@/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,39 +73,59 @@ function getStageStates(
 // Stage row
 // ---------------------------------------------------------------------------
 
-function StageRow({ stage, state, label, stateLabel }: { stage: Stage; state: StageState; label: string; stateLabel: string }) {
+function StageRow({
+  state,
+  label,
+  stateLabel,
+}: {
+  stage: Stage;
+  state: StageState;
+  label: string;
+  stateLabel: string;
+}) {
   const icon = (() => {
     switch (state) {
       case 'completed':
-        return <CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" aria-hidden="true" />;
+        return <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" aria-hidden="true" />;
       case 'active':
         return (
-          <Loader2 className="h-4 w-4 animate-spin text-orange-500 shrink-0" aria-hidden="true" />
+          <Loader2 className="h-4 w-4 animate-spin text-amber-500 shrink-0" aria-hidden="true" />
         );
       case 'failed':
         return <XCircle className="h-4 w-4 text-red-500 shrink-0" aria-hidden="true" />;
       default:
-        return <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" aria-hidden="true" />;
+        return <Circle className="h-4 w-4 text-muted-foreground/30 shrink-0" aria-hidden="true" />;
     }
   })();
 
-  const textClass =
-    state === 'completed'
-      ? 'text-foreground line-through opacity-60'
-      : state === 'active'
-        ? 'text-foreground font-medium'
-        : state === 'failed'
-          ? 'text-red-600 dark:text-red-400'
-          : 'text-muted-foreground/50';
-
   return (
-    <div className="flex items-center gap-3" key={stage.key}>
+    <div
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors',
+        state === 'active' && 'bg-amber-500/8 dark:bg-amber-500/5',
+        state === 'completed' && 'opacity-60'
+      )}
+    >
       {icon}
-      <span className={`flex-1 text-sm ${textClass}`}>{label}</span>
       <span
-        className={`text-xs tabular-nums ${
-          state === 'active' ? 'text-orange-500' : 'text-muted-foreground/50'
-        }`}
+        className={cn(
+          'flex-1 text-sm',
+          state === 'completed' && 'text-muted-foreground line-through',
+          state === 'active' && 'text-foreground font-medium',
+          state === 'failed' && 'text-red-600 dark:text-red-400',
+          state === 'pending' && 'text-muted-foreground/50'
+        )}
+      >
+        {label}
+      </span>
+      <span
+        className={cn(
+          'text-xs tabular-nums font-medium',
+          state === 'active' && 'text-amber-600 dark:text-amber-400',
+          state === 'completed' && 'text-emerald-600 dark:text-emerald-400',
+          state === 'failed' && 'text-red-500',
+          state === 'pending' && 'text-muted-foreground/40'
+        )}
       >
         {stateLabel}
       </span>
@@ -119,14 +140,14 @@ function StageRow({ stage, state, label, stateLabel }: { stage: Stage; state: St
 function ProgressBar({ value }: { value: number }) {
   return (
     <div
-      className="h-2 bg-muted rounded-full overflow-hidden"
+      className="h-1.5 bg-muted/60 rounded-full overflow-hidden"
       role="progressbar"
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={100}
     >
       <div
-        className="h-full bg-orange-500 transition-all duration-500 rounded-full"
+        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500 ease-out"
         style={{ width: `${value}%` }}
       />
     </div>
@@ -137,12 +158,18 @@ function ProgressBar({ value }: { value: number }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function PdfProcessingStatus({ gameId, pdfFileName, onContinue, className }: PdfProcessingStatusProps) {
+export function PdfProcessingStatus({
+  gameId,
+  pdfFileName,
+  onContinue,
+  className,
+}: PdfProcessingStatusProps) {
   const { t } = useTranslation();
   const { data, isLoading } = usePdfProcessingStatus(gameId);
 
   const status = data?.status;
-  const progress = data?.progress ?? (status === 'indexed' ? 100 : status === 'processing' ? 68 : 0);
+  const progress =
+    data?.progress ?? (status === 'indexed' ? 100 : status === 'processing' ? 68 : 0);
   const stageStates = getStageStates(status);
 
   // Don't render if no gameId or no status available and not loading
@@ -152,26 +179,42 @@ export function PdfProcessingStatus({ gameId, pdfFileName, onContinue, className
 
   const stageLabelByState = (state: StageState) => {
     switch (state) {
-      case 'completed': return t('pdfIndexing.stageCompleted');
-      case 'active': return t('pdfIndexing.stageActive');
-      case 'failed': return t('pdfIndexing.stageFailed');
-      default: return t('pdfIndexing.stagePending');
+      case 'completed':
+        return t('pdfIndexing.stageCompleted');
+      case 'active':
+        return t('pdfIndexing.stageActive');
+      case 'failed':
+        return t('pdfIndexing.stageFailed');
+      default:
+        return t('pdfIndexing.stagePending');
     }
   };
 
   return (
     <div
-      className={[
-        'rounded-xl border border-orange-500/20 bg-orange-500/5 dark:bg-orange-900/10 px-5 py-4 space-y-4',
-        className ?? '',
-      ].join(' ')}
+      className={cn(
+        'rounded-xl border px-5 py-4 space-y-4',
+        status === 'indexed'
+          ? 'border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-900/10'
+          : status === 'failed'
+            ? 'border-red-500/20 bg-red-500/5 dark:bg-red-900/10'
+            : 'border-amber-500/20 bg-amber-500/5 dark:bg-amber-900/10',
+        className
+      )}
       data-testid="pdf-processing-status"
       aria-live="polite"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className={cn(
+              'text-sm font-semibold',
+              status === 'indexed' && 'text-emerald-700 dark:text-emerald-300',
+              status === 'failed' && 'text-red-700 dark:text-red-300',
+              !isTerminal && 'text-foreground'
+            )}
+          >
             {status === 'indexed'
               ? t('pdfIndexing.indexed')
               : status === 'failed'
@@ -183,12 +226,12 @@ export function PdfProcessingStatus({ gameId, pdfFileName, onContinue, className
           )}
         </div>
         {!isTerminal && (
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {t('pdfIndexing.progress', { progress })}
+          <span className="text-sm font-semibold text-amber-600 dark:text-amber-400 tabular-nums shrink-0">
+            {progress}%
           </span>
         )}
         {status === 'indexed' && data?.chunkCount && (
-          <span className="text-xs text-teal-600 dark:text-teal-400 tabular-nums">
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 tabular-nums shrink-0">
             {t('pdfIndexing.chunksCount', { count: data.chunkCount })}
           </span>
         )}
@@ -198,7 +241,7 @@ export function PdfProcessingStatus({ gameId, pdfFileName, onContinue, className
       {!isTerminal && <ProgressBar value={progress} />}
 
       {/* Stage rows */}
-      <div className="space-y-2">
+      <div className="space-y-0.5">
         {STAGES.map((stage, i) => (
           <StageRow
             key={stage.key}
@@ -212,19 +255,19 @@ export function PdfProcessingStatus({ gameId, pdfFileName, onContinue, className
 
       {/* Background note + Continue button */}
       {!isTerminal && (
-        <div className="flex items-start justify-between gap-4">
+        <div className="space-y-3">
           <p className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
-            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-orange-400" aria-hidden="true" />
+            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-400" aria-hidden="true" />
             {t('pdfIndexing.backgroundNote')}
           </p>
           {onContinue && (
             <Button
               size="sm"
-              variant="outline"
               onClick={onContinue}
-              className="shrink-0 text-xs"
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white"
             >
               {t('pdfIndexing.continueToAgent')}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
           )}
         </div>
@@ -235,9 +278,10 @@ export function PdfProcessingStatus({ gameId, pdfFileName, onContinue, className
         <Button
           size="sm"
           onClick={onContinue}
-          className="w-full"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
         >
           {t('pdfIndexing.continueToAgent')}
+          <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
         </Button>
       )}
     </div>

@@ -244,15 +244,16 @@ describe('EditorDashboardClient', () => {
     it('shows badge counts on tabs', async () => {
       render(<EditorDashboardClient />);
 
+      // Wait for data to load and badge counts to render
       await waitFor(() => {
-        expect(screen.getByRole('tab', { name: /Pending/i })).toBeInTheDocument();
+        const pendingTab = screen.getByRole('tab', { name: /Pending/i });
+        expect(within(pendingTab).getByText('1')).toBeInTheDocument(); // 1 Draft game
       });
 
-      const pendingTab = screen.getByRole('tab', { name: /Pending/i });
-      expect(within(pendingTab).getByText('1')).toBeInTheDocument(); // 1 Draft game
-
-      const inReviewTab = screen.getByRole('tab', { name: /In Review/i });
-      expect(within(inReviewTab).getByText('1')).toBeInTheDocument(); // 1 PendingApproval game
+      await waitFor(() => {
+        const inReviewTab = screen.getByRole('tab', { name: /In Review/i });
+        expect(within(inReviewTab).getByText('1')).toBeInTheDocument(); // 1 PendingApproval game
+      });
     });
   });
 
@@ -475,9 +476,12 @@ describe('EditorDashboardClient', () => {
 
       // Counter should eventually show final value
       const pendingCard = screen.getByTestId('stats-card-pending');
-      await waitFor(() => {
-        expect(within(pendingCard).getByText('1')).toBeInTheDocument();
-      }, { timeout: 1500 });
+      await waitFor(
+        () => {
+          expect(within(pendingCard).getByText('1')).toBeInTheDocument();
+        },
+        { timeout: 1500 }
+      );
     });
   });
 });

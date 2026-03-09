@@ -14,9 +14,8 @@ import React, { useState } from 'react';
 
 import { Loader2, RotateCcw, ChevronRight, RefreshCw } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-
 import type { TurnOrderData } from '@/components/session/types';
+import { cn } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -143,8 +142,7 @@ export function TurnOrderTool({
         {turnOrder.playerOrder.map((playerName: string, index: number) => {
           const isCurrent = index === turnOrder.currentIndex;
           const isNext =
-            !isCurrent &&
-            index === (turnOrder.currentIndex + 1) % turnOrder.playerOrder.length;
+            !isCurrent && index === (turnOrder.currentIndex + 1) % turnOrder.playerOrder.length;
 
           return (
             <li
@@ -153,7 +151,7 @@ export function TurnOrderTool({
                 'flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-300',
                 isCurrent
                   ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-400 dark:border-amber-600 shadow-sm'
-                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700',
+                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700'
               )}
               aria-current={isCurrent ? 'step' : undefined}
             >
@@ -163,7 +161,7 @@ export function TurnOrderTool({
                   'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
                   isCurrent
                     ? 'bg-amber-500 dark:bg-amber-400 text-white'
-                    : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400',
+                    : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'
                 )}
                 aria-hidden="true"
               >
@@ -176,7 +174,7 @@ export function TurnOrderTool({
                   'flex-1 text-sm font-medium',
                   isCurrent
                     ? 'text-amber-900 dark:text-amber-100'
-                    : 'text-stone-700 dark:text-stone-300',
+                    : 'text-stone-700 dark:text-stone-300'
                 )}
               >
                 {playerName}
@@ -213,7 +211,7 @@ export function TurnOrderTool({
                 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white',
                 'transition-colors duration-150',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
-                'disabled:opacity-60 disabled:cursor-not-allowed',
+                'disabled:opacity-60 disabled:cursor-not-allowed'
               )}
               aria-label="Fine turno — passa al prossimo giocatore"
             >
@@ -239,7 +237,7 @@ export function TurnOrderTool({
                 'hover:bg-stone-100 dark:hover:bg-stone-800',
                 'transition-colors duration-150',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
-                'disabled:opacity-60 disabled:cursor-not-allowed',
+                'disabled:opacity-60 disabled:cursor-not-allowed'
               )}
               aria-label="Reimposta ordine di turno al round 1"
               title="Reset"

@@ -1,21 +1,28 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import Link from 'next/link';
-import { ArrowLeftIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
+
 import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeftIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
 
-import { useQueueList, useJobDetail } from '../lib/queue-api';
-import type { QueueFilters } from '../lib/queue-api';
-import { useQueueSSE } from '../hooks/use-queue-sse';
-import { useJobSSE } from '../hooks/use-job-sse';
-import { QueueStatsBar } from './queue-stats-bar';
+import { BulkActionsBar } from './bulk-actions-bar';
+import { JobDetailPanel } from './job-detail-panel';
+import { MetricsDashboard } from './metrics-dashboard';
+import { QueueAlertsBanner } from './queue-alerts-banner';
+import { QueueCapacityIndicator } from './queue-capacity-indicator';
+import { QueueControlBar } from './queue-control-bar';
 import { QueueFiltersBar } from './queue-filters';
 import { QueueList } from './queue-list';
-import { JobDetailPanel } from './job-detail-panel';
+import { QueueStatsBar } from './queue-stats-bar';
 import { SSEConnectionIndicator } from './sse-connection-indicator';
+import { useJobSSE } from '../hooks/use-job-sse';
+import { useQueueSSE } from '../hooks/use-queue-sse';
+import { useQueueList, useJobDetail } from '../lib/queue-api';
+
+import type { QueueFilters } from '../lib/queue-api';
 
 export function QueueDashboardClient({ gameId }: { gameId?: string }) {
   const queryClient = useQueryClient();
@@ -34,7 +41,10 @@ export function QueueDashboardClient({ gameId }: { gameId?: string }) {
 
   // Reduce polling when SSE is active
   const { data: queueData, isLoading: isQueueLoading } = useQueueList(filters, sseConnected);
-  const { data: jobDetail, isLoading: isDetailLoading } = useJobDetail(selectedJobId, jobSseConnected);
+  const { data: jobDetail, isLoading: isDetailLoading } = useJobDetail(
+    selectedJobId,
+    jobSseConnected
+  );
 
   const handleSelectJob = useCallback((jobId: string) => {
     setSelectedJobId(jobId);
@@ -59,15 +69,14 @@ export function QueueDashboardClient({ gameId }: { gameId?: string }) {
               Processing Queue
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {gameId ? 'Processing jobs for selected game' : 'Monitor and manage PDF processing jobs'}
+              {gameId
+                ? 'Processing jobs for selected game'
+                : 'Monitor and manage PDF processing jobs'}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <SSEConnectionIndicator
-            state={queueSSEState}
-            onReconnect={reconnectQueueSSE}
-          />
+          <SSEConnectionIndicator state={queueSSEState} onReconnect={reconnectQueueSSE} />
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCwIcon className="h-4 w-4 mr-1" />
             Refresh
@@ -81,10 +90,22 @@ export function QueueDashboardClient({ gameId }: { gameId?: string }) {
         </div>
       </div>
 
+      {/* Proactive Alerts Banner (Issue #5460) */}
+      <QueueAlertsBanner />
+
+      {/* Queue Control Bar (Pause/Resume, Workers, Backpressure) */}
+      <QueueControlBar />
+
+      {/* Capacity Indicator */}
+      <QueueCapacityIndicator />
+
       {/* Stats Bar */}
       <QueueStatsBar />
 
-      {/* Filters */}
+      {/* Bulk Actions + Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <BulkActionsBar />
+      </div>
       <QueueFiltersBar filters={filters} onFiltersChange={setFilters} />
 
       {/* Main Content: List (40%) + Detail (60%) */}
@@ -106,6 +127,9 @@ export function QueueDashboardClient({ gameId }: { gameId?: string }) {
           <JobDetailPanel job={jobDetail} isLoading={isDetailLoading} />
         </div>
       </div>
+
+      {/* Metrics Dashboard */}
+      <MetricsDashboard />
     </div>
   );
 }

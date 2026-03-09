@@ -1,51 +1,59 @@
 /**
  * Discover Page — Community Game Catalog
- * Issue #5039 — Consolidate User Routes
+ * Issue #5041 — Migrate Game Catalog into /discover
  *
- * Consolidates community-facing game browsing into a single hub:
- * - Tab: Catalog (/discover → Sfoglia il catalogo)
- * - Tab: Proposals (/discover?tab=proposals → Le mie proposte)
- *
- * TODO (Issue #5041): Migrate full content from /games and /library/proposals.
+ * Tabs:
+ * - catalog (default): Full shared games catalog via CatalogContent
+ * - proposals: User game proposals via MyProposalsClient
+ * - community: Placeholder for future community features
  */
 
-import { DiscoverNavConfig } from './NavConfig';
+import { Suspense } from 'react';
+
+import MyProposalsClient from '@/app/(authenticated)/library/proposals/MyProposalsClient';
+import { CatalogContent } from '@/app/(public)/games/catalog/_content';
+import { MeepleGameCatalogCardSkeleton } from '@/components/catalog/MeepleGameCatalogCard';
 
 interface DiscoverPageProps {
   searchParams: Promise<{ tab?: string }>;
+}
+
+function CatalogSkeleton() {
+  return (
+    <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <MeepleGameCatalogCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
   const params = await searchParams;
   const tab = params.tab ?? 'catalog';
 
-  // Proposals tab — stub until Issue #5041 migrates full content here
   if (tab === 'proposals') {
+    return <MyProposalsClient catalogBasePath="/discover" />;
+  }
+
+  if (tab === 'community') {
     return (
       <div className="min-h-screen bg-background">
-        <DiscoverNavConfig />
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Le mie Proposte</h1>
-          <p className="mt-2 text-muted-foreground">
-            Le proposte sono in fase di migrazione. Disponibile con Issue #5041.
-          </p>
-          {/* TODO Issue #5041: Migrate MyProposalsClient content here */}
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Community</h1>
+          <p className="mt-2 text-muted-foreground">Funzionalità community in arrivo.</p>
         </div>
       </div>
     );
   }
 
-  // Default: catalog view — stub until Issue #5041
   return (
-    <div className="min-h-screen bg-background">
-      <DiscoverNavConfig />
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Scopri</h1>
-        <p className="mt-2 text-muted-foreground">
-          Sfoglia il catalogo comunitario dei giochi da tavolo.
-        </p>
-        {/* TODO Issue #5041: Render full game catalog with tabs */}
-      </div>
-    </div>
+    <Suspense fallback={<CatalogSkeleton />}>
+      <CatalogContent gameDetailBasePath="/discover" />
+    </Suspense>
   );
 }

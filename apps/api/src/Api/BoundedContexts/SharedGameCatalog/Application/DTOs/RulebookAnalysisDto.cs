@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 /// <summary>
 /// DTO for RulebookAnalysis.
 /// Issue #2402: Rulebook Analysis Service
+/// Issue #5454: Extended with KeyConcepts, GeneratedFaqs, GameStateSchema, CompletionStatus.
 /// </summary>
 public record RulebookAnalysisDto(
     Guid Id,
@@ -22,7 +23,12 @@ public record RulebookAnalysisDto(
     bool IsActive,
     GenerationSource Source,
     DateTime AnalyzedAt,
-    Guid CreatedBy
+    Guid CreatedBy,
+    List<KeyConceptDto> KeyConcepts = default!,
+    List<GeneratedFaqDto> GeneratedFaqs = default!,
+    string? GameStateSchemaJson = null,
+    string CompletionStatus = "Complete",
+    List<string>? MissingSections = null
 );
 
 /// <summary>
@@ -53,6 +59,28 @@ public record GamePhaseDto(
     string Description,
     int Order,
     bool IsOptional
+);
+
+/// <summary>
+/// DTO for KeyConcept value object.
+/// Issue #5454: Analysis results UI.
+/// </summary>
+public record KeyConceptDto(
+    string Term,
+    string Definition,
+    string Category
+);
+
+/// <summary>
+/// DTO for GeneratedFaq value object.
+/// Issue #5454: Analysis results UI.
+/// </summary>
+public record GeneratedFaqDto(
+    string Question,
+    string Answer,
+    string SourceSection,
+    decimal Confidence,
+    List<string> Tags
 );
 
 /// <summary>

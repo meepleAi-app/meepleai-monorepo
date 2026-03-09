@@ -35,6 +35,12 @@ import {
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
+import type {
+  BackendModelDto,
+  GetModelsResponse,
+  BackendAgentConfigurationDto,
+  UpdateAgentConfigurationRequest,
+} from '../schemas/agent-config.schemas';
 
 export interface CreateAgentsClientParams {
   httpClient: HttpClient;
@@ -156,11 +162,14 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         success: boolean;
         typologies: Typology[];
         total: number;
-      }>(url, z.object({
-        success: z.boolean(),
-        typologies: z.array(typologySchema),
-        total: z.number(),
-      }));
+      }>(
+        url,
+        z.object({
+          success: z.boolean(),
+          typologies: z.array(typologySchema),
+          total: z.number(),
+        })
+      );
 
       return response?.typologies ?? [];
     },
@@ -477,7 +486,10 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * POST /api/v1/agent-typologies/{id}/test
      * Issue #4962: Wire agent test console to real backend API
      */
-    async testTypology(typologyId: string, testQuery: string): Promise<{
+    async testTypology(
+      typologyId: string,
+      testQuery: string
+    ): Promise<{
       success: boolean;
       response: string;
       confidenceScore: number;
@@ -486,10 +498,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         success: boolean;
         response: string;
         confidenceScore: number;
-      }>(
-        `/api/v1/agent-typologies/${encodeURIComponent(typologyId)}/test`,
-        { testQuery }
-      );
+      }>(`/api/v1/agent-typologies/${encodeURIComponent(typologyId)}/test`, { testQuery });
 
       if (!response) {
         throw new Error('Failed to test agent typology: no response from server');
@@ -537,6 +546,32 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       }
 
       return saved;
+    },
+
+    /**
+     * Update a user-owned agent (name, strategy)
+     * PUT /api/v1/agents/{id}/user
+     * Issue #4683: User Agent CRUD Endpoints
+     */
+    async updateUserAgent(
+      agentId: string,
+      request: {
+        name?: string;
+        strategyName?: string;
+        strategyParameters?: Record<string, unknown>;
+      }
+    ): Promise<AgentDto> {
+      const response = await httpClient.put<AgentDto>(
+        `/api/v1/agents/${encodeURIComponent(agentId)}/user`,
+        request,
+        AgentDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to update user agent: no response from server');
+      }
+
+      return response;
     },
 
     // ========== Agent Chat SSE (Issue #4126) ==========
@@ -607,6 +642,41 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       } finally {
         reader.releaseLock();
       }
+    },
+
+    // ========== Model & Agent Configuration ==========
+
+    /** Get available AI models, optionally filtered by tier */
+    async getModels(tier?: string): Promise<BackendModelDto[]> {
+      const params = tier ? `?tier=${encodeURIComponent(tier)}` : '';
+      const response = await httpClient.get<GetModelsResponse>(`/api/v1/models${params}`);
+      return response?.models ?? [];
+    },
+
+    /** Get current LLM configuration for an agent */
+    async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
+      const response = await httpClient.get<BackendAgentConfigurationDto>(
+        `/api/v1/agents/${agentId}/configuration`
+      );
+      if (!response) {
+        throw new Error('Failed to get agent configuration: no response from server');
+      }
+      return response;
+    },
+
+    /** Patch LLM configuration for an agent (partial update) */
+    async updateAgentConfiguration(
+      agentId: string,
+      config: UpdateAgentConfigurationRequest
+    ): Promise<BackendAgentConfigurationDto> {
+      const response = await httpClient.patch<BackendAgentConfigurationDto>(
+        `/api/v1/agents/${agentId}/configuration`,
+        config
+      );
+      if (!response) {
+        throw new Error('Failed to update agent configuration: no response from server');
+      }
+      return response;
     },
   };
 }

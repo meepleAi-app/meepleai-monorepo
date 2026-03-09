@@ -1,3 +1,4 @@
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 using Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;

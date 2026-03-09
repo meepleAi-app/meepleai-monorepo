@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 import { type Metadata } from 'next';
 
 import { PermissionsMatrix } from '@/components/admin/users/permissions-matrix';
-import { RoleCardsGrid } from '@/components/admin/users/role-cards-grid';
 
 export const metadata: Metadata = {
   title: 'Roles & Permissions',
@@ -21,7 +20,6 @@ function CardSkeleton({ height = 'h-[180px]' }: { height?: string }) {
 export default function RolesPermissionsPage() {
   return (
     <div className="space-y-8">
-      {/* Page Header */}
       <div>
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
           Roles & Permissions
@@ -30,19 +28,6 @@ export default function RolesPermissionsPage() {
           Manage user roles and access control across the platform
         </p>
       </div>
-
-      {/* Role Overview Cards - Real API Data */}
-      <Suspense
-        fallback={
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <CardSkeleton key={i} />
-            ))}
-          </div>
-        }
-      >
-        <RoleCardsGrid />
-      </Suspense>
 
       {/* Permissions Matrix */}
       <Suspense fallback={<CardSkeleton height="h-[600px]" />}>

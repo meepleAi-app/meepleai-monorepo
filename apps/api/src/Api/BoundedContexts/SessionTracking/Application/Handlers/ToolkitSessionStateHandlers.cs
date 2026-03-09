@@ -2,7 +2,9 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -68,15 +70,18 @@ internal sealed class UpdateWidgetStateCommandHandler
     private readonly IToolkitSessionStateRepository _repository;
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISessionSyncService _syncService;
 
     public UpdateWidgetStateCommandHandler(
         IToolkitSessionStateRepository repository,
         ISessionRepository sessionRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISessionSyncService syncService)
     {
         _repository = repository;
         _sessionRepository = sessionRepository;
         _unitOfWork = unitOfWork;
+        _syncService = syncService;
     }
 
     public async Task<ToolkitSessionStateDto> Handle(
@@ -105,6 +110,17 @@ internal sealed class UpdateWidgetStateCommandHandler
 
         state.UpdateWidgetState(request.WidgetType, request.StateJson);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Broadcast widget state change to all session participants via SSE
+        var evt = new WidgetStateUpdatedEvent(
+            request.SessionId,
+            request.ToolkitId,
+            request.WidgetType,
+            request.StateJson,
+            request.UserId,
+            DateTime.UtcNow);
+        await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken)
+            .ConfigureAwait(false);
 
         return ToolkitSessionStateMapper.ToDto(state);
     }

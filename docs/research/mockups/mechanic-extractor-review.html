@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="it" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleAI — Mechanic Extractor &mdash; Review &amp; Export</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --color-background: #faf9f7;
+      --color-foreground: #1c1917;
+      --color-card: #ffffff;
+      --color-muted: #f5f3f0;
+      --color-muted-foreground: #78716c;
+      --color-border: #e7e5e4;
+      --color-primary: #f59e0b;
+      --color-accent: #fef3c7;
+      --color-accent-foreground: #92400e;
+      --glass-bg: rgba(255,255,255,0.72);
+      --glass-border: rgba(251,191,36,0.25);
+      --glass-blur: blur(12px);
+      --glass-shadow: 0 8px 32px rgba(31,38,135,0.08);
+      --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.12), 0 1px 2px rgba(180,130,80,0.08);
+      --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.15), 0 2px 4px rgba(180,130,80,0.08);
+      --transition-base: 200ms cubic-bezier(0.4,0,0.2,1);
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+    }
+    .dark {
+      --color-background: #1c1917;
+      --color-foreground: #fafaf9;
+      --color-card: #292524;
+      --color-muted: #292524;
+      --color-muted-foreground: #a8a29e;
+      --color-border: #44403c;
+      --color-accent: #451a03;
+      --color-accent-foreground: #fef3c7;
+      --glass-bg: rgba(41,37,36,0.78);
+      --glass-border: rgba(251,191,36,0.18);
+      --glass-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: var(--color-background);
+      color: var(--color-foreground);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' /%3E%3C/svg%3E");
+      opacity: 0.015;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    h1, h2, h3, h4 { font-family: 'Quicksand', sans-serif; font-weight: 700; letter-spacing: -0.025em; }
+
+    /* TopNav (simplified) */
+    .topnav {
+      position: fixed; top: 0; left: 0; right: 0; height: 56px;
+      background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--glass-border); box-shadow: var(--shadow-warm-sm);
+      display: flex; align-items: center; padding: 0 1.5rem; z-index: 100; gap: 1rem;
+    }
+    .topnav .brand { display: flex; align-items: center; gap: 0.5rem; font-family: 'Quicksand'; font-weight: 700; font-size: 1.125rem; }
+    .topnav .meeple-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #f59e0b, #f97316); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; }
+    .topnav .spacer { flex: 1; }
+    .topnav .back-link { font-size: 0.8125rem; color: var(--color-muted-foreground); text-decoration: none; display: flex; align-items: center; gap: 0.375rem; }
+    .topnav .back-link:hover { color: var(--color-foreground); }
+    .theme-toggle { width: 36px; height: 36px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-card); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+    /* Main */
+    .main { margin-top: 72px; padding: 1.5rem; max-width: 900px; margin-left: auto; margin-right: auto; }
+
+    /* Header */
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+    .page-header h1 { font-size: 1.5rem; }
+    .page-header .subtitle { font-size: 0.875rem; color: var(--color-muted-foreground); margin-top: 0.25rem; }
+
+    /* Card */
+    .card {
+      background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border); border-radius: var(--radius-xl);
+      box-shadow: var(--glass-shadow); overflow: hidden; margin-bottom: 1.5rem;
+    }
+    .card-header {
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--color-border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--color-card);
+    }
+    .card-header h2 { font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .card-body { padding: 1.5rem; }
+
+    /* Section */
+    .section { margin-bottom: 1.5rem; }
+    .section:last-child { margin-bottom: 0; }
+    .section-title {
+      font-family: 'Quicksand'; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-primary);
+      margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.375rem;
+    }
+    .section p { font-size: 0.875rem; line-height: 1.7; }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+    .chip {
+      padding: 0.25rem 0.625rem; border-radius: var(--radius-md);
+      font-size: 0.75rem; font-weight: 600;
+      background: var(--color-accent); color: var(--color-accent-foreground);
+      border: 1px solid rgba(245,158,11,0.2);
+    }
+
+    /* Table */
+    .resources-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    .resources-table th {
+      text-align: left; padding: 0.5rem 0.75rem; font-size: 0.6875rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--color-muted-foreground); border-bottom: 2px solid var(--color-border);
+      font-family: 'Quicksand';
+    }
+    .resources-table td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border); }
+    .resources-table tr:last-child td { border-bottom: none; }
+    .resources-table tr:hover td { background: rgba(245,158,11,0.03); }
+
+    /* Phases */
+    .phase-item {
+      display: flex; gap: 0.75rem; padding: 0.75rem 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .phase-item:last-child { border-bottom: none; }
+    .phase-number {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: white; font-family: 'Quicksand'; font-weight: 700; font-size: 0.75rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .phase-content { flex: 1; }
+    .phase-name { font-weight: 700; font-size: 0.875rem; margin-bottom: 0.125rem; }
+    .phase-desc { font-size: 0.8125rem; color: var(--color-muted-foreground); }
+
+    /* FAQ */
+    .faq-item { margin-bottom: 1rem; }
+    .faq-item:last-child { margin-bottom: 0; }
+    .faq-q { font-weight: 700; font-size: 0.875rem; margin-bottom: 0.25rem; color: var(--color-foreground); }
+    .faq-a { font-size: 0.8125rem; color: var(--color-muted-foreground); line-height: 1.6; padding-left: 1rem; border-left: 2px solid var(--color-primary); }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.6875rem; font-weight: 600; }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+    .dark .badge-green { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+
+    /* Buttons */
+    .btn { padding: 0.5rem 1rem; border-radius: var(--radius-md); font-size: 0.8125rem; font-weight: 600; font-family: 'Nunito'; cursor: pointer; transition: all var(--transition-base); border: 1px solid transparent; display: inline-flex; align-items: center; gap: 0.375rem; }
+    .btn-primary { background: linear-gradient(135deg, #f59e0b, #f97316); color: white; border: none; box-shadow: 0 2px 8px rgba(245,158,11,0.25); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(245,158,11,0.35); }
+    .btn-outline { background: var(--color-card); color: var(--color-foreground); border-color: var(--color-border); }
+    .btn-outline:hover { border-color: var(--color-primary); background: var(--color-accent); }
+
+    /* Stats Bar */
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card {
+      background: var(--color-card); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); padding: 1rem; text-align: center;
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-warm-md); }
+    .stat-value { font-family: 'Quicksand'; font-size: 1.5rem; font-weight: 700; color: var(--color-primary); }
+    .stat-label { font-size: 0.6875rem; color: var(--color-muted-foreground); margin-top: 0.25rem; }
+
+    /* Footer */
+    .copyright-footer {
+      margin-top: 2rem; padding: 1.25rem; border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02));
+      border: 1px solid rgba(16,185,129,0.2); text-align: center;
+      font-size: 0.75rem; color: #065f46;
+    }
+    .dark .copyright-footer { color: #6ee7b7; }
+
+    /* Action bar */
+    .action-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 0; border-top: 1px solid var(--color-border); margin-top: 2rem;
+    }
+    .action-bar .btn-group { display: flex; gap: 0.5rem; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.3); border-radius: 3px; }
+
+    @media (max-width: 640px) {
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    body, .topnav, .card, .card-header {
+      transition: background-color 300ms, color 300ms, border-color 300ms;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TopNav -->
+  <nav class="topnav">
+    <div class="brand">
+      <div class="meeple-icon">&#9823;</div>
+      <span>MeepleAI</span>
+    </div>
+    <a class="back-link" href="mechanic-extractor.html">&#8592; Torna all'editor</a>
+    <div class="spacer"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">&#127769;</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>I Coloni di Catan &mdash; Anteprima Analisi</h1>
+        <p class="subtitle">Revisione finale prima dell'attivazione nella Knowledge Base</p>
+      </div>
+      <span class="badge badge-green">&#9989; 6/6 sezioni completate</span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-value">6</div>
+        <div class="stat-label">Sezioni completate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">7</div>
+        <div class="stat-label">Meccaniche estratte</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">5</div>
+        <div class="stat-label">Risorse catalogate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">852</div>
+        <div class="stat-label">Token AI utilizzati</div>
+      </div>
+    </div>
+
+    <!-- Summary Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>&#128214; Sommario del Gioco</h2>
+        <span class="badge badge-green">Originale</span>
+      </div>
+      <div class="card-body">
+        <p>
+          Catan &egrave; un gioco competitivo di strategia e negoziazione in cui 3-4 partecipanti
+          si contendono il dominio di un'isola modulare formata da tessere esagonali, ciascuna
+          associata a una risorsa naturale. Durante la partita, i giocatori espandono la propria
+          rete infrastrutturale &mdash; costruendo strade, villaggi e centri urbani &mdash; e interagiscono
+          attraverso scambi commerciali. La vittoria spetta al primo giocatore che accumula
+          10 punti, ottenibili attraverso espansione territoriale, sviluppo tecnologico e
+          obiettivi speciali.
+        </p>
+      </div>
+    </div>
+
+    <!-- Mechanics Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>&#127922; Meccaniche di Gioco</h2>
+        <span class="badge badge-amber">7 meccaniche</span>
+      </div>
+      <div class="card-body">
+        <div class="chips">
+          <span class="chip">Piazzamento su Mappa</span>
+          <span class="chip">Raccolta Risorse</span>
+          <span class="chip">Commercio tra Giocatori</span>
+          <span class="chip">Costruzione con Set Collecting</span>
+          <span class="chip">Lancio Dadi</span>
+          <span class="chip">Carte Sviluppo</span>
+          <span class="chip">Interferenza (Ladro)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Victory Conditions Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>&#127942; Condizioni di Vittoria</h2>
+        <span class="badge badge-green">Originale</span>
+      </div>
+      <div class="card-body">
+        <div class="section">
+          <p><strong>Obiettivo principale:</strong> Raggiungere 10 punti vittoria.</p>
+        </div>
+        <div class="section">
+          <div class="section-title">Fonti di Punti</div>
+          <p>
+            &bull; Villaggio: 1 punto<br>
+            &bull; Citt&agrave;: 2 punti<br>
+            &bull; Strada Pi&ugrave; Lunga (min. 5 segmenti consecutivi): 2 punti<br>
+            &bull; Esercito Pi&ugrave; Grande (min. 3 carte cavaliere giocate): 2 punti<br>
+            &bull; Carte Punto Vittoria: 1 punto ciascuna
+          </p>
+        </div>
+        <p style="font-size:0.8125rem;font-style:italic;color:var(--color-muted-foreground);margin-top:0.75rem;">
+          Il sistema &egrave; basato su punti con possibilit&agrave; di accumulo tramite diverse strategie,
+          incentivando approcci di gioco differenziati.
+        </p>
+      </div>
+    </div>
+
+    <!-- Resources Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>&#128230; Risorse</h2>
+        <span class="badge badge-amber">5 risorse</span>
+      </div>
+      <div class="card-body">
+        <table class="resources-table">
+          <thead>
+            <tr>
+              <th>Risorsa</th>
+              <th>Tipo</th>
+              <th>Utilizzo</th>
+              <th>Limitata</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Legno</strong></td><td>Naturale</td><td>Costruzione strade e insediamenti</td><td>S&igrave;</td></tr>
+            <tr><td><strong>Argilla</strong></td><td>Naturale</td><td>Costruzione strade e insediamenti</td><td>S&igrave;</td></tr>
+            <tr><td><strong>Grano</strong></td><td>Agricola</td><td>Insediamenti, citt&agrave;, carte sviluppo</td><td>S&igrave;</td></tr>
+            <tr><td><strong>Lana</strong></td><td>Animale</td><td>Insediamenti e carte sviluppo</td><td>S&igrave;</td></tr>
+            <tr><td><strong>Minerale</strong></td><td>Minerario</td><td>Citt&agrave; e carte sviluppo</td><td>S&igrave;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Game Phases Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>&#128260; Fasi di Gioco</h2>
+        <span class="badge badge-amber">3 fasi</span>
+      </div>
+      <div class="card-body">
+        <div class="phase-item">
+          <div class="phase-number">1</div>
+          <div class="phase-content">
+            <div class="phase-name">Produzione Risorse</div>
+            <div class="phase-desc">Il giocatore attivo lancia due dadi. Tutti i giocatori con insediamenti o citt&agrave; adiacenti agli esagoni corrispondenti ricevono le risorse associate. Se esce 7, si attiva il ladro.</div>
+          </div>
+        </div>
+        <div class="phase-item">
+          <div class="phase-number">2</div>
+          <div class="phase-content">
+            <div class="phase-name">Commercio</div>
+            <div class="phase-desc">Il giocatore attivo pu&ograve; scambiare risorse con gli altri giocatori (negoziazione libera) o con la banca (4:1, o rapporti migliori tramite porti).</div>
+          </div>
+        </div>
+        <div class="phase-item">
+          <div class="phase-number">3</div>
+          <div class="phase-content">
+            <div class="phase-name">Costruzione</div>
+            <div class="phase-desc">Il giocatore attivo pu&ograve; spendere risorse per costruire strade, insediamenti, citt&agrave; o acquistare carte sviluppo. Ogni costruzione ha un costo specifico in risorse.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2>&#10067; Domande Frequenti</h2>
+        <span class="badge badge-amber">4 FAQ</span>
+      </div>
+      <div class="card-body">
+        <div class="faq-item">
+          <div class="faq-q">Posso costruire ovunque sulla mappa?</div>
+          <div class="faq-a">No, gli insediamenti devono essere piazzati su incroci liberi e rispettare la regola della distanza: almeno due segmenti stradali di separazione da qualsiasi altro insediamento.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Cosa succede quando esce il 7?</div>
+          <div class="faq-a">Chi ha pi&ugrave; di 7 carte risorsa deve scartarne met&agrave;. Il giocatore attivo muove il ladro su un esagono a scelta, bloccandone la produzione, e ruba una carta a un giocatore adiacente.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Come funzionano i porti?</div>
+          <div class="faq-a">I porti permettono di scambiare risorse con la banca a rapporti favorevoli: i porti generici offrono 3:1, quelli specializzati 2:1 per una risorsa specifica.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Si possono giocare pi&ugrave; carte sviluppo per turno?</div>
+          <div class="faq-a">No, si pu&ograve; giocare solo una carta sviluppo per turno. Le carte appena acquistate non possono essere giocate nello stesso turno.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copyright Footer -->
+    <div class="copyright-footer">
+      &#128737;&#65039; <strong>&copy; 2026 MeepleAI</strong> &mdash; Contenuto originale. Meccaniche di gioco descritte indipendentemente.<br>
+      <span style="font-size:0.6875rem;opacity:0.8;">Generato con Variant C (human + AI assistant). L'AI non ha mai letto il testo del PDF originale.</span>
+    </div>
+
+    <!-- Actions -->
+    <div class="action-bar">
+      <a class="btn btn-outline" href="mechanic-extractor.html">&#8592; Torna all'editor</a>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="alert('PDF generato con successo!')">&#128229; Esporta PDF</button>
+        <button class="btn btn-primary" onclick="alert('Analisi attivata nella Knowledge Base!')">&#9989; Attiva nella Knowledge Base</button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    function toggleTheme() {
+      var html = document.documentElement;
+      var btn = document.getElementById('themeBtn');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        btn.textContent = '\uD83C\uDF19';
+      } else {
+        html.classList.add('dark');
+        btn.textContent = '\u2600\uFE0F';
+      }
+    }
+  </script>
+
+</body>
+</html>

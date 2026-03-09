@@ -1,11 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getAdminBudgetOverview, type AdminBudgetOverviewDto } from '@/lib/api/clients/budgetClient';
+
+import { AlertCircle, DollarSign, Euro } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle, DollarSign, Euro } from 'lucide-react';
+import {
+  getAdminBudgetOverview,
+  type AdminBudgetOverviewDto,
+} from '@/lib/api/clients/budgetClient';
 
 interface BudgetDebugPanelProps {
   className?: string;
@@ -72,11 +77,19 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
     );
   }
 
-  const dailyStatus = overview.dailyUsagePercent >= 95 ? 'critical' :
-                      overview.dailyUsagePercent >= 80 ? 'warning' : 'ok';
+  const dailyStatus =
+    overview.dailyUsagePercent >= 95
+      ? 'critical'
+      : overview.dailyUsagePercent >= 80
+        ? 'warning'
+        : 'ok';
 
-  const weeklyStatus = overview.weeklyUsagePercent >= 95 ? 'critical' :
-                       overview.weeklyUsagePercent >= 80 ? 'warning' : 'ok';
+  const weeklyStatus =
+    overview.weeklyUsagePercent >= 95
+      ? 'critical'
+      : overview.weeklyUsagePercent >= 80
+        ? 'warning'
+        : 'ok';
 
   return (
     <Card className={className}>
@@ -105,7 +118,15 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
               <DollarSign className="mr-2 h-4 w-4" />
               Daily Budget
             </span>
-            <Badge variant={dailyStatus === 'ok' ? 'outline' : dailyStatus === 'warning' ? 'default' : 'destructive'}>
+            <Badge
+              variant={
+                dailyStatus === 'ok'
+                  ? 'outline'
+                  : dailyStatus === 'warning'
+                    ? 'default'
+                    : 'destructive'
+              }
+            >
               {overview.dailyUsagePercent}%
             </Badge>
           </div>
@@ -118,9 +139,11 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
               value={overview.dailyUsagePercent}
               className="h-2"
               indicatorClassName={
-                dailyStatus === 'critical' ? 'bg-destructive' :
-                dailyStatus === 'warning' ? 'bg-yellow-500' :
-                'bg-primary'
+                dailyStatus === 'critical'
+                  ? 'bg-destructive'
+                  : dailyStatus === 'warning'
+                    ? 'bg-yellow-500'
+                    : 'bg-primary'
               }
             />
           </div>
@@ -133,7 +156,15 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
               <DollarSign className="mr-2 h-4 w-4" />
               Weekly Budget
             </span>
-            <Badge variant={weeklyStatus === 'ok' ? 'outline' : weeklyStatus === 'warning' ? 'default' : 'destructive'}>
+            <Badge
+              variant={
+                weeklyStatus === 'ok'
+                  ? 'outline'
+                  : weeklyStatus === 'warning'
+                    ? 'default'
+                    : 'destructive'
+              }
+            >
               {overview.weeklyUsagePercent}%
             </Badge>
           </div>
@@ -146,9 +177,11 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
               value={overview.weeklyUsagePercent}
               className="h-2"
               indicatorClassName={
-                weeklyStatus === 'critical' ? 'bg-destructive' :
-                weeklyStatus === 'warning' ? 'bg-yellow-500' :
-                'bg-primary'
+                weeklyStatus === 'critical'
+                  ? 'bg-destructive'
+                  : weeklyStatus === 'warning'
+                    ? 'bg-yellow-500'
+                    : 'bg-primary'
               }
             />
           </div>
@@ -161,9 +194,7 @@ export function BudgetDebugPanel({ className }: BudgetDebugPanelProps) {
               <AlertCircle className="mr-2 mt-0.5 h-4 w-4 text-destructive" />
               <div className="text-xs">
                 <div className="font-semibold text-destructive">Budget Alert</div>
-                <div className="text-muted-foreground">
-                  System may auto-switch to free models
-                </div>
+                <div className="text-muted-foreground">System may auto-switch to free models</div>
               </div>
             </div>
           </div>

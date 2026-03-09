@@ -109,5 +109,63 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.Property(e => e.IndexingStartedAt)
             .HasColumnName("indexing_started_at")
             .IsRequired(false);
+
+        // Issue #5443: Document classification for pipeline routing
+        builder.Property(e => e.DocumentCategory)
+            .IsRequired()
+            .HasMaxLength(32)
+            .HasColumnName("document_category")
+            .HasDefaultValue("Rulebook");
+
+        builder.HasIndex(e => e.DocumentCategory)
+            .HasDatabaseName("ix_pdf_documents_document_category");
+
+        // Issue #5444: Self-referential FK for expansion/errata linkage
+        builder.Property(e => e.BaseDocumentId)
+            .HasColumnName("base_document_id")
+            .IsRequired(false);
+
+        builder.HasOne(e => e.BaseDocument)
+            .WithMany()
+            .HasForeignKey(e => e.BaseDocumentId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(e => e.BaseDocumentId)
+            .HasDatabaseName("ix_pdf_documents_base_document_id");
+
+        // Issue #5446: Copyright disclaimer and RAG active toggle
+        builder.Property(e => e.CopyrightDisclaimerAcceptedAt)
+            .HasColumnName("copyright_disclaimer_accepted_at")
+            .IsRequired(false);
+
+        builder.Property(e => e.CopyrightDisclaimerAcceptedBy)
+            .HasColumnName("copyright_disclaimer_accepted_by")
+            .IsRequired(false);
+
+        builder.Property(e => e.IsActiveForRag)
+            .IsRequired()
+            .HasColumnName("is_active_for_rag")
+            .HasDefaultValue(true);
+
+        builder.HasIndex(e => e.IsActiveForRag)
+            .HasDatabaseName("ix_pdf_documents_is_active_for_rag");
+
+        // Issue #5447: User-editable version label
+        builder.Property(e => e.VersionLabel)
+            .HasMaxLength(100)
+            .HasColumnName("version_label")
+            .IsRequired(false);
+
+        // PDF deduplication: SHA-256 content hash
+        builder.Property(e => e.ContentHash)
+            .HasMaxLength(64)
+            .HasColumnName("content_hash")
+            .IsRequired(false);
+
+        builder.HasIndex(e => new { e.ContentHash, e.GameId })
+            .HasDatabaseName("ix_pdf_documents_content_hash_game_id");
+
+        builder.HasIndex(e => new { e.ContentHash, e.PrivateGameId })
+            .HasDatabaseName("ix_pdf_documents_content_hash_private_game_id");
     }
 }

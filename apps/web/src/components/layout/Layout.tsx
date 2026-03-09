@@ -61,7 +61,7 @@ export function Layout({
   const { isMobile, isDesktop: _isDesktop } = responsive;
 
   // Calculate bottom padding based on visible elements
-  // ActionBar: 56px + safe-area, BottomNav: 72px
+  // ActionBar: 56px + safe-area, bottom nav: 72px
   const bottomPadding = isMobile
     ? showActionBar
       ? 'pb-[calc(72px+56px+env(safe-area-inset-bottom))]'
@@ -117,12 +117,7 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({
-  title,
-  description,
-  actions,
-  className,
-}: PageHeaderProps) {
+export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
   return (
     <div
       className={cn(
@@ -132,20 +127,12 @@ export function PageHeader({
       )}
     >
       <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight sm:text-3xl">
-          {title}
-        </h1>
+        <h1 className="font-quicksand text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
         {description && (
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {description}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">{description}</p>
         )}
       </div>
-      {actions && (
-        <div className="mt-4 flex items-center gap-2 sm:mt-0">
-          {actions}
-        </div>
-      )}
+      {actions && <div className="mt-4 flex items-center gap-2 sm:mt-0">{actions}</div>}
     </div>
   );
 }
@@ -171,11 +158,7 @@ const maxWidthClasses = {
   full: 'max-w-full',
 };
 
-export function PageContent({
-  children,
-  className,
-  maxWidth = 'full',
-}: PageContentProps) {
+export function PageContent({ children, className, maxWidth = 'full' }: PageContentProps) {
   return (
     <div
       className={cn(
@@ -207,29 +190,12 @@ export interface EmptyStateProps {
   className?: string;
 }
 
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-  className,
-}: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center py-12 text-center',
-        className
-      )}
-    >
-      {icon && (
-        <div className="mb-4 text-muted-foreground">{icon}</div>
-      )}
+    <div className={cn('flex flex-col items-center justify-center py-12 text-center', className)}>
+      {icon && <div className="mb-4 text-muted-foreground">{icon}</div>}
       <h3 className="font-quicksand text-lg font-semibold">{title}</h3>
-      {description && (
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          {description}
-        </p>
-      )}
+      {description && <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -245,16 +211,10 @@ export interface LoadingStateProps {
   className?: string;
 }
 
-export function LoadingState({
-  message = 'Caricamento...',
-  className,
-}: LoadingStateProps) {
+export function LoadingState({ message = 'Caricamento...', className }: LoadingStateProps) {
   return (
     <div
-      className={cn(
-        'flex flex-col items-center justify-center py-12',
-        className
-      )}
+      className={cn('flex flex-col items-center justify-center py-12', className)}
       role="status"
       aria-busy="true"
       aria-label={message}

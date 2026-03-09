@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -25,7 +25,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
-using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration;
 

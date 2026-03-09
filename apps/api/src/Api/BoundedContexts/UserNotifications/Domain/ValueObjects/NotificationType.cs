@@ -67,6 +67,9 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5085: Daily OpenRouter usage digest sent at 08:00 UTC (admin)
     public static readonly NotificationType AdminOpenRouterDailySummary = new("admin_openrouter_daily_summary");
 
+    // ISSUE-5477: Redis rate-limiting subsystem degradation alert (admin)
+    public static readonly NotificationType AdminRedisRateLimitingDegraded = new("admin_redis_rate_limiting_degraded");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -120,6 +123,7 @@ internal sealed class NotificationType : ValueObject
             "admin_openrouter_budget_alert" => AdminOpenRouterBudgetAlert,
             "admin_circuit_breaker_state_changed" => AdminCircuitBreakerStateChanged,
             "admin_openrouter_daily_summary" => AdminOpenRouterDailySummary,
+            "admin_redis_rate_limiting_degraded" => AdminRedisRateLimitingDegraded,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

@@ -17,6 +17,9 @@
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-pulse-meeple: pulseMeeple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 
+  /* Voice UI animations */
+  --animate-voice-pulse: voice-pulse 1.5s ease-in-out infinite;
+
   /* MeepleCard v2 animations (Issue #4604) */
   --animate-mc-shimmer: mc-shimmer 0.8s ease-out forwards;
   --animate-mc-float-up: mc-float-up 0.35s ease-out both;
@@ -74,7 +77,12 @@
   }
 }
 
-/* MeepleCard v2 animations (Issue #4604) */
+/* Voice UI animations */
+@keyframes voice-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 0; }
+}
+
 @keyframes mc-shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
@@ -223,6 +231,15 @@
     text-wrap: balance;
   }
 
+  /* Hide scrollbar for horizontal-scroll chip rows on mobile */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* MeepleAI Hover Effects - Issue #2848 */
   .hover-card {
     @apply transition-all duration-300;
@@ -296,7 +313,7 @@
   }
 }
 
-/* Accessibility - Reduce Motion Support (Issue #2848, #2905) */
+/* Accessibility - Reduce Motion Support (Issue #2848, #2905, Mobile UX Epic Issue 8) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -304,12 +321,30 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable smooth scrolling on html/body */
+  html,
+  body {
+    scroll-behavior: auto !important;
   }
 
   .animate-pulse-meeple,
   .animate-pulse-slow,
-  .animate-bounce-slow {
+  .animate-bounce-slow,
+  .animate-voice-pulse {
     animation: none !important;
+  }
+
+  /* Tailwind animate-in / slide-in / fade-in utility classes */
+  .animate-in,
+  .fade-in-0,
+  .slide-in-from-bottom-4,
+  .slide-in-from-top-4 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   .hover-card:hover,

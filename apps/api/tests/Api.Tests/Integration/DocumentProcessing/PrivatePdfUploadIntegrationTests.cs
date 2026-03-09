@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Application.EventHandlers;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 

@@ -18,8 +18,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
-import type { NavAction } from '@/types/navigation';
 import { cn } from '@/lib/utils';
+import type { NavAction } from '@/types/navigation';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -71,8 +71,9 @@ export function ActionBarButton({ action, compact = false }: ActionBarButtonProp
         // Variant: ghost
         action.variant === 'ghost' && [
           'text-foreground/80 hover:bg-accent hover:text-foreground',
-          isDisabled && 'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground/80',
-        ],
+          isDisabled &&
+            'opacity-50 cursor-not-allowed hover:bg-transparent hover:text-foreground/80',
+        ]
       )}
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -85,7 +86,7 @@ export function ActionBarButton({ action, compact = false }: ActionBarButtonProp
             'absolute -top-1 -right-1',
             'inline-flex h-4 min-w-[1rem] items-center justify-center',
             'rounded-full px-1 text-[10px] font-semibold tabular-nums',
-            'bg-destructive text-destructive-foreground',
+            'bg-destructive text-destructive-foreground'
           )}
           aria-label={`${action.badge} items`}
         >

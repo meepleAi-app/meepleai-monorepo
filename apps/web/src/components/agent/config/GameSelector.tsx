@@ -14,6 +14,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+
 import { BookOpen, Loader2, Search, Library, AlertCircle } from 'lucide-react';
 
 import {
@@ -51,24 +52,22 @@ export function GameSelector({
   // Fetch user's library games (large page to get all games for selector)
   const { data: libraryData, isLoading, error } = useLibrary({ page: 1, pageSize: 100 });
 
-  const games = libraryData?.items ?? [];
+  const games = useMemo(() => libraryData?.items ?? [], [libraryData?.items]);
 
   // Filter games by search term
   const filteredGames = useMemo(() => {
     if (!search.trim()) return games;
     const term = search.toLowerCase();
     return games.filter(
-      (g) =>
-        g.gameTitle.toLowerCase().includes(term) ||
-        g.gamePublisher?.toLowerCase().includes(term)
+      g => g.gameTitle.toLowerCase().includes(term) || g.gamePublisher?.toLowerCase().includes(term)
     );
   }, [games, search]);
 
   // Find selected game for display
-  const selectedGame = games.find((g) => g.gameId === value);
+  const selectedGame = games.find(g => g.gameId === value);
 
   const handleValueChange = (gameId: string) => {
-    const game = games.find((g) => g.gameId === gameId) ?? null;
+    const game = games.find(g => g.gameId === gameId) ?? null;
     onChange(gameId, game);
   };
 
@@ -92,11 +91,7 @@ export function GameSelector({
         <span className="ml-1 text-red-500">*</span>
       </label>
 
-      <Select
-        value={value}
-        onValueChange={handleValueChange}
-        disabled={disabled || isLoading}
-      >
+      <Select value={value} onValueChange={handleValueChange} disabled={disabled || isLoading}>
         <SelectTrigger className={className} aria-label="Select game">
           {isLoading ? (
             <div className="flex items-center gap-2">
@@ -125,23 +120,19 @@ export function GameSelector({
                 <input
                   type="text"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={e => setSearch(e.target.value)}
                   placeholder="Search games..."
                   className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   // Prevent Select from closing on input interaction
-                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyDown={e => e.stopPropagation()}
                 />
               </div>
             </div>
           )}
 
           {filteredGames.length > 0 ? (
-            filteredGames.map((game) => (
-              <SelectItem
-                key={game.gameId}
-                value={game.gameId}
-                className="cursor-pointer"
-              >
+            filteredGames.map(game => (
+              <SelectItem key={game.gameId} value={game.gameId} className="cursor-pointer">
                 <div className="flex items-center justify-between gap-3 w-full">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <BookOpen className="h-4 w-4 text-orange-500 shrink-0" />
@@ -160,9 +151,7 @@ export function GameSelector({
                         📚 Rulebook
                       </span>
                     )}
-                    {game.isFavorite && (
-                      <span className="text-amber-500">★</span>
-                    )}
+                    {game.isFavorite && <span className="text-amber-500">★</span>}
                   </div>
                 </div>
               </SelectItem>

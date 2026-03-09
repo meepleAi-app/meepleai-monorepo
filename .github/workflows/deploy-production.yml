@@ -38,7 +38,7 @@ jobs:
   # Verify staging is healthy before production deploy
   staging-check:
     name: Verify Staging
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     if: inputs.skip_staging_check != 'true'
     steps:
       - name: Check Staging Health
@@ -70,7 +70,7 @@ jobs:
   # Build production images
   build:
     name: Build Production Images
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [staging-check, test]
     if: always() && needs.test.result == 'success' && (needs.staging-check.result == 'success' || needs.staging-check.result == 'skipped')
     outputs:
@@ -156,7 +156,7 @@ jobs:
   # Manual approval gate before production deploy
   approve:
     name: Approval Gate
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build]
     environment:
       name: production-approval
@@ -169,7 +169,7 @@ jobs:
   # Deploy to production with blue-green strategy
   deploy:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build, approve]
     environment:
       name: production
@@ -258,7 +258,7 @@ jobs:
   # Post-deploy validation
   validate:
     name: Production Validation
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [deploy]
     steps:
       - name: Checkout
@@ -317,7 +317,7 @@ jobs:
   # Rollback capability
   rollback:
     name: Rollback (Manual)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [deploy]
     if: failure()
     environment:
@@ -337,7 +337,7 @@ jobs:
   # Notifications
   notify:
     name: Notify
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build, deploy, validate]
     if: always()
     steps:

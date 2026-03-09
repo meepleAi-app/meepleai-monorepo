@@ -55,6 +55,23 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; private set; }
 
+    // PDF deduplication: SHA-256 hash of file content
+    public string? ContentHash { get; private set; }
+
+    // Issue #5443: Document classification for pipeline routing
+    public DocumentCategory DocumentCategory { get; private set; }
+
+    // Issue #5444: Self-referential FK for expansion/errata linkage to base rulebook
+    public Guid? BaseDocumentId { get; private set; }
+
+    // Issue #5446: Copyright disclaimer and RAG active toggle
+    public DateTime? CopyrightDisclaimerAcceptedAt { get; private set; }
+    public Guid? CopyrightDisclaimerAcceptedBy { get; private set; }
+    public bool IsActiveForRag { get; private set; } = true;
+
+    // Issue #5447: User-editable version label (e.g., "2nd Edition", "v1.3 Errata")
+    public string? VersionLabel { get; private set; }
+
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
     public DateTime? ExtractingStartedAt { get; private set; }
@@ -81,7 +98,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         LanguageCode? language = null,
         Guid? collectionId = null,
         DocumentType? documentType = null,
-        int sortOrder = 0) : base(id)
+        int sortOrder = 0,
+        DocumentCategory documentCategory = DocumentCategory.Rulebook) : base(id)
     {
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("File path cannot be empty", nameof(filePath));
@@ -108,6 +126,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         CollectionId = collectionId;
         DocumentType = documentType ?? ValueObjects.DocumentType.Base; // Default to base
         SortOrder = sortOrder;
+
+        // Issue #5443: Document classification for pipeline routing
+        DocumentCategory = documentCategory;
     }
 
     /// <summary>
@@ -148,7 +169,14 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         DateTime? extractingStartedAt = null,
         DateTime? chunkingStartedAt = null,
         DateTime? embeddingStartedAt = null,
-        DateTime? indexingStartedAt = null)
+        DateTime? indexingStartedAt = null,
+        string? contentHash = null,
+        DocumentCategory? documentCategory = null,
+        Guid? baseDocumentId = null,
+        DateTime? copyrightDisclaimerAcceptedAt = null,
+        Guid? copyrightDisclaimerAcceptedBy = null,
+        bool isActiveForRag = true,
+        string? versionLabel = null)
     {
         var document = new PdfDocument
         {
@@ -192,7 +220,24 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ExtractingStartedAt = extractingStartedAt,
             ChunkingStartedAt = chunkingStartedAt,
             EmbeddingStartedAt = embeddingStartedAt,
-            IndexingStartedAt = indexingStartedAt
+            IndexingStartedAt = indexingStartedAt,
+
+            // PDF deduplication
+            ContentHash = contentHash,
+
+            // Issue #5443: Document classification for pipeline routing
+            DocumentCategory = documentCategory ?? DocumentCategory.Rulebook,
+
+            // Issue #5444: Base document linkage
+            BaseDocumentId = baseDocumentId,
+
+            // Issue #5446: Copyright disclaimer and RAG toggle
+            CopyrightDisclaimerAcceptedAt = copyrightDisclaimerAcceptedAt,
+            CopyrightDisclaimerAcceptedBy = copyrightDisclaimerAcceptedBy,
+            IsActiveForRag = isActiveForRag,
+
+            // Issue #5447: Version label
+            VersionLabel = versionLabel
         };
 
         // Issue #4219: Calculate ETA after reconstitution
@@ -466,6 +511,95 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         };
     }
 
+    /// <summary>
+    /// Sets the SHA-256 content hash for deduplication.
+    /// </summary>
+    public void SetContentHash(string hash)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hash);
+        ContentHash = hash;
+    }
+
+    /// <summary>
+    /// Links this document to a base rulebook document.
+    /// Issue #5444: Expansion/errata documents can reference their base rulebook.
+    /// </summary>
+    public void LinkToBaseDocument(Guid baseDocumentId)
+    {
+        if (baseDocumentId == Guid.Empty)
+            throw new ArgumentException("Base document ID cannot be empty", nameof(baseDocumentId));
+
+        if (baseDocumentId == Id)
+            throw new ArgumentException("A document cannot reference itself as base document", nameof(baseDocumentId));
+
+        BaseDocumentId = baseDocumentId;
+    }
+
+    /// <summary>
+    /// Removes the link to a base document.
+    /// Issue #5444: Allows unlinking from base rulebook.
+    /// </summary>
+    public void UnlinkBaseDocument()
+    {
+        BaseDocumentId = null;
+    }
+
+    /// <summary>
+    /// Accepts the copyright disclaimer for this document.
+    /// Issue #5446: Required before processing starts.
+    /// </summary>
+    public void AcceptCopyrightDisclaimer(Guid userId)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User ID cannot be empty", nameof(userId));
+
+        CopyrightDisclaimerAcceptedAt = DateTime.UtcNow;
+        CopyrightDisclaimerAcceptedBy = userId;
+    }
+
+    /// <summary>
+    /// Sets whether this document is active for RAG search.
+    /// Issue #5446: Deactivated docs remain in Qdrant but excluded from search.
+    /// </summary>
+    public void SetActiveForRag(bool isActive)
+    {
+        IsActiveForRag = isActive;
+    }
+
+    /// <summary>
+    /// Checks if the copyright disclaimer has been accepted.
+    /// Issue #5446: Upload blocked until disclaimer accepted (admin exempt).
+    /// </summary>
+    public bool HasAcceptedDisclaimer => CopyrightDisclaimerAcceptedAt.HasValue;
+
+    /// <summary>
+    /// Sets the user-editable version label.
+    /// Issue #5447: e.g., "2nd Edition", "v1.3 Errata".
+    /// </summary>
+    public void SetVersionLabel(string? versionLabel)
+    {
+        if (versionLabel is not null && versionLabel.Length > 100)
+            throw new ArgumentException("Version label cannot exceed 100 characters", nameof(versionLabel));
+
+        VersionLabel = versionLabel?.Trim();
+    }
+
+    /// <summary>
+    /// Reclassifies the document with new category, base document link, and version label.
+    /// Issue #5447: Admin can reclassify documents post-upload.
+    /// </summary>
+    public void Reclassify(DocumentCategory category, Guid? baseDocumentId, string? versionLabel)
+    {
+        DocumentCategory = category;
+
+        if (baseDocumentId.HasValue)
+            LinkToBaseDocument(baseDocumentId.Value);
+        else
+            UnlinkBaseDocument();
+
+        SetVersionLabel(versionLabel);
+    }
+
     // Issue #2029: Update detected language after processing
     public void UpdateLanguage(LanguageCode languageCode)
     {
@@ -573,6 +707,20 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             SharedGameId = sharedGameId,
             ContributorId = contributorId,
             SourceDocumentId = source.Id, // Track lineage
+
+            // Issue #5443: Copy document category
+            DocumentCategory = source.DocumentCategory,
+
+            // Issue #5444: Copy base document linkage
+            BaseDocumentId = source.BaseDocumentId,
+
+            // Issue #5446: Copy disclaimer and RAG state
+            CopyrightDisclaimerAcceptedAt = source.CopyrightDisclaimerAcceptedAt,
+            CopyrightDisclaimerAcceptedBy = source.CopyrightDisclaimerAcceptedBy,
+            IsActiveForRag = source.IsActiveForRag,
+
+            // Issue #5447: Copy version label
+            VersionLabel = source.VersionLabel,
 
             // Issue #4219: Copy timing fields for accurate metrics
             UploadingStartedAt = source.UploadingStartedAt,

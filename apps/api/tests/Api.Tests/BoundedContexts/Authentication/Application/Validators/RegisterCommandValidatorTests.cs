@@ -275,10 +275,8 @@ public sealed class RegisterCommandValidatorTests
     [Theory]
     [InlineData("user")]
     [InlineData("editor")]
-    [InlineData("admin")]
     [InlineData("USER")]
     [InlineData("EDITOR")]
-    [InlineData("ADMIN")]
     public void Should_Pass_When_Role_Is_Valid(string role)
     {
         // Arrange
@@ -315,6 +313,7 @@ public sealed class RegisterCommandValidatorTests
     }
 
     [Theory]
+    [InlineData("admin")]
     [InlineData("superadmin")]
     [InlineData("moderator")]
     [InlineData("guest")]
@@ -333,7 +332,7 @@ public sealed class RegisterCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Role)
-            .WithErrorMessage("Role must be one of: user, editor, admin");
+            .WithErrorMessage("Role must be one of: user, editor");
     }
     [Fact]
     public void Should_Fail_With_Multiple_Validation_Errors()

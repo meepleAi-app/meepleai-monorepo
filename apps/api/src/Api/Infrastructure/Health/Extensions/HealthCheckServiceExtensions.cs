@@ -17,8 +17,9 @@ public static class HealthCheckServiceExtensions
     public static IHealthChecksBuilder AddComprehensiveHealthChecks(this IHealthChecksBuilder builder)
     {
         // Core Infrastructure (Critical)
-        // PostgreSQL, Redis, Qdrant already registered in ObservabilityServiceExtensions
-        // with tags: "db", "cache", "vector" - we add critical tag in ObservabilityServiceExtensions
+        // PostgreSQL, Redis already registered in ObservabilityServiceExtensions
+        // with tags: "db", "cache" - we add critical tag in ObservabilityServiceExtensions
+        // Note: Qdrant removed — pgvector is the sole vector store (covered by Postgres health check)
 
         // AI Services
         builder.AddCheck<OpenRouterHealthCheck>(
@@ -87,6 +88,13 @@ public static class HealthCheckServiceExtensions
             "hyperdx",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.Monitoring, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
+        // Issue #5477: Redis rate-limiting subsystem health
+        builder.AddCheck<RedisRateLimitingHealthCheck>(
+            "redis-rate-limiting",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Core, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
         // Storage Services

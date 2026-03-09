@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -14,7 +14,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
-using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 

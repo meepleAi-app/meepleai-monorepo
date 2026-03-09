@@ -14,8 +14,6 @@ import { useState } from 'react';
 import { AlertCircle, BotOff, Loader2, MessageSquare, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
@@ -23,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -111,9 +111,7 @@ function TypologyCard({
           selected ? 'border-primary' : 'border-muted-foreground/40'
         )}
       >
-        {selected && (
-          <div className="h-2 w-2 rounded-full bg-primary" />
-        )}
+        {selected && <div className="h-2 w-2 rounded-full bg-primary" />}
       </div>
       <div>
         <div className="flex items-center gap-1.5">
@@ -183,11 +181,7 @@ export function AgentConfigForm({
       {/* Agent typology radio group */}
       <div>
         <Label className="text-sm font-medium mb-2 block">Tipo di agente</Label>
-        <div
-          className="flex flex-col gap-2"
-          role="radiogroup"
-          aria-label="Tipo di agente"
-        >
+        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Tipo di agente">
           {TYPOLOGIES.map(option => (
             <TypologyCard
               key={option.value}
@@ -204,10 +198,7 @@ export function AgentConfigForm({
         <Label htmlFor="strategy-select" className="text-sm font-medium mb-2 block">
           Strategia
         </Label>
-        <Select
-          value={strategy}
-          onValueChange={(v: string) => setStrategy(v as AgentStrategy)}
-        >
+        <Select value={strategy} onValueChange={(v: string) => setStrategy(v as AgentStrategy)}>
           <SelectTrigger id="strategy-select" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -272,10 +263,7 @@ export function AgentConfigForm({
             <BotOff className="h-4 w-4 mr-2" />
             Salva &amp; Avvia Chat →
           </Button>
-          <p
-            id="no-kb-hint"
-            className="text-xs text-muted-foreground text-center"
-          >
+          <p id="no-kb-hint" className="text-xs text-muted-foreground text-center">
             Aggiungi un documento indicizzato per abilitare la chat
           </p>
         </div>

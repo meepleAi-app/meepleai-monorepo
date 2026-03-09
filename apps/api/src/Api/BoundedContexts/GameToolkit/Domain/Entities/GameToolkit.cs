@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.BoundedContexts.GameToolkit.Domain.Events;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameToolkit.Domain.Entities;
@@ -40,6 +41,13 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     public TurnTemplateConfig? TurnTemplate { get; private set; }
     public StateTemplateDefinition? StateTemplate { get; private set; }
     public string? AgentConfig { get; private set; }
+
+    // Template marketplace fields
+    public TemplateStatus TemplateStatus { get; private set; } = TemplateStatus.Draft;
+    public bool IsTemplate { get; private set; }
+    public string? ReviewNotes { get; private set; }
+    public Guid? ReviewedByUserId { get; private set; }
+    public DateTime? ReviewedAt { get; private set; }
 
     // Private constructor for EF Core
 #pragma warning disable CS8618
@@ -255,6 +263,48 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     public void SetAgentConfig(string? agentConfig)
     {
         AgentConfig = agentConfig;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    // ========================================================================
+    // Template marketplace workflow
+    // ========================================================================
+
+    public void SubmitForReview()
+    {
+        if (TemplateStatus != TemplateStatus.Draft && TemplateStatus != TemplateStatus.Rejected)
+            throw new ConflictException("Can only submit drafts or rejected templates for review.");
+        TemplateStatus = TemplateStatus.PendingReview;
+        IsTemplate = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ApproveTemplate(Guid adminUserId, string? notes = null)
+    {
+        if (TemplateStatus != TemplateStatus.PendingReview)
+            throw new ConflictException("Can only approve templates pending review.");
+        TemplateStatus = TemplateStatus.Approved;
+        ReviewedByUserId = adminUserId;
+        ReviewedAt = DateTime.UtcNow;
+        ReviewNotes = notes;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RejectTemplate(Guid adminUserId, string notes)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(notes);
+        if (TemplateStatus != TemplateStatus.PendingReview)
+            throw new ConflictException("Can only reject templates pending review.");
+        TemplateStatus = TemplateStatus.Rejected;
+        ReviewedByUserId = adminUserId;
+        ReviewedAt = DateTime.UtcNow;
+        ReviewNotes = notes;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsTemplate()
+    {
+        IsTemplate = true;
         UpdatedAt = DateTime.UtcNow;
     }
 }

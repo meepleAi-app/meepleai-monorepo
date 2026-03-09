@@ -7,21 +7,12 @@
 
 import React from 'react';
 
-import {
-  Calendar,
-  Clock,
-  Hash,
-  Pause,
-  Play,
-  RotateCcw,
-  Save,
-  UserPlus,
-  Users,
-} from 'lucide-react';
+import { Calendar, Clock, Hash, Pause, Play, RotateCcw, Save, UserPlus, Users } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 import { PLAYER_COLOR_BG } from '../../meeple-card-features/session-types';
+
 import type {
   OverviewTabData,
   SessionStatus,
@@ -52,15 +43,21 @@ function PlayerAvatar({ player }: { player: SessionPlayerInfo }) {
         <p className="text-xs text-slate-500 capitalize">{player.role}</p>
       </div>
       {player.totalScore !== undefined && (
-        <span className="font-mono text-sm font-bold text-indigo-600">
-          {player.totalScore}
-        </span>
+        <span className="font-mono text-sm font-bold text-indigo-600">{player.totalScore}</span>
       )}
     </div>
   );
 }
 
-function StatItem({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="flex items-center gap-2 rounded-lg bg-white/50 px-3 py-2">
       <Icon className="h-4 w-4 text-indigo-400 flex-shrink-0" />
@@ -140,14 +137,14 @@ export function OverviewTab({ data, status, actions }: OverviewTabProps) {
             value={`${Math.floor(data.durationMinutes / 60)}h ${data.durationMinutes % 60}m`}
           />
         )}
-        {data.sessionCode && (
-          <StatItem icon={Hash} label="Session Code" value={data.sessionCode} />
-        )}
+        {data.sessionCode && <StatItem icon={Hash} label="Session Code" value={data.sessionCode} />}
         {data.currentRound != null && (
           <StatItem
             icon={RotateCcw}
             label="Round"
-            value={data.totalRounds ? `${data.currentRound}/${data.totalRounds}` : `${data.currentRound}`}
+            value={
+              data.totalRounds ? `${data.currentRound}/${data.totalRounds}` : `${data.currentRound}`
+            }
           />
         )}
       </div>
@@ -161,7 +158,7 @@ export function OverviewTab({ data, status, actions }: OverviewTabProps) {
           </h3>
         </div>
         <div className="space-y-1.5">
-          {data.players.map((player) => (
+          {data.players.map(player => (
             <PlayerAvatar key={player.id} player={player} />
           ))}
         </div>
@@ -187,7 +184,12 @@ export function OverviewTab({ data, status, actions }: OverviewTabProps) {
           )}
           {status === 'completed' && (
             <>
-              <ActionButton icon={RotateCcw} label="Rematch" onClick={actions.onRematch} variant="primary" />
+              <ActionButton
+                icon={RotateCcw}
+                label="Rematch"
+                onClick={actions.onRematch}
+                variant="primary"
+              />
               <ActionButton icon={Play} label="View Record" onClick={actions.onViewPlayRecord} />
             </>
           )}

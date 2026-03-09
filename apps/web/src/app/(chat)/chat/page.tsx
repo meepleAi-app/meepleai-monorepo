@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { getNavigationLinks } from '@/config/entity-navigation';
 import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
+
 import { ChatNavConfig } from './NavConfig';
 
 // ─── Agent Group ─────────────────────────────────────────────────────────────
@@ -39,7 +40,8 @@ const SYSTEM_AGENT_LABELS: Record<string, string> = {
   auto: 'Agente Auto',
   tutor: 'Tutor',
   arbitro: 'Arbitro',
-  decisore: 'Decisore',
+  stratega: 'Stratega',
+  narratore: 'Narratore',
 };
 
 function groupSessionsByAgent(sessions: ChatSessionSummaryDto[]): AgentGroup[] {
@@ -75,7 +77,7 @@ function groupSessionsByAgent(sessions: ChatSessionSummaryDto[]): AgentGroup[] {
     }, '');
 
   return [...map.values()].sort(
-    (a, b) => new Date(latestDate(b)).getTime() - new Date(latestDate(a)).getTime(),
+    (a, b) => new Date(latestDate(b)).getTime() - new Date(latestDate(a)).getTime()
   );
 }
 
@@ -97,7 +99,7 @@ function formatRelativeDate(dateString: string | null | undefined): string {
 }
 
 function renderChatSessionCard(
-  session: ChatSessionSummaryDto,
+  session: ChatSessionSummaryDto
 ): Omit<MeepleCardProps, 'entity' | 'variant'> {
   const navLinks = getNavigationLinks('chatSession', {
     id: session.id,
@@ -136,7 +138,7 @@ function AgentGroupSection({
       <button
         type="button"
         className="flex items-center gap-2 w-full text-left py-2 px-1 rounded hover:bg-muted/50 transition-colors"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setExpanded(v => !v)}
         aria-expanded={expanded}
       >
         {expanded ? (
@@ -154,7 +156,7 @@ function AgentGroupSection({
       {/* Sessions grid */}
       {expanded && (
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {group.sessions.map((session) => {
+          {group.sessions.map(session => {
             const cardProps = renderChatSessionCard(session);
             return (
               <MeepleCard
@@ -234,13 +236,10 @@ export default function ChatListPage() {
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="flex flex-col gap-2">
               <span className="font-nunito font-medium">
-                Stai utilizzando {limitData.used} su {limitData.limit} chat ({usagePercent}%).
-                Le chat più vecchie verranno archiviate automaticamente quando raggiungi il limite.
+                Stai utilizzando {limitData.used} su {limitData.limit} chat ({usagePercent}%). Le
+                chat più vecchie verranno archiviate automaticamente quando raggiungi il limite.
               </span>
-              <Progress
-                value={usagePercent}
-                className="h-2 bg-amber-200 [&>div]:bg-amber-500"
-              />
+              <Progress value={usagePercent} className="h-2 bg-amber-200 [&>div]:bg-amber-500" />
             </AlertDescription>
           </Alert>
         )}
@@ -267,11 +266,11 @@ export default function ChatListPage() {
         )}
 
         {!isLoading &&
-          groups.map((group) => (
+          groups.map(group => (
             <AgentGroupSection
               key={group.key}
               group={group}
-              onSessionClick={(session) => router.push(`/chat/${session.id}`)}
+              onSessionClick={session => router.push(`/chat/${session.id}`)}
             />
           ))}
       </div>

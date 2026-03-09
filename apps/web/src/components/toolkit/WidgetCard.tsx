@@ -5,8 +5,8 @@ import React from 'react';
 import { Settings } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
 import { Switch } from '@/components/ui/forms/switch';
+import { Button } from '@/components/ui/primitives/button';
 
 interface WidgetCardProps {
   title: string;

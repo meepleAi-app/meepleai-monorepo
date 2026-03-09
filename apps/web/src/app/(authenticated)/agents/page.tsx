@@ -6,7 +6,7 @@
  * Features:
  * - Grid view with MeepleCard entity=agent
  * - Search by name/description
- * - Filter by type (Tutor, Arbitro, Decisore)
+ * - Filter by type (Tutor, Arbitro, Stratega, Narratore)
  * - Sort by usage, rating, name
  */
 
@@ -19,9 +19,7 @@ import { useRouter } from 'next/navigation';
 
 import { AgentCreationSheet } from '@/components/agent/config';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import { Button } from '@/components/ui/primitives/button';
-import { useEntityActions } from '@/hooks/use-entity-actions';
 import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
@@ -30,13 +28,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useAgentSlots } from '@/hooks/queries/useAgentSlots';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 
 import { AgentsNavConfig } from './NavConfig';
 
 /** Agent card wrapper to use entity actions hook per-card */
-function AgentCard({ agent, onClick }: { agent: { id: string; name: string; type: string; invocationCount: number; strategyName: string }; onClick: () => void }) {
+function AgentCard({
+  agent,
+  onClick,
+}: {
+  agent: { id: string; name: string; type: string; invocationCount: number; strategyName: string };
+  onClick: () => void;
+}) {
   const entityActions = useEntityActions({ entity: 'agent', id: agent.id });
 
   return (
@@ -120,7 +126,9 @@ export default function AgentsPage() {
               <div className="flex-1 max-w-[200px] h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-amber-500 rounded-full transition-all"
-                  style={{ width: `${slotsData.total > 0 ? (slotsData.used / slotsData.total) * 100 : 0}%` }}
+                  style={{
+                    width: `${slotsData.total > 0 ? (slotsData.used / slotsData.total) * 100 : 0}%`,
+                  }}
                 />
               </div>
               <span className="text-xs text-muted-foreground">
@@ -163,7 +171,8 @@ export default function AgentsPage() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="Tutor">Tutor</SelectItem>
             <SelectItem value="Arbitro">Arbitro</SelectItem>
-            <SelectItem value="Decisore">Decisore</SelectItem>
+            <SelectItem value="Stratega">Stratega</SelectItem>
+            <SelectItem value="Narratore">Narratore</SelectItem>
           </SelectContent>
         </Select>
 
@@ -204,10 +213,7 @@ export default function AgentsPage() {
             {searchQuery ? 'No agents found' : 'No agents yet. Create your first AI agent!'}
           </p>
           {searchQuery ? (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="text-primary hover:underline"
-            >
+            <button onClick={() => setSearchQuery('')} className="text-primary hover:underline">
               Clear search
             </button>
           ) : (
@@ -224,10 +230,7 @@ export default function AgentsPage() {
       )}
 
       {/* Issue #4778: Agent creation wizard */}
-      <AgentCreationSheet
-        isOpen={creationSheetOpen}
-        onClose={() => setCreationSheetOpen(false)}
-      />
+      <AgentCreationSheet isOpen={creationSheetOpen} onClose={() => setCreationSheetOpen(false)} />
     </div>
   );
 }

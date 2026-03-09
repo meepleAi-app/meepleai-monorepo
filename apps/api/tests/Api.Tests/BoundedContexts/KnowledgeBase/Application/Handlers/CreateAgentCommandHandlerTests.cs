@@ -3,6 +3,12 @@ using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -18,6 +24,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public class CreateAgentCommandHandlerTests
 {
     private readonly Mock<IAgentRepository> _mockAgentRepo;
+    private readonly MeepleAiDbContext _db;
     private readonly Mock<ILogger<CreateAgentCommandHandler>> _mockLogger;
     private readonly CreateAgentCommandHandler _handler;
 
@@ -26,8 +33,15 @@ public class CreateAgentCommandHandlerTests
         _mockAgentRepo = new Mock<IAgentRepository>();
         _mockLogger = new Mock<ILogger<CreateAgentCommandHandler>>();
 
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        _db = new MeepleAiDbContext(options, new Mock<IMediator>().Object, new Mock<IDomainEventCollector>().Object);
+
         _handler = new CreateAgentCommandHandler(
             _mockAgentRepo.Object,
+            _db,
             _mockLogger.Object
         );
     }
@@ -342,9 +356,19 @@ public class CreateAgentCommandHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new CreateAgentCommandHandler(null!, _mockLogger.Object));
+            new CreateAgentCommandHandler(null!, _db, _mockLogger.Object));
 
         Assert.Equal("agentRepository", ex.ParamName);
+    }
+
+    [Fact]
+    public async Task Constructor_WithNullDb_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var ex = Assert.Throws<ArgumentNullException>(() =>
+            new CreateAgentCommandHandler(_mockAgentRepo.Object, null!, _mockLogger.Object));
+
+        Assert.Equal("db", ex.ParamName);
     }
 
     [Fact]
@@ -352,7 +376,7 @@ public class CreateAgentCommandHandlerTests
     {
         // Act & Assert
         var ex = Assert.Throws<ArgumentNullException>(() =>
-            new CreateAgentCommandHandler(_mockAgentRepo.Object, null!));
+            new CreateAgentCommandHandler(_mockAgentRepo.Object, _db, null!));
 
         Assert.Equal("logger", ex.ParamName);
     }

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.TurnOrder;
@@ -35,6 +36,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameStrategyRepository, GameStrategyRepository>();
         services.AddScoped<ITurnOrderRepository, TurnOrderRepository>(); // Issue #4970: TurnOrder base toolkit
         services.AddScoped<IWhiteboardStateRepository, WhiteboardStateRepository>(); // Issue #4971: Whiteboard base toolkit
+        services.AddScoped<ISessionAttachmentRepository, SessionAttachmentRepository>(); // Issue #5360: Session photo attachments
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -53,6 +55,12 @@ internal static class GameManagementServiceExtensions
 
         // Issue #3891: Register play record permission checker
         services.AddScoped<PlayRecordPermissionChecker>();
+
+        // Issue #5361: Session attachment service (upload, thumbnail, S3)
+        services.AddScoped<ISessionAttachmentService, SessionAttachmentService>();
+
+        // Issue #5366: Session attachment cleanup background job
+        services.AddHostedService<SessionAttachmentCleanupJob>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

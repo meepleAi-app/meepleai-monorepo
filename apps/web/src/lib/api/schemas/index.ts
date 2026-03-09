@@ -101,3 +101,9 @@ export * from './admin-knowledge-base.schemas';
 
 // EntityLink schemas (Issue #5142 — Epic A EntityRelationships)
 export * from './entity-link.schemas';
+
+// Live Sessions schemas (Issue #5041 — Sessions Redesign)
+export * from './live-sessions.schemas';
+
+// Session Tracking schemas (Issue #5041 — Sessions Redesign)
+export * from './session-tracking.schemas';

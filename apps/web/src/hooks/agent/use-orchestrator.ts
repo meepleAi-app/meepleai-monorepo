@@ -5,7 +5,12 @@
 
 'use client';
 
-import { useMutation, useQuery, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import * as orchestratorClient from '@/lib/api/orchestrator-client';
@@ -47,14 +52,14 @@ export function useExecuteWorkflow(): UseMutationResult<
 > {
   return useMutation({
     mutationFn: orchestratorClient.executeWorkflow,
-    onSuccess: (data) => {
+    onSuccess: data => {
       // Show which agent responded
       const agentName = data.agent_type.charAt(0).toUpperCase() + data.agent_type.slice(1);
       toast.success(`${agentName} agent responded (${data.execution_time_ms.toFixed(0)}ms)`, {
         duration: 2000,
       });
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Agent execution failed: ${error.message}`);
     },
   });
@@ -71,13 +76,13 @@ export function useSwitchAgent(): UseMutationResult<
   return useMutation({
     mutationFn: ({ sessionId, gameId, targetAgent }) =>
       orchestratorClient.requestAgentSwitch(sessionId, gameId, targetAgent),
-    onSuccess: (data) => {
+    onSuccess: data => {
       const agentName = data.agent_type.charAt(0).toUpperCase() + data.agent_type.slice(1);
       toast.success(`Switched to ${agentName} agent`, {
         icon: getAgentIcon(data.agent_type),
       });
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Agent switch failed: ${error.message}`);
     },
   });
@@ -90,7 +95,8 @@ function getAgentIcon(agentType: AgentType): string {
   const icons: Record<AgentType, string> = {
     tutor: '📚',
     arbitro: '⚖️',
-    decisore: '♟️',
+    stratega: '🎯',
+    narratore: '📖',
   };
   return icons[agentType];
 }

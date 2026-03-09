@@ -5,13 +5,18 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+
 import { api } from '@/lib/api';
+
 import { agentSlotsKeys } from './useAgentSlots';
 
 /** Centralized toast messages for agent creation flow — import in tests to avoid magic strings */
 export const AGENT_FLOW_MESSAGES = {
   success: (agentName: string) => `Agente "${agentName}" creato! Avvio chat...`,
-  slotLimit: { title: 'Nessuno slot disponibile', description: "Effettua l'upgrade per avere più slot agente." },
+  slotLimit: {
+    title: 'Nessuno slot disponibile',
+    description: "Effettua l'upgrade per avere più slot agente.",
+  },
   nameConflict: { title: 'Nome agente già in uso', description: 'Scegli un nome diverso.' },
   genericError: (description: string) => ({ title: 'Creazione agente fallita', description }),
   fallbackErrorDesc: "Errore nella creazione dell'agente",
@@ -41,9 +46,9 @@ export function useCreateAgentFlow(options?: {
   const queryClient = useQueryClient();
 
   return useMutation<CreateAgentFlowResult, Error, CreateAgentFlowInput>({
-    mutationFn: (input) => api.agents.createWithSetup(input),
+    mutationFn: input => api.agents.createWithSetup(input),
 
-    onSuccess: (result) => {
+    onSuccess: result => {
       // Invalidate agent slots cache (slot count changed)
       queryClient.invalidateQueries({ queryKey: agentSlotsKeys.all });
       // Invalidate agents list
@@ -57,7 +62,7 @@ export function useCreateAgentFlow(options?: {
       options?.onSuccess?.(result);
     },
 
-    onError: (error) => {
+    onError: error => {
       const message = error.message || AGENT_FLOW_MESSAGES.fallbackErrorDesc;
 
       if (message.includes('Agent limit reached')) {

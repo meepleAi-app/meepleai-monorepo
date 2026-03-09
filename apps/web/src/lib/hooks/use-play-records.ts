@@ -40,6 +40,7 @@ export function usePlayRecord(id: string | undefined) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     queryFn: () => playRecordsApi.getRecord(id!),
     enabled: !!id,
+    retry: false,
   });
 }
 
@@ -57,6 +58,7 @@ export function usePlayHistory(params: {
   return useQuery({
     queryKey: playRecordsKeys.list(params),
     queryFn: () => playRecordsApi.getUserHistory(params),
+    retry: false,
   });
 }
 
@@ -94,6 +96,7 @@ export function usePlayerStatistics() {
   return useQuery({
     queryKey: playRecordsKeys.statistics(),
     queryFn: () => playRecordsApi.getPlayerStatistics(),
+    retry: false,
   });
 }
 
@@ -123,14 +126,12 @@ export function useAddPlayer(recordId: string) {
 
   return useMutation({
     mutationFn: (player: AddPlayerRequest) => playRecordsApi.addPlayer(recordId, player),
-    onMutate: async (newPlayer) => {
+    onMutate: async newPlayer => {
       // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: playRecordsKeys.detail(recordId) });
 
       // Snapshot previous value
-      const previous = queryClient.getQueryData<PlayRecordDto>(
-        playRecordsKeys.detail(recordId)
-      );
+      const previous = queryClient.getQueryData<PlayRecordDto>(playRecordsKeys.detail(recordId));
 
       // Optimistically update
       if (previous) {

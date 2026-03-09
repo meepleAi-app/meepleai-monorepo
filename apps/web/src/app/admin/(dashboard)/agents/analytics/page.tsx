@@ -3,9 +3,9 @@ import { Suspense } from 'react';
 import { type Metadata } from 'next';
 
 import { AgentKPICards } from '@/components/admin/agents/agent-kpi-cards';
-import { UsageTrendChart } from '@/components/admin/agents/usage-trend-chart';
 import { CostBreakdownChart } from '@/components/admin/agents/cost-breakdown-chart';
 import { TopQueriesTable } from '@/components/admin/agents/top-queries-table';
+import { UsageTrendChart } from '@/components/admin/agents/usage-trend-chart';
 
 export const metadata: Metadata = {
   title: 'Analytics',
@@ -47,7 +47,15 @@ export default function AgentAnalyticsPage() {
       </div>
 
       {/* KPI Cards */}
-      <Suspense fallback={<div className="grid grid-cols-1 md:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} height="h-[100px]" />)}</div>}>
+      <Suspense
+        fallback={
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <CardSkeleton key={i} height="h-[100px]" />
+            ))}
+          </div>
+        }
+      >
         <AgentKPICards />
       </Suspense>
 

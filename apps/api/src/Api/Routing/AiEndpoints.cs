@@ -792,7 +792,8 @@ internal static class AiEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
-        var gameGuid = Guid.Parse(gameId);
+        if (!Guid.TryParse(gameId, out var gameGuid))
+            return null;
         var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct).ConfigureAwait(false);
 
         if (gameDto != null && !string.IsNullOrEmpty(gameDto.Title))
@@ -913,7 +914,7 @@ internal static class AiEndpoints
     }
 
     // Helpers for Streaming
-    private static Task<IReadOnlyList<string>> StartFollowUpGenerationAsync(
+    private static async Task<IReadOnlyList<string>> StartFollowUpGenerationAsync(
         string gameId,
         string query,
         string answer,
@@ -922,34 +923,32 @@ internal static class AiEndpoints
         ILogger logger,
         CancellationToken ct)
     {
-        return Task.Run(async () =>
+        try
         {
-            try
-            {
-                var gameGuid = Guid.Parse(gameId);
-                var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct).ConfigureAwait(false);
+            if (!Guid.TryParse(gameId, out var gameGuid))
+                return new List<string>().AsReadOnly();
+            var gameDto = await mediator.Send(new GetGameByIdQuery(gameGuid), ct).ConfigureAwait(false);
 
-                if (gameDto == null || string.IsNullOrEmpty(gameDto.Title))
-                {
-                    logger.LogWarning("Game {GameId} not found for follow-up generation", gameId);
-                    return (IReadOnlyList<string>)new List<string>().AsReadOnly();
-                }
-
-                return await mediator.Send(new GenerateFollowUpQuestionsQuery
-                {
-                    OriginalQuestion = query,
-                    GeneratedAnswer = answer,
-                    RagContext = snippets,
-                    GameName = gameDto.Title,
-                    MaxQuestions = 5
-                }, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex)
+            if (gameDto == null || string.IsNullOrEmpty(gameDto.Title))
             {
-                logger.LogError(ex, "Error generating follow-up questions");
+                logger.LogWarning("Game {GameId} not found for follow-up generation", gameId);
                 return new List<string>().AsReadOnly();
             }
-        });
+
+            return await mediator.Send(new GenerateFollowUpQuestionsQuery
+            {
+                OriginalQuestion = query,
+                GeneratedAnswer = answer,
+                RagContext = snippets,
+                GameName = gameDto.Title,
+                MaxQuestions = 5
+            }, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error generating follow-up questions");
+            return new List<string>().AsReadOnly();
+        }
     }
 
     private static async Task SendFollowUpQuestionsEventAsync(

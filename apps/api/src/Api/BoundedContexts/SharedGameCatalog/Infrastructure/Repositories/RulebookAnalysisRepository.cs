@@ -116,6 +116,41 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
         return pdfDocument?.ExtractedText ?? string.Empty;
     }
 
+    public async Task<string?> GetPdfDocumentCategoryAsync(Guid pdfDocumentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.DocumentCategory)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<List<GamePdfPair>> GetGamePdfPairsWithReadyTextAsync(CancellationToken cancellationToken = default)
+    {
+        var pairs = await _context.SharedGames
+            .AsNoTracking()
+            .Where(g => !g.IsDeleted)
+            .Join(
+                _context.PdfDocuments.Where(p => p.ProcessingState == "Ready" && p.ExtractedText != null && p.ExtractedText != ""),
+                g => g.Id, p => p.SharedGameId,
+                (g, p) => new GamePdfPair(g.Id, g.Title, p.Id))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return pairs;
+    }
+
+    public async Task<HashSet<string>> GetActiveAnalysisKeysAsync(CancellationToken cancellationToken = default)
+    {
+        var activeKeys = await _context.RulebookAnalyses
+            .AsNoTracking()
+            .Where(a => a.IsActive)
+            .Select(a => a.SharedGameId + ":" + a.PdfDocumentId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return new HashSet<string>(activeKeys, StringComparer.Ordinal);
+    }
+
     // Mapping methods
 
     private static RulebookAnalysis MapToDomain(RulebookAnalysisEntity entity)
@@ -146,6 +181,14 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
         var commonQuestions = JsonSerializer.Deserialize<List<string>>(entity.CommonQuestionsJson) ?? new List<string>();
 
+        var keyConcepts = JsonSerializer.Deserialize<List<KeyConceptDto>>(entity.KeyConceptsJson)?
+            .Select(kc => new KeyConcept(kc.Term, kc.Definition, kc.Category))
+            .ToList() ?? new List<KeyConcept>();
+
+        var generatedFaqs = JsonSerializer.Deserialize<List<GeneratedFaqDto>>(entity.GeneratedFaqsJson)?
+            .Select(f => new GeneratedFaq(f.Question, f.Answer, f.SourceSection, f.Confidence, f.Tags))
+            .ToList() ?? new List<GeneratedFaq>();
+
         return new RulebookAnalysis(
             entity.Id,
             entity.SharedGameId,
@@ -162,7 +205,12 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             entity.IsActive,
             (GenerationSource)entity.Source,
             entity.AnalyzedAt,
-            entity.CreatedBy);
+            entity.CreatedBy,
+            keyConcepts,
+            generatedFaqs,
+            entity.GameStateSchemaJson,
+            (AnalysisCompletionStatus)entity.CompletionStatus,
+            JsonSerializer.Deserialize<List<string>>(entity.MissingSectionsJson) ?? new List<string>());
     }
 
     private static RulebookAnalysisEntity MapToEntity(RulebookAnalysis analysis)
@@ -195,6 +243,13 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
             ResourcesJson = JsonSerializer.Serialize(resourceDtos),
             GamePhasesJson = JsonSerializer.Serialize(phaseDtos),
             CommonQuestionsJson = JsonSerializer.Serialize(analysis.CommonQuestions.ToList()),
+            KeyConceptsJson = JsonSerializer.Serialize(
+                analysis.KeyConcepts.Select(kc => new KeyConceptDto(kc.Term, kc.Definition, kc.Category)).ToList()),
+            GeneratedFaqsJson = JsonSerializer.Serialize(
+                analysis.GeneratedFaqs.Select(f => new GeneratedFaqDto(f.Question, f.Answer, f.SourceSection, f.Confidence, f.Tags)).ToList()),
+            GameStateSchemaJson = analysis.GameStateSchemaJson,
+            CompletionStatus = (int)analysis.CompletionStatus,
+            MissingSectionsJson = JsonSerializer.Serialize(analysis.MissingSections.ToList()),
             ConfidenceScore = analysis.ConfidenceScore,
             Version = analysis.Version,
             IsActive = analysis.IsActive,
@@ -213,4 +268,6 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
 
     private sealed record ResourceDto(string Name, string Type, string? Usage, bool IsLimited);
     private sealed record GamePhaseDto(string Name, string Description, int Order, bool IsOptional);
+    private sealed record KeyConceptDto(string Term, string Definition, string Category);
+    private sealed record GeneratedFaqDto(string Question, string Answer, string SourceSection, decimal Confidence, List<string> Tags);
 }

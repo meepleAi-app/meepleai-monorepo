@@ -7,6 +7,15 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
+import { PanelRightIcon, PanelRightCloseIcon, RefreshCwIcon } from 'lucide-react';
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import {
   Select,
   SelectContent,
@@ -14,8 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
-import { PanelRightIcon, PanelRightCloseIcon, RefreshCwIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Known RAG strategies (matching backend AgentStrategy value object)
@@ -71,10 +78,12 @@ export function StrategySelectorBar({
       // Handle both paginated and flat array responses
       const items = data.items || data;
       if (Array.isArray(items)) {
-        setGames(items.map((g: { id: string; name?: string; title?: string }) => ({
-          id: g.id,
-          name: g.name || g.title || g.id,
-        })));
+        setGames(
+          items.map((g: { id: string; name?: string; title?: string }) => ({
+            id: g.id,
+            name: g.name || g.title || g.id,
+          }))
+        );
       }
     } catch {
       // Silently fail - games list is a convenience

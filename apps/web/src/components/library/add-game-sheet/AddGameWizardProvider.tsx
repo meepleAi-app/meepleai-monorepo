@@ -9,6 +9,7 @@
  */
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+
 import { useQueryClient } from '@tanstack/react-query';
 
 import { libraryKeys } from '@/hooks/queries/useLibrary';
@@ -86,7 +87,7 @@ export function AddGameWizardProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(savedGameId) });
       }
     },
-    [queryClient],
+    [queryClient]
   );
 
   return (

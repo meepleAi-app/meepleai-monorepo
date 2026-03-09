@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -20,6 +21,7 @@ public class CreateChatThreadCommandHandlerTests
     private readonly Mock<IAgentRepository> _mockAgentRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IPublisher> _mockPublisher;
+    private readonly Mock<ILogger<CreateChatThreadCommandHandler>> _mockLogger;
     private readonly CreateChatThreadCommandHandler _handler;
 
     public CreateChatThreadCommandHandlerTests()
@@ -28,7 +30,8 @@ public class CreateChatThreadCommandHandlerTests
         _mockAgentRepository = new Mock<IAgentRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockPublisher = new Mock<IPublisher>();
-        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object);
+        _mockLogger = new Mock<ILogger<CreateChatThreadCommandHandler>>();
+        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object, _mockLogger.Object);
     }
 
     [Fact]

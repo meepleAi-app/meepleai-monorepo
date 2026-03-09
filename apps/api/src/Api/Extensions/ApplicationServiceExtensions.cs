@@ -19,7 +19,6 @@ using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection
 using Api.Helpers;
 using Api.Services;
 using Api.Services.Pdf;
-using Api.Services.Qdrant;
 using Api.Services.Rag;
 using Api.Observability;
 using FluentValidation;
@@ -102,19 +101,14 @@ internal static class ApplicationServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // AI-01: Vector search services
-        services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
-
-        // Qdrant specialized services (SOLID refactoring)
-        services.AddScoped<IQdrantCollectionManager, QdrantCollectionManager>();
-        services.AddScoped<IQdrantVectorIndexer, QdrantVectorIndexer>();
-        services.AddScoped<IQdrantVectorSearcher, QdrantVectorSearcher>();
-
-        // Qdrant facade service (Scoped to match specialized services lifetime)
-        services.AddScoped<IQdrantService, QdrantService>();
-
-        // Issue #3651: Private user-scoped vector storage for private PDFs
-        services.AddScoped<IPrivateQdrantService, PrivateQdrantService>();
+        // Qdrant services DISABLED — replaced by PgVectorStoreAdapter (registered in KnowledgeBaseServiceExtensions)
+        // IQdrantCollectionManager, IQdrantVectorIndexer, IQdrantVectorSearcher,
+        // IQdrantService, IPrivateQdrantService registrations removed.
+        // No-op stubs retained for handlers that depend on Qdrant interfaces at DI resolution time.
+        // These return empty results — actual vector operations go through PgVectorStoreAdapter.
+        services.AddSingleton<IQdrantClientAdapter, NoOpQdrantClientAdapter>();
+        services.AddSingleton<IQdrantService, NoOpQdrantService>();
+        services.AddSingleton<IPrivateQdrantService, NoOpPrivateQdrantService>();
 
         // ADR-016 Phase 2: Multi-provider embedding configuration
         services.Configure<EmbeddingConfiguration>(configuration.GetSection("Embedding"));

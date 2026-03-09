@@ -1,8 +1,9 @@
 'use client';
 
+import { BookPlus, Clock, Users, Star, Brain, CalendarDays, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { BookPlus, Clock, Users, Star, Brain, CalendarDays, ExternalLink } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAddGameToLibrary } from '@/hooks/queries';

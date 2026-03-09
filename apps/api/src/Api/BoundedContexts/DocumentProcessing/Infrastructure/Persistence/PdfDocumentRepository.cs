@@ -148,6 +148,15 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.PdfDocuments.AnyAsync(p =>
+            p.ContentHash == contentHash &&
+            ((gameId.HasValue && p.GameId == gameId) ||
+             (privateGameId.HasValue && p.PrivateGameId == privateGameId)),
+            cancellationToken).ConfigureAwait(false);
+    }
+
     private static PdfDocument MapToDomain(Api.Infrastructure.Entities.PdfDocumentEntity entity)
     {
         var fileName = new FileName(entity.FileName);
@@ -212,7 +221,17 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             extractingStartedAt: entity.ExtractingStartedAt, // Issue #4219
             chunkingStartedAt: entity.ChunkingStartedAt, // Issue #4219
             embeddingStartedAt: entity.EmbeddingStartedAt, // Issue #4219
-            indexingStartedAt: entity.IndexingStartedAt // Issue #4219
+            indexingStartedAt: entity.IndexingStartedAt, // Issue #4219
+            contentHash: entity.ContentHash,
+            documentCategory: !string.IsNullOrWhiteSpace(entity.DocumentCategory)
+                && Enum.TryParse<DocumentCategory>(entity.DocumentCategory, ignoreCase: true, out var parsedCategory)
+                    ? parsedCategory
+                    : DocumentCategory.Rulebook, // Issue #5443
+            baseDocumentId: entity.BaseDocumentId, // Issue #5444
+            copyrightDisclaimerAcceptedAt: entity.CopyrightDisclaimerAcceptedAt, // Issue #5446
+            copyrightDisclaimerAcceptedBy: entity.CopyrightDisclaimerAcceptedBy, // Issue #5446
+            isActiveForRag: entity.IsActiveForRag, // Issue #5446
+            versionLabel: entity.VersionLabel // Issue #5447
         );
     }
 
@@ -249,7 +268,14 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             ExtractingStartedAt = domain.ExtractingStartedAt, // Issue #4219
             ChunkingStartedAt = domain.ChunkingStartedAt, // Issue #4219
             EmbeddingStartedAt = domain.EmbeddingStartedAt, // Issue #4219
-            IndexingStartedAt = domain.IndexingStartedAt // Issue #4219
+            IndexingStartedAt = domain.IndexingStartedAt, // Issue #4219
+            ContentHash = domain.ContentHash,
+            DocumentCategory = domain.DocumentCategory.ToString(), // Issue #5443
+            BaseDocumentId = domain.BaseDocumentId, // Issue #5444
+            CopyrightDisclaimerAcceptedAt = domain.CopyrightDisclaimerAcceptedAt, // Issue #5446
+            CopyrightDisclaimerAcceptedBy = domain.CopyrightDisclaimerAcceptedBy, // Issue #5446
+            IsActiveForRag = domain.IsActiveForRag, // Issue #5446
+            VersionLabel = domain.VersionLabel // Issue #5447
         };
     }
 }

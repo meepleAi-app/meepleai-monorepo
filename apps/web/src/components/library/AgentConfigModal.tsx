@@ -15,6 +15,7 @@
 
 import { useState, useEffect } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Check, RotateCcw, MessageCircle, Bot } from 'lucide-react';
 
 import { TypologySelector, StrategySelector } from '@/components/agent/config';
@@ -41,7 +42,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-gro
 import { Slider } from '@/components/ui/primitives/slider';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useAgentConfig, useUpdateAgentConfig, agentConfigKeys } from '@/hooks/queries';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   MODEL_OPTIONS,
   PERSONALITY_OPTIONS,
@@ -125,7 +125,9 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
       onClose();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Errore durante il salvataggio della configurazione'
+        error instanceof Error
+          ? error.message
+          : 'Errore durante il salvataggio della configurazione'
       );
     }
   };
@@ -195,10 +197,16 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
             {mode === 'create' ? 'Crea Agente AI' : 'Configurazione Agente AI'}
           </DialogTitle>
           <DialogDescription>
-            {mode === 'create'
-              ? <>Seleziona tipologia e strategia per creare un agente AI per <strong>{gameTitle}</strong></>
-              : <>Personalizza l'agente AI per <strong>{gameTitle}</strong></>
-            }
+            {mode === 'create' ? (
+              <>
+                Seleziona tipologia e strategia per creare un agente AI per{' '}
+                <strong>{gameTitle}</strong>
+              </>
+            ) : (
+              <>
+                Personalizza l'agente AI per <strong>{gameTitle}</strong>
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -208,11 +216,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
           </div>
         ) : mode === 'create' ? (
           <div className="space-y-6">
-            <TypologySelector
-              value={typologyId}
-              onChange={setTypologyId}
-              disabled={isCreating}
-            />
+            <TypologySelector value={typologyId} onChange={setTypologyId} disabled={isCreating} />
 
             <StrategySelector
               value={strategyName}
@@ -223,8 +227,8 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-sm text-blue-800 dark:text-blue-200">
                 <Bot className="inline h-4 w-4 mr-1" />
-                L'agente verrà creato con la tipologia e strategia selezionate.
-                Potrai personalizzare modello e parametri dopo la creazione.
+                L'agente verrà creato con la tipologia e strategia selezionate. Potrai
+                personalizzare modello e parametri dopo la creazione.
               </p>
             </div>
 
@@ -254,21 +258,20 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
               <Label htmlFor="model" className="text-base font-semibold">
                 🤖 Modello AI
               </Label>
-              <Select value={modelType} onValueChange={(value) => setModelType(value as AIModel)}>
+              <Select value={modelType} onValueChange={value => setModelType(value as AIModel)}>
                 <SelectTrigger id="model">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {MODEL_OPTIONS.map((model) => (
+                  {MODEL_OPTIONS.map(model => (
                     <SelectItem key={model.value} value={model.value}>
-                      {model.label} ({model.costLevel}){' '}
-                      {model.isDefault && '⭐'}
+                      {model.label} ({model.costLevel}) {model.isDefault && '⭐'}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
-                {MODEL_OPTIONS.find((m) => m.value === modelType)?.description}
+                {MODEL_OPTIONS.find(m => m.value === modelType)?.description}
               </p>
             </div>
 
@@ -307,7 +310,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
                 max={8192}
                 step={256}
                 value={maxTokens}
-                onChange={(e) => setMaxTokens(Number(e.target.value))}
+                onChange={e => setMaxTokens(Number(e.target.value))}
               />
               <p className="text-sm text-muted-foreground">
                 Lunghezza massima della risposta (512-8192)
@@ -317,8 +320,11 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
             {/* Personality Radio Buttons */}
             <div className="space-y-2">
               <Label className="text-base font-semibold">🎭 Personalità Agente</Label>
-              <RadioGroup value={personality} onValueChange={(v) => setPersonality(v as AgentPersonality)}>
-                {PERSONALITY_OPTIONS.map((option) => (
+              <RadioGroup
+                value={personality}
+                onValueChange={v => setPersonality(v as AgentPersonality)}
+              >
+                {PERSONALITY_OPTIONS.map(option => (
                   <div key={option.value} className="flex items-center space-x-2">
                     <RadioGroupItem value={option.value} id={`personality-${option.value}`} />
                     <Label
@@ -338,8 +344,8 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
             {/* Detail Level Radio Buttons */}
             <div className="space-y-2">
               <Label className="text-base font-semibold">📊 Livello Dettaglio</Label>
-              <RadioGroup value={detailLevel} onValueChange={(v) => setDetailLevel(v as DetailLevel)}>
-                {DETAIL_LEVEL_OPTIONS.map((option) => (
+              <RadioGroup value={detailLevel} onValueChange={v => setDetailLevel(v as DetailLevel)}>
+                {DETAIL_LEVEL_OPTIONS.map(option => (
                   <div key={option.value} className="flex items-center space-x-2">
                     <RadioGroupItem value={option.value} id={`detail-${option.value}`} />
                     <Label
@@ -365,7 +371,7 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
                 id="instructions"
                 placeholder="Es: Spiega sempre le regole come se fossi principiante"
                 value={customInstructions}
-                onChange={(e) => setCustomInstructions(e.target.value)}
+                onChange={e => setCustomInstructions(e.target.value)}
                 maxLength={1000}
                 rows={4}
               />

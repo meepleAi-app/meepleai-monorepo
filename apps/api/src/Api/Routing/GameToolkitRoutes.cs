@@ -4,6 +4,8 @@ using Api.BoundedContexts.GameToolkit.Application.Queries;
 using Api.Extensions;
 using MediatR;
 
+// ReSharper disable once RedundantUsingDirective - Used in endpoint parameter types
+
 namespace Api.Routing;
 
 /// <summary>
@@ -232,6 +234,105 @@ internal static class GameToolkitRoutes
         .WithName("ClearStateTemplate")
         .WithSummary("Clear the state template")
         .Produces<GameToolkitDto>(200);
+
+        // ---- Template Marketplace ----
+
+        toolkits.MapGet("/templates", async (Api.BoundedContexts.GameToolkit.Domain.Enums.TemplateCategory? category, IMediator m) =>
+        {
+            var result = await m.Send(new GetApprovedTemplatesQuery(category)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetApprovedTemplates")
+        .WithSummary("Get all approved toolkit templates")
+        .Produces<IReadOnlyList<GameToolkitDto>>(200);
+
+        toolkits.MapGet("/templates/pending-review", async (IMediator m) =>
+        {
+            var result = await m.Send(new GetPendingReviewTemplatesQuery()).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetPendingReviewTemplates")
+        .WithSummary("Get templates pending admin review")
+        .Produces<IReadOnlyList<GameToolkitDto>>(200)
+        .RequireAuthorization("AdminPolicy");
+
+        toolkits.MapPost("/{id:guid}/submit-for-review", async (Guid id, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new SubmitTemplateForReviewCommand(id, userId)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("SubmitTemplateForReview")
+        .WithSummary("Submit a toolkit as template for admin review")
+        .Produces<GameToolkitDto>(200);
+
+        toolkits.MapPost("/{id:guid}/approve", async (Guid id, ApproveTemplateRequest request, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new ApproveTemplateCommand(id, userId, request.Notes)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("ApproveTemplate")
+        .WithSummary("Approve a pending template")
+        .Produces<GameToolkitDto>(200)
+        .RequireAuthorization("AdminPolicy");
+
+        toolkits.MapPost("/{id:guid}/reject", async (Guid id, RejectTemplateRequest request, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new RejectTemplateCommand(id, userId, request.Notes)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("RejectTemplate")
+        .WithSummary("Reject a pending template")
+        .Produces<GameToolkitDto>(200)
+        .RequireAuthorization("AdminPolicy");
+
+        toolkits.MapPost("/clone-from-template/{templateId:guid}", async (Guid templateId, CloneFromTemplateRequest request, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new CloneFromTemplateCommand(templateId, request.GameId, userId)).ConfigureAwait(false);
+            return Results.Created($"/api/v1/game-toolkits/{result.Id}", result);
+        })
+        .WithName("CloneFromTemplate")
+        .WithSummary("Clone a toolkit from an approved template")
+        .Produces<GameToolkitDto>(201);
+
+        // ---- AI Generation ----
+
+        toolkits.MapPost("/{id:guid}/generate-from-kb", async (Guid id, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new GenerateToolkitFromKbCommand(id, userId)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GenerateToolkitFromKb")
+        .WithSummary("Generate an AI toolkit suggestion from knowledge base chunks")
+        .Produces<AiToolkitSuggestionDto>(200)
+        .Produces(401);
+
+        toolkits.MapPost("/{id:guid}/apply-ai-suggestion", async (Guid id, ApplyAiSuggestionRequest request, HttpContext ctx, IMediator m) =>
+        {
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
+                return Results.Unauthorized();
+            var result = await m.Send(new ApplyAiToolkitSuggestionCommand(id, userId, request.ToolkitId, request.Suggestion)).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("ApplyAiToolkitSuggestion")
+        .WithSummary("Apply an AI-generated suggestion to create or update a toolkit")
+        .Produces<GameToolkitDto>(200)
+        .Produces(401);
 
         return toolkits;
     }

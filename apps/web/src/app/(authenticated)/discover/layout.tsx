@@ -11,7 +11,7 @@
 
 import { type ReactNode, useEffect } from 'react';
 
-import { BookOpen, Plus, Users } from 'lucide-react';
+import { BookOpen, FileText, Plus, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useSetNavConfig } from '@/context/NavigationContext';
@@ -24,6 +24,7 @@ export default function DiscoverLayout({ children }: { children: ReactNode }) {
     setNavConfig({
       miniNav: [
         { id: 'catalog', label: 'Catalogo', href: '/discover', icon: BookOpen },
+        { id: 'proposals', label: 'Proposte', href: '/discover?tab=proposals', icon: FileText },
         { id: 'community', label: 'Community', href: '/discover?tab=community', icon: Users },
       ],
       actionBar: [

@@ -7,8 +7,8 @@ using Moq;
 using StackExchange.Redis;
 using Xunit;
 using FluentAssertions;
-using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
-using UserTier = Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
+using UserTier = Api.SharedKernel.Domain.ValueObjects.UserTier;
 using Api.Tests.Constants;
 using System.Globalization;
 

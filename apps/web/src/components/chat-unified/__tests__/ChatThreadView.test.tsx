@@ -83,6 +83,12 @@ vi.mock('@/components/chat/ChatInfoPanel', () => ({
   ),
 }));
 
+// Mock AgentSettingsDrawer (Issue #3250)
+vi.mock('@/components/agent/settings', () => ({
+  AgentSettingsDrawer: ({ isOpen }: any) =>
+    isOpen ? <div data-testid="agent-settings-drawer">Settings Drawer</div> : null,
+}));
+
 // Mock AgentSelector (Issue #4465)
 vi.mock('@/components/agent/AgentSelector', () => ({
   AgentSelector: ({ value, onChange, disabled }: any) => (
@@ -95,20 +101,24 @@ vi.mock('@/components/agent/AgentSelector', () => ({
       <option value="auto">Auto</option>
       <option value="tutor">Tutor</option>
       <option value="arbitro">Arbitro</option>
-      <option value="decisore">Decisore</option>
+      <option value="stratega">Stratega</option>
+      <option value="narratore">Narratore</option>
     </select>
   ),
   AGENT_NAMES: {
     auto: 'Auto (Orchestrator)',
     tutor: 'Tutor',
     arbitro: 'Arbitro',
-    decisore: 'Decisore',
+    stratega: 'Stratega',
+    narratore: 'Narratore',
   },
 }));
 
 // Mock AuthProvider (Issue #4916: ChatThreadView now uses useAuth for admin detection)
 vi.mock('@/components/auth/AuthProvider', () => ({
-  useAuth: () => ({ user: { id: 'user-1', role: 'User', email: 'test@test.com', displayName: 'Test' } }),
+  useAuth: () => ({
+    user: { id: 'user-1', role: 'User', email: 'test@test.com', displayName: 'Test' },
+  }),
 }));
 
 // Mock store
@@ -140,7 +150,9 @@ const mockThread = {
       role: 'assistant',
       content: 'Hi there!',
       timestamp: '2024-01-01T00:01:00Z',
-      citations: [{ documentId: 'doc-1', pageNumber: 5, snippet: 'Rule text', relevanceScore: 0.9 }],
+      citations: [
+        { documentId: 'doc-1', pageNumber: 5, snippet: 'Rule text', relevanceScore: 0.9 },
+      ],
       followUpQuestions: ['What else?', 'How about this?'],
     },
   ],
@@ -425,7 +437,7 @@ describe('ChatThreadView', () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
       messages: [],
-      agentTypology: 'Tutor',
+      agentType: 'Tutor',
     });
 
     await renderView();
@@ -441,7 +453,7 @@ describe('ChatThreadView', () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
       messages: [],
-      agentTypology: 'Arbitro',
+      agentType: 'Arbitro',
     });
 
     await renderView();
@@ -455,7 +467,7 @@ describe('ChatThreadView', () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
       messages: [],
-      agentTypology: 'Stratega',
+      agentType: 'Stratega',
     });
 
     await renderView();
@@ -469,7 +481,7 @@ describe('ChatThreadView', () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
       messages: [],
-      agentTypology: 'Narratore',
+      agentType: 'Narratore',
     });
 
     await renderView();
@@ -483,7 +495,7 @@ describe('ChatThreadView', () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
       messages: [],
-      agentTypology: 'unknown',
+      agentType: 'unknown',
     });
 
     await renderView();
@@ -496,7 +508,7 @@ describe('ChatThreadView', () => {
   it('does not show welcome message when thread has existing messages', async () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
-      agentTypology: 'Tutor',
+      agentType: 'Tutor',
     });
 
     await renderView();
@@ -514,7 +526,7 @@ describe('ChatThreadView', () => {
   it('passes proxy game context when agentTypology is set', async () => {
     (apiMock.chat.getThreadById as Mock).mockResolvedValue({
       ...mockThread,
-      agentTypology: 'Tutor',
+      agentType: 'Tutor',
     });
 
     const user = userEvent.setup();
@@ -529,12 +541,10 @@ describe('ChatThreadView', () => {
     await user.click(screen.getByTestId('send-btn'));
 
     await waitFor(() => {
-      expect(mockSendViaSSE).toHaveBeenCalledWith(
-        'agent-1',
-        'Help with rules',
-        'thread-1',
-        { gameName: 'Catan', agentTypology: 'Tutor' }
-      );
+      expect(mockSendViaSSE).toHaveBeenCalledWith('agent-1', 'Help with rules', 'thread-1', {
+        gameName: 'Catan',
+        agentTypology: 'Tutor',
+      });
     });
   });
 
@@ -609,7 +619,11 @@ describe('ChatThreadView', () => {
       {
         type: 16,
         name: 'Prompt Context',
-        payload: { systemPrompt: '[redacted]', userPromptPreview: 'test', estimatedPromptTokens: 100 },
+        payload: {
+          systemPrompt: '[redacted]',
+          userPromptPreview: 'test',
+          estimatedPromptTokens: 100,
+        },
         timestamp: '2026-01-01T12:00:00.000Z',
       },
     ];

@@ -10,6 +10,8 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 public interface IConfigurationRepository : IRepository<SystemConfigurationEntity, Guid>
 {
     Task<SystemConfigurationEntity?> GetByKeyAsync(string key, string? environment = null, bool activeOnly = true, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SystemConfigurationEntity>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SystemConfigurationEntity>> GetByKeysAsync(IEnumerable<string> keys, string? environment = null, bool activeOnly = false, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SystemConfigurationEntity>> GetByCategoryAsync(string category, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SystemConfigurationEntity>> GetActiveConfigurationsAsync(CancellationToken cancellationToken = default);
 }

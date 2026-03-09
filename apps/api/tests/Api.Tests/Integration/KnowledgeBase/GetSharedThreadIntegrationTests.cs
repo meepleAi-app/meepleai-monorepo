@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands.CreateShareLink;
 using Api.BoundedContexts.Authentication.Application.Commands.RevokeShareLink;
 using Api.BoundedContexts.Authentication.Application.Queries.ValidateShareLink;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetSharedThread;

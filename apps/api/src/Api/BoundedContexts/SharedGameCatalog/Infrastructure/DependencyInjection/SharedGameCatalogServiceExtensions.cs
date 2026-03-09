@@ -1,3 +1,4 @@
+using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -40,6 +41,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<ISharedGameDocumentRepository, SharedGameDocumentRepository>(); // Issue #2391 Sprint 1
         services.AddScoped<IGameStateTemplateRepository, GameStateTemplateRepository>(); // Issue #2400 Sprint 3
         services.AddScoped<IRulebookAnalysisRepository, RulebookAnalysisRepository>(); // Issue #2402 Sprint 3
+        services.AddScoped<IMechanicDraftRepository, MechanicDraftRepository>(); // Mechanic Extractor: Variant C drafts
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards

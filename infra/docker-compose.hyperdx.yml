@@ -25,11 +25,11 @@ services:
 
     ports:
       # Web UI - Custom port to avoid conflict with meepleai-api:8080
-      - "8180:8080"
+      - "127.0.0.1:8180:8080"
 
       # OpenTelemetry Collector endpoints - Custom ports to avoid conflicts
-      - "14317:4317"  # OTLP gRPC
-      - "14318:4318"  # OTLP HTTP
+      - "127.0.0.1:14317:4317"  # OTLP gRPC
+      - "127.0.0.1:14318:4318"  # OTLP HTTP
 
       # ClickHouse port 8123 intentionally NOT exposed for security
       # Access via Docker internal networking only (e.g., for backups)

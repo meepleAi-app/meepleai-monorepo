@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -31,8 +30,6 @@ internal class HybridLlmService : ILlmService
     private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
     private readonly ILlmCostService _costService;
     private readonly ILogger<HybridLlmService> _logger;
-    private readonly IOpenRouterRateLimitTracker? _rateLimitTracker;
-    private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker;
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
@@ -51,17 +48,13 @@ internal class HybridLlmService : ILlmService
         ILlmProviderSelector providerSelector,
         ICircuitBreakerRegistry circuitBreakerRegistry,
         ILlmCostService costService,
-        ILogger<HybridLlmService> logger,
-        IOpenRouterRateLimitTracker? rateLimitTracker = null,
-        IFreeModelQuotaTracker? freeModelQuotaTracker = null)
+        ILogger<HybridLlmService> logger)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _providerSelector = providerSelector ?? throw new ArgumentNullException(nameof(providerSelector));
         _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
         _costService = costService ?? throw new ArgumentNullException(nameof(costService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _rateLimitTracker = rateLimitTracker;
-        _freeModelQuotaTracker = freeModelQuotaTracker;
 
         if (_clients.Count == 0)
         {
@@ -131,15 +124,9 @@ internal class HybridLlmService : ILlmService
                 "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
                 client.ProviderName, decision.ModelId, decision.Reason);
 
-            // Issue #5075: Warn if approaching RPM limit
-            if (_rateLimitTracker != null)
-            {
-                var isApproaching = await _rateLimitTracker
-                    .IsApproachingLimitAsync(client.ProviderName, thresholdPercent: 80, cancellationToken)
-                    .ConfigureAwait(false);
-                if (isApproaching)
-                    _logger.LogWarning("OpenRouter rate limit approaching 80% for provider {Provider}", client.ProviderName);
-            }
+            // Issue #5492: Warn if approaching RPM limit (delegated to selector)
+            await _providerSelector.WarnIfApproachingLimitAsync(client.ProviderName, cancellationToken)
+                .ConfigureAwait(false);
 
             var attemptStopwatch = Stopwatch.StartNew();
             try
@@ -156,35 +143,16 @@ internal class HybridLlmService : ILlmService
 
                 if (result.Success)
                 {
-                    // Step 3: Record success + log cost
-                    _circuitBreakerRegistry.RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+                    // Step 3: Record success + log cost (Issue #5492: delegated to selector)
+                    _providerSelector.RecordSuccess(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
                     await _costService.LogSuccessAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
-
-                    if (_rateLimitTracker != null)
-                    {
-                        var totalTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
-                        _ = _rateLimitTracker.RecordRequestAsync(client.ProviderName, decision.ModelId, totalTokens);
-                    }
 
                     return result;
                 }
 
-                _circuitBreakerRegistry.RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
-
-                // Issue #5087/#5088: Record rate limit events for future routing avoidance
-                if (string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal)
-                    && _freeModelQuotaTracker != null
-                    && result.Metadata.TryGetValue("rate_limit_type", out var rlTypeStr)
-                    && Enum.TryParse<RateLimitErrorType>(rlTypeStr, ignoreCase: true, out var rlErrorType))
-                {
-                    result.Metadata.TryGetValue("rate_limit_reset_ms", out var resetMsStr);
-                    long? resetMs = long.TryParse(resetMsStr, NumberStyles.None, CultureInfo.InvariantCulture, out var resetMsVal)
-                        ? resetMsVal : null;
-                    result.Metadata.TryGetValue("rate_limit_model", out var rlModel);
-                    var modelForTracking = string.IsNullOrEmpty(rlModel) ? decision.ModelId : rlModel;
-                    _ = _freeModelQuotaTracker.RecordRateLimitErrorAsync(modelForTracking, rlErrorType, resetMs, cancellationToken);
-                }
+                // Issue #5492: Record failure (circuit breaker + rate limit tracking delegated to selector)
+                _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
 
                 await _costService.LogFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
@@ -192,7 +160,7 @@ internal class HybridLlmService : ILlmService
             catch (Exception ex)
             {
                 attemptStopwatch.Stop();
-                _circuitBreakerRegistry.RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+                _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds);
 
                 _logger.LogError(ex,
                     "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
@@ -406,11 +374,11 @@ internal class HybridLlmService : ILlmService
             if (!result.Success)
             {
                 _logger.LogWarning("Explicit model {Model} call failed: {Error}", explicitModel, result.ErrorMessage);
-                _circuitBreakerRegistry.RecordFailure(providerName, stopwatch.ElapsedMilliseconds);
+                _providerSelector.RecordFailure(providerName, explicitModel, stopwatch.ElapsedMilliseconds, result);
                 return result;
             }
 
-            _circuitBreakerRegistry.RecordSuccess(providerName, stopwatch.ElapsedMilliseconds);
+            _providerSelector.RecordSuccess(providerName, explicitModel, stopwatch.ElapsedMilliseconds, result);
 
             // Log cost asynchronously (fire-and-forget — use CancellationToken.None to survive request cancellation)
             _ = _costService.LogSuccessAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
@@ -425,35 +393,9 @@ internal class HybridLlmService : ILlmService
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error generating completion with explicit model {Model}", explicitModel);
-            _circuitBreakerRegistry.RecordFailure(providerName, stopwatch.ElapsedMilliseconds);
+            _providerSelector.RecordFailure(providerName, explicitModel, stopwatch.ElapsedMilliseconds);
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
-    }
-
-    /// <summary>
-    /// Issue #5487: Monitoring status now delegated to ICircuitBreakerRegistry.
-    /// Kept for backward compatibility with GetLlmHealthQueryHandler.
-    /// </summary>
-    public virtual Dictionary<string, (string circuitState, string latencyStats)> GetMonitoringStatus()
-    {
-        return _circuitBreakerRegistry.GetMonitoringStatus();
-    }
-
-    /// <summary>
-    /// Issue #5487: Latency stats now delegated to ICircuitBreakerRegistry.
-    /// </summary>
-    public string GetLatencyStats(string providerName)
-    {
-        return _circuitBreakerRegistry.GetLatencyStats(providerName);
-    }
-
-    /// <summary>
-    /// Issue #5487: Circuit breaker reset now delegated to ICircuitBreakerRegistry.
-    /// Kept for backward compatibility with ActivateEmergencyOverrideCommandHandler.
-    /// </summary>
-    public void ResetCircuitBreaker(string? targetProvider = null)
-    {
-        _circuitBreakerRegistry.ResetCircuitBreaker(targetProvider);
     }
 
     private void AddRoutingMetadata(

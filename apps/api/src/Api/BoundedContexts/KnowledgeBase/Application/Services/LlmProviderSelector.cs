@@ -1,6 +1,8 @@
+using System.Globalization;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
@@ -26,6 +28,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
     private readonly IProviderHealthCheckService? _healthCheckService;
     private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker;
     private readonly IEmergencyOverrideService? _emergencyOverrideService;
+    private readonly IOpenRouterRateLimitTracker? _rateLimitTracker;
     private readonly ILogger<LlmProviderSelector> _logger;
 
     public LlmProviderSelector(
@@ -37,7 +40,8 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         ILogger<LlmProviderSelector> logger,
         IProviderHealthCheckService? healthCheckService = null,
         IFreeModelQuotaTracker? freeModelQuotaTracker = null,
-        IEmergencyOverrideService? emergencyOverrideService = null)
+        IEmergencyOverrideService? emergencyOverrideService = null,
+        IOpenRouterRateLimitTracker? rateLimitTracker = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -48,6 +52,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         _healthCheckService = healthCheckService;
         _freeModelQuotaTracker = freeModelQuotaTracker;
         _emergencyOverrideService = emergencyOverrideService;
+        _rateLimitTracker = rateLimitTracker;
 
         if (_clients.Count == 0)
         {
@@ -177,6 +182,53 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         }
 
         return ProviderSelectionResult.NoProvider($"No fallback providers available after {failedProvider}");
+    }
+
+    /// <inheritdoc/>
+    public void RecordSuccess(string providerName, string modelId, long latencyMs, LlmCompletionResult result)
+    {
+        _circuitBreakerRegistry.RecordSuccess(providerName, latencyMs);
+
+        if (_rateLimitTracker != null)
+        {
+            _ = _rateLimitTracker.RecordRequestAsync(providerName, modelId, result.Usage.TotalTokens);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void RecordFailure(string providerName, string modelId, long latencyMs, LlmCompletionResult? result = null)
+    {
+        _circuitBreakerRegistry.RecordFailure(providerName, latencyMs);
+
+        // Issue #5087/#5088: Record rate limit events for future routing avoidance
+        if (result != null
+            && string.Equals(providerName, "OpenRouter", StringComparison.Ordinal)
+            && _freeModelQuotaTracker != null
+            && result.Metadata.TryGetValue("rate_limit_type", out var rlTypeStr)
+            && Enum.TryParse<RateLimitErrorType>(rlTypeStr, ignoreCase: true, out var rlErrorType))
+        {
+            result.Metadata.TryGetValue("rate_limit_reset_ms", out var resetMsStr);
+            long? resetMs = long.TryParse(resetMsStr, NumberStyles.None, CultureInfo.InvariantCulture, out var resetMsVal)
+                ? resetMsVal : null;
+            result.Metadata.TryGetValue("rate_limit_model", out var rlModel);
+            var modelForTracking = string.IsNullOrEmpty(rlModel) ? modelId : rlModel;
+            _ = _freeModelQuotaTracker.RecordRateLimitErrorAsync(modelForTracking, rlErrorType, resetMs);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task WarnIfApproachingLimitAsync(string providerName, CancellationToken ct = default)
+    {
+        if (_rateLimitTracker == null) return;
+
+        var isApproaching = await _rateLimitTracker
+            .IsApproachingLimitAsync(providerName, thresholdPercent: 80, ct)
+            .ConfigureAwait(false);
+        if (isApproaching)
+        {
+            _logger.LogWarning(
+                "Rate limit approaching 80% for provider {Provider}", providerName);
+        }
     }
 
     /// <summary>

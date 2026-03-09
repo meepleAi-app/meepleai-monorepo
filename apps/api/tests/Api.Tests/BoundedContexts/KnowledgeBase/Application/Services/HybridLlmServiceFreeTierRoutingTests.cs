@@ -107,8 +107,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
             selector,
             _circuitBreakerRegistryMock.Object,
             _costServiceMock.Object,
-            _logger,
-            freeModelQuotaTracker: _quotaTrackerMock.Object);
+            _logger);
     }
 
     private static LlmCompletionResult SuccessResult(string provider) =>

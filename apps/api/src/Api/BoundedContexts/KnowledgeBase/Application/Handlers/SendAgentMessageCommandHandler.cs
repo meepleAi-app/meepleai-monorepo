@@ -10,6 +10,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -312,17 +313,26 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             new StreamingStateUpdate("Searching knowledge base...", thread.Id));
 
         // Issue #5258: Rewrite ambiguous follow-up queries for better RAG retrieval
+        // Issue #5543: Distributed tracing — child spans for RAG pipeline stages
         var searchQuery = command.UserQuestion;
         if (!string.IsNullOrEmpty(chatHistoryContext))
         {
+            using var rewriteActivity = MeepleAiActivitySources.Rag.StartActivity("Rag.QueryRewrite");
+            rewriteActivity?.SetTag("rag.original_query_length", command.UserQuestion.Length);
             searchQuery = await _queryRewriter.RewriteQueryAsync(
                 command.UserQuestion, chatHistoryContext, cancellationToken).ConfigureAwait(false);
+            rewriteActivity?.SetTag("rag.rewritten_query_length", searchQuery.Length);
         }
 
         // Step 1: Generate embedding for search query (rewritten if applicable)
+        // Issue #5543: Distributed tracing — child span for embedding generation
+        using var embeddingActivity = MeepleAiActivitySources.Rag.StartActivity("Rag.Embedding");
+        embeddingActivity?.SetTag("rag.query_length", searchQuery.Length);
         var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
             searchQuery,
             cancellationToken).ConfigureAwait(false);
+        embeddingActivity?.SetTag("rag.embedding_success", embeddingResult.Success);
+        embeddingActivity?.Dispose();
 
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
         {
@@ -520,6 +530,11 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _logger.LogInformation("Using model: {Model} (requested: {Requested})", modelToUse, requestedModel);
 
         // === LLM Call with Retry + Tiered Fallback ===
+        // Issue #5543: Distributed tracing — child span for LLM call
+        using var llmActivity = MeepleAiActivitySources.Rag.StartActivity("Rag.LlmCall");
+        llmActivity?.SetTag("rag.model", modelToUse);
+        llmActivity?.SetTag("rag.estimated_prompt_tokens", estimatedPromptTokens);
+
         var originalModel = modelToUse;
         string? fallbackReason = null;
 
@@ -570,6 +585,8 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         // All attempts exhausted
         if (!llmResult.Success)
         {
+            llmActivity?.SetTag("rag.llm_success", false);
+            llmActivity?.SetTag("rag.llm_error", llmResult.ErrorMessage ?? "unknown");
             _logger.LogError("All LLM attempts failed. Original={Original}, Last={Last}, Error={Error}",
                 originalModel, modelToUse, llmResult.ErrorMessage);
             yield return CreateEvent(
@@ -577,6 +594,11 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 new StreamingError("Il servizio AI non è al momento disponibile. Riprova tra qualche minuto.", "LLM_FAILED"));
             yield break;
         }
+
+        llmActivity?.SetTag("rag.llm_success", true);
+        llmActivity?.SetTag("rag.final_model", modelToUse);
+        llmActivity?.SetTag("rag.used_fallback", !string.Equals(modelToUse, originalModel, StringComparison.Ordinal));
+        llmActivity?.SetTag("rag.total_tokens", llmResult.Usage.TotalTokens);
 
         // Emit downgrade notice if model changed
         if (!string.Equals(modelToUse, originalModel, StringComparison.Ordinal))

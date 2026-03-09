@@ -295,6 +295,9 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-1907: ADR-016 Phase 5 - Grid Search and Benchmark Reports
         services.AddScoped<RunGridSearchHandler>();
         services.AddSingleton<IReportGeneratorService, ReportGeneratorService>();
+
+        // Issue #5513: AI consent check service (cross-cutting from Administration BC)
+        services.AddScoped<IUserAiConsentCheckService, UserAiConsentCheckService>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

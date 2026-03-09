@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
@@ -73,6 +74,12 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             .Setup(r => r.RewriteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns<string, string, CancellationToken>((query, _, _) => Task.FromResult(query));
 
+        // Issue #5513: Consent check — default true so existing tests pass
+        var consentCheckMock = new Mock<IUserAiConsentCheckService>();
+        consentCheckMock
+            .Setup(s => s.IsAiProcessingAllowedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         _handler = new SendAgentMessageCommandHandler(
             _agentRepository,
             _chatThreadRepository,
@@ -87,6 +94,7 @@ public sealed class SendAgentMessagePersistenceTests : IAsyncLifetime
             new ChatContextDomainService(),
             mockQueryRewriter.Object,
             Mock.Of<IConversationSummarizer>(),
+            consentCheckMock.Object,
             Mock.Of<ILogger<SendAgentMessageCommandHandler>>());
 
         // Seed a test user (FK requirement)

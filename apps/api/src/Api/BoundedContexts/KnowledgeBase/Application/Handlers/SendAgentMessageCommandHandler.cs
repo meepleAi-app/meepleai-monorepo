@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
@@ -44,6 +45,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly ChatContextDomainService _chatContextService;
     private readonly IConversationQueryRewriter _queryRewriter;
     private readonly IConversationSummarizer _conversationSummarizer;
+    private readonly IUserAiConsentCheckService _consentCheckService;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
 
     public SendAgentMessageCommandHandler(
@@ -60,6 +62,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         ChatContextDomainService chatContextService,
         IConversationQueryRewriter queryRewriter,
         IConversationSummarizer conversationSummarizer,
+        IUserAiConsentCheckService consentCheckService,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -75,6 +78,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _queryRewriter = queryRewriter ?? throw new ArgumentNullException(nameof(queryRewriter));
         _conversationSummarizer = conversationSummarizer ?? throw new ArgumentNullException(nameof(conversationSummarizer));
+        _consentCheckService = consentCheckService ?? throw new ArgumentNullException(nameof(consentCheckService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -102,6 +106,25 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _logger.LogInformation(
             "Starting agent chat for Agent {AgentId}, User {UserId}, Thread {ChatThreadId}",
             command.AgentId, command.UserId, command.ChatThreadId);
+
+        // Issue #5513: Check AI consent — if user opted out, return search-only error
+        var aiAllowed = await _consentCheckService
+            .IsAiProcessingAllowedAsync(command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!aiAllowed)
+        {
+            _logger.LogInformation(
+                "User {UserId} has not consented to AI processing — blocking LLM generation",
+                command.UserId);
+
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(
+                    "AI features are disabled. Enable AI processing in Settings > AI & Privacy to use this feature.",
+                    "AI_CONSENT_REQUIRED"));
+            yield break;
+        }
 
         // Validate Agent exists
         var agent = await _agentRepository

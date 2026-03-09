@@ -39,6 +39,7 @@ public sealed class LlmResilienceChaosTests
     private readonly Mock<IAiModelConfigurationRepository> _modelConfigMock = new();
     private readonly Mock<IFreeModelQuotaTracker> _quotaTrackerMock = new();
     private readonly Mock<ICircuitBreakerRegistry> _circuitBreakerRegistryMock = new();
+    private readonly Mock<ILlmCostService> _costServiceMock = new();
     private readonly ILogger<HybridLlmService> _logger;
     private readonly ILogger<LlmProviderSelector> _selectorLogger;
 
@@ -110,6 +111,7 @@ public sealed class LlmResilienceChaosTests
             clients,
             selector,
             _circuitBreakerRegistryMock.Object,
+            _costServiceMock.Object,
             _logger,
             freeModelQuotaTracker: _quotaTrackerMock.Object);
     }

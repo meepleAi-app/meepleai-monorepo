@@ -102,7 +102,8 @@ function ScoreRadarChart({ data }: { data: AbTestAnalyticsDto['modelAvgScores'] 
     for (const model of data) {
       const shortName = model.modelId.split('/').pop() ?? model.modelId;
       const key = `avg${dim}` as keyof typeof model;
-      entry[shortName] = Number((model[key] as number).toFixed(2));
+      const val = model[key];
+      entry[shortName] = typeof val === 'number' ? Number(val.toFixed(2)) : 0;
     }
     return entry;
   });
@@ -232,6 +233,8 @@ export default function AbTestAnalyticsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
+  const isDateRangeValid = !dateFrom || !dateTo || dateFrom <= dateTo;
+
   const { data, isLoading } = useQuery({
     queryKey: ['abTestAnalytics', dateFrom, dateTo],
     queryFn: () =>
@@ -239,6 +242,8 @@ export default function AbTestAnalyticsPage() {
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
       }),
+    enabled: isDateRangeValid,
+    staleTime: 30_000,
   });
 
   const hasData = data && data.totalTests > 0;
@@ -273,8 +278,11 @@ export default function AbTestAnalyticsPage() {
       {/* Date Filter */}
       <div className="flex items-end gap-4">
         <div>
-          <Label className="text-xs">From</Label>
+          <Label htmlFor="date-from" className="text-xs">
+            From
+          </Label>
           <Input
+            id="date-from"
             type="date"
             value={dateFrom}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateFrom(e.target.value)}
@@ -282,8 +290,11 @@ export default function AbTestAnalyticsPage() {
           />
         </div>
         <div>
-          <Label className="text-xs">To</Label>
+          <Label htmlFor="date-to" className="text-xs">
+            To
+          </Label>
           <Input
+            id="date-to"
             type="date"
             value={dateTo}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateTo(e.target.value)}
@@ -301,6 +312,9 @@ export default function AbTestAnalyticsPage() {
           >
             Clear
           </Button>
+        )}
+        {!isDateRangeValid && (
+          <p className="text-xs text-red-500">From date must be before To date</p>
         )}
       </div>
 

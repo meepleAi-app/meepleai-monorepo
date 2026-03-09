@@ -173,12 +173,7 @@ export function LlmConfigTab() {
               <RotateCcw className="mr-1 h-3 w-3" /> Discard
             </Button>
           )}
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!isDirty || saving}
-            className="text-xs"
-          >
+          <Button size="sm" onClick={handleSave} disabled={!isDirty || saving} className="text-xs">
             {saving ? (
               <Loader2 className="mr-1 h-3 w-3 animate-spin" />
             ) : (
@@ -215,9 +210,7 @@ export function LlmConfigTab() {
           <>
             {' '}
             · Last updated:{' '}
-            <span className="font-medium">
-              {new Date(config.lastUpdatedAt).toLocaleString()}
-            </span>
+            <span className="font-medium">{new Date(config.lastUpdatedAt).toLocaleString()}</span>
           </>
         )}
       </div>
@@ -370,8 +363,7 @@ function ConfigSection({
   children: React.ReactNode;
 }) {
   const badgeClasses: Record<string, string> = {
-    emerald:
-      'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
+    emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
     amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
     blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
     rose: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400',
@@ -402,6 +394,7 @@ function NumberField({
   min,
   max,
   step = 1,
+  integer,
 }: {
   label: string;
   value: number;

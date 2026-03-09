@@ -252,6 +252,9 @@ services:
     profiles: [ai, full]
     ports:
       - "8000:8000"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://hyperdx:14318
+      - OTEL_SERVICE_NAME=embedding-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -290,6 +293,8 @@ services:
       - LOG_LEVEL=INFO
       - MAX_FILE_SIZE=52428800  # 50MB
       - TIMEOUT=30
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://hyperdx:14318
+      - OTEL_SERVICE_NAME=unstructured-service
       - UNSTRUCTURED_STRATEGY=fast
       - LANGUAGE=ita
       - CHUNK_MAX_CHARACTERS=2000
@@ -330,6 +335,8 @@ services:
     environment:
       - LOG_LEVEL=INFO
       - MAX_FILE_SIZE=52428800  # 50MB
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://hyperdx:14318
+      - OTEL_SERVICE_NAME=smoldocling-service
       - MAX_PAGES_PER_REQUEST=20
       - TIMEOUT=60
       - DEVICE=cpu  # Use cpu for development (set to cuda in production with GPU)
@@ -381,6 +388,8 @@ services:
     ports:
       - "127.0.0.1:8003:8003"  # Bind to localhost only for security
     environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://hyperdx:14318
+      - OTEL_SERVICE_NAME=reranker-service
       - MODEL_NAME=BAAI/bge-reranker-v2-m3
       - BATCH_SIZE=32
       - LOG_LEVEL=INFO

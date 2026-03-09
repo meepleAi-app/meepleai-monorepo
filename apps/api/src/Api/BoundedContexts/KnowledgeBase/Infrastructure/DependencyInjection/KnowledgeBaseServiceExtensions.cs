@@ -227,6 +227,13 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Issue #5087: Free model quota tracker — Redis-backed RPD exhaustion state (Singleton - stateless)
         services.AddSingleton<IFreeModelQuotaTracker, FreeModelQuotaTracker>();
+
+        // Issue #5476: Emergency override service — Redis-backed with IMemoryCache L1 + TTL auto-revert
+        services.AddSingleton<IEmergencyOverrideService, EmergencyOverrideService>();
+
+        // Issue #5477: Redis rate-limiting health monitor — pings Redis every 30s, alerts admins on failure
+        services.AddSingleton<RedisRateLimitingHealthMonitor>();
+        services.AddHostedService(sp => sp.GetRequiredService<RedisRateLimitingHealthMonitor>());
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)

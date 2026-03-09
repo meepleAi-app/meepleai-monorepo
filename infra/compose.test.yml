@@ -67,19 +67,11 @@ services:
     profiles:
       - observability  # Won't start unless --profile observability is used
 
-  jaeger:
-    profiles:
-      - observability
-
   prometheus:
     profiles:
       - observability
 
   alertmanager:
-    profiles:
-      - observability
-
-  seq:
     profiles:
       - observability
 

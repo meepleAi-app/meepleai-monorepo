@@ -124,7 +124,7 @@ services:
     ports:
       - "80:80"       # HTTP
       # - "443:443"   # HTTPS (uncomment for production)
-      - "8080:8080"   # Dashboard (DEVELOPMENT ONLY)
+      - "127.0.0.1:8888:8080"   # Dashboard (DEVELOPMENT ONLY - port 8888 to avoid conflict with API on 8080)
 
     environment:
       # PRODUCTION: Cloudflare API token for DNS challenge

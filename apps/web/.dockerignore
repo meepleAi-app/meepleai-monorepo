@@ -15,6 +15,12 @@ coverage
 # Exception: Allow .env*.example for Docker builds (Issue #2009)
 !.env*.example
 
+# E2E test files
+e2e/
+playwright.config.ts
+playwright-report/
+test-results/
+
 # Test files and directories
 **/__tests__/**
 **/*.test.ts

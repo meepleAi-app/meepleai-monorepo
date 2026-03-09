@@ -8352,6 +8352,61 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("AiModelConfigurations", "SystemConfiguration");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.LlmSystemConfigEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CircuitBreakerFailureThreshold")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(5);
+
+                    b.Property<int>("CircuitBreakerOpenDurationSeconds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
+                    b.Property<int>("CircuitBreakerSuccessThreshold")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<decimal>("DailyBudgetUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasDefaultValue(10.00m);
+
+                    b.Property<string>("FallbackChainJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]");
+
+                    b.Property<decimal>("MonthlyBudgetUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasDefaultValue(100.00m);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LlmSystemConfigs", "SystemConfiguration");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.ShareRequestLimitConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")

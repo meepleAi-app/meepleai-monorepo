@@ -182,9 +182,17 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-2391 Sprint 2: LLM Provider Factory
         services.AddSingleton<LlmProviderFactory>();
 
+        // Issue #5487: Circuit breaker registry (Singleton - shared state across all scoped services)
+        services.AddSingleton<ICircuitBreakerRegistry, CircuitBreakerRegistry>();
+
+        // Issue #5487: Provider selector (Scoped - uses scoped IAiModelConfigurationRepository)
+        services.AddScoped<ILlmProviderSelector, LlmProviderSelector>();
+
+        // Issue #5489: Cost service (Scoped - uses scoped repositories via IServiceScopeFactory)
+        services.AddScoped<ILlmCostService, LlmCostService>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
-        // ISSUE-5086: IServiceScopeFactory is auto-injected by the DI container (built-in singleton)
-        // enabling fire-and-forget circuit breaker notifications without coupling to request scope
+        // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 

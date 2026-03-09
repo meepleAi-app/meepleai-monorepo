@@ -83,6 +83,8 @@ describe('useAgentChatStream', () => {
       totalTokens: 0,
       debugSteps: [],
       modelDowngrade: null,
+      strategyTier: null,
+      executionId: null,
     });
   });
 

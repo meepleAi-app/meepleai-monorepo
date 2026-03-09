@@ -188,8 +188,11 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5487: Provider selector (Scoped - uses scoped IAiModelConfigurationRepository)
         services.AddScoped<ILlmProviderSelector, LlmProviderSelector>();
 
+        // Issue #5489: Cost service (Scoped - uses scoped repositories via IServiceScopeFactory)
+        services.AddScoped<ILlmCostService, LlmCostService>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
-        // Issue #5487: Now delegates to ILlmProviderSelector and ICircuitBreakerRegistry
+        // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 

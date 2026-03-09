@@ -1,47 +1,37 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
-using Api.BoundedContexts.KnowledgeBase.Domain.Events;
-using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
-using Api.BoundedContexts.BusinessSimulations.Domain.Events;
-using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Services;
 using Api.Services.LlmClients;
-using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// Hybrid LLM service coordinating multiple providers (Ollama, OpenRouter) with adaptive routing.
-/// Issue #5487: Refactored to thin orchestrator — delegates provider selection to ILlmProviderSelector
-/// and circuit breaker management to ICircuitBreakerRegistry.
+/// Issue #5487: Delegates provider selection to ILlmProviderSelector and circuit breaker to ICircuitBreakerRegistry.
+/// Issue #5489: Delegates cost logging to ILlmCostService.
 ///
 /// Responsibilities (select → execute → log):
 /// 1. Select provider via ILlmProviderSelector
 /// 2. Execute request against selected ILlmClient
 /// 3. Record outcome in ICircuitBreakerRegistry
-/// 4. Log cost and usage
+/// 4. Log cost via ILlmCostService
 /// </summary>
 internal class HybridLlmService : ILlmService
 {
     private readonly List<ILlmClient> _clients;
     private readonly ILlmProviderSelector _providerSelector;
     private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
+    private readonly ILlmCostService _costService;
     private readonly ILogger<HybridLlmService> _logger;
-    private readonly IUserBudgetService? _userBudgetService;
-    private readonly IOpenRouterFileLogger? _openRouterFileLogger;
-    private readonly IOpenRouterUsageService? _openRouterUsageService;
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker;
-    private readonly IServiceScopeFactory? _scopeFactory;
     private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker;
 
     // Default LLM parameters
@@ -60,23 +50,17 @@ internal class HybridLlmService : ILlmService
         IEnumerable<ILlmClient> clients,
         ILlmProviderSelector providerSelector,
         ICircuitBreakerRegistry circuitBreakerRegistry,
+        ILlmCostService costService,
         ILogger<HybridLlmService> logger,
-        IUserBudgetService? userBudgetService = null,
-        IOpenRouterFileLogger? openRouterFileLogger = null,
-        IOpenRouterUsageService? openRouterUsageService = null,
         IOpenRouterRateLimitTracker? rateLimitTracker = null,
-        IServiceScopeFactory? scopeFactory = null,
         IFreeModelQuotaTracker? freeModelQuotaTracker = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _providerSelector = providerSelector ?? throw new ArgumentNullException(nameof(providerSelector));
         _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
+        _costService = costService ?? throw new ArgumentNullException(nameof(costService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _userBudgetService = userBudgetService;
-        _openRouterFileLogger = openRouterFileLogger;
-        _openRouterUsageService = openRouterUsageService;
         _rateLimitTracker = rateLimitTracker;
-        _scopeFactory = scopeFactory;
         _freeModelQuotaTracker = freeModelQuotaTracker;
 
         if (_clients.Count == 0)
@@ -175,7 +159,7 @@ internal class HybridLlmService : ILlmService
                     // Step 3: Record success + log cost
                     _circuitBreakerRegistry.RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                    await _costService.LogSuccessAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
 
                     if (_rateLimitTracker != null)
                     {
@@ -202,7 +186,7 @@ internal class HybridLlmService : ILlmService
                     _ = _freeModelQuotaTracker.RecordRateLimitErrorAsync(modelForTracking, rlErrorType, resetMs, cancellationToken);
                 }
 
-                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -215,7 +199,7 @@ internal class HybridLlmService : ILlmService
                     client.ProviderName, decision.ModelId,
                     _circuitBreakerRegistry.GetCircuitStateDescription(client.ProviderName));
 
-                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -428,8 +412,8 @@ internal class HybridLlmService : ILlmService
 
             _circuitBreakerRegistry.RecordSuccess(providerName, stopwatch.ElapsedMilliseconds);
 
-            // Log cost asynchronously (fire-and-forget)
-            _ = LogCostAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, ct);
+            // Log cost asynchronously (fire-and-forget — use CancellationToken.None to survive request cancellation)
+            _ = _costService.LogSuccessAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
 
             _logger.LogInformation(
                 "Explicit model {Model} completion successful (tokens: {Tokens}, cost: ${Cost:F6}, latency: {Latency}ms)",
@@ -485,183 +469,6 @@ internal class HybridLlmService : ILlmService
             metadata["selected_model"] = decision.ModelId;
             metadata["latency_ms"] = latencyMs.ToString(CultureInfo.InvariantCulture);
             metadata["circuit_state"] = _circuitBreakerRegistry.GetCircuitStateDescription(client.ProviderName);
-        }
-    }
-
-    /// <summary>
-    /// Log LLM cost and update usage stats.
-    /// </summary>
-    private async Task LogCostAsync(
-        LlmCompletionResult result,
-        User? user,
-        long latencyMs,
-        RequestSource source,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (_scopeFactory != null)
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
-                await costLogRepo.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
-                    new LlmCostCalculation
-                    {
-                        ModelId = result.Cost.ModelId,
-                        Provider = result.Cost.Provider,
-                        PromptTokens = result.Usage.PromptTokens,
-                        CompletionTokens = result.Usage.CompletionTokens,
-                        InputCost = result.Cost.InputCost,
-                        OutputCost = result.Cost.OutputCost
-                    },
-                    endpoint: "completion",
-                    success: true,
-                    errorMessage: null,
-                    latencyMs: (int)latencyMs,
-                    ipAddress: null,
-                    userAgent: null,
-                    source: source,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-
-            await UpdateModelUsageStatsAsync(result, cancellationToken).ConfigureAwait(false);
-
-            if (_userBudgetService != null && user?.Id != null && _scopeFactory != null)
-            {
-                using var budgetScope = _scopeFactory.CreateScope();
-                var budgetService = budgetScope.ServiceProvider.GetRequiredService<IUserBudgetService>();
-                var requestCost = result.Cost.TotalCost;
-                var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
-
-                await budgetService
-                    .RecordUsageAsync(user.Id, requestCost, requestTokens, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-
-            var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
-            if (totalCost > 0 && user?.Id != null && _scopeFactory != null)
-            {
-                using var publishScope = _scopeFactory.CreateScope();
-                var publisher = publishScope.ServiceProvider.GetRequiredService<IPublisher>();
-                await publisher.Publish(
-                    new TokenUsageLedgerEvent(
-                        UserId: user.Id,
-                        ModelId: result.Cost.ModelId,
-                        TokensConsumed: result.Usage.PromptTokens + result.Usage.CompletionTokens,
-                        CostUsd: totalCost,
-                        Endpoint: "completion",
-                        Timestamp: DateTime.UtcNow),
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            _openRouterFileLogger?.LogRequest(
-                requestId: Guid.NewGuid().ToString(),
-                model: result.Cost.ModelId,
-                provider: result.Cost.Provider,
-                source: source.ToString(),
-                userId: user?.Id,
-                promptTokens: result.Usage.PromptTokens,
-                completionTokens: result.Usage.CompletionTokens,
-                costUsd: result.Cost.TotalCost,
-                latencyMs: latencyMs,
-                success: true,
-                isFreeModel: result.Cost.TotalCost == 0,
-                sessionId: null);
-
-            if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
-                _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost);
-        }
-        catch (Exception logEx)
-        {
-            _logger.LogWarning(logEx, "Failed to log LLM cost");
-        }
-    }
-
-    private async Task UpdateModelUsageStatsAsync(LlmCompletionResult result, CancellationToken cancellationToken)
-    {
-        if (_scopeFactory is null)
-        {
-            _logger.LogDebug("IServiceScopeFactory not available, skipping usage stats update");
-            return;
-        }
-
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var repository = scope.ServiceProvider.GetRequiredService<IAiModelConfigurationRepository>();
-
-            var modelConfig = await repository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
-            if (modelConfig != null)
-            {
-                var inputTokens = result.Usage.PromptTokens;
-                var outputTokens = result.Usage.CompletionTokens;
-                var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
-
-                modelConfig.TrackUsage(inputTokens, outputTokens, totalCost);
-                await repository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
-
-                _logger.LogDebug(
-                    "Updated usage stats for model {ModelId}: +{Tokens} tokens, +${Cost:F6}",
-                    result.Cost.ModelId, inputTokens + outputTokens, totalCost);
-            }
-            else
-            {
-                _logger.LogWarning("Model {ModelId} not found in DB for usage stats update", result.Cost.ModelId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update usage stats for model {ModelId}", result.Cost.ModelId);
-        }
-    }
-
-    private async Task LogCostFailureAsync(
-        string? errorMessage,
-        User? user,
-        long latencyMs,
-        RequestSource source,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (_scopeFactory != null)
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
-                await costLogRepo.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
-                    LlmCostCalculation.Empty,
-                    endpoint: "completion",
-                    success: false,
-                    errorMessage: errorMessage,
-                    latencyMs: (int)latencyMs,
-                    ipAddress: null,
-                    userAgent: null,
-                    source: source,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-
-            _openRouterFileLogger?.LogRequest(
-                requestId: Guid.NewGuid().ToString(),
-                model: string.Empty,
-                provider: string.Empty,
-                source: source.ToString(),
-                userId: user?.Id,
-                promptTokens: 0,
-                completionTokens: 0,
-                costUsd: 0,
-                latencyMs: latencyMs,
-                success: false,
-                isFreeModel: false,
-                sessionId: null,
-                errorMessage: errorMessage);
-        }
-        catch (Exception logEx)
-        {
-            _logger.LogWarning(logEx, "Failed to log LLM error cost");
         }
     }
 

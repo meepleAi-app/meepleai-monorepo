@@ -54,6 +54,11 @@ add_report() {
   REPORT_LINES+=("$1")
 }
 
+# Portable float comparison using awk (works on Linux, macOS, Windows/Git Bash)
+float_gt() { awk "BEGIN { exit !($1 > $2) }"; }
+float_pct() { awk "BEGIN { printf \"%d\", ($1 * 100 / $2) }"; }
+float_mul() { awk "BEGIN { printf \"%.2f\", ($1 * $2) }"; }
+
 check_metric() {
   local metric_name="$1"
   local current_value="$2"
@@ -68,15 +73,12 @@ check_metric() {
 
   if [[ -n "$slo_value" ]]; then
     # Compare against absolute SLO threshold
-    local exceeded
-    exceeded=$(echo "$current_value > $slo_value" | bc -l 2>/dev/null || echo "0")
-
-    if [[ "$exceeded" == "1" ]]; then
+    if float_gt "$current_value" "$slo_value"; then
       add_report "❌ **FAIL**: \`$metric_name\` = ${current_value}ms (SLO: ${slo_value}ms)"
       FAILURES=$((FAILURES + 1))
     else
       local pct_of_slo
-      pct_of_slo=$(echo "scale=0; $current_value * 100 / $slo_value" | bc -l 2>/dev/null || echo "0")
+      pct_of_slo=$(float_pct "$current_value" "$slo_value")
 
       if [[ "$pct_of_slo" -gt 85 ]]; then
         add_report "⚠️ **WARN**: \`$metric_name\` = ${current_value}ms (${pct_of_slo}% of SLO ${slo_value}ms)"
@@ -150,10 +152,9 @@ for summary_file in "${SUMMARY_FILES[@]}"; do
 
   # Error rate check
   if [[ -n "$error_rate" ]]; then
-    error_pct=$(echo "scale=2; $error_rate * 100" | bc -l 2>/dev/null || echo "0")
+    error_pct=$(float_mul "$error_rate" 100)
     slo_error="${SLO_THRESHOLDS[http_req_failed_rate]:-1.0}"
-    exceeded=$(echo "$error_pct > $slo_error" | bc -l 2>/dev/null || echo "0")
-    if [[ "$exceeded" == "1" ]]; then
+    if float_gt "$error_pct" "$slo_error"; then
       add_report "❌ **FAIL**: Error rate = ${error_pct}% (SLO: <${slo_error}%)"
       FAILURES=$((FAILURES + 1))
     else

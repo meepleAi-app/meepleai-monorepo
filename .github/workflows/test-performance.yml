@@ -39,6 +39,8 @@ on:
           - library-browsing
           - catalog-search
           - admin-concurrent
+          - rag-isolated
+          - rag-e2e
       run_lighthouse:
         description: 'Run Lighthouse CI'
         required: false
@@ -273,6 +275,8 @@ jobs:
             ["library-browsing"]="scenarios/library-browsing.js"
             ["catalog-search"]="scenarios/catalog-search.js"
             ["admin-concurrent"]="scenarios/admin-concurrent-actions.js"
+            ["rag-isolated"]="scenarios/rag-pipeline-isolated.js"
+            ["rag-e2e"]="scenarios/rag-e2e-realistic.js"
           )
 
           # Run scenarios

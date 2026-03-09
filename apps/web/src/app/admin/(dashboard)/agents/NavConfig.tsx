@@ -11,7 +11,16 @@
 
 import { useEffect } from 'react';
 
-import { Activity, Bot, GitBranch, BarChart3, Gauge, Terminal, Layers } from 'lucide-react';
+import {
+  Activity,
+  Bot,
+  GitBranch,
+  BarChart3,
+  Gauge,
+  Terminal,
+  Layers,
+  FlaskConical,
+} from 'lucide-react';
 
 import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 
@@ -28,6 +37,12 @@ export function AgentsNavConfig() {
         { id: 'usage', label: 'Usage', href: '/admin/agents/usage', icon: Gauge },
         { id: 'debug', label: 'Debug', href: '/admin/agents/debug', icon: Terminal },
         { id: 'templates', label: 'Templates', href: '/admin/agents/templates', icon: Layers },
+        {
+          id: 'ab-testing',
+          label: 'A/B Testing',
+          href: '/admin/agents/ab-testing/new',
+          icon: FlaskConical,
+        },
       ],
       actionBar: [],
     });

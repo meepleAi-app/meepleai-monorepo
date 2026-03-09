@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260309165531_AddAbTestSessionTables")]
+    partial class AddAbTestSessionTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3001,77 +3004,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_Games_SharedGameId");
 
                     b.ToTable("games", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightPlaylistEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatorUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("creator_user_id");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
-
-                    b.Property<string>("GamesJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("games_json");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<bool>("IsShared")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_shared");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("name");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasColumnName("row_version");
-
-                    b.Property<DateTime?>("ScheduledDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("scheduled_date");
-
-                    b.Property<string>("ShareToken")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("share_token");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatorUserId")
-                        .HasDatabaseName("ix_game_night_playlists_creator_user_id");
-
-                    b.HasIndex("ShareToken")
-                        .IsUnique()
-                        .HasDatabaseName("ix_game_night_playlists_share_token")
-                        .HasFilter("share_token IS NOT NULL");
-
-                    b.ToTable("game_night_playlists", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameReviewEntity", b =>

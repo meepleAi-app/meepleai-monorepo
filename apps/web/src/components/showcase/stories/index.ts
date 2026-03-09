@@ -11,6 +11,7 @@ import { entityListViewStory } from './entity-list-view.story';
 import { gameCarouselStory } from './game-carousel.story';
 import { meepleCardStory } from './meeple-card.story';
 import { pageTransitionStory } from './page-transition.story';
+import { ruleSourceCardStory } from './rule-source-card.story';
 import { tagStripStory } from './tag-strip.story';
 import { tierBadgeStory } from './tier-badge.story';
 
@@ -26,6 +27,7 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
   pageTransitionStory,
   confidenceBadgeStory,
   tierBadgeStory,
+  ruleSourceCardStory,
 ];
 
 /** Look up a story by its slug id */

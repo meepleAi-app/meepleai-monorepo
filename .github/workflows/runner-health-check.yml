@@ -1,0 +1,71 @@
+name: Self-Hosted Runner Health Check
+
+on:
+  schedule:
+    # Every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+# Only one health check at a time
+concurrency:
+  group: runner-health-check
+  cancel-in-progress: true
+
+jobs:
+  health-check:
+    name: Runner Health Check
+    # Only run when self-hosted runner is configured
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    if: ${{ vars.RUNNER != '' }}
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify runner is alive
+        run: |
+          echo "Runner: $(hostname)"
+          echo "Architecture: $(uname -m)"
+          echo "OS: $(uname -s -r)"
+          echo "Uptime: $(uptime)"
+          echo "Date: $(date -u)"
+
+      - name: Check Docker daemon
+        run: |
+          if ! docker info > /dev/null 2>&1; then
+            echo "::error::Docker daemon is not running"
+            exit 1
+          fi
+          echo "Docker: $(docker --version)"
+
+      - name: Check disk space
+        run: |
+          # Requires GNU df (--output flag)
+          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+          echo "Disk usage: ${USAGE}%"
+          if [ "$USAGE" -gt 90 ]; then
+            echo "::error::Disk usage critically high (${USAGE}%) — runner needs immediate attention"
+            exit 1
+          elif [ "$USAGE" -gt 80 ]; then
+            echo "::warning::Disk usage elevated (${USAGE}%) — cleanup may be needed before next maintenance window"
+          else
+            echo "Disk usage healthy (${USAGE}%)"
+          fi
+
+      - name: Check available memory
+        run: |
+          FREE_MB=$(free -m | awk '/^Mem:/ {print ($7 != "" ? $7 : $4)}')
+          echo "Available memory: ${FREE_MB}MB"
+          if [ "$FREE_MB" -lt 512 ]; then
+            echo "::warning::Low available memory (${FREE_MB}MB)"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Runner Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Host | $(hostname) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Architecture | $(uname -m) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Disk Usage | $(df / --output=pcent | tail -1 | tr -d ' ') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Memory Available | $(free -m | awk '/^Mem:/ {print ($7 != "" ? $7 : $4)}')MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker | $(docker --version 2>/dev/null | cut -d' ' -f3 || echo 'N/A') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Checked | $(date -u +"%Y-%m-%d %H:%M UTC") |" >> $GITHUB_STEP_SUMMARY

@@ -28,11 +28,13 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/store/voice/store';
 import type { Citation } from '@/types';
-import { isAdminOrAbove } from '@/types/auth';
+import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
 
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
+import { ResponseMetaBadge } from './ResponseMetaBadge';
+import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
 import { DebugSummaryBar } from './DebugSummaryBar';
 import { TtsSpeakerButton } from './TtsSpeakerButton';
 import { VoiceMicButton } from './VoiceMicButton';
@@ -76,6 +78,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const isAdmin = isAdminOrAbove(user);
+  const isEditor = isEditorOrAbove(user);
 
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
@@ -578,7 +581,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   </div>
                 </div>
               ) : (
-                messages.map(msg => (
+                messages.map((msg, msgIndex) => {
+                  // Show strategy badge on the last assistant message when available
+                  const isLastAssistant = msg.role === 'assistant'
+                    && !streamState.isStreaming
+                    && msgIndex === messages.length - 1;
+
+                  return (
                   <div
                     key={msg.id}
                     className={cn(
@@ -608,8 +617,20 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                         ))}
                       </div>
                     )}
+                    {isLastAssistant && streamState.strategyTier && (
+                      <div className="mt-2">
+                        <ResponseMetaBadge strategyTier={streamState.strategyTier} />
+                      </div>
+                    )}
+                    {isLastAssistant && isEditor && streamState.debugSteps.length > 0 && (
+                      <TechnicalDetailsPanel
+                        debugSteps={streamState.debugSteps}
+                        executionId={streamState.executionId}
+                      />
+                    )}
                   </div>
-                ))
+                  );
+                })
               )}
               {/* Streaming status message */}
               {streamState.statusMessage && (

@@ -91,6 +91,10 @@ export interface AgentChatStreamState {
     isLocalFallback: boolean;
     upgradeMessage: string | null;
   } | null;
+  /** Strategy tier from Complete event (Issue #5481: ResponseMetaBadge) */
+  strategyTier: string | null;
+  /** Execution ID for deep link to Debug Console (Issue #5486) */
+  executionId: string | null;
 }
 
 /** Game context for OpenRouter proxy requests */
@@ -122,6 +126,8 @@ const INITIAL_STATE: AgentChatStreamState = {
   totalTokens: 0,
   debugSteps: [],
   modelDowngrade: null,
+  strategyTier: null,
+  executionId: null,
 };
 
 export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
@@ -277,12 +283,16 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
                     chatThreadId?: string;
                     completionTokens?: number;
                     promptTokens?: number;
+                    strategyTier?: string;
+                    executionId?: string;
                   };
                   setState(prev => {
                     const finalState = {
                       ...prev,
                       totalTokens: data?.totalTokens || 0,
                       chatThreadId: data?.chatThreadId || prev.chatThreadId,
+                      strategyTier: data?.strategyTier || prev.strategyTier,
+                      executionId: data?.executionId || prev.executionId,
                       isStreaming: false,
                       statusMessage: null,
                     };

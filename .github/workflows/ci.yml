@@ -502,3 +502,9 @@ jobs:
             exit 1
           fi
           echo "✅ CI Passed"
+
+      - name: Post-CI cleanup (self-hosted)
+        if: always() && !contains(runner.name, 'GitHub Actions')
+        run: |
+          docker container prune -f 2>/dev/null || true
+          docker image prune -f 2>/dev/null || true

@@ -115,6 +115,15 @@ jobs:
             NEXT_PUBLIC_ENV=staging
             VERSION=${{ steps.version.outputs.version }}
 
+      - name: Post-build cleanup (self-hosted)
+        if: always() && !contains(runner.name, 'GitHub Actions')
+        run: |
+          echo "🧹 Cleaning up Docker build artifacts on self-hosted runner..."
+          docker container prune -f 2>/dev/null || true
+          docker image prune -f 2>/dev/null || true
+          echo "✅ Cleanup complete"
+          df -h / | tail -1
+
   # Deploy to staging server
   deploy:
     name: Deploy to Staging

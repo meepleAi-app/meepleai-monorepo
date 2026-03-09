@@ -38,7 +38,7 @@ $InfraDir = Join-Path $ProjectRoot 'infra'
 # Compose files
 $ComposeFiles = @(
     '-f', 'docker-compose.yml',
-    '-f', 'docker-compose.traefik.yml',
+    '-f', 'compose.traefik.yml',
     '-f', 'compose.prod.yml',
     '-f', 'compose.meepleai.yml'
 )

@@ -274,7 +274,7 @@ cd /opt/meepleai/infra
 # Start all services
 docker compose \
   -f docker-compose.yml \
-  -f docker-compose.traefik.yml \
+  -f compose.traefik.yml \
   -f compose.prod.yml \
   -f compose.meepleai.yml \
   --profile full \
@@ -285,7 +285,7 @@ docker compose \
 
 ```bash
 # Check service status
-docker compose -f docker-compose.yml -f docker-compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml ps
+docker compose -f docker-compose.yml -f compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml ps
 
 # Check Traefik logs for certificate issuance
 docker logs meepleai-traefik -f

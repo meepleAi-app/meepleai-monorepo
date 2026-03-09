@@ -11,7 +11,7 @@ echo ""
 cd "$(dirname "$0")"
 
 # Start with observability profile and include HyperDX
-docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml --profile observability up -d
+docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observability up -d
 
 echo ""
 echo "✅ Observability stack started successfully!"
@@ -23,4 +23,4 @@ echo "   Alertmanager: http://localhost:9093"
 echo "   HyperDX: http://localhost:8180"
 echo ""
 echo "💡 To view logs: docker compose logs -f"
-echo "💡 To stop: docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml down"
+echo "💡 To stop: docker compose -f docker-compose.yml -f compose.hyperdx.yml down"

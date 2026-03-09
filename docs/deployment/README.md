@@ -9,7 +9,7 @@
 | Environment | URL | Command |
 |-------------|-----|---------|
 | **Local** | http://localhost:3000 | `cd infra && docker compose --profile minimal up -d` |
-| **Staging** | https://staging.meepleai.com | `docker compose -f docker-compose.yml -f docker-compose.traefik.yml --profile full up -d` |
+| **Staging** | https://staging.meepleai.com | `docker compose -f docker-compose.yml -f compose.traefik.yml --profile full up -d` |
 | **Production** | https://app.meepleai.com | Same as staging + `.env.production` |
 
 **Related**: [GitHub Alternatives & Cost Optimization](github-alternatives-cost-optimization.md)
@@ -74,7 +74,7 @@ git clone <repo-url> /opt/meepleai && cd /opt/meepleai
 # 3. Create .env.production (see below)
 
 # 4. Start with Traefik
-cd infra && docker compose -f docker-compose.yml -f docker-compose.traefik.yml \
+cd infra && docker compose -f docker-compose.yml -f compose.traefik.yml \
   --profile full --env-file ../.env.production up -d
 
 # 5. Verify

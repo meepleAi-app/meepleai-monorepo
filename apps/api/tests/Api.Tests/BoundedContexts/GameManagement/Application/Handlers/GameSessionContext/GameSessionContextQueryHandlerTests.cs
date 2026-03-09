@@ -104,7 +104,7 @@ public class GameSessionContextQueryHandlerTests
             .Setup(x => x.RefreshContextAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedContext);
 
-        var handler = new RefreshGameSessionContextQueryHandler(_orchestratorMock.Object);
+        var handler = new RefreshGameSessionContextQueryHandler(_orchestratorMock.Object, Mock.Of<Api.Services.IHybridCacheService>());
         var query = new RefreshGameSessionContextQuery(sessionId);
 
         // Act
@@ -125,7 +125,7 @@ public class GameSessionContextQueryHandlerTests
             .Setup(x => x.RefreshContextAsync(sessionId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new NotFoundException("LiveGameSession", sessionId.ToString()));
 
-        var handler = new RefreshGameSessionContextQueryHandler(_orchestratorMock.Object);
+        var handler = new RefreshGameSessionContextQueryHandler(_orchestratorMock.Object, Mock.Of<Api.Services.IHybridCacheService>());
         var query = new RefreshGameSessionContextQuery(sessionId);
 
         // Act & Assert

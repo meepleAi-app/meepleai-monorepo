@@ -22,6 +22,19 @@ internal interface IQdrantVectorStoreAdapter
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Performs vector similarity search across multiple game IDs.
+    /// Used for session-aware RAG where context includes primary game + expansions.
+    /// Issue #5580: Session-aware RAG chat.
+    /// </summary>
+    Task<List<Embedding>> SearchByMultipleGameIdsAsync(
+        IReadOnlyList<Guid> gameIds,
+        Vector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Indexes a batch of embeddings into Qdrant.
     /// </summary>
     Task IndexBatchAsync(

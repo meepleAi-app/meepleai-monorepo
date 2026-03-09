@@ -794,4 +794,104 @@ public sealed class ChatThreadTests
     }
 
     #endregion
+
+    #region ConversationSummary Tests (Issue #5259)
+
+    [Fact]
+    public void UpdateConversationSummary_WithValidSummary_SetsSummary()
+    {
+        // Arrange
+        var thread = CreateActiveThread();
+
+        // Act
+        thread.UpdateConversationSummary("User discussed Catan setup rules.");
+
+        // Assert
+        thread.ConversationSummary.Should().Be("User discussed Catan setup rules.");
+    }
+
+    [Fact]
+    public void UpdateConversationSummary_TrimsWhitespace()
+    {
+        var thread = CreateActiveThread();
+        thread.UpdateConversationSummary("  Summary with spaces  ");
+
+        thread.ConversationSummary.Should().Be("Summary with spaces");
+    }
+
+    [Fact]
+    public void UpdateConversationSummary_WithEmpty_Throws()
+    {
+        var thread = CreateActiveThread();
+        var act = () => thread.UpdateConversationSummary("");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void UpdateConversationSummary_WithWhitespace_Throws()
+    {
+        var thread = CreateActiveThread();
+        var act = () => thread.UpdateConversationSummary("   ");
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void UpdateConversationSummary_CanBeUpdatedMultipleTimes()
+    {
+        var thread = CreateActiveThread();
+
+        thread.UpdateConversationSummary("First summary.");
+        thread.ConversationSummary.Should().Be("First summary.");
+
+        thread.UpdateConversationSummary("Updated summary with more context.");
+        thread.ConversationSummary.Should().Be("Updated summary with more context.");
+    }
+
+    [Fact]
+    public void ConversationSummary_DefaultsToNull()
+    {
+        var thread = CreateActiveThread();
+        thread.ConversationSummary.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateConversationSummary_SetsLastSummarizedMessageCount()
+    {
+        var thread = CreateActiveThread();
+        thread.AddUserMessage("Q1");
+        thread.AddAssistantMessage("A1");
+        thread.AddUserMessage("Q2");
+        thread.AddAssistantMessage("A2");
+
+        thread.UpdateConversationSummary("Summary of 4 messages.");
+
+        thread.LastSummarizedMessageCount.Should().Be(4);
+    }
+
+    [Fact]
+    public void UpdateConversationSummary_UpdatesLastSummarizedMessageCount_OnSubsequentCalls()
+    {
+        var thread = CreateActiveThread();
+        for (int i = 0; i < 6; i++)
+            thread.AddUserMessage($"Q{i}");
+
+        thread.UpdateConversationSummary("First summary.");
+        thread.LastSummarizedMessageCount.Should().Be(6);
+
+        thread.AddUserMessage("Q6");
+        thread.AddUserMessage("Q7");
+        thread.UpdateConversationSummary("Updated summary.");
+        thread.LastSummarizedMessageCount.Should().Be(8);
+    }
+
+    [Fact]
+    public void LastSummarizedMessageCount_DefaultsToZero()
+    {
+        var thread = CreateActiveThread();
+        thread.LastSummarizedMessageCount.Should().Be(0);
+    }
+
+    #endregion
 }

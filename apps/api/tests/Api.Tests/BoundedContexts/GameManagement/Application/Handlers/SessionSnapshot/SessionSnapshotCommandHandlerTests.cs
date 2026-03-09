@@ -2,6 +2,7 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.Handlers.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -18,13 +19,20 @@ public class SessionSnapshotCommandHandlerTests
 {
     private readonly Mock<ISessionSnapshotRepository> _snapshotRepoMock;
     private readonly Mock<ILiveSessionRepository> _sessionRepoMock;
+    private readonly Mock<ISessionAttachmentRepository> _attachmentRepoMock;
     private readonly Mock<IUnitOfWork> _uowMock;
 
     public SessionSnapshotCommandHandlerTests()
     {
         _snapshotRepoMock = new Mock<ISessionSnapshotRepository>();
         _sessionRepoMock = new Mock<ILiveSessionRepository>();
+        _attachmentRepoMock = new Mock<ISessionAttachmentRepository>();
         _uowMock = new Mock<IUnitOfWork>();
+
+        // Default: no attachments for any snapshot
+        _attachmentRepoMock.Setup(r => r.GetBySnapshotAsync(
+                It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SessionAttachment>());
     }
 
     // ========================================================================
@@ -38,7 +46,7 @@ public class SessionSnapshotCommandHandlerTests
             .ReturnsAsync((LiveGameSession?)null);
 
         var handler = new CreateSnapshotCommandHandler(
-            _snapshotRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
         var command = new CreateSnapshotCommand(Guid.NewGuid(), SnapshotTrigger.ManualSave, "Save", null);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -57,7 +65,7 @@ public class SessionSnapshotCommandHandlerTests
             .ReturnsAsync((Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot?)null);
 
         var handler = new CreateSnapshotCommandHandler(
-            _snapshotRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
         var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.ManualSave, "Initial", null);
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
@@ -93,7 +101,7 @@ public class SessionSnapshotCommandHandlerTests
             .ReturnsAsync(new List<Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot> { existingSnapshot });
 
         var handler = new CreateSnapshotCommandHandler(
-            _snapshotRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
         var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.TurnAdvanced, null, null);
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
@@ -119,7 +127,7 @@ public class SessionSnapshotCommandHandlerTests
             .ReturnsAsync(latestSnapshot);
 
         var handler = new CreateSnapshotCommandHandler(
-            _snapshotRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
         var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.TurnAdvanced, null, null);
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
@@ -141,7 +149,7 @@ public class SessionSnapshotCommandHandlerTests
             .ReturnsAsync((Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot?)null);
 
         var handler = new CreateSnapshotCommandHandler(
-            _snapshotRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
         var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.ManualSave, null, null);
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
@@ -169,12 +177,71 @@ public class SessionSnapshotCommandHandlerTests
             .ReturnsAsync((Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot?)null);
 
         var handler = new CreateSnapshotCommandHandler(
-            _snapshotRepoMock.Object, _sessionRepoMock.Object, _uowMock.Object);
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
         var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.ManualSave, "Player save", playerId);
 
         var result = await handler.Handle(command, TestContext.Current.CancellationToken);
 
         Assert.Equal(playerId, result.CreatedByPlayerId);
+    }
+
+    [Fact]
+    public async Task CreateSnapshot_WithAttachments_EmbedsInDeltaJson()
+    {
+        var sessionId = Guid.NewGuid();
+        var session = CreateLiveSession(sessionId, "{\"turn\":0}");
+        var attachments = new List<SessionAttachment>
+        {
+            SessionAttachment.Create(sessionId, Guid.NewGuid(), AttachmentType.BoardState,
+                "https://s3/photo.jpg", "image/jpeg", 5000, "https://s3/thumb.jpg", "Board photo", 0),
+        };
+
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        _snapshotRepoMock.Setup(r => r.GetLatestBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot?)null);
+        _attachmentRepoMock.Setup(r => r.GetBySnapshotAsync(sessionId, 0, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(attachments);
+
+        var handler = new CreateSnapshotCommandHandler(
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
+        var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.ManualSave, "With photos", null);
+
+        var result = await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.AttachmentCount);
+
+        // Verify delta JSON contains _attachments
+        _snapshotRepoMock.Verify(r => r.AddAsync(
+            It.Is<Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(
+                s => s.DeltaDataJson.Contains("_attachments", StringComparison.Ordinal)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateSnapshot_WithNoAttachments_DoesNotEmbedAttachments()
+    {
+        var sessionId = Guid.NewGuid();
+        var session = CreateLiveSession(sessionId, "{\"turn\":0}");
+
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        _snapshotRepoMock.Setup(r => r.GetLatestBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot?)null);
+
+        var handler = new CreateSnapshotCommandHandler(
+            _snapshotRepoMock.Object, _sessionRepoMock.Object, _attachmentRepoMock.Object, _uowMock.Object);
+        var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.ManualSave, null, null);
+
+        var result = await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result.AttachmentCount);
+
+        // Verify delta JSON does NOT contain _attachments
+        _snapshotRepoMock.Verify(r => r.AddAsync(
+            It.Is<Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(
+                s => !s.DeltaDataJson.Contains("_attachments", StringComparison.Ordinal)),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ========================================================================

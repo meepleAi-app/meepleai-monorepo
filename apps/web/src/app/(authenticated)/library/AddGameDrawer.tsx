@@ -21,14 +21,9 @@ import { useCallback, useState } from 'react';
 import { BookOpen, PenLine } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { UserWizardClient } from '@/app/(authenticated)/library/private/add/client';
 import { CatalogSearchStep } from '@/app/(authenticated)/library/CatalogSearchStep';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/navigation/sheet';
+import { UserWizardClient } from '@/app/(authenticated)/library/private/add/client';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,7 +91,7 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
         }, 300);
       }
     },
-    [onClose],
+    [onClose]
   );
 
   // Called by CatalogSearchStep after game is successfully added to library
@@ -127,9 +122,7 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
           {/* Step 0: Choice */}
           {step === 'choice' && (
             <div className="px-6 py-6 space-y-4" data-testid="add-game-step-choice">
-              <p className="text-sm text-muted-foreground">
-                How do you want to add your game?
-              </p>
+              <p className="text-sm text-muted-foreground">How do you want to add your game?</p>
 
               <ChoiceCard
                 data-testid="add-game-choice-manual"
@@ -159,10 +152,7 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
           {/* Step 1b: Catalog search */}
           {step === 'catalog' && (
             <div data-testid="add-game-step-catalog">
-              <CatalogSearchStep
-                onSelect={handleCatalogSelect}
-                onBack={() => setStep('choice')}
-              />
+              <CatalogSearchStep onSelect={handleCatalogSelect} onBack={() => setStep('choice')} />
             </div>
           )}
 

@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+
 import {
   Activity,
   Filter,
@@ -18,7 +19,9 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type {
   EventsTimelineData,
   EventsTimelineActions,
@@ -32,12 +35,15 @@ interface EventsTimelineProps {
 }
 
 /** Event type configuration */
-const EVENT_CONFIG: Record<SessionEventType, {
-  icon: React.ElementType;
-  dot: string;
-  text: string;
-  label: string;
-}> = {
+const EVENT_CONFIG: Record<
+  SessionEventType,
+  {
+    icon: React.ElementType;
+    dot: string;
+    text: string;
+    label: string;
+  }
+> = {
   system: { icon: Settings, dot: 'bg-slate-400', text: 'text-slate-600', label: 'System' },
   turn: { icon: RotateCcw, dot: 'bg-blue-400', text: 'text-blue-600', label: 'Turn' },
   score: { icon: Trophy, dot: 'bg-amber-400', text: 'text-amber-600', label: 'Score' },
@@ -74,12 +80,14 @@ function TimelineEventItem({
   const hasDetails = event.description || event.snapshotId;
 
   return (
-    <div
-      className="relative pl-6"
-      data-testid={`timeline-event-${event.id}`}
-    >
+    <div className="relative pl-6" data-testid={`timeline-event-${event.id}`}>
       {/* Timeline dot */}
-      <div className={cn('absolute left-0 top-2 h-3 w-3 rounded-full border-2 border-white', config.dot)} />
+      <div
+        className={cn(
+          'absolute left-0 top-2 h-3 w-3 rounded-full border-2 border-white',
+          config.dot
+        )}
+      />
       {/* Timeline line */}
       <div className="absolute left-[5px] top-5 bottom-0 w-0.5 bg-slate-200" />
 
@@ -96,42 +104,41 @@ function TimelineEventItem({
           if (hasDetails) onToggle();
           onEventClick?.(event);
         }}
-        onKeyDown={hasDetails ? (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggle();
-            onEventClick?.(event);
-          }
-        } : undefined}
+        onKeyDown={
+          hasDetails
+            ? e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onToggle();
+                  onEventClick?.(event);
+                }
+              }
+            : undefined
+        }
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-1.5 min-w-0">
             <Icon className={cn('h-3 w-3 mt-0.5 flex-shrink-0', config.text)} />
             <div className="min-w-0">
-              <p className={cn('font-nunito text-xs font-medium', config.text)}>
-                {event.label}
-              </p>
+              <p className={cn('font-nunito text-xs font-medium', config.text)}>{event.label}</p>
               {event.playerName && (
-                <p className="font-nunito text-[10px] text-slate-400">
-                  by {event.playerName}
-                </p>
+                <p className="font-nunito text-[10px] text-slate-400">by {event.playerName}</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             {event.turnNumber != null && (
-              <span className="font-nunito text-[10px] text-slate-400">
-                T{event.turnNumber}
-              </span>
+              <span className="font-nunito text-[10px] text-slate-400">T{event.turnNumber}</span>
             )}
             <span className="font-nunito text-[10px] text-slate-400 tabular-nums">
               {formattedTime}
             </span>
-            {hasDetails && (
-              isExpanded
-                ? <ChevronUp className="h-3 w-3 text-slate-300" />
-                : <ChevronDown className="h-3 w-3 text-slate-300" />
-            )}
+            {hasDetails &&
+              (isExpanded ? (
+                <ChevronUp className="h-3 w-3 text-slate-300" />
+              ) : (
+                <ChevronDown className="h-3 w-3 text-slate-300" />
+              ))}
           </div>
         </div>
 
@@ -139,13 +146,11 @@ function TimelineEventItem({
         {isExpanded && hasDetails && (
           <div className="mt-1.5 pl-5 space-y-1">
             {event.description && (
-              <p className="font-nunito text-[10px] text-slate-500">
-                {event.description}
-              </p>
+              <p className="font-nunito text-[10px] text-slate-500">{event.description}</p>
             )}
             {event.snapshotId && onNavigateToSnapshot && (
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   onNavigateToSnapshot(event.snapshotId!);
                 }}
@@ -182,7 +187,9 @@ function FilterChip({
       onClick={onClick}
       className={cn(
         'flex items-center gap-1 rounded-full px-2 py-0.5 font-nunito text-[10px] font-medium transition-colors',
-        active ? `${config.text} bg-white shadow-sm border border-slate-200` : 'text-slate-400 hover:text-slate-600'
+        active
+          ? `${config.text} bg-white shadow-sm border border-slate-200`
+          : 'text-slate-400 hover:text-slate-600'
       )}
       data-testid={`filter-${type}`}
     >
@@ -214,12 +221,11 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
   }, {});
 
   // Filter events
-  const filteredEvents = activeFilters.size === 0
-    ? data.events
-    : data.events.filter((e) => activeFilters.has(e.type));
+  const filteredEvents =
+    activeFilters.size === 0 ? data.events : data.events.filter(e => activeFilters.has(e.type));
 
   const toggleFilter = (type: SessionEventType) => {
-    setActiveFilters((prev) => {
+    setActiveFilters(prev => {
       const next = new Set(prev);
       if (next.has(type)) {
         next.delete(type);
@@ -231,7 +237,7 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
   };
 
   const toggleExpanded = (id: string) => {
-    setExpandedIds((prev) => {
+    setExpandedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -243,8 +249,9 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
   };
 
   // Available event types that actually have events
-  const availableTypes = (Object.keys(EVENT_CONFIG) as SessionEventType[])
-    .filter((type) => (typeCounts[type] ?? 0) > 0);
+  const availableTypes = (Object.keys(EVENT_CONFIG) as SessionEventType[]).filter(
+    type => (typeCounts[type] ?? 0) > 0
+  );
 
   return (
     <div className="space-y-3" data-testid="events-timeline">
@@ -252,7 +259,7 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
       <div className="flex items-center gap-2">
         <Filter className="h-3 w-3 text-slate-400 flex-shrink-0" aria-hidden="true" />
         <div className="flex flex-wrap gap-1">
-          {availableTypes.map((type) => (
+          {availableTypes.map(type => (
             <FilterChip
               key={type}
               type={type}
@@ -271,7 +278,7 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
 
       {/* Timeline */}
       <div className="relative">
-        {filteredEvents.map((event) => (
+        {filteredEvents.map(event => (
           <TimelineEventItem
             key={event.id}
             event={event}

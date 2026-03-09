@@ -3,8 +3,10 @@ using Api.BoundedContexts.SessionTracking.Application.Handlers;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.Tests.Constants;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -152,6 +154,7 @@ public class AskSessionAgentCommandHandlerTests
     private readonly Mock<ISessionRepository> _mockSessionRepo;
     private readonly Mock<ISessionChatRepository> _mockChatRepo;
     private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<ILlmService> _mockLlmService;
     private readonly AskSessionAgentCommandHandler _handler;
 
     public AskSessionAgentCommandHandlerTests()
@@ -159,10 +162,19 @@ public class AskSessionAgentCommandHandlerTests
         _mockSessionRepo = new Mock<ISessionRepository>();
         _mockChatRepo = new Mock<ISessionChatRepository>();
         _mockMediator = new Mock<IMediator>();
+        _mockLlmService = new Mock<ILlmService>();
+
+        _mockLlmService
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Test agent response"));
+
         _handler = new AskSessionAgentCommandHandler(
             _mockSessionRepo.Object,
             _mockChatRepo.Object,
-            _mockMediator.Object);
+            _mockMediator.Object,
+            _mockLlmService.Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
     }
 
     private static Session CreateSessionWithParticipant(Guid sessionId, Guid participantId)
@@ -222,7 +234,7 @@ public class AskSessionAgentCommandHandlerTests
 
         // Assert
         Assert.NotEqual(Guid.Empty, result.MessageId);
-        Assert.Null(result.Confidence); // Stub returns null confidence
+        Assert.Equal(0.85f, result.Confidence); // LLM success returns 0.85 confidence
         Assert.Equal("tutor", result.AgentType);
         Assert.True(saveCalledAfterFirstAdd, "SaveChangesAsync should be called after the first AddAsync (user message) to prevent sequence number race condition");
         _mockChatRepo.Verify(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Exactly(2));

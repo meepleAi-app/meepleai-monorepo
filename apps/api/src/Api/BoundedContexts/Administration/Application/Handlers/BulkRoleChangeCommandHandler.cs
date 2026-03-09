@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;

@@ -11,8 +11,6 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-import type { ScoreEntry, Participant } from '@/components/session/types';
-
 // ============ SSE Event Types ============
 
 export type SessionSSEEventType =
@@ -23,7 +21,12 @@ export type SessionSSEEventType =
   | 'session:toolkit'
   | 'session:chat';
 
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+export type ConnectionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'failed';
 
 export interface SessionSSEEvent<T = unknown> {
   type: SessionSSEEventType;
@@ -103,10 +106,7 @@ export function useSessionStream(
   sessionId: string | null,
   options: UseSessionStreamOptions = {}
 ): UseSessionStreamReturn {
-  const {
-    enabled = true,
-    maxReconnectAttempts = 5,
-  } = options;
+  const { enabled = true, maxReconnectAttempts = 5 } = options;
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [reconnectCount, setReconnectCount] = useState(0);

@@ -4,15 +4,17 @@
  * Tests for console and Seq logger implementations.
  */
 
+import { type MockInstance } from 'vitest';
+
 import { logger, logApiError } from '../core/logger';
 import { ApiError, UnauthorizedError } from '../core/errors';
 
 describe('Logger', () => {
   let originalEnv: NodeJS.ProcessEnv;
-  let consoleErrorSpy: SpyInstance;
-  let consoleWarnSpy: SpyInstance;
-  let consoleInfoSpy: SpyInstance;
-  let consoleDebugSpy: SpyInstance;
+  let consoleErrorSpy: MockInstance;
+  let consoleWarnSpy: MockInstance;
+  let consoleInfoSpy: MockInstance;
+  let consoleDebugSpy: MockInstance;
 
   beforeEach(() => {
     originalEnv = process.env;
@@ -139,7 +141,7 @@ describe('Logger', () => {
 });
 
 describe('logApiError', () => {
-  let consoleErrorSpy: SpyInstance;
+  let consoleErrorSpy: MockInstance;
 
   beforeEach(() => {
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
@@ -176,8 +178,8 @@ describe('logApiError', () => {
   it('should include additional context', () => {
     const error = new ApiError({
       message: 'Request failed',
-      statusCode: 404,
-      correlationId: 'test-404',
+      statusCode: 422,
+      correlationId: 'test-422',
       endpoint: '/api/v1/games/123',
     });
 
@@ -189,9 +191,9 @@ describe('logApiError', () => {
       expect.objectContaining({
         error: expect.any(Object),
         context: expect.objectContaining({
-          correlationId: 'test-404',
+          correlationId: 'test-422',
           endpoint: '/api/v1/games/123',
-          statusCode: 404,
+          statusCode: 422,
           userId: '990e8400-e29b-41d4-a716-000000000456',
         }),
       })

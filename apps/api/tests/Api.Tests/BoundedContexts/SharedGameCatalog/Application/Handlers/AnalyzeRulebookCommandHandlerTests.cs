@@ -1,4 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.Middleware.Exceptions;
+using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
@@ -283,6 +285,123 @@ public class AnalyzeRulebookCommandHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    #endregion
+
+    #region Document Category Gate (Issue #5443)
+
+    [Theory]
+    [InlineData("QuickStart")]
+    [InlineData("Reference")]
+    [InlineData("PlayerAid")]
+    [InlineData("Other")]
+    public async Task Handle_WithNonAnalyzableCategory_ThrowsConflictException(string category)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var game = CreateTestGame(userId);
+        var pdfDocumentId = Guid.NewGuid();
+        var command = new AnalyzeRulebookCommand(pdfDocumentId, game.Id, userId);
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetPdfDocumentCategoryAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(category);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ConflictException>(() =>
+            _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        ex.Message.Should().Contain("not eligible for rulebook analysis");
+        ex.Message.Should().Contain(category);
+
+        // Verify analysis was never started
+        _rulebookAnalyzerMock.Verify(
+            a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Rulebook")]
+    [InlineData("Expansion")]
+    [InlineData("Errata")]
+    public async Task Handle_WithAnalyzableCategory_ProceedsToAnalysis(string category)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var game = CreateTestGame(userId);
+        var pdfDocumentId = Guid.NewGuid();
+        var command = new AnalyzeRulebookCommand(pdfDocumentId, game.Id, userId);
+        var analysisResult = CreateTestAnalysisResult();
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetPdfDocumentCategoryAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(category);
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetPdfTextAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Rulebook content");
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetByPdfDocumentIdAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<RulebookAnalysis>());
+
+        _rulebookAnalyzerMock
+            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(analysisResult);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert - analysis proceeded
+        result.Should().NotBeNull();
+        result.Analysis.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WithNullCategory_ProceedsToAnalysis()
+    {
+        // Arrange — legacy documents without category should still be analyzed
+        var userId = Guid.NewGuid();
+        var game = CreateTestGame(userId);
+        var pdfDocumentId = Guid.NewGuid();
+        var command = new AnalyzeRulebookCommand(pdfDocumentId, game.Id, userId);
+        var analysisResult = CreateTestAnalysisResult();
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetPdfDocumentCategoryAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetPdfTextAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Rulebook content");
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetByPdfDocumentIdAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<RulebookAnalysis>());
+
+        _rulebookAnalyzerMock
+            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(analysisResult);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert - analysis proceeded (backward compat)
+        result.Should().NotBeNull();
+        result.Analysis.Should().NotBeNull();
     }
 
     #endregion

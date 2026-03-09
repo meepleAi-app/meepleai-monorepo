@@ -5,6 +5,8 @@
  * Maps backend HTTP status codes to frontend error types.
  */
 
+import { parseRetryAfter } from './retryPolicy';
+
 export interface ApiErrorDetails {
   message: string;
   statusCode?: number;
@@ -202,38 +204,6 @@ export class RateLimitError extends ApiError {
       retryAfter: this.retryAfter,
     };
   }
-
-  /**
-   * Parse Retry-After header value (supports both seconds and HTTP-date formats)
-   * @param retryAfterValue The value from the Retry-After header
-   * @returns Number of seconds to wait, or undefined if invalid
-   */
-  public static parseRetryAfter(retryAfterValue: string | null | undefined): number | undefined {
-    if (!retryAfterValue) {
-      return undefined;
-    }
-
-    // Try parsing as number of seconds
-    const seconds = parseInt(retryAfterValue, 10);
-    if (!isNaN(seconds) && seconds > 0) {
-      return seconds;
-    }
-
-    // Try parsing as HTTP-date (RFC 7231)
-    try {
-      const retryDate = new Date(retryAfterValue);
-      if (!isNaN(retryDate.getTime())) {
-        const now = new Date();
-        const diffMs = retryDate.getTime() - now.getTime();
-        const diffSeconds = Math.ceil(diffMs / 1000);
-        return Math.max(0, diffSeconds);
-      }
-    } catch {
-      // Invalid date format
-    }
-
-    return undefined;
-  }
 }
 
 /**
@@ -325,7 +295,8 @@ export async function createApiError(endpoint: string, response: Response): Prom
       return new ValidationError({ ...baseDetails, validationErrors });
     case 429: {
       const retryAfterHeader = response.headers.get('Retry-After');
-      const retryAfter = RateLimitError.parseRetryAfter(retryAfterHeader);
+      const retryAfterMs = parseRetryAfter(retryAfterHeader);
+      const retryAfter = retryAfterMs != null ? Math.ceil(retryAfterMs / 1000) : undefined;
       return new RateLimitError({
         ...baseDetails,
         retryAfter,

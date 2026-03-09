@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="it" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleAI — Mechanic Extractor</title>
+
+  <!-- Quicksand + Nunito (MeepleAI brand fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       MeepleAI Design Tokens — faithfully reproduced from design-tokens.css
+       ═══════════════════════════════════════════════════════════════ */
+    :root {
+      --color-background: #faf9f7;
+      --color-foreground: #1c1917;
+      --color-card: #ffffff;
+      --color-card-foreground: #1c1917;
+      --color-muted: #f5f3f0;
+      --color-muted-foreground: #78716c;
+      --color-border: #e7e5e4;
+      --color-input: #e7e5e4;
+      --color-primary: #f59e0b;
+      --color-primary-foreground: #451a03;
+      --color-accent: #fef3c7;
+      --color-accent-foreground: #92400e;
+      --color-destructive: #ef4444;
+
+      /* Glass morphism */
+      --glass-bg: rgba(255,255,255,0.72);
+      --glass-border: rgba(251,191,36,0.25);
+      --glass-blur: blur(12px);
+      --glass-shadow: 0 8px 32px rgba(31,38,135,0.08);
+
+      /* Warm shadows (MeepleCard v2) */
+      --shadow-warm-sm: 0 1px 3px rgba(180,130,80,0.12), 0 1px 2px rgba(180,130,80,0.08);
+      --shadow-warm-md: 0 4px 12px rgba(180,130,80,0.15), 0 2px 4px rgba(180,130,80,0.08);
+      --shadow-warm-lg: 0 10px 30px rgba(180,130,80,0.18), 0 4px 8px rgba(180,130,80,0.10);
+
+      /* Transitions */
+      --transition-base: 200ms cubic-bezier(0.4,0,0.2,1);
+      --transition-slow: 300ms cubic-bezier(0.4,0,0.2,1);
+
+      /* Radius */
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+    }
+
+    .dark {
+      --color-background: #1c1917;
+      --color-foreground: #fafaf9;
+      --color-card: #292524;
+      --color-card-foreground: #fafaf9;
+      --color-muted: #292524;
+      --color-muted-foreground: #a8a29e;
+      --color-border: #44403c;
+      --color-input: #44403c;
+      --color-accent: #451a03;
+      --color-accent-foreground: #fef3c7;
+
+      --glass-bg: rgba(41,37,36,0.78);
+      --glass-border: rgba(251,191,36,0.18);
+      --glass-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Reset & Base
+       ═══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: var(--color-background);
+      color: var(--color-foreground);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Paper texture overlay (from admin-dashboard.css) */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' /%3E%3C/svg%3E");
+      opacity: 0.015;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Quicksand', system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Admin Shell — TopNav
+       ═══════════════════════════════════════════════════════════════ */
+    .admin-topnav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-warm-sm);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      z-index: 100;
+      gap: 1.5rem;
+    }
+
+    .admin-topnav .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--color-foreground);
+    }
+
+    .admin-topnav .brand .meeple-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: white;
+      box-shadow: 0 2px 8px rgba(245,158,11,0.35);
+    }
+
+    .admin-topnav .nav-tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-left: 2rem;
+    }
+
+    .admin-topnav .nav-tab {
+      padding: 0.5rem 0.875rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-muted-foreground);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-base);
+      text-decoration: none;
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .admin-topnav .nav-tab:hover {
+      background: var(--color-muted);
+      color: var(--color-foreground);
+    }
+
+    .admin-topnav .nav-tab.active {
+      background: var(--color-accent);
+      color: var(--color-accent-foreground);
+    }
+
+    .admin-topnav .spacer { flex: 1; }
+
+    .admin-topnav .theme-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-card);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all var(--transition-base);
+    }
+
+    .admin-topnav .theme-toggle:hover {
+      border-color: var(--color-primary);
+      background: var(--color-accent);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       L2 MiniNav
+       ═══════════════════════════════════════════════════════════════ */
+    .mini-nav {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: var(--color-card);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      gap: 0.125rem;
+      z-index: 99;
+      overflow-x: auto;
+    }
+
+    .mini-nav .mini-tab {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-muted-foreground);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-base);
+      white-space: nowrap;
+      text-decoration: none;
+      font-family: 'Nunito', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .mini-nav .mini-tab:hover {
+      background: var(--color-muted);
+      color: var(--color-foreground);
+    }
+
+    .mini-nav .mini-tab.active {
+      background: var(--color-accent);
+      color: var(--color-accent-foreground);
+    }
+
+    .mini-tab svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Main Content Area
+       ═══════════════════════════════════════════════════════════════ */
+    .main-content {
+      margin-top: 100px;
+      padding: 1.5rem;
+      max-width: 1600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Page Header
+       ═══════════════════════════════════════════════════════════════ */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.5rem;
+      color: var(--color-foreground);
+    }
+
+    .page-header .subtitle {
+      font-size: 0.875rem;
+      color: var(--color-muted-foreground);
+      margin-top: 0.25rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Game Selector & Compliance Banner
+       ═══════════════════════════════════════════════════════════════ */
+    .game-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .game-selector-bar label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-muted-foreground);
+      font-family: 'Quicksand', sans-serif;
+    }
+
+    .game-select {
+      padding: 0.5rem 2rem 0.5rem 0.75rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-card);
+      color: var(--color-foreground);
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.875rem;
+      min-width: 280px;
+      cursor: pointer;
+      transition: border-color var(--transition-base);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+    }
+
+    .game-select:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-color: var(--color-primary);
+    }
+
+    .pdf-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.625rem;
+      border-radius: var(--radius-md);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .dark .pdf-badge {
+      background: rgba(59,130,246,0.15);
+      color: #93c5fd;
+    }
+
+    .compliance-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1rem;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03));
+      border: 1px solid rgba(16,185,129,0.2);
+      font-size: 0.75rem;
+      color: #065f46;
+      margin-bottom: 1rem;
+    }
+    .dark .compliance-banner {
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.04));
+      border-color: rgba(16,185,129,0.15);
+      color: #6ee7b7;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Split Panel Layout
+       ═══════════════════════════════════════════════════════════════ */
+    .split-panel {
+      display: grid;
+      grid-template-columns: 45fr 55fr;
+      gap: 1rem;
+      height: calc(100vh - 220px);
+      min-height: 500px;
+    }
+
+    .panel {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--glass-shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-card);
+      flex-shrink: 0;
+    }
+
+    .panel-header h3 {
+      font-size: 0.875rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-header h3 .icon { opacity: 0.6; }
+
+    .panel-body {
+      flex: 1;
+      overflow: auto;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       PDF Viewer Panel (Left)
+       ═══════════════════════════════════════════════════════════════ */
+    .pdf-viewer-panel .panel-body {
+      background: #e5e5e5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .dark .pdf-viewer-panel .panel-body { background: #1a1a1a; }
+
+    .pdf-mock-page {
+      width: 85%;
+      max-width: 400px;
+      aspect-ratio: 8.5 / 11;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      padding: 2rem;
+      position: relative;
+      animation: fadeInPage 0.5s ease-out;
+    }
+
+    @keyframes fadeInPage {
+      from { opacity: 0; transform: translateY(8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .pdf-mock-page .mock-title {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #1c1917;
+      margin-bottom: 0.75rem;
+    }
+
+    .pdf-mock-page .mock-line {
+      height: 6px;
+      background: #e7e5e4;
+      border-radius: 3px;
+      margin-bottom: 0.4rem;
+    }
+    .mock-line.short { width: 65%; }
+    .mock-line.medium { width: 85%; }
+    .mock-line.full { width: 100%; }
+    .mock-line.gap { margin-bottom: 1rem; }
+
+    .pdf-mock-page .mock-img {
+      width: 100%;
+      height: 80px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border-radius: var(--radius-md);
+      margin: 0.75rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .mock-section-title {
+      font-family: 'Quicksand', sans-serif;
+      font-weight: 700;
+      font-size: 0.75rem;
+      color: #1c1917;
+      margin-bottom: 0.5rem;
+    }
+
+    .pdf-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--color-card);
+      border-top: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+
+    .pdf-controls .ctrl-btn {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-card);
+      color: var(--color-foreground);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      transition: all var(--transition-base);
+    }
+    .pdf-controls .ctrl-btn:hover {
+      border-color: var(--color-primary);
+      background: var(--color-accent);
+    }
+
+    .pdf-controls .page-info {
+      font-size: 0.75rem;
+      color: var(--color-muted-foreground);
+      font-weight: 600;
+      margin: 0 0.5rem;
+    }
+    .pdf-controls .spacer { flex: 1; }
+
+    .pdf-select {
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: 0.6875rem;
+      background: var(--color-card);
+      color: var(--color-foreground);
+      max-width: 180px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Mechanic Editor Panel (Right)
+       ═══════════════════════════════════════════════════════════════ */
+    .editor-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--color-border);
+      overflow-x: auto;
+      flex-shrink: 0;
+      background: var(--color-card);
+    }
+
+    .editor-tab {
+      padding: 0.625rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-muted-foreground);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition-base);
+      white-space: nowrap;
+      font-family: 'Nunito', sans-serif;
+    }
+    .editor-tab:hover {
+      color: var(--color-foreground);
+      background: var(--color-muted);
+    }
+    .editor-tab.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-left: 0.375rem;
+    }
+    .tab-dot.filled { background: #10b981; }
+    .tab-dot.partial { background: #f59e0b; }
+    .tab-dot.empty { background: var(--color-border); }
+
+    .editor-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+    }
+
+    .editor-section { margin-bottom: 1.5rem; }
+
+    .section-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-muted-foreground);
+      margin-bottom: 0.5rem;
+      font-family: 'Quicksand', sans-serif;
+    }
+
+    .notes-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 0.75rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-card);
+      color: var(--color-foreground);
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      resize: vertical;
+      transition: border-color var(--transition-base);
+    }
+    .notes-textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.12);
+    }
+    .notes-textarea::placeholder {
+      color: var(--color-muted-foreground);
+      opacity: 0.6;
+    }
+
+    .char-count {
+      text-align: right;
+      font-size: 0.6875rem;
+      color: var(--color-muted-foreground);
+      margin-top: 0.25rem;
+    }
+
+    /* AI Assist Button */
+    .ai-assist-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: white;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-base);
+      box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+      margin-top: 0.5rem;
+    }
+    .ai-assist-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(245,158,11,0.4);
+    }
+    .ai-assist-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* AI Loading */
+    .ai-loading {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--color-primary);
+      animation: pulse-ai 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-ai {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .ai-loading .dots span {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      background: var(--color-primary);
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: bounce-dot 1.4s ease-in-out infinite;
+    }
+    .ai-loading .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .ai-loading .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce-dot {
+      0%, 80%, 100% { transform: scale(1); }
+      40% { transform: scale(1.6); }
+    }
+
+    /* AI Draft Preview */
+    .draft-preview {
+      background: linear-gradient(135deg, rgba(245,158,11,0.04), rgba(249,115,22,0.02));
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      margin-top: 0.75rem;
+      animation: fadeSlideIn 0.4s ease-out;
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .dark .draft-preview {
+      background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(249,115,22,0.03));
+      border-color: rgba(245,158,11,0.15);
+    }
+    .draft-preview.accepted {
+      border-color: rgba(16,185,129,0.3);
+      background: linear-gradient(135deg, rgba(16,185,129,0.04), rgba(16,185,129,0.02));
+    }
+
+    .draft-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .draft-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      font-family: 'Quicksand', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .draft-text {
+      font-size: 0.8125rem;
+      line-height: 1.7;
+      color: var(--color-foreground);
+    }
+
+    .draft-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.4375rem 0.875rem;
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      font-family: 'Nunito', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition-base);
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+    .btn-accept { background: #10b981; color: white; border-color: #10b981; }
+    .btn-accept:hover { background: #059669; }
+    .btn-edit { background: var(--color-card); color: var(--color-foreground); border-color: var(--color-border); }
+    .btn-edit:hover { border-color: var(--color-primary); background: var(--color-accent); }
+    .btn-reject { background: var(--color-card); color: var(--color-destructive); border-color: var(--color-border); }
+    .btn-reject:hover { border-color: var(--color-destructive); background: rgba(239,68,68,0.05); }
+    .btn-primary {
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: white;
+      border: none;
+      box-shadow: 0 2px 8px rgba(245,158,11,0.25);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(245,158,11,0.35);
+    }
+    .btn-outline { background: var(--color-card); color: var(--color-foreground); border-color: var(--color-border); }
+    .btn-outline:hover { border-color: var(--color-primary); background: var(--color-accent); }
+    .btn-sm { padding: 0.3125rem 0.625rem; font-size: 0.75rem; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Action Bar
+       ═══════════════════════════════════════════════════════════════ */
+    .action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1.25rem;
+      border-top: 1px solid var(--color-border);
+      background: var(--color-card);
+      flex-shrink: 0;
+    }
+    .action-bar .status-text {
+      font-size: 0.75rem;
+      color: var(--color-muted-foreground);
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+    .autosave-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .action-bar .btn-group { display: flex; gap: 0.5rem; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Mechanic Chips
+       ═══════════════════════════════════════════════════════════════ */
+    .mechanic-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      margin-top: 0.5rem;
+    }
+    .mechanic-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.3125rem 0.625rem;
+      border-radius: var(--radius-md);
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--color-accent);
+      color: var(--color-accent-foreground);
+      border: 1px solid rgba(245,158,11,0.2);
+    }
+    .mechanic-chip .remove {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.1);
+      color: inherit;
+      cursor: pointer;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 0.25rem;
+    }
+    .add-mechanic-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .add-mechanic-row input {
+      flex: 1;
+      padding: 0.4375rem 0.75rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      background: var(--color-card);
+      color: var(--color-foreground);
+      font-family: 'Nunito', sans-serif;
+    }
+    .add-mechanic-row input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Badge variants
+       ═══════════════════════════════════════════════════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-gray { background: var(--color-muted); color: var(--color-muted-foreground); }
+    .dark .badge-green { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .dark .badge-amber { background: rgba(245,158,11,0.15); color: #fcd34d; }
+
+    /* Empty state prompt */
+    .empty-prompt {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: var(--radius-lg);
+      border: 1px dashed var(--color-border);
+      text-align: center;
+      font-size: 0.8125rem;
+      color: var(--color-muted-foreground);
+    }
+    .empty-prompt .hint {
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       Responsive
+       ═══════════════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .split-panel {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .split-panel .panel { min-height: 400px; }
+    }
+
+    /* Custom scrollbar (amber theme) */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(245,158,11,0.5); }
+
+    /* Smooth transitions for dark mode */
+    body, .admin-topnav, .mini-nav, .panel, .panel-header,
+    .editor-tabs, .editor-content, .action-bar, .pdf-controls {
+      transition: background-color var(--transition-slow),
+                  color var(--transition-slow),
+                  border-color var(--transition-slow);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════ TOP NAV ══════════ -->
+  <nav class="admin-topnav">
+    <div class="brand">
+      <div class="meeple-icon">&#9823;</div>
+      <span>MeepleAI</span>
+    </div>
+    <div class="nav-tabs">
+      <a class="nav-tab" href="#">Overview</a>
+      <a class="nav-tab" href="#">Users</a>
+      <a class="nav-tab" href="#">Shared Games</a>
+      <a class="nav-tab" href="#">Agents</a>
+      <a class="nav-tab active" href="#">Knowledge Base</a>
+    </div>
+    <div class="spacer"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" id="themeBtn">&#127769;</button>
+  </nav>
+
+  <!-- ══════════ MINI NAV (L2) ══════════ -->
+  <nav class="mini-nav">
+    <a class="mini-tab" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
+      Upload
+    </a>
+    <a class="mini-tab" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+      Documents
+    </a>
+    <a class="mini-tab" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      Vectors
+    </a>
+    <a class="mini-tab active" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M10 10.3c.2-.4.5-.8.9-1a2.1 2.1 0 0 1 2.6.4c.3.4.5.8.5 1.3 0 1.3-2 2-2 2"/><circle cx="12" cy="17" r=".5"/></svg>
+      Mechanic Extractor
+    </a>
+    <a class="mini-tab" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+      Processing
+    </a>
+    <a class="mini-tab" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- ══════════ MAIN CONTENT ══════════ -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>Mechanic Extractor</h1>
+        <p class="subtitle">Estrai meccaniche dai regolamenti e crea contenuti originali per la knowledge base</p>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <span class="badge badge-green">Variant C &mdash; Legal Safe</span>
+      </div>
+    </div>
+
+    <!-- Compliance Banner -->
+    <div class="compliance-banner">
+      <span style="font-size:1rem;flex-shrink:0;">&#128737;&#65039;</span>
+      <span><strong>Copyright Firewall Active</strong> &mdash; L'AI riceve solo le tue note, mai il testo del PDF. Le meccaniche di gioco non sono soggette a copyright (Baker v. Selden, 1879).</span>
+    </div>
+
+    <!-- Game Selector Bar -->
+    <div class="game-selector-bar">
+      <label>Gioco:</label>
+      <select class="game-select" id="gameSelect" onchange="onGameChange(this.value)">
+        <option value="">Seleziona un gioco...</option>
+        <option value="catan" selected>I Coloni di Catan</option>
+        <option value="ticket">Ticket to Ride</option>
+        <option value="carcassonne">Carcassonne</option>
+        <option value="pandemic">Pandemic</option>
+        <option value="wingspan">Wingspan</option>
+        <option value="gloomhaven">Gloomhaven</option>
+      </select>
+      <span class="pdf-badge">&#128196; 2 PDF collegati</span>
+      <div style="flex:1;"></div>
+      <span class="badge badge-amber" id="draftBadge">Draft in corso</span>
+    </div>
+
+    <!-- ══════════ SPLIT PANEL ══════════ -->
+    <div class="split-panel">
+
+      <!-- ── LEFT: PDF Viewer ── -->
+      <div class="panel pdf-viewer-panel">
+        <div class="panel-header">
+          <h3>
+            <span class="icon">&#128196;</span>
+            PDF Viewer
+            <span style="font-weight:400;font-size:0.75rem;color:var(--color-muted-foreground)">(solo visualizzazione)</span>
+          </h3>
+          <select class="pdf-select">
+            <option>catan-regolamento-it.pdf</option>
+            <option>catan-reference-card.pdf</option>
+          </select>
+        </div>
+        <div class="panel-body" id="pdfBody">
+          <div class="pdf-mock-page">
+            <div class="mock-title">I Coloni di Catan &mdash; Regolamento</div>
+            <div class="mock-img">&#127965;&#65039;</div>
+            <div class="mock-line full"></div>
+            <div class="mock-line full"></div>
+            <div class="mock-line medium"></div>
+            <div class="mock-line full gap"></div>
+            <div class="mock-section-title">Fase di Produzione delle Risorse</div>
+            <div class="mock-line full"></div>
+            <div class="mock-line full"></div>
+            <div class="mock-line short"></div>
+            <div class="mock-line full gap"></div>
+            <div class="mock-section-title">Fase di Commercio</div>
+            <div class="mock-line full"></div>
+            <div class="mock-line medium"></div>
+            <div class="mock-line full"></div>
+            <div class="mock-line short"></div>
+          </div>
+        </div>
+        <div class="pdf-controls">
+          <button class="ctrl-btn">&#9664;</button>
+          <span class="page-info">Pagina 3 / 16</span>
+          <button class="ctrl-btn">&#9654;</button>
+          <div class="spacer"></div>
+          <button class="ctrl-btn" title="Zoom out">&minus;</button>
+          <span class="page-info">100%</span>
+          <button class="ctrl-btn" title="Zoom in">+</button>
+          <button class="ctrl-btn" title="Fit to width">&#11036;</button>
+        </div>
+      </div>
+
+      <!-- ── RIGHT: Mechanic Editor ── -->
+      <div class="panel editor-panel">
+        <div class="panel-header">
+          <h3>
+            <span class="icon">&#9999;&#65039;</span>
+            Editor Meccaniche
+          </h3>
+          <span class="badge badge-amber">4/6 completate</span>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="editor-tabs" id="tabBar">
+          <div class="editor-tab active" data-tab="summary">
+            Sommario <span class="tab-dot filled"></span>
+          </div>
+          <div class="editor-tab" data-tab="mechanics">
+            Meccaniche <span class="tab-dot filled"></span>
+          </div>
+          <div class="editor-tab" data-tab="victory">
+            Vittoria <span class="tab-dot filled"></span>
+          </div>
+          <div class="editor-tab" data-tab="resources">
+            Risorse <span class="tab-dot partial"></span>
+          </div>
+          <div class="editor-tab" data-tab="phases">
+            Fasi di Gioco <span class="tab-dot empty"></span>
+          </div>
+          <div class="editor-tab" data-tab="questions">
+            FAQ <span class="tab-dot empty"></span>
+          </div>
+        </div>
+
+        <!-- Editor Content -->
+        <div class="editor-content" id="editorContent">
+
+          <!-- Summary Tab -->
+          <div id="tab-summary" class="tab-content">
+            <div class="editor-section">
+              <div class="section-label">&#128221; Le tue note (dall'osservazione del PDF)</div>
+              <textarea class="notes-textarea" placeholder="Leggi il PDF e scrivi le tue note sul sommario del gioco... L'AI non legge mai il PDF direttamente.">Catan &egrave; un gioco di costruzione e commercio per 3-4 giocatori. Si gioca su un'isola composta da esagoni con diverse risorse. I giocatori costruiscono strade, insediamenti e citt&agrave;, commerciando risorse tra loro. Il primo a raggiungere 10 punti vittoria vince.</textarea>
+              <div class="char-count">287 / 5000</div>
+            </div>
+
+            <button class="ai-assist-btn" onclick="mockAiAssist(this)">
+              &#10024; AI Assist &mdash; Genera bozza
+            </button>
+
+            <div class="draft-preview" id="draft-summary">
+              <div class="draft-header">
+                <span class="draft-label">&#10024; Bozza AI &mdash; Testo originale</span>
+                <span class="badge badge-green" style="font-size:0.625rem;">GPT-4 &middot; 142 tokens</span>
+              </div>
+              <div class="draft-text">
+                Catan &egrave; un gioco competitivo di strategia e negoziazione in cui 3-4 partecipanti
+                si contendono il dominio di un'isola modulare formata da tessere esagonali, ciascuna
+                associata a una risorsa naturale. Durante la partita, i giocatori espandono la propria
+                rete infrastrutturale &mdash; costruendo strade, villaggi e centri urbani &mdash; e interagiscono
+                attraverso scambi commerciali. La vittoria spetta al primo giocatore che accumula
+                10 punti, ottenibili attraverso espansione territoriale, sviluppo tecnologico e
+                obiettivi speciali.
+              </div>
+              <div class="draft-actions">
+                <button class="btn btn-sm btn-accept" onclick="acceptDraft(this)">&#10003; Accetta</button>
+                <button class="btn btn-sm btn-edit">&#9998; Modifica</button>
+                <button class="btn btn-sm btn-reject" onclick="rejectDraft(this)">&#10005; Rifiuta</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mechanics Tab -->
+          <div id="tab-mechanics" class="tab-content" style="display:none">
+            <div class="editor-section">
+              <div class="section-label">&#128221; Le tue note sulle meccaniche di gioco</div>
+              <textarea class="notes-textarea" placeholder="Descrivi le meccaniche principali che hai osservato...">Il gioco usa piazzamento su mappa modulare, raccolta risorse tramite dadi, commercio diretto tra giocatori, costruzione con set di risorse, carte sviluppo che danno bonus speciali, e il ladro che blocca la produzione.</textarea>
+              <div class="char-count">214 / 5000</div>
+            </div>
+
+            <button class="ai-assist-btn" onclick="mockAiAssist(this)">
+              &#10024; AI Assist &mdash; Genera lista meccaniche
+            </button>
+
+            <div class="editor-section" style="margin-top:1.25rem;">
+              <div class="section-label">&#127922; Meccaniche estratte</div>
+              <div class="mechanic-chips">
+                <span class="mechanic-chip">Piazzamento su Mappa <button class="remove">&times;</button></span>
+                <span class="mechanic-chip">Raccolta Risorse <button class="remove">&times;</button></span>
+                <span class="mechanic-chip">Commercio tra Giocatori <button class="remove">&times;</button></span>
+                <span class="mechanic-chip">Costruzione con Set Collecting <button class="remove">&times;</button></span>
+                <span class="mechanic-chip">Lancio Dadi <button class="remove">&times;</button></span>
+                <span class="mechanic-chip">Carte Sviluppo <button class="remove">&times;</button></span>
+                <span class="mechanic-chip">Interferenza (Ladro) <button class="remove">&times;</button></span>
+              </div>
+              <div class="add-mechanic-row">
+                <input type="text" placeholder="Aggiungi meccanica...">
+                <button class="btn btn-sm btn-outline">+ Aggiungi</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Victory Tab -->
+          <div id="tab-victory" class="tab-content" style="display:none">
+            <div class="editor-section">
+              <div class="section-label">&#128221; Le tue note sulle condizioni di vittoria</div>
+              <textarea class="notes-textarea" placeholder="Descrivi come si vince...">Primo a 10 punti vittoria. Punti da insediamenti (1pt), citt&agrave; (2pt), strada pi&ugrave; lunga (2pt), esercito pi&ugrave; grande (2pt), carte punti vittoria (1pt ciascuna).</textarea>
+              <div class="char-count">168 / 5000</div>
+            </div>
+
+            <button class="ai-assist-btn" onclick="mockAiAssist(this)">
+              &#10024; AI Assist &mdash; Genera descrizione
+            </button>
+
+            <div class="draft-preview accepted">
+              <div class="draft-header">
+                <span class="draft-label">&#9989; Bozza accettata</span>
+                <span class="badge badge-green" style="font-size:0.625rem;">Accettata &#10003;</span>
+              </div>
+              <div class="draft-text">
+                <strong>Obiettivo principale:</strong> Raggiungere 10 punti vittoria.<br><br>
+                <strong>Fonti di punti:</strong><br>
+                &bull; Villaggio: 1 punto<br>
+                &bull; Citt&agrave;: 2 punti<br>
+                &bull; Strada Pi&ugrave; Lunga (min. 5 segmenti consecutivi): 2 punti<br>
+                &bull; Esercito Pi&ugrave; Grande (min. 3 carte cavaliere giocate): 2 punti<br>
+                &bull; Carte Punto Vittoria: 1 punto ciascuna<br><br>
+                <em>Il sistema &egrave; basato su punti con possibilit&agrave; di accumulo tramite diverse strategie,
+                incentivando approcci di gioco differenziati.</em>
+              </div>
+              <div class="draft-actions">
+                <button class="btn btn-sm btn-accept" style="opacity:0.5;cursor:default;">&#10003; Accettata</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resources Tab -->
+          <div id="tab-resources" class="tab-content" style="display:none">
+            <div class="editor-section">
+              <div class="section-label">&#128221; Le tue note sulle risorse del gioco</div>
+              <textarea class="notes-textarea" placeholder="Elenca e descrivi le risorse del gioco...">5 risorse: legno, argilla, grano, lana, minerale. Servono combinazioni diverse per costruire. La scarsit&agrave; dipende dalla distribuzione degli esagoni e dai numeri.</textarea>
+              <div class="char-count">165 / 5000</div>
+            </div>
+
+            <button class="ai-assist-btn" onclick="mockAiAssist(this)">
+              &#10024; AI Assist &mdash; Genera tabella risorse
+            </button>
+
+            <div class="ai-loading">
+              <span>&#10024; L'AI sta generando la descrizione delle risorse</span>
+              <span class="dots"><span></span><span></span><span></span></span>
+            </div>
+          </div>
+
+          <!-- Phases Tab -->
+          <div id="tab-phases" class="tab-content" style="display:none">
+            <div class="editor-section">
+              <div class="section-label">&#128221; Le tue note sulle fasi di gioco</div>
+              <textarea class="notes-textarea" style="min-height:80px;" placeholder="Descrivi le fasi di un turno di gioco..."></textarea>
+              <div class="char-count">0 / 5000</div>
+            </div>
+
+            <button class="ai-assist-btn" disabled>
+              &#10024; AI Assist &mdash; Scrivi prima le note
+            </button>
+
+            <div class="empty-prompt">
+              &#128203; Leggi le fasi di gioco dal PDF e prendi appunti qui sopra.<br>
+              <span class="hint">L'AI Assist si attiva quando hai almeno 10 caratteri di note.</span>
+            </div>
+          </div>
+
+          <!-- FAQ Tab -->
+          <div id="tab-questions" class="tab-content" style="display:none">
+            <div class="editor-section">
+              <div class="section-label">&#128221; Le tue note sulle domande comuni</div>
+              <textarea class="notes-textarea" style="min-height:80px;" placeholder="Quali domande fanno spesso i giocatori?"></textarea>
+              <div class="char-count">0 / 5000</div>
+            </div>
+
+            <button class="ai-assist-btn" disabled>
+              &#10024; AI Assist &mdash; Scrivi prima le note
+            </button>
+
+            <div class="empty-prompt">
+              &#128172; Pensa alle domande che i giocatori fanno pi&ugrave; spesso durante una partita.
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+          <div class="status-text">
+            <span class="autosave-dot"></span>
+            Autosalvato 12 sec fa
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-outline" onclick="exportPdf()">&#128229; Esporta PDF</button>
+            <button class="btn btn-outline">&#128190; Salva Bozza</button>
+            <button class="btn btn-primary">&#9989; Salva e Attiva</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // ── Tab Switching ──
+    document.getElementById('tabBar').addEventListener('click', function(e) {
+      var tab = e.target.closest('.editor-tab');
+      if (!tab) return;
+      var tabId = tab.getAttribute('data-tab');
+      if (!tabId) return;
+
+      // Hide all tabs
+      var contents = document.querySelectorAll('.tab-content');
+      for (var i = 0; i < contents.length; i++) {
+        contents[i].style.display = 'none';
+      }
+      // Deactivate all tabs
+      var tabs = document.querySelectorAll('.editor-tab');
+      for (var i = 0; i < tabs.length; i++) {
+        tabs[i].classList.remove('active');
+      }
+      // Show selected
+      document.getElementById('tab-' + tabId).style.display = 'block';
+      tab.classList.add('active');
+    });
+
+    // ── Mock AI Assist ──
+    function mockAiAssist(btn) {
+      var original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '\u23F3 Generazione in corso...';
+      setTimeout(function() {
+        btn.disabled = false;
+        btn.textContent = '\u2728 AI Assist \u2014 Rigenera';
+      }, 2000);
+    }
+
+    // ── Accept Draft ──
+    function acceptDraft(btn) {
+      var draft = btn.closest('.draft-preview');
+      if (draft) {
+        draft.classList.add('accepted');
+        var label = draft.querySelector('.draft-label');
+        label.textContent = '\u2705 Bozza accettata';
+        var actions = draft.querySelector('.draft-actions');
+        // Clear and replace with static accepted button
+        while (actions.firstChild) { actions.removeChild(actions.firstChild); }
+        var newBtn = document.createElement('button');
+        newBtn.className = 'btn btn-sm btn-accept';
+        newBtn.style.opacity = '0.5';
+        newBtn.style.cursor = 'default';
+        newBtn.textContent = '\u2713 Accettata';
+        actions.appendChild(newBtn);
+      }
+    }
+
+    // ── Reject Draft ──
+    function rejectDraft(btn) {
+      var draft = btn.closest('.draft-preview');
+      if (draft) {
+        draft.style.display = 'none';
+      }
+    }
+
+    // ── Theme Toggle ──
+    function toggleTheme() {
+      var html = document.documentElement;
+      var btn = document.getElementById('themeBtn');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        btn.textContent = '\uD83C\uDF19';
+      } else {
+        html.classList.add('dark');
+        btn.textContent = '\u2600\uFE0F';
+      }
+    }
+
+    // ── Game Change (mock) ──
+    function onGameChange(value) {
+      var badge = document.getElementById('draftBadge');
+      if (!value) {
+        badge.textContent = 'Nessun gioco';
+        badge.className = 'badge badge-gray';
+      } else {
+        badge.textContent = 'Draft in corso';
+        badge.className = 'badge badge-amber';
+      }
+    }
+
+    // ── Export PDF (mock) ──
+    function exportPdf() {
+      alert('\uD83D\uDCC4 Generazione PDF copyright-compliant in corso...\n\n\u00A9 2026 MeepleAI \u2014 Contenuto originale\nMeccaniche descritte indipendentemente.');
+    }
+  </script>
+
+</body>
+</html>

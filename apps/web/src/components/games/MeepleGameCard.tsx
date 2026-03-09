@@ -23,10 +23,14 @@ import { Users, Clock } from 'lucide-react';
 
 import { AgentCreationSheet } from '@/components/agent/config';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
-import { MeepleCard, type MeepleCardVariant, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleCard,
+  type MeepleCardVariant,
+  type MeepleCardMetadata,
+} from '@/components/ui/data-display/meeple-card';
+import { getNavigationLinks } from '@/config/entity-navigation';
 import { useEntityActions } from '@/hooks/use-entity-actions';
 import { useAuthUser } from '@/hooks/useAuthUser';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import type { Game } from '@/lib/api';
 
 // ============================================================================
@@ -99,7 +103,7 @@ export function MeepleGameCard({
         playingTimeMinutes: game.minPlayTimeMinutes ?? undefined,
         yearPublished: game.yearPublished ?? undefined,
         source: 'catalog',
-      },
+      }
     );
   }, [openWizard, game]);
 

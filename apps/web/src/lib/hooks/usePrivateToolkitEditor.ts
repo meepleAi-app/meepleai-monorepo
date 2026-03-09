@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import type { UpdateOverridesPayload } from './useToolkitEditor';
 import type {
   CardToolDto,
   CounterToolDto,
@@ -22,7 +23,6 @@ import type {
   GameToolkitDto,
   TimerToolDto,
 } from '../types/gameToolkit';
-import type { UpdateOverridesPayload } from './useToolkitEditor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,10 +52,7 @@ function getBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE ?? '';
 }
 
-async function apiFetch<T>(
-  url: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(url, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options.headers },
@@ -166,44 +163,41 @@ export function usePrivateToolkitEditor(privateGameId: string): UsePrivateToolki
             overridesScoreboard: false,
             overridesDiceSet: false,
           }),
-        }),
+        })
       );
     },
-    [privateGameId, withSaving],
+    [privateGameId, withSaving]
   );
 
   const updateOverrides = useCallback(
     async (payload: UpdateOverridesPayload) => {
       if (!toolkit) throw new Error('No toolkit loaded');
       await withSaving(() =>
-        apiFetch<GameToolkitDto>(
-          `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}`,
-          {
-            method: 'PUT',
-            body: JSON.stringify({
-              name: payload.name ?? toolkit.name,
-              overridesTurnOrder: payload.overridesTurnOrder ?? toolkit.overridesTurnOrder,
-              overridesScoreboard: payload.overridesScoreboard ?? toolkit.overridesScoreboard,
-              overridesDiceSet: payload.overridesDiceSet ?? toolkit.overridesDiceSet,
-            }),
-          },
-        ),
+        apiFetch<GameToolkitDto>(`${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: payload.name ?? toolkit.name,
+            overridesTurnOrder: payload.overridesTurnOrder ?? toolkit.overridesTurnOrder,
+            overridesScoreboard: payload.overridesScoreboard ?? toolkit.overridesScoreboard,
+            overridesDiceSet: payload.overridesDiceSet ?? toolkit.overridesDiceSet,
+          }),
+        })
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const addDiceTool = useCallback(
     async (tool: DiceToolDto) => {
       if (!toolkit) throw new Error('No toolkit loaded');
       await withSaving(() =>
-        apiFetch<GameToolkitDto>(
-          `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/dice-tools`,
-          { method: 'POST', body: JSON.stringify(tool) },
-        ),
+        apiFetch<GameToolkitDto>(`${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/dice-tools`, {
+          method: 'POST',
+          body: JSON.stringify(tool),
+        })
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const removeDiceTool = useCallback(
@@ -212,24 +206,24 @@ export function usePrivateToolkitEditor(privateGameId: string): UsePrivateToolki
       await withSaving(() =>
         apiFetch<GameToolkitDto>(
           `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/dice-tools/${encodeURIComponent(name)}`,
-          { method: 'DELETE' },
-        ),
+          { method: 'DELETE' }
+        )
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const addCardTool = useCallback(
     async (tool: CardToolDto) => {
       if (!toolkit) throw new Error('No toolkit loaded');
       await withSaving(() =>
-        apiFetch<GameToolkitDto>(
-          `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/card-tools`,
-          { method: 'POST', body: JSON.stringify(tool) },
-        ),
+        apiFetch<GameToolkitDto>(`${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/card-tools`, {
+          method: 'POST',
+          body: JSON.stringify(tool),
+        })
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const removeCardTool = useCallback(
@@ -238,24 +232,24 @@ export function usePrivateToolkitEditor(privateGameId: string): UsePrivateToolki
       await withSaving(() =>
         apiFetch<GameToolkitDto>(
           `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/card-tools/${encodeURIComponent(name)}`,
-          { method: 'DELETE' },
-        ),
+          { method: 'DELETE' }
+        )
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const addTimerTool = useCallback(
     async (tool: TimerToolDto) => {
       if (!toolkit) throw new Error('No toolkit loaded');
       await withSaving(() =>
-        apiFetch<GameToolkitDto>(
-          `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/timer-tools`,
-          { method: 'POST', body: JSON.stringify(tool) },
-        ),
+        apiFetch<GameToolkitDto>(`${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/timer-tools`, {
+          method: 'POST',
+          body: JSON.stringify(tool),
+        })
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const removeTimerTool = useCallback(
@@ -264,11 +258,11 @@ export function usePrivateToolkitEditor(privateGameId: string): UsePrivateToolki
       await withSaving(() =>
         apiFetch<GameToolkitDto>(
           `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/timer-tools/${encodeURIComponent(name)}`,
-          { method: 'DELETE' },
-        ),
+          { method: 'DELETE' }
+        )
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const addCounterTool = useCallback(
@@ -277,11 +271,11 @@ export function usePrivateToolkitEditor(privateGameId: string): UsePrivateToolki
       await withSaving(() =>
         apiFetch<GameToolkitDto>(
           `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/counter-tools`,
-          { method: 'POST', body: JSON.stringify(tool) },
-        ),
+          { method: 'POST', body: JSON.stringify(tool) }
+        )
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   const removeCounterTool = useCallback(
@@ -290,11 +284,11 @@ export function usePrivateToolkitEditor(privateGameId: string): UsePrivateToolki
       await withSaving(() =>
         apiFetch<GameToolkitDto>(
           `${getBaseUrl()}/api/v1/game-toolkits/${toolkit.id}/counter-tools/${encodeURIComponent(name)}`,
-          { method: 'DELETE' },
-        ),
+          { method: 'DELETE' }
+        )
       );
     },
-    [toolkit, withSaving],
+    [toolkit, withSaving]
   );
 
   return {

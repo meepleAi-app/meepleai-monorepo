@@ -76,3 +76,39 @@ internal class GetPublishedToolkitsQueryHandler : IQueryHandler<GetPublishedTool
         return toolkits.Select(ToolkitMapper.ToDto).ToList();
     }
 }
+
+internal class GetApprovedTemplatesQueryHandler : IQueryHandler<GetApprovedTemplatesQuery, IReadOnlyList<GameToolkitDto>>
+{
+    private readonly IGameToolkitRepository _repository;
+
+    public GetApprovedTemplatesQueryHandler(IGameToolkitRepository repository)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+    }
+
+    public async Task<IReadOnlyList<GameToolkitDto>> Handle(GetApprovedTemplatesQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var toolkits = await _repository.GetApprovedTemplatesAsync(query.Category, cancellationToken).ConfigureAwait(false);
+        return toolkits.Select(ToolkitMapper.ToDto).ToList();
+    }
+}
+
+internal class GetPendingReviewTemplatesQueryHandler : IQueryHandler<GetPendingReviewTemplatesQuery, IReadOnlyList<GameToolkitDto>>
+{
+    private readonly IGameToolkitRepository _repository;
+
+    public GetPendingReviewTemplatesQueryHandler(IGameToolkitRepository repository)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+    }
+
+    public async Task<IReadOnlyList<GameToolkitDto>> Handle(GetPendingReviewTemplatesQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var toolkits = await _repository.GetPendingReviewAsync(cancellationToken).ConfigureAwait(false);
+        return toolkits.Select(ToolkitMapper.ToDto).ToList();
+    }
+}

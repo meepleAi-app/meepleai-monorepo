@@ -8,6 +8,7 @@
  */
 
 import { useState } from 'react';
+
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -24,22 +25,23 @@ import {
   CheckCircle2Icon,
   XCircleIcon,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import type { DebugEvent } from '@/hooks/useDebugChatStream';
+import { cn } from '@/lib/utils';
 
 // Event type to icon/color mapping
 const EVENT_CONFIG: Record<number, { icon: React.ElementType; color: string; bg: string }> = {
-  10: { icon: RouteIcon, color: 'text-purple-400', bg: 'bg-purple-500/10' },     // AgentRouter
-  11: { icon: SettingsIcon, color: 'text-blue-400', bg: 'bg-blue-500/10' },      // StrategySelected
-  12: { icon: SearchIcon, color: 'text-amber-400', bg: 'bg-amber-500/10' },      // RetrievalStart
-  13: { icon: ListIcon, color: 'text-green-400', bg: 'bg-green-500/10' },        // RetrievalResults
-  14: { icon: PlugIcon, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },          // PluginExecution
+  10: { icon: RouteIcon, color: 'text-purple-400', bg: 'bg-purple-500/10' }, // AgentRouter
+  11: { icon: SettingsIcon, color: 'text-blue-400', bg: 'bg-blue-500/10' }, // StrategySelected
+  12: { icon: SearchIcon, color: 'text-amber-400', bg: 'bg-amber-500/10' }, // RetrievalStart
+  13: { icon: ListIcon, color: 'text-green-400', bg: 'bg-green-500/10' }, // RetrievalResults
+  14: { icon: PlugIcon, color: 'text-cyan-400', bg: 'bg-cyan-500/10' }, // PluginExecution
   15: { icon: ShieldCheckIcon, color: 'text-emerald-400', bg: 'bg-emerald-500/10' }, // ValidationLayer
-  16: { icon: FileTextIcon, color: 'text-orange-400', bg: 'bg-orange-500/10' },  // PromptContext
+  16: { icon: FileTextIcon, color: 'text-orange-400', bg: 'bg-orange-500/10' }, // PromptContext
   17: { icon: DollarSignIcon, color: 'text-yellow-400', bg: 'bg-yellow-500/10' }, // CostUpdate
-  18: { icon: DatabaseIcon, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },  // SearchDetails
-  19: { icon: HardDriveIcon, color: 'text-sky-400', bg: 'bg-sky-500/10' },       // CacheCheck
-  20: { icon: CheckCircle2Icon, color: 'text-teal-400', bg: 'bg-teal-500/10' },  // DocumentCheck
+  18: { icon: DatabaseIcon, color: 'text-indigo-400', bg: 'bg-indigo-500/10' }, // SearchDetails
+  19: { icon: HardDriveIcon, color: 'text-sky-400', bg: 'bg-sky-500/10' }, // CacheCheck
+  20: { icon: CheckCircle2Icon, color: 'text-teal-400', bg: 'bg-teal-500/10' }, // DocumentCheck
 };
 
 function formatMs(ms: number): string {
@@ -64,17 +66,14 @@ export function DebugEventCard({ event }: DebugEventCardProps) {
 
   // Determine success/failure indicator
   const hasStatus = data && typeof data === 'object';
-  const isSuccess = hasStatus && (
-    data.hit === true ||
-    data.allReady === true ||
-    data.isValid === true ||
-    (typeof data.count === 'number' && (data.count as number) > 0)
-  );
-  const isFailure = hasStatus && (
-    data.hit === false ||
-    data.allReady === false ||
-    data.isValid === false
-  );
+  const isSuccess =
+    hasStatus &&
+    (data.hit === true ||
+      data.allReady === true ||
+      data.isValid === true ||
+      (typeof data.count === 'number' && (data.count as number) > 0));
+  const isFailure =
+    hasStatus && (data.hit === false || data.allReady === false || data.isValid === false);
 
   return (
     <div className={cn('rounded-md border border-border/50', config.bg)}>
@@ -84,9 +83,7 @@ export function DebugEventCard({ event }: DebugEventCardProps) {
         type="button"
       >
         <Icon className={cn('h-4 w-4 shrink-0', config.color)} />
-        <span className="font-medium text-foreground truncate flex-1">
-          {event.typeName}
-        </span>
+        <span className="font-medium text-foreground truncate flex-1">{event.typeName}</span>
 
         {isSuccess && <CheckCircle2Icon className="h-3.5 w-3.5 text-green-500 shrink-0" />}
         {isFailure && <XCircleIcon className="h-3.5 w-3.5 text-red-500 shrink-0" />}
@@ -95,9 +92,11 @@ export function DebugEventCard({ event }: DebugEventCardProps) {
           +{formatMs(event.elapsedMs)}
         </span>
 
-        {expanded
-          ? <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          : <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+        {expanded ? (
+          <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        )}
       </button>
 
       {expanded && data && (
@@ -202,7 +201,9 @@ function ValidationDetail({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
       <span className="text-muted-foreground">Layer</span>
-      <span>#{data.layerNumber as number} {data.layerName as string}</span>
+      <span>
+        #{data.layerNumber as number} {data.layerName as string}
+      </span>
       <span className="text-muted-foreground">Valid</span>
       <span className={data.isValid ? 'text-green-500' : 'text-red-500'}>
         {data.isValid ? 'Yes' : 'No'}

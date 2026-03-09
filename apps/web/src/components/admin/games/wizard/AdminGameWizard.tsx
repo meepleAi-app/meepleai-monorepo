@@ -6,20 +6,19 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { ArrowLeftIcon } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/primitives/button';
-
-import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 import type { CreateGameFromWizardResult } from '@/hooks/queries/useAdminGameWizard';
+import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 
 import { BggSearchStep } from './steps/BggSearchStep';
 import { GameDetailsStep } from './steps/GameDetailsStep';
-import { PdfUploadStep } from './steps/PdfUploadStep';
 import { LaunchProcessingStep } from './steps/LaunchProcessingStep';
+import { PdfUploadStep } from './steps/PdfUploadStep';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -41,7 +40,7 @@ export function AdminGameWizard() {
   const [createdGame, setCreatedGame] = useState<CreateGameFromWizardResult | null>(null);
   const [pdfDocumentId, setPdfDocumentId] = useState<string | null>(null);
 
-  const currentStepIndex = STEP_CONFIG.findIndex((s) => s.id === currentStep);
+  const currentStepIndex = STEP_CONFIG.findIndex(s => s.id === currentStep);
 
   const handleGameSelected = useCallback((game: BggSearchResult) => {
     setSelectedGame(game);
@@ -107,9 +106,7 @@ export function AdminGameWizard() {
                 {index > 0 && (
                   <div
                     className={`h-px w-8 ${
-                      isCompleted
-                        ? 'bg-amber-500'
-                        : 'bg-slate-200 dark:bg-zinc-700'
+                      isCompleted ? 'bg-amber-500' : 'bg-slate-200 dark:bg-zinc-700'
                     }`}
                   />
                 )}
@@ -124,7 +121,13 @@ export function AdminGameWizard() {
                     }`}
                   >
                     {isCompleted ? (
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     ) : (
@@ -133,9 +136,7 @@ export function AdminGameWizard() {
                   </div>
                   <span
                     className={`text-sm font-medium ${
-                      isActive
-                        ? 'text-foreground'
-                        : 'text-muted-foreground'
+                      isActive ? 'text-foreground' : 'text-muted-foreground'
                     }`}
                   >
                     {step.label}
@@ -149,9 +150,7 @@ export function AdminGameWizard() {
 
       {/* Step Content */}
       <div className="min-h-[400px]">
-        {currentStep === 'bgg-search' && (
-          <BggSearchStep onGameSelected={handleGameSelected} />
-        )}
+        {currentStep === 'bgg-search' && <BggSearchStep onGameSelected={handleGameSelected} />}
         {currentStep === 'game-details' && selectedGame && (
           <GameDetailsStep
             selectedGame={selectedGame}

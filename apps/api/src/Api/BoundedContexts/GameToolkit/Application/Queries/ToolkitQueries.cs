@@ -18,3 +18,9 @@ internal record GetToolkitsByPrivateGameQuery(
 ) : IQuery<IReadOnlyList<GameToolkitDto>>;
 
 internal record GetPublishedToolkitsQuery() : IQuery<IReadOnlyList<GameToolkitDto>>;
+
+internal record GetApprovedTemplatesQuery(
+    Api.BoundedContexts.GameToolkit.Domain.Enums.TemplateCategory? Category = null
+) : IQuery<IReadOnlyList<GameToolkitDto>>;
+
+internal record GetPendingReviewTemplatesQuery() : IQuery<IReadOnlyList<GameToolkitDto>>;

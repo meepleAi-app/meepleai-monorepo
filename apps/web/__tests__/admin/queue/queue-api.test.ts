@@ -7,11 +7,12 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockGet, mockPost, mockPut, mockDelete } = vi.hoisted(() => ({
+const { mockGet, mockPost, mockPut, mockDelete, mockPatch } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockPost: vi.fn(),
   mockPut: vi.fn(),
   mockDelete: vi.fn(),
+  mockPatch: vi.fn(),
 }));
 
 vi.mock('@/lib/api/client', () => ({
@@ -20,6 +21,7 @@ vi.mock('@/lib/api/client', () => ({
     post: mockPost,
     put: mockPut,
     delete: mockDelete,
+    patch: mockPatch,
   },
 }));
 
@@ -29,6 +31,14 @@ import {
   removeJob,
   reorderQueue,
   enqueuePdf,
+  bumpPriority,
+  getQueueConfig,
+  updateQueueConfig,
+  bulkReindexFailed,
+  getExtractedText,
+  getQueueStatus,
+  getDashboardMetrics,
+  getActiveAlerts,
 } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 
 describe('Queue API Functions', () => {
@@ -88,6 +98,170 @@ describe('Queue API Functions', () => {
         pdfDocumentId: 'pdf-doc-2',
         priority: 10,
       });
+    });
+  });
+
+  // Issue #5458: New API functions for queue management
+  describe('bumpPriority', () => {
+    it('should PATCH priority endpoint with new priority', async () => {
+      mockPatch.mockResolvedValue(undefined);
+      await bumpPriority('job-123', 'Urgent');
+      expect(mockPatch).toHaveBeenCalledWith('/api/v1/admin/queue/job-123/priority', {
+        newPriority: 'Urgent',
+      });
+    });
+  });
+
+  describe('getQueueConfig', () => {
+    it('should GET queue config', async () => {
+      const config = {
+        isPaused: false,
+        maxConcurrentWorkers: 3,
+        updatedAt: '2026-01-01',
+        updatedBy: null,
+      };
+      mockGet.mockResolvedValue(config);
+      const result = await getQueueConfig();
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/config');
+      expect(result).toEqual(config);
+    });
+  });
+
+  describe('updateQueueConfig', () => {
+    it('should PATCH config with isPaused', async () => {
+      mockPatch.mockResolvedValue(undefined);
+      await updateQueueConfig(true);
+      expect(mockPatch).toHaveBeenCalledWith('/api/v1/admin/queue/config', {
+        isPaused: true,
+        maxConcurrentWorkers: undefined,
+      });
+    });
+
+    it('should PATCH config with maxConcurrentWorkers', async () => {
+      mockPatch.mockResolvedValue(undefined);
+      await updateQueueConfig(undefined, 5);
+      expect(mockPatch).toHaveBeenCalledWith('/api/v1/admin/queue/config', {
+        isPaused: undefined,
+        maxConcurrentWorkers: 5,
+      });
+    });
+  });
+
+  describe('bulkReindexFailed', () => {
+    it('should POST to reindex-failed endpoint', async () => {
+      const result = { enqueuedCount: 3, skippedCount: 1, errors: [] };
+      mockPost.mockResolvedValue(result);
+      const response = await bulkReindexFailed();
+      expect(mockPost).toHaveBeenCalledWith('/api/v1/admin/queue/reindex-failed');
+      expect(response).toEqual(result);
+    });
+  });
+
+  describe('getExtractedText', () => {
+    it('should GET extracted text for a document', async () => {
+      const textResult = {
+        id: 'doc-1',
+        fileName: 'rules.pdf',
+        extractedText: 'Game rules...',
+        processingStatus: 'Completed',
+        processedAt: '2026-01-01',
+        pageCount: 5,
+        characterCount: 1200,
+        processingError: null,
+      };
+      mockGet.mockResolvedValue(textResult);
+      const result = await getExtractedText('doc-1');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/documents/doc-1/extracted-text');
+      expect(result).toEqual(textResult);
+    });
+
+    it('should return null for not found document', async () => {
+      mockGet.mockResolvedValue(null);
+      const result = await getExtractedText('doc-missing');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getQueueStatus', () => {
+    it('should GET queue status with backpressure info', async () => {
+      const status = {
+        queueDepth: 42,
+        backpressureThreshold: 50,
+        isUnderPressure: false,
+        isPaused: false,
+        maxConcurrentWorkers: 3,
+        estimatedWaitMinutes: 14.0,
+      };
+      mockGet.mockResolvedValue(status);
+      const result = await getQueueStatus();
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/status');
+      expect(result).toEqual(status);
+    });
+  });
+
+  // Issue #5459: Dashboard metrics API
+  describe('getDashboardMetrics', () => {
+    it('should GET metrics with default period (24h)', async () => {
+      const metrics = {
+        phaseTimings: [
+          {
+            phase: 'TextExtraction',
+            avgDurationSeconds: 12.5,
+            minDurationSeconds: 3.2,
+            maxDurationSeconds: 45.0,
+            sampleCount: 10,
+          },
+        ],
+        totalProcessed: 50,
+        totalFailed: 5,
+        failureRatePercent: 9.1,
+        avgTotalDurationSeconds: 45.3,
+        period: '24h',
+      };
+      mockGet.mockResolvedValue(metrics);
+      const result = await getDashboardMetrics();
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/metrics?period=24h');
+      expect(result).toEqual(metrics);
+    });
+
+    it('should GET metrics with custom period', async () => {
+      const metrics = {
+        phaseTimings: [],
+        totalProcessed: 200,
+        totalFailed: 15,
+        failureRatePercent: 7.0,
+        avgTotalDurationSeconds: 0,
+        period: '30d',
+      };
+      mockGet.mockResolvedValue(metrics);
+      const result = await getDashboardMetrics('30d');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/metrics?period=30d');
+      expect(result).toEqual(metrics);
+    });
+  });
+
+  // Issue #5460: Active alerts API
+  describe('getActiveAlerts', () => {
+    it('should GET active alerts', async () => {
+      const alerts = [
+        {
+          type: 'DocumentStuck',
+          severity: 'Warning',
+          message: "Document 'rules.pdf' stuck for 15.3 minutes",
+          detectedAt: '2026-03-08T22:00:00Z',
+          data: { jobId: 'j1', pdfDocumentId: 'p1', fileName: 'rules.pdf', stuckMinutes: 15.3 },
+        },
+      ];
+      mockGet.mockResolvedValue(alerts);
+      const result = await getActiveAlerts();
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/queue/alerts');
+      expect(result).toEqual(alerts);
+    });
+
+    it('should return empty array when no alerts', async () => {
+      mockGet.mockResolvedValue(null);
+      const result = await getActiveAlerts();
+      expect(result).toEqual([]);
     });
   });
 });

@@ -123,7 +123,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
     return (
       <GameCarousel
         games={games.map(mapToCarouselGame)}
-        onGameSelect={(game) => handleGameClick(game.id)}
+        onGameSelect={game => handleGameClick(game.id)}
         showDots
         autoPlay={false}
         flippable
@@ -143,6 +143,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
             flippable
             onClick={() => handleGameClick(game.id)}
             libraryStatus={batchStatus?.results[game.id]}
+            className="h-full"
           />
         ))}
       </div>

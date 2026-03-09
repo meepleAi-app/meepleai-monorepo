@@ -30,12 +30,20 @@ import { useState, useCallback } from 'react';
 import { Clock, Play, RotateCcw, Share2, Trash2, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
+import {
+  MeepleCard,
+  type MeepleCardVariant,
+  type MeepleEntityType,
+} from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import { getNavigationLinks } from '@/config/entity-navigation';
 import { useSharedGame } from '@/hooks/queries';
 import { useRemoveGameFromLibrary } from '@/hooks/queries';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
+
+import { AgentDrawerSheet } from './AgentDrawerSheet';
+import { ChatDrawerSheet } from './ChatDrawerSheet';
+import { KbDrawerSheet } from './KbDrawerSheet';
+import { SessionDrawerSheet } from './SessionDrawerSheet';
 
 // ============================================================================
 // Types
@@ -85,6 +93,12 @@ export function MeepleUserLibraryCard({
 
   const removeMutation = useRemoveGameFromLibrary();
 
+  // Drawer states
+  const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
+  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
+
   const handleFlip = useCallback(() => {
     setFetchDetail(true);
   }, []);
@@ -110,9 +124,7 @@ export function MeepleUserLibraryCard({
     game.playingTimeMinutes
       ? { icon: Clock, value: formatPlaytime(game.playingTimeMinutes) }
       : null,
-    game.playCount > 0
-      ? { icon: RotateCcw, value: `${game.playCount}x` }
-      : null,
+    game.playCount > 0 ? { icon: RotateCcw, value: `${game.playCount}x` } : null,
   ].filter((m): m is NonNullable<typeof m> => m !== null);
 
   const quickActions = [
@@ -138,31 +150,77 @@ export function MeepleUserLibraryCard({
 
   const badge = game.isOwned ? 'Owned' : game.inWishlist ? 'Wishlist' : undefined;
 
+  const drawerNavLinks = [
+    { entity: 'document' as MeepleEntityType, label: 'KB', onClick: () => setKbDrawerOpen(true) },
+    {
+      entity: 'agent' as MeepleEntityType,
+      label: 'Agents',
+      onClick: () => setAgentDrawerOpen(true),
+    },
+    {
+      entity: 'chatSession' as MeepleEntityType,
+      label: 'Chats',
+      onClick: () => setChatDrawerOpen(true),
+    },
+    {
+      entity: 'session' as MeepleEntityType,
+      label: 'Sessions',
+      onClick: () => setSessionDrawerOpen(true),
+    },
+  ];
+
   return (
-    <MeepleCard
-      id={game.id}
-      entity="game"
-      variant={variant}
-      title={game.title}
-      subtitle={game.publisher ?? undefined}
-      imageUrl={game.imageUrl ?? undefined}
-      rating={game.averageRating ?? undefined}
-      ratingMax={10}
-      metadata={metadata}
-      badge={badge}
-      onClick={onClick ? () => onClick(game.id) : undefined}
-      flippable
-      flipData={flipData}
-      flipTrigger="button"
-      onFlip={handleFlip}
-      navigateTo={getNavigationLinks('game', { id: game.id })}
-      entityQuickActions={quickActions}
-      showInfoButton
-      infoHref={`/games/${game.id}`}
-      infoTooltip="Vai al dettaglio"
-      className={className}
-      data-testid={`library-game-card-${game.id}`}
-    />
+    <>
+      <MeepleCard
+        id={game.id}
+        entity="game"
+        variant={variant}
+        title={game.title}
+        subtitle={game.publisher ?? undefined}
+        imageUrl={game.imageUrl ?? undefined}
+        rating={game.averageRating ?? undefined}
+        ratingMax={10}
+        metadata={metadata}
+        badge={badge}
+        onClick={onClick ? () => onClick(game.id) : undefined}
+        flippable
+        flipData={flipData}
+        flipTrigger="button"
+        onFlip={handleFlip}
+        navigateTo={drawerNavLinks}
+        entityQuickActions={quickActions}
+        showInfoButton
+        infoHref={`/games/${game.id}`}
+        infoTooltip="Vai al dettaglio"
+        className={className}
+        data-testid={`library-game-card-${game.id}`}
+      />
+
+      <KbDrawerSheet
+        open={kbDrawerOpen}
+        onOpenChange={setKbDrawerOpen}
+        gameId={game.id}
+        gameTitle={game.title}
+      />
+      <AgentDrawerSheet
+        open={agentDrawerOpen}
+        onOpenChange={setAgentDrawerOpen}
+        gameId={game.id}
+        gameTitle={game.title}
+      />
+      <ChatDrawerSheet
+        open={chatDrawerOpen}
+        onOpenChange={setChatDrawerOpen}
+        gameId={game.id}
+        gameTitle={game.title}
+      />
+      <SessionDrawerSheet
+        open={sessionDrawerOpen}
+        onOpenChange={setSessionDrawerOpen}
+        gameId={game.id}
+        gameTitle={game.title}
+      />
+    </>
   );
 }
 

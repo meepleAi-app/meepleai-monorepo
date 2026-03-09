@@ -154,7 +154,7 @@ export function CostBreakdownPanel({
                   nameKey="name"
                   paddingAngle={2}
                 >
-                  {donutData.map((entry, i) => (
+                  {donutData.map((entry, _i) => (
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>

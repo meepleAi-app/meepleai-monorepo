@@ -35,7 +35,6 @@ import {
   FolderOpen,
   Activity,
   Settings,
-  Clock,
   Menu,
 } from 'lucide-react';
 
@@ -134,22 +133,10 @@ export function Navbar({ className }: NavbarProps) {
           role="menubar"
           aria-label="Navigation sections"
         >
-          <NavbarDropdown
-            label="Tool"
-            items={TOOL_ITEMS}
-            data-testid="tool-dropdown"
-          />
-          <NavbarDropdown
-            label="Scopri"
-            items={DISCOVER_ITEMS}
-            data-testid="discover-dropdown"
-          />
+          <NavbarDropdown label="Tool" items={TOOL_ITEMS} data-testid="tool-dropdown" />
+          <NavbarDropdown label="Scopri" items={DISCOVER_ITEMS} data-testid="discover-dropdown" />
           {isAdmin && (
-            <NavbarDropdown
-              label="Admin"
-              items={ADMIN_ITEMS}
-              data-testid="admin-dropdown"
-            />
+            <NavbarDropdown label="Admin" items={ADMIN_ITEMS} data-testid="admin-dropdown" />
           )}
         </div>
 
@@ -161,10 +148,7 @@ export function Navbar({ className }: NavbarProps) {
       </nav>
 
       {/* Mobile drawer (rendered outside nav to avoid nesting issues) */}
-      <NavbarMobileDrawer
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-      />
+      <NavbarMobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
     </>
   );
 }

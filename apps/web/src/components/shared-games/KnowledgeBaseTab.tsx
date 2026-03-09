@@ -23,8 +23,10 @@ import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { agentDocumentsKeys } from '@/hooks/queries/useAgentDocuments';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
+import { useEmbeddingStatus } from '@/hooks/useEmbeddingStatus';
 import { api } from '@/lib/api';
 import type { AgentDocumentsDto, SelectedDocumentDto } from '@/lib/api/schemas';
+import type { EmbeddingStatus } from '@/lib/api/schemas/knowledge-base.schemas';
 import type { PdfState } from '@/types/pdf';
 
 // ============================================================================
@@ -49,17 +51,32 @@ const DOCUMENT_TYPE_VARIANTS: Record<number, 'default' | 'secondary' | 'outline'
   2: 'outline',
 };
 
+/** Map backend EmbeddingStatus to frontend PdfState */
+function mapEmbeddingStatusToPdfState(status: EmbeddingStatus): PdfState {
+  const mapping: Record<EmbeddingStatus, PdfState> = {
+    Pending: 'pending',
+    Extracting: 'extracting',
+    Chunking: 'chunking',
+    Embedding: 'embedding',
+    Completed: 'ready',
+    Failed: 'failed',
+  };
+  return mapping[status];
+}
+
 // ============================================================================
 // Component
 // ============================================================================
 
 export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
+  // Fetch embedding status for the game's KB
+  const { data: embeddingData } = useEmbeddingStatus(gameId);
+  const gamePdfState: PdfState = embeddingData
+    ? mapEmbeddingStatusToPdfState(embeddingData.status)
+    : 'pending';
+
   // Fetch agents for the game
-  const {
-    data: agents,
-    isLoading: agentsLoading,
-    error: agentsError,
-  } = useGameAgents({ gameId });
+  const { data: agents, isLoading: agentsLoading, error: agentsError } = useGameAgents({ gameId });
 
   // Fetch documents for each agent using useQueries (fixes Rules of Hooks violation)
   const documentsQueries = useQueries({
@@ -74,8 +91,8 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
   });
 
   // Aggregate all documents from all agents
-  const allDocuments: Array<SelectedDocumentDto & { agentName: string }> =
-    documentsQueries.flatMap((query, index) => {
+  const allDocuments: Array<SelectedDocumentDto & { agentName: string }> = documentsQueries.flatMap(
+    (query, index) => {
       if (!query.data?.documents || !agents) {
         return [];
       }
@@ -85,7 +102,8 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
         ...doc,
         agentName,
       }));
-    });
+    }
+  );
 
   // Loading state
   if (agentsLoading) {
@@ -101,9 +119,7 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
   if (agentsError) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>
-          Failed to load agents: {agentsError.message}
-        </AlertDescription>
+        <AlertDescription>Failed to load agents: {agentsError.message}</AlertDescription>
       </Alert>
     );
   }
@@ -128,8 +144,7 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
         <FileText className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Documents Indexed Yet</h3>
         <p className="text-sm text-muted-foreground max-w-md">
-          Documents will appear here once they have been uploaded and indexed in the Knowledge
-          Base.
+          Documents will appear here once they have been uploaded and indexed in the Knowledge Base.
         </p>
       </div>
     );
@@ -152,7 +167,7 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
       {/* Documents List */}
       <div className="grid gap-4 md:grid-cols-2">
         {allDocuments.map(doc => (
-          <DocumentCard key={doc.id} document={doc} />
+          <DocumentCard key={doc.id} document={doc} pdfState={gamePdfState} />
         ))}
       </div>
     </div>
@@ -165,14 +180,13 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
 
 interface DocumentCardProps {
   document: SelectedDocumentDto & { agentName: string };
+  /** PDF indexing state from game-level embedding status */
+  pdfState: PdfState;
 }
 
-function DocumentCard({ document }: DocumentCardProps) {
+function DocumentCard({ document, pdfState }: DocumentCardProps) {
   const typeLabel = DOCUMENT_TYPE_LABELS[document.documentType] || 'Unknown';
   const typeVariant = DOCUMENT_TYPE_VARIANTS[document.documentType] || 'secondary';
-
-  // Map document state to PdfState (simplified for now - can be enhanced with real data)
-  const pdfState: PdfState = 'ready'; // TODO: Get actual state from API
 
   return (
     <Card>
@@ -196,9 +210,7 @@ function DocumentCard({ document }: DocumentCardProps) {
             <div className="flex gap-2 flex-shrink-0">
               {/* New: PdfStatusBadge (Issue #4217) */}
               <PdfStatusBadge state={pdfState} variant="compact" />
-              <Badge variant={typeVariant}>
-                {typeLabel}
-              </Badge>
+              <Badge variant={typeVariant}>{typeLabel}</Badge>
             </div>
           </div>
 

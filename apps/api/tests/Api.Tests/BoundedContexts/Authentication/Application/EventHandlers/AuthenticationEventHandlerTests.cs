@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.EventHandlers;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;

@@ -2,23 +2,23 @@
  * DashboardSessionHero — Issue #5095, Epic #5094
  *
  * Full-width hero card for the dashboard:
- * - ACTIVE state: gradient card with live session info + "Riprendi" CTA
- * - EMPTY state: dashed card with "Nuova sessione" / "Riprendi ultima" CTAs
+ * - ACTIVE state: warm amber gradient with live session info + "Riprendi" CTA
+ * - EMPTY state: warm dashed card with "Nuova sessione" / "Riprendi ultima" CTAs
  */
 
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Play, RotateCcw } from 'lucide-react';
+import { Dices, Play, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { useGame } from '@/hooks/queries/useGames';
+import { Button } from '@/components/ui/primitives/button';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
+import { useGame } from '@/hooks/queries/useGames';
 import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
+import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -37,19 +37,15 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
 
   const gameTitle = game?.title ?? 'Sessione in corso';
   const duration = formatDuration(session.durationMinutes);
-  const meta = [
-    `${session.playerCount} giocatori`,
-    duration ? `Da ${duration}` : null,
-  ]
+  const meta = [`${session.playerCount} giocatori`, duration ? `Da ${duration}` : null]
     .filter(Boolean)
     .join(' · ');
 
   return (
     <div
-      className="relative flex items-center gap-4 rounded-2xl px-6 py-5 overflow-hidden"
+      className="relative flex items-center gap-4 rounded-2xl px-6 py-5 overflow-hidden shadow-[0_8px_32px_rgba(180,100,30,0.18)]"
       style={{
-        background:
-          'linear-gradient(135deg, hsl(240,60%,55%), hsl(240,60%,38%))',
+        background: 'linear-gradient(135deg, hsl(25,90%,48%), hsl(25,70%,28%))',
       }}
     >
       {/* Diagonal stripe overlay */}
@@ -58,13 +54,22 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,.04) 12px, rgba(255,255,255,.04) 13px)',
+            'repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,.05) 12px, rgba(255,255,255,.05) 13px)',
+        }}
+      />
+
+      {/* Subtle noise grain */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }}
       />
 
       {/* Live dot */}
       <span
-        className="relative z-10 shrink-0 rounded-full"
+        className="relative z-10 shrink-0 rounded-full animate-pulse"
         style={{
           width: 10,
           height: 10,
@@ -75,25 +80,18 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
 
       {/* Content */}
       <div className="relative z-10 flex-1 min-w-0">
-        <p className="text-[11px] font-bold font-quicksand uppercase tracking-widest text-white/75">
-          🟢 Sessione attiva
+        <p className="text-[11px] font-bold font-quicksand uppercase tracking-widest text-white/80">
+          Sessione attiva
         </p>
-        <h2 className="font-quicksand text-lg font-bold text-white truncate mt-0.5">
-          {gameTitle}
-        </h2>
-        {meta && (
-          <p className="text-xs text-white/70 font-nunito mt-0.5">{meta}</p>
-        )}
+        <h2 className="font-quicksand text-lg font-bold text-white truncate mt-0.5">{gameTitle}</h2>
+        {meta && <p className="text-xs text-white/70 font-nunito mt-0.5">{meta}</p>}
       </div>
 
       {/* CTA */}
-      <Link
-        href={`/sessions/${session.id}`}
-        className="relative z-10 shrink-0"
-      >
+      <Link href={`/sessions/${session.id}`} className="relative z-10 shrink-0">
         <Button
           size="sm"
-          className="font-quicksand font-bold bg-white text-[hsl(240,60%,55%)] hover:bg-white/90 hover:-translate-y-px transition-transform"
+          className="font-quicksand font-bold bg-white text-[hsl(25,85%,35%)] hover:bg-white/90 shadow-md hover:shadow-lg hover:-translate-y-px transition-all duration-200"
         >
           Riprendi →
         </Button>
@@ -104,11 +102,7 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
 
 // ─── Empty hero ───────────────────────────────────────────────────────────────
 
-function EmptySessionHero({
-  lastSession,
-}: {
-  lastSession?: SessionSummaryDto;
-}) {
+function EmptySessionHero({ lastSession }: { lastSession?: SessionSummaryDto }) {
   const lastGameName = lastSession?.gameName;
   const lastDate = lastSession?.sessionDate
     ? formatDistanceToNow(new Date(lastSession.sessionDate), {
@@ -118,10 +112,10 @@ function EmptySessionHero({
     : null;
 
   return (
-    <div className="flex items-center gap-4 rounded-2xl px-6 py-5 border-2 border-dashed border-border bg-surface">
+    <div className="flex items-center gap-4 rounded-2xl px-6 py-5 border-2 border-dashed border-[hsl(25,40%,80%)] dark:border-[hsl(25,30%,30%)] bg-[rgba(255,245,235,0.5)] dark:bg-[rgba(40,30,20,0.4)]">
       {/* Icon */}
-      <span className="text-4xl shrink-0 opacity-40" aria-hidden>
-        🎲
+      <span className="shrink-0 opacity-50" aria-hidden>
+        <Dices className="h-9 w-9 text-[hsl(25,60%,50%)]" />
       </span>
 
       {/* Content */}
@@ -143,11 +137,7 @@ function EmptySessionHero({
       <div className="flex gap-2 shrink-0 flex-wrap justify-end">
         <Button
           size="sm"
-          className="font-quicksand font-bold gap-1.5"
-          style={{
-            background: 'hsl(240,60%,55%)',
-            color: '#fff',
-          }}
+          className="font-quicksand font-bold gap-1.5 bg-[hsl(25,90%,45%)] hover:bg-[hsl(25,90%,40%)] text-white shadow-sm"
           asChild
         >
           <Link href="/sessions/new">
@@ -159,7 +149,7 @@ function EmptySessionHero({
           <Button
             variant="outline"
             size="sm"
-            className="font-quicksand font-bold gap-1.5"
+            className="font-quicksand font-bold gap-1.5 border-[hsl(25,40%,75%)] text-[hsl(25,70%,35%)] hover:bg-[hsl(25,95%,95%)]"
             asChild
           >
             <Link href="/sessions">
@@ -196,6 +186,9 @@ export function DashboardSessionHero({ lastSession }: DashboardSessionHeroProps)
   if (activeSession) {
     return <ActiveSessionHero session={activeSession} />;
   }
+
+  // Don't show the empty hero if the user has never played a session
+  if (!lastSession) return null;
 
   return <EmptySessionHero lastSession={lastSession} />;
 }

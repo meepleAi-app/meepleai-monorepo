@@ -23,7 +23,12 @@ internal record GameToolkitDto(
     ScoringTemplateDto? ScoringTemplate,
     TurnTemplateDto? TurnTemplate,
     StateTemplateDto? StateTemplate,
-    string? AgentConfig
+    string? AgentConfig,
+    TemplateStatus TemplateStatus = TemplateStatus.Draft,
+    bool IsTemplate = false,
+    string? ReviewNotes = null,
+    Guid? ReviewedByUserId = null,
+    DateTime? ReviewedAt = null
 );
 
 internal record DiceToolDto(
@@ -171,3 +176,13 @@ internal record SetStateTemplateRequest(
     string SchemaJson,
     string? Description = null
 );
+
+internal record ApplyAiSuggestionRequest(
+    Guid? ToolkitId,
+    AiToolkitSuggestionDto Suggestion
+);
+
+// Template marketplace request DTOs
+internal record ApproveTemplateRequest(string? Notes);
+internal record RejectTemplateRequest(string Notes);
+internal record CloneFromTemplateRequest(Guid GameId);

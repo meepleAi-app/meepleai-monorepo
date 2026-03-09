@@ -52,7 +52,7 @@ export function SessionScoreModal({
   className,
 }: SessionScoreModalProps) {
   const [activeDimension, setActiveDimension] = useState(
-    scoringConfig.enabledDimensions[0] ?? 'default',
+    scoringConfig.enabledDimensions[0] ?? 'default'
   );
   const [editedScores, setEditedScores] = useState<Map<string, number>>(new Map());
 
@@ -75,7 +75,7 @@ export function SessionScoreModal({
   }, [roundScores]);
 
   const allRounds = [
-    ...new Set(roundScores.filter((s) => s.dimension === activeDimension).map((s) => s.round)),
+    ...new Set(roundScores.filter(s => s.dimension === activeDimension).map(s => s.round)),
   ].sort((a, b) => a - b);
 
   // Add an empty round for new entries
@@ -86,7 +86,7 @@ export function SessionScoreModal({
     (playerId: string, round: number, value: string) => {
       const numValue = parseInt(value, 10);
       if (value === '' || (/^-?\d+$/.test(value) && !isNaN(numValue))) {
-        setEditedScores((prev) => {
+        setEditedScores(prev => {
           const next = new Map(prev);
           if (value === '') {
             next.delete(scoreKey(playerId, round, activeDimension));
@@ -97,7 +97,7 @@ export function SessionScoreModal({
         });
       }
     },
-    [activeDimension],
+    [activeDimension]
   );
 
   const handleSave = useCallback(() => {
@@ -123,18 +123,23 @@ export function SessionScoreModal({
           'bg-card rounded-2xl shadow-2xl border border-border',
           'w-[90vw] max-w-[500px] max-h-[80vh]',
           'flex flex-col overflow-hidden',
-          className,
+          className
         )}
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="score-modal-title"
-        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        onKeyDown={e => {
+          if (e.key === 'Escape') onClose();
+        }}
         data-testid="score-modal"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 id="score-modal-title" className="font-quicksand text-lg font-bold text-card-foreground">
+          <h2
+            id="score-modal-title"
+            className="font-quicksand text-lg font-bold text-card-foreground"
+          >
             Modifica Punteggio
           </h2>
           <button
@@ -149,7 +154,7 @@ export function SessionScoreModal({
         {/* Dimension tabs */}
         {scoringConfig.enabledDimensions.length > 1 && (
           <div className="flex gap-1 px-5 pt-3">
-            {scoringConfig.enabledDimensions.map((dim) => (
+            {scoringConfig.enabledDimensions.map(dim => (
               <button
                 key={dim}
                 onClick={() => setActiveDimension(dim)}
@@ -157,14 +162,14 @@ export function SessionScoreModal({
                   'px-3 py-1 rounded-md text-xs font-medium transition-colors',
                   dim === activeDimension
                     ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                    : 'text-muted-foreground hover:bg-muted',
+                    : 'text-muted-foreground hover:bg-muted'
                 )}
               >
                 {dim}
                 {/* eslint-disable-next-line security/detect-object-injection */}
                 {scoringConfig.dimensionUnits[dim]
-                  // eslint-disable-next-line security/detect-object-injection
-                  ? ` (${scoringConfig.dimensionUnits[dim]})`
+                  ? // eslint-disable-next-line security/detect-object-injection
+                    ` (${scoringConfig.dimensionUnits[dim]})`
                   : ''}
               </button>
             ))}
@@ -177,7 +182,7 @@ export function SessionScoreModal({
             <thead>
               <tr className="text-muted-foreground text-xs">
                 <th className="text-left pr-3 pb-2 font-medium">Player</th>
-                {displayRounds.map((r) => (
+                {displayRounds.map(r => (
                   <th key={r} className="text-center px-1 pb-2 font-medium min-w-[48px]">
                     R{r}
                   </th>
@@ -185,15 +190,15 @@ export function SessionScoreModal({
               </tr>
             </thead>
             <tbody>
-              {players.map((player) => (
+              {players.map(player => (
                 <tr key={player.id} className="border-t border-border/30">
                   <td className="pr-3 py-2">
                     <span className="flex items-center gap-2">
                       <span
                         className={cn(
                           'w-3 h-3 rounded-full flex-shrink-0',
-                          // eslint-disable-next-line security/detect-object-injection
-                          PLAYER_COLOR_BG[player.color],
+
+                          PLAYER_COLOR_BG[player.color]
                         )}
                       />
                       <span className="font-medium truncate max-w-[100px]">
@@ -201,7 +206,7 @@ export function SessionScoreModal({
                       </span>
                     </span>
                   </td>
-                  {displayRounds.map((r) => {
+                  {displayRounds.map(r => {
                     const key = scoreKey(player.id, r, activeDimension);
                     const value = editedScores.get(key);
                     return (
@@ -211,13 +216,13 @@ export function SessionScoreModal({
                           inputMode="numeric"
                           pattern="[0-9]*"
                           value={value ?? ''}
-                          onChange={(e) => handleChange(player.id, r, e.target.value)}
+                          onChange={e => handleChange(player.id, r, e.target.value)}
                           className={cn(
                             'w-full text-center px-1 py-1 rounded-md',
                             'bg-muted/50 border border-border/30',
                             'text-sm font-medium tabular-nums',
                             'focus:outline-none focus:ring-2 focus:ring-indigo-300',
-                            'transition-colors',
+                            'transition-colors'
                           )}
                           data-testid={`score-input-${player.id}-r${r}`}
                           aria-label={`Score for ${player.displayName} round ${r}`}

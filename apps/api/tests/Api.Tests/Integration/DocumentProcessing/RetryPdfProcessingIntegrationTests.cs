@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using MediatR;
@@ -347,14 +348,12 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         _dbContext!.PdfDocuments.Add(failedPdf);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Act
+        // Act & Assert
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var command = new RetryPdfProcessingCommand(pdfId, otherUserId);
-        var result = await mediator.Send(command, TestCancellationToken);
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Contains("not authorized", result.Message);
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(
+            () => mediator.Send(command, TestCancellationToken));
+        Assert.Contains("not authorized", ex.Message);
     }
 
     [Fact]
@@ -364,15 +363,12 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var pdfId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        // Act
+        // Act & Assert
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
         var command = new RetryPdfProcessingCommand(pdfId, userId);
-        var result = await mediator.Send(command, TestCancellationToken);
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Contains("not found", result.Message);
-        Assert.Equal("NotFound", result.CurrentState);
+        var ex = await Assert.ThrowsAsync<NotFoundException>(
+            () => mediator.Send(command, TestCancellationToken));
+        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

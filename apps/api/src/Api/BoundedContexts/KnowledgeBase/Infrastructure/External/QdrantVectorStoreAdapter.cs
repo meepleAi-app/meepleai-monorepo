@@ -31,7 +31,8 @@ internal class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
         CancellationToken cancellationToken = default)
     {
         // Issue #2141: Convert Guid documentIds to string[] for Qdrant native filtering
-        var documentIdStrings = documentIds?.Select(id => id.ToString()).ToList();
+        // Use "N" format (no hyphens) to match BlobStorageService.FileId format stored in Qdrant
+        var documentIdStrings = documentIds?.Select(id => id.ToString("N")).ToList();
 
         // Call QdrantService with native document filtering
         var searchResult = await _qdrantService.SearchAsync(
@@ -146,7 +147,7 @@ internal class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
 
     public async Task EnsureCollectionExistsAsync(
         Guid gameId,
-        int vectorDimension = 1536,
+        int vectorDimension = 1024,
         CancellationToken cancellationToken = default)
     {
         // QdrantService manages collection creation globally

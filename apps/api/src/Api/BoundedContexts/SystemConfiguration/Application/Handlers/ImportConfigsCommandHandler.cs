@@ -26,28 +26,36 @@ internal class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsComman
     public async Task<int> Handle(ImportConfigsCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Preload all existing configs by key in a single query to avoid N+1
+        var keys = command.Configurations.Select(c => c.Key).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var existingConfigs = await _configurationRepository.GetByKeysAsync(keys, activeOnly: false, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var configByKey = existingConfigs
+            .GroupBy(c => c.Key.Value, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
         var importedCount = 0;
 
         foreach (var item in command.Configurations)
         {
             var key = new ConfigKey(item.Key);
-            // Import should check for existing config with same key AND environment (active or inactive)
-            var existing = await _configurationRepository.GetByKeyAsync(key.Value, environment: item.Environment, activeOnly: false, cancellationToken).ConfigureAwait(false);
+            // Find existing config matching key and environment
+            var existing = configByKey.TryGetValue(key.Value, out var matches)
+                ? matches.FirstOrDefault(c =>
+                    string.Equals(c.Environment, item.Environment, StringComparison.OrdinalIgnoreCase))
+                : null;
 
             if (existing != null)
             {
                 if (command.OverwriteExisting)
                 {
-                    // Update existing configuration
                     existing.UpdateValue(item.Value, command.UserId);
                     await _configurationRepository.UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
                     importedCount++;
                 }
-                // If not overwriting, skip this configuration
             }
             else
             {
-                // Create new configuration
                 var config = new Domain.Entities.SystemConfiguration(
                     id: Guid.NewGuid(),
                     key: key,

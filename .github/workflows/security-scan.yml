@@ -17,7 +17,7 @@ permissions:
   actions: read
 
 jobs:
-  # CodeQL SAST
+  # CodeQL SAST — forced to ubuntu-latest because CodeQL CLI doesn't support linux/arm64
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
@@ -58,7 +58,7 @@ jobs:
   # Dependency scanning
   dependencies:
     name: Dependency Vulnerabilities
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -118,12 +118,16 @@ jobs:
   # Secrets scanning with Semgrep
   secrets:
     name: Secrets Detection
-    runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3-pip || true
+          python3 -m pip install --user --break-system-packages semgrep || pip3 install --user semgrep
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run Semgrep
         run: |

@@ -65,6 +65,9 @@ public static class SseEventTypeMapper
         [typeof(StrokeRemovedEvent)] = "session:whiteboard",
         [typeof(StructuredUpdatedEvent)] = "session:whiteboard",
         [typeof(WhiteboardClearedEvent)] = "session:whiteboard",
+
+        // Widget state → session:toolkit (P2-1: Widget State SSE Broadcast)
+        [typeof(WidgetStateUpdatedEvent)] = "session:toolkit",
     };
 
     /// <summary>

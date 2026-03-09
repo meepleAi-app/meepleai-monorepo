@@ -57,8 +57,8 @@ export default function ContributionsPage() {
   const { data, isLoading, error } = useShareRequests(queryParams);
 
   const requests = data?.items || [];
-  const totalPages = data?.totalPages || 0;
-  const totalCount = data?.totalCount || 0;
+  const totalCount = data?.total || 0;
+  const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
 
   // Reset to page 1 when filters change
   const handleFilterChange = () => {
@@ -125,9 +125,7 @@ export default function ContributionsPage() {
               <div className="rounded-full bg-primary/10 p-6 mb-6">
                 <FileText className="h-16 w-16 text-primary" />
               </div>
-              <h3 className="text-2xl font-semibold font-quicksand mb-2">
-                No Share Requests Yet
-              </h3>
+              <h3 className="text-2xl font-semibold font-quicksand mb-2">No Share Requests Yet</h3>
               <p className="text-muted-foreground mb-6 max-w-md">
                 {selectedStatuses.length > 0
                   ? 'No share requests match your current filters. Try adjusting your filters or clearing them.'
@@ -161,7 +159,7 @@ export default function ContributionsPage() {
 
               {/* Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-                {requests.map((request) => (
+                {requests.map(request => (
                   <ShareRequestCard key={request.id} request={request} />
                 ))}
               </div>

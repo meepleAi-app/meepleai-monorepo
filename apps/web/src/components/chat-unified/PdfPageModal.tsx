@@ -2,32 +2,27 @@
 
 import { useCallback, useState } from 'react';
 
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { api } from '@/lib/api';
 import type { Citation } from '@/types';
 
 // ─── react-pdf dynamic imports (avoids pdfjs SSR issues) ───────────────────
 
 const PdfDocument = dynamic(
-  () => import('react-pdf').then((mod) => {
-    // Configure worker using local bundle (avoid CDN — security fix)
-    const { pdfjs } = mod;
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.min.mjs',
-      import.meta.url,
-    ).toString();
-    return mod.Document;
-  }),
+  () =>
+    import('react-pdf').then(mod => {
+      // Configure worker using local bundle (avoid CDN — security fix)
+      const { pdfjs } = mod;
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
+      return mod.Document;
+    }),
   {
     ssr: false,
     loading: () => (
@@ -38,7 +33,7 @@ const PdfDocument = dynamic(
   }
 );
 
-const PdfPage = dynamic(() => import('react-pdf').then((mod) => mod.Page), {
+const PdfPage = dynamic(() => import('react-pdf').then(mod => mod.Page), {
   ssr: false,
 });
 
@@ -66,15 +61,15 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
     setNumPages(numPages);
     setLoadError(null);
     // Clamp page to valid range
-    setCurrentPage((prev) => Math.min(Math.max(1, prev), numPages));
+    setCurrentPage(prev => Math.min(Math.max(1, prev), numPages));
   }, []);
 
   const handleDocumentError = useCallback(() => {
     setLoadError('Impossibile caricare il documento PDF. Verificare che il file sia disponibile.');
   }, []);
 
-  const goToPrevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
-  const goToNextPage = () => setCurrentPage((p) => (numPages ? Math.min(numPages, p + 1) : p));
+  const goToPrevPage = () => setCurrentPage(p => Math.max(1, p - 1));
+  const goToNextPage = () => setCurrentPage(p => (numPages ? Math.min(numPages, p + 1) : p));
 
   // Reset page to citation page when modal opens/citation changes
   const handleOpenChange = (isOpen: boolean) => {
@@ -124,7 +119,10 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
               >
                 <PdfPage
                   pageNumber={currentPage}
-                  width={Math.min(620, typeof window !== 'undefined' ? window.innerWidth - 80 : 620)}
+                  width={Math.min(
+                    620,
+                    typeof window !== 'undefined' ? window.innerWidth - 80 : 620
+                  )}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                 />

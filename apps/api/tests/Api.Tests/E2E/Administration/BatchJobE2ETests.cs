@@ -34,7 +34,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         {
             // Use reflection to set role (Role is a value object with private setter)
             var roleProperty = user.GetType().GetProperty("Role");
-            roleProperty?.SetValue(user, Api.BoundedContexts.Authentication.Domain.ValueObjects.Role.Admin);
+            roleProperty?.SetValue(user, Api.SharedKernel.Domain.ValueObjects.Role.Admin);
             await DbContext.SaveChangesAsync();
         }
 

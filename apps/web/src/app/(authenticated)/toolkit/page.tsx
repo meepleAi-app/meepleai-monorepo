@@ -48,16 +48,20 @@ export default function ToolkitLandingPage() {
     setIsCreating(true);
 
     try {
-      await createSession({
-        participants: validParticipants.map(name => ({ displayName: name.trim() })),
-        sessionDate: new Date(),
-      });
+      const sessionId = await createSession({});
+
+      // Add players after session creation
+      const store = useSessionStore.getState();
+      for (const name of validParticipants) {
+        await store.addPlayer({ displayName: name.trim() });
+      }
 
       const activeSession = useSessionStore.getState().activeSession;
       if (activeSession) {
-        toast.success(`Session created! Code: ${activeSession.sessionCode}`);
-
-        router.push(`/toolkit/${activeSession.id}`);
+        toast.success(
+          `Session created! Code: ${activeSession.sessionCode ?? activeSession.id.slice(0, 6)}`
+        );
+        router.push(`/toolkit/${sessionId}`);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create session');
@@ -249,9 +253,7 @@ export default function ToolkitLandingPage() {
 
             {/* Navigation Links */}
             <div className="border-t pt-4 mt-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Explore more:
-              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Explore more:</p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/toolkit/history">
                   <Button variant="outline" size="sm" className="gap-2">

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Xunit;
 

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -125,9 +126,9 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void SelectProvider_AnonymousUser_UsesStrategyForModelSelection()
+    public void SelectProvider_NullUser_DefaultsToUserTier()
     {
-        // Arrange
+        // Arrange — null user (internal pipeline calls) should default to User tier
         var sut = CreateStrategy();
 
         // Act
@@ -136,7 +137,7 @@ public class HybridAdaptiveRoutingStrategyTests
         // Assert
         Assert.Equal("DeepSeek", decision.ProviderName);
         Assert.Equal("deepseek-chat", decision.ModelId);
-        Assert.Contains("Tier: Anonymous", decision.Reason);
+        Assert.Contains("Tier: User", decision.Reason);
     }
 
     [Theory]
@@ -491,16 +492,16 @@ public class HybridAdaptiveRoutingStrategyTests
     }
 
     [Fact]
-    public void SelectProvider_AnonymousUser_IncludesAnonymousTierInReason()
+    public void SelectProvider_NullUser_IncludesUserTierInReason()
     {
-        // Arrange
+        // Arrange — null user defaults to User tier (not Anonymous)
         var sut = CreateStrategy();
 
         // Act
         var decision = sut.SelectProvider(user: null, RagStrategy.Fast);
 
-        // Assert
-        Assert.Contains("Tier: Anonymous", decision.Reason);
+        // Assert — internal pipeline calls default to User tier
+        Assert.Contains("Tier: User", decision.Reason);
     }
 
     #endregion

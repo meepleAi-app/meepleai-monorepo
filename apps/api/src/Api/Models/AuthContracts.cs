@@ -25,11 +25,6 @@ internal class RegisterPayload
     /// </summary>
     public string? DisplayName { get; set; }
 
-    /// <summary>
-    /// Optional role assignment. Accepts both "role" (camelCase) and "Role" (PascalCase) in JSON.
-    /// If not provided, defaults to "User" role (or "Admin" for first user).
-    /// </summary>
-    public string? Role { get; set; }
 }
 
 /// <summary>
@@ -48,14 +43,6 @@ internal class LoginPayload
     /// </summary>
     public string Password { get; set; } = string.Empty;
 }
-
-internal record RegisterCommand(
-    string Email,
-    string Password,
-    string? DisplayName,
-    string? Role,
-    string? IpAddress,
-    string? UserAgent);
 
 internal record LoginCommand(
     string Email,

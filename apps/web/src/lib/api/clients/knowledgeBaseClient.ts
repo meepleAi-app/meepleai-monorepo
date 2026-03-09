@@ -5,7 +5,12 @@
  * Used by useEmbeddingStatus hook to poll RAG readiness.
  */
 
-import { KnowledgeBaseStatusSchema, type KnowledgeBaseStatus } from '../schemas/knowledge-base.schemas';
+import {
+  KnowledgeBaseStatusSchema,
+  RagConfigSchema,
+  type KnowledgeBaseStatus,
+  type RagConfigResponse,
+} from '../schemas/knowledge-base.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -28,8 +33,37 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
     async getEmbeddingStatus(gameId: string): Promise<KnowledgeBaseStatus | null> {
       return httpClient.get(
         `/api/v1/knowledge-base/${encodeURIComponent(gameId)}/status`,
-        KnowledgeBaseStatusSchema,
+        KnowledgeBaseStatusSchema
       );
+    },
+
+    /**
+     * Get user's RAG configuration (Issue #5311)
+     * @param strategy Optional strategy filter
+     * @returns Current RAG config or defaults
+     */
+    async getRagConfig(strategy?: string): Promise<RagConfigResponse | null> {
+      const query = strategy ? `?strategy=${encodeURIComponent(strategy)}` : '';
+      return httpClient.get(`/api/v1/rag-dashboard/config${query}`, RagConfigSchema);
+    },
+
+    /**
+     * Save user's RAG configuration (Issue #5311)
+     * @param config Full RAG config to persist
+     * @returns Saved config
+     */
+    async saveRagConfig(config: RagConfigResponse): Promise<RagConfigResponse> {
+      return httpClient.put(`/api/v1/rag-dashboard/config`, config, RagConfigSchema);
+    },
+
+    /**
+     * Reset user's RAG configuration to defaults (Issue #5311)
+     * @param strategy Optional strategy to reset
+     * @returns Default config
+     */
+    async resetRagConfig(strategy?: string): Promise<RagConfigResponse> {
+      const body = strategy ? { strategy } : {};
+      return httpClient.post(`/api/v1/rag-dashboard/config/reset`, body, RagConfigSchema);
     },
   };
 }

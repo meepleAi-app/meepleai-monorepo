@@ -16,9 +16,8 @@ import {
   BarChart3Icon,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-
+import { Button } from '@/components/ui/primitives/button';
 import {
   useAgentAutoTest,
   type AgentAutoTestResult,
@@ -74,9 +73,7 @@ function QualityReportCard({ report }: { report: AgentQualityReport }) {
               <TrophyIcon className="h-3.5 w-3.5" />
               Pass Rate
             </div>
-            <p className="text-lg font-semibold">
-              {Math.round(report.passRate * 100)}%
-            </p>
+            <p className="text-lg font-semibold">{Math.round(report.passRate * 100)}%</p>
             <p className="text-xs text-muted-foreground">
               {report.passed}/{report.totalTests} passed
             </p>
@@ -86,9 +83,7 @@ function QualityReportCard({ report }: { report: AgentQualityReport }) {
               <TargetIcon className="h-3.5 w-3.5" />
               Avg Confidence
             </div>
-            <p className="text-lg font-semibold">
-              {(report.averageConfidence * 100).toFixed(1)}%
-            </p>
+            <p className="text-lg font-semibold">{(report.averageConfidence * 100).toFixed(1)}%</p>
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -163,7 +158,8 @@ export function AutoTestSuite({ gameId }: AutoTestSuiteProps) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            Sends 8 standard board game questions to test RAG retrieval quality, confidence, and latency.
+            Sends 8 standard board game questions to test RAG retrieval quality, confidence, and
+            latency.
           </p>
         </div>
         <Button
@@ -213,7 +209,7 @@ function TestResults({ result }: { result: AgentAutoTestResult }) {
           <CardTitle className="text-base">Test Cases</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {result.testCases.map((tc) => (
+          {result.testCases.map(tc => (
             <TestCaseRow key={tc.index} testCase={tc} />
           ))}
         </CardContent>

@@ -1,6 +1,6 @@
-import type { Metadata } from 'next';
-
 import { UserToolkitConfiguratorClient } from './client';
+
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Toolkit Configurator — MeepleAI',

@@ -39,11 +39,7 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false } },
   });
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -157,7 +153,9 @@ describe('MobileNavDrawer', () => {
       expect(screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'))).toBeInTheDocument();
 
       await user.click(screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle));
-      expect(screen.queryByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'))).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'))
+      ).not.toBeInTheDocument();
     });
 
     it('library section expanded by default when library route active', async () => {
@@ -193,7 +191,7 @@ describe('MobileNavDrawer', () => {
       await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       const agentsLink = screen.getByTestId(NAV_TEST_IDS.mobileNavItem('agents'));
-      expect(agentsLink).toHaveClass('text-[hsl(262_83%_62%)]');
+      expect(agentsLink).toHaveClass('text-[hsl(25_95%_42%)]');
       expect(agentsLink).toHaveAttribute('aria-current', 'page');
     });
 
@@ -205,7 +203,7 @@ describe('MobileNavDrawer', () => {
       await user.click(screen.getByTestId(NAV_TEST_IDS.mobileNavTrigger));
 
       const libraryToggle = screen.getByTestId(NAV_TEST_IDS.mobileLibraryToggle);
-      expect(libraryToggle).toHaveClass('text-[hsl(262_83%_62%)]');
+      expect(libraryToggle).toHaveClass('text-[hsl(25_95%_42%)]');
     });
 
     it('highlights active library sub-item', async () => {
@@ -218,7 +216,7 @@ describe('MobileNavDrawer', () => {
       // Library should auto-expand since /library is active
 
       const collectionLink = screen.getByTestId(NAV_TEST_IDS.mobileLibraryItem('collection'));
-      expect(collectionLink).toHaveClass('text-[hsl(262_83%_62%)]');
+      expect(collectionLink).toHaveClass('text-[hsl(25_95%_42%)]');
       expect(collectionLink).toHaveAttribute('aria-current', 'page');
     });
   });

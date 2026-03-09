@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Extensions;
 using Api.Filters;
 using MediatR;
@@ -77,6 +79,56 @@ internal static class AdminQueueEndpoints
             .WithName("StreamQueueUpdates")
             .Produces(200, contentType: "text/event-stream")
             .WithSummary("SSE stream for queue-wide real-time updates");
+
+        // Issue #5455: Priority bump endpoint
+        group.MapPatch("/{jobId:guid}/priority", HandleBumpPriority)
+            .WithName("BumpJobPriority")
+            .Produces(204)
+            .Produces(404)
+            .Produces(409)
+            .WithSummary("Bump the priority of a queued job");
+
+        // Issue #5455: Queue configuration endpoints
+        group.MapGet("/config", HandleGetQueueConfig)
+            .WithName("GetQueueConfig")
+            .Produces<QueueConfigDto>(200)
+            .WithSummary("Get current queue configuration");
+
+        group.MapPatch("/config", HandleUpdateQueueConfig)
+            .WithName("UpdateQueueConfig")
+            .Produces(204)
+            .WithSummary("Update queue configuration (pause/resume, concurrency)");
+
+        // Issue #5456: Bulk reindex failed documents
+        group.MapPost("/reindex-failed", HandleBulkReindexFailed)
+            .WithName("BulkReindexFailed")
+            .Produces<BulkReindexResult>(200)
+            .WithSummary("Re-queue all failed documents as Low priority");
+
+        // Issue #5456: Extracted text preview
+        group.MapGet("/documents/{pdfDocumentId:guid}/extracted-text", HandleGetExtractedText)
+            .WithName("GetExtractedText")
+            .Produces<PdfTextResult>(200)
+            .Produces(404)
+            .WithSummary("Preview extracted text for a document before embedding");
+
+        // Issue #5457: Queue status with backpressure info
+        group.MapGet("/status", HandleGetQueueStatus)
+            .WithName("GetQueueStatus")
+            .Produces<QueueStatusDto>(200)
+            .WithSummary("Get queue status with depth, ETA, and backpressure info");
+
+        // Issue #5459: Dashboard metrics with period filtering
+        group.MapGet("/metrics", HandleGetDashboardMetrics)
+            .WithName("GetDashboardMetrics")
+            .Produces<DashboardMetricsDto>(200)
+            .WithSummary("Get processing metrics for dashboard (period: 24h, 7d, 30d)");
+
+        // Issue #5460: Active alerts for the processing queue
+        group.MapGet("/alerts", HandleGetActiveAlerts)
+            .WithName("GetActiveAlerts")
+            .Produces<IReadOnlyList<QueueAlertDto>>(200)
+            .WithSummary("Get currently active queue alerts (stuck docs, depth, failure rate)");
     }
 
     private static async Task<IResult> HandleEnqueue(
@@ -231,9 +283,90 @@ internal static class AdminQueueEndpoints
             // Client disconnected - expected behavior
         }
     }
+
+    private static async Task<IResult> HandleBumpPriority(
+        Guid jobId,
+        BumpPriorityRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        await mediator.Send(new BumpPriorityCommand(jobId, request.NewPriority), ct).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetQueueConfig(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetQueueConfigQuery(), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUpdateQueueConfig(
+        UpdateQueueConfigRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (_, session, _) = context.RequireAdminSession();
+        var userId = session.User!.Id;
+
+        await mediator.Send(
+            new UpdateQueueConfigCommand(userId, request.IsPaused, request.MaxConcurrentWorkers), ct)
+            .ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleBulkReindexFailed(
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (_, session, _) = context.RequireAdminSession();
+        var userId = session.User!.Id;
+
+        var result = await mediator.Send(new BulkReindexFailedCommand(userId), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetExtractedText(
+        Guid pdfDocumentId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetPdfTextQuery(pdfDocumentId), ct).ConfigureAwait(false);
+        return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetQueueStatus(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetQueueStatusQuery(), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetDashboardMetrics(
+        [FromQuery] string? period,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetDashboardMetricsQuery(period ?? "24h"), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetActiveAlerts(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetActiveAlertsQuery(), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 }
 
 // Request DTOs (defined alongside the routing file, following AdminPdfManagementEndpoints pattern)
 internal record EnqueuePdfRequest(Guid PdfDocumentId, int Priority = 0);
 internal record ReorderQueueRequest(List<Guid> OrderedJobIds);
 internal record EnqueuePdfResponse(Guid JobId);
+internal record BumpPriorityRequest(ProcessingPriority NewPriority);
+internal record UpdateQueueConfigRequest(bool? IsPaused = null, int? MaxConcurrentWorkers = null);

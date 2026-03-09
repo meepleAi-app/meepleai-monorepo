@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
+
 import {
   StrategyBadge,
   ConfidenceBadge,
@@ -24,7 +24,12 @@ import {
   type WaterfallCall,
   type WaterfallCallType,
 } from '@/components/admin/rag';
-import { createAdminClient, type RagExecutionListItem, type RagExecutionDetail } from '@/lib/api/clients/adminClient';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  createAdminClient,
+  type RagExecutionListItem,
+  type RagExecutionDetail,
+} from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import { cn } from '@/lib/utils';
 
@@ -96,7 +101,12 @@ function parseExecutionTrace(traceJson: string | null): WaterfallCall[] | null {
  */
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp);
-  const time = date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const time = date.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
   return time;
 }
 
@@ -210,8 +220,8 @@ export default function DebugConsolePage() {
           setExecutions(result.items);
           setSkip(result.items.length);
         } else {
-          setExecutions((prev) => [...prev, ...result.items]);
-          setSkip((prev) => prev + result.items.length);
+          setExecutions(prev => [...prev, ...result.items]);
+          setSkip(prev => prev + result.items.length);
         }
 
         setTotalCount(result.totalCount);
@@ -267,10 +277,10 @@ export default function DebugConsolePage() {
 
   // Handle filter changes
   const handleStrategyToggle = (strategy: string) => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
       strategies: prev.strategies.includes(strategy)
-        ? prev.strategies.filter((s) => s !== strategy)
+        ? prev.strategies.filter(s => s !== strategy)
         : [...prev.strategies, strategy],
     }));
   };
@@ -325,7 +335,7 @@ export default function DebugConsolePage() {
               <label className="text-xs text-zinc-400">Refresh:</label>
               <select
                 value={refreshInterval}
-                onChange={(e) => setRefreshInterval(Number(e.target.value) as RefreshInterval)}
+                onChange={e => setRefreshInterval(Number(e.target.value) as RefreshInterval)}
                 disabled={!autoRefresh}
                 className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-mono text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
@@ -418,14 +428,13 @@ export default function DebugConsolePage() {
                   </tr>
                 ) : (
                   // Data rows
-                  executions.map((execution) => (
+                  executions.map(execution => (
                     <tr
                       key={execution.id}
                       onClick={() => handleRowClick(execution)}
                       className={cn(
                         'cursor-pointer border-b border-zinc-100 transition-colors hover:bg-amber-50/50 dark:border-zinc-800 dark:hover:bg-zinc-800/30',
-                        selectedExecution?.id === execution.id &&
-                          'bg-amber-50 dark:bg-amber-950/20'
+                        selectedExecution?.id === execution.id && 'bg-amber-50 dark:bg-amber-950/20'
                       )}
                     >
                       <td className="py-3 pr-4 text-xs font-mono text-zinc-500 dark:text-zinc-400">
@@ -475,7 +484,9 @@ export default function DebugConsolePage() {
                 disabled={isLoadingMore}
                 className="rounded-lg bg-amber-100 px-4 py-2 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-950/30 dark:text-amber-400 dark:hover:bg-amber-950/50"
               >
-                {isLoadingMore ? 'Loading...' : `Load More (${totalCount - executions.length} remaining)`}
+                {isLoadingMore
+                  ? 'Loading...'
+                  : `Load More (${totalCount - executions.length} remaining)`}
               </button>
             </div>
           )}
@@ -517,7 +528,12 @@ export default function DebugConsolePage() {
                       <div className="space-y-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-zinc-500 dark:text-zinc-400">Status:</span>
-                          <span className={cn('font-semibold', getStatusColor(selectedExecution.status))}>
+                          <span
+                            className={cn(
+                              'font-semibold',
+                              getStatusColor(selectedExecution.status)
+                            )}
+                          >
                             {selectedExecution.status}
                           </span>
                         </div>
@@ -547,7 +563,14 @@ export default function DebugConsolePage() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-zinc-500 dark:text-zinc-400">Cache Hit:</span>
-                          <span className={cn('font-semibold', selectedExecution.cacheHit ? 'text-green-600 dark:text-green-400' : 'text-zinc-400')}>
+                          <span
+                            className={cn(
+                              'font-semibold',
+                              selectedExecution.cacheHit
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-zinc-400'
+                            )}
+                          >
                             {selectedExecution.cacheHit ? 'Yes' : 'No'}
                           </span>
                         </div>
@@ -594,7 +617,7 @@ export default function DebugConsolePage() {
                 Strategy
               </div>
               <div className="space-y-1.5">
-                {['POC', 'SingleModel', 'MultiModelConsensus', 'HybridRAG'].map((strategy) => (
+                {['POC', 'SingleModel', 'MultiModelConsensus', 'HybridRAG'].map(strategy => (
                   <label
                     key={strategy}
                     className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -622,7 +645,7 @@ export default function DebugConsolePage() {
                   { value: 'ok', label: 'Success' },
                   { value: 'error', label: 'Error' },
                   { value: 'cache', label: 'Cached' },
-                ].map((option) => (
+                ].map(option => (
                   <label
                     key={option.value}
                     className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -632,8 +655,8 @@ export default function DebugConsolePage() {
                       name="status"
                       value={option.value}
                       checked={filters.status === option.value}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
+                      onChange={e =>
+                        setFilters(prev => ({
                           ...prev,
                           status: e.target.value as FilterState['status'],
                         }))
@@ -653,7 +676,7 @@ export default function DebugConsolePage() {
               </div>
               <select
                 value={filters.agent}
-                onChange={(e) => setFilters((prev) => ({ ...prev, agent: e.target.value }))}
+                onChange={e => setFilters(prev => ({ ...prev, agent: e.target.value }))}
                 className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
                 <option value="all">All Agents</option>
@@ -679,8 +702,8 @@ export default function DebugConsolePage() {
                 max="1"
                 step="0.01"
                 value={filters.minConfidence}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, minConfidence: Number(e.target.value) }))
+                onChange={e =>
+                  setFilters(prev => ({ ...prev, minConfidence: Number(e.target.value) }))
                 }
                 className="w-full"
               />
@@ -704,8 +727,8 @@ export default function DebugConsolePage() {
                   max="5000"
                   step="100"
                   value={filters.maxLatencyMs}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, maxLatencyMs: Number(e.target.value) }))
+                  onChange={e =>
+                    setFilters(prev => ({ ...prev, maxLatencyMs: Number(e.target.value) }))
                   }
                   className="flex-1"
                 />
@@ -722,13 +745,13 @@ export default function DebugConsolePage() {
                 <input
                   type="date"
                   value={filters.dateFrom}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                  onChange={e => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
                   className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                 />
                 <input
                   type="date"
                   value={filters.dateTo}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                  onChange={e => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
                   className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                 />
               </div>

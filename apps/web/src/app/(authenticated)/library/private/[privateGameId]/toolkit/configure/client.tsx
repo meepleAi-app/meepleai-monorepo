@@ -20,7 +20,7 @@
  * Shows "Accesso negato" if the current user is not the owner.
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import {
   ChevronLeft,
@@ -36,10 +36,13 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { AiToolkitGenerator } from '@/components/toolkit/AiToolkitGenerator';
+import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { Switch } from '@/components/ui/forms/switch';
+import { useApiClient } from '@/lib/api/context';
+import type { AiToolkitSuggestion } from '@/lib/api/schemas/toolkit.schemas';
 import { usePrivateToolkitEditor } from '@/lib/hooks/usePrivateToolkitEditor';
 import type {
   CardToolDto,
@@ -184,9 +187,7 @@ function AccessDeniedPanel({ onBack }: { onBack: () => void }) {
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
       <Lock className="w-10 h-10 text-stone-400" />
       <div>
-        <p className="text-base font-semibold text-stone-700 dark:text-stone-300">
-          Accesso negato
-        </p>
+        <p className="text-base font-semibold text-stone-700 dark:text-stone-300">Accesso negato</p>
         <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
           Non sei il proprietario di questo gioco.
         </p>
@@ -259,12 +260,7 @@ function OverrideToggle({
   return (
     <div className="flex items-center justify-between py-2">
       <Label className="text-sm font-medium cursor-pointer">{label}</Label>
-      <Switch
-        checked={checked}
-        onCheckedChange={onToggle}
-        disabled={disabled}
-        aria-label={label}
-      />
+      <Switch checked={checked} onCheckedChange={onToggle} disabled={disabled} aria-label={label} />
     </div>
   );
 }
@@ -311,7 +307,10 @@ function AddDiceToolForm({
           <Label className="text-xs">Nome *</Label>
           <Input
             value={form.name}
-            onChange={e => { setNameError(null); setForm(f => ({ ...f, name: e.target.value })); }}
+            onChange={e => {
+              setNameError(null);
+              setForm(f => ({ ...f, name: e.target.value }));
+            }}
             placeholder="es. 2×d6"
             required
             className="h-8 text-sm"
@@ -407,7 +406,10 @@ function AddCardToolForm({
           <Label className="text-xs">Nome *</Label>
           <Input
             value={form.name}
-            onChange={e => { setNameError(null); setForm(f => ({ ...f, name: e.target.value })); }}
+            onChange={e => {
+              setNameError(null);
+              setForm(f => ({ ...f, name: e.target.value }));
+            }}
             placeholder="es. Deck sviluppo"
             required
             className="h-8 text-sm"
@@ -445,10 +447,7 @@ function AddCardToolForm({
           ] as const
         ).map(([key, label]) => (
           <label key={key} className="flex items-center gap-1 cursor-pointer">
-            <Switch
-              checked={form[key]}
-              onCheckedChange={v => setForm(f => ({ ...f, [key]: v }))}
-            />
+            <Switch checked={form[key]} onCheckedChange={v => setForm(f => ({ ...f, [key]: v }))} />
             {label}
           </label>
         ))}
@@ -508,7 +507,10 @@ function AddTimerToolForm({
           <Label className="text-xs">Nome *</Label>
           <Input
             value={form.name}
-            onChange={e => { setNameError(null); setForm(f => ({ ...f, name: e.target.value })); }}
+            onChange={e => {
+              setNameError(null);
+              setForm(f => ({ ...f, name: e.target.value }));
+            }}
             placeholder="es. Countdown"
             required
             className="h-8 text-sm"
@@ -608,7 +610,10 @@ function AddCounterToolForm({
           <Label className="text-xs">Nome *</Label>
           <Input
             value={form.name}
-            onChange={e => { setNameError(null); setForm(f => ({ ...f, name: e.target.value })); }}
+            onChange={e => {
+              setNameError(null);
+              setForm(f => ({ ...f, name: e.target.value }));
+            }}
             placeholder="es. Risorse"
             required
             className="h-8 text-sm"
@@ -704,6 +709,7 @@ function ToolListItem({
 
 function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: string }) {
   const router = useRouter();
+  const { gameToolkit: gameToolkitClient } = useApiClient();
   const {
     toolkit,
     isLoading,
@@ -728,13 +734,52 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
   const [showTimerForm, setShowTimerForm] = useState(false);
   const [showCounterForm, setShowCounterForm] = useState(false);
 
+  // AI generator state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [showAiGenerator, setShowAiGenerator] = useState(true);
+
+  const handleAiGenerate = useCallback(
+    async (gameId: string): Promise<AiToolkitSuggestion> => {
+      setIsGenerating(true);
+      try {
+        return await gameToolkitClient.generateToolkitFromKb(gameId);
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    [gameToolkitClient]
+  );
+
+  const handleAiApply = useCallback(
+    async (suggestion: AiToolkitSuggestion): Promise<void> => {
+      setIsApplying(true);
+      try {
+        await gameToolkitClient.applyAiSuggestion(privateGameId, toolkit?.id ?? null, suggestion);
+        toast.success('Suggerimento AI applicato');
+        // Reload page to reflect the new toolkit state
+        router.refresh();
+      } catch (err) {
+        toast.error("Errore nell'applicazione del suggerimento AI");
+        throw err;
+      } finally {
+        setIsApplying(false);
+      }
+    },
+    [gameToolkitClient, privateGameId, toolkit?.id, router]
+  );
+
+  const handleAiDismiss = useCallback(() => {
+    setShowAiGenerator(false);
+  }, []);
+
   const handleBack = () => router.push('/library/private');
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleToggle = async (
     field: 'overridesTurnOrder' | 'overridesScoreboard' | 'overridesDiceSet',
-    value: boolean,
+    value: boolean
   ) => {
     try {
       await updateOverrides({ [field]: value });
@@ -748,7 +793,7 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
       await addDiceTool(tool);
       toast.success(`Dado "${tool.name}" aggiunto`);
     } catch {
-      toast.error('Errore nell\'aggiunta del dado');
+      toast.error("Errore nell'aggiunta del dado");
     }
   };
 
@@ -766,7 +811,7 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
       await addCardTool(tool);
       toast.success(`Mazzo "${tool.name}" aggiunto`);
     } catch {
-      toast.error('Errore nell\'aggiunta del mazzo');
+      toast.error("Errore nell'aggiunta del mazzo");
     }
   };
 
@@ -784,7 +829,7 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
       await addTimerTool(tool);
       toast.success(`Timer "${tool.name}" aggiunto`);
     } catch {
-      toast.error('Errore nell\'aggiunta del timer');
+      toast.error("Errore nell'aggiunta del timer");
     }
   };
 
@@ -802,7 +847,7 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
       await addCounterTool(tool);
       toast.success(`Contatore "${tool.name}" aggiunto`);
     } catch {
-      toast.error('Errore nell\'aggiunta del contatore');
+      toast.error("Errore nell'aggiunta del contatore");
     }
   };
 
@@ -830,14 +875,8 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
   const header = (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBack}
-          aria-label="Torna ai miei giochi"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          I miei giochi
+        <Button variant="ghost" size="sm" onClick={handleBack} aria-label="Torna ai miei giochi">
+          <ChevronLeft className="w-4 h-4" />I miei giochi
         </Button>
         <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100">
           Toolkit Configurator
@@ -899,9 +938,20 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
       {header}
       {errorBanner}
 
+      {/* AI Toolkit Generator */}
+      {showAiGenerator && (
+        <AiToolkitGenerator
+          gameId={privateGameId}
+          onGenerate={handleAiGenerate}
+          onApply={handleAiApply}
+          onDismiss={handleAiDismiss}
+          isGenerating={isGenerating}
+          isApplying={isApplying}
+        />
+      )}
+
       {/* 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
         {/* LEFT: Override base tools */}
         <section
           aria-label="Override tool base"

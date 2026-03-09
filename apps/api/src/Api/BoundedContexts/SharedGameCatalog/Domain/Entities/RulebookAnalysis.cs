@@ -4,6 +4,23 @@ using Api.SharedKernel.Domain.Entities;
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 
 /// <summary>
+/// A key concept extracted from a rulebook (e.g., game terms, mechanics, components).
+/// Issue #5448: ExtractKeyConcepts glossary extraction.
+/// </summary>
+public record KeyConcept(string Term, string Definition, string Category);
+
+/// <summary>
+/// A generated FAQ entry from rulebook analysis.
+/// Issue #5449: GenerateQuestions FAQ generation.
+/// </summary>
+public record GeneratedFaq(
+    string Question,
+    string Answer,
+    string SourceSection,
+    decimal Confidence,
+    List<string> Tags);
+
+/// <summary>
 /// Entity representing a structured analysis of a rulebook PDF.
 /// Contains extracted game information like mechanics, victory conditions, resources, and phases.
 /// Supports multi-versioning with one active analysis per game.
@@ -20,6 +37,11 @@ public sealed class RulebookAnalysis : Entity<Guid>
     private List<Resource> _resources = new();
     private List<GamePhase> _gamePhases = new();
     private List<string> _commonQuestions = new();
+    private List<KeyConcept> _keyConcepts = new();
+    private List<GeneratedFaq> _generatedFaqs = new();
+    private string? _gameStateSchemaJson;
+    private AnalysisCompletionStatus _completionStatus = AnalysisCompletionStatus.Complete;
+    private List<string> _missingSections = new();
     private decimal _confidenceScore;
     private readonly string _version = string.Empty;
     private bool _isActive;
@@ -78,6 +100,37 @@ public sealed class RulebookAnalysis : Entity<Guid>
     public IReadOnlyList<string> CommonQuestions => _commonQuestions.AsReadOnly();
 
     /// <summary>
+    /// Gets the list of key concepts extracted from the rulebook (glossary terms).
+    /// Issue #5448: ExtractKeyConcepts glossary extraction.
+    /// </summary>
+    public IReadOnlyList<KeyConcept> KeyConcepts => _keyConcepts.AsReadOnly();
+
+    /// <summary>
+    /// Gets the list of generated FAQ entries from rulebook analysis.
+    /// Issue #5449: GenerateQuestions FAQ generation.
+    /// </summary>
+    public IReadOnlyList<GeneratedFaq> GeneratedFaqs => _generatedFaqs.AsReadOnly();
+
+    /// <summary>
+    /// Gets the game state schema as a JSON Schema string.
+    /// Used by frontend for game state display during live sessions.
+    /// Issue #5450: ExtractStateSchema game state tracking.
+    /// </summary>
+    public string? GameStateSchemaJson => _gameStateSchemaJson;
+
+    /// <summary>
+    /// Gets the analysis completion status based on critical section coverage.
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public AnalysisCompletionStatus CompletionStatus => _completionStatus;
+
+    /// <summary>
+    /// Gets the list of missing critical sections (if PartiallyComplete).
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public IReadOnlyList<string> MissingSections => _missingSections.AsReadOnly();
+
+    /// <summary>
     /// Gets the AI confidence score (0-1) for this analysis.
     /// </summary>
     public decimal ConfidenceScore => _confidenceScore;
@@ -133,7 +186,12 @@ public sealed class RulebookAnalysis : Entity<Guid>
         bool isActive,
         GenerationSource source,
         DateTime analyzedAt,
-        Guid createdBy) : base(id)
+        Guid createdBy,
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null,
+        AnalysisCompletionStatus completionStatus = AnalysisCompletionStatus.Complete,
+        List<string>? missingSections = null) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -145,6 +203,11 @@ public sealed class RulebookAnalysis : Entity<Guid>
         _resources = resources;
         _gamePhases = gamePhases;
         _commonQuestions = commonQuestions;
+        _keyConcepts = keyConcepts ?? new List<KeyConcept>();
+        _generatedFaqs = generatedFaqs ?? new List<GeneratedFaq>();
+        _gameStateSchemaJson = gameStateSchemaJson;
+        _completionStatus = completionStatus;
+        _missingSections = missingSections ?? new List<string>();
         _confidenceScore = confidenceScore;
         _version = version;
         _isActive = isActive;
@@ -168,7 +231,10 @@ public sealed class RulebookAnalysis : Entity<Guid>
         List<string> commonQuestions,
         decimal confidenceScore,
         Guid createdBy,
-        string? version = null)
+        string? version = null,
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null)
     {
         ValidateCreateParameters(sharedGameId, pdfDocumentId, gameTitle, createdBy);
 
@@ -195,7 +261,10 @@ public sealed class RulebookAnalysis : Entity<Guid>
             false, // Not active by default
             GenerationSource.AI,
             DateTime.UtcNow,
-            createdBy);
+            createdBy,
+            keyConcepts,
+            generatedFaqs,
+            gameStateSchemaJson);
     }
 
     /// <summary>
@@ -212,7 +281,10 @@ public sealed class RulebookAnalysis : Entity<Guid>
         List<GamePhase> gamePhases,
         List<string> commonQuestions,
         Guid createdBy,
-        string? version = null)
+        string? version = null,
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null)
     {
         ValidateCreateParameters(sharedGameId, pdfDocumentId, gameTitle, createdBy);
 
@@ -236,7 +308,20 @@ public sealed class RulebookAnalysis : Entity<Guid>
             false, // Not active by default
             GenerationSource.Manual,
             DateTime.UtcNow,
-            createdBy);
+            createdBy,
+            keyConcepts,
+            generatedFaqs,
+            gameStateSchemaJson);
+    }
+
+    /// <summary>
+    /// Marks this analysis as partially complete with missing critical sections.
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public void MarkAsPartiallyComplete(List<string> missingSections)
+    {
+        _completionStatus = AnalysisCompletionStatus.PartiallyComplete;
+        _missingSections = missingSections ?? new List<string>();
     }
 
     /// <summary>
@@ -264,7 +349,10 @@ public sealed class RulebookAnalysis : Entity<Guid>
         VictoryConditions? victoryConditions,
         List<Resource> resources,
         List<GamePhase> gamePhases,
-        List<string> commonQuestions)
+        List<string> commonQuestions,
+        List<KeyConcept>? keyConcepts = null,
+        List<GeneratedFaq>? generatedFaqs = null,
+        string? gameStateSchemaJson = null)
     {
         if (string.IsNullOrWhiteSpace(summary))
             throw new ArgumentException("Summary cannot be empty", nameof(summary));
@@ -275,6 +363,9 @@ public sealed class RulebookAnalysis : Entity<Guid>
         _resources = resources ?? new List<Resource>();
         _gamePhases = gamePhases ?? new List<GamePhase>();
         _commonQuestions = commonQuestions ?? new List<string>();
+        _keyConcepts = keyConcepts ?? new List<KeyConcept>();
+        _generatedFaqs = generatedFaqs ?? new List<GeneratedFaq>();
+        _gameStateSchemaJson = gameStateSchemaJson;
         _source = GenerationSource.Manual; // Mark as manually edited
         _confidenceScore = 0.0m; // Clear confidence after manual edit
     }

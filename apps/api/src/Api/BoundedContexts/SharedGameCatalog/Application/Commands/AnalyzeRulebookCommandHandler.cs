@@ -1,13 +1,16 @@
+using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +79,24 @@ internal sealed class AnalyzeRulebookCommandHandler
             throw new InvalidOperationException($"Shared game with ID {command.SharedGameId} not found");
         }
 
+        // Issue #5443: Gate - only analyzable document categories enter the pipeline
+        var categoryString = await _analysisRepository.GetPdfDocumentCategoryAsync(
+            command.PdfDocumentId,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!string.IsNullOrWhiteSpace(categoryString)
+            && Enum.TryParse<DocumentCategory>(categoryString, ignoreCase: true, out var category)
+            && !category.IsAnalyzable())
+        {
+            _logger.LogInformation(
+                "PDF {PdfId} has category {Category} which is not analyzable. Skipping analysis.",
+                command.PdfDocumentId, categoryString);
+
+            throw new ConflictException(
+                $"Document category '{categoryString}' is not eligible for rulebook analysis. " +
+                $"Only Rulebook, Expansion, and Errata documents can be analyzed.");
+        }
+
         // 2. Get PDF document text content
         var rulebookContent = await _analysisRepository.GetPdfTextAsync(
             command.PdfDocumentId,
@@ -88,14 +109,18 @@ internal sealed class AnalyzeRulebookCommandHandler
                 command.PdfDocumentId);
         }
 
-        // 3. Route to sync/async based on content size (Issue #2454)
-        var isLargeRulebook = rulebookContent.Length > _options.LargeRulebookThreshold;
+        // 3. Route to sync/async based on content complexity (Issue #5451)
+        var complexity = ContentComplexityScore.ComputeFromText(rulebookContent);
 
-        if (isLargeRulebook)
+        _logger.LogInformation(
+            "Content complexity for PDF {PdfId}: {Complexity}",
+            command.PdfDocumentId, complexity);
+
+        if (complexity.Decision == RoutingDecision.Background)
         {
             _logger.LogInformation(
-                "Large rulebook detected ({Length} chars > {Threshold}), scheduling background analysis",
-                rulebookContent.Length, _options.LargeRulebookThreshold);
+                "Complex rulebook detected (score={Score:F4} > 0.4), scheduling background analysis",
+                complexity.Score);
 
             return await ScheduleBackgroundAnalysisAsync(
                 command.SharedGameId,
@@ -107,8 +132,8 @@ internal sealed class AnalyzeRulebookCommandHandler
         }
 
         _logger.LogInformation(
-            "Small rulebook ({Length} chars <= {Threshold}), using synchronous analysis",
-            rulebookContent.Length, _options.LargeRulebookThreshold);
+            "Simple rulebook (score={Score:F4} <= 0.4), using synchronous analysis",
+            complexity.Score);
 
         // 3b. Synchronous analysis for small rulebooks (existing MVP flow)
         var analysisResult = await _rulebookAnalyzer.AnalyzeAsync(

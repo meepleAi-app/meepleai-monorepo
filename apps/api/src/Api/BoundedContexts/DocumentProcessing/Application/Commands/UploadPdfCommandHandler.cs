@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
@@ -24,12 +24,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Handler with related types
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUploadResult>
 {
+    internal const string DuplicateContentErrorMessage = "Un file identico è già stato caricato per questo gioco.";
+
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<UploadPdfCommandHandler> _logger;
@@ -94,8 +97,17 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         // Issue #3664: Handle private game PDF uploads
         if (command.PrivateGameId.HasValue)
         {
+            // Compute content hash and check for duplicates (private game)
+            var privateContentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
+            if (await _db.PdfDocuments.AnyAsync(
+                    p => p.ContentHash == privateContentHash && p.PrivateGameId == command.PrivateGameId.Value,
+                    cancellationToken).ConfigureAwait(false))
+            {
+                return new PdfUploadResult(false, DuplicateContentErrorMessage, null);
+            }
+
             return await HandlePrivateGamePdfUploadAsync(
-                command.PrivateGameId.Value, userId, file, fileName, cancellationToken).ConfigureAwait(false);
+                command.PrivateGameId.Value, userId, file, fileName, privateContentHash, cancellationToken).ConfigureAwait(false);
         }
 
         // Check user quota and permissions (also resolves/creates game)
@@ -109,9 +121,18 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var gameId = resolvedGameId.Value.ToString();
 
+        // Compute content hash and check for duplicates
+        var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
+        if (await _db.PdfDocuments.AnyAsync(
+                p => p.ContentHash == contentHash && p.GameId == resolvedGameId.Value,
+                cancellationToken).ConfigureAwait(false))
+        {
+            return new PdfUploadResult(false, DuplicateContentErrorMessage, null);
+        }
+
         // Store file and create database record
         var (storageSuccess, storageResult, pdfDoc) = await StoreFileAndCreateRecordAsync(
-            file, fileName, gameId, userId, null, cancellationToken).ConfigureAwait(false);
+            file, fileName, gameId, userId, null, cancellationToken, contentHash).ConfigureAwait(false);
 
         if (!storageSuccess)
         {
@@ -422,7 +443,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         string? gameId,
         Guid userId,
         Guid? privateGameId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? contentHash = null)
     {
         try
         {
@@ -453,7 +475,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 UploadedByUserId = userId,
                 UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 ProcessingStatus = "pending",
-                PrivateGameId = privateGameId // Issue #3664
+                PrivateGameId = privateGameId, // Issue #3664
+                ContentHash = contentHash
             };
 
             _db.PdfDocuments.Add(pdfDoc);
@@ -562,7 +585,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             PageCount: pdfDoc.PageCount,
             ProcessingState: pdfDoc.ProcessingState,
             ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
-            RetryCount: pdfDoc.RetryCount
+            RetryCount: pdfDoc.RetryCount,
+            DocumentCategory: pdfDoc.DocumentCategory,
+            BaseDocumentId: pdfDoc.BaseDocumentId,
+            IsActiveForRag: pdfDoc.IsActiveForRag,
+            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue,
+            VersionLabel: pdfDoc.VersionLabel
         ));
     }
 
@@ -1404,6 +1432,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         Guid userId,
         IFormFile file,
         string fileName,
+        string? contentHash,
         CancellationToken cancellationToken)
     {
         // Validate private game exists and user is owner using repository pattern
@@ -1432,7 +1461,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         // Private games don't have a shared GameEntity — GameId is null, PrivateGameId is set
         // Store file and create database record with PrivateGameId (GameId = null)
         var (storageSuccess, storageResult, pdfDoc) = await StoreFileAndCreateRecordAsync(
-            file, fileName, null, userId, privateGameId, cancellationToken).ConfigureAwait(false);
+            file, fileName, null, userId, privateGameId, cancellationToken, contentHash).ConfigureAwait(false);
 
         if (!storageSuccess)
         {
@@ -1460,7 +1489,12 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             PageCount: pdfDoc.PageCount,
             ProcessingState: pdfDoc.ProcessingState,
             ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
-            RetryCount: pdfDoc.RetryCount
+            RetryCount: pdfDoc.RetryCount,
+            DocumentCategory: pdfDoc.DocumentCategory,
+            BaseDocumentId: pdfDoc.BaseDocumentId,
+            IsActiveForRag: pdfDoc.IsActiveForRag,
+            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue,
+            VersionLabel: pdfDoc.VersionLabel
         );
 
         return new PdfUploadResult(true, "PDF upload started successfully", documentDto);
@@ -1533,6 +1567,16 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         "Ready" => 100,
         _ => 0 // Pending, Failed
     };
+
+    /// <summary>
+    /// Computes SHA-256 hash of the file content for deduplication.
+    /// </summary>
+    private static async Task<string> ComputeContentHashAsync(IFormFile file, CancellationToken cancellationToken)
+    {
+        using var stream = file.OpenReadStream();
+        var hashBytes = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexStringLower(hashBytes);
+    }
 
     private void RecordUploadMetricSafely(string status, long? fileSizeBytes)
     {

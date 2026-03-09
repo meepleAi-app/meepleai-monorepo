@@ -6,7 +6,7 @@ using Api.Models;
 using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc; // For [FromBody] attribute
-using Microsoft.EntityFrameworkCore; // For AsNoTracking
+
 using Microsoft.Extensions.Options;
 
 // DDD CQRS imports (using aliases to avoid conflicts with Api.Models)
@@ -21,12 +21,21 @@ using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Quer
 using LoginWithApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginWithApiKeyCommand;
 using LogoutApiKeyCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutApiKeyCommand;
 using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutAllDevicesCommand;
+using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
 
 namespace Api.Routing;
 
 /// <summary>
 /// Core authentication endpoints.
 /// Handles user registration, login, logout, API key authentication, and session management.
+///
+/// Authentication pattern:
+/// - <c>RequireAdminSession()</c>: Custom extension that validates the session cookie and checks admin role
+///   in a single call. Used for endpoints that need admin access without ASP.NET authorization middleware.
+/// - <c>.RequireAuthorization("AdminOnlyPolicy")</c>: Standard ASP.NET authorization middleware policy.
+///   Used for endpoints registered via MapGroup() with policy-based auth.
+/// Both resolve to the same "admin" role check. RequireAdminSession() is preferred in endpoint handlers
+/// that need the session object for auditing (e.g., session.User.Id for logging).
 /// </summary>
 internal static class AuthenticationEndpoints
 {
@@ -83,7 +92,7 @@ internal static class AuthenticationEndpoints
                 Email: payload.Email,
                 Password: payload.Password,
                 DisplayName: displayName,
-                Role: payload.Role,
+                Role: null,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent: context.Request.Headers.UserAgent.ToString());
 
@@ -323,8 +332,6 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         group.MapPost("/auth/session/extend", async (
             HttpContext context,
             IMediator mediator,
-            IConfiguration config,
-            Api.Infrastructure.MeepleAiDbContext db,
             CancellationToken ct) =>
         {
             // Require authentication
@@ -341,10 +348,8 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
             var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
             var tokenHash = Convert.ToBase64String(hash);
 
-            // Look up session by token hash to get session ID
-            var dbSession = await db.UserSessions
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct).ConfigureAwait(false);
+            // Look up session by token hash via CQRS query
+            var dbSession = await mediator.Send(new GetSessionByTokenHashQuery(tokenHash), ct).ConfigureAwait(false);
 
             if (dbSession == null)
             {

@@ -1,6 +1,7 @@
 'use client';
 
 import { BookOpen, ExternalLink, Tag, Zap } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -38,7 +39,7 @@ export function CatalogDetailsSection({
     <section className="space-y-4">
       {/* Description */}
       {hasDescription && (
-        <Card className="rounded-3xl border border-[rgba(45,42,38,0.08)] bg-[#FFFDF9] shadow-[0_4px_20px_rgba(45,42,38,0.08)]">
+        <Card className="rounded-3xl border border-border/40 bg-card shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base font-semibold text-[hsl(25,95%,38%)]">
               <BookOpen className="h-4 w-4" />
@@ -53,7 +54,7 @@ export function CatalogDetailsSection({
 
       {/* Categories, Mechanics & Designers */}
       {(hasCategories || hasMechanics || hasDesigners) && (
-        <Card className="rounded-3xl border border-[rgba(45,42,38,0.08)] bg-[#FFFDF9] shadow-[0_4px_20px_rgba(45,42,38,0.08)]">
+        <Card className="rounded-3xl border border-border/40 bg-card shadow-sm">
           <CardContent className="pt-5 space-y-4">
             {hasCategories && (
               <div className="space-y-2">

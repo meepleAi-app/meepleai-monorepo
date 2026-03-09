@@ -40,7 +40,7 @@ jobs:
   # Build and push Docker images
   build:
     name: Build Images
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [test]
     if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == 'true'))
     outputs:
@@ -118,7 +118,7 @@ jobs:
   # Deploy to staging server
   deploy:
     name: Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build]
     environment:
       name: staging
@@ -184,7 +184,7 @@ jobs:
   # Post-deploy validation
   validate:
     name: Post-deploy Validation
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [deploy]
     steps:
       - name: Health Check
@@ -216,7 +216,7 @@ jobs:
   # Notify on completion
   notify:
     name: Notify
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [build, deploy, validate]
     if: always()
     steps:

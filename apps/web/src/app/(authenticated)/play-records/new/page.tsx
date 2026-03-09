@@ -30,8 +30,6 @@ export default function NewPlayRecordPage() {
         groupId: data.groupId,
         scoringDimensions: data.enableScoring ? data.scoringDimensions : undefined,
         dimensionUnits: data.enableScoring ? data.dimensionUnits : undefined,
-        notes: data.notes,
-        location: data.location,
       });
 
       toast.success('Session Created', {
@@ -54,19 +52,12 @@ export default function NewPlayRecordPage() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleCancel}
-          aria-label="Back to history"
-        >
+        <Button variant="ghost" size="icon" onClick={handleCancel} aria-label="Back to history">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
           <h1 className="text-3xl font-bold">New Play Session</h1>
-          <p className="text-muted-foreground mt-1">
-            Record a new game session
-          </p>
+          <p className="text-muted-foreground mt-1">Record a new game session</p>
         </div>
       </div>
 

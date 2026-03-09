@@ -58,6 +58,36 @@ public class RulebookAnalysisEntity
     public string CommonQuestionsJson { get; set; } = "[]";
 
     /// <summary>
+    /// Key concepts / glossary terms extracted from rulebook (stored as JSON array).
+    /// Issue #5448: ExtractKeyConcepts glossary extraction.
+    /// </summary>
+    public string KeyConceptsJson { get; set; } = "[]";
+
+    /// <summary>
+    /// Generated FAQ entries from rulebook analysis (stored as JSON array).
+    /// Issue #5449: GenerateQuestions FAQ generation.
+    /// </summary>
+    public string GeneratedFaqsJson { get; set; } = "[]";
+
+    /// <summary>
+    /// Game state tracking schema as JSON Schema string.
+    /// Issue #5450: ExtractStateSchema game state tracking.
+    /// </summary>
+    public string? GameStateSchemaJson { get; set; }
+
+    /// <summary>
+    /// Analysis completion status (0=Complete, 1=PartiallyComplete, 2=Failed).
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public int CompletionStatus { get; set; }
+
+    /// <summary>
+    /// Missing critical sections as JSON array (when PartiallyComplete).
+    /// Issue #5452: Critical section quality gate.
+    /// </summary>
+    public string MissingSectionsJson { get; set; } = "[]";
+
+    /// <summary>
     /// AI confidence score (0-1).
     /// </summary>
     public decimal ConfidenceScore { get; set; }

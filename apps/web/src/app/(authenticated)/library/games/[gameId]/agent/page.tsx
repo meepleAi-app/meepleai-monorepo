@@ -12,19 +12,22 @@
 
 import { useCallback, useState } from 'react';
 
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-
 import { ArrowLeft, Bot, Clock, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 
-import { AgentConfigForm, type AgentStrategy, type AgentTypology } from '@/components/library/AgentConfigForm';
+import {
+  AgentConfigForm,
+  type AgentStrategy,
+  type AgentTypology,
+} from '@/components/library/AgentConfigForm';
 import { KbStatusPanel } from '@/components/library/KbStatusPanel';
 import { Button } from '@/components/ui/primitives/button';
-import { useCreateAgentFlow } from '@/hooks/queries/useCreateAgentFlow';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
+import { useCreateAgentFlow } from '@/hooks/queries/useCreateAgentFlow';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
-import { cn } from '@/lib/utils';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Recent chat thread row
@@ -50,18 +53,14 @@ function ChatThreadRow({ session }: { session: ChatSessionSummaryDto }) {
     >
       <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {session.title ?? 'Chat senza titolo'}
-        </p>
+        <p className="text-sm font-medium truncate">{session.title ?? 'Chat senza titolo'}</p>
         {session.lastMessagePreview && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">
             {session.lastMessagePreview}
           </p>
         )}
       </div>
-      {dateLabel && (
-        <span className="text-xs text-muted-foreground shrink-0">{dateLabel}</span>
-      )}
+      {dateLabel && <span className="text-xs text-muted-foreground shrink-0">{dateLabel}</span>}
       <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground rotate-180 shrink-0" />
     </Link>
   );
@@ -90,9 +89,7 @@ export default function AgentConfigPage() {
   // Note: limited to 100 most-recent sessions across all games to reduce risk
   // of game-specific sessions being pushed out of the window.
   const { data: chatData } = useRecentChatSessions(100);
-  const gameChats = (chatData?.sessions ?? [])
-    .filter(s => s.gameId === gameId)
-    .slice(0, 5);
+  const gameChats = (chatData?.sessions ?? []).filter(s => s.gameId === gameId).slice(0, 5);
 
   // Agent creation flow — on success navigate to the new chat thread
   const { mutateAsync: createAgent } = useCreateAgentFlow({
@@ -118,7 +115,6 @@ export default function AgentConfigPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
         {/* Breadcrumb / Back */}
         <div>
           <Button variant="ghost" size="sm" className="-ml-2" asChild>
@@ -147,11 +143,7 @@ export default function AgentConfigPage() {
 
           {/* Right: Agent Config Form */}
           <div className="rounded-xl border border-border/50 bg-card p-5">
-            <AgentConfigForm
-              gameId={gameId}
-              hasIndexedKb={hasIndexedKb}
-              onSave={handleSave}
-            />
+            <AgentConfigForm gameId={gameId} hasIndexedKb={hasIndexedKb} onSave={handleSave} />
           </div>
         </div>
 
@@ -171,7 +163,6 @@ export default function AgentConfigPage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

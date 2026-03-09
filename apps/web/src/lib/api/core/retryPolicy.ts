@@ -92,6 +92,7 @@ export function isRetryableError(error: unknown): boolean {
 
 /**
  * Parse Retry-After header value (supports both seconds and HTTP-date formats)
+ * @returns milliseconds to wait, or undefined if invalid
  */
 export function parseRetryAfter(retryAfterValue: string | null | undefined): number | undefined {
   if (!retryAfterValue) {

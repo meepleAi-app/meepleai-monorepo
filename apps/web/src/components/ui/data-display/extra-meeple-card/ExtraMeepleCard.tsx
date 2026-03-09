@@ -28,17 +28,14 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
-import type {
-  ExtraMeepleCardProps,
-  ExtraMeepleCardTab,
-  TabConfig,
-} from './types';
-import { OverviewTab } from './tabs/OverviewTab';
-import { ToolkitTab } from './tabs/ToolkitTab';
-import { ScoreboardTab } from './tabs/ScoreboardTab';
+import { AITab } from './tabs/AITab';
 import { HistoryTab } from './tabs/HistoryTab';
 import { MediaTab } from './tabs/MediaTab';
-import { AITab } from './tabs/AITab';
+import { OverviewTab } from './tabs/OverviewTab';
+import { ScoreboardTab } from './tabs/ScoreboardTab';
+import { ToolkitTab } from './tabs/ToolkitTab';
+
+import type { ExtraMeepleCardProps, ExtraMeepleCardTab, TabConfig } from './types';
 
 // ============================================================================
 // Constants
@@ -189,9 +186,11 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
         'max-md:w-full max-md:max-w-full',
         className
       )}
-      style={{
-        '--session-color': SESSION_COLOR,
-      } as React.CSSProperties}
+      style={
+        {
+          '--session-color': SESSION_COLOR,
+        } as React.CSSProperties
+      }
       data-testid={testId}
     >
       {/* ================================================================
@@ -205,10 +204,7 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
             style={{ backgroundImage: `url(${imageUrl})` }}
           />
         ) : (
-          <div
-            className="absolute inset-0"
-            style={{ background: `hsl(${SESSION_COLOR})` }}
-          />
+          <div className="absolute inset-0" style={{ background: `hsl(${SESSION_COLOR})` }} />
         )}
 
         {/* Gradient overlay */}
@@ -236,7 +232,9 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5 text-white/70 text-sm font-nunito">
                 <Users className="h-3.5 w-3.5" />
-                <span>{playerCount} player{playerCount !== 1 ? 's' : ''}</span>
+                <span>
+                  {playerCount} player{playerCount !== 1 ? 's' : ''}
+                </span>
               </div>
               <div className="flex items-center gap-1.5 text-white/70 text-sm font-nunito">
                 <Gamepad2 className="h-3.5 w-3.5" />
@@ -252,11 +250,7 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
       {/* ================================================================
           Tab System
           ================================================================ */}
-      <Tabs
-        value={currentTab}
-        onValueChange={handleTabChange}
-        className="flex flex-1 flex-col"
-      >
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="flex flex-1 flex-col">
         {/* Tab bar */}
         <TabsList
           className={cn(
@@ -267,7 +261,7 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
             'max-md:overflow-x-auto max-md:scrollbar-none'
           )}
         >
-          {TABS.map((tab) => {
+          {TABS.map(tab => {
             const Icon = tab.icon;
             const badge = tabBadges?.[tab.id];
             return (
@@ -303,11 +297,7 @@ export const ExtraMeepleCard = React.memo(function ExtraMeepleCard({
         {/* Tab content area */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
           <TabsContent value="overview" className="mt-0">
-            <OverviewTab
-              data={overviewData}
-              status={status}
-              actions={actions}
-            />
+            <OverviewTab data={overviewData} status={status} actions={actions} />
           </TabsContent>
 
           <TabsContent value="toolkit" className="mt-0">

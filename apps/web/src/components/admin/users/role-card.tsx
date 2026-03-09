@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { ShieldIcon, PencilIcon, UserIcon, HelpCircleIcon, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 
 interface RoleCardProps {
   /** Role name */
@@ -54,17 +54,29 @@ const colorStyles = {
   },
 };
 
-export function RoleCard({ role, userCount, description, iconName, colorClass, href, isLoading }: RoleCardProps) {
+export function RoleCard({
+  role,
+  userCount,
+  description,
+  iconName,
+  colorClass,
+  href,
+  isLoading,
+}: RoleCardProps) {
   const colors = colorStyles[colorClass];
   const Icon = iconMap[iconName];
 
   const content = (
     <>
       <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 ${colors.iconBg} dark:bg-zinc-700 rounded-lg flex items-center justify-center`}>
+        <div
+          className={`w-12 h-12 ${colors.iconBg} dark:bg-zinc-700 rounded-lg flex items-center justify-center`}
+        >
           <Icon className={`w-6 h-6 ${colors.iconText} dark:text-zinc-300`} />
         </div>
-        <span className={`px-3 py-1 ${colors.badgeBg} ${colors.badgeText} dark:bg-zinc-700 dark:text-zinc-300 text-sm font-semibold rounded-full`}>
+        <span
+          className={`px-3 py-1 ${colors.badgeBg} ${colors.badgeText} dark:bg-zinc-700 dark:text-zinc-300 text-sm font-semibold rounded-full`}
+        >
           {isLoading ? (
             <span className="inline-block w-12 h-4 bg-slate-200 dark:bg-zinc-600 rounded animate-pulse" />
           ) : (
@@ -75,13 +87,12 @@ export function RoleCard({ role, userCount, description, iconName, colorClass, h
       <h3 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100 mb-2">
         {role}
       </h3>
-      <p className="text-slate-600 dark:text-zinc-400 text-sm">
-        {description}
-      </p>
+      <p className="text-slate-600 dark:text-zinc-400 text-sm">{description}</p>
     </>
   );
 
-  const className = "bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm hover:shadow-md transition-shadow";
+  const className =
+    'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50 shadow-sm hover:shadow-md transition-shadow';
 
   if (href) {
     return (

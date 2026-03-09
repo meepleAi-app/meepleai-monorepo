@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
 
 namespace Api.Services;

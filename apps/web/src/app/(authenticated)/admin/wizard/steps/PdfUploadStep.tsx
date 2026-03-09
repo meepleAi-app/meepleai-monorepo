@@ -8,11 +8,14 @@
 
 import { useState, useCallback } from 'react';
 
+import { ArrowRight, FileText, SkipForward, Upload, X } from 'lucide-react';
+
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
+import { cn } from '@/lib/utils';
 
 interface PdfUploadStepProps {
   onComplete: (pdfId: string, fileName: string, isPublic: boolean) => void;
@@ -36,7 +39,13 @@ interface PdfUploadStepProps {
   onSkip?: () => void;
 }
 
-export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = false, onSkip }: PdfUploadStepProps) {
+export function PdfUploadStep({
+  onComplete,
+  gameId,
+  privateGameId,
+  isPrivate = false,
+  onSkip,
+}: PdfUploadStepProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isPublic, setIsPublic] = useState(!isPrivate);
   const [uploading, setUploading] = useState(false);
@@ -102,39 +111,41 @@ export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = f
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ documentId: string; fileName: string }>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', e => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        });
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch {
-              reject(new Error('Risposta non valida dal server'));
+      const uploadPromise = new Promise<{ documentId: string; fileName: string }>(
+        (resolve, reject) => {
+          xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable) {
+              setUploadProgress(Math.round((e.loaded / e.total) * 100));
             }
-          } else {
-            try {
-              const error = JSON.parse(xhr.responseText);
-              reject(new Error(error.error || 'Upload fallito'));
-            } catch {
-              reject(new Error(`Upload fallito: ${xhr.statusText}`));
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response);
+              } catch {
+                reject(new Error('Risposta non valida dal server'));
+              }
+            } else {
+              try {
+                const error = JSON.parse(xhr.responseText);
+                reject(new Error(error.error || 'Upload fallito'));
+              } catch {
+                reject(new Error(`Upload fallito: ${xhr.statusText}`));
+              }
             }
-          }
-        });
+          });
 
-        xhr.addEventListener('error', () => {
-          reject(new Error('Errore di rete durante upload'));
-        });
+          xhr.addEventListener('error', () => {
+            reject(new Error('Errore di rete durante upload'));
+          });
 
-        xhr.open('POST', '/api/v1/ingest/pdf');
-        xhr.withCredentials = true;
-        xhr.send(formData);
-      });
+          xhr.open('POST', '/api/v1/ingest/pdf');
+          xhr.withCredentials = true;
+          xhr.send(formData);
+        }
+      );
 
       const result = await uploadPromise;
 
@@ -149,25 +160,23 @@ export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = f
   }, [file, isPublic, onComplete, gameId, privateGameId]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
-          Carica il Regolamento PDF
-        </h2>
-        <p className="text-slate-600 dark:text-slate-400">
-          Carica il file PDF del regolamento del gioco. Verra' processato per estrarre le regole.
+        <h2 className="text-lg font-semibold text-foreground mb-1">Carica il Regolamento PDF</h2>
+        <p className="text-sm text-muted-foreground">
+          Carica il file PDF del regolamento del gioco. Verrà processato per estrarre le regole.
         </p>
       </div>
 
       {/* Drop Zone */}
       <div
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-          dragActive
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-            : file
-              ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-              : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
-        }`}
+        className={cn(
+          'relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer',
+          dragActive && 'border-amber-500 bg-amber-500/5 scale-[1.01]',
+          file && !dragActive && 'border-emerald-500/50 bg-emerald-500/5',
+          !file && !dragActive && 'border-border hover:border-amber-500/50 hover:bg-muted/30',
+          uploading && 'pointer-events-none opacity-70'
+        )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -185,28 +194,38 @@ export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = f
         />
 
         {file ? (
-          <div className="space-y-2">
-            <div className="text-4xl">📄</div>
-            <p className="font-medium text-slate-900 dark:text-white">{file.name}</p>
-            <p className="text-sm text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-500/10">
+              <FileText className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div className="text-left min-w-0">
+              <p className="font-medium text-foreground text-sm truncate">{file.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {(file.size / 1024 / 1024).toFixed(1)} MB
+              </p>
+            </div>
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
               onClick={e => {
                 e.stopPropagation();
                 setFile(null);
               }}
+              aria-label="Rimuovi file"
             >
-              Cambia file
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="text-4xl">📁</div>
-            <p className="font-medium text-slate-900 dark:text-white">
+          <div className="space-y-2 py-2">
+            <div className="mx-auto w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+              <Upload className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="font-medium text-foreground text-sm">
               Trascina qui il PDF o clicca per selezionare
             </p>
-            <p className="text-sm text-slate-500">PDF fino a 50MB</p>
+            <p className="text-xs text-muted-foreground">PDF fino a 50MB</p>
           </div>
         )}
       </div>
@@ -223,8 +242,8 @@ export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = f
             <Label htmlFor="is-public" className="font-medium cursor-pointer">
               Aggiungi alla Libreria Pubblica
             </Label>
-            <p className="text-sm text-slate-500">
-              Il PDF sara' visibile a tutti gli utenti registrati nella libreria pubblica.
+            <p className="text-sm text-muted-foreground">
+              Il PDF sarà visibile a tutti gli utenti registrati nella libreria pubblica.
             </p>
           </div>
         </div>
@@ -234,12 +253,14 @@ export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = f
       {uploading && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Caricamento in corso...</span>
-            <span>{uploadProgress}%</span>
+            <span className="text-muted-foreground">Caricamento in corso...</span>
+            <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+              {uploadProgress}%
+            </span>
           </div>
-          <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-muted/60 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all duration-300"
+              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300 ease-out"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -247,20 +268,33 @@ export function PdfUploadStep({ onComplete, gameId, privateGameId, isPrivate = f
       )}
 
       {/* Actions */}
-      <div className="flex justify-between gap-3">
+      <div className="flex justify-between gap-3 pt-1">
         {onSkip && (
-          <Button variant="outline" onClick={onSkip} disabled={uploading}>
-            Salta PDF
+          <Button
+            variant="ghost"
+            onClick={onSkip}
+            disabled={uploading}
+            className="text-muted-foreground"
+          >
+            <SkipForward className="mr-1.5 h-3.5 w-3.5" />
+            Salta
           </Button>
         )}
-        <Button onClick={handleUpload} disabled={!file || uploading} className="min-w-32 ml-auto">
+        <Button
+          onClick={handleUpload}
+          disabled={!file || uploading}
+          className="min-w-32 ml-auto bg-amber-600 hover:bg-amber-700 text-white"
+        >
           {uploading ? (
             <>
               <Spinner size="sm" className="mr-2" />
               Caricamento...
             </>
           ) : (
-            'Carica PDF →'
+            <>
+              Carica PDF
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </>
           )}
         </Button>
       </div>

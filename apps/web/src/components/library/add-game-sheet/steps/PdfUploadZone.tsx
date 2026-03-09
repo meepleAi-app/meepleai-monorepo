@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+
 import { Upload, FileText, X, AlertCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,10 @@ export interface PdfUploadZoneProps {
   /** Called when upload completes successfully */
   onUploadComplete: (documentId: string, fileName: string, fileSizeBytes: number) => void;
   /** Called to perform the upload */
-  onUpload: (file: File, onProgress: (percent: number) => void) => Promise<{ documentId: string; fileName: string }>;
+  onUpload: (
+    file: File,
+    onProgress: (percent: number) => void
+  ) => Promise<{ documentId: string; fileName: string }>;
   /** Whether upload is disabled */
   disabled?: boolean;
   /** Additional CSS classes */
@@ -58,7 +62,7 @@ export function PdfUploadZone({
       setError(null);
       setFile(selectedFile);
     },
-    [validateFile],
+    [validateFile]
   );
 
   const handleDrop = useCallback(
@@ -69,7 +73,7 @@ export function PdfUploadZone({
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile) handleFileSelect(droppedFile);
     },
-    [handleFileSelect],
+    [handleFileSelect]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -121,7 +125,7 @@ export function PdfUploadZone({
           dragActive && 'border-teal-400 bg-teal-400/5',
           file && !dragActive && 'border-teal-500/50 bg-teal-500/5',
           !file && !dragActive && 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/30',
-          disabled && 'pointer-events-none opacity-50',
+          disabled && 'pointer-events-none opacity-50'
         )}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -131,7 +135,7 @@ export function PdfUploadZone({
         role="button"
         aria-label="Carica un file PDF"
         tabIndex={0}
-        onKeyDown={(e) => {
+        onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             inputRef.current?.click();
@@ -143,7 +147,7 @@ export function PdfUploadZone({
           type="file"
           accept="application/pdf"
           className="hidden"
-          onChange={(e) => {
+          onChange={e => {
             const selected = e.target.files?.[0];
             if (selected) handleFileSelect(selected);
           }}
@@ -162,7 +166,7 @@ export function PdfUploadZone({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-slate-500 hover:text-slate-300"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   handleClearFile();
                 }}
@@ -218,7 +222,7 @@ export function PdfUploadZone({
       {/* Upload button */}
       {file && !uploading && (
         <Button
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             void handleUpload();
           }}

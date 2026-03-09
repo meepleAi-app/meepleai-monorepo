@@ -7,10 +7,11 @@
  * - shows game detail with "Add to Library" CTA
  */
 
-import { notFound, redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { ArrowLeft } from 'lucide-react';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
+
 import { GameDiscoverDetail } from '@/components/discover/GameDiscoverDetail';
 import type { SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 

@@ -21,4 +21,23 @@ internal interface IProcessingJobRepository : IRepository<ProcessingJob, Guid>
         int pageSize,
         CancellationToken cancellationToken = default);
     Task<ProcessingJob?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get all jobs with a given status.
+    /// Issue #5456: Bulk reindex support.
+    /// </summary>
+    Task<IReadOnlyList<ProcessingJob>> GetAllByStatusAsync(JobStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically dequeue the next highest-priority job (priority DESC, CreatedAt ASC).
+    /// Returns null if no queued jobs exist.
+    /// Issue #5455: Priority-based dequeue.
+    /// </summary>
+    Task<ProcessingJob?> DequeueNextAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Count currently processing jobs.
+    /// Issue #5455: Concurrency control.
+    /// </summary>
+    Task<int> CountProcessingAsync(CancellationToken cancellationToken = default);
 }

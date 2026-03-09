@@ -10,6 +10,13 @@
 
 import { NextRequest } from 'next/server';
 
+import {
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_TYPOLOGY_PROMPT,
+  getTypologyConfig,
+} from '@/lib/config/typology-config';
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -45,7 +52,8 @@ const StreamingEventType = {
 // ============================================================================
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_MODEL = process.env.OPENROUTER_DEFAULT_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
+const DEFAULT_MODEL =
+  process.env.OPENROUTER_DEFAULT_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
 const MAX_MESSAGE_LENGTH = 2000;
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -93,17 +101,9 @@ setInterval(() => {
 // System Prompt Builder
 // ============================================================================
 
-const TYPOLOGY_PROMPTS: Record<string, string> = {
-  Tutor: 'Sei un Tutor esperto del gioco {gameName}. Il tuo ruolo è spiegare le regole in modo chiaro, fare esempi pratici e guidare i giocatori passo dopo passo. Rispondi sempre in italiano.',
-  Arbitro: 'Sei un Arbitro esperto del gioco {gameName}. Il tuo ruolo è giudicare dispute sulle regole, chiarire situazioni ambigue e garantire il fair play. Rispondi sempre in italiano.',
-  Stratega: 'Sei uno Stratega esperto del gioco {gameName}. Il tuo ruolo è consigliare tattiche, analizzare posizioni e suggerire mosse ottimali. Rispondi sempre in italiano.',
-  Narratore: 'Sei un Narratore esperto del gioco {gameName}. Il tuo ruolo è creare atmosfera, raccontare la storia della partita e rendere l\'esperienza immersiva. Rispondi sempre in italiano.',
-};
-
-const DEFAULT_SYSTEM_PROMPT = 'Sei un assistente esperto del gioco {gameName}. Aiuta i giocatori con regole, strategie e consigli. Rispondi sempre in italiano.';
-
 function buildSystemPrompt(gameContext: ChatProxyRequest['gameContext']): string {
-  const template = TYPOLOGY_PROMPTS[gameContext.agentTypology] || DEFAULT_SYSTEM_PROMPT;
+  const config = getTypologyConfig(gameContext.agentTypology);
+  const template = config?.systemPrompt || DEFAULT_TYPOLOGY_PROMPT;
   let prompt = template.replace(/{gameName}/g, gameContext.gameName);
 
   if (gameContext.ragContext) {
@@ -128,16 +128,17 @@ function sseEvent(type: number, data: unknown): string {
 export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'OpenRouter API key not configured' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'OpenRouter API key not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   // Rate limiting - use forwarded IP or fallback
-  const clientId = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || 'anonymous';
+  const clientId =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'anonymous';
 
   if (!checkRateLimit(clientId)) {
     return new Response(
@@ -151,17 +152,17 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON body' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   if (!body.message || typeof body.message !== 'string') {
-    return new Response(
-      JSON.stringify({ error: 'message is required and must be a string' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'message is required and must be a string' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   if (body.message.length > MAX_MESSAGE_LENGTH) {
@@ -172,10 +173,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (!body.agentId || typeof body.agentId !== 'string') {
-    return new Response(
-      JSON.stringify({ error: 'agentId is required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'agentId is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   if (!body.gameContext?.gameName || !body.gameContext?.agentTypology) {
@@ -185,11 +186,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Build OpenRouter request
+  // Build OpenRouter request — use typology-specific defaults
+  const typologyConfig = getTypologyConfig(body.gameContext.agentTypology);
   const systemPrompt = buildSystemPrompt(body.gameContext);
   const model = body.modelId || DEFAULT_MODEL;
-  const maxTokens = Math.min(body.maxTokens || 1024, 4096);
-  const temperature = Math.max(0, Math.min(body.temperature ?? 0.7, 2));
+  const maxTokens = Math.min(
+    body.maxTokens || typologyConfig?.maxTokens || DEFAULT_MAX_TOKENS,
+    4096
+  );
+  const temperature = Math.max(
+    0,
+    Math.min(body.temperature ?? typologyConfig?.temperature ?? DEFAULT_TEMPERATURE, 2)
+  );
 
   const openRouterBody = {
     model,
@@ -221,10 +229,12 @@ export async function POST(request: NextRequest) {
 
       // Send initial state update
       controller.enqueue(
-        encoder.encode(sseEvent(StreamingEventType.StateUpdate, {
-          message: 'Connecting to AI model...',
-          chatThreadId: body.threadId || null,
-        }))
+        encoder.encode(
+          sseEvent(StreamingEventType.StateUpdate, {
+            message: 'Connecting to AI model...',
+            chatThreadId: body.threadId || null,
+          })
+        )
       );
 
       let totalTokens = 0;
@@ -233,7 +243,7 @@ export async function POST(request: NextRequest) {
         const response = await fetch(OPENROUTER_API_URL, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
             'HTTP-Referer': 'https://meepleai.com',
             'X-Title': 'MeepleAI Agent Chat',
@@ -245,10 +255,12 @@ export async function POST(request: NextRequest) {
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error');
           controller.enqueue(
-            encoder.encode(sseEvent(StreamingEventType.Error, {
-              errorMessage: `AI model error (${response.status}): ${errorText}`,
-              errorCode: 'MODEL_ERROR',
-            }))
+            encoder.encode(
+              sseEvent(StreamingEventType.Error, {
+                errorMessage: `AI model error (${response.status}): ${errorText}`,
+                errorCode: 'MODEL_ERROR',
+              })
+            )
           );
           controller.close();
           return;
@@ -257,10 +269,12 @@ export async function POST(request: NextRequest) {
         const reader = response.body?.getReader();
         if (!reader) {
           controller.enqueue(
-            encoder.encode(sseEvent(StreamingEventType.Error, {
-              errorMessage: 'No response stream from AI model',
-              errorCode: 'NO_STREAM',
-            }))
+            encoder.encode(
+              sseEvent(StreamingEventType.Error, {
+                errorMessage: 'No response stream from AI model',
+                errorCode: 'NO_STREAM',
+              })
+            )
           );
           controller.close();
           return;
@@ -296,9 +310,11 @@ export async function POST(request: NextRequest) {
                 if (delta?.content) {
                   totalTokens++;
                   controller.enqueue(
-                    encoder.encode(sseEvent(StreamingEventType.Token, {
-                      token: delta.content,
-                    }))
+                    encoder.encode(
+                      sseEvent(StreamingEventType.Token, {
+                        token: delta.content,
+                      })
+                    )
                   );
                 }
 
@@ -315,10 +331,12 @@ export async function POST(request: NextRequest) {
 
         // Send complete event
         controller.enqueue(
-          encoder.encode(sseEvent(StreamingEventType.Complete, {
-            totalTokens,
-            chatThreadId: body.threadId || null,
-          }))
+          encoder.encode(
+            sseEvent(StreamingEventType.Complete, {
+              totalTokens,
+              chatThreadId: body.threadId || null,
+            })
+          )
         );
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
@@ -327,10 +345,12 @@ export async function POST(request: NextRequest) {
           const errorMsg = error instanceof Error ? error.message : 'Stream processing failed';
           try {
             controller.enqueue(
-              encoder.encode(sseEvent(StreamingEventType.Error, {
-                errorMessage: errorMsg,
-                errorCode: 'STREAM_ERROR',
-              }))
+              encoder.encode(
+                sseEvent(StreamingEventType.Error, {
+                  errorMessage: errorMsg,
+                  errorCode: 'STREAM_ERROR',
+                })
+              )
             );
           } catch {
             // Controller already closed
@@ -358,7 +378,7 @@ export async function POST(request: NextRequest) {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
     },
   });

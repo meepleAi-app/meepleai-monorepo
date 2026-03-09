@@ -11,16 +11,16 @@
 
 import { useCallback, useState } from 'react';
 
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArchiveRestore, Clock, Pencil, Share2, Trash2, Upload, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/navigation/sheet';
+import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import { sharedGamesKeys, useSharedGames } from '@/hooks/queries';
 import { api } from '@/lib/api';
 import type { SharedGame } from '@/lib/api';
-import type { ResolvedNavigationLink } from '@/config/entity-navigation';
 import type { GameStatus } from '@/lib/api/schemas/shared-games.schemas';
 
 import { AdminSharedGameCardContainer } from './AdminSharedGameCardContainer';
@@ -29,10 +29,7 @@ import { AdminSharedGameCardContainer } from './AdminSharedGameCardContainer';
 // Helpers
 // ============================================================================
 
-function formatPlayers(
-  min: number | null | undefined,
-  max: number | null | undefined,
-): string {
+function formatPlayers(min: number | null | undefined, max: number | null | undefined): string {
   if (!min && !max) return 'N/A';
   if (min === max) return `${min}`;
   return `${min ?? '?'}-${max ?? '?'}`;
@@ -67,7 +64,13 @@ interface AdminGameCardProps {
   onOpenExtraCard: (id: string) => void;
 }
 
-function AdminGameCard({ game, onPublish, onArchive, onDelete, onOpenExtraCard }: AdminGameCardProps) {
+function AdminGameCard({
+  game,
+  onPublish,
+  onArchive,
+  onDelete,
+  onOpenExtraCard,
+}: AdminGameCardProps) {
   const router = useRouter();
 
   const metadata = [
@@ -169,8 +172,8 @@ export function GameCatalogGrid() {
   const handleDelete = useCallback((id: string) => deleteMutation.mutate(id), [deleteMutation]);
   const handleOpenExtraCard = useCallback((id: string) => setSheetGameId(id), []);
 
-  const published = games.filter((g) => g.status === 'Published').length;
-  const draft = games.filter((g) => g.status === 'Draft').length;
+  const published = games.filter(g => g.status === 'Published').length;
+  const draft = games.filter(g => g.status === 'Draft').length;
 
   return (
     <div className="space-y-6">
@@ -217,7 +220,7 @@ export function GameCatalogGrid() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.map((game) => (
+          {games.map(game => (
             <AdminGameCard
               key={game.id}
               game={game}
@@ -231,7 +234,12 @@ export function GameCatalogGrid() {
       )}
 
       {/* ExtraCard Sheet */}
-      <Sheet open={!!sheetGameId} onOpenChange={(open) => { if (!open) setSheetGameId(null); }}>
+      <Sheet
+        open={!!sheetGameId}
+        onOpenChange={open => {
+          if (!open) setSheetGameId(null);
+        }}
+      >
         <SheetContent side="right" className="w-[640px] sm:max-w-[640px] p-0 overflow-y-auto">
           <SheetTitle className="sr-only">Dettaglio gioco</SheetTitle>
           {sheetGameId && (

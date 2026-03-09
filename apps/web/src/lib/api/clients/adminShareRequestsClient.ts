@@ -123,7 +123,9 @@ export function createAdminShareRequestsClient(httpClient: HttpClient): AdminSha
   const baseUrl = '/api/v1/admin/share-requests';
 
   return {
-    async getAll(params: Partial<GetAdminShareRequestsParams> = {}): Promise<PaginatedAdminShareRequestsResponse> {
+    async getAll(
+      params: Partial<GetAdminShareRequestsParams> = {}
+    ): Promise<PaginatedAdminShareRequestsResponse> {
       const queryParams = new URLSearchParams();
 
       if (params.page) queryParams.set('page', params.page.toString());
@@ -145,10 +147,7 @@ export function createAdminShareRequestsClient(httpClient: HttpClient): AdminSha
           items: [],
           page: 1,
           pageSize: 20,
-          totalCount: 0,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPreviousPage: false,
+          total: 0,
         }
       );
     },
@@ -182,10 +181,7 @@ export function createAdminShareRequestsClient(httpClient: HttpClient): AdminSha
     },
 
     async getMyReviews(): Promise<ActiveReviewDto[]> {
-      const result = await httpClient.get(
-        `${baseUrl}/my-reviews`,
-        ActiveReviewDtoSchema.array()
-      );
+      const result = await httpClient.get(`${baseUrl}/my-reviews`, ActiveReviewDtoSchema.array());
 
       return result ?? [];
     },

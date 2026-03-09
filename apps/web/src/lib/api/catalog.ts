@@ -1,20 +1,22 @@
-import { apiClient } from "./client";
+import { apiClient } from './client';
 
 export interface TrendingGame {
+  rank: number;
   gameId: string;
   title: string;
-  trendScore: number;
-  percentageChange: number | null;
-  imageUrl?: string;
+  thumbnailUrl: string | null;
+  score: number;
+  searchCount: number;
+  viewCount: number;
+  libraryAddCount: number;
+  playCount: number;
 }
 
-export async function getTrendingGames(period: "week" | "month" = "week"): Promise<TrendingGame[]> {
-  const response = await apiClient.get<{ games: TrendingGame[] }>(`/catalog/trending?period=${period}`);
-  if (!response) return [];
-  return response.games;
+export async function getTrendingGames(limit = 10): Promise<TrendingGame[]> {
+  const response = await apiClient.get<TrendingGame[]>(`/catalog/trending?limit=${limit}`);
+  return response ?? [];
 }
 
 export async function fetchCatalogTrending(limit = 5): Promise<TrendingGame[]> {
-  const games = await getTrendingGames('week');
-  return games.slice(0, limit);
+  return getTrendingGames(limit);
 }

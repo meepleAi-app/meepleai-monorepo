@@ -1,12 +1,8 @@
 'use client';
 
 import type { ComponentType } from 'react';
-import {
-  ClockIcon,
-  LoaderIcon,
-  CheckCircle2Icon,
-  XCircleIcon,
-} from 'lucide-react';
+
+import { ClockIcon, LoaderIcon, CheckCircle2Icon, XCircleIcon } from 'lucide-react';
 
 import { useQueueStats } from '../lib/queue-api';
 
@@ -18,17 +14,42 @@ interface StatItem {
   bgColor: string;
 }
 
-const STAT_CONFIG: { label: string; icon: ComponentType<{ className?: string }>; color: string; bgColor: string }[] = [
-  { label: 'Queued', icon: ClockIcon, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-50 dark:bg-amber-900/20' },
-  { label: 'Processing', icon: LoaderIcon, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
-  { label: 'Completed', icon: CheckCircle2Icon, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-50 dark:bg-emerald-900/20' },
-  { label: 'Failed', icon: XCircleIcon, color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-50 dark:bg-red-900/20' },
+const STAT_CONFIG: {
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  color: string;
+  bgColor: string;
+}[] = [
+  {
+    label: 'Queued',
+    icon: ClockIcon,
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+  },
+  {
+    label: 'Processing',
+    icon: LoaderIcon,
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+  },
+  {
+    label: 'Completed',
+    icon: CheckCircle2Icon,
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+  },
+  {
+    label: 'Failed',
+    icon: XCircleIcon,
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-50 dark:bg-red-900/20',
+  },
 ];
 
 export function QueueStatsBar() {
   const results = useQueueStats();
 
-  const isLoading = results.some((r) => r.isLoading);
+  const isLoading = results.some(r => r.isLoading);
 
   if (isLoading) {
     return (
@@ -50,7 +71,7 @@ export function QueueStatsBar() {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {stats.map((stat) => {
+      {stats.map(stat => {
         const Icon = stat.icon;
         return (
           <div

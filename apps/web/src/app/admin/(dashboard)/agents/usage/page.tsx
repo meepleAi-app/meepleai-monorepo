@@ -11,13 +11,16 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
 import { FreeQuotaIndicator } from '@/components/admin/usage/FreeQuotaIndicator';
 import { KpiCards } from '@/components/admin/usage/KpiCards';
 import { RateLimitGauge } from '@/components/admin/usage/RateLimitGauge';
-import { RecentRequestsTable, type RecentRequestsFilters } from '@/components/admin/usage/RecentRequestsTable';
+import {
+  RecentRequestsTable,
+  type RecentRequestsFilters,
+} from '@/components/admin/usage/RecentRequestsTable';
 import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
+import { Button } from '@/components/ui/primitives/button';
 import { useSetNavConfig } from '@/hooks/useSetNavConfig';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
@@ -131,8 +134,7 @@ export default function UsagePage() {
         >
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>
-            Failed to load usage data:{' '}
-            {error instanceof Error ? error.message : 'Unknown error'}
+            Failed to load usage data: {error instanceof Error ? error.message : 'Unknown error'}
           </span>
         </div>
       )}

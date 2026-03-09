@@ -11,12 +11,13 @@
  */
 
 import { use, useState, useCallback } from 'react';
+
 import { notFound } from 'next/navigation';
 
-import { ShowcaseLayout } from '@/components/showcase/showcase-layout';
-import { ShowcaseSidebar } from '@/components/showcase/showcase-sidebar';
 import { ShowcaseCanvas } from '@/components/showcase/showcase-canvas';
 import { ShowcaseControls } from '@/components/showcase/showcase-controls';
+import { ShowcaseLayout } from '@/components/showcase/showcase-layout';
+import { ShowcaseSidebar } from '@/components/showcase/showcase-sidebar';
 import { ShowcaseStoryPicker } from '@/components/showcase/showcase-story-picker';
 import { ALL_STORIES, STORY_MAP } from '@/components/showcase/stories';
 import type { PropsState } from '@/components/showcase/types';
@@ -34,7 +35,7 @@ export default function ShowcaseComponentPage({ params }: PageProps) {
   if (!story) notFound();
 
   // Build initial props state from story defaultProps
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   const [propsState, setPropsState] = useState<PropsState>(() => {
     const state: PropsState = {};
     for (const [key, value] of Object.entries(story.defaultProps as Record<string, unknown>)) {
@@ -45,29 +46,26 @@ export default function ShowcaseComponentPage({ params }: PageProps) {
     return state;
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const [bgMode, setBgMode] = useState<BgMode>('light');
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   const [zoom, setZoom] = useState(1);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   const [activePreset, setActivePreset] = useState<string>(() => {
     const presets = story.presets ?? {};
     return Object.keys(presets)[0] ?? '';
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const handleControlChange = useCallback((key: string, value: string | boolean | number) => {
-    setPropsState((prev) => ({ ...prev, [key]: value }));
+    setPropsState(prev => ({ ...prev, [key]: value }));
     setActivePreset(''); // clear preset when user manually changes
   }, []);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const handlePresetChange = useCallback(
     (presetKey: string) => {
       const preset = story.presets?.[presetKey];
       if (!preset) return;
       setActivePreset(presetKey);
-      setPropsState((prev) => {
+      setPropsState(prev => {
         const next = { ...prev };
         for (const [k, v] of Object.entries(preset.props as Record<string, unknown>)) {
           if (typeof v === 'string' || typeof v === 'boolean' || typeof v === 'number') {

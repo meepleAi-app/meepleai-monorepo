@@ -1,8 +1,7 @@
 import { Suspense } from 'react';
 
-import { type Metadata } from 'next';
-
 import { PlusIcon } from 'lucide-react';
+import { type Metadata } from 'next';
 
 import { ModelsTable } from '@/components/admin/agents/models-table';
 import { SystemPromptsSection } from '@/components/admin/agents/system-prompts-section';

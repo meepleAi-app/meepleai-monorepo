@@ -16,11 +16,11 @@ import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp, LayoutProvider } from '@/components/layout';
+import { AddGameWizardProvider } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { PWAProvider } from '@/components/pwa';
-import { AddGameWizardProvider } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
@@ -145,7 +145,10 @@ export function AppProviders({ children }: AppProvidersProps) {
         <QueryProvider>
           <AuthProvider>
             <LayoutProvider>
-              <ErrorBoundary componentName="App" showDetails={process.env.NODE_ENV === 'development'}>
+              <ErrorBoundary
+                componentName="App"
+                showDetails={process.env.NODE_ENV === 'development'}
+              >
                 <RouteErrorBoundary routeName="AppContent">
                   <AddGameWizardProvider>
                     <AppContent>{children}</AppContent>

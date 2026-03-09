@@ -910,3 +910,57 @@ groups:
             API 5xx error ratio is {{ $value | humanize }}% over 6h window.
             At this rate, >80% of 28-day error budget will be consumed.
           runbook_url: "https://docs.meepleai.dev/runbooks/high-error-rate"
+
+  # ─── Issue #5480: LLM Operational Maturity Alerts ──────────────────────
+  - name: meepleai_llm_operational_alerts
+    interval: 30s
+    rules:
+      # Circuit breaker opened — provider traffic blocked
+      - alert: LlmCircuitBreakerOpen
+        expr: meepleai_llm_circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: llm
+        annotations:
+          summary: "LLM circuit breaker OPEN for {{ $labels.provider }}"
+          description: |
+            Circuit breaker for provider {{ $labels.provider }} is open.
+            All requests to this provider are being blocked.
+
+      # Budget threshold 80%
+      - alert: OpenRouterBudget80Percent
+        expr: meepleai_openrouter_balance_usd < 15
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: llm
+        annotations:
+          summary: "OpenRouter balance below $15 (80% budget threshold)"
+          description: "OpenRouter balance is ${{ $value | humanize }}."
+
+      # Budget threshold 95% — critical
+      - alert: OpenRouterBudget95Percent
+        expr: meepleai_openrouter_balance_usd < 3.75
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: llm
+        annotations:
+          summary: "OpenRouter balance CRITICAL — below $3.75"
+          description: "Activate force-ollama-only override immediately."
+
+      # RPM utilization high
+      - alert: OpenRouterHighRpmUtilization
+        expr: meepleai_openrouter_rpm_utilization > 0.8
+        for: 3m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: llm
+        annotations:
+          summary: "OpenRouter RPM utilization above 80%"
+          description: "RPM utilization at {{ $value | humanizePercentage }}."

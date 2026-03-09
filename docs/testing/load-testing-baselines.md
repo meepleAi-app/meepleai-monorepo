@@ -144,6 +144,39 @@ concurrency_errors: count<3 per 5min
 | `/api/v1/admin/ai-models` | <300ms | <600ms | <0.1% |
 | `/api/v1/admin/tier-routing` | <250ms | <500ms | <0.1% |
 
+### 6. RAG Pipeline Isolated (Issue #5545)
+
+**Test Configuration**: 50 VUs, 6 minutes (ramp-up 2m, sustain 3m, ramp-down 1m)
+
+| Metric | p95 Target | p99 Target | Error Rate |
+|--------|------------|------------|------------|
+| `pipeline_total_latency` | <1000ms | <2000ms | <5% |
+| `embedding_latency` | <300ms | — | — |
+| `vector_search_latency` | <200ms | — | — |
+| `chat_response_latency` | <1500ms | <3000ms | — |
+
+**Aggregate Metrics**:
+```
+pipeline_success_rate: >95%
+pipeline_errors: count<20
+```
+
+### 7. RAG E2E Realistic (Issue #5545)
+
+**Test Configuration**: 20 VUs, 8 minutes (ramp-up 2m, sustain 5m, ramp-down 1m)
+
+| Metric | p95 Target | p99 Target | Error Rate |
+|--------|------------|------------|------------|
+| `chat_response_latency` | <5000ms | <10000ms | <10% |
+| `first_token_latency` | <2000ms | — | — |
+| `fallback_activation_rate` | — | — | <5% |
+
+**Aggregate Metrics**:
+```
+e2e_success_rate: >90%
+e2e_errors: count<10
+```
+
 ## Load Profiles
 
 ### Smoke Test Profile

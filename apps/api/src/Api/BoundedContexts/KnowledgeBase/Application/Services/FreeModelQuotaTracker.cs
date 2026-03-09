@@ -144,6 +144,39 @@ internal sealed class FreeModelQuotaTracker : IFreeModelQuotaTracker
         }
     }
 
+    /// <inheritdoc/>
+    public async Task FlushCacheAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var server = _redis.GetServers().FirstOrDefault();
+            if (server == null) return;
+
+            // Delete all RPD exhaustion keys and related state
+            var tasks = new List<Task>
+            {
+                db.KeyDeleteAsync(LastErrorKey),
+                db.KeyDeleteAsync(RpdResetAtKey)
+            };
+
+            // Scan for RPD exhaustion keys
+            await foreach (var key in server.KeysAsync(pattern: "openrouter:rpd_exhausted:*").ConfigureAwait(false))
+            {
+                tasks.Add(db.KeyDeleteAsync(key));
+            }
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            _logger.LogWarning("Free model quota cache flushed (all RPD/RPM state cleared)");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to flush free model quota cache");
+            throw;
+        }
+    }
+
     // ─── Private helpers ────────────────────────────────────────────────────
 
     private static string RpdExhaustedKey(string modelId) =>

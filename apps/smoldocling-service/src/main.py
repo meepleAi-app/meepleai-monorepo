@@ -1,5 +1,6 @@
 """FastAPI application entry point for SmolDocling service"""
 import logging
+import os
 import uuid
 import torch
 import threading
@@ -28,6 +29,44 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# OpenTelemetry setup (Issue #5543: RAG pipeline distributed tracing)
+def _setup_otel():
+    """Initialize OpenTelemetry tracing if OTEL endpoint is configured."""
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not endpoint:
+        logger.info("OTEL_EXPORTER_OTLP_ENDPOINT not set, tracing disabled")
+        return
+
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.resources import Resource
+
+        resource = Resource.create({
+            "service.name": os.getenv("OTEL_SERVICE_NAME", "smoldocling-service"),
+            "service.version": "1.0.0",
+            "service.namespace": "meepleai",
+        })
+
+        provider = TracerProvider(resource=resource)
+        exporter = OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces")
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+        trace.set_tracer_provider(provider)
+
+        logger.info(f"OpenTelemetry tracing initialized → {endpoint}")
+    except Exception as e:
+        logger.warning(f"Failed to initialize OpenTelemetry: {e}")
+
+_setup_otel()
+_tracer = None
+try:
+    from opentelemetry import trace
+    _tracer = trace.get_tracer("smoldocling-service", "1.0.0")
+except Exception:
+    pass
 
 
 # Global service instance (initialized in lifespan)
@@ -90,6 +129,15 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+# Instrument FastAPI for automatic trace context propagation (Issue #5543)
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    FastAPIInstrumentor.instrument_app(app)
+    logger.info("FastAPI OpenTelemetry instrumentation enabled")
+except Exception:
+    pass
 
 
 # Exception handlers
@@ -214,13 +262,37 @@ async def extract_pdf(
 
         file_io = BytesIO(file_content)
 
-        # Extract text off the event loop (CPU/GPU bound)
-        result = await run_in_threadpool(
-            pdf_service.extract,
-            file_io,
-            file.filename or "document.pdf",
-            "ita",
-        )
+        # Extract text off the event loop (CPU/GPU bound) with tracing (Issue #5543)
+        span_ctx = _tracer.start_as_current_span("smoldocling.extract") if _tracer else None
+        span = span_ctx.__enter__() if span_ctx else None
+        try:
+            if span:
+                span.set_attribute("smoldocling.file_name", file.filename or "document.pdf")
+                span.set_attribute("smoldocling.file_size_bytes", file_size)
+                span.set_attribute("smoldocling.model", settings.model_name)
+                span.set_attribute("smoldocling.device", settings.device)
+
+            result = await run_in_threadpool(
+                pdf_service.extract,
+                file_io,
+                file.filename or "document.pdf",
+                "ita",
+            )
+
+            if span:
+                span.set_attribute("smoldocling.page_count", result.page_count)
+                span.set_attribute("smoldocling.chunk_count", len(result.chunks))
+                span.set_attribute("smoldocling.quality_score", result.quality_score.total_score)
+                span.set_attribute("smoldocling.duration_ms", result.extraction_duration_ms)
+                span.set_attribute("smoldocling.success", True)
+        except Exception as extract_err:
+            if span:
+                span.set_attribute("smoldocling.success", False)
+                span.record_exception(extract_err)
+            raise
+        finally:
+            if span_ctx:
+                span_ctx.__exit__(None, None, None)
 
         # Build response
         response = PdfExtractionResponse(

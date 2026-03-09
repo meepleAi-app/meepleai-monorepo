@@ -90,6 +90,13 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Monitoring, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
+        // Issue #5477: Redis rate-limiting subsystem health
+        builder.AddCheck<RedisRateLimitingHealthCheck>(
+            "redis-rate-limiting",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Core, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
         // Storage Services
         builder.AddCheck<S3StorageHealthCheck>(
             "s3storage",

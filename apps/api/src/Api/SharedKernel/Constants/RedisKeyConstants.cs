@@ -1,4 +1,4 @@
-namespace Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
+namespace Api.SharedKernel.Constants;
 
 /// <summary>
 /// Centralized Redis key constants for background analysis.

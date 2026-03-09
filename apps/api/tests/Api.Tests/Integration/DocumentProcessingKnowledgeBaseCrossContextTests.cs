@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;

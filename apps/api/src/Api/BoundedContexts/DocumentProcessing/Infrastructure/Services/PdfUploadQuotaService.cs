@@ -1,9 +1,9 @@
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services;
 using StackExchange.Redis;
 using System.Globalization;
-using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 

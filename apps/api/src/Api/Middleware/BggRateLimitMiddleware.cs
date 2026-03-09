@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Net;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Extensions;
 using Api.Models;
 using Api.Services;

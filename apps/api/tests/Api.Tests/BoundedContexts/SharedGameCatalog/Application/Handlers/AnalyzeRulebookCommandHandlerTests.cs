@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;

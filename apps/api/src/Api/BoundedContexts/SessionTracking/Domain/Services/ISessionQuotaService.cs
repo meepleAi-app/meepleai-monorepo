@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.SessionTracking.Domain.Services;
 

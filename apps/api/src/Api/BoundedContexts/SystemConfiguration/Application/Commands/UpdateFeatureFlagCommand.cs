@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;

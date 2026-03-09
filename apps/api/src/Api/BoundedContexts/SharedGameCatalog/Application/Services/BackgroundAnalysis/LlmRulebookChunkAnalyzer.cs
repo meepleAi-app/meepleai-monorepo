@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
+using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Services;
 using Microsoft.Extensions.Logging;

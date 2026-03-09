@@ -1,6 +1,7 @@
 using System.Reflection;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.Tests.BoundedContexts.Authentication.TestHelpers;
 

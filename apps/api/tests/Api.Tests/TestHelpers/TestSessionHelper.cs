@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

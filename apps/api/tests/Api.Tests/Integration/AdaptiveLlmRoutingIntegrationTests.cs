@@ -540,12 +540,33 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             aiSettings,
             _strategyLogger);
 
-        return new HybridLlmService(
+        // Issue #5487: Create ICircuitBreakerRegistry mock and real LlmProviderSelector
+        var circuitBreakerRegistryMock = new Mock<ICircuitBreakerRegistry>();
+        circuitBreakerRegistryMock.Setup(r => r.AllowsRequests(It.IsAny<string>())).Returns(true);
+        circuitBreakerRegistryMock.Setup(r => r.GetState(It.IsAny<string>())).Returns(CircuitState.Closed);
+        circuitBreakerRegistryMock.Setup(r => r.GetMonitoringStatus())
+            .Returns(new Dictionary<string, (string, string)>
+            {
+                ["Ollama"] = ("Closed", "avg: 50ms, p99: 100ms"),
+                ["OpenRouter"] = ("Closed", "avg: 150ms, p99: 300ms")
+            });
+        circuitBreakerRegistryMock.Setup(r => r.GetLatencyStats(It.IsAny<string>()))
+            .Returns("avg: 100ms, p99: 200ms");
+
+        var selectorLogger = _loggerFactory.CreateLogger<LlmProviderSelector>();
+        var selector = new LlmProviderSelector(
             clients,
             routingStrategy,
-            _serviceLogger,
+            circuitBreakerRegistryMock.Object,
             aiSettings,
             mockModelConfigRepository.Object,
+            selectorLogger);
+
+        return new HybridLlmService(
+            clients,
+            selector,
+            circuitBreakerRegistryMock.Object,
+            _serviceLogger,
             scopeFactory: mockScopeFactory.Object);
     }
 

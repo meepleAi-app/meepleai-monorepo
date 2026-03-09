@@ -103,6 +103,23 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         return deleted;
     }
 
+    public async Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var deleted = await _context.LlmRequestLogs
+            .Where(x => x.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (deleted > 0)
+        {
+            _logger.LogInformation(
+                "Deleted {Count} LLM request logs for user {UserId} (GDPR erasure)",
+                deleted, userId);
+        }
+
+        return deleted;
+    }
+
     public async Task<IReadOnlyList<(DateTime Bucket, string Source, int Count, decimal CostUsd)>> GetTimelineAsync(
         DateTime from,
         DateTime until,

@@ -43,6 +43,12 @@ public interface ILlmRequestLogRepository
     Task<int> DeleteExpiredAsync(DateTime cutoff, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Issue #5509: Deletes all LLM request log entries for a specific user (GDPR Art. 17 right to erasure).
+    /// Returns the number of deleted records.
+    /// </summary>
+    Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns per-source request counts grouped into time buckets (hourly or daily).
     /// Issue #5078: request timeline chart data.
     /// </summary>

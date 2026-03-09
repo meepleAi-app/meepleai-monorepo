@@ -15,7 +15,7 @@
 # 4. Update service labels for HTTPS
 #
 # Usage:
-#   Development: docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+#   Development: docker compose -f docker-compose.yml -f compose.traefik.yml up -d
 #   With profiles: COMPOSE_PROFILES=minimal,proxy docker compose up -d
 
 services:

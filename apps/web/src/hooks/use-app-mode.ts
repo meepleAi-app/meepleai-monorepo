@@ -6,5 +6,5 @@
 import { useUserPreferences, type AppMode } from '@/lib/stores/user-preferences';
 
 export function useAppMode(): AppMode {
-  return useUserPreferences((s) => s.appMode);
+  return useUserPreferences(s => s.appMode);
 }

@@ -130,21 +130,13 @@ describe('TechnicalDetailsPanel', () => {
 
   it('shows debug console deep link when executionId provided', async () => {
     const user = userEvent.setup();
-    render(
-      <TechnicalDetailsPanel
-        debugSteps={mockDebugSteps}
-        executionId="abc-123-def"
-      />
-    );
+    render(<TechnicalDetailsPanel debugSteps={mockDebugSteps} executionId="abc-123-def" />);
 
     await user.click(screen.getByTestId('technical-details-toggle'));
 
     const link = screen.getByTestId('debug-console-link');
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute(
-      'href',
-      '/admin/agents/debug-chat?executionId=abc-123-def'
-    );
+    expect(link).toHaveAttribute('href', '/admin/agents/debug-chat?executionId=abc-123-def');
     expect(link).toHaveTextContent('Vedi in Debug Console');
   });
 

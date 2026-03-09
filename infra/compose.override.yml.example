@@ -1,9 +1,9 @@
 # Docker Compose Override Example
 #
-# Copy this file to docker-compose.override.yml and customize for local development:
-#   cp docker-compose.override.yml.example docker-compose.override.yml
+# Copy this file to compose.override.yml and customize for local development:
+#   cp compose.override.yml.example compose.override.yml
 #
-# Docker Compose automatically uses docker-compose.override.yml when present.
+# Docker Compose automatically uses compose.override.yml when present.
 # Override files take precedence over docker-compose.yml for matching services.
 #
 # Common Use Cases:
@@ -12,11 +12,11 @@
 # 3. Resource Adjustments - Increase limits for resource-intensive development
 # 4. Service Disabling - Comment out services not needed for current work
 #
-# NOTE: docker-compose.override.yml is gitignored to prevent local configs from being committed.
+# NOTE: compose.override.yml is gitignored to prevent local configs from being committed.
 
 # Uncomment and customize the sections below for local development needs.
 # Docker Compose requires at least one service definition when using override files.
-# If you don't need any overrides, simply don't create docker-compose.override.yml.
+# If you don't need any overrides, simply don't create compose.override.yml.
 
 services:
   # ====================
@@ -155,12 +155,12 @@ services:
 #    docker compose up -d
 #
 # 4. Override precedence (later files override earlier):
-#    docker-compose.yml < docker-compose.override.yml
+#    docker-compose.yml < compose.override.yml
 #
 # 5. Use multiple override files for complex scenarios:
-#    docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.custom.yml up
+#    docker compose -f docker-compose.yml -f compose.override.yml -f docker-compose.custom.yml up
 #
 # 6. Troubleshooting:
 #    - If services won't start, validate config: docker compose config
 #    - Check logs for errors: docker compose logs -f <service>
-#    - Reset to defaults: rm docker-compose.override.yml && docker compose up -d
+#    - Reset to defaults: rm compose.override.yml && docker compose up -d

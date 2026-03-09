@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
@@ -56,8 +57,8 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
         ScheduledDate = scheduledDate;
         IsShared = false;
         IsDeleted = false;
-        CreatedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        CreatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
 
         AddDomainEvent(new PlaylistCreatedEvent(id, name, creatorUserId));
     }
@@ -81,7 +82,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
             throw new ArgumentException("Playlist name cannot exceed 200 characters", nameof(name));
 
         Name = name.Trim();
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -90,7 +91,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
     public void UpdateScheduledDate(DateTime? date)
     {
         ScheduledDate = date;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -104,7 +105,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
             throw new ArgumentException("Position must be >= 1", nameof(position));
 
         if (_games.Any(g => g.SharedGameId == sharedGameId))
-            throw new InvalidOperationException($"Game {sharedGameId} is already in the playlist");
+            throw new ConflictException($"Game {sharedGameId} is already in the playlist");
 
         // Shift existing games at or after position
         for (var i = 0; i < _games.Count; i++)
@@ -119,10 +120,10 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
         {
             SharedGameId = sharedGameId,
             Position = position,
-            AddedAt = DateTime.UtcNow
+            AddedAt = TimeProvider.System.GetUtcNow().UtcDateTime
         });
 
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -134,7 +135,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
             throw new ArgumentException("SharedGameId cannot be empty", nameof(sharedGameId));
 
         var game = _games.FirstOrDefault(g => g.SharedGameId == sharedGameId)
-            ?? throw new InvalidOperationException($"Game {sharedGameId} is not in the playlist");
+            ?? throw new NotFoundException("PlaylistGame", sharedGameId.ToString());
 
         var removedPosition = game.Position;
         _games.Remove(game);
@@ -148,7 +149,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
             }
         }
 
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -175,7 +176,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
             _games[i] = _games[i] with { Position = newPosition };
         }
 
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -188,7 +189,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
             .Replace("+", "-")
             .TrimEnd('=');
         IsShared = true;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
         return ShareToken;
     }
 
@@ -199,7 +200,7 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
     {
         ShareToken = null;
         IsShared = false;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>
@@ -208,11 +209,11 @@ internal sealed class GameNightPlaylist : AggregateRoot<Guid>
     public void SoftDelete()
     {
         if (IsDeleted)
-            throw new InvalidOperationException("Playlist is already deleted");
+            throw new ConflictException("Playlist is already deleted");
 
         IsDeleted = true;
-        DeletedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        DeletedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
+        UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
     /// <summary>

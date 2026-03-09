@@ -73,9 +73,7 @@ function CitationChip({ citation, isActive, isPowerMode, onClick }: CitationChip
     >
       <span>p.{citation.pageNumber}</span>
       {isPowerMode && (
-        <span className="text-[10px] opacity-75">
-          {formatRelevance(citation.relevanceScore)}
-        </span>
+        <span className="text-[10px] opacity-75">{formatRelevance(citation.relevanceScore)}</span>
       )}
     </button>
   );
@@ -110,10 +108,10 @@ export function RuleSourceCard({
     (e: React.KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault();
-        setActiveIndex((prev) => (prev + 1) % citations.length);
+        setActiveIndex(prev => (prev + 1) % citations.length);
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         e.preventDefault();
-        setActiveIndex((prev) => (prev - 1 + citations.length) % citations.length);
+        setActiveIndex(prev => (prev - 1 + citations.length) % citations.length);
       }
     },
     [citations.length]

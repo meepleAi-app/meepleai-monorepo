@@ -109,7 +109,7 @@ CUsersUtente*
 
 # Docker
 .dockerignore
-docker-compose.override.yml
+compose.override.yml
 
 # Data
 **/pdf_uploads/

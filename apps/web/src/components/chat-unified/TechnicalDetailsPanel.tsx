@@ -92,7 +92,11 @@ function extractMetadata(steps: DebugStep[]): ExtractedMetadata {
  * Collapsible technical details panel for Editor/Admin users.
  * Issue #5483: Shows full metadata below AI responses.
  */
-export function TechnicalDetailsPanel({ debugSteps, executionId, className }: TechnicalDetailsPanelProps) {
+export function TechnicalDetailsPanel({
+  debugSteps,
+  executionId,
+  className,
+}: TechnicalDetailsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -125,10 +129,7 @@ export function TechnicalDetailsPanel({ debugSteps, executionId, className }: Te
 
   return (
     <div
-      className={cn(
-        'mt-2 rounded-lg border border-border/40 bg-muted/30 text-[11px]',
-        className,
-      )}
+      className={cn('mt-2 rounded-lg border border-border/40 bg-muted/30 text-[11px]', className)}
       data-testid="technical-details-panel"
     >
       <button
@@ -241,9 +242,7 @@ export function TechnicalDetailsPanel({ debugSteps, executionId, className }: Te
                     className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-muted/50 tabular-nums"
                   >
                     {chunk.page != null && <span>p.{chunk.page}</span>}
-                    <span className="text-muted-foreground">
-                      {(chunk.score * 100).toFixed(0)}%
-                    </span>
+                    <span className="text-muted-foreground">{(chunk.score * 100).toFixed(0)}%</span>
                   </span>
                 ))}
               </div>

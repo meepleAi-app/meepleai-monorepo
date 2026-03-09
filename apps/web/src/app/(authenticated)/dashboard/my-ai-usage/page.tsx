@@ -8,20 +8,17 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-import {
-  Brain,
-  Cpu,
-  Zap,
-  DollarSign,
-  BarChart3,
-  RefreshCw,
-} from 'lucide-react';
+import { Brain, Cpu, Zap, DollarSign, BarChart3, RefreshCw } from 'lucide-react';
 
 import { RequireRole } from '@/components/auth/RequireRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { dashboardClient } from '@/lib/api/dashboard-client';
-import type { UserAiUsageDto, ModelUsageDto, DailyUsageDto } from '@/lib/api/schemas/ai-usage.schemas';
+import type {
+  UserAiUsageDto,
+  ModelUsageDto,
+  DailyUsageDto,
+} from '@/lib/api/schemas/ai-usage.schemas';
 import { cn } from '@/lib/utils';
 
 type Period = 1 | 7 | 30;
@@ -118,9 +115,7 @@ function MyAiUsageContent() {
       {/* Error */}
       {error && (
         <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="py-4 text-sm text-destructive">
-            {error}
-          </CardContent>
+          <CardContent className="py-4 text-sm text-destructive">{error}</CardContent>
         </Card>
       )}
 
@@ -179,15 +174,14 @@ function MyAiUsageContent() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Distribuzione per tipo</CardTitle>
-                <CardDescription>Ripartizione delle richieste per tipologia operazione</CardDescription>
+                <CardDescription>
+                  Ripartizione delle richieste per tipologia operazione
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {usage.byOperation.map(op => (
-                    <div
-                      key={op.operation}
-                      className="flex items-center justify-between text-sm"
-                    >
+                    <div key={op.operation} className="flex items-center justify-between text-sm">
                       <span className="font-medium capitalize">{op.operation}</span>
                       <div className="flex items-center gap-4 tabular-nums">
                         <span className="text-muted-foreground">{op.count} richieste</span>
@@ -253,8 +247,12 @@ function ModelDistribution({
 
   const sorted = [...models].sort((a, b) => b.tokens - a.tokens);
   const colors = [
-    'bg-blue-500', 'bg-violet-500', 'bg-amber-500',
-    'bg-emerald-500', 'bg-rose-500', 'bg-cyan-500',
+    'bg-blue-500',
+    'bg-violet-500',
+    'bg-amber-500',
+    'bg-emerald-500',
+    'bg-rose-500',
+    'bg-cyan-500',
   ];
 
   return (
@@ -272,9 +270,7 @@ function ModelDistribution({
                 <span className="font-mono truncate max-w-[200px]" title={m.model}>
                   {m.model}
                 </span>
-                <span className="tabular-nums text-muted-foreground ml-2">
-                  {pct.toFixed(0)}%
-                </span>
+                <span className="tabular-nums text-muted-foreground ml-2">{pct.toFixed(0)}%</span>
               </div>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div

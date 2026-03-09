@@ -33,5 +33,5 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
 /** Look up a story by its slug id */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const STORY_MAP: Record<string, ShowcaseStory<any>> = Object.fromEntries(
-  ALL_STORIES.map((s) => [s.id, s])
+  ALL_STORIES.map(s => [s.id, s])
 );

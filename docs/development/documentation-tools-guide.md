@@ -46,18 +46,17 @@ app.MapPost("/api/v1/games", async (CreateGameCommand cmd, IMediator mediator) =
 
 ---
 
-### 2. validate-doc-links.sh (Link Validation)
+### 2. validate-doc-links.ps1 (Link Validation)
 
 **Descrizione**: Valida link interni markdown per evitare broken references
 
 **Status**: ✅ Disponibile
 
-**Location**: `scripts/quality/validate-doc-links.sh`
+**Location**: `scripts/quality/validate-doc-links.ps1`
 
 **Usage**:
-```bash
-cd scripts
-./validate-doc-links.sh
+```powershell
+.\scripts\quality\validate-doc-links.ps1
 
 # Output:
 # 🔍 Validating documentation links...
@@ -77,7 +76,7 @@ cd scripts
 ```yaml
 # Add to .github/workflows/docs.yml
 - name: Validate Documentation Links
-  run: bash scripts/quality/validate-doc-links.sh
+  run: pwsh scripts/quality/validate-doc-links.ps1
 ```
 
 ---
@@ -266,7 +265,7 @@ pnpm storybook
 | Tool | Purpose | Auto-Gen | Maintenance | Team Size | Recommendation |
 |------|---------|----------|-------------|-----------|----------------|
 | **Scalar** | API docs | ✅ Yes | Zero | Any | ⭐ Essential |
-| **validate-doc-links.sh** | Link validation | ✅ Yes | Low | Any | ⭐ Essential |
+| **validate-doc-links.ps1** | Link validation | ✅ Yes | Low | Any | ⭐ Essential |
 | **DocFX** | C# API reference | ⚠️ Partial | High | >5 | 🤔 Consider |
 | **TypeDoc** | TypeScript docs | ⚠️ Partial | Medium | >3 | 🤔 Consider |
 | **Storybook** | Component library | ⚠️ Partial | Medium | >2 | ✅ Recommended |
@@ -277,7 +276,7 @@ pnpm storybook
 
 ### Current (✅ Already Active)
 1. **Scalar** - API documentation (zero effort)
-2. **validate-doc-links.sh** - CI link validation
+2. **validate-doc-links.ps1** - CI link validation
 
 ### Add for Team >2 (✅ Recommended)
 3. **Storybook** - Component library documentation
@@ -303,7 +302,7 @@ pnpm storybook
 ### 1. Validare Link (Ora)
 ```bash
 cd scripts
-./validate-doc-links.sh
+./validate-doc-links.ps1
 ```
 
 ### 2. Migliorare Scalar Docs (10 min)
@@ -337,5 +336,5 @@ pnpm storybook
 
 **Last Updated**: 2026-01-18
 **Maintainer**: Documentation Team
-**Active Tools**: 2 (Scalar, validate-doc-links.sh)
+**Active Tools**: 2 (Scalar, validate-doc-links.ps1)
 **Recommended**: +1 (Storybook for component library)

@@ -383,7 +383,8 @@ internal static class AgentEndpoints
                 GameId = req.GameId,
                 Language = req.Language,
                 TopK = req.TopK ?? 5,
-                MinScore = req.MinScore ?? 0.6
+                MinScore = req.MinScore ?? 0.6,
+                GameSessionId = req.GameSessionId
             };
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -486,7 +487,8 @@ internal static class AgentEndpoints
                 UserQuestion: request.Message,
                 UserId: session.User!.Id,
                 ChatThreadId: request.ChatThreadId,
-                UserRole: session.User!.Role
+                UserRole: session.User!.Role,
+                GameSessionId: request.GameSessionId
             );
 
             // Set SSE headers
@@ -918,11 +920,12 @@ internal record TutorQueryRequest(
 
 /// <summary>
 /// Request for chat with agent (SSE streaming).
-/// Issue #4126, Issue #4386: SSE Stream → ChatThread Persistence Hook
+/// Issue #4126, Issue #4386: SSE Stream, Issue #5580: GameSessionId for session-aware RAG.
 /// </summary>
 internal record ChatWithAgentRequest(
     string Message,
-    Guid? ChatThreadId = null
+    Guid? ChatThreadId = null,
+    Guid? GameSessionId = null
 );
 
 // Request DTOs
@@ -967,6 +970,10 @@ internal record UnifiedAgentQueryRequest(
 /// <summary>
 /// POC: Request to ask agent a question with search strategy selection
 /// </summary>
+/// <summary>
+/// POC: Request to ask agent a question with search strategy selection.
+/// Issue #5580: GameSessionId for session-aware RAG filtering.
+/// </summary>
 internal record AskAgentQuestionRequest(
     string Question,
     Api.BoundedContexts.KnowledgeBase.Domain.Enums.AgentSearchStrategy Strategy,
@@ -974,7 +981,8 @@ internal record AskAgentQuestionRequest(
     Guid? GameId = null,
     string? Language = null,
     int? TopK = null,
-    double? MinScore = null
+    double? MinScore = null,
+    Guid? GameSessionId = null
 );
 
 /// <summary>

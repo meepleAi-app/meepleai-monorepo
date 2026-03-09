@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -553,6 +554,8 @@ public sealed class LlmFallbackTests : IDisposable
             mockQueryRewriter.Object,
             Mock.Of<IConversationSummarizer>(),
             consentCheckMock.Object,
+            Mock.Of<IGameSessionOrchestratorService>(),
+            Mock.Of<IHybridCacheService>(),
             _mockLogger.Object);
     }
 

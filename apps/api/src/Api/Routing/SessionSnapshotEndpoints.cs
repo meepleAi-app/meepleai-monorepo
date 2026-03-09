@@ -45,6 +45,16 @@ internal static class SessionSnapshotEndpoints
             .WithSummary("Create a manual snapshot")
             .WithDescription("Creates a manual save snapshot of the current session state.");
 
+        group.MapPost("/sessions/{sessionId}/snapshots/{index:int}/restore", HandleRestoreSnapshot)
+            .RequireAuthenticatedUser()
+            .Produces<SessionSnapshotDto>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("SessionSnapshots")
+            .WithSummary("Restore session state from a snapshot")
+            .WithDescription("Restores the session to the state at the specified snapshot index. Auto-creates a pre-restore snapshot of the current state. Issue #5581.");
+
         return group;
     }
 
@@ -78,5 +88,13 @@ internal static class SessionSnapshotEndpoints
         var result = await mediator.Send(command).ConfigureAwait(false);
         return Results.Created(
             $"/api/v1/sessions/{sessionId}/snapshots/{result.SnapshotIndex}", result);
+    }
+
+    private static async Task<IResult> HandleRestoreSnapshot(
+        Guid sessionId, int index, IMediator mediator)
+    {
+        var command = new RestoreSessionSnapshotCommand(sessionId, index);
+        var result = await mediator.Send(command).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 }

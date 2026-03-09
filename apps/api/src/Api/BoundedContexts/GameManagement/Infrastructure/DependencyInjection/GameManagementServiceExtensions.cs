@@ -59,6 +59,9 @@ internal static class GameManagementServiceExtensions
         // Issue #5361: Session attachment service (upload, thumbnail, S3)
         services.AddScoped<ISessionAttachmentService, SessionAttachmentService>();
 
+        // Issue #5579: GameSessionContext cross-context orchestrator
+        services.AddScoped<IGameSessionOrchestratorService, GameSessionOrchestratorService>();
+
         // Issue #5366: Session attachment cleanup background job
         services.AddHostedService<SessionAttachmentCleanupJob>();
 

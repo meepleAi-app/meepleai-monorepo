@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Xunit;
 
@@ -182,14 +183,14 @@ public class GameNightPlaylistTests
     }
 
     [Fact]
-    public void AddGame_DuplicateGame_ThrowsInvalidOperation()
+    public void AddGame_DuplicateGame_ThrowsConflictException()
     {
         var playlist = CreatePlaylist();
         var gameId = Guid.NewGuid();
 
         playlist.AddGame(gameId, 1);
 
-        Assert.Throws<InvalidOperationException>(() => playlist.AddGame(gameId, 2));
+        Assert.Throws<ConflictException>(() => playlist.AddGame(gameId, 2));
     }
 
     [Fact]
@@ -230,10 +231,10 @@ public class GameNightPlaylistTests
     }
 
     [Fact]
-    public void RemoveGame_NonExistent_ThrowsInvalidOperation()
+    public void RemoveGame_NonExistent_ThrowsNotFoundException()
     {
         var playlist = CreatePlaylist();
-        Assert.Throws<InvalidOperationException>(() => playlist.RemoveGame(Guid.NewGuid()));
+        Assert.Throws<NotFoundException>(() => playlist.RemoveGame(Guid.NewGuid()));
     }
 
     [Fact]
@@ -352,12 +353,12 @@ public class GameNightPlaylistTests
     }
 
     [Fact]
-    public void SoftDelete_AlreadyDeleted_ThrowsInvalidOperation()
+    public void SoftDelete_AlreadyDeleted_ThrowsConflictException()
     {
         var playlist = CreatePlaylist();
         playlist.SoftDelete();
 
-        Assert.Throws<InvalidOperationException>(() => playlist.SoftDelete());
+        Assert.Throws<ConflictException>(() => playlist.SoftDelete());
     }
 
     #endregion

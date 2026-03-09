@@ -31,7 +31,7 @@ test.describe('RuleSourceCard in Chat (#5527)', () => {
 
   test.beforeEach(async ({ page }) => {
     // Mock thread API to return messages with citations
-    await page.route('**/api/v1/chat-threads/*', async (route) => {
+    await page.route('**/api/v1/chat-threads/*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -60,7 +60,7 @@ test.describe('RuleSourceCard in Chat (#5527)', () => {
     });
 
     // Mock games API
-    await page.route('**/api/v1/games*', async (route) => {
+    await page.route('**/api/v1/games*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -119,7 +119,7 @@ test.describe('RuleSourceCard in Chat (#5527)', () => {
 
   test('message without citations does NOT show RuleSourceCard', async ({ page }) => {
     // Override route with message that has no citations
-    await page.route('**/api/v1/chat-threads/*', async (route) => {
+    await page.route('**/api/v1/chat-threads/*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

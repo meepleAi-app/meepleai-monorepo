@@ -46,7 +46,7 @@ MeepleAI uses Loki for centralized log aggregation from all services:
 cd infra
 
 # Start log aggregation stack
-docker compose -f docker-compose.logging.yml up -d
+docker compose -f compose.logging.yml up -d
 
 # Verify Loki is ready
 curl http://localhost:3100/ready

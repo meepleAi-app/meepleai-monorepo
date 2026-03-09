@@ -114,11 +114,28 @@ public class GameSessionOrchestratorServiceTests
             .ReturnsAsync(links);
     }
 
+    private readonly Dictionary<Guid, List<VectorDocument>> _vectorDocSetups = new();
+
     private void SetupVectorDocuments(Guid gameId, List<VectorDocument> docs)
     {
+        _vectorDocSetups[gameId] = docs;
+
         _vectorDocRepoMock
             .Setup(x => x.GetByGameIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(docs);
+
+        // Re-setup batch query to reflect all registered game IDs
+        _vectorDocRepoMock
+            .Setup(x => x.GetGameIdsWithDocumentsAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<IEnumerable<Guid>, CancellationToken>((ids, _) =>
+            {
+                var result = ids
+                    .Where(id => _vectorDocSetups.TryGetValue(id, out var d) && d.Count > 0)
+                    .ToList();
+                return Task.FromResult(result);
+            });
     }
 
     private void SetupRulebookAnalyses(Guid sharedGameId, List<RulebookAnalysis> analyses)
@@ -354,7 +371,7 @@ public class GameSessionOrchestratorServiceTests
         SetupEntityLinks(gameId, new List<EntityLink>());
 
         _vectorDocRepoMock
-            .Setup(x => x.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetGameIdsWithDocumentsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Qdrant unavailable"));
 
         // Act

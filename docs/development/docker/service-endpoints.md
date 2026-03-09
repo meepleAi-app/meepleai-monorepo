@@ -378,7 +378,7 @@ curl http://localhost:9100/metrics | grep node_cpu
 **Startup**:
 ```bash
 cd infra
-docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml --profile observability up -d
+docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observability up -d
 ```
 
 **Test Command**:

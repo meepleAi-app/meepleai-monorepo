@@ -66,8 +66,18 @@ function makeCitation(overrides: Partial<Citation> = {}): Citation {
 
 const multiCitations: Citation[] = [
   makeCitation({ pageNumber: 12, relevanceScore: 0.92 }),
-  makeCitation({ documentId: 'doc-002', pageNumber: 23, snippet: 'Seconda citazione dal regolamento.', relevanceScore: 0.67 }),
-  makeCitation({ documentId: 'doc-003', pageNumber: 45, snippet: 'Terza citazione dal regolamento.', relevanceScore: 0.41 }),
+  makeCitation({
+    documentId: 'doc-002',
+    pageNumber: 23,
+    snippet: 'Seconda citazione dal regolamento.',
+    relevanceScore: 0.67,
+  }),
+  makeCitation({
+    documentId: 'doc-003',
+    pageNumber: 45,
+    snippet: 'Terza citazione dal regolamento.',
+    relevanceScore: 0.41,
+  }),
 ];
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -186,10 +196,7 @@ describe('RuleSourceCard', () => {
 
   it('publisher link has correct href and target="_blank"', () => {
     render(
-      <RuleSourceCard
-        citations={[makeCitation()]}
-        publisherUrl="https://www.catan.com/rules"
-      />
+      <RuleSourceCard citations={[makeCitation()]} publisherUrl="https://www.catan.com/rules" />
     );
     fireEvent.click(screen.getByTestId('rule-source-header'));
     const link = screen.getByTestId('publisher-link');

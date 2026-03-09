@@ -8,8 +8,8 @@
 #             alertmanager, cadvisor, node-exporter, n8n, minio, mailpit, traefik
 #
 # Usage:
-#   docker compose -f docker-compose.mvp.yml up -d
-#   docker compose -f docker-compose.mvp.yml logs -f
+#   docker compose -f compose.mvp.yml up -d
+#   docker compose -f compose.mvp.yml logs -f
 #
 # Post-deploy: run scripts/ollama-init.sh to pull required models
 

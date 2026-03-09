@@ -19,13 +19,13 @@ interface UserPreferencesState {
 export const useUserPreferences = create<UserPreferencesState>()(
   devtools(
     persist(
-      (set) => ({
+      set => ({
         appMode: 'casual',
         setAppMode: (mode: AppMode) => set({ appMode: mode }),
       }),
       {
         name: 'meepleai-user-prefs',
-        partialize: (state) => ({ appMode: state.appMode }),
+        partialize: state => ({ appMode: state.appMode }),
       }
     ),
     { name: 'UserPreferences' }

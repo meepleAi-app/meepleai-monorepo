@@ -1,12 +1,7 @@
 'use client';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 /** Strategy tier badge configuration */
 const STRATEGY_BADGES = {
@@ -68,7 +63,7 @@ export function ResponseMetaBadge({ strategyTier, className }: ResponseMetaBadge
               'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border',
               'font-medium select-none transition-colors',
               badge.colorClasses,
-              className,
+              className
             )}
             data-testid="response-meta-badge"
           >

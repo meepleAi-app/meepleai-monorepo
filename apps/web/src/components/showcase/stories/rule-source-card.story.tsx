@@ -14,7 +14,8 @@ const singleCitation: Citation[] = [
   {
     documentId: 'doc-catan-001',
     pageNumber: 12,
-    snippet: 'Quando un giocatore costruisce un insediamento su un incrocio adiacente a un terreno con il numero uscito, riceve la risorsa corrispondente.',
+    snippet:
+      'Quando un giocatore costruisce un insediamento su un incrocio adiacente a un terreno con il numero uscito, riceve la risorsa corrispondente.',
     relevanceScore: 0.92,
   },
 ];
@@ -23,19 +24,22 @@ const multiCitations: Citation[] = [
   {
     documentId: 'doc-catan-001',
     pageNumber: 12,
-    snippet: 'Quando un giocatore costruisce un insediamento su un incrocio adiacente a un terreno con il numero uscito, riceve la risorsa corrispondente.',
+    snippet:
+      'Quando un giocatore costruisce un insediamento su un incrocio adiacente a un terreno con il numero uscito, riceve la risorsa corrispondente.',
     relevanceScore: 0.92,
   },
   {
     documentId: 'doc-catan-001',
     pageNumber: 23,
-    snippet: 'Il ladro viene spostato quando un giocatore tira un 7. Il giocatore sceglie un terreno e ruba una risorsa.',
+    snippet:
+      'Il ladro viene spostato quando un giocatore tira un 7. Il giocatore sceglie un terreno e ruba una risorsa.',
     relevanceScore: 0.67,
   },
   {
     documentId: 'doc-catan-001',
     pageNumber: 45,
-    snippet: 'Per vincere la partita, un giocatore deve raggiungere 10 punti vittoria durante il proprio turno.',
+    snippet:
+      'Per vincere la partita, un giocatore deve raggiungere 10 punti vittoria durante il proprio turno.',
     relevanceScore: 0.41,
   },
 ];
@@ -44,7 +48,7 @@ const highRelevanceCitations: Citation[] = [
   {
     documentId: 'doc-catan-001',
     pageNumber: 5,
-    snippet: 'All\'inizio del gioco, ogni giocatore piazza due insediamenti e due strade.',
+    snippet: "All'inizio del gioco, ogni giocatore piazza due insediamenti e due strade.",
     relevanceScore: 0.98,
   },
   {
@@ -79,9 +83,11 @@ export const ruleSourceCardStory: ShowcaseStory<RuleSourceCardShowcaseProps> = {
     citationSet,
   }: RuleSourceCardShowcaseProps) {
     const citations =
-      citationSet === 'single' ? singleCitation
-        : citationSet === 'high-relevance' ? highRelevanceCitations
-        : multiCitations;
+      citationSet === 'single'
+        ? singleCitation
+        : citationSet === 'high-relevance'
+          ? highRelevanceCitations
+          : multiCitations;
 
     return (
       <div className="max-w-lg space-y-4">
@@ -108,8 +114,17 @@ export const ruleSourceCardStory: ShowcaseStory<RuleSourceCardShowcaseProps> = {
   controls: {
     mode: { type: 'select', options: ['casual', 'power'], default: 'casual', label: 'Mode' },
     gameTitle: { type: 'text', default: 'Catan', label: 'Game Title' },
-    publisherUrl: { type: 'text', default: 'https://www.catan.com/understand-catan/game-rules', label: 'Publisher URL' },
-    citationSet: { type: 'select', options: ['single', 'multiple', 'high-relevance'], default: 'multiple', label: 'Citation Set' },
+    publisherUrl: {
+      type: 'text',
+      default: 'https://www.catan.com/understand-catan/game-rules',
+      label: 'Publisher URL',
+    },
+    citationSet: {
+      type: 'select',
+      options: ['single', 'multiple', 'high-relevance'],
+      default: 'multiple',
+      label: 'Citation Set',
+    },
   },
 
   presets: {

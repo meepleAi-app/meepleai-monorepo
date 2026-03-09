@@ -119,9 +119,7 @@ export const dashboardClient = {
     }
 
     const queryString = queryParams.toString();
-    const url = queryString
-      ? `/api/v1/users/me/games?${queryString}`
-      : '/api/v1/users/me/games';
+    const url = queryString ? `/api/v1/users/me/games?${queryString}` : '/api/v1/users/me/games';
 
     const response = await httpClient.get<PagedResult<UserGameDto>>(url);
     if (!response) throw new Error('Failed to fetch user games');

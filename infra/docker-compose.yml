@@ -44,6 +44,11 @@ services:
     container_name: meepleai-qdrant
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
+    env_file:
+      - ./secrets/qdrant.secret
+    environment:
+      # C3: API key authentication — QDRANT__SERVICE__API_KEY loaded from qdrant.secret
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
     ports:
       - "127.0.0.1:6333:6333"  # HTTP REST API
       - "127.0.0.1:6334:6334"  # gRPC API
@@ -74,9 +79,11 @@ services:
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
       - ./secrets/redis.secret
-    command: ["sh","-c","redis-server --appendonly yes --requirepass $$REDIS_PASSWORD --maxmemory 768mb --maxmemory-policy allkeys-lru"]
+    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $$REDIS_PASSWORD"]
     ports:
       - "127.0.0.1:6379:6379"
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
     healthcheck:
       test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep PONG"]
       interval: 10s
@@ -101,9 +108,12 @@ services:
     restart: unless-stopped
     profiles: [dev, full]
     command: server /data --console-address ":9001"
+    env_file:
+      - ./secrets/storage.secret
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
+      # I1: Credentials from storage.secret (MINIO_ROOT_USER, MINIO_ROOT_PASSWORD)
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     ports:
       - "127.0.0.1:9000:9000"   # S3 API
       - "127.0.0.1:9001:9001"   # Web console
@@ -128,15 +138,17 @@ services:
 
   # MinIO bucket initialization (runs once, creates meepleai-uploads bucket)
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2024-11-17T19-35-25Z
     container_name: meepleai-minio-init
     profiles: [dev, full]
     depends_on:
       minio:
         condition: service_healthy
+    env_file:
+      - ./secrets/storage.secret
     entrypoint: >
       /bin/sh -c "
-      mc alias set myminio http://minio:9000 minioadmin minioadmin123;
+      mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin123};
       mc mb myminio/meepleai-uploads --ignore-existing;
       echo 'Bucket meepleai-uploads ready';
       "
@@ -455,10 +467,12 @@ services:
     networks:
       - meepleai
     depends_on:
+      # R3: AI services use service_started (not service_healthy) to avoid cascading startup failures
+      # orchestration-service can start before AI services finish model downloads
       embedding-service:
-        condition: service_healthy
+        condition: service_started
       reranker-service:
-        condition: service_healthy
+        condition: service_started
       postgres:
         condition: service_healthy
       redis:
@@ -473,7 +487,7 @@ services:
           memory: 2G
 
   # OPS-02: OpenTelemetry Observability Stack
-  # Seq and Jaeger removed - replaced by HyperDX unified observability (see docker-compose.hyperdx.yml)
+  # Seq and Jaeger removed - replaced by HyperDX unified observability (see compose.hyperdx.yml)
   # Migration: Issue #1564 - HyperDX provides logs, traces, and session replay in one platform
   # HyperDX UI: http://localhost:8180
   # OTLP endpoints: gRPC :14317, HTTP :14318
@@ -577,7 +591,9 @@ services:
     container_name: meepleai-cadvisor
     restart: unless-stopped
     profiles: [observability, full]
-    privileged: true
+    # I6: Removed privileged:true — use device mounts instead for security
+    devices:
+      - /dev/kmsg:/dev/kmsg
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -585,6 +601,8 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Required for Docker API access
+    security_opt:
+      - no-new-privileges=true
     ports:
       - "127.0.0.1:8082:8080"
     networks:
@@ -781,7 +799,6 @@ services:
       start_period: 20s
     networks:
       - meepleai
-      - meepleai-shared  # Also join the shared 'meepleai' network for embedding-service and HyperDX
     deploy:
       resources:
         limits:
@@ -859,10 +876,7 @@ volumes:
 networks:
   meepleai:
     driver: bridge
-  meepleai-shared:
-    # External network shared with docker-compose.hyperdx.yml and other stacks
-    # Gives the API container access to: meepleai-hyperdx (OTLP/logs), embedding-service
-    external: true
+    # R5: Explicit name ensures compose.hyperdx.yml can reference this network as external
     name: meepleai
 
 # SEC-708: Docker Secrets for sensitive credentials

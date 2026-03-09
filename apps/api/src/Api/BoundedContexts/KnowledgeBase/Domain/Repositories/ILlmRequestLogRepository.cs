@@ -76,6 +76,13 @@ public interface ILlmRequestLogRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Issue #5511: Pseudonymizes UserId with salted SHA-256 hash for logs older than the cutoff.
+    /// Only processes records where IsAnonymized = false and UserId is not null.
+    /// Returns the number of pseudonymized records.
+    /// </summary>
+    Task<int> PseudonymizeOldLogsAsync(DateTime cutoff, string salt, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns a paginated, optionally filtered list of recent LLM request log entries.
     /// Issue #5083: recent requests table data.
     /// </summary>

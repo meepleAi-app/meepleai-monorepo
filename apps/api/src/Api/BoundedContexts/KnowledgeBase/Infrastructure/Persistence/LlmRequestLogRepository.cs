@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -225,6 +227,48 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
             .Select(g => (ModelId: g.Key, RequestsToday: g.Count()))
             .OrderByDescending(x => x.RequestsToday)
             .ToList();
+    }
+
+    public async Task<int> PseudonymizeOldLogsAsync(DateTime cutoff, string salt, CancellationToken cancellationToken = default)
+    {
+        // Batch processing to avoid loading too many entities at once
+        const int batchSize = 500;
+        var totalPseudonymized = 0;
+
+        while (true)
+        {
+            var batch = await _context.LlmRequestLogs
+                .Where(x => x.RequestedAt < cutoff
+                          && !x.IsAnonymized
+                          && x.UserId != null)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (batch.Count == 0)
+                break;
+
+            foreach (var log in batch)
+            {
+                var input = $"{log.UserId}{salt}";
+                var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+                // Store the hash as a deterministic GUID (first 16 bytes of SHA-256)
+                log.UserId = new Guid(hashBytes.AsSpan(0, 16));
+                log.IsAnonymized = true;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            totalPseudonymized += batch.Count;
+        }
+
+        if (totalPseudonymized > 0)
+        {
+            _logger.LogInformation(
+                "Pseudonymized {Count} LLM request logs older than {Cutoff}",
+                totalPseudonymized, cutoff);
+        }
+
+        return totalPseudonymized;
     }
 
     public async Task<(IReadOnlyList<LlmRequestLogEntity> Items, int Total)> GetPagedAsync(

@@ -28,23 +28,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set Python version
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 
+# Create non-root user for security (before model download so cache is user-owned)
+RUN groupadd -r smoldocling && useradd -r -g smoldocling -m -d /home/smoldocling smoldocling \
+    && mkdir -p /home/smoldocling/.cache/huggingface \
+    && chown -R smoldocling:smoldocling /home/smoldocling
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
 # Download model weights at build time (optional - speeds up first startup)
-# Comment out if you prefer on-demand download
+# Cache to user-owned directory so non-root user can access at runtime
+ENV HF_HOME=/home/smoldocling/.cache/huggingface
 RUN python -c "from transformers import AutoProcessor, AutoModelForImageTextToText; \
     print('Downloading SmolDocling model...'); \
     AutoProcessor.from_pretrained('docling-project/SmolDocling-256M-preview'); \
     AutoModelForImageTextToText.from_pretrained('docling-project/SmolDocling-256M-preview'); \
-    print('Model download complete')"
+    print('Model download complete')" \
+    && chown -R smoldocling:smoldocling /home/smoldocling/.cache
 
 # Copy application code
 COPY src/ ./src/
-
-# Create non-root user for security
-RUN groupadd -r smoldocling && useradd -r -g smoldocling -m -d /home/smoldocling smoldocling
 
 # Create temp directory for PDF processing
 RUN mkdir -p /tmp/pdf-processing && chown smoldocling:smoldocling /tmp/pdf-processing

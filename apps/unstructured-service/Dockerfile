@@ -24,19 +24,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set Tesseract data directory
 ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
 
+# Create non-root user for security (before NLTK download so data is user-owned)
+RUN groupadd -r unstructured && useradd -r -g unstructured -m -d /home/unstructured unstructured
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download required NLTK datasets to avoid runtime races
 ENV NLTK_DATA=/home/unstructured/nltk_data
-RUN python -m nltk.downloader punkt punkt_tab averaged_perceptron_tagger
+RUN python -m nltk.downloader punkt punkt_tab averaged_perceptron_tagger \
+    && chown -R unstructured:unstructured /home/unstructured/nltk_data
 
 # Copy application code
 COPY src/ ./src/
-
-# Create non-root user for security
-RUN groupadd -r unstructured && useradd -r -g unstructured -m -d /home/unstructured unstructured
 
 # Create temp directory with proper permissions
 RUN mkdir -p /tmp/pdf-extraction && chown unstructured:unstructured /tmp/pdf-extraction

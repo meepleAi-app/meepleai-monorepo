@@ -17,10 +17,10 @@ permissions:
   actions: read
 
 jobs:
-  # CodeQL SAST
+  # CodeQL SAST — forced to ubuntu-latest because CodeQL CLI doesn't support linux/arm64
   codeql:
     name: CodeQL Analysis
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         language: ['csharp', 'javascript']
@@ -45,7 +45,7 @@ jobs:
         if: matrix.language == 'csharp'
         working-directory: apps/api
         run: |
-          sudo apt-get update && sudo apt-get install -y libgdiplus || true
+          sudo apt-get update && sudo apt-get install -y libgdiplus
           dotnet restore
           dotnet build --no-restore
 
@@ -125,7 +125,8 @@ jobs:
 
       - name: Install Semgrep
         run: |
-          python3 -m pip install --user semgrep
+          sudo apt-get update && sudo apt-get install -y python3-pip || true
+          python3 -m pip install --user --break-system-packages semgrep || pip3 install --user semgrep
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run Semgrep

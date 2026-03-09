@@ -11,7 +11,8 @@
 
 import { useState, useCallback, useRef } from 'react';
 
-import { SendIcon } from 'lucide-react';
+import { SendIcon, LinkIcon } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 import { DebugTimeline } from '@/components/admin/debug-chat/DebugTimeline';
 import { StrategySelectorBar } from '@/components/admin/debug-chat/StrategySelectorBar';
@@ -32,6 +33,10 @@ interface ChatMessage {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminDebugChatPage() {
+  // Deep link: executionId from TechnicalDetailsPanel (Issue #5486)
+  const searchParams = useSearchParams();
+  const linkedExecutionId = searchParams.get('executionId');
+
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -186,6 +191,22 @@ export default function AdminDebugChatPage() {
         showDebug={showDebug}
         onToggleDebug={handleToggleDebug}
       />
+
+      {/* Deep link context banner (Issue #5486) */}
+      {linkedExecutionId && (
+        <div
+          className="flex items-center gap-2 border-b bg-blue-500/10 px-4 py-2 text-xs text-blue-700 dark:text-blue-300"
+          data-testid="execution-context-banner"
+        >
+          <LinkIcon className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>
+            Sessione collegata · Execution ID:{' '}
+            <code className="rounded bg-blue-500/10 px-1 py-0.5 font-mono text-[10px]">
+              {linkedExecutionId}
+            </code>
+          </span>
+        </div>
+      )}
 
       {/* Main split view */}
       <div

@@ -691,6 +691,12 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             }
         }
 
+        // Derive strategy tier from the model used (Issue #5481: Response Meta Badge)
+        var strategyTier = ResolveStrategyTier(modelToUse);
+
+        // Issue #5486: Include executionId for Editor/Admin deep link to Debug Console
+        Guid? executionId = isAdminCaller ? Guid.NewGuid() : null;
+
         // Complete event (include ThreadId for frontend)
         yield return CreateEvent(
             StreamingEventType.Complete,
@@ -700,7 +706,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 completionTokens: tokenCount,
                 totalTokens: tokenCount,
                 confidence: retrievalConfidence,
-                chatThreadId: thread.Id));
+                chatThreadId: thread.Id,
+                strategyTier: strategyTier,
+                executionId: executionId));
     }
 
     /// <summary>
@@ -783,6 +791,26 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
         return gameName;
+    }
+
+    /// <summary>
+    /// Maps the model tier to a user-facing strategy tier label.
+    /// Issue #5481: ResponseMetaBadge — soft quality badge on AI responses.
+    /// </summary>
+    private string ResolveStrategyTier(string modelId)
+    {
+        var modelConfig = _modelConfigService.GetModelById(modelId);
+        if (modelConfig == null)
+            return "Fast"; // Unknown model → conservative label
+
+        return modelConfig.Tier switch
+        {
+            ModelTier.Free => "Fast",
+            ModelTier.Normal => "Balanced",
+            ModelTier.Premium => "Premium",
+            ModelTier.Custom => "HybridRAG",
+            _ => "Balanced"
+        };
     }
 
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

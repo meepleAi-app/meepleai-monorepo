@@ -140,7 +140,7 @@ echo ""
 # 8. Docker Compose Configuration Validation
 echo "8️⃣  Validating Docker Compose configuration..."
 cd "$(dirname "$0")/.."
-if docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml config > /dev/null 2>&1; then
+if docker compose -f docker-compose.yml -f compose.hyperdx.yml config > /dev/null 2>&1; then
     check_pass "Docker Compose configuration is valid"
 else
     check_fail "Docker Compose configuration has errors"

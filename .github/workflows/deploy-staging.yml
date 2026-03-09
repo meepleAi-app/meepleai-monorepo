@@ -177,11 +177,11 @@ jobs:
             export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
 
             # Deploy with zero-downtime
-            docker compose -f docker-compose.staging.yml pull
-            docker compose -f docker-compose.staging.yml up -d --no-deps api web
+            docker compose -f compose.staging.yml pull
+            docker compose -f compose.staging.yml up -d --no-deps api web
 
             # Run database migrations
-            docker compose -f docker-compose.staging.yml exec -T api \
+            docker compose -f compose.staging.yml exec -T api \
               dotnet ef database update --no-build
 
             # Health check

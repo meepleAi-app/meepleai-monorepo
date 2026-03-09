@@ -163,6 +163,6 @@ Margin: 83-98% depending on cache hit rate and query tier distribution.
 3. **Disable reranker** (1 day) - Config change, test RAG quality
 4. **Replace Qdrant with pgvector** (3-5 days) - New adapter, migration, re-index
 5. **PDF processing transition** (2-3 days) - PdfPig integration, offline pre-processing
-6. **Deploy on Hetzner CAX31** (1-2 days) - docker-compose.mvp.yml, Caddy, DNS
+6. **Deploy on Hetzner CAX31** (1-2 days) - compose.mvp.yml, Caddy, DNS
 
 **Total estimated effort**: ~2 weeks

@@ -2,8 +2,8 @@
 # Extends docker-compose.yml with development-specific overrides
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+#   docker compose -f docker-compose.yml -f compose.dev.yml up -d
+#   docker compose -f docker-compose.yml -f compose.dev.yml down
 #
 # Note: This file uses plain environment variables instead of secrets for easier local development
 

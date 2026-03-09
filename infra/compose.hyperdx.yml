@@ -4,7 +4,7 @@
 # Note: Inherits project name from docker-compose.yml (name: meepleai)
 # Volumes will be named: meepleai_hyperdx_data, meepleai_hyperdx_logs
 #
-# Usage: docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml up -d
+# Usage: docker compose -f docker-compose.yml -f compose.hyperdx.yml up -d
 #
 # Ports:
 #   - 8180: HyperDX Web UI

@@ -1,5 +1,5 @@
 # Docker Compose Release Override
-# Usage: docker compose -f docker-compose.yml -f docker-compose.release.yml --profile full [command]
+# Usage: docker compose -f docker-compose.yml -f compose.release.yml --profile full [command]
 #
 # Switches API from Development to Production environment.
 # All other services remain unchanged.

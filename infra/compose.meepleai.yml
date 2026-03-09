@@ -3,7 +3,7 @@
 # This file extends docker-compose.yml + compose.prod.yml with meepleai.io specific config
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml up -d
+#   docker compose -f docker-compose.yml -f compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml up -d
 #
 # Or use the deploy script:
 #   ./scripts/deploy-meepleai.sh

@@ -41,7 +41,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Compose files
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml"
+COMPOSE_FILES="-f docker-compose.yml -f compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml"
 
 cd "$INFRA_DIR"
 

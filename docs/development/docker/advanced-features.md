@@ -25,11 +25,11 @@ Advanced Docker Compose features for power users: custom profiles, overrides, op
 
 ### What Are Overrides?
 
-Docker Compose automatically merges `docker-compose.yml` with `docker-compose.override.yml` if it exists. This allows **per-developer customization** without modifying the main compose file.
+Docker Compose automatically merges `docker-compose.yml` with `compose.override.yml` if it exists. This allows **per-developer customization** without modifying the main compose file.
 
 ### Create Personal Override
 
-**File**: `infra/docker-compose.override.yml` (gitignored)
+**File**: `infra/compose.override.yml` (gitignored)
 
 ```yaml
 # Personal development overrides
@@ -80,7 +80,7 @@ services:
 docker compose up -d
 
 # Explicitly specify override
-docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+docker compose -f docker-compose.yml -f compose.override.yml up -d
 
 # Ignore override
 docker compose -f docker-compose.yml up -d
@@ -92,7 +92,7 @@ docker compose -f docker-compose.yml up -d
 
 ```bash
 # Development overrides
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.yml -f compose.dev.yml up -d
 
 # Staging overrides
 docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
@@ -101,7 +101,7 @@ docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # Combine multiple overrides
-docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.hyperdx.yml up -d
+docker compose -f docker-compose.yml -f compose.dev.yml -f compose.hyperdx.yml up -d
 ```
 
 ### Common Override Patterns
@@ -167,7 +167,7 @@ networks:
 
 ### Create Custom Profiles
 
-**File**: `docker-compose.override.yml`
+**File**: `compose.override.yml`
 
 ```yaml
 # Define custom profile: "my-workflow"
@@ -584,7 +584,7 @@ CMD ["npm", "start"]
    - **Port**: `5000` (debugger port)
    - **Attach to process**: `Api.dll`
 
-**docker-compose.override.yml**:
+**compose.override.yml**:
 ```yaml
 services:
   api:

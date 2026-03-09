@@ -18,5 +18,11 @@ public enum AgentSessionMode
     /// <summary>
     /// AI acts as game master, managing turns and enforcing rules.
     /// </summary>
-    GameMaster = 2
+    GameMaster = 2,
+
+    /// <summary>
+    /// AI resolves disputes between players by citing the rulebook.
+    /// Issue #5585: Arbiter Mode.
+    /// </summary>
+    Arbiter = 3
 }

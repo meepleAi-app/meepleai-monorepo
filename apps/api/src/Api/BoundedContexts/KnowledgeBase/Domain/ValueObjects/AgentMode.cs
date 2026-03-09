@@ -19,5 +19,11 @@ public enum AgentMode
     /// <summary>
     /// Tracks complete game state from conversation.
     /// </summary>
-    Ledger = 2
+    Ledger = 2,
+
+    /// <summary>
+    /// Resolves disputes between players by citing the rulebook.
+    /// Issue #5585: Arbiter Mode.
+    /// </summary>
+    Arbiter = 3
 }

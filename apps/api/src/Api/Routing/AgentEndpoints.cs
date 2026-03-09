@@ -55,6 +55,9 @@ internal static class AgentEndpoints
         MapGetAgentConfigurationEndpoint(group);
         MapUpdateAgentConfigurationEndpoint(group);
 
+        // Issue #5585: Arbiter Mode — dispute arbitration
+        MapAskArbiterEndpoint(group);
+
         return group;
     }
 
@@ -863,6 +866,55 @@ internal static class AgentEndpoints
     }
 
     /// <summary>
+    /// Ask the arbiter agent to resolve a dispute between players.
+    /// Issue #5585: Arbiter Mode — dispute arbitration with citations and verdict.
+    /// </summary>
+    private static void MapAskArbiterEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/{id:guid}/arbiter", async (
+            [FromRoute] Guid id,
+            [FromBody] AskArbiterRequest request,
+            [FromServices] IMediator mediator,
+            HttpContext httpContext,
+            ILogger<Program> logger,
+            CancellationToken cancellationToken) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+
+            var command = new AskArbiterCommand
+            {
+                AgentId = id,
+                SessionId = request.SessionId,
+                Situation = request.Situation,
+                PositionA = request.PositionA,
+                PositionB = request.PositionB,
+                UserId = session.User!.Id
+            };
+
+            var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Arbiter verdict for Agent {AgentId}: confidence={Confidence:F2}, conclusive={IsConclusive}, citations={CitationCount}",
+                id, result.Confidence, result.IsConclusive, result.Citations.Count);
+
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("AskArbiter")
+        .WithTags("Agents", "Arbiter")
+        .WithSummary("Request arbiter verdict on a dispute between players")
+        .WithDescription(
+            "Submits a dispute between two player positions for arbitration. " +
+            "The arbiter searches the rulebook, cites exact passages, and provides " +
+            "a structured verdict with confidence level.")
+        .Produces<ArbiterVerdictDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .Produces(500);
+    }
+
+    /// <summary>
     /// Patch the LLM configuration for a user-owned agent.
     /// Only non-null fields are updated. Enforces tier-based model restrictions.
     /// </summary>
@@ -1046,4 +1098,15 @@ internal record UpdateAgentConfigurationRequest(
     decimal? Temperature = null,
     int? MaxTokens = null,
     IReadOnlyList<Guid>? SelectedDocumentIds = null
+);
+
+/// <summary>
+/// Request for arbiter dispute resolution.
+/// Issue #5585: Arbiter Mode — dispute arbitration with citations and verdict.
+/// </summary>
+internal record AskArbiterRequest(
+    Guid SessionId,
+    string Situation,
+    string PositionA,
+    string PositionB
 );

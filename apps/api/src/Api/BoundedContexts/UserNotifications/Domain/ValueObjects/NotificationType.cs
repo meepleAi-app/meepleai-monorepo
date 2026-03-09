@@ -73,6 +73,9 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5499: LLM model deprecated/unavailable alert (admin)
     public static readonly NotificationType AdminModelDeprecated = new("admin_model_deprecated");
 
+    // ISSUE-5501: Auto-fallback activated when model deprecated (admin)
+    public static readonly NotificationType AdminModelAutoFallback = new("admin_model_auto_fallback");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -128,6 +131,7 @@ internal sealed class NotificationType : ValueObject
             "admin_openrouter_daily_summary" => AdminOpenRouterDailySummary,
             "admin_redis_rate_limiting_degraded" => AdminRedisRateLimitingDegraded,
             "admin_model_deprecated" => AdminModelDeprecated,
+            "admin_model_auto_fallback" => AdminModelAutoFallback,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

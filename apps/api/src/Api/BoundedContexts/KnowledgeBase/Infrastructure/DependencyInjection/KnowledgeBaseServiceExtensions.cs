@@ -298,6 +298,10 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Issue #5513: AI consent check service (cross-cutting from Administration BC)
         services.AddScoped<IUserAiConsentCheckService, UserAiConsentCheckService>();
+
+        // Issue #5510: PII detection and redaction for OpenRouter-bound prompts
+        services.AddOptions<PiiDetectorOptions>();
+        services.AddSingleton<IPiiDetector, PiiDetector>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

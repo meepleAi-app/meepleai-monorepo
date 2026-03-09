@@ -67,6 +67,7 @@ internal class HybridLlmService : ILlmService
     private readonly IServiceScopeFactory? _scopeFactory; // Issue #5086: for fire-and-forget circuit breaker notifications
     private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker; // Issue #5087: RPD exhaustion state
     private readonly IEmergencyOverrideService? _emergencyOverrideService; // Issue #5476: admin emergency controls
+    private readonly IPiiDetector? _piiDetector; // Issue #5510: PII redaction for OpenRouter-bound prompts
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -98,7 +99,8 @@ internal class HybridLlmService : ILlmService
         IOpenRouterRateLimitTracker? rateLimitTracker = null,
         IServiceScopeFactory? scopeFactory = null,
         IFreeModelQuotaTracker? freeModelQuotaTracker = null,
-        IEmergencyOverrideService? emergencyOverrideService = null)
+        IEmergencyOverrideService? emergencyOverrideService = null,
+        IPiiDetector? piiDetector = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -113,6 +115,7 @@ internal class HybridLlmService : ILlmService
         _scopeFactory = scopeFactory; // Issue #5086: Optional - for circuit breaker notifications
         _freeModelQuotaTracker = freeModelQuotaTracker; // Issue #5087: Optional - RPD exhaustion state
         _emergencyOverrideService = emergencyOverrideService; // Issue #5476: Optional - admin emergency controls
+        _piiDetector = piiDetector; // Issue #5510: Optional - PII redaction for OpenRouter
 
         if (_clients.Count == 0)
         {
@@ -271,13 +274,22 @@ internal class HybridLlmService : ILlmService
                     _logger.LogWarning("OpenRouter rate limit approaching 80% for provider {Provider}", client.ProviderName);
             }
 
+            // Issue #5510: Redact PII for OpenRouter-bound prompts (not needed for local Ollama)
+            var effectiveSystemPrompt = systemPrompt;
+            var effectiveUserPrompt = userPrompt;
+            if (_piiDetector != null && string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal))
+            {
+                effectiveSystemPrompt = _piiDetector.ScanAndRedact(systemPrompt);
+                effectiveUserPrompt = _piiDetector.ScanAndRedact(userPrompt);
+            }
+
             var attemptStopwatch = Stopwatch.StartNew();
             try
             {
                 var result = await client.GenerateCompletionAsync(
                     decision.ModelId,
-                    systemPrompt,
-                    userPrompt,
+                    effectiveSystemPrompt,
+                    effectiveUserPrompt,
                     DefaultTemperature,
                     DefaultMaxTokens,
                     cancellationToken).ConfigureAwait(false);
@@ -407,10 +419,19 @@ internal class HybridLlmService : ILlmService
             "Starting streaming completion via {Provider} ({Model}) - Reason: {Reason}",
             client.ProviderName, decision.ModelId, decision.Reason);
 
+        // Issue #5510: Redact PII for OpenRouter-bound streaming prompts
+        var effectiveSystemPrompt = systemPrompt;
+        var effectiveUserPrompt = userPrompt;
+        if (_piiDetector != null && string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal))
+        {
+            effectiveSystemPrompt = _piiDetector.ScanAndRedact(systemPrompt);
+            effectiveUserPrompt = _piiDetector.ScanAndRedact(userPrompt);
+        }
+
         await foreach (var chunk in client.GenerateCompletionStreamAsync(
             decision.ModelId,
-            systemPrompt,
-            userPrompt,
+            effectiveSystemPrompt,
+            effectiveUserPrompt,
             DefaultTemperature,
             DefaultMaxTokens,
             cancellationToken).ConfigureAwait(false))

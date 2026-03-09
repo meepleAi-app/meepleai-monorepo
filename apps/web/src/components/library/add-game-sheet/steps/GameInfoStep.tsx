@@ -7,13 +7,13 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+
 import { Save, Loader2, AlertCircle, Tag } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useAddGameWizardStore } from '@/lib/stores/add-game-wizard-store';
 
@@ -45,21 +45,21 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepProps) {
-  const selectedGame = useAddGameWizardStore((s) => s.selectedGame);
-  const setGameInfo = useAddGameWizardStore((s) => s.setGameInfo);
+  const selectedGame = useAddGameWizardStore(s => s.selectedGame);
+  const setGameInfo = useAddGameWizardStore(s => s.setGameInfo);
 
   // Form state - pre-filled from selectedGame
   const [title, setTitle] = useState(selectedGame?.title ?? '');
   const [minPlayers, setMinPlayers] = useState(String(selectedGame?.minPlayers ?? ''));
   const [maxPlayers, setMaxPlayers] = useState(String(selectedGame?.maxPlayers ?? ''));
   const [playingTime, setPlayingTime] = useState(
-    selectedGame?.playingTimeMinutes ? String(selectedGame.playingTimeMinutes) : '',
+    selectedGame?.playingTimeMinutes ? String(selectedGame.playingTimeMinutes) : ''
   );
   const [complexity, setComplexity] = useState(
-    selectedGame?.complexityRating ? String(selectedGame.complexityRating) : '',
+    selectedGame?.complexityRating ? String(selectedGame.complexityRating) : ''
   );
   const [yearPublished, setYearPublished] = useState(
-    selectedGame?.yearPublished ? String(selectedGame.yearPublished) : '',
+    selectedGame?.yearPublished ? String(selectedGame.yearPublished) : ''
   );
   const [description, setDescription] = useState(selectedGame?.description ?? '');
 
@@ -124,7 +124,16 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
 
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [title, minPlayers, maxPlayers, playingTime, complexity, yearPublished, description, currentYear]);
+  }, [
+    title,
+    minPlayers,
+    maxPlayers,
+    playingTime,
+    complexity,
+    yearPublished,
+    description,
+    currentYear,
+  ]);
 
   const handleSave = useCallback(async () => {
     if (!selectedGame) return;
@@ -200,9 +209,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
     <div className="space-y-5" data-testid="game-info-step">
       {/* Header */}
       <div>
-        <h3 className="text-base font-semibold text-slate-100 mb-1">
-          Rivedi informazioni
-        </h3>
+        <h3 className="text-base font-semibold text-slate-100 mb-1">Rivedi informazioni</h3>
         <p className="text-sm text-slate-400">
           {isReadOnly
             ? 'Conferma i dati del gioco dal catalogo.'
@@ -239,7 +246,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
           <Input
             id="info-title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={e => setTitle(e.target.value)}
             placeholder="Nome del gioco"
             className="bg-slate-800 border-slate-700"
             disabled={saving || isReadOnly}
@@ -260,7 +267,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               min={1}
               max={99}
               value={minPlayers}
-              onChange={(e) => setMinPlayers(e.target.value)}
+              onChange={e => setMinPlayers(e.target.value)}
               placeholder="1"
               className="bg-slate-800 border-slate-700"
               disabled={saving || isReadOnly}
@@ -280,7 +287,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               min={1}
               max={99}
               value={maxPlayers}
-              onChange={(e) => setMaxPlayers(e.target.value)}
+              onChange={e => setMaxPlayers(e.target.value)}
               placeholder="4"
               className="bg-slate-800 border-slate-700"
               disabled={saving || isReadOnly}
@@ -304,7 +311,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               min={1}
               max={10000}
               value={playingTime}
-              onChange={(e) => setPlayingTime(e.target.value)}
+              onChange={e => setPlayingTime(e.target.value)}
               placeholder="60"
               className="bg-slate-800 border-slate-700"
               disabled={saving || isReadOnly}
@@ -325,7 +332,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               max={5}
               step={0.1}
               value={complexity}
-              onChange={(e) => setComplexity(e.target.value)}
+              onChange={e => setComplexity(e.target.value)}
               placeholder="3.0"
               className="bg-slate-800 border-slate-700"
               disabled={saving || isReadOnly}
@@ -348,7 +355,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
             min={1900}
             max={currentYear + 2}
             value={yearPublished}
-            onChange={(e) => setYearPublished(e.target.value)}
+            onChange={e => setYearPublished(e.target.value)}
             placeholder={String(currentYear)}
             className="bg-slate-800 border-slate-700"
             disabled={saving || isReadOnly}
@@ -367,7 +374,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
           <Textarea
             id="info-description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={e => setDescription(e.target.value)}
             placeholder="Descrizione del gioco..."
             rows={3}
             className="bg-slate-800 border-slate-700 resize-none"
@@ -389,7 +396,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
                 Categorie
               </p>
               <div className="flex flex-wrap gap-1.5" data-testid="categories-tags">
-                {categories.map((cat) => (
+                {categories.map(cat => (
                   <span
                     key={cat}
                     className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2.5 py-0.5 text-xs text-slate-300"
@@ -407,7 +414,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
                 Meccaniche
               </p>
               <div className="flex flex-wrap gap-1.5" data-testid="mechanics-tags">
-                {mechanics.map((mech) => (
+                {mechanics.map(mech => (
                   <span
                     key={mech}
                     className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2.5 py-0.5 text-xs text-slate-300"
@@ -440,11 +447,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
         className="w-full bg-teal-600 hover:bg-teal-700 gap-2"
         data-testid="save-button"
       >
-        {saving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Save className="h-4 w-4" />
-        )}
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         {saving ? 'Salvataggio...' : 'Salva in Collezione'}
       </Button>
     </div>

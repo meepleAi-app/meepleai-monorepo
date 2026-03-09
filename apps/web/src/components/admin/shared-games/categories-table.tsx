@@ -2,9 +2,9 @@
 
 import { PlusIcon } from 'lucide-react';
 
-import { CategoryRow } from './category-row';
-
 import { Button } from '@/components/ui/button';
+
+import { CategoryRow } from './category-row';
 
 interface Category {
   id: string;
@@ -53,10 +53,7 @@ export function CategoriesTable() {
             Drag to reorder, click to edit
           </p>
         </div>
-        <Button
-          onClick={handleAddCategory}
-          className="bg-amber-500 hover:bg-amber-600 text-white"
-        >
+        <Button onClick={handleAddCategory} className="bg-amber-500 hover:bg-amber-600 text-white">
           <PlusIcon className="h-4 w-4 mr-2" />
           Add Category
         </Button>
@@ -86,7 +83,7 @@ export function CategoriesTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200/50 dark:divide-zinc-700/50">
-              {MOCK_CATEGORIES.map((category) => (
+              {MOCK_CATEGORIES.map(category => (
                 <CategoryRow
                   key={category.id}
                   name={category.name}

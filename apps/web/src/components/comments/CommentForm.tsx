@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-import { useTranslations } from 'next-intl';
-
+import { useTranslation } from '@/hooks/useTranslation';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
@@ -18,13 +17,13 @@ export function CommentForm({
   placeholder,
   disabled = false,
 }: CommentFormProps) {
-  const t = useTranslations('comments');
+  const { t } = useTranslation();
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isDisabled = disabled || isSubmitting;
 
   // Use provided placeholder or i18n default
-  const effectivePlaceholder = placeholder || t('placeholder');
+  const effectivePlaceholder = placeholder || t('comments.placeholder');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +42,7 @@ export function CommentForm({
         error instanceof Error ? error : new Error(String(error)),
         createErrorContext('CommentForm', 'handleSubmit', { atomId })
       );
-      alert(t('createError'));
+      alert(t('comments.createError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -67,7 +66,7 @@ export function CommentForm({
             : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
         }`}
       >
-        {isSubmitting ? t('submitting') : t('addComment')}
+        {isSubmitting ? t('comments.submitting') : t('comments.addComment')}
       </button>
     </form>
   );

@@ -6,13 +6,9 @@
  */
 
 import { useState } from 'react';
-import Link from 'next/link';
 
-import {
-  ArrowLeftIcon,
-  FlaskConicalIcon,
-  MessageSquareIcon,
-} from 'lucide-react';
+import { ArrowLeftIcon, FlaskConicalIcon, MessageSquareIcon } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
 

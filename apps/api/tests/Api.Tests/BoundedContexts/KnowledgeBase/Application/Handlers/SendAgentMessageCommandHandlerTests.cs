@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -71,6 +72,12 @@ public sealed class SendAgentMessageCommandHandlerTests
             .Setup(s => s.HasBudgetForQueryAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
+        // Query rewriter stub: returns the original query unchanged
+        var mockQueryRewriter = new Mock<IConversationQueryRewriter>();
+        mockQueryRewriter
+            .Setup(r => r.RewriteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, string, CancellationToken>((query, _, _) => Task.FromResult(query));
+
         _handler = new SendAgentMessageCommandHandler(
             _mockAgentRepository.Object,
             _mockChatThreadRepository.Object,
@@ -81,6 +88,10 @@ public sealed class SendAgentMessageCommandHandlerTests
             _dbContext,
             _mockBudgetService.Object,
             Mock.Of<ILlmModelOverrideService>(),
+            Mock.Of<IModelConfigurationService>(),
+            new ChatContextDomainService(),
+            mockQueryRewriter.Object,
+            Mock.Of<IConversationSummarizer>(),
             _mockLogger.Object
         );
     }

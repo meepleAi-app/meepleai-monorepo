@@ -18,7 +18,7 @@ import type {
   UpdatePlayRecordRequest,
 } from '@/lib/api/schemas/play-records.schemas';
 
-const BASE_URL = '/api/v1/game-management/play-records';
+const BASE_URL = '/api/v1/play-records';
 
 /**
  * Play Records API Client
@@ -131,14 +131,16 @@ export const playRecordsApi = {
   /**
    * Get user's play history with pagination and filters
    */
-  async getUserHistory(params: {
-    page?: number;
-    pageSize?: number;
-    gameId?: string;
-    status?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  } = {}): Promise<PlayHistoryResponse> {
+  async getUserHistory(
+    params: {
+      page?: number;
+      pageSize?: number;
+      gameId?: string;
+      status?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    } = {}
+  ): Promise<PlayHistoryResponse> {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.set('page', params.page.toString());
     if (params.pageSize) searchParams.set('pageSize', params.pageSize.toString());

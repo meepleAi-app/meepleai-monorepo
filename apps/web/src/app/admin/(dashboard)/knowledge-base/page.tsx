@@ -1,6 +1,3 @@
-import { type Metadata } from 'next';
-import Link from 'next/link';
-
 import {
   FileTextIcon,
   DatabaseIcon,
@@ -11,6 +8,8 @@ import {
   ArrowRightIcon,
   CpuIcon,
 } from 'lucide-react';
+import { type Metadata } from 'next';
+import Link from 'next/link';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 
@@ -22,7 +21,8 @@ export const metadata: Metadata = {
 const sections = [
   {
     title: 'Documents',
-    description: 'Browse uploaded documents, view processing status, and manage the document library',
+    description:
+      'Browse uploaded documents, view processing status, and manage the document library',
     icon: FileTextIcon,
     href: '/admin/knowledge-base/documents',
     color: 'from-amber-500 to-orange-600',
@@ -30,7 +30,8 @@ const sections = [
   },
   {
     title: 'Vector Collections',
-    description: 'Manage Qdrant vector collections, view embeddings health, and run similarity searches',
+    description:
+      'Manage Qdrant vector collections, view embeddings health, and run similarity searches',
     icon: DatabaseIcon,
     href: '/admin/knowledge-base/vectors',
     color: 'from-blue-500 to-indigo-600',
@@ -38,7 +39,8 @@ const sections = [
   },
   {
     title: 'Processing Queue',
-    description: 'Monitor PDF processing jobs, view step timelines, logs, and manage the queue with filters',
+    description:
+      'Monitor PDF processing jobs, view step timelines, logs, and manage the queue with filters',
     icon: ListOrderedIcon,
     href: '/admin/knowledge-base/queue',
     color: 'from-cyan-500 to-teal-600',
@@ -46,7 +48,8 @@ const sections = [
   },
   {
     title: 'Upload & Process',
-    description: 'Upload new documents for processing, configure extraction settings, and monitor pipeline jobs',
+    description:
+      'Upload new documents for processing, configure extraction settings, and monitor pipeline jobs',
     icon: UploadIcon,
     href: '/admin/knowledge-base/upload',
     color: 'from-emerald-500 to-green-600',
@@ -54,7 +57,8 @@ const sections = [
   },
   {
     title: 'RAG Pipeline',
-    description: 'Monitor the RAG retrieval pipeline, view execution logs, and tune retrieval parameters',
+    description:
+      'Monitor the RAG retrieval pipeline, view execution logs, and tune retrieval parameters',
     icon: BrainCircuitIcon,
     href: '/admin/knowledge-base/pipeline',
     color: 'from-purple-500 to-violet-600',
@@ -62,7 +66,8 @@ const sections = [
   },
   {
     title: 'Settings',
-    description: 'Configure tier strategies, embedding models, chunking parameters, and reranking options',
+    description:
+      'Configure tier strategies, embedding models, chunking parameters, and reranking options',
     icon: SettingsIcon,
     href: '/admin/knowledge-base/settings',
     color: 'from-slate-500 to-zinc-600',
@@ -93,7 +98,7 @@ export default function KnowledgeBasePage() {
 
       {/* Section Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sections.map((section) => {
+        {sections.map(section => {
           const Icon = section.icon;
           return (
             <Link key={section.title} href={section.href}>
@@ -125,9 +130,7 @@ export default function KnowledgeBasePage() {
 
       {/* Quick Links */}
       <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-6">
-        <h2 className="font-quicksand font-semibold text-lg text-foreground mb-4">
-          Quick Links
-        </h2>
+        <h2 className="font-quicksand font-semibold text-lg text-foreground mb-4">Quick Links</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Link
             href="/admin/agents/analytics"

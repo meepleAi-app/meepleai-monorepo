@@ -151,43 +151,83 @@ const nextConfig = {
     return [
       // ── Issue #5039: Consolidate User Routes ──────────────────────────────
       // Library sub-routes → query-param tabs (more specific first)
-      { source: '/library/games/:id/agent',      destination: '/library/:id?tab=agent',      permanent: true },
-      { source: '/library/games/:id/toolkit',    destination: '/library/:id?tab=toolkit',    permanent: true },
-      { source: '/library/games/:id/faqs',       destination: '/library/:id?tab=faq',        permanent: true },
-      { source: '/library/games/:id/reviews',    destination: '/library/:id?tab=reviews',    permanent: true },
-      { source: '/library/games/:id/rules',      destination: '/library/:id?tab=rules',      permanent: true },
-      { source: '/library/games/:id/sessions',   destination: '/library/:id?tab=sessions',   permanent: true },
-      { source: '/library/games/:id/strategies', destination: '/library/:id?tab=strategies', permanent: true },
-      { source: '/library/games/:id',            destination: '/library/:id',                permanent: true },
-      { source: '/library/wishlist',             destination: '/library?tab=wishlist',        permanent: true },
-      { source: '/library/private',              destination: '/library?tab=private',         permanent: true },
-      { source: '/library/proposals',            destination: '/discover?tab=proposals',      permanent: true },
-      { source: '/library/propose',              destination: '/discover/propose',            permanent: true },
+      {
+        source: '/library/games/:id/agent',
+        destination: '/library/:id?tab=agent',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/toolkit',
+        destination: '/library/:id?tab=toolkit',
+        permanent: true,
+      },
+      { source: '/library/games/:id/faqs', destination: '/library/:id?tab=faq', permanent: true },
+      {
+        source: '/library/games/:id/reviews',
+        destination: '/library/:id?tab=reviews',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/rules',
+        destination: '/library/:id?tab=rules',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/sessions',
+        destination: '/library/:id?tab=sessions',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/strategies',
+        destination: '/library/:id?tab=strategies',
+        permanent: true,
+      },
+      { source: '/library/games/:id', destination: '/library/:id', permanent: true },
+      { source: '/library/wishlist', destination: '/library?tab=wishlist', permanent: true },
+      { source: '/library/private', destination: '/library?tab=private', permanent: true },
+      { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },
+      { source: '/library/propose', destination: '/discover/propose', permanent: true },
 
       // Profile / Settings consolidation
       // NOTE: /profile → /settings (Issue #1672) is REMOVED — /profile is now
       //       the canonical profile page; /settings redirects here instead.
-      { source: '/settings/notifications', destination: '/profile?tab=settings&section=notifications', permanent: true },
-      { source: '/settings/security',      destination: '/profile?tab=settings&section=security',      permanent: true },
-      { source: '/settings',              destination: '/profile?tab=settings',                         permanent: true },
-      { source: '/profile/achievements',  destination: '/profile?tab=achievements',                     permanent: true },
-      { source: '/badges',                destination: '/profile?tab=badges',                           permanent: true },
+      {
+        source: '/settings/notifications',
+        destination: '/profile?tab=settings&section=notifications',
+        permanent: true,
+      },
+      {
+        source: '/settings/security',
+        destination: '/profile?tab=settings&section=security',
+        permanent: true,
+      },
+      { source: '/settings', destination: '/profile?tab=settings', permanent: true },
+      {
+        source: '/profile/achievements',
+        destination: '/profile?tab=achievements',
+        permanent: true,
+      },
+      { source: '/badges', destination: '/profile?tab=badges', permanent: true },
 
       // Agents
       { source: '/agent/slots', destination: '/agents?tab=slots', permanent: true },
 
       // Sessions & Play Records
-      { source: '/sessions/history',    destination: '/sessions?tab=history',       permanent: true },
-      { source: '/play-records/stats',  destination: '/play-records?tab=stats',     permanent: true },
+      { source: '/sessions/history', destination: '/sessions?tab=history', permanent: true },
+      { source: '/play-records/stats', destination: '/play-records?tab=stats', permanent: true },
 
       // Discover / Community catalog
       // /games/[id] sub-pages → /discover/[id] with tabs
-      { source: '/games/:id/faqs',       destination: '/discover/:id?tab=faq',        permanent: true },
-      { source: '/games/:id/reviews',    destination: '/discover/:id?tab=reviews',    permanent: true },
-      { source: '/games/:id/rules',      destination: '/discover/:id?tab=rules',      permanent: true },
-      { source: '/games/:id/sessions',   destination: '/discover/:id?tab=sessions',   permanent: true },
-      { source: '/games/:id/strategies', destination: '/discover/:id?tab=strategies', permanent: true },
-      { source: '/games/:id',            destination: '/discover/:id',                permanent: true },
+      { source: '/games/:id/faqs', destination: '/discover/:id?tab=faq', permanent: true },
+      { source: '/games/:id/reviews', destination: '/discover/:id?tab=reviews', permanent: true },
+      { source: '/games/:id/rules', destination: '/discover/:id?tab=rules', permanent: true },
+      { source: '/games/:id/sessions', destination: '/discover/:id?tab=sessions', permanent: true },
+      {
+        source: '/games/:id/strategies',
+        destination: '/discover/:id?tab=strategies',
+        permanent: true,
+      },
+      { source: '/games/:id', destination: '/discover/:id', permanent: true },
 
       // ── Legacy redirects (pre-Issue #5039) ───────────────────────────────
       // Issue #3843: Redirect old /giochi route to new /games route
@@ -203,176 +243,19 @@ const nextConfig = {
         permanent: true,
       },
 
-      // ── Issue #5039: User Route Consolidation ──────────────────────────────
+      // ── Issue #5055: Game detail sub-routes (KB, agents, chats) ────────────
+      {
+        source: '/games/:id/knowledge-base',
+        destination: '/library/:id?tab=agent',
+        permanent: true,
+      },
+      { source: '/games/:id/agents', destination: '/library/:id?tab=agent', permanent: true },
+      { source: '/games/:id/chats', destination: '/chat', permanent: true },
+      { source: '/games/catalog', destination: '/discover', permanent: true },
+      { source: '/games/add', destination: '/discover/add', permanent: true },
 
-      // Library sub-routes → tabs on /library
-      {
-        source: '/library/wishlist',
-        destination: '/library?tab=wishlist',
-        permanent: true,
-      },
-      {
-        source: '/library/private',
-        destination: '/library?tab=private',
-        permanent: true,
-      },
-      {
-        source: '/library/proposals',
-        destination: '/discover?tab=proposals',
-        permanent: true,
-      },
-      {
-        source: '/library/propose',
-        destination: '/discover/propose',
-        permanent: true,
-      },
-
-      // Library game detail: /library/games/[gameId] → /library/[gameId]
-      {
-        source: '/library/games/:gameId',
-        destination: '/library/:gameId',
-        permanent: true,
-      },
-      {
-        source: '/library/games/:gameId/agent',
-        destination: '/library/:gameId?tab=agent',
-        permanent: true,
-      },
-      {
-        source: '/library/games/:gameId/toolkit',
-        destination: '/library/:gameId?tab=toolkit',
-        permanent: true,
-      },
-      {
-        source: '/library/games/:gameId/faqs',
-        destination: '/library/:gameId?tab=faq',
-        permanent: true,
-      },
-      // Public game detail pages → /discover/[gameId]
-      {
-        source: '/games/:gameId/reviews',
-        destination: '/discover/:gameId?tab=reviews',
-        permanent: true,
-      },
-      {
-        source: '/games/:gameId/rules',
-        destination: '/discover/:gameId?tab=rules',
-        permanent: true,
-      },
-      {
-        source: '/games/:gameId/sessions',
-        destination: '/discover/:gameId?tab=sessions',
-        permanent: true,
-      },
-      {
-        source: '/games/:gameId/strategies',
-        destination: '/discover/:gameId?tab=strategies',
-        permanent: true,
-      },
-      {
-        source: '/games/:gameId/faqs',
-        destination: '/discover/:gameId?tab=faq',
-        permanent: true,
-      },
-      // Issue #5055: Game detail sub-routes (KB, agents, chats) → new canonical paths
-      {
-        source: '/games/:gameId/knowledge-base',
-        destination: '/library/:gameId?tab=agent',
-        permanent: true,
-      },
-      {
-        source: '/games/:gameId/agents',
-        destination: '/library/:gameId?tab=agent',
-        permanent: true,
-      },
-      {
-        source: '/games/:gameId/chats',
-        destination: '/chat',
-        permanent: true,
-      },
-      // Games catalog and add → /discover (specific routes before catch-all)
-      {
-        source: '/games/catalog',
-        destination: '/discover',
-        permanent: true,
-      },
-      {
-        source: '/games/add',
-        destination: '/discover/add',
-        permanent: true,
-      },
-
-      // Generic game detail → /discover (public catalog)
-      {
-        source: '/games/:gameId',
-        destination: '/discover/:gameId',
-        permanent: true,
-      },
-
-      // Agents: /agent/slots → /agents?tab=slots
-      {
-        source: '/agent/slots',
-        destination: '/agents?tab=slots',
-        permanent: true,
-      },
-
-      // Play records sub-routes → tabs on /play-records
-      {
-        source: '/play-records/stats',
-        destination: '/play-records?tab=stats',
-        permanent: true,
-      },
-
-      // Sessions sub-routes → tabs on /sessions
-      {
-        source: '/sessions/history',
-        destination: '/sessions?tab=history',
-        permanent: true,
-      },
-
-      // Profile & settings consolidation → /profile hub
-      // Reverse the old /profile → /settings redirect
-      {
-        source: '/settings',
-        destination: '/profile?tab=settings',
-        permanent: true,
-      },
-      {
-        source: '/settings/notifications',
-        destination: '/profile?tab=settings&section=notifications',
-        permanent: true,
-      },
-      {
-        source: '/settings/security',
-        destination: '/profile?tab=settings&section=security',
-        permanent: true,
-      },
-      // Catch-all for any other /settings sub-paths not explicitly listed above
-      {
-        source: '/settings/:path*',
-        destination: '/profile?tab=settings',
-        permanent: true,
-      },
-      {
-        source: '/profile/achievements',
-        destination: '/profile?tab=achievements',
-        permanent: true,
-      },
-      {
-        source: '/badges',
-        destination: '/profile?tab=badges',
-        permanent: true,
-      },
-
-      // Dashboard → /library (home for authenticated users)
-      // Note: / is the public landing; (public)/page.tsx redirects auth users to /dashboard.
-      // We redirect /dashboard → /library so the gaming hub is at /library (primary user route).
-      // The dashboard page at /dashboard is preserved as fallback during transition.
-      // {
-      //   source: '/dashboard',
-      //   destination: '/library',
-      //   permanent: true,
-      // },
+      // Catch-all for any other /settings sub-paths
+      { source: '/settings/:path*', destination: '/profile?tab=settings', permanent: true },
 
       // ── Issue #5040: Admin Route Consolidation ─────────────────────────────
 

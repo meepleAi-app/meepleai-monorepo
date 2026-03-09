@@ -11,10 +11,10 @@ import { useMemo, useState } from 'react';
 
 import { TypologySelector, StrategySelector } from '@/components/agent/config';
 import { toast } from '@/components/layout';
-import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 
 interface ConfigAgentStepProps {
   gameId: string;
@@ -93,23 +93,16 @@ export function ConfigAgentStep({
       </div>
 
       {/* Agent Type Selection */}
-      <TypologySelector
-        value={typologyId}
-        onChange={setTypologyId}
-      />
+      <TypologySelector value={typologyId} onChange={setTypologyId} />
 
       {/* Strategy Selection */}
-      <StrategySelector
-        value={strategyName}
-        onChange={setStrategyName}
-        userTier={userTier}
-      />
+      <StrategySelector value={strategyName} onChange={setStrategyName} userTier={userTier} />
 
       {/* Info Card */}
       <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          💡 L'agente verrà creato utilizzando il PDF caricato come knowledge base.
-          Potrai chattare con l'agente per ricevere risposte sulle regole del gioco.
+          💡 L'agente verrà creato utilizzando il PDF caricato come knowledge base. Potrai chattare
+          con l'agente per ricevere risposte sulle regole del gioco.
         </p>
       </Card>
 

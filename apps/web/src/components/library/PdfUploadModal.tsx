@@ -47,7 +47,13 @@ interface PdfUploadModalProps {
   onUploadSuccess?: () => void;
 }
 
-export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuccess }: PdfUploadModalProps) {
+export function PdfUploadModal({
+  isOpen,
+  onClose,
+  gameId,
+  gameTitle,
+  onUploadSuccess,
+}: PdfUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<UploadStep>('select');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -90,25 +96,28 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
     return errors;
   }, []);
 
-  const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+  const handleFileChange = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (!selectedFile) return;
 
-    // Reset state
-    setValidationErrors([]);
+      // Reset state
+      setValidationErrors([]);
 
-    // Sync validation only
-    const syncErrors = validateFileSync(selectedFile);
-    if (syncErrors.length > 0) {
-      setValidationErrors(syncErrors);
-      setFile(null);
-      return;
-    }
+      // Sync validation only
+      const syncErrors = validateFileSync(selectedFile);
+      if (syncErrors.length > 0) {
+        setValidationErrors(syncErrors);
+        setFile(null);
+        return;
+      }
 
-    // All validations passed
-    setFile(selectedFile);
-    setUploadProgress(0);
-  }, [validateFileSync]);
+      // All validations passed
+      setFile(selectedFile);
+      setUploadProgress(0);
+    },
+    [validateFileSync]
+  );
 
   // Show preview step
   const handleShowPreview = useCallback(() => {
@@ -148,7 +157,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
     setUploadError(null);
 
     try {
-      await api.pdf.uploadPdf(gameId, file, (percent) => {
+      await api.pdf.uploadPdf(gameId, file, percent => {
         setUploadProgress(percent);
       });
 
@@ -161,10 +170,20 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
         handleClose();
       }, 500);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Errore durante il caricamento del PDF';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Errore durante il caricamento del PDF';
       setUploadError(errorMessage);
       toast.error(errorMessage);
       setUploadProgress(0);
+      // For duplicate content (409 Conflict), go back to select step (retry won't help)
+      const isDuplicate =
+        (error as Error & { statusCode?: number }).statusCode === 409 ||
+        (error as Error & { errorCode?: string }).errorCode === 'duplicate_content';
+      if (isDuplicate) {
+        setStep('select');
+        setUploadError(null);
+        setValidationErrors([errorMessage]);
+      }
     }
   }, [file, gameId, gameTitle, handleClose, onUploadSuccess]);
 
@@ -197,14 +216,12 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
           </DialogTitle>
           <DialogDescription>
             {step === 'select' && (
-              <>Carica un regolamento personalizzato per <strong>{gameTitle}</strong></>
+              <>
+                Carica un regolamento personalizzato per <strong>{gameTitle}</strong>
+              </>
             )}
-            {step === 'preview' && (
-              <>Verifica il documento prima di procedere con il caricamento</>
-            )}
-            {step === 'uploading' && (
-              <>Attendere il completamento del caricamento</>
-            )}
+            {step === 'preview' && <>Verifica il documento prima di procedere con il caricamento</>}
+            {step === 'uploading' && <>Attendere il completamento del caricamento</>}
           </DialogDescription>
         </DialogHeader>
 
@@ -328,10 +345,10 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
                   <div className="flex flex-col items-center gap-4">
                     <Loader2 className="h-12 w-12 text-primary animate-spin" />
                     <div className="text-center">
-                      <p className="font-medium" data-testid="uploading-filename">{file?.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Caricamento in corso...
+                      <p className="font-medium" data-testid="uploading-filename">
+                        {file?.name}
                       </p>
+                      <p className="text-sm text-muted-foreground">Caricamento in corso...</p>
                     </div>
                   </div>
 
@@ -356,7 +373,12 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose} disabled={!uploadError} data-testid="cancel-button-uploading">
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                disabled={!uploadError}
+                data-testid="cancel-button-uploading"
+              >
                 <X className="mr-2 h-4 w-4" />
                 {uploadError ? 'Chiudi' : 'Annulla'}
               </Button>

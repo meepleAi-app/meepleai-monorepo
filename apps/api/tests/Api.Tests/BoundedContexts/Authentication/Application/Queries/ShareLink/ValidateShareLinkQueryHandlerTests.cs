@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.Queries.ValidateShareLink;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;

@@ -9,8 +9,8 @@ import { useState } from 'react';
 
 import { ChevronDown, ChevronRight, Clock } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import type { DebugStep } from '@/hooks/useAgentChatStream';
+import { cn } from '@/lib/utils';
 
 // ─── Step icon/color config ───────────────────────────────────────────────────
 
@@ -26,6 +26,7 @@ const STEP_COLORS: Record<number, string> = {
   18: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20',
   19: 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-500/10 border-slate-200 dark:border-slate-500/20',
   20: 'text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20',
+  22: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20',
 };
 
 const DEFAULT_COLOR = 'text-muted-foreground bg-muted/30 border-border/50';
@@ -48,6 +49,24 @@ function JsonBlock({ data, redact }: { data: unknown; redact?: string[] }) {
     <pre className="text-[11px] font-mono whitespace-pre-wrap break-all bg-muted/50 dark:bg-muted/20 rounded p-2 overflow-auto max-h-48 text-foreground/80">
       {JSON.stringify(displayData, null, 2)}
     </pre>
+  );
+}
+
+// ─── Typology Profile View ────────────────────────────────────────────────────
+
+function TypologyProfileView({ payload }: { payload: unknown }) {
+  const p = payload as Record<string, unknown>;
+  return (
+    <div className="text-xs space-y-1 mt-1" data-testid="typology-profile-view">
+      <div className="font-semibold">{String(p.typology ?? 'Unknown')} Profile</div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-[11px]">
+        <span>TopK: {String(p.topK)}</span>
+        <span>MinScore: {String(p.minScore)}</span>
+        <span>Strategy: {String(p.searchStrategy)}</span>
+        <span>Temp: {String(p.temperature)}</span>
+        <span>MaxTokens: {String(p.maxTokens)}</span>
+      </div>
+    </div>
   );
 }
 
@@ -101,7 +120,11 @@ export function DebugStepCard({ step, index, showSystemPrompt = false }: DebugSt
               second: '2-digit',
             })}
           </p>
-          <JsonBlock data={step.payload} redact={redactKeys} />
+          {step.type === 22 ? (
+            <TypologyProfileView payload={step.payload} />
+          ) : (
+            <JsonBlock data={step.payload} redact={redactKeys} />
+          )}
         </div>
       )}
     </div>

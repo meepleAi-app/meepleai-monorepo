@@ -37,21 +37,12 @@ internal class GetVectorStoreMetricsQueryHandler : IQueryHandler<GetVectorStoreM
             {
                 var info = await _qdrantClient.GetCollectionInfoAsync(collectionName, cancellationToken).ConfigureAwait(false);
 
-                // CollectionInfo properties are direct values, not nullable
                 var vectorCount = (long)info.PointsCount;
                 var indexedCount = (long)info.IndexedVectorsCount;
 
-                // CollectionParams may be null, but VectorParams properties are direct values
-                var dimensions = 0;
-                var distanceMetric = "Unknown";
-
-                if (info.Config?.Params != null)
-                {
-                    // VectorParams is a map, need to get the "default" vector or first vector config
-                    // For simplicity, we'll estimate based on typical dimensions
-                    dimensions = 384; // Default for sentence-transformers
-                    distanceMetric = "Cosine"; // Most common
-                }
+                // pgvector replaced Qdrant — config details no longer available via this path
+                var dimensions = 384; // Default for sentence-transformers
+                var distanceMetric = "Cosine";
 
                 // Estimate memory usage (rough calculation: vectors * dimensions * 4 bytes per float)
                 var memoryBytes = vectorCount * dimensions * 4L;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import type { InfrastructureDetails } from '@/lib/api/schemas/admin.schemas';
@@ -45,9 +46,7 @@ export default function SystemHealthPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-quicksand font-bold text-foreground">
-          System Health
-        </h1>
+        <h1 className="text-2xl font-quicksand font-bold text-foreground">System Health</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Monitor infrastructure services and API metrics
         </p>
@@ -93,9 +92,11 @@ export default function SystemHealthPage() {
           {loading ? (
             <div className="col-span-full text-center py-8 text-muted-foreground">Loading...</div>
           ) : services.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-muted-foreground">No services found</div>
+            <div className="col-span-full text-center py-8 text-muted-foreground">
+              No services found
+            </div>
           ) : (
-            services.map((service) => (
+            services.map(service => (
               <div
                 key={service.serviceName}
                 className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6 hover:shadow-lg transition-shadow"
@@ -126,10 +127,14 @@ export default function SystemHealthPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Latency</span>
-                    <span className="font-semibold font-mono">{Math.round(service.responseTimeMs)}ms</span>
+                    <span className="font-semibold font-mono">
+                      {Math.round(service.responseTimeMs)}ms
+                    </span>
                   </div>
                   {service.errorMessage && (
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-2">{service.errorMessage}</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                      {service.errorMessage}
+                    </p>
                   )}
                 </div>
               </div>
@@ -157,13 +162,15 @@ export default function SystemHealthPage() {
             </div>
             <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
               <p className="text-sm text-muted-foreground">Error Rate</p>
-              <p className={`text-2xl font-quicksand font-bold mt-1 ${
-                metrics.errorRate > 0.05
-                  ? 'text-red-600 dark:text-red-400'
-                  : metrics.errorRate > 0.01
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-green-600 dark:text-green-400'
-              }`}>
+              <p
+                className={`text-2xl font-quicksand font-bold mt-1 ${
+                  metrics.errorRate > 0.05
+                    ? 'text-red-600 dark:text-red-400'
+                    : metrics.errorRate > 0.01
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-green-600 dark:text-green-400'
+                }`}
+              >
                 {(metrics.errorRate * 100).toFixed(2)}%
               </p>
             </div>

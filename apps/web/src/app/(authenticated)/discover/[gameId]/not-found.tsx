@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ArrowLeft, Search } from 'lucide-react';
+import Link from 'next/link';
 
 export default function DiscoverGameNotFound() {
   return (

@@ -615,6 +615,8 @@ internal static class SharedGameCatalogEndpoints
         [FromQuery] int? minPlayers,
         [FromQuery] int? maxPlayers,
         [FromQuery] int? maxPlayingTime,
+        [FromQuery] decimal? minComplexity,
+        [FromQuery] decimal? maxComplexity,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string sortBy = "Title",
@@ -628,6 +630,8 @@ internal static class SharedGameCatalogEndpoints
             minPlayers,
             maxPlayers,
             maxPlayingTime,
+            minComplexity,
+            maxComplexity,
             Status: null, // Public always gets Published only (filtered in handler)
             pageNumber,
             pageSize,

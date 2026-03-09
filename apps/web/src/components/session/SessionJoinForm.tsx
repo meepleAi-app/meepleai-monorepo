@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useCallback, type FormEvent } from 'react';
+
 import { LogIn, Loader2, AlertCircle } from 'lucide-react';
 
 interface SessionJoinFormProps {
@@ -35,17 +36,17 @@ export function SessionJoinForm({
 
   const handleCodeChange = useCallback((value: string) => {
     // Allow only alphanumeric, max 6 chars, auto-uppercase
-    const cleaned = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
+    const cleaned = value
+      .replace(/[^A-Za-z0-9]/g, '')
+      .toUpperCase()
+      .slice(0, 6);
     setCode(cleaned);
   }, []);
 
   return (
     <form onSubmit={handleSubmit} className={`space-y-4 ${className}`}>
       <div>
-        <label
-          htmlFor="session-code"
-          className="mb-1.5 block text-sm font-medium text-gray-700"
-        >
+        <label htmlFor="session-code" className="mb-1.5 block text-sm font-medium text-gray-700">
           Session Code
         </label>
         <input
@@ -63,10 +64,7 @@ export function SessionJoinForm({
       </div>
 
       <div>
-        <label
-          htmlFor="display-name"
-          className="mb-1.5 block text-sm font-medium text-gray-700"
-        >
+        <label htmlFor="display-name" className="mb-1.5 block text-sm font-medium text-gray-700">
           Your Name
         </label>
         <input

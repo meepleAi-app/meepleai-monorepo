@@ -3,7 +3,7 @@
  *
  * Steps:
  * 1. GameCollectionPicker  — select a game from user's library
- * 2. AgentTypePicker       — choose agent personality: Tutor / Arbitro / Decisore
+ * 2. AgentTypePicker       — choose agent personality: Tutor / Arbitro / Stratega / Narratore
  * 3. AgentNameAndKbStep    — give agent a name + pick KB PDFs
  * 4. AgentCreationReview   — summary + confirm creation
  *
@@ -45,6 +45,7 @@ import {
   WIZARD_TESTID,
   WIZARD_TYPE_TO_BACKEND,
 } from './wizard-constants';
+
 import type { WizardAgentTypeId } from './wizard-constants';
 
 // ============================================================================
@@ -86,11 +87,18 @@ const AGENT_TYPES: AgentTypeOption[] = [
     color: 'blue',
   },
   {
-    id: WIZARD_AGENT_TYPE.Decisore,
-    label: WIZARD_AGENT_TYPE.Decisore,
+    id: WIZARD_AGENT_TYPE.Stratega,
+    label: WIZARD_AGENT_TYPE.Stratega,
     description: 'Fornisce consigli strategici e tattici per la partita',
     icon: Target,
     color: 'green',
+  },
+  {
+    id: WIZARD_AGENT_TYPE.Narratore,
+    label: WIZARD_AGENT_TYPE.Narratore,
+    description: 'Racconta ambientazione, lore e atmosfera del gioco',
+    icon: BookOpen,
+    color: 'purple',
   },
 ];
 
@@ -121,7 +129,9 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
               <span
                 className={cn(
                   'text-xs mt-1 font-nunito whitespace-nowrap',
-                  isActive ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-muted-foreground'
+                  isActive
+                    ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                    : 'text-muted-foreground'
                 )}
               >
                 {WIZARD_STEP_LABEL[i]}
@@ -185,13 +195,19 @@ function GameCollectionPicker({
       </div>
 
       {isLoading ? (
-        <div data-testid={WIZARD_TESTID.LibraryLoading} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div
+          data-testid={WIZARD_TESTID.LibraryLoading}
+          className="grid grid-cols-2 sm:grid-cols-3 gap-3"
+        >
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-36 rounded-xl bg-muted animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div data-testid={WIZARD_TESTID.LibraryEmpty} className="text-center py-10 text-muted-foreground font-nunito">
+        <div
+          data-testid={WIZARD_TESTID.LibraryEmpty}
+          className="text-center py-10 text-muted-foreground font-nunito"
+        >
           {search ? 'Nessun gioco trovato' : 'Nessun gioco nella libreria'}
         </div>
       ) : (
@@ -355,7 +371,10 @@ function AgentNameAndKbStep({
             ))}
           </div>
         ) : pdfs.length === 0 ? (
-          <div data-testid={WIZARD_TESTID.PdfsEmpty} className="flex items-center gap-2 p-4 rounded-lg bg-muted/50 text-muted-foreground font-nunito text-sm">
+          <div
+            data-testid={WIZARD_TESTID.PdfsEmpty}
+            className="flex items-center gap-2 p-4 rounded-lg bg-muted/50 text-muted-foreground font-nunito text-sm"
+          >
             <FileText className="h-5 w-5 shrink-0" />
             <span>Nessun PDF disponibile per questo gioco</span>
           </div>
@@ -535,7 +554,9 @@ export function AgentCreationWizard() {
           setStep(2); // skip to type selection
         }
       })
-      .catch(() => {/* silent */});
+      .catch(() => {
+        /* silent */
+      });
   }, [preselectedGameId]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -598,7 +619,7 @@ export function AgentCreationWizard() {
       router.push(`/chat/new?game=${state.selectedGame.gameId}`);
     } catch (err) {
       setSubmitError(
-        err instanceof Error ? err.message : 'Errore nella creazione dell\'agent. Riprova.'
+        err instanceof Error ? err.message : "Errore nella creazione dell'agent. Riprova."
       );
     } finally {
       setIsSubmitting(false);
@@ -633,9 +654,7 @@ export function AgentCreationWizard() {
           {step === 1 && (
             <GameCollectionPicker selected={state.selectedGame} onSelect={handleGameSelect} />
           )}
-          {step === 2 && (
-            <AgentTypePicker selected={state.agentType} onSelect={handleTypeSelect} />
-          )}
+          {step === 2 && <AgentTypePicker selected={state.agentType} onSelect={handleTypeSelect} />}
           {step === 3 && state.selectedGame && (
             <AgentNameAndKbStep
               gameId={state.selectedGame.gameId}

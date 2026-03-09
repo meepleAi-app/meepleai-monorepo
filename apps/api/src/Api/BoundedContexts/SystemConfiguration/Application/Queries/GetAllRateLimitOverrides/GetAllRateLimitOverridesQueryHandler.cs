@@ -92,7 +92,7 @@ public sealed class GetAllRateLimitOverridesQueryHandler
             // Handle deleted users
             var userName = user?.DisplayName ?? "[Deleted User]";
             var userEmail = user?.Email.Value ?? "[deleted@unknown.com]";
-            var authTier = user?.Tier ?? Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier.Free;
+            var authTier = user?.Tier ?? Api.SharedKernel.Domain.ValueObjects.UserTier.Free;
 
             // Map Authentication tier to SystemConfiguration tier
             var sysTier = MapUserTier(user, authTier);
@@ -134,7 +134,7 @@ public sealed class GetAllRateLimitOverridesQueryHandler
     /// </summary>
     private static UserTier MapUserTier(
         Api.BoundedContexts.Authentication.Domain.Entities.User? user,
-        Api.BoundedContexts.Authentication.Domain.ValueObjects.UserTier authTier)
+        Api.SharedKernel.Domain.ValueObjects.UserTier authTier)
     {
         // Check if user is admin via Role (Admin is Role-based, not Tier-based)
         if (user != null && user.Role.Value.Equals("admin", StringComparison.OrdinalIgnoreCase))

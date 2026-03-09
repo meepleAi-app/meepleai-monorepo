@@ -2,17 +2,28 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 
 /// <summary>
 /// Processing priority for PDF documents.
-/// Admin-uploaded PDFs are processed before user PDFs.
+/// Higher value = higher priority = dequeued first.
+/// Issue #5455: 4-level priority system.
 /// </summary>
 public enum ProcessingPriority
 {
     /// <summary>
-    /// Normal user-uploaded PDFs.
+    /// Low priority — reindex operations, background maintenance.
     /// </summary>
-    Normal = 0,
+    Low = 0,
 
     /// <summary>
-    /// Admin-uploaded PDFs with elevated priority.
+    /// Normal priority — standard user-uploaded PDFs.
     /// </summary>
-    Admin = 10
+    Normal = 10,
+
+    /// <summary>
+    /// High priority — admin-uploaded or SharedGame PDFs.
+    /// </summary>
+    High = 20,
+
+    /// <summary>
+    /// Urgent priority — manually bumped by admin.
+    /// </summary>
+    Urgent = 30
 }

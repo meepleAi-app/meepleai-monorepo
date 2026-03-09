@@ -18,9 +18,8 @@
 
 'use client';
 
-import Link from 'next/link';
-
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
+import Link from 'next/link';
 
 import { usePdfProcessingStatus } from '@/hooks/queries/usePdfProcessingStatus';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -73,7 +72,7 @@ export function KbStatusBadge({ gameId }: KbStatusBadgeProps) {
         <Link
           href={`/library/games/${gameId}/agent`}
           className="ml-auto underline underline-offset-2 hover:text-teal-600"
-          onClick={(e) => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
           aria-label={t('kbStatus.createAgent')}
         >
           {t('kbStatus.createAgent')} →

@@ -30,6 +30,17 @@ export const PdfDocumentDtoSchema = z.object({
   canRetry: z.boolean().default(false),
   errorCategory: z.string().nullable().default(null),
   processingError: z.string().nullable().default(null),
+  // Issue #5443: document classification for pipeline routing
+  documentCategory: z
+    .enum(['Rulebook', 'Expansion', 'Errata', 'QuickStart', 'Reference', 'PlayerAid', 'Other'])
+    .default('Rulebook'),
+  // Issue #5444: base document linkage
+  baseDocumentId: z.string().uuid().nullable().default(null),
+  // Issue #5446: copyright disclaimer and RAG toggle
+  isActiveForRag: z.boolean().default(true),
+  hasAcceptedDisclaimer: z.boolean().default(false),
+  // Issue #5447: user-editable version label
+  versionLabel: z.string().nullable().default(null),
 });
 
 export type PdfDocumentDto = z.infer<typeof PdfDocumentDtoSchema>;

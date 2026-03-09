@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -18,13 +20,18 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.RagDashbo
 [Trait("Feature", "RagDashboard")]
 public class SaveRagConfigCommandHandlerTests
 {
+    private readonly Mock<IRagUserConfigRepository> _mockRepository;
     private readonly Mock<ILogger<SaveRagConfigCommandHandler>> _mockLogger;
     private readonly SaveRagConfigCommandHandler _handler;
 
     public SaveRagConfigCommandHandlerTests()
     {
+        _mockRepository = new Mock<IRagUserConfigRepository>();
+        _mockRepository
+            .Setup(r => r.UpsertAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RagUserConfigEntity());
         _mockLogger = new Mock<ILogger<SaveRagConfigCommandHandler>>();
-        _handler = new SaveRagConfigCommandHandler(_mockLogger.Object);
+        _handler = new SaveRagConfigCommandHandler(_mockRepository.Object, _mockLogger.Object);
     }
 
     [Fact]

@@ -39,6 +39,8 @@ on:
           - library-browsing
           - catalog-search
           - admin-concurrent
+          - rag-isolated
+          - rag-e2e
       run_lighthouse:
         description: 'Run Lighthouse CI'
         required: false
@@ -73,15 +75,16 @@ jobs:
   # ============================================
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     outputs:
-      web: ${{ steps.filter.outputs.web }}
-      api: ${{ steps.filter.outputs.api }}
-      k6: ${{ steps.filter.outputs.k6 }}
+      web: ${{ steps.filter.outputs.web || 'true' }}
+      api: ${{ steps.filter.outputs.api || 'true' }}
+      k6: ${{ steps.filter.outputs.k6 || 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name == 'pull_request'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           filters: |
@@ -97,7 +100,7 @@ jobs:
   # ============================================
   k6-tests:
     name: K6 Performance Tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     timeout-minutes: 45
     continue-on-error: true
@@ -155,11 +158,20 @@ jobs:
 
       - name: Install k6 and Redis CLI
         run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install -y k6 redis-tools
+          ARCH=$(dpkg --print-architecture)
+          if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
+            # k6 deb repo doesn't support ARM64 — install from GitHub releases
+            K6_VERSION=$(curl -s https://api.github.com/repos/grafana/k6/releases/latest | grep tag_name | cut -d'"' -f4)
+            curl -sL "https://github.com/grafana/k6/releases/download/${K6_VERSION}/k6-${K6_VERSION}-linux-arm64.tar.gz" | tar xz
+            sudo mv k6-${K6_VERSION}-linux-arm64/k6 /usr/local/bin/k6
+          else
+            sudo gpg -k
+            sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+            echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+            sudo apt-get update
+            sudo apt-get install -y k6
+          fi
+          sudo apt-get update && sudo apt-get install -y redis-tools
 
       - name: Clean API build outputs
         working-directory: apps/api/src/Api
@@ -170,7 +182,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Install EF Core tools
-        run: dotnet tool install --global dotnet-ef --version 9.0.11
+        run: dotnet tool update --global dotnet-ef || dotnet tool install --global dotnet-ef
 
       - name: Create test database
         run: |
@@ -273,6 +285,8 @@ jobs:
             ["library-browsing"]="scenarios/library-browsing.js"
             ["catalog-search"]="scenarios/catalog-search.js"
             ["admin-concurrent"]="scenarios/admin-concurrent-actions.js"
+            ["rag-isolated"]="scenarios/rag-pipeline-isolated.js"
+            ["rag-e2e"]="scenarios/rag-e2e-realistic.js"
           )
 
           # Run scenarios
@@ -302,6 +316,28 @@ jobs:
 
           echo "K6 tests completed"
 
+      # Issue #5542: Baseline regression gate
+      - name: Run baseline regression check
+        if: always()
+        working-directory: tests/k6
+        run: |
+          chmod +x utils/baseline-compare.sh
+          if utils/baseline-compare.sh reports; then
+            echo "✅ Baseline regression check passed"
+          else
+            echo "❌ Baseline regression check failed — performance regression detected"
+            # On PR, post the report as a comment
+            if [ "${{ github.event_name }}" == "pull_request" ] && [ -f reports/baseline-comparison.md ]; then
+              gh pr comment ${{ github.event.pull_request.number }} --body-file reports/baseline-comparison.md || true
+            fi
+            # Don't fail the workflow on smoke tests (informational only)
+            if [ "${{ inputs.test_type || 'smoke' }}" != "smoke" ]; then
+              exit 1
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Debug API logs on failure
         if: failure()
         run: |
@@ -317,7 +353,7 @@ jobs:
 
       - name: Upload performance reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: k6-performance-reports-${{ github.run_number }}
           path: tests/k6/reports/
@@ -325,7 +361,7 @@ jobs:
 
       - name: Archive API logs
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: k6-api-logs-${{ github.run_number }}
           path: api.log
@@ -347,7 +383,7 @@ jobs:
   # ============================================
   lighthouse-build:
     name: Build Next.js (Lighthouse)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: changes
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse != 'false') ||
@@ -375,10 +411,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: apps/web/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-
-            ${{ runner.os }}-nextjs-
+            ${{ runner.os }}-${{ runner.arch }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-${{ runner.arch }}-nextjs-
 
       - name: Build Next.js for Production
         run: pnpm build
@@ -386,7 +422,7 @@ jobs:
           NODE_ENV: production
 
       - name: Upload Next.js Build Artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: nextjs-build-lighthouse-${{ github.sha }}
           path: |
@@ -396,7 +432,7 @@ jobs:
 
   lighthouse-ci:
     name: Lighthouse CI
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [changes, lighthouse-build]
     continue-on-error: true
     defaults:
@@ -417,7 +453,7 @@ jobs:
           frozen-lockfile: 'true'
 
       - name: Download Next.js Build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: nextjs-build-lighthouse-${{ github.sha }}
           path: apps/web
@@ -429,7 +465,7 @@ jobs:
 
       - name: Upload Lighthouse CI Results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-ci-results-${{ github.run_number }}
           path: apps/web/.lighthouseci/
@@ -558,7 +594,7 @@ jobs:
   # ============================================
   notify-failure:
     name: Notify on Failure
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [k6-tests, lighthouse-ci]
     if: failure() && github.event_name == 'schedule'
     permissions:

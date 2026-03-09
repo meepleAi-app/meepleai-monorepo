@@ -39,4 +39,10 @@ internal interface IFreeModelQuotaTracker
     /// or <c>null</c> if not yet recorded.
     /// </summary>
     Task<DateTime?> GetRpdResetTimeAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Issue #5476: Flush all cached quota state from Redis.
+    /// Used by admin emergency controls to clear stale RPD exhaustion flags.
+    /// </summary>
+    Task FlushCacheAsync(CancellationToken ct = default);
 }

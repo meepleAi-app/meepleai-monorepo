@@ -22,7 +22,7 @@ export function QuickStats({ stats, isLoading }: QuickStatsProps) {
           <div
             key={i}
             className={[
-              'h-28 rounded-2xl animate-pulse',
+              'h-20 rounded-xl animate-pulse',
               'bg-[rgba(200,180,160,0.20)] dark:bg-[rgba(40,36,32,0.40)]',
             ].join(' ')}
             aria-label="Loading stats"
@@ -48,11 +48,7 @@ export function QuickStats({ stats, isLoading }: QuickStatsProps) {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard
-        icon="🎲"
-        value={stats.totalGames}
-        label="Giochi in collezione"
-      />
+      <StatCard icon="🎲" value={stats.totalGames} label="Giochi in collezione" />
 
       <StatCard
         icon="🎯"
@@ -68,11 +64,7 @@ export function QuickStats({ stats, isLoading }: QuickStatsProps) {
         label="Giocate questa settimana"
       />
 
-      <StatCard
-        icon="⭐"
-        value={stats.monthlyFavorites}
-        label="Preferiti questo mese"
-      />
+      <StatCard icon="⭐" value={stats.monthlyFavorites} label="Preferiti questo mese" />
     </div>
   );
 }

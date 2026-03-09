@@ -1,97 +1,107 @@
 /**
  * Admin Config Hub
  * Issue #5040 — Consolidate Admin Routes
+ * Issue #5052 — Admin Config Migration
  *
  * Canonical entry for all system configuration admin pages.
- * Tabs: general · limits · flags · rate-limits · n8n · wizard
- *
- * TODO (Issue #5052): Migrate full content with tab-based layout + ActionBar.
+ * Tabs: general · limits · flags · rate-limits
  */
 
-import Link from 'next/link';
+import { Suspense } from 'react';
 
+import { Settings, Gauge, Flag, ShieldCheck } from 'lucide-react';
+
+import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
+
+import { FeatureFlagsWrapper } from './FeatureFlagsWrapper';
+import { GeneralTab } from './GeneralTab';
+import { LimitsTab } from './LimitsTab';
 import { AdminConfigNavConfig } from './NavConfig';
+import { RateLimitsTab } from './RateLimitsTab';
 
 interface AdminConfigPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
 }
 
-const TABS = [
-  { id: 'general',      label: 'General',     href: '/admin/config?tab=general' },
-  { id: 'limits',       label: 'Limits',      href: '/admin/config?tab=limits' },
-  { id: 'flags',        label: 'Feature Flags', href: '/admin/config?tab=flags' },
-  { id: 'rate-limits',  label: 'Rate Limits', href: '/admin/config?tab=rate-limits' },
-  { id: 'n8n',          label: 'n8n',         href: '/admin/config?tab=n8n' },
-  { id: 'wizard',       label: 'Wizard',      href: '/admin/config?tab=wizard' },
+const TABS: readonly HubTab[] = [
+  { id: 'general', label: 'General', href: '/admin/config?tab=general', icon: <Settings /> },
+  { id: 'limits', label: 'Limits', href: '/admin/config?tab=limits', icon: <Gauge /> },
+  { id: 'flags', label: 'Feature Flags', href: '/admin/config?tab=flags', icon: <Flag /> },
+  {
+    id: 'rate-limits',
+    label: 'Rate Limits',
+    href: '/admin/config?tab=rate-limits',
+    icon: <ShieldCheck />,
+  },
 ] as const;
 
-/** Old sub-page links available while full migration is pending */
-const SUB_PAGES = [
-  { label: 'Configuration',        href: '/admin/configuration' },
-  { label: 'Library Limits',       href: '/admin/configuration/game-library-limits' },
-  { label: 'PDF Upload Limits',    href: '/admin/configuration/pdf-upload-limits' },
-  { label: 'PDF Tier Limits',      href: '/admin/configuration/pdf-tier-limits' },
-  { label: 'Feature Flags',        href: '/admin/feature-flags' },
-  { label: 'Tier Limits',          href: '/admin/tier-limits' },
-  { label: 'n8n Templates',        href: '/admin/n8n-templates' },
-];
+type TabId = (typeof TABS)[number]['id'];
+
+function TabSkeleton() {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="h-10 w-48 rounded-lg bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function renderTabContent(tab: TabId) {
+  switch (tab) {
+    case 'general':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <GeneralTab />
+        </Suspense>
+      );
+    case 'limits':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <LimitsTab />
+        </Suspense>
+      );
+    case 'flags':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <FeatureFlagsWrapper />
+        </Suspense>
+      );
+    case 'rate-limits':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <RateLimitsTab />
+        </Suspense>
+      );
+    default:
+      return null;
+  }
+}
 
 export default async function AdminConfigPage({ searchParams }: AdminConfigPageProps) {
   const params = await searchParams;
-  const tab = params.tab ?? 'general';
+  const tab = (params.tab ?? 'general') as TabId;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <AdminConfigNavConfig />
       <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Configuration
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          System settings, feature flags, rate limits, and integrations.
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          System settings, feature flags, and rate limits.
         </p>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map((t) => (
-          <Link
-            key={t.id}
-            href={t.href}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="config" defaultTab="general" />
 
-      {/* Placeholder — full content migrated in Issue #5052 */}
-      <div className="rounded-lg border border-dashed border-border/60 p-8 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Tab: <span className="font-mono">{tab}</span>
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Full tab content will be available after Issue #5052 (Admin Config Migration).
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Access via individual pages below until migration is complete:
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {SUB_PAGES.map((p) => (
-            <Link
-              key={p.href}
-              href={p.href}
-              className="rounded-md border border-border/60 px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-            >
-              {p.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <div className="pt-1">{renderTabContent(tab)}</div>
     </div>
   );
 }

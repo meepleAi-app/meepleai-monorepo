@@ -1,5 +1,5 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using AuthUserDto = Api.BoundedContexts.Authentication.Application.DTOs.UserDto;
 using Api.Middleware;
 using Api.Models;

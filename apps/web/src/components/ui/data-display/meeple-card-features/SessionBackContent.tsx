@@ -69,44 +69,45 @@ const isSafeHref = (href: string) => href.startsWith('/') && !href.startsWith('/
 // Sub-components
 // ============================================================================
 
-function StatItem({ icon: Icon, label, value }: {
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+}: {
   icon: typeof Clock;
   label: string;
   value: string | number;
 }) {
   return (
-    <div className="flex flex-col items-center gap-0.5" data-testid={`stat-${label.toLowerCase().replace(/\s/g, '-')}`}>
+    <div
+      className="flex flex-col items-center gap-0.5"
+      data-testid={`stat-${label.toLowerCase().replace(/\s/g, '-')}`}
+    >
       <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-      <span className="text-xs font-bold tabular-nums text-card-foreground max-w-[4rem] truncate">{value}</span>
+      <span className="text-xs font-bold tabular-nums text-card-foreground max-w-[4rem] truncate">
+        {value}
+      </span>
       <span className="text-[9px] text-muted-foreground">{label}</span>
     </div>
   );
 }
 
-function PlayerRankRow({ player, maxScore }: {
-  player: SessionPlayerInfo;
-  maxScore: number;
-}) {
-  const medal = player.currentRank <= 3
-    // eslint-disable-next-line security/detect-object-injection
-    ? MEDALS[player.currentRank - 1]
-    : undefined;
-  const barWidth = maxScore > 0 ? Math.max(0, Math.min(100, (player.totalScore / maxScore) * 100)) : 0;
-  // eslint-disable-next-line security/detect-object-injection
+function PlayerRankRow({ player, maxScore }: { player: SessionPlayerInfo; maxScore: number }) {
+  const medal = player.currentRank <= 3 ? MEDALS[player.currentRank - 1] : undefined;
+  const barWidth =
+    maxScore > 0 ? Math.max(0, Math.min(100, (player.totalScore / maxScore) * 100)) : 0;
+
   const colorHsl = PLAYER_COLOR_MAP[player.color];
 
   return (
-    <div
-      className="flex items-center gap-2"
-      data-testid={`rank-row-${player.id}`}
-    >
-      <span className="w-5 text-center text-xs" aria-label={medal ? `Rank ${player.currentRank}` : undefined}>
+    <div className="flex items-center gap-2" data-testid={`rank-row-${player.id}`}>
+      <span
+        className="w-5 text-center text-xs"
+        aria-label={medal ? `Rank ${player.currentRank}` : undefined}
+      >
         {medal ?? `#${player.currentRank}`}
       </span>
-      <span
-        // eslint-disable-next-line security/detect-object-injection
-        className={cn('w-2 h-2 rounded-full flex-shrink-0', PLAYER_COLOR_BG[player.color])}
-      />
+      <span className={cn('w-2 h-2 rounded-full flex-shrink-0', PLAYER_COLOR_BG[player.color])} />
       <span className="flex-1 min-w-0 text-xs font-medium truncate text-card-foreground">
         {player.displayName}
       </span>
@@ -142,8 +143,11 @@ export const SessionBackContent = React.memo(function SessionBackContent({
   const sortedPlayers = [...players].sort((a, b) => a.currentRank - b.currentRank);
   const maxScore = players.reduce((max, p) => Math.max(max, p.totalScore), 1);
   const winner = sortedPlayers[0];
-  const hasMedia = !!backData.mediaCounts &&
-    (backData.mediaCounts.photos > 0 || backData.mediaCounts.videos > 0 || backData.mediaCounts.audio > 0);
+  const hasMedia =
+    !!backData.mediaCounts &&
+    (backData.mediaCounts.photos > 0 ||
+      backData.mediaCounts.videos > 0 ||
+      backData.mediaCounts.audio > 0);
 
   const statusLabels: Record<SessionStatus, string> = {
     setup: 'Configurazione',
@@ -165,7 +169,8 @@ export const SessionBackContent = React.memo(function SessionBackContent({
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
           style={{
-            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px)',
+            backgroundImage:
+              'repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px)',
           }}
           aria-hidden="true"
         />
@@ -199,7 +204,7 @@ export const SessionBackContent = React.memo(function SessionBackContent({
               <p className="text-xs text-muted-foreground">Turni: {backData.turnType}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Giocatori: {players.filter((p) => p.role !== 'spectator').length}
+              Giocatori: {players.filter(p => p.role !== 'spectator').length}
             </p>
           </div>
         )}
@@ -212,11 +217,7 @@ export const SessionBackContent = React.memo(function SessionBackContent({
               label="Durata"
               value={backData.durationMinutes ? `${backData.durationMinutes}m` : '—'}
             />
-            <StatItem
-              icon={RotateCw}
-              label="Turni"
-              value={backData.totalTurns ?? '—'}
-            />
+            <StatItem icon={RotateCw} label="Turni" value={backData.totalTurns ?? '—'} />
             <StatItem
               icon={Trophy}
               label="Media"
@@ -237,7 +238,7 @@ export const SessionBackContent = React.memo(function SessionBackContent({
               {status === 'completed' ? 'Classifica Finale' : 'Classifica'}
             </h3>
             <div className="space-y-1.5">
-              {sortedPlayers.map((player) => (
+              {sortedPlayers.map(player => (
                 <PlayerRankRow key={player.id} player={player} maxScore={maxScore} />
               ))}
             </div>
@@ -251,7 +252,7 @@ export const SessionBackContent = React.memo(function SessionBackContent({
               Timeline
             </h3>
             <div className="space-y-1 border-l-2 border-border/40 pl-3">
-              {backData.timeline.slice(-5).map((event) => (
+              {backData.timeline.slice(-5).map(event => (
                 <div key={event.id} className="flex items-start gap-2 text-xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground mt-1 flex-shrink-0" />
                   <span className="text-card-foreground">{event.label}</span>
@@ -265,17 +266,26 @@ export const SessionBackContent = React.memo(function SessionBackContent({
         {hasMedia && backData.mediaCounts && (
           <div className="flex items-center gap-3" data-testid="media-counts">
             {backData.mediaCounts.photos > 0 && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground" aria-label={`${backData.mediaCounts.photos} foto`}>
+              <span
+                className="flex items-center gap-1 text-xs text-muted-foreground"
+                aria-label={`${backData.mediaCounts.photos} foto`}
+              >
                 <Camera className="w-3 h-3" aria-hidden="true" /> {backData.mediaCounts.photos}
               </span>
             )}
             {backData.mediaCounts.videos > 0 && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground" aria-label={`${backData.mediaCounts.videos} video`}>
+              <span
+                className="flex items-center gap-1 text-xs text-muted-foreground"
+                aria-label={`${backData.mediaCounts.videos} video`}
+              >
                 <Video className="w-3 h-3" aria-hidden="true" /> {backData.mediaCounts.videos}
               </span>
             )}
             {backData.mediaCounts.audio > 0 && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground" aria-label={`${backData.mediaCounts.audio} audio`}>
+              <span
+                className="flex items-center gap-1 text-xs text-muted-foreground"
+                aria-label={`${backData.mediaCounts.audio} audio`}
+              >
                 <Mic className="w-3 h-3" aria-hidden="true" /> {backData.mediaCounts.audio}
               </span>
             )}
@@ -287,7 +297,7 @@ export const SessionBackContent = React.memo(function SessionBackContent({
           <Link
             href={backData.agentChatHref}
             className="flex items-center gap-1.5 text-xs font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
             data-testid="agent-chat-link"
           >
             <Bot className="w-3.5 h-3.5" />
@@ -296,17 +306,19 @@ export const SessionBackContent = React.memo(function SessionBackContent({
         )}
 
         {/* Completed: PlayRecord link */}
-        {status === 'completed' && backData.playRecordHref && isSafeHref(backData.playRecordHref) && (
-          <Link
-            href={backData.playRecordHref}
-            className="flex items-center gap-1.5 text-xs font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
-            onClick={(e) => e.stopPropagation()}
-            data-testid="playrecord-link"
-          >
-            <ScrollText className="w-3.5 h-3.5" />
-            Vedi PlayRecord
-          </Link>
-        )}
+        {status === 'completed' &&
+          backData.playRecordHref &&
+          isSafeHref(backData.playRecordHref) && (
+            <Link
+              href={backData.playRecordHref}
+              className="flex items-center gap-1.5 text-xs font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
+              onClick={e => e.stopPropagation()}
+              data-testid="playrecord-link"
+            >
+              <ScrollText className="w-3.5 h-3.5" />
+              Vedi PlayRecord
+            </Link>
+          )}
 
         {/* Detail link */}
         {detailHref && (
@@ -315,7 +327,7 @@ export const SessionBackContent = React.memo(function SessionBackContent({
               href={detailHref}
               className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
               style={{ color: `hsl(${entityColor})` }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
               data-testid="session-detail-link"
             >
               <ExternalLink className="h-3.5 w-3.5" />

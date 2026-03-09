@@ -13,11 +13,7 @@ import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Tooltip,
   TooltipContent,
@@ -61,7 +57,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                 'transition-colors duration-200',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                 active
-                  ? 'bg-[hsl(262_83%_62%/0.1)] text-[hsl(262_83%_62%)] font-semibold'
+                  ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                 isCollapsed && 'justify-center px-2'
               )}
@@ -105,7 +101,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                         'transition-colors duration-200',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                         isLibraryActive
-                          ? 'bg-[hsl(262_83%_62%/0.1)] text-[hsl(262_83%_62%)] font-semibold'
+                          ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       )}
                       data-testid={libraryItem.testId}
@@ -128,7 +124,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                     'transition-colors duration-200',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                     isLibraryActive
-                      ? 'bg-[hsl(262_83%_62%/0.1)] text-[hsl(262_83%_62%)] font-semibold'
+                      ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}
                   data-testid="sidebar-library-toggle"
@@ -151,9 +147,10 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                 <CollapsibleContent>
                   <ul className="mt-1 ml-4 flex flex-col gap-0.5" role="list">
                     {libraryItem.children?.map(child => {
-                      const childActive = child.href === '/library'
-                        ? pathname === '/library'
-                        : pathname?.startsWith(child.href) ?? false;
+                      const childActive =
+                        child.href === '/library'
+                          ? pathname === '/library'
+                          : (pathname?.startsWith(child.href) ?? false);
                       return (
                         <li key={child.id}>
                           <Link
@@ -166,15 +163,18 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                               'transition-colors duration-200',
                               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                               childActive
-                                ? 'bg-[hsl(262_83%_62%/0.1)] text-[hsl(262_83%_62%)] font-medium'
+                                ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-medium'
                                 : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                             )}
                             data-testid={`sidebar-library-${child.id}`}
                           >
-                            {child.icon && (() => {
-                              const ChildIcon = child.icon;
-                              return <ChildIcon className="h-4 w-4 shrink-0" aria-hidden="true" />;
-                            })()}
+                            {child.icon &&
+                              (() => {
+                                const ChildIcon = child.icon;
+                                return (
+                                  <ChildIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                );
+                              })()}
                             <span>{child.label}</span>
                           </Link>
                         </li>
@@ -212,7 +212,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
                     'transition-colors duration-200',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2',
                     active
-                      ? 'bg-[hsl(262_83%_62%/0.1)] text-[hsl(262_83%_62%)] font-semibold'
+                      ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                     isCollapsed && 'justify-center px-2'
                   )}

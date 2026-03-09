@@ -10,7 +10,6 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { playRecordsApi } from '@/lib/api/play-records.api';
-import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';
 
 export const playersKeys = {
   all: ['players'] as const,

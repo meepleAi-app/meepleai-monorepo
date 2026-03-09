@@ -19,10 +19,7 @@ import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
 
-import {
-  PLAYER_COLOR_MAP,
-  type SessionPlayerInfo,
-} from './session-types';
+import { PLAYER_COLOR_MAP, type SessionPlayerInfo } from './session-types';
 
 // ============================================================================
 // Types
@@ -99,19 +96,18 @@ export function SessionPlayerPopup({
             'absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50',
             'bg-card/95 backdrop-blur-md rounded-xl shadow-lg border border-border',
             'p-2 min-w-[180px] max-w-[240px]',
-            'animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200',
+            'animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200'
           )}
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
           data-testid="session-player-popup"
         >
           <div className="flex flex-col gap-1.5">
-            {players.map((player) => {
-              // eslint-disable-next-line security/detect-object-injection
+            {players.map(player => {
               const colorHsl = PLAYER_COLOR_MAP[player.color];
-              // eslint-disable-next-line security/detect-object-injection
+
               const RoleIcon = roleIcons[player.role];
-              // eslint-disable-next-line security/detect-object-injection
+
               const roleLabel = roleLabels[player.role];
               const href = buildPlayerHref?.(player.userId ?? player.id);
 
@@ -120,7 +116,7 @@ export function SessionPlayerPopup({
                   className={cn(
                     'flex items-center gap-2 px-2.5 py-1.5 rounded-lg',
                     'transition-colors duration-150',
-                    href && 'hover:bg-muted/60 cursor-pointer',
+                    href && 'hover:bg-muted/60 cursor-pointer'
                   )}
                   style={{
                     borderLeft: `3px solid hsl(${colorHsl})`,
@@ -163,7 +159,7 @@ export function SessionPlayerPopup({
                   <Link
                     key={player.id}
                     href={href}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
                     className="no-underline"
                   >
                     {content}

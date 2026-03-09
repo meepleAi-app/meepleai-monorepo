@@ -1,9 +1,9 @@
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
-using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 

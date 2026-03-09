@@ -6,16 +6,11 @@
  */
 
 import React from 'react';
-import {
-  Layers,
-  Shuffle,
-  Eye,
-  ArrowDown,
-  ArrowUp,
-  Hand,
-  Trash2,
-} from 'lucide-react';
+
+import { Layers, Shuffle, Eye, ArrowDown, ArrowUp, Hand, Trash2 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type { CardDeckState, CardDeckActions, CardEntry } from '../types';
 
 interface InteractiveCardDeckProps {
@@ -98,9 +93,7 @@ function HandCard({
       className="group flex items-center justify-between rounded-lg bg-white/70 border border-slate-200/60 px-2.5 py-1.5"
       data-testid={`hand-card-${card.id}`}
     >
-      <span className="font-nunito text-xs font-medium text-slate-700 truncate">
-        {card.name}
-      </span>
+      <span className="font-nunito text-xs font-medium text-slate-700 truncate">{card.name}</span>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {allowReturn && onReturnToDeck && (
           <button
@@ -135,9 +128,9 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
     );
   }
 
-  const handCards = state.cards.filter((c) => c.zone === 'hand').sort((a, b) => a.order - b.order);
+  const handCards = state.cards.filter(c => c.zone === 'hand').sort((a, b) => a.order - b.order);
   const topDiscard = state.cards
-    .filter((c) => c.zone === 'discard' && c.faceUp)
+    .filter(c => c.zone === 'discard' && c.faceUp)
     .sort((a, b) => b.order - a.order)[0];
 
   return (
@@ -146,12 +139,8 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Layers className="h-3.5 w-3.5 text-indigo-500" />
-          <span className="font-nunito text-xs font-bold text-slate-700">
-            {state.toolName}
-          </span>
-          <span className="font-nunito text-[10px] text-slate-400">
-            {state.deckType}
-          </span>
+          <span className="font-nunito text-xs font-bold text-slate-700">{state.toolName}</span>
+          <span className="font-nunito text-[10px] text-slate-400">{state.deckType}</span>
         </div>
       </div>
 
@@ -216,12 +205,14 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
             </h4>
           </div>
           <div className="space-y-1">
-            {handCards.map((card) => (
+            {handCards.map(card => (
               <HandCard
                 key={card.id}
                 card={card}
                 onDiscard={actions?.onDiscard ? () => actions.onDiscard!(card.id) : undefined}
-                onReturnToDeck={actions?.onReturnToDeck ? () => actions.onReturnToDeck!(card.id) : undefined}
+                onReturnToDeck={
+                  actions?.onReturnToDeck ? () => actions.onReturnToDeck!(card.id) : undefined
+                }
                 allowDiscard={state.allowDiscard}
                 allowReturn={state.allowReturnToDeck}
               />
@@ -232,9 +223,7 @@ export function InteractiveCardDeck({ state, actions }: InteractiveCardDeckProps
 
       {/* Empty hand message */}
       {handCards.length === 0 && (
-        <p className="text-center font-nunito text-xs text-slate-400">
-          No cards in hand
-        </p>
+        <p className="text-center font-nunito text-xs text-slate-400">No cards in hand</p>
       )}
     </div>
   );

@@ -1,0 +1,85 @@
+#cloud-config
+# Oracle Cloud Always Free VM - Cloud-init for GitHub Actions Runner
+# Epic #2967: Zero-Cost CI/CD Infrastructure
+#
+# Usage: Paste into "Cloud-init script" field when provisioning Oracle VM
+# Target: VM.Standard.A1.Flex (ARM64, 4 OCPU, 24GB RAM, 200GB)
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - jq
+  - unzip
+  - build-essential
+  - libicu-dev
+  - libgdiplus
+  - iptables
+  - iptables-persistent
+
+runcmd:
+  # Install Docker
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  - systemctl enable docker
+  - systemctl start docker
+
+  # Configure Docker daemon for CI workloads
+  - |
+    cat > /etc/docker/daemon.json <<'DOCKER_EOF'
+    {
+      "log-driver": "json-file",
+      "log-opts": {
+        "max-size": "10m",
+        "max-file": "3"
+      },
+      "storage-driver": "overlay2",
+      "default-address-pools": [
+        {"base": "172.80.0.0/16", "size": 24}
+      ]
+    }
+    DOCKER_EOF
+  - systemctl restart docker
+
+  # Install Docker Compose v2
+  - mkdir -p /usr/local/lib/docker/cli-plugins
+  - curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" -o /usr/local/lib/docker/cli-plugins/docker-compose
+  - chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+  # Install .NET SDK 9.0 (ARM64)
+  - curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 9.0 --install-dir /usr/share/dotnet
+  - ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+  - echo 'export DOTNET_ROOT=/usr/share/dotnet' >> /etc/environment
+
+  # Install Node.js 20 LTS (ARM64)
+  - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  - apt-get install -y nodejs
+  - npm install -g pnpm@10
+
+  # Configure swap (4GB - helps with .NET builds)
+  - fallocate -l 4G /swapfile
+  - chmod 600 /swapfile
+  - mkswap /swapfile
+  - swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+  # Configure firewall (SSH only inbound, all outbound)
+  - iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+  - iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+  - iptables -A INPUT -i lo -j ACCEPT
+  - iptables -A INPUT -j DROP
+  - netfilter-persistent save
+
+  # Create runner directory
+  - mkdir -p /home/ubuntu/actions-runner
+  - chown ubuntu:ubuntu /home/ubuntu/actions-runner
+
+  # Docker prune cron (daily at 3 AM)
+  - echo '0 3 * * * docker system prune -af --volumes --filter "until=48h" 2>/dev/null' | crontab -u root -
+
+final_message: "Cloud-init complete. Run setup-runner.sh to install GitHub Actions runner."

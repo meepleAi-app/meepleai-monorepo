@@ -8,8 +8,9 @@
  * Kept separate so page.tsx can remain a Server Component for metadata.
  */
 
-import { AgentsNavConfig } from '../NavConfig';
 import { StrategyBuilder } from '@/components/rag-dashboard/builder/StrategyBuilder';
+
+import { AgentsNavConfig } from '../NavConfig';
 
 export function BuilderClient() {
   return (

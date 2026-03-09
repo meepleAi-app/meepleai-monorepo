@@ -43,15 +43,12 @@ export interface SessionScoreTableProps {
 function buildScoreMatrix(
   players: SessionPlayerInfo[],
   roundScores: SessionRoundScore[],
-  dimension: string,
+  dimension: string
 ): { playerId: string; scores: Record<number, number>; total: number }[] {
-  return players.map((p) => {
-    const playerScores = roundScores.filter(
-      (s) => s.playerId === p.id && s.dimension === dimension,
-    );
+  return players.map(p => {
+    const playerScores = roundScores.filter(s => s.playerId === p.id && s.dimension === dimension);
     const scores: Record<number, number> = {};
     for (const s of playerScores) {
-      // eslint-disable-next-line security/detect-object-injection
       scores[s.round] = s.value;
     }
     return { playerId: p.id, scores, total: p.totalScore };
@@ -73,14 +70,14 @@ export const SessionScoreTable = React.memo(function SessionScoreTable({
   if (players.length === 0) return null;
 
   const matrix = buildScoreMatrix(players, roundScores, dimension);
-  const allRounds = [...new Set(roundScores.filter((s) => s.dimension === dimension).map((s) => s.round))].sort(
-    (a, b) => a - b,
-  );
+  const allRounds = [
+    ...new Set(roundScores.filter(s => s.dimension === dimension).map(s => s.round)),
+  ].sort((a, b) => a - b);
   const visibleRounds = allRounds.slice(0, maxVisibleRounds);
   const hasMore = allRounds.length > maxVisibleRounds;
   const leaderId = players.reduce(
     (best, p) => (p.totalScore > (best?.totalScore ?? -Infinity) ? p : best),
-    players[0],
+    players[0]
   )?.id;
 
   return (
@@ -91,27 +88,25 @@ export const SessionScoreTable = React.memo(function SessionScoreTable({
           <thead>
             <tr className="text-muted-foreground/70">
               <th className="text-left font-medium pr-2 pb-1">Player</th>
-              {visibleRounds.map((r) => (
+              {visibleRounds.map(r => (
                 <th key={r} className="text-center font-medium px-1 pb-1 min-w-[24px]">
                   R{r}
                 </th>
               ))}
-              {hasMore && (
-                <th className="text-center font-medium px-1 pb-1">...</th>
-              )}
+              {hasMore && <th className="text-center font-medium px-1 pb-1">...</th>}
               <th className="text-right font-bold px-1 pb-1">Tot</th>
             </tr>
           </thead>
           <tbody>
-            {players.map((player) => {
-              const row = matrix.find((m) => m.playerId === player.id);
+            {players.map(player => {
+              const row = matrix.find(m => m.playerId === player.id);
               const isLeader = player.id === leaderId;
               return (
                 <tr
                   key={player.id}
                   className={cn(
                     'transition-colors',
-                    isLeader && 'bg-amber-50/60 dark:bg-amber-900/10',
+                    isLeader && 'bg-amber-50/60 dark:bg-amber-900/10'
                   )}
                   data-testid={`score-row-${player.id}`}
                 >
@@ -120,8 +115,8 @@ export const SessionScoreTable = React.memo(function SessionScoreTable({
                       <span
                         className={cn(
                           'w-2.5 h-2.5 rounded-full flex-shrink-0',
-                          // eslint-disable-next-line security/detect-object-injection
-                          PLAYER_COLOR_BG[player.color],
+
+                          PLAYER_COLOR_BG[player.color]
                         )}
                         aria-hidden="true"
                       />
@@ -134,13 +129,15 @@ export const SessionScoreTable = React.memo(function SessionScoreTable({
                       )}
                     </span>
                   </td>
-                  {visibleRounds.map((r) => (
+                  {visibleRounds.map(r => (
                     <td key={r} className="text-center px-1 py-0.5 tabular-nums">
                       {/* eslint-disable-next-line security/detect-object-injection */}
                       {row?.scores[r] ?? '-'}
                     </td>
                   ))}
-                  {hasMore && <td className="text-center px-1 py-0.5 text-muted-foreground">...</td>}
+                  {hasMore && (
+                    <td className="text-center px-1 py-0.5 text-muted-foreground">...</td>
+                  )}
                   <td className="text-right px-1 py-0.5 font-bold tabular-nums">
                     {row?.total ?? 0}
                   </td>
@@ -154,7 +151,7 @@ export const SessionScoreTable = React.memo(function SessionScoreTable({
       {/* Edit button */}
       {onEditScore && (
         <button
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             onEditScore();
           }}
@@ -164,7 +161,7 @@ export const SessionScoreTable = React.memo(function SessionScoreTable({
             'text-[10px] font-semibold',
             'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300',
             'hover:bg-indigo-100 dark:hover:bg-indigo-900/30',
-            'transition-colors duration-200',
+            'transition-colors duration-200'
           )}
           data-testid="edit-score-button"
         >

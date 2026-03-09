@@ -14,18 +14,14 @@ import { use } from 'react';
 import { ArrowLeft, Gamepad2, Trophy } from 'lucide-react';
 import Link from 'next/link';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
-import { useEntityNavigation } from '@/hooks/useEntityNavigation';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
+import { useEntityNavigation } from '@/hooks/useEntityNavigation';
 
-export default function PlayerDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function PlayerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: playerId } = use(params);
   const { data: stats, isLoading } = usePlayerStatistics();
   const navigationLinks = useEntityNavigation('player', { id: playerId });
@@ -68,9 +64,7 @@ export default function PlayerDetailPage({
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <Card className="border-l-4 border-l-[hsl(262,83%,58%)] shadow-lg">
               <CardHeader>
-                <CardTitle className="font-quicksand text-xl">
-                  Giochi Preferiti
-                </CardTitle>
+                <CardTitle className="font-quicksand text-xl">Giochi Preferiti</CardTitle>
               </CardHeader>
               <CardContent>
                 {Object.keys(stats.gamePlayCounts).length > 0 ? (
@@ -79,14 +73,9 @@ export default function PlayerDetailPage({
                       .sort(([, a], [, b]) => b - a)
                       .slice(0, 10)
                       .map(([game, count]) => (
-                        <li
-                          key={game}
-                          className="flex justify-between text-sm"
-                        >
+                        <li key={game} className="flex justify-between text-sm">
                           <span>{game}</span>
-                          <span className="text-muted-foreground">
-                            {count} partite
-                          </span>
+                          <span className="text-muted-foreground">{count} partite</span>
                         </li>
                       ))}
                   </ul>
@@ -102,9 +91,7 @@ export default function PlayerDetailPage({
 
             <Card className="border-l-4 border-l-[hsl(240,60%,55%)] shadow-lg">
               <CardHeader>
-                <CardTitle className="font-quicksand text-xl">
-                  Punteggi Medi
-                </CardTitle>
+                <CardTitle className="font-quicksand text-xl">Punteggi Medi</CardTitle>
               </CardHeader>
               <CardContent>
                 {Object.keys(stats.averageScoresByGame).length > 0 ? (
@@ -113,14 +100,9 @@ export default function PlayerDetailPage({
                       .sort(([, a], [, b]) => b - a)
                       .slice(0, 10)
                       .map(([game, avg]) => (
-                        <li
-                          key={game}
-                          className="flex justify-between text-sm"
-                        >
+                        <li key={game} className="flex justify-between text-sm">
                           <span>{game}</span>
-                          <span className="text-muted-foreground">
-                            {avg.toFixed(1)} pts
-                          </span>
+                          <span className="text-muted-foreground">{avg.toFixed(1)} pts</span>
                         </li>
                       ))}
                   </ul>

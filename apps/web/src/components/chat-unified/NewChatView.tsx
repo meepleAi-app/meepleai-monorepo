@@ -96,11 +96,18 @@ const DEFAULT_AGENTS: AgentOption[] = [
     icon: '⚖️',
   },
   {
-    id: 'decisore',
-    name: 'Decisore',
+    id: 'stratega',
+    name: 'Stratega',
     type: 'strategy',
     description: 'Consigli strategici e tattici',
     icon: '🎯',
+  },
+  {
+    id: 'narratore',
+    name: 'Narratore',
+    type: 'narrative',
+    description: 'Racconta ambientazione, lore e atmosfera',
+    icon: '📖',
   },
 ];
 
@@ -109,13 +116,19 @@ function getQuickStartSuggestions(gameName?: string): QuickStartSuggestion[] {
     return [
       { label: 'Consiglia un gioco', message: 'Consigliami un gioco da tavolo per la serata' },
       { label: 'Regole base', message: 'Spiegami le regole di base' },
-      { label: 'Migliori per 2 giocatori', message: 'Quali sono i migliori giochi per 2 giocatori?' },
+      {
+        label: 'Migliori per 2 giocatori',
+        message: 'Quali sono i migliori giochi per 2 giocatori?',
+      },
     ];
   }
   return [
     { label: `Come si gioca a ${gameName}`, message: `Come si gioca a ${gameName}?` },
     { label: `Regole di ${gameName}`, message: `Spiegami le regole di ${gameName}` },
-    { label: `Strategia per ${gameName}`, message: `Qual è la migliore strategia per ${gameName}?` },
+    {
+      label: `Strategia per ${gameName}`,
+      message: `Qual è la migliore strategia per ${gameName}?`,
+    },
   ];
 }
 
@@ -155,10 +168,7 @@ function GameGrid({
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-24 rounded-xl bg-muted/50 animate-pulse"
-          />
+          <div key={i} className="h-24 rounded-xl bg-muted/50 animate-pulse" />
         ))}
       </div>
     );
@@ -203,9 +213,7 @@ function GameGrid({
                 entity="game"
                 variant="compact"
                 title={game.title}
-                className={cn(
-                  selectedGameId === game.id && 'border-amber-500'
-                )}
+                className={cn(selectedGameId === game.id && 'border-amber-500')}
               />
             </button>
           ))
@@ -258,9 +266,7 @@ function AgentGrid({
             title={agent.name}
             subtitle={agent.description}
             badge={agent.icon}
-            className={cn(
-              selectedAgentType === agent.type && 'border-amber-500'
-            )}
+            className={cn(selectedAgentType === agent.type && 'border-amber-500')}
           />
         </button>
       ))}
@@ -404,7 +410,9 @@ export function NewChatView() {
   const [agents, setAgents] = useState<AgentDto[]>([]);
   const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(directGameId);
-  const [selectedAgentType, setSelectedAgentType] = useState<string | null>(isDirectGameMode ? null : 'auto');
+  const [selectedAgentType, setSelectedAgentType] = useState<string | null>(
+    isDirectGameMode ? null : 'auto'
+  );
   const [selectedCustomAgentId, setSelectedCustomAgentId] = useState<string | null>(null);
   const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(isDirectGameMode);
   const [isCreating, setIsCreating] = useState(false);
@@ -473,7 +481,8 @@ export function NewChatView() {
     let cancelled = false;
     setIsLoadingCustomAgents(true);
 
-    api.agents.getUserAgentsForGame(selectedGameId)
+    api.agents
+      .getUserAgentsForGame(selectedGameId)
       .then(result => {
         if (!cancelled) {
           setCustomAgents(result.map(a => ({ id: a.id, name: a.name, type: a.type })));
@@ -485,9 +494,13 @@ export function NewChatView() {
           setError('Errore nel caricamento degli agenti');
         }
       })
-      .finally(() => { if (!cancelled) setIsLoadingCustomAgents(false); });
+      .finally(() => {
+        if (!cancelled) setIsLoadingCustomAgents(false);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedGameId, isDirectGameMode]);
 
   // Direct game mode: auto-start or redirect based on agent count
@@ -508,12 +521,13 @@ export function NewChatView() {
       const agent = customAgents[0];
       const gameName = [...privateGames, ...sharedGames].find(g => g.id === selectedGameId)?.title;
 
-      api.chat.createThread({
-        gameId: selectedGameId,
-        agentId: agent.id,
-        title: gameName ? `Chat: ${gameName}` : 'Nuova conversazione',
-        initialMessage: null,
-      })
+      api.chat
+        .createThread({
+          gameId: selectedGameId,
+          agentId: agent.id,
+          title: gameName ? `Chat: ${gameName}` : 'Nuova conversazione',
+          initialMessage: null,
+        })
         .then(thread => {
           if (thread?.id) {
             router.push(`/chat/${thread.id}`);
@@ -525,7 +539,15 @@ export function NewChatView() {
         });
     }
     // 2+ agents: fall through to show agent selection UI
-  }, [isDirectGameMode, isLoadingCustomAgents, selectedGameId, customAgents, privateGames, sharedGames, router]);
+  }, [
+    isDirectGameMode,
+    isLoadingCustomAgents,
+    selectedGameId,
+    customAgents,
+    privateGames,
+    sharedGames,
+    router,
+  ]);
 
   // Handle game selection — reset custom agent selection
   const handleGameSelect = useCallback((gameId: string) => {
@@ -545,15 +567,17 @@ export function NewChatView() {
     setSelectedCustomAgentId(null);
   }, []);
 
-  // Resolve actual agent ID from backend agents list (for system agents)
-  const resolveAgentId = useCallback(
-    (agentType: string | null): string | undefined => {
-      if (!agentType || agentType === 'auto') return undefined;
-      const match = agents.find(a => a.type === agentType);
-      return match?.id;
-    },
-    [agents]
-  );
+  // Resolve actual agent ID — system agent types (auto/qa/rules/strategy) are UI-only
+  // labels that don't map to backend agent types (RAG, Citation, etc.), so pick the
+  // best real agent. Custom agents are game-specific and always take priority.
+  const resolveAgentId = useCallback((): string | undefined => {
+    // Custom agents for the selected game take priority (most relevant)
+    if (customAgents.length > 0) {
+      return customAgents[0].id;
+    }
+    // Fall back to first available system agent
+    return agents[0]?.id;
+  }, [customAgents, agents]);
 
   // Get selected game name for quick-start (search both lists)
   const selectedGame = useMemo(
@@ -574,15 +598,13 @@ export function NewChatView() {
 
       try {
         const gameId = selectedGameId && selectedGameId !== '' ? selectedGameId : undefined;
-        // Issue #4914: custom agent → use UUID directly; system agent → resolve from list
-        const agentId = selectedCustomAgentId ?? resolveAgentId(selectedAgentType);
+        // Issue #4914: custom agent → use UUID directly; system agent → resolve best available
+        const agentId = selectedCustomAgentId ?? resolveAgentId();
 
         const thread = await api.chat.createThread({
           gameId: gameId ?? null,
           agentId: agentId ?? null,
-          title: selectedGame?.title
-            ? `Chat: ${selectedGame.title}`
-            : 'Nuova conversazione',
+          title: selectedGame?.title ? `Chat: ${selectedGame.title}` : 'Nuova conversazione',
           initialMessage: initialMessage ?? null,
         });
 
@@ -595,7 +617,7 @@ export function NewChatView() {
         setIsCreating(false);
       }
     },
-    [selectedGameId, selectedGame?.title, selectedAgentType, selectedCustomAgentId, resolveAgentId, router]
+    [selectedGameId, selectedGame?.title, selectedCustomAgentId, resolveAgentId, router]
   );
 
   const handleQuickStart = useCallback(
@@ -605,10 +627,15 @@ export function NewChatView() {
     [handleStartChat]
   );
 
-  const canStart = selectedAgentType !== null || selectedCustomAgentId !== null;
+  const hasAgentAvailable = agents.length > 0 || customAgents.length > 0;
+  const canStart =
+    hasAgentAvailable && (selectedAgentType !== null || selectedCustomAgentId !== null);
 
   // Direct game mode: show loading spinner while resolving agents (0 or 1 → auto-redirect)
-  if (isDirectGameMode && (isLoadingCustomAgents || isCreating || (customAgents.length <= 1 && !error))) {
+  if (
+    isDirectGameMode &&
+    (isLoadingCustomAgents || isCreating || (customAgents.length <= 1 && !error))
+  ) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">
         <div className="text-center">
@@ -641,10 +668,14 @@ export function NewChatView() {
             </h1>
           </div>
           <p className="text-muted-foreground font-nunito max-w-lg mx-auto">
-            {isDirectGameMode && selectedGame
-              ? <>Scegli un agente per <span className="font-semibold text-foreground">{selectedGame.title}</span></>
-              : 'Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.'
-            }
+            {isDirectGameMode && selectedGame ? (
+              <>
+                Scegli un agente per{' '}
+                <span className="font-semibold text-foreground">{selectedGame.title}</span>
+              </>
+            ) : (
+              'Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.'
+            )}
           </p>
         </div>
 

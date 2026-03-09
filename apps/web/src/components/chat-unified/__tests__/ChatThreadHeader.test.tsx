@@ -19,7 +19,9 @@ import { ChatThreadHeader } from '../ChatThreadHeader';
 // Mock next/link
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: any) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -29,13 +31,7 @@ describe('ChatThreadHeader', () => {
   });
 
   it('renders title and metadata', () => {
-    render(
-      <ChatThreadHeader
-        title="Test Chat"
-        gameName="Catan"
-        agentName="Tutor"
-      />
-    );
+    render(<ChatThreadHeader title="Test Chat" gameName="Catan" agentName="Tutor" />);
 
     expect(screen.getByText('Test Chat')).toBeInTheDocument();
     expect(screen.getByText('Catan')).toBeInTheDocument();
@@ -52,12 +48,7 @@ describe('ChatThreadHeader', () => {
     const user = userEvent.setup();
     const onTitleChange = vi.fn();
 
-    render(
-      <ChatThreadHeader
-        title="Original Title"
-        onTitleChange={onTitleChange}
-      />
-    );
+    render(<ChatThreadHeader title="Original Title" onTitleChange={onTitleChange} />);
 
     await user.click(screen.getByTestId('title-display'));
     expect(screen.getByTestId('title-edit-input')).toBeInTheDocument();
@@ -68,12 +59,7 @@ describe('ChatThreadHeader', () => {
     const user = userEvent.setup();
     const onTitleChange = vi.fn();
 
-    render(
-      <ChatThreadHeader
-        title="Original"
-        onTitleChange={onTitleChange}
-      />
-    );
+    render(<ChatThreadHeader title="Original" onTitleChange={onTitleChange} />);
 
     await user.click(screen.getByTestId('title-display'));
     const input = screen.getByTestId('title-edit-input');
@@ -87,12 +73,7 @@ describe('ChatThreadHeader', () => {
     const user = userEvent.setup();
     const onTitleChange = vi.fn();
 
-    render(
-      <ChatThreadHeader
-        title="Original"
-        onTitleChange={onTitleChange}
-      />
-    );
+    render(<ChatThreadHeader title="Original" onTitleChange={onTitleChange} />);
 
     await user.click(screen.getByTestId('title-display'));
     await user.keyboard('{Escape}');
@@ -118,6 +99,30 @@ describe('ChatThreadHeader', () => {
     expect(screen.getByTestId('header-delete-btn')).toBeInTheDocument();
   });
 
+  // ── Typology badge ──────────────────────────────────────────────────
+
+  it.each([
+    ['Tutor', 'Tutor'],
+    ['Arbitro', 'Arbitro'],
+    ['Stratega', 'Stratega'],
+    ['Narratore', 'Narratore'],
+  ])('renders typology badge for %s', (agentType, expectedLabel) => {
+    render(<ChatThreadHeader title="Test" agentType={agentType} />);
+    const badge = screen.getByTestId('typology-badge');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent(expectedLabel);
+  });
+
+  it('does not render typology badge when agentType is not provided', () => {
+    render(<ChatThreadHeader title="Test" />);
+    expect(screen.queryByTestId('typology-badge')).not.toBeInTheDocument();
+  });
+
+  it('does not render typology badge for unknown agentType', () => {
+    render(<ChatThreadHeader title="Test" agentType="Unknown" />);
+    expect(screen.queryByTestId('typology-badge')).not.toBeInTheDocument();
+  });
+
   it('hides action buttons when handlers not provided', () => {
     render(<ChatThreadHeader title="Test" />);
 
@@ -130,13 +135,7 @@ describe('ChatThreadHeader', () => {
     const onHistoryToggle = vi.fn();
     const onDelete = vi.fn();
 
-    render(
-      <ChatThreadHeader
-        title="Test"
-        onHistoryToggle={onHistoryToggle}
-        onDelete={onDelete}
-      />
-    );
+    render(<ChatThreadHeader title="Test" onHistoryToggle={onHistoryToggle} onDelete={onDelete} />);
 
     await user.click(screen.getByTestId('header-history-btn'));
     expect(onHistoryToggle).toHaveBeenCalledOnce();

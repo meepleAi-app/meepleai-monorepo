@@ -14,7 +14,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { useShareRequests, useRateLimitStatus } from '@/hooks/queries/useShareRequests';
@@ -38,7 +44,11 @@ const STATUS_LABELS: Record<ShareRequestStatus, string> = {
   Withdrawn: 'Ritirata',
 };
 
-export default function MyProposalsClient() {
+interface MyProposalsClientProps {
+  catalogBasePath?: string;
+}
+
+export default function MyProposalsClient({ catalogBasePath = '/games' }: MyProposalsClientProps) {
   const router = useRouter();
   const { data, isLoading, error } = useShareRequests();
   const { data: rateLimitData } = useRateLimitStatus();
@@ -54,13 +64,7 @@ export default function MyProposalsClient() {
   // Error state
   if (error) {
     return (
-      <div className="container mx-auto py-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Le Mie Proposte</h1>
-          <p className="text-muted-foreground mt-2">
-            Traccia le tue proposte di giochi inviate al catalogo condiviso
-          </p>
-        </div>
+      <div className="container mx-auto py-4 space-y-4">
         <Card className="border-destructive">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -80,15 +84,13 @@ export default function MyProposalsClient() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Le Mie Proposte</h1>
-          <p className="text-muted-foreground mt-2">
-            Traccia le tue proposte di giochi inviate al catalogo condiviso
-          </p>
-        </div>
-        <Button onClick={() => router.push('/library/propose')}>
+    <div className="container mx-auto py-4 space-y-4">
+      {/* Compact header — subtitle + new proposal button */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Traccia le tue proposte di giochi inviate al catalogo condiviso
+        </p>
+        <Button size="sm" onClick={() => router.push('/library/propose')}>
           <Plus className="h-4 w-4 mr-2" />
           Nuova Proposta
         </Button>
@@ -96,13 +98,15 @@ export default function MyProposalsClient() {
 
       {/* Rate Limit Status Banner */}
       {rateLimitData && (
-        <Card className={
-          rateLimitData.isInCooldown
-            ? 'border-destructive bg-destructive/5'
-            : pendingUsage >= 80 || monthlyUsage >= 80
-              ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
-              : 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
-        }>
+        <Card
+          className={
+            rateLimitData.isInCooldown
+              ? 'border-destructive bg-destructive/5'
+              : pendingUsage >= 80 || monthlyUsage >= 80
+                ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                : 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
+          }
+        >
           <CardHeader>
             <div className="flex items-start gap-3">
               {rateLimitData.isInCooldown ? (
@@ -115,13 +119,12 @@ export default function MyProposalsClient() {
               <div className="flex-1 space-y-3">
                 <div>
                   <CardTitle className="text-base">
-                    {rateLimitData.isInCooldown
-                      ? 'Cooldown Attivo'
-                      : 'Limiti di Proposta'}
+                    {rateLimitData.isInCooldown ? 'Cooldown Attivo' : 'Limiti di Proposta'}
                   </CardTitle>
                   {rateLimitData.isInCooldown && rateLimitData.cooldownEndsAt && (
                     <CardDescription className="text-destructive">
-                      Cooldown termina il {new Date(rateLimitData.cooldownEndsAt).toLocaleString('it-IT')}
+                      Cooldown termina il{' '}
+                      {new Date(rateLimitData.cooldownEndsAt).toLocaleString('it-IT')}
                     </CardDescription>
                   )}
                 </div>
@@ -196,7 +199,7 @@ export default function MyProposalsClient() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {data.items.map((proposal) => (
+          {data.items.map(proposal => (
             <Card key={proposal.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -205,7 +208,10 @@ export default function MyProposalsClient() {
                     <CardDescription>
                       Inviata il {new Date(proposal.createdAt).toLocaleDateString('it-IT')}
                       {proposal.resolvedAt && (
-                        <> · Risolta il {new Date(proposal.resolvedAt).toLocaleDateString('it-IT')}</>
+                        <>
+                          {' '}
+                          · Risolta il {new Date(proposal.resolvedAt).toLocaleDateString('it-IT')}
+                        </>
                       )}
                     </CardDescription>
                     {proposal.userNotes && (
@@ -227,7 +233,9 @@ export default function MyProposalsClient() {
                 <div className="flex gap-2">
                   {proposal.status === 'Approved' && proposal.resultingSharedGameId && (
                     <Button size="sm" asChild>
-                      <Link href={`/games/${proposal.resultingSharedGameId}`}>Vedi nel Catalogo</Link>
+                      <Link href={`${catalogBasePath}/${proposal.resultingSharedGameId}`}>
+                        Vedi nel Catalogo
+                      </Link>
                     </Button>
                   )}
                   <Button size="sm" variant="outline" asChild>
@@ -239,11 +247,11 @@ export default function MyProposalsClient() {
           ))}
 
           {/* Pagination info */}
-          {data.totalCount > data.items.length && (
+          {data.total > data.items.length && (
             <Card className="bg-muted/50">
               <CardContent className="py-4">
                 <p className="text-sm text-center text-muted-foreground">
-                  Mostrate {data.items.length} di {data.totalCount} proposte
+                  Mostrate {data.items.length} di {data.total} proposte
                 </p>
               </CardContent>
             </Card>
@@ -253,4 +261,3 @@ export default function MyProposalsClient() {
     </div>
   );
 }
-

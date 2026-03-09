@@ -80,3 +80,112 @@ export interface UpdateWidgetRequest {
 export interface UpdateWidgetStateRequest {
   stateJson: string;
 }
+
+// ============================================================================
+// AI Toolkit Suggestion Schemas (Phase 0 — AI Generation)
+// ============================================================================
+
+export const AiDiceToolSuggestionSchema = z.object({
+  name: z.string(),
+  diceType: z.string(),
+  quantity: z.number(),
+  customFaces: z.array(z.string()).nullable().optional(),
+  isInteractive: z.boolean(),
+  color: z.string().nullable().optional(),
+});
+
+export const AiCounterToolSuggestionSchema = z.object({
+  name: z.string(),
+  minValue: z.number(),
+  maxValue: z.number(),
+  defaultValue: z.number(),
+  isPerPlayer: z.boolean(),
+  icon: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
+});
+
+export const AiTimerToolSuggestionSchema = z.object({
+  name: z.string(),
+  durationSeconds: z.number(),
+  timerType: z.string(),
+  autoStart: z.boolean(),
+  color: z.string().nullable().optional(),
+  isPerPlayer: z.boolean(),
+  warningThresholdSeconds: z.number().nullable().optional(),
+});
+
+export const AiScoringTemplateSuggestionSchema = z.object({
+  dimensions: z.array(z.string()),
+  defaultUnit: z.string(),
+  scoreType: z.string(),
+});
+
+export const AiTurnTemplateSuggestionSchema = z.object({
+  turnOrderType: z.string(),
+  phases: z.array(z.string()),
+});
+
+export const AiOverrideSuggestionSchema = z.object({
+  overridesTurnOrder: z.boolean(),
+  overridesScoreboard: z.boolean(),
+  overridesDiceSet: z.boolean(),
+});
+
+export const AiToolkitSuggestionSchema = z.object({
+  toolkitName: z.string(),
+  diceTools: z.array(AiDiceToolSuggestionSchema),
+  counterTools: z.array(AiCounterToolSuggestionSchema),
+  timerTools: z.array(AiTimerToolSuggestionSchema),
+  scoringTemplate: AiScoringTemplateSuggestionSchema.nullable(),
+  turnTemplate: AiTurnTemplateSuggestionSchema.nullable(),
+  overrides: AiOverrideSuggestionSchema.nullable(),
+  reasoning: z.string(),
+});
+
+export type AiToolkitSuggestion = z.infer<typeof AiToolkitSuggestionSchema>;
+export type AiDiceToolSuggestion = z.infer<typeof AiDiceToolSuggestionSchema>;
+export type AiCounterToolSuggestion = z.infer<typeof AiCounterToolSuggestionSchema>;
+export type AiTimerToolSuggestion = z.infer<typeof AiTimerToolSuggestionSchema>;
+export type AiScoringTemplateSuggestion = z.infer<typeof AiScoringTemplateSuggestionSchema>;
+export type AiTurnTemplateSuggestion = z.infer<typeof AiTurnTemplateSuggestionSchema>;
+export type AiOverrideSuggestion = z.infer<typeof AiOverrideSuggestionSchema>;
+
+// ============================================================================
+// Template Marketplace Schemas (Phase 1)
+// ============================================================================
+
+export const TemplateStatusSchema = z.enum(['Draft', 'PendingReview', 'Approved', 'Rejected']);
+export type TemplateStatus = z.infer<typeof TemplateStatusSchema>;
+
+export const GameToolkitTemplateDtoSchema = z.object({
+  id: z.string().uuid(),
+  gameId: z.string().uuid().nullable(),
+  privateGameId: z.string().uuid().nullable(),
+  name: z.string(),
+  version: z.number(),
+  createdByUserId: z.string().uuid(),
+  isPublished: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  templateStatus: TemplateStatusSchema,
+  isTemplate: z.boolean(),
+  reviewNotes: z.string().nullable().optional(),
+  reviewedByUserId: z.string().uuid().nullable().optional(),
+  reviewedAt: z.string().nullable().optional(),
+  diceTools: z.array(z.object({ name: z.string() })).default([]),
+  cardTools: z.array(z.object({ name: z.string() })).default([]),
+  timerTools: z.array(z.object({ name: z.string() })).default([]),
+  counterTools: z.array(z.object({ name: z.string() })).default([]),
+  scoringTemplate: z.unknown().nullable().optional(),
+  turnTemplate: z.unknown().nullable().optional(),
+  stateTemplate: z
+    .object({
+      name: z.string(),
+      description: z.string().nullable().optional(),
+      category: z.string(),
+    })
+    .nullable()
+    .optional(),
+});
+
+export type GameToolkitTemplateDto = z.infer<typeof GameToolkitTemplateDtoSchema>;

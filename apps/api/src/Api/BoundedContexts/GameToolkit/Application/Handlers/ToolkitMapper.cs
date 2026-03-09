@@ -54,7 +54,12 @@ internal static class ToolkitMapper
                     toolkit.StateTemplate.Category,
                     toolkit.StateTemplate.SchemaJson)
                 : null,
-            AgentConfig: toolkit.AgentConfig
+            AgentConfig: toolkit.AgentConfig,
+            TemplateStatus: toolkit.TemplateStatus,
+            IsTemplate: toolkit.IsTemplate,
+            ReviewNotes: toolkit.ReviewNotes,
+            ReviewedByUserId: toolkit.ReviewedByUserId,
+            ReviewedAt: toolkit.ReviewedAt
         );
     }
 }

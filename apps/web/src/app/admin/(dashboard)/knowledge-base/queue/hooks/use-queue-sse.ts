@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { useQueryClient } from '@tanstack/react-query';
 
 import { getApiBase } from '@/lib/api';
@@ -86,7 +87,7 @@ export function useQueueSSE(enabled: boolean = true) {
       }
       // Heartbeat and other events: no action needed
     },
-    [invalidateQueue],
+    [invalidateQueue]
   );
 
   const connect = useCallback(() => {
@@ -131,7 +132,7 @@ export function useQueueSSE(enabled: boolean = true) {
         setConnectionState('reconnecting');
         const delay = Math.min(
           INITIAL_BACKOFF_MS * Math.pow(2, reconnectAttemptsRef.current - 1),
-          MAX_BACKOFF_MS,
+          MAX_BACKOFF_MS
         );
         // Use connectRef to avoid stale closure over connect
         reconnectTimerRef.current = setTimeout(() => {
@@ -165,7 +166,6 @@ export function useQueueSSE(enabled: boolean = true) {
       isMountedRef.current = false;
       cleanup();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- connect called via stable ref to avoid infinite loop
   }, [enabled, cleanup]);
 
   return {

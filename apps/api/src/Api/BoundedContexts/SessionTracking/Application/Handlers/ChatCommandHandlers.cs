@@ -4,6 +4,8 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Handlers;
 
@@ -93,22 +95,28 @@ public class SendSystemEventCommandHandler : IRequestHandler<SendSystemEventComm
 
 /// <summary>
 /// Handler for asking the RAG agent a question in session context.
-/// Integrates with the existing KnowledgeBase BC agent infrastructure.
+/// Issue #5313: Wired to real HybridLlmService for LLM completions.
 /// </summary>
-public class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCommand, AskSessionAgentResult>
+internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCommand, AskSessionAgentResult>
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly ISessionChatRepository _chatRepository;
     private readonly IMediator _mediator;
+    private readonly ILlmService _llmService;
+    private readonly ILogger<AskSessionAgentCommandHandler> _logger;
 
     public AskSessionAgentCommandHandler(
         ISessionRepository sessionRepository,
         ISessionChatRepository chatRepository,
-        IMediator mediator)
+        IMediator mediator,
+        ILlmService llmService,
+        ILogger<AskSessionAgentCommandHandler> logger)
     {
         _sessionRepository = sessionRepository;
         _chatRepository = chatRepository;
         _mediator = mediator;
+        _llmService = llmService;
+        _logger = logger;
     }
 
     public async Task<AskSessionAgentResult> Handle(AskSessionAgentCommand request, CancellationToken cancellationToken)
@@ -131,12 +139,40 @@ public class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentComm
         await _chatRepository.AddAsync(userMessage, cancellationToken).ConfigureAwait(false);
         await _chatRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // STUB: In production, this will call the KnowledgeBase RAG pipeline (Issue #4761+).
-        // Currently returns a placeholder response to establish the integration contract.
-        var agentType = "tutor"; // Default session agent type
-        var answer = $"[Stub] RAG agent integration pending. Session game: {session.GameId}. " +
-                     $"Question received: {request.Question}";
-        var confidence = (float?)null; // Null confidence signals stub response
+        // Call LLM for real response
+        var agentType = "tutor";
+        var systemPrompt = $"You are a helpful board game tutor assisting during a game session (Game ID: {session.GameId}). " +
+                           "Answer questions about rules, strategy, and gameplay concisely.";
+
+        string answer;
+        float? confidence;
+
+        try
+        {
+            var result = await _llmService.GenerateCompletionAsync(
+                systemPrompt,
+                request.Question,
+                RequestSource.AgentTask,
+                cancellationToken).ConfigureAwait(false);
+
+            if (result.Success)
+            {
+                answer = result.Response;
+                confidence = 0.85f;
+            }
+            else
+            {
+                _logger.LogWarning("LLM completion failed for session {SessionId}: {Error}", request.SessionId, result.ErrorMessage);
+                answer = "I'm sorry, I couldn't process your question right now. Please try again.";
+                confidence = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LLM service error for session {SessionId}", request.SessionId);
+            answer = "I'm sorry, an error occurred while processing your question. Please try again.";
+            confidence = null;
+        }
 
         var agentSeq = await _chatRepository.GetNextSequenceNumberAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var agentMessage = SessionChatMessage.CreateAgentResponse(

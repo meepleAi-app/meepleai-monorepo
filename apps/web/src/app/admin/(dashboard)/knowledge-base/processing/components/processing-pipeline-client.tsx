@@ -25,9 +25,9 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Badge } from '@/components/ui/data-display/badge';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
@@ -109,14 +109,34 @@ function StageCard({ name, status }: { name: string; status: PipelineStageStatus
   );
 }
 
-function MetricRow({ step, avgMs, p50, p95, p99 }: { step: string; avgMs: number; p50: number; p95: number; p99: number }) {
+function MetricRow({
+  step,
+  avgMs,
+  p50,
+  p95,
+  p99,
+}: {
+  step: string;
+  avgMs: number;
+  p50: number;
+  p95: number;
+  p99: number;
+}) {
   return (
     <tr className="border-b border-border/40 hover:bg-muted/20 transition-colors">
       <td className="py-2.5 pr-4 font-nunito text-sm font-medium capitalize">{step}</td>
-      <td className="py-2.5 px-3 text-sm text-muted-foreground font-nunito text-right">{formatDuration(avgMs)}</td>
-      <td className="py-2.5 px-3 text-sm text-muted-foreground font-nunito text-right">{formatDuration(p50)}</td>
-      <td className="py-2.5 px-3 text-sm text-muted-foreground font-nunito text-right">{formatDuration(p95)}</td>
-      <td className="py-2.5 pl-3 text-sm text-muted-foreground font-nunito text-right">{formatDuration(p99)}</td>
+      <td className="py-2.5 px-3 text-sm text-muted-foreground font-nunito text-right">
+        {formatDuration(avgMs)}
+      </td>
+      <td className="py-2.5 px-3 text-sm text-muted-foreground font-nunito text-right">
+        {formatDuration(p50)}
+      </td>
+      <td className="py-2.5 px-3 text-sm text-muted-foreground font-nunito text-right">
+        {formatDuration(p95)}
+      </td>
+      <td className="py-2.5 pl-3 text-sm text-muted-foreground font-nunito text-right">
+        {formatDuration(p99)}
+      </td>
     </tr>
   );
 }
@@ -195,7 +215,9 @@ export function ProcessingPipelineClient() {
       {isLoading && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            ))}
           </div>
           <Skeleton className="h-64 w-full rounded-xl" />
           <Skeleton className="h-48 w-full rounded-xl" />
@@ -237,7 +259,9 @@ export function ProcessingPipelineClient() {
               </CardHeader>
               <CardContent>
                 {health.stages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground font-nunito">No stage data available.</p>
+                  <p className="text-sm text-muted-foreground font-nunito">
+                    No stage data available.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {health.stages.map(stage => (
@@ -261,11 +285,20 @@ export function ProcessingPipelineClient() {
                   {[
                     { label: 'Total Files', value: health.distribution.totalFiles },
                     { label: 'Total Documents', value: health.distribution.totalDocuments },
-                    { label: 'Total Chunks', value: health.distribution.totalChunks.toLocaleString() },
-                    { label: 'Vector Count', value: health.distribution.vectorCount.toLocaleString() },
+                    {
+                      label: 'Total Chunks',
+                      value: health.distribution.totalChunks.toLocaleString(),
+                    },
+                    {
+                      label: 'Vector Count',
+                      value: health.distribution.vectorCount.toLocaleString(),
+                    },
                     { label: 'Storage Size', value: health.distribution.storageSizeFormatted },
                   ].map(({ label, value }) => (
-                    <li key={label} className="flex justify-between text-sm items-center border-b border-border/30 pb-2 last:border-0 last:pb-0">
+                    <li
+                      key={label}
+                      className="flex justify-between text-sm items-center border-b border-border/30 pb-2 last:border-0 last:pb-0"
+                    >
                       <span className="text-muted-foreground">{label}</span>
                       <span className="font-semibold">{value}</span>
                     </li>

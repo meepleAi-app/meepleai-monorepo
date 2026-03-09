@@ -7,7 +7,6 @@
  */
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 
 import {
   CheckCircle2Icon,
@@ -23,14 +22,11 @@ import {
   ArrowLeftIcon,
   RocketIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-
-import {
-  useWizardProgressStream,
-  type WizardProgressEvent,
-} from '@/hooks/useWizardProgressStream';
+import { Button } from '@/components/ui/primitives/button';
+import { useWizardProgressStream } from '@/hooks/useWizardProgressStream';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -62,21 +58,27 @@ const PIPELINE_STATES = [
 
 function getStepIcon(stepId: string, className: string) {
   switch (stepId) {
-    case 'Pending': return <ClockIcon className={className} />;
-    case 'Uploading': return <UploadIcon className={className} />;
-    case 'Extracting': return <FileTextIcon className={className} />;
-    case 'Chunking': return <ScissorsIcon className={className} />;
-    case 'Embedding': return <BrainIcon className={className} />;
-    case 'Indexing': return <DatabaseIcon className={className} />;
-    case 'Ready': return <CheckCircle2Icon className={className} />;
-    default: return <ClockIcon className={className} />;
+    case 'Pending':
+      return <ClockIcon className={className} />;
+    case 'Uploading':
+      return <UploadIcon className={className} />;
+    case 'Extracting':
+      return <FileTextIcon className={className} />;
+    case 'Chunking':
+      return <ScissorsIcon className={className} />;
+    case 'Embedding':
+      return <BrainIcon className={className} />;
+    case 'Indexing':
+      return <DatabaseIcon className={className} />;
+    case 'Ready':
+      return <CheckCircle2Icon className={className} />;
+    default:
+      return <ClockIcon className={className} />;
   }
 }
 
 function buildPipelineSteps(currentState: string, isFailed: boolean): PipelineStep[] {
-  const currentIndex = PIPELINE_STATES.indexOf(
-    currentState as typeof PIPELINE_STATES[number]
-  );
+  const currentIndex = PIPELINE_STATES.indexOf(currentState as (typeof PIPELINE_STATES)[number]);
 
   return PIPELINE_STATES.map((state, index) => {
     let status: PipelineStepStatus;
@@ -104,10 +106,14 @@ function buildPipelineSteps(currentState: string, isFailed: boolean): PipelineSt
 
 function PipelineStepItem({ step }: { step: PipelineStep }) {
   const statusClasses = {
-    pending: 'bg-slate-100 dark:bg-zinc-800 text-muted-foreground border-slate-200 dark:border-zinc-700',
-    active: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20',
-    completed: 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-300 dark:border-green-700',
-    failed: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700',
+    pending:
+      'bg-slate-100 dark:bg-zinc-800 text-muted-foreground border-slate-200 dark:border-zinc-700',
+    active:
+      'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20',
+    completed:
+      'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-300 dark:border-green-700',
+    failed:
+      'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700',
   };
 
   return (
@@ -149,9 +155,7 @@ function PipelineConnector({ isCompleted }: { isCompleted: boolean }) {
     <div className="ml-4 flex items-center">
       <div
         className={`h-6 w-px transition-colors duration-300 ${
-          isCompleted
-            ? 'bg-green-400 dark:bg-green-600'
-            : 'bg-slate-200 dark:bg-zinc-700'
+          isCompleted ? 'bg-green-400 dark:bg-green-600' : 'bg-slate-200 dark:bg-zinc-700'
         }`}
       />
     </div>
@@ -262,9 +266,7 @@ export function ProcessingMonitor({ gameId, gameTitle }: ProcessingMonitorProps)
               <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
               <p className="font-medium text-red-700 dark:text-red-400">Processing Failed</p>
             </div>
-            <p className="text-sm text-red-600 dark:text-red-400/80">
-              {progress.errorMessage}
-            </p>
+            <p className="text-sm text-red-600 dark:text-red-400/80">{progress.errorMessage}</p>
           </CardContent>
         </Card>
       )}
@@ -275,12 +277,11 @@ export function ProcessingMonitor({ gameId, gameTitle }: ProcessingMonitorProps)
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center gap-2">
               <CheckCircle2Icon className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <p className="font-medium text-green-700 dark:text-green-400">
-                Processing Complete!
-              </p>
+              <p className="font-medium text-green-700 dark:text-green-400">Processing Complete!</p>
             </div>
             <p className="text-sm text-green-600 dark:text-green-400/80">
-              The PDF has been fully processed and indexed. The AI agent can now answer questions about this game.
+              The PDF has been fully processed and indexed. The AI agent can now answer questions
+              about this game.
             </p>
             <Link
               href={`/admin/games/${gameId}/agent/test?title=${encodeURIComponent(gameTitle ?? '')}`}

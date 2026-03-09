@@ -17,22 +17,14 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 export default function WishlistPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // TODO: Fetch wishlist from API
-  // const { data: wishlist, isLoading } = useQuery({
-  //   queryKey: ['wishlist'],
-  //   queryFn: () => fetch('/api/v1/wishlist').then(r => r.json())
-  // });
-
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">My Wishlist</h1>
-
+    <div className="container mx-auto py-4">
+      <div className="flex items-center justify-end mb-4">
         <div className="flex items-center gap-4">
           {/* View mode toggle */}
           <button
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground"
+            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm"
           >
             {viewMode === 'grid' ? 'List View' : 'Grid View'}
           </button>
@@ -40,7 +32,11 @@ export default function WishlistPage() {
       </div>
 
       {/* Wishlist grid */}
-      <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4' : 'space-y-2'}>
+      <div
+        className={
+          viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4' : 'space-y-2'
+        }
+      >
         {/* Mock data - replace with actual wishlist */}
         <MeepleCard
           entity="game"

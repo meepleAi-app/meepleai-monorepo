@@ -8,6 +8,7 @@
 
 import { ChatExtraMeepleCard } from '@/components/ui/data-display/extra-meeple-card';
 import type { ChatDetailData } from '@/components/ui/data-display/extra-meeple-card';
+
 import type { ShowcaseStory } from '../types';
 
 // ── Showcase prop shape (control-compatible scalars) ──────────────────────────

@@ -9,19 +9,21 @@
 export const WIZARD_AGENT_TYPE = {
   Tutor: 'Tutor',
   Arbitro: 'Arbitro',
-  Decisore: 'Decisore',
+  Stratega: 'Stratega',
+  Narratore: 'Narratore',
 } as const;
 
 export type WizardAgentTypeId = (typeof WIZARD_AGENT_TYPE)[keyof typeof WIZARD_AGENT_TYPE];
 
 /**
  * Maps wizard persona types to backend AgentType values accepted by the API validator.
- * Backend accepts: RAG, Citation, Confidence, RulesInterpreter, Conversation
+ * Backend accepts: RAG, Citation, Confidence, RulesInterpreter, Conversation, Strategist, Narrator
  */
 export const WIZARD_TYPE_TO_BACKEND: Record<WizardAgentTypeId, string> = {
   Tutor: 'RAG',
   Arbitro: 'RulesInterpreter',
-  Decisore: 'Confidence',
+  Stratega: 'Strategist',
+  Narratore: 'Narrator',
 } as const;
 
 // ─── Step Labels ───────────────────────────────────────────────────────────────

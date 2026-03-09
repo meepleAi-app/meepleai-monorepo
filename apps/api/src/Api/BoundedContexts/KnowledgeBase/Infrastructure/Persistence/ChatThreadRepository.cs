@@ -342,6 +342,19 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
 
         statusProp?.SetValue(thread, ThreadStatus.From(entity.Status));
 
+        // Issue #5259: Hydrate conversation summary and summarization tracking
+        if (!string.IsNullOrEmpty(entity.ConversationSummary))
+        {
+            var summaryProp = typeof(ChatThread).GetProperty("ConversationSummary");
+            summaryProp?.SetValue(thread, entity.ConversationSummary);
+        }
+
+        if (entity.LastSummarizedMessageCount > 0)
+        {
+            var lastSummarizedProp = typeof(ChatThread).GetProperty("LastSummarizedMessageCount");
+            lastSummarizedProp?.SetValue(thread, entity.LastSummarizedMessageCount);
+        }
+
         return thread;
     }
 
@@ -381,7 +394,9 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             Status = domainEntity.Status.Value,
             CreatedAt = domainEntity.CreatedAt,
             LastMessageAt = domainEntity.LastMessageAt,
-            MessagesJson = messagesJson
+            MessagesJson = messagesJson,
+            ConversationSummary = domainEntity.ConversationSummary, // Issue #5259
+            LastSummarizedMessageCount = domainEntity.LastSummarizedMessageCount
         };
     }
 

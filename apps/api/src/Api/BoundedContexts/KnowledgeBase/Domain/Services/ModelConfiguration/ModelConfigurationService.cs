@@ -34,6 +34,7 @@ internal sealed class ModelConfigurationService : IModelConfigurationService
         return _models.Values
             .Where(m => m.Tier <= tier)
             .OrderBy(m => m.Tier)
+            .ThenBy(m => string.Equals(m.Provider, "ollama", StringComparison.Ordinal) ? 1 : 0) // Cloud models before local Ollama
             .ThenBy(m => m.Name, StringComparer.Ordinal)
             .ToList();
     }
@@ -82,17 +83,6 @@ internal sealed class ModelConfigurationService : IModelConfigurationService
             maxTokens: 8192,
             supportsStreaming: true,
             description: "Free tier Llama 3.3 70B model via OpenRouter"));
-
-        AddModel(models, ModelConfiguration.Create(
-            id: "meta-llama/llama-3.1-70b-instruct:free",
-            name: "Llama 3.1 70B Instruct (Free)",
-            provider: "meta-llama",
-            tier: ModelTier.Free,
-            costPer1kInput: 0m,
-            costPer1kOutput: 0m,
-            maxTokens: 8192,
-            supportsStreaming: true,
-            description: "Free tier Llama 3.1 70B model via OpenRouter"));
 
         // Local Ollama models (self-hosted, free)
         AddModel(models, ModelConfiguration.Create(

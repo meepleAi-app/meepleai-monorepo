@@ -12,6 +12,7 @@ import { useState } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import type { SharedGameDetailData } from '@/components/ui/data-display/extra-meeple-card/types';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,6 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { api } from '@/lib/api';
-import type { SharedGameDetailData } from '@/components/ui/data-display/extra-meeple-card/types';
 
 import { AgentBuilderModal } from './AgentBuilderModal';
 import { PdfUploadSection } from './PdfUploadSection';
@@ -39,7 +39,10 @@ interface AdminSharedGameCardContainerProps {
 // Component
 // ============================================================================
 
-export function AdminSharedGameCardContainer({ gameId, onClose: _onClose }: AdminSharedGameCardContainerProps) {
+export function AdminSharedGameCardContainer({
+  gameId,
+  onClose: _onClose,
+}: AdminSharedGameCardContainerProps) {
   const queryClient = useQueryClient();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [agentBuilderOpen, setAgentBuilderOpen] = useState(false);
@@ -91,7 +94,7 @@ export function AdminSharedGameCardContainer({ gameId, onClose: _onClose }: Admi
         faqCount: game.faqs?.length,
         rulesDocumentCount: docs?.length,
         status: game.status,
-        documents: (docs ?? []).map((doc) => ({
+        documents: (docs ?? []).map(doc => ({
           id: doc.id,
           pdfDocumentId: doc.pdfDocumentId,
           documentType: doc.documentType,
@@ -100,7 +103,7 @@ export function AdminSharedGameCardContainer({ gameId, onClose: _onClose }: Admi
           tags: doc.tags,
           createdAt: doc.createdAt,
         })),
-        kbCards: (kbCards ?? []).map((card) => ({
+        kbCards: (kbCards ?? []).map(card => ({
           id: card.id,
           pdfDocumentId: card.pdfDocumentId,
           fileName: card.fileName,
@@ -111,9 +114,7 @@ export function AdminSharedGameCardContainer({ gameId, onClose: _onClose }: Admi
           version: card.version,
           isActive: card.isActive,
         })),
-        linkedAgent: agent
-          ? { id: agent.id, name: agent.name, isActive: agent.isActive }
-          : null,
+        linkedAgent: agent ? { id: agent.id, name: agent.name, isActive: agent.isActive } : null,
       }
     : null;
 
@@ -138,8 +139,12 @@ export function AdminSharedGameCardContainer({ gameId, onClose: _onClose }: Admi
           <PdfUploadSection
             gameId={gameId}
             onPdfUploaded={() => {
-              void queryClient.invalidateQueries({ queryKey: ['admin-shared-game-card-docs', gameId] });
-              void queryClient.invalidateQueries({ queryKey: ['admin-shared-game-card-kb', gameId] });
+              void queryClient.invalidateQueries({
+                queryKey: ['admin-shared-game-card-docs', gameId],
+              });
+              void queryClient.invalidateQueries({
+                queryKey: ['admin-shared-game-card-kb', gameId],
+              });
               setUploadOpen(false);
             }}
           />
@@ -157,7 +162,9 @@ export function AdminSharedGameCardContainer({ gameId, onClose: _onClose }: Admi
             gameDescription: game.description,
           }}
           onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ['admin-shared-game-card-agent', gameId] });
+            void queryClient.invalidateQueries({
+              queryKey: ['admin-shared-game-card-agent', gameId],
+            });
           }}
         />
       )}

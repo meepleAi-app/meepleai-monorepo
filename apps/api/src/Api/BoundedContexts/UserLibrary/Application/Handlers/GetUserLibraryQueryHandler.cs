@@ -97,6 +97,15 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
 
         // ProcessingState is stored as the enum member name (e.g., "Ready", "Failed")
         // because PdfDocumentEntity.ProcessingState is a string property (HasConversion<string>()).
+        // Legacy data may contain "Indexed" instead of "Ready" — treat both as completed.
+        static bool IsCompleted(string? state) =>
+            string.Equals(state, nameof(PdfProcessingState.Ready), StringComparison.OrdinalIgnoreCase)
+            || string.Equals(state, "Indexed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(state, "completed", StringComparison.OrdinalIgnoreCase);
+
+        static bool IsFailed(string? state) =>
+            string.Equals(state, nameof(PdfProcessingState.Failed), StringComparison.OrdinalIgnoreCase);
+
         // Shared game PDFs: PrivateGameId IS NULL. Group by SharedGameId (not games.Id) so the
         // dictionary key matches entry.GameId used below.
         var kbStatsByGame = pdfDocumentsRaw
@@ -107,11 +116,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                 g => new
                 {
                     KbCardCount = g.Count(),
-                    KbIndexedCount = g.Count(p => string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal)),
-                    KbProcessingCount = g.Count(p =>
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Pending), StringComparison.Ordinal)),
+                    KbIndexedCount = g.Count(p => IsCompleted(p.ProcessingState)),
+                    KbProcessingCount = g.Count(p => !IsCompleted(p.ProcessingState) && !IsFailed(p.ProcessingState)),
                 });
 
         // Private game PDFs: PrivateGameId IS NOT NULL. Keyed by PrivateGameId.
@@ -123,11 +129,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                 g => new
                 {
                     KbCardCount = g.Count(),
-                    KbIndexedCount = g.Count(p => string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal)),
-                    KbProcessingCount = g.Count(p =>
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal) &&
-                        !string.Equals(p.ProcessingState, nameof(PdfProcessingState.Pending), StringComparison.Ordinal)),
+                    KbIndexedCount = g.Count(p => IsCompleted(p.ProcessingState)),
+                    KbProcessingCount = g.Count(p => !IsCompleted(p.ProcessingState) && !IsFailed(p.ProcessingState)),
                 });
 
         // Batch load: Get all SharedGames in a single query (prevents N+1).
@@ -163,7 +166,12 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbCardCount: kbStats?.KbCardCount ?? 0,
                     KbIndexedCount: kbStats?.KbIndexedCount ?? 0,
                     KbProcessingCount: kbStats?.KbProcessingCount ?? 0,
-                    AgentIsOwned: true // Always true in library context: user owns all their library agents
+                    AgentIsOwned: true, // Always true in library context: user owns all their library agents
+                    MinPlayers: sharedGame.MinPlayers,
+                    MaxPlayers: sharedGame.MaxPlayers,
+                    PlayingTimeMinutes: sharedGame.PlayingTimeMinutes,
+                    ComplexityRating: sharedGame.ComplexityRating,
+                    AverageRating: sharedGame.AverageRating
                 ));
             }
             // Check PrivateGame entries (batch-loaded above)

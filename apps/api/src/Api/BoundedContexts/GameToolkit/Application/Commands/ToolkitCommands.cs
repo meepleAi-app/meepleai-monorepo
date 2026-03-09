@@ -118,3 +118,27 @@ internal record SetStateTemplateCommand(
 internal record ClearStateTemplateCommand(
     Guid ToolkitId
 ) : ICommand<GameToolkitDto>;
+
+// Template marketplace commands
+internal record SubmitTemplateForReviewCommand(
+    Guid ToolkitId,
+    Guid UserId
+) : ICommand<GameToolkitDto>;
+
+internal record ApproveTemplateCommand(
+    Guid ToolkitId,
+    Guid AdminUserId,
+    string? Notes
+) : ICommand<GameToolkitDto>;
+
+internal record RejectTemplateCommand(
+    Guid ToolkitId,
+    Guid AdminUserId,
+    string Notes
+) : ICommand<GameToolkitDto>;
+
+internal record CloneFromTemplateCommand(
+    Guid TemplateId,
+    Guid GameId,
+    Guid UserId
+) : ICommand<GameToolkitDto>;

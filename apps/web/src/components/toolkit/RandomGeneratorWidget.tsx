@@ -151,7 +151,6 @@ export function RandomGeneratorWidget({
             <div className="text-3xl font-bold tabular-nums">{lastResult.result}</div>
             <div className="mt-1 flex flex-wrap justify-center gap-1">
               {lastResult.breakdown.map((v, i) => (
-                // eslint-disable-next-line react/no-array-index-key
                 <Badge key={i} variant="secondary" className="text-xs">
                   {v}
                 </Badge>

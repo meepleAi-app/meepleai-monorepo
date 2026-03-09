@@ -2,7 +2,7 @@
  * AgentSelector - Multi-agent switching component (Task #4, Issue #12)
  *
  * Features:
- * - Dropdown selector for Tutor, Arbitro, Decisore, Orchestrator (auto)
+ * - Dropdown selector for Tutor, Arbitro, Stratega, Narratore, Orchestrator (auto)
  * - Agent status indicators (online/offline/busy)
  * - Agent descriptions and icons
  * - Selection persistence per conversation
@@ -13,7 +13,7 @@
 
 import { useState, useEffect } from 'react';
 
-import { Bot, Sparkles, Shield, Brain, Zap, Circle } from 'lucide-react';
+import { Bot, Sparkles, Shield, Zap, Circle, BookOpen, Target } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 // Types
 // ============================================================================
 
-export type AgentType = 'auto' | 'tutor' | 'arbitro' | 'decisore';
+export type AgentType = 'auto' | 'tutor' | 'arbitro' | 'stratega' | 'narratore';
 export type AgentStatus = 'online' | 'offline' | 'busy';
 
 export interface Agent {
@@ -59,7 +59,8 @@ export const AGENT_NAMES: Record<AgentType, string> = {
   auto: 'Auto (Orchestrator)',
   tutor: 'Tutor',
   arbitro: 'Arbitro',
-  decisore: 'Decisore',
+  stratega: 'Stratega',
+  narratore: 'Narratore',
 };
 
 const AGENTS: Record<AgentType, Omit<Agent, 'status'>> = {
@@ -81,11 +82,17 @@ const AGENTS: Record<AgentType, Omit<Agent, 'status'>> = {
     description: 'Move validation, rules arbitration',
     icon: Shield,
   },
-  decisore: {
-    id: 'decisore',
-    name: 'Decisore',
-    description: 'Strategic move suggestions',
-    icon: Brain,
+  stratega: {
+    id: 'stratega',
+    name: 'Stratega',
+    description: 'Strategic analysis and move suggestions',
+    icon: Target,
+  },
+  narratore: {
+    id: 'narratore',
+    name: 'Narratore',
+    description: 'Game lore, atmosphere, and narrative',
+    icon: BookOpen,
   },
 };
 
@@ -110,7 +117,8 @@ export function AgentSelector({ value, onChange, className, disabled }: AgentSel
     auto: 'online',
     tutor: 'online',
     arbitro: 'online',
-    decisore: 'online',
+    stratega: 'online',
+    narratore: 'online',
   });
 
   // Fetch agent statuses from API (real implementation would poll or use WebSocket)
@@ -122,7 +130,8 @@ export function AgentSelector({ value, onChange, className, disabled }: AgentSel
         auto: 'online',
         tutor: 'online',
         arbitro: 'online',
-        decisore: 'online',
+        stratega: 'online',
+        narratore: 'online',
       });
     };
 
@@ -140,7 +149,7 @@ export function AgentSelector({ value, onChange, className, disabled }: AgentSel
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {(Object.keys(AGENTS) as AgentType[]).map((agentId) => {
+          {(Object.keys(AGENTS) as AgentType[]).map(agentId => {
             const agent = AGENTS[agentId];
             const status = _agentStatuses[agentId];
             const Icon = agent.icon;
@@ -159,17 +168,13 @@ export function AgentSelector({ value, onChange, className, disabled }: AgentSel
                       <span className="font-medium text-sm">{agent.name}</span>
                       {/* Status Indicator */}
                       <div className="flex items-center gap-1">
-                        <Circle
-                          className={cn('h-2 w-2 fill-current', STATUS_COLORS[status])}
-                        />
+                        <Circle className={cn('h-2 w-2 fill-current', STATUS_COLORS[status])} />
                         <span className="text-xs text-muted-foreground">
                           {STATUS_LABELS[status]}
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {agent.description}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{agent.description}</p>
                   </div>
                 </div>
               </SelectItem>

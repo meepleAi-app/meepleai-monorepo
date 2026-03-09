@@ -20,30 +20,19 @@ describe('Agent Switching Components', () => {
 
     it('shows all three agent options when showSwitcher=true', () => {
       const onSwitch = vi.fn();
-      render(
-        <AgentSelectorBadge
-          currentAgent="tutor"
-          onSwitch={onSwitch}
-          showSwitcher={true}
-        />
-      );
+      render(<AgentSelectorBadge currentAgent="tutor" onSwitch={onSwitch} showSwitcher={true} />);
 
       expect(screen.getByText('Tutor')).toBeInTheDocument();
       expect(screen.getByText('Arbitro')).toBeInTheDocument();
-      expect(screen.getByText('Decisore')).toBeInTheDocument();
+      expect(screen.getByText('Stratega')).toBeInTheDocument();
+      expect(screen.getByText('Narratore')).toBeInTheDocument();
     });
 
     it('calls onSwitch when different agent clicked', async () => {
       const onSwitch = vi.fn();
       const user = userEvent.setup();
 
-      render(
-        <AgentSelectorBadge
-          currentAgent="tutor"
-          onSwitch={onSwitch}
-          showSwitcher={true}
-        />
-      );
+      render(<AgentSelectorBadge currentAgent="tutor" onSwitch={onSwitch} showSwitcher={true} />);
 
       const arbitroButton = screen.getByText('Arbitro');
       await user.click(arbitroButton);
@@ -52,13 +41,7 @@ describe('Agent Switching Components', () => {
     });
 
     it('disables current agent button', () => {
-      render(
-        <AgentSelectorBadge
-          currentAgent="tutor"
-          onSwitch={vi.fn()}
-          showSwitcher={true}
-        />
-      );
+      render(<AgentSelectorBadge currentAgent="tutor" onSwitch={vi.fn()} showSwitcher={true} />);
 
       const tutorButton = screen.getByText('Tutor').closest('button');
       expect(tutorButton).toBeDisabled();
@@ -67,13 +50,7 @@ describe('Agent Switching Components', () => {
     it('shows tooltip with agent description', async () => {
       const user = userEvent.setup();
 
-      render(
-        <AgentSelectorBadge
-          currentAgent="tutor"
-          onSwitch={vi.fn()}
-          showSwitcher={true}
-        />
-      );
+      render(<AgentSelectorBadge currentAgent="tutor" onSwitch={vi.fn()} showSwitcher={true} />);
 
       const arbitroButton = screen.getByText('Arbitro');
       await user.hover(arbitroButton);
@@ -100,62 +77,31 @@ describe('Agent Switching Components', () => {
 
   describe('ChatMessage with Agent Attribution', () => {
     it('shows agent type for assistant messages', () => {
-      render(
-        <ChatMessage
-          role="assistant"
-          content="Test response"
-          agentType="tutor"
-        />
-      );
+      render(<ChatMessage role="assistant" content="Test response" agentType="tutor" />);
 
       expect(screen.getByText(/📚 Tutor/i)).toBeInTheDocument();
     });
 
     it('shows correct icon for arbitro', () => {
-      render(
-        <ChatMessage
-          role="assistant"
-          content="Move validated"
-          agentType="arbitro"
-        />
-      );
+      render(<ChatMessage role="assistant" content="Move validated" agentType="arbitro" />);
 
       expect(screen.getByText(/⚖️ Arbitro/i)).toBeInTheDocument();
     });
 
-    it('shows correct icon for decisore', () => {
-      render(
-        <ChatMessage
-          role="assistant"
-          content="Strategic analysis"
-          agentType="decisore"
-        />
-      );
+    it('shows correct icon for stratega', () => {
+      render(<ChatMessage role="assistant" content="Strategic analysis" agentType="stratega" />);
 
-      expect(screen.getByText(/♟️ Decisore/i)).toBeInTheDocument();
+      expect(screen.getByText(/🎯 Stratega/i)).toBeInTheDocument();
     });
 
     it('does not show agent type for user messages', () => {
-      render(
-        <ChatMessage
-          role="user"
-          content="User question"
-          avatar={{ fallback: 'U' }}
-        />
-      );
+      render(<ChatMessage role="user" content="User question" avatar={{ fallback: 'U' }} />);
 
-      expect(screen.queryByText(/Tutor|Arbitro|Decisore/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Tutor|Arbitro|Stratega|Narratore/i)).not.toBeInTheDocument();
     });
 
     it('hides agent type when typing', () => {
-      render(
-        <ChatMessage
-          role="assistant"
-          content=""
-          agentType="tutor"
-          isTyping={true}
-        />
-      );
+      render(<ChatMessage role="assistant" content="" agentType="tutor" isTyping={true} />);
 
       expect(screen.queryByText(/📚 Tutor/i)).not.toBeInTheDocument();
     });

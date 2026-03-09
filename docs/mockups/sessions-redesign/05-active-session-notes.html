@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeepleAI — Active Session: Note</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        quicksand: ['Quicksand', 'sans-serif'],
+        nunito: ['Nunito', 'sans-serif'],
+      },
+      colors: {
+        background: 'hsl(30 25% 97%)',
+        foreground: 'hsl(30 15% 15%)',
+        card: '#ffffff',
+        'card-border': 'hsl(30 15% 85%)',
+        primary: 'hsl(25 95% 38%)',
+        'primary-light': 'hsl(25 95% 53%)',
+        secondary: 'hsl(142 76% 28%)',
+        accent: 'hsl(271 91% 55%)',
+        'accent-light': 'hsl(262 83% 62%)',
+        muted: 'hsl(30 20% 90%)',
+        'muted-fg': 'hsl(30 12% 35%)',
+        'entity-session': 'hsl(240 60% 55%)',
+        'entity-game': 'hsl(25 95% 45%)',
+        'entity-player': 'hsl(262 83% 58%)',
+        ring: 'hsl(25 95% 53%)',
+      }
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: hsl(30 25% 97%);
+    background-image: repeating-linear-gradient(
+      87deg,
+      transparent,
+      transparent 3px,
+      rgba(139, 105, 20, 0.02) 3px,
+      rgba(139, 105, 20, 0.02) 6px
+    );
+  }
+  .font-quicksand { font-family: 'Quicksand', sans-serif; }
+
+  /* Glass morphism */
+  .glass { background: rgba(255,255,255,0.70); backdrop-filter: blur(12px); }
+  .glass-bright { background: rgba(255,255,255,0.60); backdrop-filter: blur(20px); }
+
+  /* Warm shadow */
+  .warm-shadow { box-shadow: 0 2px 12px rgba(180,130,80,0.12); }
+  .warm-shadow-lg { box-shadow: 0 4px 24px rgba(180,130,80,0.15); }
+
+  /* Live dot animation */
+  @keyframes live-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .live-dot { animation: live-dot 1.5s ease-in-out infinite; }
+
+  /* MiniNav active tab */
+  .mini-tab { transition: all 0.15s ease; }
+  .mini-tab.active { color: hsl(262 83% 62%); border-bottom-color: hsl(262 83% 62%); }
+
+  /* Note card — warm yellow sticky note */
+  .note-card-revealed {
+    background: linear-gradient(135deg, hsl(48 96% 94%), hsl(45 93% 88%));
+    border: 1px solid hsl(45 60% 78%);
+  }
+
+  /* Note editor */
+  .note-editor {
+    background: white;
+    border: 1px solid hsl(30 15% 85%);
+  }
+
+  /* Hidden note */
+  .note-hidden {
+    background: hsl(30 20% 93%);
+    border: 1px dashed hsl(30 15% 80%);
+  }
+
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 8px); }
+</style>
+</head>
+<body class="min-h-screen flex flex-col" style="color: hsl(30 15% 15%);">
+
+<!-- Wrapper: mobile 375px centered -->
+<div class="mx-auto w-full max-w-[375px] min-h-screen flex flex-col relative" style="background-color: hsl(30 25% 97%); background-image: repeating-linear-gradient(87deg, transparent, transparent 3px, rgba(139,105,20,0.02) 3px, rgba(139,105,20,0.02) 6px);">
+
+  <!-- TOP NAVBAR — h-14, sticky, backdrop-blur -->
+  <header class="sticky top-0 z-50 h-14 flex items-center px-4 border-b" style="background: hsla(30, 25%, 97%, 0.95); backdrop-filter: blur(12px); border-color: hsl(30 15% 85%);">
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <!-- Back button -->
+      <button class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: hsl(30 20% 90%);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: hsl(30 12% 35%);"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <!-- Game info -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-md" style="background: hsl(25 95% 93%); color: hsl(25 95% 38%);">Catan</span>
+          <span class="w-1.5 h-1.5 rounded-full live-dot" style="background: hsl(142 76% 42%);"></span>
+        </div>
+      </div>
+      <!-- Session code -->
+      <span class="text-[11px] font-mono font-bold tracking-wider px-2 py-1 rounded-lg" style="background: hsl(240 60% 95%); color: hsl(240 60% 55%);">K7X2M9</span>
+      <!-- Notification bell -->
+      <button class="w-9 h-9 rounded-xl flex items-center justify-center relative" style="background: hsl(30 20% 90%);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: hsl(30 12% 35%);"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </button>
+      <!-- Avatar -->
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style="background: hsl(25 95% 45%);">M</div>
+    </div>
+  </header>
+
+  <!-- MININAV — h-12, sticky below navbar, horizontal tabs -->
+  <nav class="sticky z-40 h-12 flex items-center gap-1 px-3 border-b overflow-x-auto" style="top: 56px; background: rgba(255,255,255,0.60); backdrop-filter: blur(20px); border-color: hsl(30 15% 85%);">
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Punteggi</button>
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Strumenti</button>
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Chat</button>
+    <button class="mini-tab active shrink-0 h-full px-3.5 text-sm font-semibold border-b-2" style="color: hsl(262 83% 62%); border-bottom-color: hsl(262 83% 62%);">Note</button>
+    <button class="mini-tab shrink-0 h-full px-3.5 text-sm font-semibold border-b-2 border-transparent" style="color: hsl(30 12% 55%);">Dettagli</button>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 overflow-y-auto px-4 pt-4 pb-24">
+
+    <!-- ======================== -->
+    <!-- MY NOTES SECTION         -->
+    <!-- ======================== -->
+    <section class="mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-quicksand font-bold text-base" style="color: hsl(30 15% 20%);">I Miei Appunti</h2>
+        <!-- Visibility toggle: Privato / Visibile -->
+        <div class="flex items-center gap-0.5 p-0.5 rounded-lg" style="background: hsl(30 20% 90%);">
+          <button class="h-7 px-2.5 rounded-md text-[11px] font-semibold text-white" style="background: hsl(25 95% 38%);">Privato</button>
+          <button class="h-7 px-2.5 rounded-md text-[11px] font-semibold" style="color: hsl(30 12% 55%);">Visibile</button>
+        </div>
+      </div>
+
+      <!-- Note editor -->
+      <div class="note-editor rounded-2xl p-4 mb-3 warm-shadow">
+        <textarea class="w-full bg-transparent text-sm resize-none outline-none min-h-[120px] leading-relaxed placeholder:text-muted-fg/50" style="color: hsl(30 15% 20%);" placeholder="Scrivi i tuoi appunti...">Strategia Round 5-6:
+- Concentrarsi sulle strade verso il porto del grano
+- Marco sta accumulando pietra &rarr; probabilmente punta alla citta
+- Tenere d'occhio Lucia: ha 3 cavalieri, potrebbe rubare il cavaliere piu potente
+- Scambiare legno per mattoni al prossimo turno</textarea>
+        <div class="flex items-center justify-between mt-3 pt-3" style="border-top: 1px solid hsl(30 15% 90%);">
+          <span class="text-[10px] flex items-center gap-1" style="color: hsl(30 12% 60%);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: hsl(30 12% 55%);"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Solo tu puoi vedere questi appunti
+          </span>
+          <button class="h-8 px-3 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style="background: hsl(25 95% 38%); box-shadow: 0 2px 8px rgba(180,100,20,0.2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+            Salva
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick note template buttons -->
+      <div class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        <button class="shrink-0 h-8 px-3 rounded-xl text-xs font-medium flex items-center gap-1.5 warm-shadow" style="background: white; border: 1px solid hsl(30 15% 85%); color: hsl(30 12% 40%);">
+          &#x1F3AF; Strategia
+        </button>
+        <button class="shrink-0 h-8 px-3 rounded-xl text-xs font-medium flex items-center gap-1.5 warm-shadow" style="background: white; border: 1px solid hsl(30 15% 85%); color: hsl(30 12% 40%);">
+          &#x1F504; Piano turno
+        </button>
+        <button class="shrink-0 h-8 px-3 rounded-xl text-xs font-medium flex items-center gap-1.5 warm-shadow" style="background: white; border: 1px solid hsl(30 15% 85%); color: hsl(30 12% 40%);">
+          &#x1F4CA; Previsione
+        </button>
+        <button class="shrink-0 h-8 px-3 rounded-xl text-xs font-medium flex items-center gap-1.5 warm-shadow" style="background: white; border: 1px solid hsl(30 15% 85%); color: hsl(30 12% 40%);">
+          &#x1F4DD; Generico
+        </button>
+      </div>
+    </section>
+
+    <!-- ======================== -->
+    <!-- REVEALED NOTES SECTION   -->
+    <!-- ======================== -->
+    <section>
+      <h2 class="font-quicksand font-bold text-base mb-3" style="color: hsl(30 15% 20%);">Note Rivelate</h2>
+
+      <!-- Revealed note 1: Lucia -->
+      <div class="note-card-revealed rounded-2xl p-4 mb-3 warm-shadow-lg relative overflow-hidden" style="transform: rotate(-0.5deg);">
+        <!-- Top accent bar -->
+        <div class="absolute top-0 left-0 w-full h-1" style="background: hsl(45 80% 60%);"></div>
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style="background: hsl(174 60% 40%);">L</div>
+          <span class="text-xs font-semibold" style="color: hsl(35 60% 30%);">Lucia</span>
+          <span class="text-[10px] ml-auto" style="color: hsl(35 40% 50%);">Round 4</span>
+        </div>
+        <p class="text-sm leading-relaxed" style="color: hsl(35 50% 20%);">Predizione: Marco vincera se nessuno gli blocca la strada verso il porto. Dobbiamo allearci! &#x1F91D;</p>
+      </div>
+
+      <!-- Revealed note 2: Anna -->
+      <div class="note-card-revealed rounded-2xl p-4 mb-3 warm-shadow-lg relative overflow-hidden" style="transform: rotate(0.3deg);">
+        <div class="absolute top-0 left-0 w-full h-1" style="background: hsl(45 80% 60%);"></div>
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style="background: hsl(350 65% 55%);">A</div>
+          <span class="text-xs font-semibold" style="color: hsl(35 60% 30%);">Anna</span>
+          <span class="text-[10px] ml-auto" style="color: hsl(35 40% 50%);">Round 3</span>
+        </div>
+        <p class="text-sm leading-relaxed" style="color: hsl(35 50% 20%);">Ho 3 pecore e 2 grani. Qualcuno vuole scambiare?</p>
+      </div>
+
+      <!-- Hidden note placeholder: Giulia -->
+      <div class="note-hidden rounded-2xl p-4 mb-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: hsl(30 20% 87%);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: hsl(30 12% 55%);"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div>
+          <p class="text-sm font-medium" style="color: hsl(30 12% 45%);">Giulia ha un appunto nascosto</p>
+          <p class="text-[11px]" style="color: hsl(30 12% 60%);">Verra rivelato quando decidera lei</p>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+</body>
+</html>

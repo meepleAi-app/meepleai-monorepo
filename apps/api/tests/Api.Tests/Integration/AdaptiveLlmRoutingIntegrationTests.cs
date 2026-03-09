@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
@@ -15,7 +16,6 @@ using Api.Services.LlmClients;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MediatR;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -517,10 +517,19 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             .Setup(s => s.HasAccessToStrategyAsync(It.IsAny<LlmUserTier>(), It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
+        var mockModelConfigRepository = new Mock<IAiModelConfigurationRepository>();
+
+        // Setup IServiceScopeFactory to provide services for both routing strategy and cost logging
         var mockServiceProvider = new Mock<IServiceProvider>();
         mockServiceProvider
             .Setup(sp => sp.GetService(typeof(ITierStrategyAccessService)))
             .Returns(mockTierAccessService.Object);
+        mockServiceProvider
+            .Setup(sp => sp.GetService(typeof(ILlmCostLogRepository)))
+            .Returns(_mockCostLogRepository.Object);
+        mockServiceProvider
+            .Setup(sp => sp.GetService(typeof(IAiModelConfigurationRepository)))
+            .Returns(mockModelConfigRepository.Object);
         var mockScope = new Mock<IServiceScope>();
         mockScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider.Object);
         var mockScopeFactory = new Mock<IServiceScopeFactory>();
@@ -532,19 +541,13 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             aiSettings,
             _strategyLogger);
 
-        var mockModelConfigRepository = new Mock<IAiModelConfigurationRepository>();
-
-        var mockPublisher = new Mock<IPublisher>();
-
         return new HybridLlmService(
             clients,
             routingStrategy,
-            _mockCostLogRepository.Object,
             _serviceLogger,
             aiSettings,
             mockModelConfigRepository.Object,
-            mockPublisher.Object,
-            healthCheckService: null);
+            scopeFactory: mockScopeFactory.Object);
     }
 
     private static IOptions<AiProviderSettings> CreateAiSettings(

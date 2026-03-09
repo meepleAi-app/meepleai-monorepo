@@ -64,6 +64,11 @@ vi.mock('@/components/layout/Sidebar', () => ({
   Sidebar: () => null,
 }));
 
+// Mock MobileTabBar to avoid QueryClient/Navigation dependencies
+vi.mock('@/components/layout/MobileTabBar', () => ({
+  MobileTabBar: () => <nav data-testid="mobile-tab-bar" aria-label="Primary navigation" />,
+}));
+
 // Mock useCurrentUser to avoid QueryClient dependency in UnifiedHeader
 const mockUseCurrentUser = vi.fn(() => ({
   data: null,
@@ -421,10 +426,14 @@ describe('PublicLayout', () => {
       const footer = wrapper?.querySelector('footer');
 
       if (header && main) {
-        expect(header.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(
+          header.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
       }
       if (main && footer) {
-        expect(main.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(
+          main.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
       }
     });
 

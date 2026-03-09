@@ -15,7 +15,7 @@
  * Features:
  * - UnifiedHeader with user context (internally managed)
  * - PublicFooter
- * - BottomNav for mobile
+ * - UnifiedActionBar for authenticated mobile users
  * - Responsive container
  * - Dark mode support
  */
@@ -27,9 +27,5 @@ import { ReactNode } from 'react';
 import { PublicLayout } from '@/components/layouts/PublicLayout';
 
 export default function PublicRootLayout({ children }: { children: ReactNode }) {
-  return (
-    <PublicLayout showNewsletter={false}>
-      {children}
-    </PublicLayout>
-  );
+  return <PublicLayout showNewsletter={false}>{children}</PublicLayout>;
 }

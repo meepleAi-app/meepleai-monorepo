@@ -14,8 +14,6 @@
 
 import { useEffect } from 'react';
 
-import Link from 'next/link';
-
 import {
   AlertCircle,
   BrainCircuit,
@@ -25,6 +23,7 @@ import {
   Plus,
   XCircle,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import { usePdfProcessingStatus } from '@/hooks/queries/usePdfProcessingStatus';
 import { cn } from '@/lib/utils';
@@ -39,11 +38,7 @@ interface KbStatusPanelProps {
   onStatusChange?: (isIndexed: boolean) => void;
 }
 
-function StatusBadge({
-  status,
-}: {
-  status: 'pending' | 'processing' | 'indexed' | 'failed';
-}) {
+function StatusBadge({ status }: { status: 'pending' | 'processing' | 'indexed' | 'failed' }) {
   switch (status) {
     case 'indexed':
       return (
@@ -129,9 +124,7 @@ export function KbStatusPanel({ gameId, onStatusChange }: KbStatusPanelProps) {
             <FileText className="h-6 w-6 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">
-              Nessun documento collegato
-            </p>
+            <p className="text-sm font-medium text-foreground">Nessun documento collegato</p>
             <p className="text-xs text-muted-foreground mt-1">
               Carica un PDF del regolamento per creare la Knowledge Base.
             </p>
@@ -174,9 +167,7 @@ export function KbStatusPanel({ gameId, onStatusChange }: KbStatusPanelProps) {
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium truncate">
-                  Regolamento.pdf
-                </span>
+                <span className="text-sm font-medium truncate">Regolamento.pdf</span>
                 <StatusBadge status={data.status} />
               </div>
 

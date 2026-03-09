@@ -1,3 +1,4 @@
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.Commands.ApiKeys;
 using Api.BoundedContexts.Authentication.Application.Handlers;

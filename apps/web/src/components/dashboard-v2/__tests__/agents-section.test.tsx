@@ -50,17 +50,14 @@ describe('AgentsDashboardSection', () => {
     expect(screen.queryByText('Catan Expert')).not.toBeInTheDocument();
   });
 
-  it('always renders the "Crea nuovo agente" CTA card', () => {
+  it('does not render the "Crea nuovo agente" CTA card', () => {
     (useRecentAgents as ReturnType<typeof vi.fn>).mockReturnValue({
       data: [],
       isLoading: false,
     });
 
     render(<AgentsDashboardSection />);
-    expect(screen.getByRole('link', { name: /Crea nuovo agente/ })).toHaveAttribute(
-      'href',
-      '/agents/new'
-    );
+    expect(screen.queryByText(/Crea nuovo agente/)).not.toBeInTheDocument();
   });
 
   it('renders agent cards', () => {

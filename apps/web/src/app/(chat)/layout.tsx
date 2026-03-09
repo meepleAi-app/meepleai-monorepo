@@ -12,8 +12,8 @@
 
 import { type ReactNode, Suspense } from 'react';
 
-import { MiniNav } from '@/components/layout/MiniNav/MiniNav';
 import { NavActionBar } from '@/components/layout/ActionBar/NavActionBar';
+import { MiniNav } from '@/components/layout/MiniNav/MiniNav';
 import { NavigationProvider } from '@/context/NavigationContext';
 
 function ChatLayoutInner({ children }: { children: ReactNode }) {
@@ -27,9 +27,7 @@ function ChatLayoutInner({ children }: { children: ReactNode }) {
       </div>
 
       {/* Page content */}
-      <div className="flex-1">
-        {children}
-      </div>
+      <div className="flex-1">{children}</div>
 
       {/* NavActionBar (L3) — desktop: sticky bottom, mobile: fixed bottom */}
       <NavActionBar />

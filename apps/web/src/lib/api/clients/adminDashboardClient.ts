@@ -8,6 +8,7 @@ import { HttpClient } from '../core/httpClient';
 
 const httpClient = new HttpClient({});
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- untyped admin endpoints, typing tracked in #4656 */
 export const adminDashboardClient = {
   /**
    * Get user activity log (#4652)
@@ -54,3 +55,4 @@ export const adminDashboardClient = {
    */
   getGameCategories: () => httpClient.get<any>('/api/v1/admin/shared-games/categories'),
 };
+/* eslint-enable @typescript-eslint/no-explicit-any */

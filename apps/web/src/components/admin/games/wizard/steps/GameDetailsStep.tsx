@@ -9,23 +9,19 @@
 import {
   ArrowLeftIcon,
   CalendarIcon,
-  UsersIcon,
-  ClockIcon,
   HashIcon,
   LoaderCircleIcon,
   CheckCircle2Icon,
 } from 'lucide-react';
-
 import Image from 'next/image';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-
-import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
+import { Button } from '@/components/ui/primitives/button';
 import {
   useCreateGameFromWizard,
   type CreateGameFromWizardResult,
 } from '@/hooks/queries/useAdminGameWizard';
+import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,16 +33,12 @@ interface GameDetailsStepProps {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function GameDetailsStep({
-  selectedGame,
-  onBack,
-  onGameCreated,
-}: GameDetailsStepProps) {
+export function GameDetailsStep({ selectedGame, onBack, onGameCreated }: GameDetailsStepProps) {
   const createGame = useCreateGameFromWizard();
 
   const handleCreateGame = () => {
     createGame.mutate(selectedGame.bggId, {
-      onSuccess: (data) => {
+      onSuccess: data => {
         onGameCreated(data);
       },
     });
@@ -73,9 +65,7 @@ export function GameDetailsStep({
               </div>
             )}
             <div>
-              <p className="font-quicksand font-bold text-foreground">
-                {selectedGame.name}
-              </p>
+              <p className="font-quicksand font-bold text-foreground">{selectedGame.name}</p>
               <p className="text-sm text-muted-foreground font-normal mt-1">
                 Selected from BoardGameGeek
               </p>
@@ -118,11 +108,7 @@ export function GameDetailsStep({
 
       {/* Actions */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          disabled={createGame.isPending}
-        >
+        <Button variant="ghost" onClick={onBack} disabled={createGame.isPending}>
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back to Search
         </Button>
@@ -151,9 +137,7 @@ export function GameDetailsStep({
       {/* Error state */}
       {createGame.isError && (
         <div className="rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/20 p-3">
-          <p className="text-sm text-red-700 dark:text-red-400">
-            {createGame.error.message}
-          </p>
+          <p className="text-sm text-red-700 dark:text-red-400">{createGame.error.message}</p>
         </div>
       )}
     </div>

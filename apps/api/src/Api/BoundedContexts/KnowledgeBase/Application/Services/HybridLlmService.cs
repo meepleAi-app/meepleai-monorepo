@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -55,18 +56,17 @@ internal class HybridLlmService : ILlmService
 {
     private readonly List<ILlmClient> _clients;
     private readonly ILlmRoutingStrategy _routingStrategy;
-    private readonly ILlmCostLogRepository _costLogRepository;
     private readonly IUserBudgetService? _userBudgetService;
     private readonly ILogger<HybridLlmService> _logger;
     private readonly IProviderHealthCheckService? _healthCheckService;
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly IAiModelConfigurationRepository _modelConfigRepository;
-    private readonly IPublisher _publisher;
     private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
     private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
     private readonly IServiceScopeFactory? _scopeFactory; // Issue #5086: for fire-and-forget circuit breaker notifications
     private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker; // Issue #5087: RPD exhaustion state
+    private readonly IEmergencyOverrideService? _emergencyOverrideService; // Issue #5476: admin emergency controls
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -88,26 +88,23 @@ internal class HybridLlmService : ILlmService
     public HybridLlmService(
         IEnumerable<ILlmClient> clients,
         ILlmRoutingStrategy routingStrategy,
-        ILlmCostLogRepository costLogRepository,
         ILogger<HybridLlmService> logger,
         IOptions<AiProviderSettings> aiSettings,
         IAiModelConfigurationRepository modelConfigRepository,
-        IPublisher publisher,
         IProviderHealthCheckService? healthCheckService = null,
         IUserBudgetService? userBudgetService = null,
         IOpenRouterFileLogger? openRouterFileLogger = null,
         IOpenRouterUsageService? openRouterUsageService = null,
         IOpenRouterRateLimitTracker? rateLimitTracker = null,
         IServiceScopeFactory? scopeFactory = null,
-        IFreeModelQuotaTracker? freeModelQuotaTracker = null)
+        IFreeModelQuotaTracker? freeModelQuotaTracker = null,
+        IEmergencyOverrideService? emergencyOverrideService = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
-        _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _modelConfigRepository = modelConfigRepository ?? throw new ArgumentNullException(nameof(modelConfigRepository));
-        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
         _userBudgetService = userBudgetService; // Optional - for credit tracking
         _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
@@ -115,6 +112,7 @@ internal class HybridLlmService : ILlmService
         _rateLimitTracker = rateLimitTracker; // Issue #5075: Optional - RPM/TPM sliding window
         _scopeFactory = scopeFactory; // Issue #5086: Optional - for circuit breaker notifications
         _freeModelQuotaTracker = freeModelQuotaTracker; // Issue #5087: Optional - RPD exhaustion state
+        _emergencyOverrideService = emergencyOverrideService; // Issue #5476: Optional - admin emergency controls
 
         if (_clients.Count == 0)
         {
@@ -190,6 +188,20 @@ internal class HybridLlmService : ILlmService
             // ISSUE-962: Route with circuit breaker awareness and support fallback retries
             // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
             decision = _routingStrategy.SelectProvider(user, strategy);
+
+            // Issue #5476: Emergency override — force all traffic to Ollama
+            if (_emergencyOverrideService != null
+                && string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal))
+            {
+                var forceOllama = await _emergencyOverrideService
+                    .IsForceOllamaOnlyAsync(cancellationToken).ConfigureAwait(false);
+                if (forceOllama)
+                {
+                    _logger.LogWarning("Emergency override active: force-ollama-only — rerouting from OpenRouter");
+                    var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
+                    decision = LlmRoutingDecision.Ollama(ollamaModelId, "Emergency override: force-ollama-only active");
+                }
+            }
 
             // Issue #5089: Proactively skip OpenRouter when RPD quota is known-exhausted
             if (string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal)
@@ -607,6 +619,12 @@ internal class HybridLlmService : ILlmService
         }
     }
 
+    /// <summary>
+    /// Log LLM cost and update usage stats.
+    /// Uses a dedicated DI scope for DB operations because this method may be called
+    /// fire-and-forget (e.g. from GenerateCompletionWithModelAsync line 1163), which
+    /// would otherwise cause DbContext concurrency with the caller's SaveChangesAsync.
+    /// </summary>
     private async Task LogCostAsync(
         LlmCompletionResult result,
         User? user,
@@ -616,46 +634,57 @@ internal class HybridLlmService : ILlmService
     {
         try
         {
-            await _costLogRepository.LogCostAsync(
-                user?.Id,
-                user?.Role.Value ?? "Anonymous",
-                new LlmCostCalculation
-                {
-                    ModelId = result.Cost.ModelId,
-                    Provider = result.Cost.Provider,
-                    PromptTokens = result.Usage.PromptTokens,
-                    CompletionTokens = result.Usage.CompletionTokens,
-                    InputCost = result.Cost.InputCost,
-                    OutputCost = result.Cost.OutputCost
-                },
-                endpoint: "completion",
-                success: true,
-                errorMessage: null,
-                latencyMs: (int)latencyMs,
-                ipAddress: null,
-                userAgent: null,
-                source: source,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            // Use a dedicated scope for DB-dependent cost logging to prevent
+            // "A second operation was started on this context instance" when called fire-and-forget
+            if (_scopeFactory != null)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
+                await costLogRepo.LogCostAsync(
+                    user?.Id,
+                    user?.Role.Value ?? "Anonymous",
+                    new LlmCostCalculation
+                    {
+                        ModelId = result.Cost.ModelId,
+                        Provider = result.Cost.Provider,
+                        PromptTokens = result.Usage.PromptTokens,
+                        CompletionTokens = result.Usage.CompletionTokens,
+                        InputCost = result.Cost.InputCost,
+                        OutputCost = result.Cost.OutputCost
+                    },
+                    endpoint: "completion",
+                    success: true,
+                    errorMessage: null,
+                    latencyMs: (int)latencyMs,
+                    ipAddress: null,
+                    userAgent: null,
+                    source: source,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
 
-            // Issue #2520: Update model usage statistics
+            // Issue #2520: Update model usage statistics (uses its own scope internally)
             await UpdateModelUsageStatsAsync(result, cancellationToken).ConfigureAwait(false);
 
             // Budget Display System: Record credit usage (if service available and user authenticated)
-            if (_userBudgetService != null && user?.Id != null)
+            if (_userBudgetService != null && user?.Id != null && _scopeFactory != null)
             {
+                using var budgetScope = _scopeFactory.CreateScope();
+                var budgetService = budgetScope.ServiceProvider.GetRequiredService<IUserBudgetService>();
                 var requestCost = result.Cost.TotalCost;
                 var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
 
-                await _userBudgetService
+                await budgetService
                     .RecordUsageAsync(user.Id, requestCost, requestTokens, cancellationToken)
                     .ConfigureAwait(false);
             }
 
             // Issue #3721: Publish event for automatic financial ledger tracking
             var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
-            if (totalCost > 0 && user?.Id != null)
+            if (totalCost > 0 && user?.Id != null && _scopeFactory != null)
             {
-                await _publisher.Publish(
+                using var publishScope = _scopeFactory.CreateScope();
+                var publisher = publishScope.ServiceProvider.GetRequiredService<IPublisher>();
+                await publisher.Publish(
                     new TokenUsageLedgerEvent(
                         UserId: user.Id,
                         ModelId: result.Cost.ModelId,
@@ -666,7 +695,7 @@ internal class HybridLlmService : ILlmService
                     cancellationToken).ConfigureAwait(false);
             }
 
-            // Issue #5073: Write to rotating OpenRouter file log
+            // Issue #5073: Write to rotating OpenRouter file log (no DB, safe without scope)
             _openRouterFileLogger?.LogRequest(
                 requestId: Guid.NewGuid().ToString(),
                 model: result.Cost.ModelId,
@@ -681,7 +710,7 @@ internal class HybridLlmService : ILlmService
                 isFreeModel: result.Cost.TotalCost == 0,
                 sessionId: null);
 
-            // Issue #5074: Accumulate daily spend in Redis (fire-and-forget)
+            // Issue #5074: Accumulate daily spend in Redis (fire-and-forget, no DB)
             if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
                 _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost);
         }
@@ -692,13 +721,26 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <summary>
-    /// Issue #2520: Update AiModelConfiguration usage statistics after successful request
+    /// Issue #2520: Update AiModelConfiguration usage statistics after successful request.
+    /// Uses a dedicated DI scope to avoid DbContext concurrency with the calling handler's scope.
+    /// Without this, long-running SSE requests (e.g. Ollama fallback) cause
+    /// "A second operation was started on this context instance" when the handler's
+    /// SaveChangesAsync runs concurrently with this repository call.
     /// </summary>
     private async Task UpdateModelUsageStatsAsync(LlmCompletionResult result, CancellationToken cancellationToken)
     {
+        if (_scopeFactory is null)
+        {
+            _logger.LogDebug("IServiceScopeFactory not available, skipping usage stats update");
+            return;
+        }
+
         try
         {
-            var modelConfig = await _modelConfigRepository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
+            using var scope = _scopeFactory.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IAiModelConfigurationRepository>();
+
+            var modelConfig = await repository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
             if (modelConfig != null)
             {
                 var inputTokens = result.Usage.PromptTokens;
@@ -706,7 +748,7 @@ internal class HybridLlmService : ILlmService
                 var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
 
                 modelConfig.TrackUsage(inputTokens, outputTokens, totalCost); // Issue #2580: Use TrackUsage API
-                await _modelConfigRepository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
+                await repository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
 
                 _logger.LogDebug(
                     "Updated usage stats for model {ModelId}: +{Tokens} tokens, +${Cost:F6}",
@@ -723,6 +765,9 @@ internal class HybridLlmService : ILlmService
         }
     }
 
+    /// <summary>
+    /// Log LLM failure cost. Uses a dedicated DI scope for the same concurrency reasons as LogCostAsync.
+    /// </summary>
     private async Task LogCostFailureAsync(
         string? errorMessage,
         User? user,
@@ -732,20 +777,25 @@ internal class HybridLlmService : ILlmService
     {
         try
         {
-            await _costLogRepository.LogCostAsync(
-                user?.Id,
-                user?.Role.Value ?? "Anonymous",
-                LlmCostCalculation.Empty,
-                endpoint: "completion",
-                success: false,
-                errorMessage: errorMessage,
-                latencyMs: (int)latencyMs,
-                ipAddress: null,
-                userAgent: null,
-                source: source,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (_scopeFactory != null)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
+                await costLogRepo.LogCostAsync(
+                    user?.Id,
+                    user?.Role.Value ?? "Anonymous",
+                    LlmCostCalculation.Empty,
+                    endpoint: "completion",
+                    success: false,
+                    errorMessage: errorMessage,
+                    latencyMs: (int)latencyMs,
+                    ipAddress: null,
+                    userAgent: null,
+                    source: source,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
 
-            // Issue #5073: Write failure to rotating OpenRouter file log
+            // Issue #5073: Write failure to rotating OpenRouter file log (no DB, safe without scope)
             _openRouterFileLogger?.LogRequest(
                 requestId: Guid.NewGuid().ToString(),
                 model: string.Empty,
@@ -987,6 +1037,33 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <summary>
+    /// Issue #5476: Reset circuit breaker state for a specific provider (or all).
+    /// Called by admin emergency controls.
+    /// </summary>
+    public void ResetCircuitBreaker(string? targetProvider = null)
+    {
+        lock (_monitoringLock)
+        {
+            if (targetProvider != null)
+            {
+                if (_circuitBreakers.TryGetValue(targetProvider, out var breaker))
+                {
+                    breaker.Reset();
+                    _logger.LogWarning("Circuit breaker reset for provider {Provider}", targetProvider);
+                }
+            }
+            else
+            {
+                foreach (var (provider, breaker) in _circuitBreakers)
+                {
+                    breaker.Reset();
+                    _logger.LogWarning("Circuit breaker reset for provider {Provider} (reset-all)", provider);
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// ISSUE-962: Get monitoring status for all providers
     /// </summary>
     public virtual Dictionary<string, (string circuitState, string latencyStats)> GetMonitoringStatus()
@@ -1050,15 +1127,16 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <summary>
-    /// Hardcoded fallback for backward compatibility
+    /// Fallback model when no DB configuration exists.
+    /// Uses AgentDefaults.DefaultModel (reads OPENROUTER_DEFAULT_MODEL env var).
     /// </summary>
     private static string GetHardcodedDefaultModel(string providerName)
     {
         return providerName.ToLowerInvariant() switch
         {
-            "ollama" => "llama3.3:70b", // Free tier default
-            "openrouter" => "meta-llama/llama-3.3-70b-instruct:free", // Free tier default
-            _ => "llama3.3:70b" // Safe default
+            "ollama" => AgentDefaults.OllamaFallbackModel,
+            "openrouter" => AgentDefaults.DefaultModel,
+            _ => AgentDefaults.OllamaFallbackModel
         };
     }
 

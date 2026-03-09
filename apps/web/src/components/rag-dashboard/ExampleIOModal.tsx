@@ -18,17 +18,12 @@ import { X, Play, Loader2, AlertCircle, Square } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 
-import { useLiveTestStream } from './use-live-test-stream';
 import { STRATEGIES } from './rag-data';
+import { useLiveTestStream } from './use-live-test-stream';
 
 import type { RagStrategy, UserTier } from './types';
 
@@ -76,19 +71,20 @@ const STRATEGY_EXAMPLES: Record<RagStrategy, StrategyExample[]> = {
       category: 'simple_faq',
       input: {
         query: 'Quanti giocatori supporta?',
-        gameContext: 'Catan'
+        gameContext: 'Catan',
       },
       output: {
-        answer: 'Il gioco Catan supporta 2-4 giocatori nella versione base (o 5-6 con l\'espansione).',
+        answer:
+          "Il gioco Catan supporta 2-4 giocatori nella versione base (o 5-6 con l'espansione).",
         sources: [{ page: 3, text: 'Numero giocatori: 2-4 (base), 5-6 (con espansione)' }],
-        confidence: 0.92
+        confidence: 0.92,
       },
       metrics: {
         tokensUsed: 1850,
         latencyMs: 145,
         cost: 0,
-        cacheHit: false
-      }
+        cacheHit: false,
+      },
     },
     {
       id: 'fast-2',
@@ -96,22 +92,23 @@ const STRATEGY_EXAMPLES: Record<RagStrategy, StrategyExample[]> = {
       category: 'rules_lookup',
       input: {
         query: 'Come si fa il setup iniziale?',
-        gameContext: 'Catan'
+        gameContext: 'Catan',
       },
       output: {
-        answer: 'Setup iniziale: 1) Assembla il tabellone esagonale, 2) Posiziona i numeri casuali, 3) Ogni giocatore sceglie 2 insediamenti e 2 strade iniziali.',
+        answer:
+          'Setup iniziale: 1) Assembla il tabellone esagonale, 2) Posiziona i numeri casuali, 3) Ogni giocatore sceglie 2 insediamenti e 2 strade iniziali.',
         sources: [
           { page: 4, text: 'Setup iniziale - sezione 2.1' },
-          { page: 5, text: 'Posizionamento insediamenti iniziali' }
+          { page: 5, text: 'Posizionamento insediamenti iniziali' },
         ],
-        confidence: 0.88
+        confidence: 0.88,
       },
       metrics: {
         tokensUsed: 2100,
         latencyMs: 180,
         cost: 0,
-        cacheHit: false
-      }
+        cacheHit: false,
+      },
     },
     {
       id: 'fast-3',
@@ -119,20 +116,20 @@ const STRATEGY_EXAMPLES: Record<RagStrategy, StrategyExample[]> = {
       category: 'simple_faq',
       input: {
         query: 'Durata partita?',
-        gameContext: 'Catan'
+        gameContext: 'Catan',
       },
       output: {
         answer: 'Una partita di Catan dura tipicamente 60-90 minuti.',
         sources: [{ page: 2, text: 'Durata: 60-90 minuti' }],
-        confidence: 0.95
+        confidence: 0.95,
       },
       metrics: {
         tokensUsed: 50,
         latencyMs: 25,
         cost: 0,
-        cacheHit: true
-      }
-    }
+        cacheHit: true,
+      },
+    },
   ],
 
   BALANCED: [
@@ -142,22 +139,23 @@ const STRATEGY_EXAMPLES: Record<RagStrategy, StrategyExample[]> = {
       category: 'rules_lookup',
       input: {
         query: 'Posso costruire una strada se il mio avversario ha già costruito lì?',
-        gameContext: 'Catan'
+        gameContext: 'Catan',
       },
       output: {
-        answer: 'No, secondo le regole di costruzione (sezione 3.4, pagina 15), non puoi costruire una strada su uno spazio già occupato da un altro giocatore. Ogni spazio può contenere solo una strada.',
+        answer:
+          'No, secondo le regole di costruzione (sezione 3.4, pagina 15), non puoi costruire una strada su uno spazio già occupato da un altro giocatore. Ogni spazio può contenere solo una strada.',
         sources: [
           { page: 15, text: 'Regole di costruzione - una strada per spazio' },
-          { page: 16, text: 'Eccezioni costruzione - nessuna per strade' }
+          { page: 16, text: 'Eccezioni costruzione - nessuna per strade' },
         ],
-        confidence: 0.91
+        confidence: 0.91,
       },
       metrics: {
         tokensUsed: 2650,
         latencyMs: 1200,
         cost: 0.01,
-        cacheHit: false
-      }
+        cacheHit: false,
+      },
     },
     {
       id: 'balanced-2',
@@ -165,23 +163,24 @@ const STRATEGY_EXAMPLES: Record<RagStrategy, StrategyExample[]> = {
       category: 'strategy',
       input: {
         query: 'Qual è la strategia migliore per il primo turno?',
-        gameContext: 'Catan'
+        gameContext: 'Catan',
       },
       output: {
-        answer: 'La strategia più comune per il primo turno è posizionare il primo insediamento su un esagono con numero alto (6 o 8) e risorse diverse (grano + minerale è forte). Il secondo insediamento dovrebbe diversificare le risorse o garantire accesso al porto.',
+        answer:
+          'La strategia più comune per il primo turno è posizionare il primo insediamento su un esagono con numero alto (6 o 8) e risorse diverse (grano + minerale è forte). Il secondo insediamento dovrebbe diversificare le risorse o garantire accesso al porto.',
         sources: [
           { page: 45, text: 'Guide strategiche - posizionamento iniziale' },
-          { page: 46, text: 'Numeri produttivi - probabilità' }
+          { page: 46, text: 'Numeri produttivi - probabilità' },
         ],
-        confidence: 0.87
+        confidence: 0.87,
       },
       metrics: {
         tokensUsed: 2900,
         latencyMs: 1450,
         cost: 0.01,
-        cacheHit: false
-      }
-    }
+        cacheHit: false,
+      },
+    },
   ],
 
   PRECISE: [
@@ -190,37 +189,44 @@ const STRATEGY_EXAMPLES: Record<RagStrategy, StrategyExample[]> = {
       title: 'Tournament Edge Case',
       category: 'edge_case',
       input: {
-        query: 'Se due giocatori pareggiano al tie-breaker, cosa succede secondo le regole ufficiali del torneo?',
-        gameContext: 'Catan Championship Rules'
+        query:
+          'Se due giocatori pareggiano al tie-breaker, cosa succede secondo le regole ufficiali del torneo?',
+        gameContext: 'Catan Championship Rules',
       },
       output: {
-        answer: 'Secondo le regole ufficiali del torneo (Tournament Rulebook, sezione 7.3, pagina 89), in caso di pareggio al tie-breaker si applica il criterio secondario: vince chi ha costruito più città. Se anche questo pareggia, si procede con il maggior numero di carte sviluppo giocate. Se ancora in pareggio, si gioca un round aggiuntivo decisivo.',
+        answer:
+          'Secondo le regole ufficiali del torneo (Tournament Rulebook, sezione 7.3, pagina 89), in caso di pareggio al tie-breaker si applica il criterio secondario: vince chi ha costruito più città. Se anche questo pareggia, si procede con il maggior numero di carte sviluppo giocate. Se ancora in pareggio, si gioca un round aggiuntivo decisivo.',
         sources: [
           { page: 89, text: 'Tie-breaker secondario - conteggio città' },
           { page: 90, text: 'Tie-breaker terziario - carte sviluppo' },
-          { page: 91, text: 'Round decisivo - procedura' }
+          { page: 91, text: 'Round decisivo - procedura' },
         ],
-        confidence: 0.97
+        confidence: 0.97,
       },
       metrics: {
         tokensUsed: 21800,
         latencyMs: 8500,
         cost: 0.128,
-        cacheHit: false
-      }
-    }
+        cacheHit: false,
+      },
+    },
   ],
 
   EXPERT: [],
   CONSENSUS: [],
-  CUSTOM: []
+  CUSTOM: [],
 };
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }: ExampleIOModalProps) {
+export function ExampleIOModal({
+  strategy,
+  isOpen,
+  onClose,
+  userTier = 'User',
+}: ExampleIOModalProps) {
   const [activeTab, setActiveTab] = useState('examples');
   const [liveQuery, setLiveQuery] = useState('');
   const [liveGameContext, setLiveGameContext] = useState('Catan');
@@ -236,7 +242,12 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={open => { if (!open) handleClose(); }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={open => {
+        if (!open) handleClose();
+      }}
+    >
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-4">
@@ -245,9 +256,7 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
               <DialogTitle className="text-2xl font-quicksand font-bold">
                 {strategyData.name} - Examples & Testing
               </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {strategyData.description}
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">{strategyData.description}</p>
             </div>
 
             <Button variant="ghost" size="icon" onClick={handleClose}>
@@ -258,14 +267,8 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
           <TabsList className={isAdmin ? 'grid w-full grid-cols-2' : 'w-full'}>
-            <TabsTrigger value="examples">
-              📝 Static Examples ({examples.length})
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="live">
-                🧪 Live Test (Admin)
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="examples">📝 Static Examples ({examples.length})</TabsTrigger>
+            {isAdmin && <TabsTrigger value="live">🧪 Live Test (Admin)</TabsTrigger>}
           </TabsList>
 
           {/* Static Examples Tab */}
@@ -463,7 +466,10 @@ export function ExampleIOModal({ strategy, isOpen, onClose, userTier = 'User' }:
                     </div>
                     <div className="space-y-1">
                       {liveTestState.citations.map((c, i) => (
-                        <div key={i} className="text-xs text-muted-foreground flex items-start gap-1">
+                        <div
+                          key={i}
+                          className="text-xs text-muted-foreground flex items-start gap-1"
+                        >
                           <span className="flex-shrink-0">•</span>
                           <span>
                             {c.page != null ? `Page ${c.page}: ` : ''}

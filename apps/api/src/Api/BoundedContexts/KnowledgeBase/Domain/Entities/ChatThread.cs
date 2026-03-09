@@ -21,6 +21,17 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public DateTime LastMessageAt { get; private set; }
 
+    /// <summary>
+    /// Progressive summary of older conversation messages (Issue #5259).
+    /// Used by sliding window strategy to maintain context for long conversations.
+    /// </summary>
+    public string? ConversationSummary { get; private set; }
+
+    /// <summary>
+    /// Tracks the message count at the time of the last summarization.
+    /// Used to determine which messages are new since the last summary update.
+    /// </summary>
+    public int LastSummarizedMessageCount { get; private set; }
 
     private readonly List<ChatMessage> _messages = new();
     public IReadOnlyList<ChatMessage> Messages => _messages.AsReadOnly();
@@ -220,6 +231,20 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         AgentType = normalized;
 
         AddDomainEvent(new Events.AgentSwitchedInThreadEvent(Id, previousType, normalized));
+    }
+
+    /// <summary>
+    /// Updates the progressive conversation summary (Issue #5259).
+    /// Records the current message count so GetMessagesToSummarize can
+    /// return only messages added since this point.
+    /// </summary>
+    public void UpdateConversationSummary(string summary)
+    {
+        if (string.IsNullOrWhiteSpace(summary))
+            throw new ArgumentException("Summary cannot be empty", nameof(summary));
+
+        ConversationSummary = summary.Trim();
+        LastSummarizedMessageCount = _messages.Count;
     }
 
     /// <summary>

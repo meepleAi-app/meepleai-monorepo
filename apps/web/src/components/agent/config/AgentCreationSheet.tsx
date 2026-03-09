@@ -13,7 +13,6 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 
 import {
   X,
@@ -27,6 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import {
   Sheet,
@@ -37,12 +37,9 @@ import {
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { api } from '@/lib/api';
-import {
-  useCreateAgentFlow,
-  type CreateAgentFlowResult,
-} from '@/hooks/queries/useCreateAgentFlow';
 import { useHasAvailableSlots } from '@/hooks/queries/useAgentSlots';
+import { useCreateAgentFlow, type CreateAgentFlowResult } from '@/hooks/queries/useCreateAgentFlow';
+import { api } from '@/lib/api';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 import { CostPreview } from './CostPreview';
@@ -124,10 +121,7 @@ export function AgentCreationSheet({
   const effectiveAgentName = agentName || (gameTitle ? `Esperto di ${gameTitle}` : '');
 
   // Validation
-  const canCreate =
-    selectedGameId != null &&
-    hasAvailableSlots &&
-    !isCreating;
+  const canCreate = selectedGameId != null && hasAvailableSlots && !isCreating;
 
   // --- Handlers ---
 
@@ -180,65 +174,75 @@ export function AgentCreationSheet({
 
   // --- PDF Upload Handlers ---
 
-  const handleFileUpload = useCallback(async (files: FileList | File[]) => {
-    if (!selectedGameId) return;
+  const handleFileUpload = useCallback(
+    async (files: FileList | File[]) => {
+      if (!selectedGameId) return;
 
-    const fileArray = Array.from(files).filter(f => f.type === 'application/pdf');
-    if (fileArray.length === 0) return;
+      const fileArray = Array.from(files).filter(f => f.type === 'application/pdf');
+      if (fileArray.length === 0) return;
 
-    for (const file of fileArray) {
-      const fileId = `${Date.now()}-${file.name}`;
-      const newFile: UploadedFile = {
-        id: fileId,
-        name: file.name,
-        size: file.size,
-        uploadProgress: 0,
-        status: 'uploading',
-      };
+      for (const file of fileArray) {
+        const fileId = `${Date.now()}-${file.name}`;
+        const newFile: UploadedFile = {
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          uploadProgress: 0,
+          status: 'uploading',
+        };
 
-      setUploadedFiles(prev => [...prev, newFile]);
+        setUploadedFiles(prev => [...prev, newFile]);
 
-      try {
-        const result = await api.pdf.uploadPdf(
-          selectedGameId,
-          file,
-          (percent) => {
+        try {
+          const result = await api.pdf.uploadPdf(selectedGameId, file, percent => {
             setUploadedFiles(prev =>
               prev.map(f =>
                 f.id === fileId
-                  ? { ...f, uploadProgress: percent, status: percent < 100 ? 'uploading' : 'processing' }
+                  ? {
+                      ...f,
+                      uploadProgress: percent,
+                      status: percent < 100 ? 'uploading' : 'processing',
+                    }
                   : f
               )
             );
-          }
-        );
+          });
 
-        setUploadedFiles(prev =>
-          prev.map(f =>
-            f.id === fileId
-              ? { ...f, documentId: result.documentId, status: 'completed', uploadProgress: 100 }
-              : f
-          )
-        );
-      } catch (err) {
-        setUploadedFiles(prev =>
-          prev.map(f =>
-            f.id === fileId
-              ? { ...f, status: 'error', error: err instanceof Error ? err.message : 'Upload failed' }
-              : f
-          )
-        );
+          setUploadedFiles(prev =>
+            prev.map(f =>
+              f.id === fileId
+                ? { ...f, documentId: result.documentId, status: 'completed', uploadProgress: 100 }
+                : f
+            )
+          );
+        } catch (err) {
+          setUploadedFiles(prev =>
+            prev.map(f =>
+              f.id === fileId
+                ? {
+                    ...f,
+                    status: 'error',
+                    error: err instanceof Error ? err.message : 'Upload failed',
+                  }
+                : f
+            )
+          );
+        }
       }
-    }
-  }, [selectedGameId]);
+    },
+    [selectedGameId]
+  );
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files.length > 0) {
-      handleFileUpload(e.dataTransfer.files);
-    }
-  }, [handleFileUpload]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      if (e.dataTransfer.files.length > 0) {
+        handleFileUpload(e.dataTransfer.files);
+      }
+    },
+    [handleFileUpload]
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -258,22 +262,13 @@ export function AgentCreationSheet({
 
   return (
     <Sheet open={isOpen} onOpenChange={open => !open && handleClose()}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-[480px] flex flex-col p-0"
-      >
+      <SheetContent side="right" className="w-full sm:max-w-[480px] flex flex-col p-0">
         {/* Header */}
         <SheetHeader className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <SheetTitle className="text-lg font-semibold">
-                Crea Agente
-              </SheetTitle>
-              {gameTitle && (
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {gameTitle}
-                </p>
-              )}
+              <SheetTitle className="text-lg font-semibold">Crea Agente</SheetTitle>
+              {gameTitle && <p className="text-sm text-muted-foreground mt-0.5">{gameTitle}</p>}
             </div>
             <Button
               variant="ghost"
@@ -337,9 +332,10 @@ export function AgentCreationSheet({
                 <div
                   className={`
                     relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer
-                    ${isDragOver
-                      ? 'border-primary bg-primary/5'
-                      : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                    ${
+                      isDragOver
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted-foreground/25 hover:border-muted-foreground/50'
                     }
                     ${!selectedGameId ? 'opacity-50 pointer-events-none' : ''}
                   `}
@@ -357,12 +353,10 @@ export function AgentCreationSheet({
                     accept=".pdf"
                     multiple
                     className="hidden"
-                    onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                    onChange={e => e.target.files && handleFileUpload(e.target.files)}
                   />
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="text-sm font-medium">
-                    Trascina PDF qui o clicca per caricare
-                  </p>
+                  <p className="text-sm font-medium">Trascina PDF qui o clicca per caricare</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Regolamenti, FAQ, guide — max 50MB per file
                   </p>
@@ -452,7 +446,7 @@ export function AgentCreationSheet({
                   <Input
                     id="agent-name"
                     value={agentName}
-                    onChange={(e) => setAgentName(e.target.value)}
+                    onChange={e => setAgentName(e.target.value)}
                     placeholder={gameTitle ? `Esperto di ${gameTitle}` : 'Nome agente...'}
                     disabled={isCreating}
                     maxLength={100}
@@ -479,7 +473,7 @@ export function AgentCreationSheet({
                 {/* Model */}
                 <ModelSelector
                   value={selectedModelId}
-                  onChange={(modelId) => setSelectedModelId(modelId)}
+                  onChange={modelId => setSelectedModelId(modelId)}
                   disabled={isCreating}
                 />
               </div>
@@ -526,9 +520,7 @@ export function AgentCreationSheet({
                       </div>
                     )}
                     {slotsData.available === 1 && (
-                      <p className="text-xs text-amber-600">
-                        Ultimo slot disponibile!
-                      </p>
+                      <p className="text-xs text-amber-600">Ultimo slot disponibile!</p>
                     )}
                   </div>
                 )}
@@ -543,17 +535,10 @@ export function AgentCreationSheet({
         {/* Footer */}
         <SheetFooter className="border-t px-6 py-4">
           <div className="w-full flex gap-3 justify-end">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={isCreating}
-            >
+            <Button variant="outline" onClick={handleClose} disabled={isCreating}>
               Annulla
             </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={!canCreate}
-            >
+            <Button onClick={handleCreate} disabled={!canCreate}>
               {isCreating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

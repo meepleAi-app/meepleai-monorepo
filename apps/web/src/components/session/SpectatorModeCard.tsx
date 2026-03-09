@@ -9,6 +9,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+
 import { Eye, Hand, MessageSquare } from 'lucide-react';
 
 import type { Participant, ScoreEntry } from '@/components/session/types';
@@ -23,9 +24,9 @@ interface SpectatorModeCardProps {
 }
 
 export function SpectatorModeCard({
-  sessionId,
+  sessionId: _sessionId,
   participants,
-  scores,
+  scores: _scores,
   sessionStatus,
   onRequestToPlay,
   className = '',
@@ -60,9 +61,7 @@ export function SpectatorModeCard({
           </button>
         )}
 
-        {hasRequested && (
-          <span className="text-xs text-gray-400">Request sent</span>
-        )}
+        {hasRequested && <span className="text-xs text-gray-400">Request sent</span>}
       </div>
 
       {/* Live Scoreboard (Read-Only) */}
@@ -91,9 +90,7 @@ export function SpectatorModeCard({
                   </span>
                 )}
               </span>
-              <span className="font-mono text-sm font-semibold tabular-nums">
-                {p.totalScore}
-              </span>
+              <span className="font-mono text-sm font-semibold tabular-nums">{p.totalScore}</span>
             </div>
           ))}
         </div>

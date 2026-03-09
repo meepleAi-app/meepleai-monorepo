@@ -26,8 +26,9 @@ fi
 echo "🔨 Verifying frontend builds..."
 
 if [ -d "apps/web" ]; then
-  (cd apps/web && pnpm build --no-lint 2>/dev/null) || {
-    # Try with full build if quick fails
+  (cd apps/web && pnpm build) || {
+    # Retry after cleaning stale lock
+    rm -f apps/web/.next/lock
     (cd apps/web && pnpm build) || {
       echo ""
       echo "❌ Frontend build failed. Please fix build errors before pushing."
@@ -102,7 +103,7 @@ if [ -n "$CURRENT_BRANCH" ]; then
 
   if ! echo "$CURRENT_BRANCH" | grep -qE "$VALID_PATTERN"; then
     echo ""
-    echo "⚠️  Warning: Branch name '$CURRENT_BRANCH' doesn't follow naming convention."
+    echo "Warning: Branch name $CURRENT_BRANCH does not follow naming convention."
     echo "   Expected patterns:"
     echo "     - feature/frontend-dev-{issue}-{desc}  (from frontend-dev)"
     echo "     - feature/{issue}-{desc}              (from main-dev)"

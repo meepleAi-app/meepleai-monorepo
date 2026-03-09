@@ -36,15 +36,17 @@ function createRequest(body: unknown, headers?: Record<string, string>): NextReq
   });
 }
 
-function createValidBody(overrides?: Partial<{
-  message: string;
-  agentId: string;
-  threadId: string;
-  gameContext: { gameName: string; agentTypology: string; ragContext?: string };
-  modelId: string;
-  maxTokens: number;
-  temperature: number;
-}>) {
+function createValidBody(
+  overrides?: Partial<{
+    message: string;
+    agentId: string;
+    threadId: string;
+    gameContext: { gameName: string; agentTypology: string; ragContext?: string };
+    modelId: string;
+    maxTokens: number;
+    temperature: number;
+  }>
+) {
   return {
     message: 'How do I play Catan?',
     agentId: 'agent-123',
@@ -57,7 +59,9 @@ function createValidBody(overrides?: Partial<{
 }
 
 /** Read all SSE events from a streaming Response */
-async function readSSEEvents(response: Response): Promise<Array<{ type: number; data: unknown; timestamp: string }>> {
+async function readSSEEvents(
+  response: Response
+): Promise<Array<{ type: number; data: unknown; timestamp: string }>> {
   const events: Array<{ type: number; data: unknown; timestamp: string }> = [];
   const reader = response.body?.getReader();
   if (!reader) return events;
@@ -119,7 +123,7 @@ async function callProxyAndConsume(
   fetchMock: ReturnType<typeof vi.fn>,
   body: ReturnType<typeof createValidBody>,
   openRouterChunks: string[] = [openRouterDone()],
-  headers?: Record<string, string>,
+  headers?: Record<string, string>
 ) {
   const stream = createOpenRouterStream(openRouterChunks);
   fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
@@ -154,7 +158,10 @@ describe('POST /api/chat-proxy', () => {
 
   describe('Input Validation', () => {
     it('returns 400 for missing message', async () => {
-      const req = createRequest({ agentId: 'a', gameContext: { gameName: 'X', agentTypology: 'Tutor' } });
+      const req = createRequest({
+        agentId: 'a',
+        gameContext: { gameName: 'X', agentTypology: 'Tutor' },
+      });
       const res = await POST(req);
 
       expect(res.status).toBe(400);
@@ -172,7 +179,10 @@ describe('POST /api/chat-proxy', () => {
     });
 
     it('returns 400 for missing agentId', async () => {
-      const req = createRequest({ message: 'hi', gameContext: { gameName: 'X', agentTypology: 'Tutor' } });
+      const req = createRequest({
+        message: 'hi',
+        gameContext: { gameName: 'X', agentTypology: 'Tutor' },
+      });
       const res = await POST(req);
 
       expect(res.status).toBe(400);
@@ -217,11 +227,7 @@ describe('POST /api/chat-proxy', () => {
 
   describe('SSE Streaming', () => {
     it('sends Token events for OpenRouter chunks', async () => {
-      const chunks = [
-        openRouterChunk('Hello'),
-        openRouterChunk(' world'),
-        openRouterDone(),
-      ];
+      const chunks = [openRouterChunk('Hello'), openRouterChunk(' world'), openRouterDone()];
 
       const { res, events } = await callProxyAndConsume(fetchMock, createValidBody(), chunks);
 
@@ -263,7 +269,7 @@ describe('POST /api/chat-proxy', () => {
     it('includes threadId in Complete event when provided', async () => {
       const { events } = await callProxyAndConsume(
         fetchMock,
-        createValidBody({ threadId: 'thread-456' }),
+        createValidBody({ threadId: 'thread-456' })
       );
 
       const complete = events.find(e => e.type === EventType.Complete);
@@ -323,15 +329,13 @@ describe('POST /api/chat-proxy', () => {
 
       const errorEvents = events.filter(e => e.type === EventType.Error);
       expect(errorEvents).toHaveLength(1);
-      expect((errorEvents[0].data as { errorMessage: string }).errorMessage).toContain('Network error');
+      expect((errorEvents[0].data as { errorMessage: string }).errorMessage).toContain(
+        'Network error'
+      );
     });
 
     it('skips malformed OpenRouter chunks', async () => {
-      const chunks = [
-        'data: {invalid json}\n\n',
-        openRouterChunk('ok'),
-        openRouterDone(),
-      ];
+      const chunks = ['data: {invalid json}\n\n', openRouterChunk('ok'), openRouterDone()];
 
       const { events } = await callProxyAndConsume(fetchMock, createValidBody(), chunks);
 
@@ -343,9 +347,12 @@ describe('POST /api/chat-proxy', () => {
 
   describe('System Prompt', () => {
     it('sends correct system prompt for Tutor typology', async () => {
-      const { fetchCall } = await callProxyAndConsume(fetchMock, createValidBody({
-        gameContext: { gameName: 'Catan', agentTypology: 'Tutor' },
-      }));
+      const { fetchCall } = await callProxyAndConsume(
+        fetchMock,
+        createValidBody({
+          gameContext: { gameName: 'Catan', agentTypology: 'Tutor' },
+        })
+      );
 
       const requestBody = JSON.parse(fetchCall[1].body);
       expect(requestBody.messages[0].role).toBe('system');
@@ -355,9 +362,12 @@ describe('POST /api/chat-proxy', () => {
     });
 
     it('sends correct system prompt for Arbitro typology', async () => {
-      const { fetchCall } = await callProxyAndConsume(fetchMock, createValidBody({
-        gameContext: { gameName: 'Terraforming Mars', agentTypology: 'Arbitro' },
-      }));
+      const { fetchCall } = await callProxyAndConsume(
+        fetchMock,
+        createValidBody({
+          gameContext: { gameName: 'Terraforming Mars', agentTypology: 'Arbitro' },
+        })
+      );
 
       const requestBody = JSON.parse(fetchCall[1].body);
       expect(requestBody.messages[0].content).toContain('Arbitro');
@@ -365,22 +375,28 @@ describe('POST /api/chat-proxy', () => {
     });
 
     it('includes RAG context in system prompt when provided', async () => {
-      const { fetchCall } = await callProxyAndConsume(fetchMock, createValidBody({
-        gameContext: {
-          gameName: 'Catan',
-          agentTypology: 'Tutor',
-          ragContext: 'Each player starts with 2 settlements and 2 roads.',
-        },
-      }));
+      const { fetchCall } = await callProxyAndConsume(
+        fetchMock,
+        createValidBody({
+          gameContext: {
+            gameName: 'Catan',
+            agentTypology: 'Tutor',
+            ragContext: 'Each player starts with 2 settlements and 2 roads.',
+          },
+        })
+      );
 
       const requestBody = JSON.parse(fetchCall[1].body);
       expect(requestBody.messages[0].content).toContain('2 settlements and 2 roads');
     });
 
     it('uses default prompt for unknown typology', async () => {
-      const { fetchCall } = await callProxyAndConsume(fetchMock, createValidBody({
-        gameContext: { gameName: 'Chess', agentTypology: 'UnknownType' },
-      }));
+      const { fetchCall } = await callProxyAndConsume(
+        fetchMock,
+        createValidBody({
+          gameContext: { gameName: 'Chess', agentTypology: 'UnknownType' },
+        })
+      );
 
       const requestBody = JSON.parse(fetchCall[1].body);
       expect(requestBody.messages[0].content).toContain('assistente esperto');
@@ -390,16 +406,19 @@ describe('POST /api/chat-proxy', () => {
 
   describe('OpenRouter Request Format', () => {
     it('sends correct model and parameters to OpenRouter', async () => {
-      const { fetchCall } = await callProxyAndConsume(fetchMock, createValidBody({
-        modelId: 'anthropic/claude-3.5-sonnet',
-      }));
+      const { fetchCall } = await callProxyAndConsume(
+        fetchMock,
+        createValidBody({
+          modelId: 'anthropic/claude-3.5-sonnet',
+        })
+      );
 
       expect(fetchCall[0]).toBe('https://openrouter.ai/api/v1/chat/completions');
       const requestBody = JSON.parse(fetchCall[1].body);
       expect(requestBody.model).toBe('anthropic/claude-3.5-sonnet');
       expect(requestBody.stream).toBe(true);
       expect(requestBody.max_tokens).toBe(1024);
-      expect(requestBody.temperature).toBe(0.7);
+      expect(requestBody.temperature).toBe(0.5); // Tutor typology default
     });
 
     it('uses default model when modelId not provided', async () => {
@@ -438,9 +457,12 @@ describe('POST /api/chat-proxy', () => {
     });
 
     it('includes user message in messages array', async () => {
-      const { fetchCall } = await callProxyAndConsume(fetchMock, createValidBody({
-        message: 'How to win at Catan?',
-      }));
+      const { fetchCall } = await callProxyAndConsume(
+        fetchMock,
+        createValidBody({
+          message: 'How to win at Catan?',
+        })
+      );
 
       const requestBody = JSON.parse(fetchCall[1].body);
       expect(requestBody.messages).toHaveLength(2);

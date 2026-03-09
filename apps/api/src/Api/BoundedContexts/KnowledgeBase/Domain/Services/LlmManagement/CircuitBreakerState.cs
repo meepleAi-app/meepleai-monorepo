@@ -118,6 +118,22 @@ internal sealed class CircuitBreakerState
     }
 
     /// <summary>
+    /// Issue #5476: Reset circuit breaker to closed state (admin emergency action).
+    /// </summary>
+    public void Reset()
+    {
+        var previous = State;
+        State = CircuitState.Closed;
+        ConsecutiveFailures = 0;
+        ConsecutiveSuccesses = 0;
+        OpenedAt = null;
+        LastAttemptAt = DateTime.UtcNow;
+
+        if (previous != CircuitState.Closed)
+            OnStateTransition?.Invoke(previous, CircuitState.Closed);
+    }
+
+    /// <summary>
     /// Get human-readable status
     /// </summary>
     public string GetStatus()

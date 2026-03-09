@@ -31,8 +31,9 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        cache: 'pnpm'
-        cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+        # Note: Built-in cache disabled because actions/setup-node doesn't include
+        # runner.arch in cache key, causing x86/ARM64 cache collisions (GH issue #1008).
+        # Custom cache step below uses runner.arch-aware keys instead.
 
     - name: Get pnpm store directory
       shell: bash
@@ -42,9 +43,9 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
+        key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
         restore-keys: |
-          ${{ runner.os }}-pnpm-store-
+          ${{ runner.os }}-${{ runner.arch }}-pnpm-store-
 
     - name: Install dependencies
       shell: bash

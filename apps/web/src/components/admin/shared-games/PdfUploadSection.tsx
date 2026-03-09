@@ -291,6 +291,11 @@ export function PdfUploadSection({
           canRetry: false,
           errorCategory: null,
           processingError: null,
+          documentCategory: 'Rulebook',
+          baseDocumentId: null,
+          isActiveForRag: true,
+          hasAcceptedDisclaimer: false,
+          versionLabel: null,
         });
       }
     } catch (err) {
@@ -300,7 +305,7 @@ export function PdfUploadSection({
     } finally {
       setUploading(false);
     }
-  }, [file, API_BASE, gameId, onPdfUploaded, linkPdfToGame]);
+  }, [file, gameId, onPdfUploaded, linkPdfToGame]);
 
   // Remove uploaded PDF
   const handleRemove = useCallback(() => {

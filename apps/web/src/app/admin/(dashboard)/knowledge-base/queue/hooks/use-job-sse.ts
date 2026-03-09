@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { useQueryClient } from '@tanstack/react-query';
 
 import { getApiBase } from '@/lib/api';
@@ -96,7 +97,7 @@ export function useJobSSE(jobId: string | null) {
         }, DEBOUNCE_MS);
       }
     },
-    [jobId, queryClient],
+    [jobId, queryClient]
   );
 
   // Use eventName string directly instead of fragile numeric enum indexing
@@ -116,7 +117,7 @@ export function useJobSSE(jobId: string | null) {
       // Non-terminal: debounced invalidation
       invalidateJobDetail(false);
     },
-    [invalidateJobDetail, cleanup],
+    [invalidateJobDetail, cleanup]
   );
 
   const connect = useCallback(() => {
@@ -161,7 +162,7 @@ export function useJobSSE(jobId: string | null) {
         setConnectionState('reconnecting');
         const delay = Math.min(
           INITIAL_BACKOFF_MS * Math.pow(2, reconnectAttemptsRef.current - 1),
-          MAX_BACKOFF_MS,
+          MAX_BACKOFF_MS
         );
         // Use connectRef to avoid stale closure over connect
         reconnectTimerRef.current = setTimeout(() => {
@@ -190,7 +191,6 @@ export function useJobSSE(jobId: string | null) {
       isMountedRef.current = false;
       cleanup();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- connect called via stable ref to avoid infinite loop
   }, [jobId, cleanup]);
 
   return { connectionState };

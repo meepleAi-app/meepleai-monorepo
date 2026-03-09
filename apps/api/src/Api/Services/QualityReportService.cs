@@ -130,6 +130,12 @@ internal class QualityReportService : BackgroundService, IQualityReportService
             throw new ArgumentException("End date must be greater than or equal to start date", nameof(endDate));
         }
 
+        // Ensure UTC Kind for Npgsql timestamptz compatibility
+        if (startDate.Kind != DateTimeKind.Utc)
+            startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+        if (endDate.Kind != DateTimeKind.Utc)
+            endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
+
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -147,7 +153,7 @@ internal class QualityReportService : BackgroundService, IQualityReportService
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Calculate date range (last N days)
-        var endDate = _timeProvider.GetUtcNow().DateTime;
+        var endDate = _timeProvider.GetUtcNow().UtcDateTime;
         var startDate = endDate.AddDays(-_reportWindowDays);
 
         var report = await GenerateReportInternalAsync(dbContext, startDate, endDate, cancellationToken).ConfigureAwait(false);

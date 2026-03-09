@@ -1,4 +1,4 @@
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;

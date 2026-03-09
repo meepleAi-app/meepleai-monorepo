@@ -5,4 +5,3 @@
  */
 
 export { AgentSettingsDrawer } from './AgentSettingsDrawer';
-export type { AgentRuntimeConfig } from './AgentSettingsDrawer';

@@ -30,26 +30,13 @@
  * ```
  */
 
-import React, {
-  useRef,
-  useState,
-  useCallback,
-  useEffect,
-  useId,
-} from 'react';
+import React, { useRef, useState, useCallback, useEffect, useId } from 'react';
 
-import {
-  Loader2,
-  Pencil,
-  LayoutGrid,
-  Layers,
-  Eraser,
-  Trash2,
-  Plus,
-  X,
-} from 'lucide-react';
+import { Loader2, Pencil, LayoutGrid, Layers, Eraser, Trash2, Plus, X } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+
+import { WHITEBOARD_COLORS, TOKEN_COLORS, THICKNESS_VALUES } from './types';
 
 import type {
   WhiteboardState,
@@ -59,11 +46,6 @@ import type {
   Stroke,
   StrokePoint,
   WhiteboardToken,
-} from './types';
-import {
-  WHITEBOARD_COLORS,
-  TOKEN_COLORS,
-  THICKNESS_VALUES,
 } from './types';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -365,12 +347,9 @@ export function WhiteboardTool({
     [tokens, gridSize, showGrid, mode, onStructuredChange]
   );
 
-  const handleTokenDragStart = useCallback(
-    (e: React.DragEvent, tokenId: string) => {
-      e.dataTransfer.setData('text/plain', tokenId);
-    },
-    []
-  );
+  const handleTokenDragStart = useCallback((e: React.DragEvent, tokenId: string) => {
+    e.dataTransfer.setData('text/plain', tokenId);
+  }, []);
 
   const handleCellDrop = useCallback(
     (e: React.DragEvent, targetX: number, targetY: number) => {
@@ -465,7 +444,11 @@ export function WhiteboardTool({
               { value: 'freehand', icon: Pencil, label: 'Solo disegno' },
               { value: 'structured', icon: LayoutGrid, label: 'Solo griglia' },
               { value: 'both', icon: Layers, label: 'Entrambi' },
-            ] as { value: WhiteboardMode; icon: React.ComponentType<{ className?: string }>; label: string }[]
+            ] as {
+              value: WhiteboardMode;
+              icon: React.ComponentType<{ className?: string }>;
+              label: string;
+            }[]
           ).map(({ value, icon: Icon, label }) => (
             <button
               key={value}
@@ -582,16 +565,15 @@ export function WhiteboardTool({
         {showCanvas && (
           <>
             {/* Color palette */}
-            <div
-              className="flex items-center gap-1"
-              role="group"
-              aria-label="Palette colori"
-            >
+            <div className="flex items-center gap-1" role="group" aria-label="Palette colori">
               {WHITEBOARD_COLORS.map(color => (
                 <button
                   key={color}
                   type="button"
-                  onClick={() => { setSelectedColor(color); setIsEraser(false); }}
+                  onClick={() => {
+                    setSelectedColor(color);
+                    setIsEraser(false);
+                  }}
                   aria-label={`Colore ${color}`}
                   aria-pressed={selectedColor === color && !isEraser}
                   disabled={isPending}
@@ -608,11 +590,7 @@ export function WhiteboardTool({
             </div>
 
             {/* Thickness */}
-            <div
-              className="flex items-center gap-1"
-              role="group"
-              aria-label="Spessore pennello"
-            >
+            <div className="flex items-center gap-1" role="group" aria-label="Spessore pennello">
               {(
                 [
                   { value: 'thin', label: 'Sottile' },
@@ -623,7 +601,10 @@ export function WhiteboardTool({
                 <button
                   key={value}
                   type="button"
-                  onClick={() => { setSelectedThickness(value); setIsEraser(false); }}
+                  onClick={() => {
+                    setSelectedThickness(value);
+                    setIsEraser(false);
+                  }}
                   aria-label={label}
                   aria-pressed={selectedThickness === value && !isEraser}
                   disabled={isPending}
@@ -790,7 +771,10 @@ export function WhiteboardTool({
           </button>
           <button
             type="button"
-            onClick={() => { setAddTokenColor(null); setAddTokenLabel(''); }}
+            onClick={() => {
+              setAddTokenColor(null);
+              setAddTokenLabel('');
+            }}
             aria-label="Annulla aggiunta token"
             className="px-3 py-1 rounded-lg border border-stone-300 dark:border-stone-600 text-sm text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
           >

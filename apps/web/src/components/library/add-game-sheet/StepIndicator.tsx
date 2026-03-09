@@ -1,7 +1,7 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import type { WizardStep } from '@/lib/stores/add-game-wizard-store';
+import { cn } from '@/lib/utils';
 
 interface StepIndicatorProps {
   currentStep: WizardStep;

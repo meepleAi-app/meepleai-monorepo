@@ -55,17 +55,14 @@ export const SessionTurnSequence = React.memo(function SessionTurnSequence({
   if (players.length === 0) return null;
 
   // Sort players by their turn order (use array index as fallback)
-  const sortedPlayers = [...players].filter((p) => p.role !== 'spectator');
+  const sortedPlayers = [...players].filter(p => p.role !== 'spectator');
 
   return (
-    <div
-      className={cn('flex items-center gap-1.5', className)}
-      data-testid="session-turn-sequence"
-    >
+    <div className={cn('flex items-center gap-1.5', className)} data-testid="session-turn-sequence">
       {/* Prev arrow (host only) */}
       {isHost && onPrevTurn && (
         <button
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             onPrevTurn();
           }}
@@ -84,7 +81,7 @@ export const SessionTurnSequence = React.memo(function SessionTurnSequence({
             const isActive = turn.currentPlayerId
               ? player.id === turn.currentPlayerId
               : index === turn.currentIndex;
-            // eslint-disable-next-line security/detect-object-injection
+
             const colorHsl = PLAYER_COLOR_MAP[player.color];
 
             return (
@@ -96,13 +93,11 @@ export const SessionTurnSequence = React.memo(function SessionTurnSequence({
                       'min-w-[26px] h-[22px] px-1.5 rounded-full',
                       'text-[9px] font-bold text-white',
                       'transition-all duration-200',
-                      isActive && 'ring-2 ring-offset-1 ring-white/60 scale-110',
+                      isActive && 'ring-2 ring-offset-1 ring-white/60 scale-110'
                     )}
                     style={{
                       backgroundColor: `hsl(${colorHsl})`,
-                      ...(isActive
-                        ? { boxShadow: `0 0 8px hsla(${colorHsl}, 0.6)` }
-                        : {}),
+                      ...(isActive ? { boxShadow: `0 0 8px hsla(${colorHsl}, 0.6)` } : {}),
                     }}
                     data-testid={`turn-chip-${player.id}`}
                     aria-current={isActive ? 'step' : undefined}
@@ -130,7 +125,7 @@ export const SessionTurnSequence = React.memo(function SessionTurnSequence({
       {/* Next arrow (host only) */}
       {isHost && onNextTurn && (
         <button
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             onNextTurn();
           }}

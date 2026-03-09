@@ -18,18 +18,26 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
+import { AgentSettingsDrawer } from '@/components/agent/settings';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
 import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
-import { useAuth } from '@/components/auth/AuthProvider';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { isAdminOrAbove } from '@/types/auth';
+import { useVoicePreferencesStore } from '@/store/voice/store';
 import type { Citation } from '@/types';
+import { isAdminOrAbove } from '@/types/auth';
 
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
+import { TtsSpeakerButton } from './TtsSpeakerButton';
+import { VoiceMicButton } from './VoiceMicButton';
+import { VoiceSettingsPopover } from './VoiceSettingsPopover';
+import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
 
 // ============================================================================
 // Types
@@ -78,11 +86,57 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'debug'>('chat');
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAgentConfirm, setShowAgentConfirm] = useState(false);
   const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
 
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
+
+  // Voice input/output
+  const voicePrefs = useVoicePreferencesStore();
+  const lastMessageWasVoiceRef = useRef(false);
+  const handleSendRef = useRef<((content?: string) => void) | undefined>(undefined);
+
+  const {
+    state: voiceState,
+    interimText,
+    finalText,
+    startListening,
+    stopListening,
+    cancelListening,
+    isSupported: isVoiceSupported,
+  } = useVoiceInput({
+    language: voicePrefs.language,
+    autoSend: voicePrefs.autoSend,
+    onTranscript: text => {
+      if (voicePrefs.autoSend && text.trim()) {
+        lastMessageWasVoiceRef.current = true;
+        handleSendRef.current?.(text);
+      }
+    },
+  });
+
+  const {
+    speak,
+    stop: stopSpeaking,
+    isSpeaking,
+    isSupported: isTtsSupported,
+    availableVoices,
+  } = useVoiceOutput({
+    language: voicePrefs.language,
+    preferredVoiceURI: voicePrefs.voiceURI ?? undefined,
+    rate: voicePrefs.rate,
+  });
+
+  const handleVoiceTap = useCallback(() => {
+    if (voiceState === 'listening') {
+      stopListening();
+    } else if (voiceState === 'idle' || voiceState === 'error') {
+      if (isSpeaking) stopSpeaking();
+      startListening();
+    }
+  }, [voiceState, isSpeaking, stopListening, startListening, stopSpeaking]);
 
   // SSE Streaming (Issue #4364)
   const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
@@ -95,19 +149,21 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         followUpQuestions: metadata.followUpQuestions,
       };
       setMessages(prev => [...prev, assistantMessage]);
+      // TTS: auto-speak response when last message was voice-initiated
+      if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current) {
+        speak(answer);
+        lastMessageWasVoiceRef.current = false;
+      }
       setIsSending(false);
     },
-    onError: (errorMsg) => {
+    onError: errorMsg => {
       setError(errorMsg);
       setIsSending(false);
     },
   });
 
   // Extract citations from all assistant messages
-  const allCitations = useMemo(
-    () => messages.flatMap(m => m.citations ?? []),
-    [messages]
-  );
+  const allCitations = useMemo(() => messages.flatMap(m => m.citations ?? []), [messages]);
 
   // Extract last suggested questions
   const suggestedQuestions = useMemo(() => {
@@ -136,7 +192,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           return;
         }
 
-        const mappedMessages: ChatMessage[] = (threadData.messages ?? []).map((m) => ({
+        const mappedMessages: ChatMessage[] = (threadData.messages ?? []).map(m => ({
           id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
           role: m.role as 'user' | 'assistant',
           content: m.content,
@@ -240,16 +296,18 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
         if (response?.messages) {
           setMessages(
-            response.messages.map((m): ChatMessage => ({
-              id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-              timestamp: m.timestamp,
-            }))
+            response.messages.map(
+              (m): ChatMessage => ({
+                id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
+                role: m.role as 'user' | 'assistant',
+                content: m.content,
+                timestamp: m.timestamp,
+              })
+            )
           );
         }
       } catch {
-        setError('Errore nell\'invio del messaggio');
+        setError("Errore nell'invio del messaggio");
         // Remove optimistic message on error
         setMessages(prev => prev.filter(m => m.id !== userMessage.id));
       } finally {
@@ -259,12 +317,15 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     [inputValue, isSending, threadId, thread?.agentId, thread?.agentTypology, game, sendViaSSE]
   );
 
+  // Keep ref in sync for voice onTranscript callback
+  handleSendRef.current = handleSendMessage;
+
   // Title change
   const handleTitleChange = useCallback(
     async (newTitle: string) => {
       try {
         await api.chat.updateThreadTitle(threadId, newTitle);
-        setThread(prev => prev ? { ...prev, title: newTitle } : prev);
+        setThread(prev => (prev ? { ...prev, title: newTitle } : prev));
       } catch {
         // Silent fail
       }
@@ -278,23 +339,26 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       await api.chat.deleteThread(threadId);
       router.push('/chat/new');
     } catch {
-      setError('Errore nell\'eliminazione della conversazione');
+      setError("Errore nell'eliminazione della conversazione");
     }
   }, [threadId, router]);
 
   // Agent switching with confirmation (Issue #4465)
-  const handleAgentChangeRequest = useCallback((newAgent: AgentType) => {
-    if (newAgent === (thread?.agentTypology as AgentType ?? 'auto')) return;
-    setPendingAgent(newAgent);
-    setShowAgentConfirm(true);
-  }, [thread?.agentTypology]);
+  const handleAgentChangeRequest = useCallback(
+    (newAgent: AgentType) => {
+      if (newAgent === ((thread?.agentTypology as AgentType) ?? 'auto')) return;
+      setPendingAgent(newAgent);
+      setShowAgentConfirm(true);
+    },
+    [thread?.agentTypology]
+  );
 
   const handleAgentChangeConfirm = useCallback(async () => {
     if (!pendingAgent || !thread) return;
     setShowAgentConfirm(false);
     try {
       await api.chat.switchThreadAgent(thread.id, pendingAgent);
-      setThread(prev => prev ? { ...prev, agentTypology: pendingAgent } : prev);
+      setThread(prev => (prev ? { ...prev, agentTypology: pendingAgent } : prev));
     } catch {
       setError('Errore nel cambio agente');
     }
@@ -343,10 +407,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <div className="flex h-dvh items-center justify-center" data-testid="chat-error">
         <div className="text-center max-w-md">
           <p className="text-red-600 dark:text-red-400 mb-3">{error}</p>
-          <a
-            href="/chat/new"
-            className="text-amber-600 hover:text-amber-700 underline text-sm"
-          >
+          <a href="/chat/new" className="text-amber-600 hover:text-amber-700 underline text-sm">
             Torna alla selezione
           </a>
         </div>
@@ -360,8 +421,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <ChatThreadHeader
         title={thread?.title ?? 'Chat'}
         gameName={game?.title}
-        agentName={thread?.agentTypology ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto'] : undefined}
+        agentName={
+          thread?.agentTypology
+            ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto']
+            : undefined
+        }
         onTitleChange={handleTitleChange}
+        onSettings={thread?.agentId ? () => setSettingsOpen(true) : undefined}
         onDelete={handleDelete}
       />
 
@@ -383,7 +449,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           data-testid="agent-switch-confirm"
         >
           <p className="text-sm font-nunito text-amber-900 dark:text-amber-200">
-            Vuoi cambiare agente a <strong>{AGENT_NAMES[pendingAgent]}</strong>? La cronologia viene mantenuta.
+            Vuoi cambiare agente a <strong>{AGENT_NAMES[pendingAgent]}</strong>? La cronologia viene
+            mantenuta.
           </p>
           <div className="flex gap-2 flex-shrink-0">
             <button
@@ -419,7 +486,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         {/* Chat Area (left) */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Chat / Debug tab bar (Issue #4916) */}
-          <div role="tablist" aria-label="Chat panels" className="flex items-center gap-1 px-4 pt-2 pb-0 border-b border-border/30">
+          <div
+            role="tablist"
+            aria-label="Chat panels"
+            className="flex items-center gap-1 px-4 pt-2 pb-0 border-b border-border/30"
+          >
             <button
               type="button"
               role="tab"
@@ -461,7 +532,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
           {/* Debug panel (Issue #4916) */}
           {activeTab === 'debug' && (
-            <div id="panel-debug" role="tabpanel" className="flex-1 overflow-y-auto px-4 py-4 space-y-3" data-testid="debug-panel">
+            <div
+              id="panel-debug"
+              role="tabpanel"
+              className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+              data-testid="debug-panel"
+            >
               {streamState.debugSteps.length === 0 ? (
                 <div className="flex items-center justify-center h-32">
                   <p className="text-sm text-muted-foreground font-nunito">
@@ -488,69 +564,140 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
           {/* Messages (only when chat tab is active) */}
           {activeTab === 'chat' && (
-          <div
-            id="panel-chat"
-            role="tabpanel"
-            className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
-            data-testid="messages-area"
-          >
-            {messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center text-muted-foreground">
-                  <p className="text-lg font-quicksand mb-2">Inizia la conversazione</p>
-                  <p className="text-sm font-nunito">Scrivi un messaggio per cominciare.</p>
+            <div
+              id="panel-chat"
+              role="tabpanel"
+              className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+              data-testid="messages-area"
+            >
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-lg font-quicksand mb-2">Inizia la conversazione</p>
+                    <p className="text-sm font-nunito">Scrivi un messaggio per cominciare.</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              messages.map(msg => (
+              ) : (
+                messages.map(msg => (
+                  <div
+                    key={msg.id}
+                    className={cn(
+                      'max-w-[85%] rounded-2xl px-4 py-3',
+                      msg.role === 'user'
+                        ? 'ml-auto bg-amber-500 text-white'
+                        : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
+                    )}
+                    data-testid={`message-${msg.role}`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+                    {msg.role === 'assistant' && isTtsSupported && voicePrefs.ttsEnabled && (
+                      <TtsSpeakerButton
+                        text={msg.content}
+                        isSpeaking={isSpeaking}
+                        onSpeak={speak}
+                        onStop={stopSpeaking}
+                      />
+                    )}
+                    {msg.citations && msg.citations.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {msg.citations.map((c, i) => (
+                          <CitationBadge
+                            key={`${c.documentId}-${c.pageNumber}-${i}`}
+                            citation={c}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+              {/* Streaming status message */}
+              {streamState.statusMessage && (
                 <div
-                  key={msg.id}
-                  className={cn(
-                    'max-w-[85%] rounded-2xl px-4 py-3',
-                    msg.role === 'user'
-                      ? 'ml-auto bg-amber-500 text-white'
-                      : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
-                  )}
-                  data-testid={`message-${msg.role}`}
+                  className="flex items-center gap-2 text-xs text-muted-foreground font-nunito"
+                  data-testid="stream-status"
                 >
-                  <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
-                  {msg.citations && msg.citations.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {msg.citations.map((c, i) => (
-                        <CitationBadge
-                          key={`${c.documentId}-${c.pageNumber}-${i}`}
-                          citation={c}
-                        />
-                      ))}
+                  <div className="h-3 w-3 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                  {streamState.statusMessage}
+                </div>
+              )}
+
+              {/* Model downgrade banner */}
+              {streamState.modelDowngrade && (
+                <div
+                  className="mx-0 mb-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                  data-testid="model-downgrade-banner"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="h-4 w-4 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <span>
+                      {streamState.modelDowngrade.isLocalFallback
+                        ? `Modello ${streamState.modelDowngrade.originalModel} non disponibile. Risposta generata con modello locale (${streamState.modelDowngrade.fallbackModel}).`
+                        : `Modello cambiato: ${streamState.modelDowngrade.originalModel} → ${streamState.modelDowngrade.fallbackModel}`}
+                    </span>
+                  </div>
+                  {streamState.modelDowngrade.upgradeMessage && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <a
+                        href="/pricing"
+                        className="font-medium text-amber-900 underline dark:text-amber-100"
+                      >
+                        Passa a Premium
+                      </a>
+                      <span className="text-amber-600 dark:text-amber-400">
+                        per modelli più veloci e affidabili
+                      </span>
                     </div>
                   )}
                 </div>
-              ))
-            )}
-            {/* Streaming status message */}
-            {streamState.statusMessage && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground font-nunito" data-testid="stream-status">
-                <div className="h-3 w-3 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
-                {streamState.statusMessage}
-              </div>
-            )}
+              )}
 
-            {/* Streaming response bubble */}
-            {streamState.isStreaming && streamState.currentAnswer && (
-              <div
-                className="max-w-[85%] mr-auto rounded-2xl px-4 py-3 bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
-                data-testid="message-streaming"
-              >
-                <p className="text-sm whitespace-pre-wrap font-nunito">{streamState.currentAnswer}</p>
-                <div className="mt-1 flex items-center gap-1">
-                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  <span className="text-[10px] text-muted-foreground">In scrittura...</span>
+              {/* Streaming response bubble */}
+              {streamState.isStreaming && streamState.currentAnswer && (
+                <div
+                  className="max-w-[85%] mr-auto rounded-2xl px-4 py-3 bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
+                  data-testid="message-streaming"
+                >
+                  <p className="text-sm whitespace-pre-wrap font-nunito">
+                    {streamState.currentAnswer}
+                  </p>
+                  <div className="mt-1 flex items-center gap-1">
+                    <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="text-[10px] text-muted-foreground">In scrittura...</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div ref={messagesEndRef} />
-          </div>
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+
+          {/* Voice transcript overlay */}
+          {voiceState !== 'idle' && (
+            <VoiceTranscriptOverlay
+              interimText={interimText}
+              finalText={finalText}
+              state={voiceState}
+              onEdit={text => setInputValue(text)}
+              onSend={() => {
+                lastMessageWasVoiceRef.current = true;
+                handleSendMessage(finalText);
+              }}
+              onCancel={cancelListening}
+              autoSend={voicePrefs.autoSend}
+            />
           )}
 
           {/* Input */}
@@ -574,6 +721,26 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 disabled={isSending || streamState.isStreaming}
                 data-testid="message-input"
               />
+              <VoiceMicButton
+                state={voiceState}
+                onTap={handleVoiceTap}
+                disabled={!isVoiceSupported || isSending || streamState.isStreaming}
+                size="md"
+              />
+              {isVoiceSupported && (
+                <VoiceSettingsPopover
+                  preferences={voicePrefs}
+                  onPreferencesChange={updates => {
+                    if (updates.ttsEnabled !== undefined)
+                      voicePrefs.setTtsEnabled(updates.ttsEnabled);
+                    if (updates.autoSend !== undefined) voicePrefs.setAutoSend(updates.autoSend);
+                    if (updates.language !== undefined) voicePrefs.setLanguage(updates.language);
+                    if (updates.voiceURI !== undefined) voicePrefs.setVoiceURI(updates.voiceURI);
+                    if (updates.rate !== undefined) voicePrefs.setRate(updates.rate);
+                  }}
+                  availableVoices={availableVoices}
+                />
+              )}
               <button
                 onClick={() => void handleSendMessage()}
                 disabled={!inputValue.trim() || isSending || streamState.isStreaming}
@@ -590,13 +757,33 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
                   </svg>
                 )}
               </button>
             </div>
           </div>
         </div>
+
+        {/* Agent Settings Drawer */}
+        {thread?.agentId && (
+          <AgentSettingsDrawer
+            isOpen={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            agentId={thread.agentId}
+            agentName={
+              thread.agentTypology
+                ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto']
+                : undefined
+            }
+            userTier={user ? 'premium' : 'free'}
+          />
+        )}
 
         {/* Info Panel (right) - Hidden on mobile */}
         <div className="hidden lg:flex w-[340px] flex-shrink-0 flex-col border-l border-border/50 bg-card/50 p-4 overflow-y-auto">
@@ -608,13 +795,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           )}
           {allCitations.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-sm font-semibold font-quicksand mb-2">Citazioni ({allCitations.length})</h4>
+              <h4 className="text-sm font-semibold font-quicksand mb-2">
+                Citazioni ({allCitations.length})
+              </h4>
               <div className="flex flex-wrap gap-1">
                 {allCitations.slice(0, 20).map((c, i) => (
-                  <CitationBadge
-                    key={`panel-${c.documentId}-${c.pageNumber}-${i}`}
-                    citation={c}
-                  />
+                  <CitationBadge key={`panel-${c.documentId}-${c.pageNumber}-${i}`} citation={c} />
                 ))}
               </div>
             </div>

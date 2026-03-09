@@ -60,7 +60,8 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
             FileSizeBytes: p.FileSizeBytes,
             UploadedAt: p.UploadedAt,
             Source: p.PrivateGameId != null ? "Custom" : "Catalog",
-            Language: p.Language
+            Language: p.Language,
+            ProcessingState: p.ProcessingState
         )).ToList();
 
         _logger.LogInformation(

@@ -8,14 +8,10 @@
 
 import { useCallback, useState } from 'react';
 
-import {
-  FileTextIcon,
-  CheckCircle2Icon,
-} from 'lucide-react';
+import { FileTextIcon, CheckCircle2Icon } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
-
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import type { CategorizedError } from '@/lib/errorUtils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -74,8 +70,8 @@ export function PdfUploadStep({ gameId, gameTitle, onPdfUploaded }: PdfUploadSte
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Upload the rulebook PDF for <strong>{gameTitle}</strong>.
-            The PDF will be processed with admin priority.
+            Upload the rulebook PDF for <strong>{gameTitle}</strong>. The PDF will be processed with
+            admin priority.
           </p>
           <PdfUploadForm
             gameId={gameId}
@@ -88,12 +84,8 @@ export function PdfUploadStep({ gameId, gameTitle, onPdfUploaded }: PdfUploadSte
 
       {uploadError && (
         <div className="rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/20 p-3">
-          <p className="text-sm font-medium text-red-700 dark:text-red-400">
-            Upload failed
-          </p>
-          <p className="text-sm text-red-600 dark:text-red-400/80">
-            {uploadError.message}
-          </p>
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">Upload failed</p>
+          <p className="text-sm text-red-600 dark:text-red-400/80">{uploadError.message}</p>
         </div>
       )}
     </div>

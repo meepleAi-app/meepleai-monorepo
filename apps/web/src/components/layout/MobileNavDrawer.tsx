@@ -8,7 +8,7 @@
  * - Hamburger button triggers drawer from left
  * - Role-filtered navigation items (via unified hook)
  * - Libreria expandable section with children
- * - Active link purple highlighting
+ * - Active link warm orange highlighting
  * - Close on link click or outside tap
  * - 300ms smooth animation
  * - Focus trap and keyboard navigation
@@ -19,15 +19,10 @@
 
 import { useState } from 'react';
 
-import {
-  Menu,
-  X,
-  ChevronDown,
-} from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-import { getActiveLibraryTab } from '@/config/library-navigation';
 import {
   Sheet,
   SheetClose,
@@ -37,6 +32,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
+import { getActiveLibraryTab } from '@/config/library-navigation';
 import { useNavigationItems } from '@/hooks/useNavigationItems';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
@@ -46,9 +42,7 @@ export interface MobileNavDrawerProps {
   className?: string;
 }
 
-export function MobileNavDrawer({
-  className,
-}: MobileNavDrawerProps) {
+export function MobileNavDrawer({ className }: MobileNavDrawerProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { items: navItems, isItemActive } = useNavigationItems();
@@ -109,13 +103,15 @@ export function MobileNavDrawer({
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
                   'transition-colors duration-200',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                   active
-                    ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
+                    ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
                 onClick={handleLinkClick}
-                data-testid={NAV_TEST_IDS.mobileNavItem(item.href.split('/').filter(Boolean).join('-') || 'home')}
+                data-testid={NAV_TEST_IDS.mobileNavItem(
+                  item.href.split('/').filter(Boolean).join('-') || 'home'
+                )}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
                 <span>{item.label}</span>
@@ -133,9 +129,9 @@ export function MobileNavDrawer({
                 className={cn(
                   'flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium',
                   'transition-colors duration-200',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                   isLibraryActive
-                    ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
+                    ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                     : 'text-muted-foreground hover:text-primary hover:bg-muted'
                 )}
                 data-testid={NAV_TEST_IDS.mobileLibraryToggle}
@@ -174,9 +170,9 @@ export function MobileNavDrawer({
                         className={cn(
                           'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm',
                           'transition-colors duration-200',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                           active
-                            ? 'bg-[hsl(262_83%_62%/0.1)] text-[hsl(262_83%_62%)] font-medium'
+                            ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-medium'
                             : 'text-muted-foreground hover:text-primary hover:bg-muted/50'
                         )}
                         onClick={handleLinkClick}
@@ -210,13 +206,15 @@ export function MobileNavDrawer({
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
                       'transition-colors duration-200',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(25_95%_42%)] focus-visible:ring-offset-2',
                       active
-                        ? 'bg-[hsl(262_83%_62%/0.15)] text-[hsl(262_83%_62%)] font-semibold'
+                        ? 'bg-[hsl(25_95%_45%/0.12)] text-[hsl(25_95%_42%)] font-semibold'
                         : 'text-muted-foreground hover:text-primary hover:bg-muted'
                     )}
                     onClick={handleLinkClick}
-                    data-testid={NAV_TEST_IDS.mobileNavItem(item.href.split('/').filter(Boolean).join('-') || item.id)}
+                    data-testid={NAV_TEST_IDS.mobileNavItem(
+                      item.href.split('/').filter(Boolean).join('-') || item.id
+                    )}
                   >
                     <Icon className="h-5 w-5" aria-hidden="true" />
                     <span>{item.label}</span>

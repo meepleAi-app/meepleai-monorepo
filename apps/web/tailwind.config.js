@@ -25,6 +25,7 @@ module.exports = {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-meeple': 'pulseMeeple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         shake: 'shake 0.4s ease-in-out',
+        'voice-pulse': 'voice-pulse 1.5s ease-in-out infinite',
         'bounce-slow': 'bounce 1s infinite',
         'heart-beat': 'heartBeat 0.6s ease-in-out',
         // MeepleCard v2 animations (Issue #4604)
@@ -57,6 +58,10 @@ module.exports = {
           '0%, 100%': { transform: 'translateX(0)' },
           '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-10px)' },
           '20%, 40%, 60%, 80%': { transform: 'translateX(10px)' },
+        },
+        'voice-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
+          '50%': { transform: 'scale(1.3)', opacity: '0' },
         },
         pulseMeeple: {
           '0%, 100%': { opacity: '1' },

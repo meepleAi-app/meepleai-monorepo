@@ -432,4 +432,109 @@ public class PdfDocumentTests
         Assert.Equal(PdfProcessingState.Ready, document.ProcessingState);
         Assert.False(document.CanRetry()); // Can't retry completed document
     }
+
+    #region BaseDocumentId Tests (Issue #5444)
+
+    [Fact]
+    public void Constructor_DefaultBaseDocumentId_IsNull()
+    {
+        var document = CreateDefaultDocument();
+        Assert.Null(document.BaseDocumentId);
+    }
+
+    [Fact]
+    public void LinkToBaseDocument_WithValidId_SetsBaseDocumentId()
+    {
+        var document = CreateDefaultDocument();
+        var baseDocId = Guid.NewGuid();
+
+        document.LinkToBaseDocument(baseDocId);
+
+        Assert.Equal(baseDocId, document.BaseDocumentId);
+    }
+
+    [Fact]
+    public void LinkToBaseDocument_WithEmptyGuid_ThrowsArgumentException()
+    {
+        var document = CreateDefaultDocument();
+
+        Assert.Throws<ArgumentException>(() =>
+            document.LinkToBaseDocument(Guid.Empty));
+    }
+
+    [Fact]
+    public void LinkToBaseDocument_WithSelfReference_ThrowsArgumentException()
+    {
+        var document = CreateDefaultDocument();
+
+        Assert.Throws<ArgumentException>(() =>
+            document.LinkToBaseDocument(document.Id));
+    }
+
+    [Fact]
+    public void UnlinkBaseDocument_ClearsBaseDocumentId()
+    {
+        var document = CreateDefaultDocument();
+        var baseDocId = Guid.NewGuid();
+        document.LinkToBaseDocument(baseDocId);
+
+        document.UnlinkBaseDocument();
+
+        Assert.Null(document.BaseDocumentId);
+    }
+
+    [Fact]
+    public void Reconstitute_WithBaseDocumentId_PreservesValue()
+    {
+        var baseDocId = Guid.NewGuid();
+        var document = PdfDocument.Reconstitute(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            fileName: new FileName("test.pdf"),
+            filePath: "/path/test.pdf",
+            fileSize: new FileSize(1024),
+            uploadedByUserId: Guid.NewGuid(),
+            uploadedAt: DateTime.UtcNow,
+            processingStatus: "pending",
+            processedAt: null,
+            pageCount: null,
+            processingError: null,
+            language: LanguageCode.English,
+            baseDocumentId: baseDocId);
+
+        Assert.Equal(baseDocId, document.BaseDocumentId);
+    }
+
+    [Fact]
+    public void Reconstitute_WithoutBaseDocumentId_DefaultsToNull()
+    {
+        var document = PdfDocument.Reconstitute(
+            id: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            fileName: new FileName("test.pdf"),
+            filePath: "/path/test.pdf",
+            fileSize: new FileSize(1024),
+            uploadedByUserId: Guid.NewGuid(),
+            uploadedAt: DateTime.UtcNow,
+            processingStatus: "pending",
+            processedAt: null,
+            pageCount: null,
+            processingError: null,
+            language: LanguageCode.English);
+
+        Assert.Null(document.BaseDocumentId);
+    }
+
+    private static PdfDocument CreateDefaultDocument()
+    {
+        return new PdfDocument(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            new FileName("test.pdf"),
+            "/path/to/test.pdf",
+            new FileSize(1024),
+            Guid.NewGuid());
+    }
+
+    #endregion
 }

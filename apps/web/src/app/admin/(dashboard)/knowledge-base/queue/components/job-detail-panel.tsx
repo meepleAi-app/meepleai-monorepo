@@ -1,19 +1,13 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import {
-  XCircleIcon,
-  RefreshCwIcon,
-  Trash2Icon,
-  FileTextIcon,
-  ClockIcon,
-} from 'lucide-react';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { XCircleIcon, RefreshCwIcon, Trash2Icon, FileTextIcon, ClockIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
-import { Separator } from '@/components/ui/navigation/separator';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Separator } from '@/components/ui/navigation/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,12 +19,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/overlays/alert-dialog-primitives';
+import { Button } from '@/components/ui/primitives/button';
 import { useToast } from '@/hooks/use-toast';
 
-import type { ProcessingJobDetailDto } from '../lib/queue-api';
-import { cancelJob, retryJob, removeJob } from '../lib/queue-api';
-import { JobStepTimeline } from './job-step-timeline';
 import { JobLogViewer } from './job-log-viewer';
+import { JobStepTimeline } from './job-step-timeline';
+import { cancelJob, retryJob, removeJob } from '../lib/queue-api';
+
+import type { ProcessingJobDetailDto } from '../lib/queue-api';
 
 interface JobDetailPanelProps {
   job: ProcessingJobDetailDto | null | undefined;
@@ -133,7 +129,7 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
 
   // Collect all log entries from all steps
   const allLogs = job.steps
-    .flatMap((s) => s.logEntries)
+    .flatMap(s => s.logEntries)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   const canCancel = job.status === 'Queued' || job.status === 'Processing';
@@ -166,9 +162,7 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
 
         {job.errorMessage && (
           <div className="mt-3 p-3 bg-red-50/80 dark:bg-red-900/20 rounded-lg border border-red-200/50 dark:border-red-800/30">
-            <p className="text-xs text-red-700 dark:text-red-300 font-mono">
-              {job.errorMessage}
-            </p>
+            <p className="text-xs text-red-700 dark:text-red-300 font-mono">{job.errorMessage}</p>
           </div>
         )}
       </div>
@@ -185,9 +179,7 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
 
       {/* Logs */}
       <div>
-        <h3 className="text-sm font-semibold text-foreground mb-3">
-          Logs ({allLogs.length})
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Logs ({allLogs.length})</h3>
         <JobLogViewer logs={allLogs} />
       </div>
 
@@ -221,11 +213,7 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
             {canRemove && (
               <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
                 <AlertDialogTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={removeMutation.isPending}
-                  >
+                  <Button variant="destructive" size="sm" disabled={removeMutation.isPending}>
                     <Trash2Icon className="h-4 w-4 mr-1" />
                     Remove
                   </Button>
@@ -234,14 +222,13 @@ export function JobDetailPanel({ job, isLoading }: JobDetailPanelProps) {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Remove job?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently remove &quot;{job.pdfFileName}&quot; from the queue. This action cannot be undone.
+                      This will permanently remove &quot;{job.pdfFileName}&quot; from the queue.
+                      This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => removeMutation.mutate(job.id)}
-                    >
+                    <AlertDialogAction onClick={() => removeMutation.mutate(job.id)}>
                       Remove
                     </AlertDialogAction>
                   </AlertDialogFooter>

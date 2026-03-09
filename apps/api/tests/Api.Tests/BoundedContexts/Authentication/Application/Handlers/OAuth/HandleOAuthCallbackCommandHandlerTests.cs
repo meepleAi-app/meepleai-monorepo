@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

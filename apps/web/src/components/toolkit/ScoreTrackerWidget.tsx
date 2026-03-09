@@ -6,6 +6,7 @@ import { Plus, Trophy, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { useWidgetSync } from '@/lib/hooks/useWidgetSync';
 
 import { WidgetCard } from './WidgetCard';
 
@@ -18,6 +19,8 @@ interface ScoreEntry {
 interface ScoreTrackerWidgetProps {
   isEnabled: boolean;
   players?: Array<{ id: string; name: string }>;
+  sessionId?: string;
+  toolkitId?: string;
   onToggle?: (enabled: boolean) => void;
   onStateChange?: (stateJson: string) => void;
   'data-testid'?: string;
@@ -30,6 +33,8 @@ interface ScoreTrackerWidgetProps {
 export function ScoreTrackerWidget({
   isEnabled,
   players: initialPlayers,
+  sessionId,
+  toolkitId,
   onToggle,
   onStateChange,
   'data-testid': testId,
@@ -44,9 +49,28 @@ export function ScoreTrackerWidget({
   const [newPlayerName, setNewPlayerName] = useState('');
   const [pendingScores, setPendingScores] = useState<Record<string, string>>({});
 
+  const { broadcastState } = useWidgetSync({
+    sessionId,
+    toolkitId,
+    widgetType: 'ScoreTracker',
+    enabled: !!sessionId && !!toolkitId,
+    onRemoteUpdate: (stateJson: string) => {
+      try {
+        const remote: { entries: ScoreEntry[] } = JSON.parse(stateJson);
+        setEntries(remote.entries);
+      } catch {
+        // Ignore malformed remote state
+      }
+    },
+  });
+
   const persist = useCallback(
-    (e: ScoreEntry[]) => onStateChange?.(JSON.stringify({ entries: e })),
-    [onStateChange]
+    (e: ScoreEntry[]) => {
+      const stateJson = JSON.stringify({ entries: e });
+      onStateChange?.(stateJson);
+      broadcastState(stateJson);
+    },
+    [onStateChange, broadcastState]
   );
 
   const addScore = useCallback(

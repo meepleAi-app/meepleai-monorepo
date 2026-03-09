@@ -9,6 +9,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+
 import { Check, Dice5, Pause, Play, Trophy } from 'lucide-react';
 
 import type { Participant, ScoreEntry } from '@/components/session/types';
@@ -29,10 +30,10 @@ interface PlayerModeCardProps {
 }
 
 export function PlayerModeCard({
-  sessionId,
+  sessionId: _sessionId,
   currentParticipant,
   participants,
-  scores,
+  scores: _scores,
   sessionStatus,
   isHost,
   onUpdateScore,

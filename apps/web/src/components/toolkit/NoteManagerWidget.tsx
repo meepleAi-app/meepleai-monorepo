@@ -6,11 +6,14 @@ import { FileText, Lock, Globe } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useWidgetSync } from '@/lib/hooks/useWidgetSync';
 
 import { WidgetCard } from './WidgetCard';
 
 interface NoteManagerWidgetProps {
   isEnabled: boolean;
+  sessionId?: string;
+  toolkitId?: string;
   onToggle?: (enabled: boolean) => void;
   onStateChange?: (stateJson: string) => void;
   'data-testid'?: string;
@@ -22,6 +25,8 @@ interface NoteManagerWidgetProps {
  */
 export function NoteManagerWidget({
   isEnabled,
+  sessionId,
+  toolkitId,
   onToggle,
   onStateChange,
   'data-testid': testId,
@@ -31,13 +36,31 @@ export function NoteManagerWidget({
   const [publicNote, setPublicNote] = useState('');
   const [saved, setSaved] = useState(false);
 
+  const { broadcastState } = useWidgetSync({
+    sessionId,
+    toolkitId,
+    widgetType: 'NoteManager',
+    enabled: !!sessionId && !!toolkitId,
+    onRemoteUpdate: (stateJson: string) => {
+      try {
+        // Only sync public notes — private notes stay local
+        const remote: { publicNote: string } = JSON.parse(stateJson);
+        setPublicNote(remote.publicNote);
+      } catch {
+        // Ignore malformed remote state
+      }
+    },
+  });
+
   const persist = useCallback(
     (priv: string, pub: string) => {
       onStateChange?.(JSON.stringify({ privateNote: priv, publicNote: pub }));
+      // Only broadcast public note content
+      broadcastState(JSON.stringify({ publicNote: pub }));
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     },
-    [onStateChange]
+    [onStateChange, broadcastState]
   );
 
   const save = useCallback(

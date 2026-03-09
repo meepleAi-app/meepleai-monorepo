@@ -2,7 +2,7 @@
  * Unified Navigation Type Definitions
  * Single source of truth for all navigation item types.
  *
- * Used by: UnifiedHeader, MobileNavDrawer, BottomNav, ActionBar, Navbar
+ * Used by: UnifiedHeader, MobileNavDrawer, ActionBar, Navbar
  */
 
 import type { LucideIcon } from 'lucide-react';

@@ -1,13 +1,19 @@
 /**
  * useSidebarState Hook
  * Manages sidebar collapsed/expanded state with localStorage persistence.
+ *
+ * Migrated to safeStorage (Issue #5238) for validated reads.
  */
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { z } from 'zod';
+
+import { safeStorage } from '@/lib/storage/safeStorage';
 
 const STORAGE_KEY = 'meepleai-sidebar-collapsed';
+const BoolStringSchema = z.enum(['true', 'false']);
 
 export interface UseSidebarStateReturn {
   /** Whether the sidebar is collapsed */
@@ -23,23 +29,16 @@ export function useSidebarState(): UseSidebarStateReturn {
 
   // Read stored value on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === 'true') {
-        setIsCollapsed(true);
-      }
-    } catch {
-      // localStorage unavailable (SSR, privacy mode, etc.)
+    const stored = safeStorage.getRaw(STORAGE_KEY, 'false');
+    const result = BoolStringSchema.safeParse(stored);
+    if (result.success && result.data === 'true') {
+      setIsCollapsed(true);
     }
   }, []);
 
   const setCollapsed = useCallback((collapsed: boolean) => {
     setIsCollapsed(collapsed);
-    try {
-      localStorage.setItem(STORAGE_KEY, String(collapsed));
-    } catch {
-      // localStorage unavailable
-    }
+    safeStorage.setRaw(STORAGE_KEY, String(collapsed));
   }, []);
 
   const toggle = useCallback(() => {

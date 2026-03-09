@@ -77,6 +77,34 @@ internal class ConfigurationRepository : RepositoryBase, IConfigurationRepositor
         return entity != null ? MapToDomain(entity) : null;
     }
 
+    public async Task<IReadOnlyList<SystemConfigurationAggregate>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AsNoTracking()
+            .Where(c => idList.Contains(c.Id))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<SystemConfigurationAggregate>> GetByKeysAsync(IEnumerable<string> keys, string? environment = null, bool activeOnly = false, CancellationToken cancellationToken = default)
+    {
+        var keyList = keys.ToList();
+        var query = DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AsNoTracking()
+            .Where(c => keyList.Contains(c.Key));
+
+        if (activeOnly)
+            query = query.Where(c => c.IsActive);
+
+        if (!string.IsNullOrEmpty(environment))
+            query = query.Where(c => c.Environment == environment || c.Environment == "All");
+
+        var entities = await query.ToListAsync(cancellationToken).ConfigureAwait(false);
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<SystemConfigurationAggregate>> GetByCategoryAsync(string category, CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()

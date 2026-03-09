@@ -273,7 +273,7 @@ public sealed class BatchJobIntegrationTests : IAsyncLifetime
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         var logger = _serviceProvider!.GetRequiredService<ILogger<BatchJobProcessorJob>>();
-        var processor = new BatchJobProcessorJob(_repository, logger);
+        var processor = new BatchJobProcessorJob(_repository, _serviceProvider, logger);
 
         var contextMock = new Mock<IJobExecutionContext>();
         contextMock.Setup(x => x.CancellationToken).Returns(TestCancellationToken);
@@ -306,7 +306,7 @@ public sealed class BatchJobIntegrationTests : IAsyncLifetime
         await _unitOfWork.SaveChangesAsync(TestCancellationToken);
 
         var logger = _serviceProvider!.GetRequiredService<ILogger<BatchJobProcessorJob>>();
-        var processor = new BatchJobProcessorJob(_repository, logger);
+        var processor = new BatchJobProcessorJob(_repository, _serviceProvider, logger);
 
         var contextMock = new Mock<IJobExecutionContext>();
         contextMock.Setup(x => x.CancellationToken).Returns(TestCancellationToken);
@@ -452,8 +452,8 @@ public sealed class BatchJobIntegrationTests : IAsyncLifetime
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         var logger = _serviceProvider!.GetRequiredService<ILogger<BatchJobProcessorJob>>();
-        var processor1 = new BatchJobProcessorJob(_repository, logger);
-        var processor2 = new BatchJobProcessorJob(_repository, logger);
+        var processor1 = new BatchJobProcessorJob(_repository, _serviceProvider, logger);
+        var processor2 = new BatchJobProcessorJob(_repository, _serviceProvider, logger);
 
         var contextMock = new Mock<IJobExecutionContext>();
         contextMock.Setup(x => x.CancellationToken).Returns(TestCancellationToken);

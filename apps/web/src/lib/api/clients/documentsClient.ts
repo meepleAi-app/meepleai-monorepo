@@ -133,6 +133,31 @@ export interface DocumentsClient {
    * @param documentId - The document ID
    */
   removeDocument(gameId: string, collectionId: string, documentId: string): Promise<void>;
+
+  /**
+   * Accept copyright disclaimer for a PDF document (Issue #5446)
+   */
+  acceptDisclaimer(pdfId: string): Promise<{ success: boolean; message: string }>;
+
+  /**
+   * Toggle RAG active flag for a PDF document (Issue #5446)
+   */
+  setActiveForRag(
+    pdfId: string,
+    isActive: boolean
+  ): Promise<{ success: boolean; message: string; isActive: boolean }>;
+
+  /**
+   * Reclassify a document's category, base document, and version label (Issue #5447)
+   */
+  reclassifyDocument(
+    pdfId: string,
+    request: {
+      category: string;
+      baseDocumentId?: string | null;
+      versionLabel?: string | null;
+    }
+  ): Promise<{ success: boolean; message: string; pdfId: string }>;
 }
 
 export function createDocumentsClient({ httpClient }: { httpClient: HttpClient }): DocumentsClient {
@@ -203,6 +228,27 @@ export function createDocumentsClient({ httpClient }: { httpClient: HttpClient }
     async removeDocument(gameId, collectionId, documentId) {
       await httpClient.delete(
         `/api/v1/games/${gameId}/document-collections/${collectionId}/documents/${documentId}`
+      );
+    },
+
+    async acceptDisclaimer(pdfId) {
+      return await httpClient.post<{ success: boolean; message: string }>(
+        `/api/v1/documents/${pdfId}/accept-disclaimer`,
+        {}
+      );
+    },
+
+    async setActiveForRag(pdfId, isActive) {
+      return await httpClient.patch<{ success: boolean; message: string; isActive: boolean }>(
+        `/api/v1/documents/${pdfId}/active`,
+        { isActive }
+      );
+    },
+
+    async reclassifyDocument(pdfId, request) {
+      return await httpClient.patch<{ success: boolean; message: string; pdfId: string }>(
+        `/api/v1/documents/${pdfId}/classify`,
+        request
       );
     },
   };

@@ -2,6 +2,7 @@
  * RecentChatsDashboardSection — Issue #5097, Epic #5094
  *
  * Dashboard section: 2 recent chat sessions as compact list-cards.
+ * Warm brown accent to match dashboard palette.
  */
 
 'use client';
@@ -20,9 +21,7 @@ import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.sche
 function SectionHeader() {
   return (
     <div className="flex items-center justify-between mb-3">
-      <h3 className="font-quicksand text-sm font-bold text-foreground">
-        💬 Chat recenti
-      </h3>
+      <h3 className="font-quicksand text-sm font-bold text-foreground">💬 Chat recenti</h3>
       <Link
         href="/chat"
         className="flex items-center gap-1 text-xs font-semibold font-nunito text-muted-foreground hover:text-foreground transition-colors"
@@ -43,29 +42,28 @@ function ChatListCard({ chat }: { chat: ChatSessionSummaryDto }) {
         locale: it,
       })
     : chat.createdAt
-    ? formatDistanceToNow(new Date(chat.createdAt), {
-        addSuffix: true,
-        locale: it,
-      })
-    : null;
+      ? formatDistanceToNow(new Date(chat.createdAt), {
+          addSuffix: true,
+          locale: it,
+        })
+      : null;
 
-  const title =
-    chat.title ?? (chat.gameTitle ? `Chat · ${chat.gameTitle}` : 'Chat senza titolo');
+  const title = chat.title ?? (chat.gameTitle ? `Chat · ${chat.gameTitle}` : 'Chat senza titolo');
 
   return (
     <Link
       href={`/chat/${chat.id}`}
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-surface hover:bg-accent/40 transition-colors group"
-      style={{ borderLeftWidth: 3, borderLeftColor: 'hsl(220,80%,55%)' }}
+      style={{ borderLeftWidth: 3, borderLeftColor: 'hsl(25,50%,45%)' }}
     >
       {/* Icon */}
-      <div className="w-10 h-10 rounded-lg bg-[hsl(220,80%,92%)] shrink-0 flex items-center justify-center">
-        <MessageSquare className="h-4 w-4 text-[hsl(220,80%,55%)]" />
+      <div className="w-10 h-10 rounded-lg bg-[hsl(25,40%,92%)] dark:bg-[hsl(25,30%,20%)] shrink-0 flex items-center justify-center">
+        <MessageSquare className="h-4 w-4 text-[hsl(25,50%,45%)]" />
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="font-quicksand font-bold text-sm text-foreground truncate group-hover:text-[hsl(220,80%,50%)] transition-colors">
+        <p className="font-quicksand font-bold text-sm text-foreground truncate group-hover:text-[hsl(25,70%,40%)] transition-colors">
           {title}
         </p>
         <p className="text-xs text-muted-foreground font-nunito mt-0.5 truncate">
@@ -107,7 +105,7 @@ function EmptyChats() {
       <p className="text-sm font-nunito">Nessuna chat recente</p>
       <Link
         href="/chat/new"
-        className="text-xs font-semibold text-[hsl(220,80%,55%)] hover:underline"
+        className="text-xs font-semibold text-[hsl(25,80%,45%)] hover:underline"
       >
         Inizia una conversazione →
       </Link>
@@ -133,7 +131,7 @@ export function RecentChatsDashboardSection() {
         ) : chats.length === 0 ? (
           <EmptyChats />
         ) : (
-          chats.map((chat) => <ChatListCard key={chat.id} chat={chat} />)
+          chats.map(chat => <ChatListCard key={chat.id} chat={chat} />)
         )}
       </div>
     </section>

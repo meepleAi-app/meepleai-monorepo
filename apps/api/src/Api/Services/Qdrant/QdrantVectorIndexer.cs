@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client.Grpc;
@@ -84,10 +86,17 @@ internal class QdrantVectorIndexer : IQdrantVectorIndexer
     {
         var points = new List<PointStruct>();
 
+        // Issue #5254: Extract pdf_id for deterministic point IDs
+        var pdfIdForKey = basePayload.TryGetValue("pdf_id", out var pdfIdValue)
+            ? pdfIdValue.StringValue.Replace("-", "", StringComparison.Ordinal)
+            : "unknown";
+
         for (int i = 0; i < chunks.Count; i++)
         {
             var chunk = chunks[i];
-            var pointId = Guid.NewGuid().ToString();
+            // Issue #5254: Deterministic point ID based on (pdfId, chunkIndex).
+            // This ensures upsert overwrites existing points on re-index instead of creating duplicates.
+            var pointId = GenerateDeterministicId(pdfIdForKey, i);
 
             // Clone base payload and add chunk-specific data
             var payload = new Dictionary<string, Value>(basePayload, StringComparer.Ordinal)
@@ -111,6 +120,20 @@ internal class QdrantVectorIndexer : IQdrantVectorIndexer
         }
 
         return points;
+    }
+
+    /// <summary>
+    /// Issue #5254: Generate a deterministic UUID from (pdfId, chunkIndex).
+    /// Uses SHA-256 truncated to 16 bytes formatted as a GUID, ensuring the same
+    /// chunk always produces the same point ID across re-indexing runs.
+    /// </summary>
+    private static string GenerateDeterministicId(string pdfId, int chunkIndex)
+    {
+        var input = $"{pdfId}:{chunkIndex}";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+        // Take first 16 bytes of SHA-256 to form a GUID
+        var guid = new Guid(hash.AsSpan(0, 16));
+        return guid.ToString();
     }
 
     /// <summary>

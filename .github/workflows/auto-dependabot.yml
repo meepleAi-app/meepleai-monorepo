@@ -16,7 +16,7 @@ permissions:
 jobs:
   auto-merge:
     name: Auto-merge Dependabot PRs
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     # Only run for Dependabot PRs with automerge label
     if: |
       github.actor == 'dependabot[bot]' &&

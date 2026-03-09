@@ -46,26 +46,26 @@ export const PlayRecordDtoSchema = z.object({
   id: z.string().uuid(),
   gameId: z.string().uuid().nullable(),
   gameName: z.string(),
-  sessionDate: z.string().datetime(),
-  duration: z.string().nullable(), // ISO 8601 duration (e.g., "PT2H30M")
+  sessionDate: z.string(),
+  duration: z.string().nullable(), // .NET TimeSpan (e.g., "02:30:00") or ISO 8601 (e.g., "PT2H30M")
   status: PlayRecordStatusSchema,
   players: z.array(SessionPlayerSchema),
   scoringConfig: SessionScoringConfigSchema,
   createdByUserId: z.string().uuid(),
   visibility: PlayRecordVisibilitySchema,
-  startTime: z.string().datetime().nullable(),
-  endTime: z.string().datetime().nullable(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
   notes: z.string().nullable(),
   location: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 export type PlayRecordDto = z.infer<typeof PlayRecordDtoSchema>;
 
 export const PlayRecordSummarySchema = z.object({
   id: z.string().uuid(),
   gameName: z.string(),
-  sessionDate: z.string().datetime(),
+  sessionDate: z.string(),
   duration: z.string().nullable(),
   status: PlayRecordStatusSchema,
   playerCount: z.number().int().nonnegative(),
@@ -85,13 +85,11 @@ export type PlayerStatistics = z.infer<typeof PlayerStatisticsSchema>;
 export const CreatePlayRecordRequestSchema = z.object({
   gameId: z.string().uuid().optional(),
   gameName: z.string().min(1).max(255),
-  sessionDate: z.string().datetime(),
+  sessionDate: z.string(),
   visibility: PlayRecordVisibilitySchema,
   groupId: z.string().uuid().optional(),
   scoringDimensions: z.array(z.string()).optional(),
   dimensionUnits: z.record(z.string(), z.string()).optional(),
-  notes: z.string().max(2000).optional(),
-  location: z.string().max(255).optional(),
 });
 export type CreatePlayRecordRequest = z.infer<typeof CreatePlayRecordRequestSchema>;
 
@@ -110,8 +108,7 @@ export const RecordScoreRequestSchema = z.object({
 export type RecordScoreRequest = z.infer<typeof RecordScoreRequestSchema>;
 
 export const UpdatePlayRecordRequestSchema = z.object({
-  gameName: z.string().min(1).max(255).optional(),
-  sessionDate: z.string().datetime().optional(),
+  sessionDate: z.string().optional(),
   notes: z.string().max(2000).optional(),
   location: z.string().max(255).optional(),
 });
@@ -121,7 +118,7 @@ export type UpdatePlayRecordRequest = z.infer<typeof UpdatePlayRecordRequestSche
 
 export const PlayHistoryResponseSchema = z.object({
   records: z.array(PlayRecordSummarySchema),
-  total: z.number().int().nonnegative(),
+  totalCount: z.number().int().nonnegative(),
   page: z.number().int().positive(),
   pageSize: z.number().int().positive(),
   totalPages: z.number().int().nonnegative(),
@@ -130,46 +127,50 @@ export type PlayHistoryResponse = z.infer<typeof PlayHistoryResponseSchema>;
 
 // ========== Form Schemas (Client-side validation) ==========
 
-export const SessionCreateFormSchema = z.object({
-  gameType: z.enum(['catalog', 'freeform']),
-  gameId: z.string().uuid().optional(),
-  gameName: z.string().min(1, 'Game name is required').max(255),
-  sessionDate: z.date(),
-  visibility: PlayRecordVisibilitySchema,
-  groupId: z.string().uuid().optional(),
-  enableScoring: z.boolean().optional(),
-  scoringDimensions: z.array(z.string()).optional(),
-  dimensionUnits: z.record(z.string(), z.string()).optional(),
-  notes: z.string().max(2000).optional(),
-  location: z.string().max(255).optional(),
-}).refine(
-  (data) => {
-    // If catalog game selected, gameId must be provided
-    if (data.gameType === 'catalog' && !data.gameId) return false;
-    // If Group visibility, groupId must be provided
-    if (data.visibility === 'Group' && !data.groupId) return false;
-    return true;
-  },
-  {
-    message: 'Invalid game or group selection',
-  }
-);
+export const SessionCreateFormSchema = z
+  .object({
+    gameType: z.enum(['catalog', 'freeform']),
+    gameId: z.string().uuid().optional(),
+    gameName: z.string().min(1, 'Game name is required').max(255),
+    sessionDate: z.date(),
+    visibility: PlayRecordVisibilitySchema,
+    groupId: z.string().uuid().optional(),
+    enableScoring: z.boolean().optional(),
+    scoringDimensions: z.array(z.string()).optional(),
+    dimensionUnits: z.record(z.string(), z.string()).optional(),
+    notes: z.string().max(2000).optional(),
+    location: z.string().max(255).optional(),
+  })
+  .refine(
+    data => {
+      // If catalog game selected, gameId must be provided
+      if (data.gameType === 'catalog' && !data.gameId) return false;
+      // If Group visibility, groupId must be provided
+      if (data.visibility === 'Group' && !data.groupId) return false;
+      return true;
+    },
+    {
+      message: 'Invalid game or group selection',
+    }
+  );
 export type SessionCreateForm = z.infer<typeof SessionCreateFormSchema>;
 
-export const PlayerAddFormSchema = z.object({
-  playerType: z.enum(['user', 'guest']),
-  userId: z.string().uuid().optional(),
-  displayName: z.string().min(1, 'Name is required').max(50),
-}).refine(
-  (data) => {
-    // If user type, userId must be provided
-    if (data.playerType === 'user' && !data.userId) return false;
-    return true;
-  },
-  {
-    message: 'User selection required for registered players',
-  }
-);
+export const PlayerAddFormSchema = z
+  .object({
+    playerType: z.enum(['user', 'guest']),
+    userId: z.string().uuid().optional(),
+    displayName: z.string().min(1, 'Name is required').max(50),
+  })
+  .refine(
+    data => {
+      // If user type, userId must be provided
+      if (data.playerType === 'user' && !data.userId) return false;
+      return true;
+    },
+    {
+      message: 'User selection required for registered players',
+    }
+  );
 export type PlayerAddForm = z.infer<typeof PlayerAddFormSchema>;
 
 export const ScoreInputFormSchema = z.object({

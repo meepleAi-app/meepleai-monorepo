@@ -1,6 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.Administration.Application.Services;
 

@@ -42,6 +42,7 @@ internal static class DocumentProcessingServiceExtensions
         // Domain Layer
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
         services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>(); // Issue #4731: Queue commands
+        services.AddScoped<IProcessingQueueConfigRepository, ProcessingQueueConfigRepository>(); // Issue #5455: Queue config
         services.AddScoped<IChunkedUploadSessionRepository, ChunkedUploadSessionRepository>();
         services.AddScoped<IDocumentCollectionRepository, DocumentCollectionRepository>(); // ISSUE-2051: Document collections
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -52,6 +53,7 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<PdfTextProcessingDomainService>(); // DDD-PHASE4: Text processing business rules
         services.AddScoped<PdfQualityValidationDomainService>(); // BGAI-012: Quality threshold enforcement
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>(); // User tier-based upload quotas
+        services.AddScoped<IQueueBackpressureService, QueueBackpressureService>(); // Issue #5457: Backpressure
         services.AddScoped<CitationPriorityService>(); // ISSUE-2051: Citation priority and deduplication
 
         // Issue #3653: Private PDF progress streaming service (singleton for in-memory subscriber management)
@@ -69,6 +71,9 @@ internal static class DocumentProcessingServiceExtensions
 
         // Issue #4212: Processing metrics and ETA calculation service
         services.AddScoped<IProcessingMetricsService, ProcessingMetricsService>();
+
+        // Issue #5445: Language detection for PDF pipeline routing
+        services.AddSingleton<ILanguageDetector, LanguageDetector>();
 
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
@@ -119,6 +124,9 @@ internal static class DocumentProcessingServiceExtensions
 
         // Stale PDF recovery: runs once on startup to reprocess stuck PDFs
         services.AddHostedService<StalePdfRecoveryService>();
+
+        // Issue #5460: Queue monitoring for proactive alerts (stuck docs, depth, failure rate)
+        services.AddHostedService<ProcessingQueueMonitorService>();
 
         // Issue #4208: Register Quartz job for automatic PDF retry (every 5 minutes)
         RegisterRetryFailedPdfsJob(services);

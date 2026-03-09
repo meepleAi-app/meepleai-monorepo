@@ -73,6 +73,24 @@ public class PdfDocumentEntity
     // Issue #3664: Private game PDF support
     public Guid? PrivateGameId { get; set; }
 
+    // PDF deduplication: SHA-256 hash of file content
+    public string? ContentHash { get; set; }
+
+    // Issue #5443: Document classification for pipeline routing
+    public string DocumentCategory { get; set; } = "Rulebook"; // DocumentCategory enum stored as string
+
+    // Issue #5444: Self-referential FK for expansion/errata linkage to base rulebook
+    public Guid? BaseDocumentId { get; set; }
+    public PdfDocumentEntity? BaseDocument { get; set; }
+
+    // Issue #5446: Copyright disclaimer and RAG active toggle
+    public DateTime? CopyrightDisclaimerAcceptedAt { get; set; }
+    public Guid? CopyrightDisclaimerAcceptedBy { get; set; }
+    public bool IsActiveForRag { get; set; } = true;
+
+    // Issue #5447: User-editable version label
+    public string? VersionLabel { get; set; }
+
     // Admin Wizard: Processing priority (Normal=0, Admin=10)
     public string ProcessingPriority { get; set; } = "Normal";
 

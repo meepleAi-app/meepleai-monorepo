@@ -14,6 +14,7 @@
 'use client';
 
 import { useMemo } from 'react';
+
 import { Loader2, AlertCircle, Sparkles, Zap } from 'lucide-react';
 
 import {
@@ -63,15 +64,19 @@ export function ModelSelector({
   className,
 }: ModelSelectorProps) {
   // Fetch active models
-  const { data: modelsData, isLoading, error } = useAiModels({ status: 'active', page: 1, pageSize: 50 });
+  const {
+    data: modelsData,
+    isLoading,
+    error,
+  } = useAiModels({ status: 'active', page: 1, pageSize: 50 });
 
   const models = useMemo(() => modelsData?.items ?? [], [modelsData]);
 
   // Find selected model for display
-  const selectedModel = models.find((m) => m.id === value);
+  const selectedModel = models.find(m => m.id === value);
 
   const handleValueChange = (modelId: string) => {
-    const model = models.find((m) => m.id === modelId) ?? null;
+    const model = models.find(m => m.id === modelId) ?? null;
     onChange(modelId, model);
   };
 
@@ -95,11 +100,7 @@ export function ModelSelector({
         <span className="ml-1 text-red-500">*</span>
       </label>
 
-      <Select
-        value={value}
-        onValueChange={handleValueChange}
-        disabled={disabled || isLoading}
-      >
+      <Select value={value} onValueChange={handleValueChange} disabled={disabled || isLoading}>
         <SelectTrigger className={className} aria-label="Select AI model">
           {isLoading ? (
             <div className="flex items-center gap-2">
@@ -121,14 +122,10 @@ export function ModelSelector({
 
         <SelectContent>
           {models.length > 0 ? (
-            models.map((model) => {
+            models.map(model => {
               const provider = PROVIDER_CONFIG[model.provider];
               return (
-                <SelectItem
-                  key={model.id}
-                  value={model.id}
-                  className="cursor-pointer"
-                >
+                <SelectItem key={model.id} value={model.id} className="cursor-pointer">
                   <div className="flex items-center justify-between gap-3 w-full">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <span className="text-base shrink-0">{provider?.icon ?? '🤖'}</span>

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Tests.Constants;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -22,6 +23,7 @@ public sealed class OpenRouterUsageServiceTests
     private readonly Mock<IConnectionMultiplexer> _redisMock;
     private readonly Mock<IDatabase> _dbMock;
     private readonly Mock<IHttpClientFactory> _httpFactoryMock;
+    private readonly Mock<IConfiguration> _configMock;
     private readonly Mock<ILogger<OpenRouterUsageService>> _loggerMock;
 
     public OpenRouterUsageServiceTests()
@@ -29,6 +31,7 @@ public sealed class OpenRouterUsageServiceTests
         _redisMock = new Mock<IConnectionMultiplexer>();
         _dbMock = new Mock<IDatabase>();
         _httpFactoryMock = new Mock<IHttpClientFactory>();
+        _configMock = new Mock<IConfiguration>();
         _loggerMock = new Mock<ILogger<OpenRouterUsageService>>();
 
         _redisMock
@@ -37,7 +40,7 @@ public sealed class OpenRouterUsageServiceTests
     }
 
     private OpenRouterUsageService CreateSut()
-        => new(_httpFactoryMock.Object, _redisMock.Object, _loggerMock.Object);
+        => new(_httpFactoryMock.Object, _redisMock.Object, _configMock.Object, _loggerMock.Object);
 
     // ─── Constructor ────────────────────────────────────────────────────────
 
@@ -45,21 +48,21 @@ public sealed class OpenRouterUsageServiceTests
     public void Constructor_NullHttpFactory_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new OpenRouterUsageService(null!, _redisMock.Object, _loggerMock.Object));
+            new OpenRouterUsageService(null!, _redisMock.Object, _configMock.Object, _loggerMock.Object));
     }
 
     [Fact]
     public void Constructor_NullRedis_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new OpenRouterUsageService(_httpFactoryMock.Object, null!, _loggerMock.Object));
+            new OpenRouterUsageService(_httpFactoryMock.Object, null!, _configMock.Object, _loggerMock.Object));
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new OpenRouterUsageService(_httpFactoryMock.Object, _redisMock.Object, null!));
+            new OpenRouterUsageService(_httpFactoryMock.Object, _redisMock.Object, _configMock.Object, null!));
     }
 
     [Fact]

@@ -49,6 +49,35 @@ vi.mock('@/hooks/queries/useSessionQuota', () => ({
   useSessionQuotaWithStatus: vi.fn(),
 }));
 
+// Mock useAvailableModels (dynamic models from API)
+vi.mock('@/hooks/queries/useModels', () => ({
+  useAvailableModels: vi.fn().mockReturnValue({
+    data: [
+      {
+        id: 'meta-llama/llama-3.3-70b-instruct:free',
+        name: 'Llama 3.3 70B Free',
+        provider: 'openrouter',
+        tier: 'Free',
+        costPer1kInputTokens: 0,
+        costPer1kOutputTokens: 0,
+        maxTokens: 8192,
+        supportsStreaming: true,
+      },
+      {
+        id: 'anthropic/claude-3.5-sonnet',
+        name: 'Claude 3.5 Sonnet',
+        provider: 'openrouter',
+        tier: 'Premium',
+        costPer1kInputTokens: 0.003,
+        costPer1kOutputTokens: 0.015,
+        maxTokens: 8192,
+        supportsStreaming: true,
+      },
+    ],
+    isLoading: false,
+  }),
+}));
+
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -194,10 +223,10 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.availableModels).toEqual([
-          { name: 'Claude-3.5-Haiku', cost: 0.003 },
-          { name: 'GPT-4o', cost: 0.005, recommended: true },
-        ]);
+        expect(result.current.availableModels).toHaveLength(2);
+        expect(result.current.availableModels[0]).toEqual({ name: 'Llama 3.3 70B Free', cost: 0, recommended: true });
+        expect(result.current.availableModels[1].name).toBe('Claude 3.5 Sonnet');
+        expect(result.current.availableModels[1].cost).toBeCloseTo(0.021);
       });
     });
   });
@@ -213,7 +242,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
     });
 
@@ -223,14 +252,14 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
-        result.current.setSelectedModelName('Claude-3.5-Haiku');
+        result.current.setSelectedModelName('Claude 3.5 Sonnet');
       });
 
-      expect(result.current.selectedModelName).toBe('Claude-3.5-Haiku');
+      expect(result.current.selectedModelName).toBe('Claude 3.5 Sonnet');
     });
 
     it('should update selectedTypologyId', () => {
@@ -269,10 +298,10 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
-      expect(result.current.estimatedCost).toBe(0.005);
+      expect(result.current.estimatedCost).toBe(0);
     });
 
     it('should update cost when model changes', async () => {
@@ -281,14 +310,14 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.estimatedCost).toBe(0.005);
+        expect(result.current.estimatedCost).toBe(0);
       });
 
       act(() => {
-        result.current.setSelectedModelName('Claude-3.5-Haiku');
+        result.current.setSelectedModelName('Claude 3.5 Sonnet');
       });
 
-      expect(result.current.estimatedCost).toBe(0.003);
+      expect(result.current.estimatedCost).toBeCloseTo(0.021);
     });
   });
 
@@ -344,7 +373,7 @@ describe('useAgentConfigModal', () => {
     it('should load cached config on mount', async () => {
       const cachedConfig = {
         typologyId: 'typo-2',
-        modelName: 'Claude-3.5-Haiku',
+        modelName: 'Claude 3.5 Sonnet',
         timestamp: Date.now(),
       };
 
@@ -356,7 +385,7 @@ describe('useAgentConfigModal', () => {
 
       await waitFor(() => {
         expect(result.current.selectedTypologyId).toBe('typo-2');
-        expect(result.current.selectedModelName).toBe('Claude-3.5-Haiku');
+        expect(result.current.selectedModelName).toBe('Claude 3.5 Sonnet');
       });
     });
 
@@ -366,7 +395,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
@@ -384,7 +413,7 @@ describe('useAgentConfigModal', () => {
         if (stored) {
           const parsed = JSON.parse(stored);
           expect(parsed.typologyId).toBe('typo-1');
-          expect(parsed.modelName).toBe('GPT-4o');
+          expect(parsed.modelName).toBe('Llama 3.3 70B Free');
           expect(parsed.timestamp).toBeDefined();
         }
       });
@@ -407,7 +436,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result1.current.selectedModelName).toBe('GPT-4o');
+        expect(result1.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
@@ -439,7 +468,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
@@ -453,8 +482,8 @@ describe('useAgentConfigModal', () => {
       await waitFor(() => {
         expect(api.library.saveAgentConfig).toHaveBeenCalledWith('game-123', {
           typologyId: 'typo-1',
-          modelName: 'GPT-4o',
-          costEstimate: 0.005,
+          modelName: 'Llama 3.3 70B Free',
+          costEstimate: 0,
         });
       });
     });
@@ -465,7 +494,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
@@ -492,7 +521,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
@@ -551,7 +580,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
@@ -583,7 +612,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {
@@ -625,7 +654,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       expect(result.current.isValid).toBe(false);
@@ -650,7 +679,7 @@ describe('useAgentConfigModal', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.selectedModelName).toBe('GPT-4o');
+        expect(result.current.selectedModelName).toBe('Llama 3.3 70B Free');
       });
 
       act(() => {

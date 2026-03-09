@@ -46,10 +46,7 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
         items: [mockShareRequest],
         page: 1,
         pageSize: 20,
-        totalCount: 1,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPreviousPage: false,
+        total: 1,
       };
       vi.mocked(mockHttpClient.get).mockResolvedValue(mockResponse);
 
@@ -68,10 +65,7 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
         items: [],
         page: 2,
         pageSize: 10,
-        totalCount: 0,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPreviousPage: true,
+        total: 0,
       });
 
       const client = createAdminShareRequestsClient(mockHttpClient);
@@ -102,7 +96,7 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
       const result = await client.getAll();
 
       expect(result.items).toEqual([]);
-      expect(result.totalCount).toBe(0);
+      expect(result.total).toBe(0);
     });
   });
 
@@ -159,9 +153,7 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
 
       const client = createAdminShareRequestsClient(mockHttpClient);
 
-      await expect(client.startReview('req-123')).rejects.toThrow(
-        'already being reviewed'
-      );
+      await expect(client.startReview('req-123')).rejects.toThrow('already being reviewed');
     });
 
     it('should throw error when review fails', async () => {
@@ -169,9 +161,7 @@ describe('AdminShareRequestsClient - Issue #3026', () => {
 
       const client = createAdminShareRequestsClient(mockHttpClient);
 
-      await expect(client.startReview('req-123')).rejects.toThrow(
-        'Failed to start review'
-      );
+      await expect(client.startReview('req-123')).rejects.toThrow('Failed to start review');
     });
   });
 

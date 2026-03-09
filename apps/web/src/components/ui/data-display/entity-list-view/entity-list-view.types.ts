@@ -4,8 +4,9 @@
  * @module components/ui/data-display/entity-list-view/types
  */
 
-import type { MeepleCardProps, MeepleEntityType } from '../meeple-card';
 import type React from 'react';
+
+import type { MeepleCardProps, MeepleEntityType } from '../meeple-card';
 import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
@@ -153,7 +154,6 @@ export interface CarouselOptions {
   /** Carousel orientation */
   orientation?: 'horizontal' | 'vertical' | 'auto';
 }
-
 
 // ============================================================================
 // Table Configuration

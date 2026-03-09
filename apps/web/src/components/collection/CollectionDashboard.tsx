@@ -45,15 +45,15 @@ import {
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { GameCarousel, type CarouselGame } from '@/components/ui/data-display/game-carousel';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
-import { GameCarousel, type CarouselGame } from '@/components/ui/data-display/game-carousel';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Select,
   SelectContent,
@@ -63,16 +63,11 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import {
-  useLibrary,
-  useLibraryStats,
-  useLibraryQuota,
-} from '@/hooks/queries/useLibrary';
-import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
+import { useLibrary, useLibraryStats, useLibraryQuota } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 import { COLLECTION_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
-
 
 // ============================================================================
 // Types
@@ -207,15 +202,12 @@ function HeroStatCard({ stat, index }: { stat: HeroStat; index: number }) {
         <Icon className={cn('h-5 w-5', colors.icon)} />
         {stat.trend !== undefined && stat.trend > 0 && (
           <span className="flex items-center gap-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-            <TrendingUp className="h-3 w-3" />
-            +{stat.trend}
+            <TrendingUp className="h-3 w-3" />+{stat.trend}
           </span>
         )}
       </div>
       <div className="mt-1">
-        <span className="font-heading text-2xl font-bold tracking-tight">
-          {stat.value}
-        </span>
+        <span className="font-heading text-2xl font-bold tracking-tight">{stat.value}</span>
       </div>
       <span className="text-xs text-muted-foreground">{stat.label}</span>
     </motion.div>
@@ -275,13 +267,16 @@ function CollectionToolbar({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce search input (300ms)
-  const handleSearchInput = useCallback((value: string) => {
-    setLocalSearch(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onSearchChange(value);
-    }, 300);
-  }, [onSearchChange]);
+  const handleSearchInput = useCallback(
+    (value: string) => {
+      setLocalSearch(value);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        onSearchChange(value);
+      }, 300);
+    },
+    [onSearchChange]
+  );
 
   const handleSortChange = (value: string) => {
     const [field, order] = value.split('-') as [SortOption, 'asc' | 'desc'];
@@ -315,13 +310,20 @@ function CollectionToolbar({
   const getChipCount = (chipId: FilterChip['id']): number | undefined => {
     if (!stateCounts) return undefined;
     switch (chipId) {
-      case 'all': return stateCounts.total;
-      case 'favorites': return stateCounts.favorites;
-      case 'Nuovo': return stateCounts.nuovo;
-      case 'InPrestito': return stateCounts.inPrestito;
-      case 'Wishlist': return stateCounts.wishlist;
-      case 'Owned': return stateCounts.owned;
-      default: return undefined;
+      case 'all':
+        return stateCounts.total;
+      case 'favorites':
+        return stateCounts.favorites;
+      case 'Nuovo':
+        return stateCounts.nuovo;
+      case 'InPrestito':
+        return stateCounts.inPrestito;
+      case 'Wishlist':
+        return stateCounts.wishlist;
+      case 'Owned':
+        return stateCounts.owned;
+      default:
+        return undefined;
     }
   };
 
@@ -430,7 +432,10 @@ function CollectionToolbar({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/library/private/add" className="flex items-center gap-2 cursor-pointer">
+                <Link
+                  href="/library/private/add"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
                   <Gamepad2 className="h-4 w-4" />
                   {t('collection.addPrivateGame')}
                 </Link>
@@ -477,12 +482,7 @@ function CollectionToolbar({
         })}
 
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClearFilters}
-            className="h-8 text-xs"
-          >
+          <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-8 text-xs">
             <X className="mr-1 h-3 w-3" />
             Pulisci
           </Button>
@@ -509,7 +509,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
       </h3>
       <p className="text-muted-foreground max-w-md mb-6">
         {hasFilters
-          ? 'Prova a modificare i filtri o cerca qualcos\'altro.'
+          ? "Prova a modificare i filtri o cerca qualcos'altro."
           : 'Inizia ad aggiungere i tuoi giochi da tavolo preferiti per costruire la tua collezione.'}
       </p>
       {!hasFilters && (
@@ -562,18 +562,25 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
   const pageSize = 20;
 
   // Query params
-  const queryParams: GetUserLibraryParams = useMemo(() => ({
-    page,
-    pageSize,
-    search: searchQuery || undefined,
-    favoritesOnly: favoritesOnly || undefined,
-    stateFilter: stateFilter.length > 0 ? stateFilter : undefined,
-    sortBy: sortBy === 'playCount' ? 'addedAt' : sortBy, // API doesn't support playCount yet
-    sortDescending,
-  }), [page, pageSize, searchQuery, favoritesOnly, stateFilter, sortBy, sortDescending]);
+  const queryParams: GetUserLibraryParams = useMemo(
+    () => ({
+      page,
+      pageSize,
+      search: searchQuery || undefined,
+      favoritesOnly: favoritesOnly || undefined,
+      stateFilter: stateFilter.length > 0 ? stateFilter : undefined,
+      sortBy: sortBy === 'playCount' ? 'addedAt' : sortBy, // API doesn't support playCount yet
+      sortDescending,
+    }),
+    [page, pageSize, searchQuery, favoritesOnly, stateFilter, sortBy, sortDescending]
+  );
 
   // Data fetching
-  const { data: libraryData, isLoading: isLoadingLibrary, error: libraryError } = useLibrary(queryParams);
+  const {
+    data: libraryData,
+    isLoading: isLoadingLibrary,
+    error: libraryError,
+  } = useLibrary(queryParams);
   const { data: statsData, isLoading: isLoadingStats } = useLibraryStats();
   const { data: quotaData } = useLibraryQuota();
 
@@ -702,13 +709,11 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
       {/* Hero Stats Section */}
       <section aria-label="Collection statistics">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {isLoadingStats ? (
-            Array.from({ length: 4 }).map((_, i) => <HeroStatSkeleton key={i} />)
-          ) : (
-            heroStats.map((stat, index) => (
-              <HeroStatCard key={stat.id} stat={stat} index={index} />
-            ))
-          )}
+          {isLoadingStats
+            ? Array.from({ length: 4 }).map((_, i) => <HeroStatSkeleton key={i} />)
+            : heroStats.map((stat, index) => (
+                <HeroStatCard key={stat.id} stat={stat} index={index} />
+              ))}
         </div>
       </section>
 
@@ -737,9 +742,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
           <GameGridSkeleton count={8} />
         ) : libraryError ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-destructive mb-4">
-              Errore nel caricamento della collezione.
-            </p>
+            <p className="text-destructive mb-4">Errore nel caricamento della collezione.</p>
             <Button onClick={() => window.location.reload()}>Riprova</Button>
           </div>
         ) : games.length === 0 ? (
@@ -788,10 +791,12 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
                       imageUrl={game.imageUrl}
                       variant={viewMode === 'list' ? 'list' : 'grid'}
                       status={game.status}
-                      metadata={[
-                        { label: t('collection.year'), value: game.yearPublished?.toString() },
-                        { label: t('collection.plays'), value: game.playCount.toString() },
-                      ].filter(m => m.value) as Array<{ label: string; value: string }>}
+                      metadata={
+                        [
+                          { label: t('collection.year'), value: game.yearPublished?.toString() },
+                          { label: t('collection.plays'), value: game.playCount.toString() },
+                        ].filter(m => m.value) as Array<{ label: string; value: string }>
+                      }
                     />
                   ))}
                 </motion.div>

@@ -7,7 +7,7 @@
  * Displays community-curated game catalog with advanced filtering.
  */
 
-import { Suspense, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 
 import { AlertCircle, Library, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
@@ -15,7 +15,10 @@ import { useRouter } from 'next/navigation';
 
 import { CatalogFilters } from '@/components/catalog/CatalogFilters';
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
-import { MeepleGameCatalogCard, MeepleGameCatalogCardSkeleton } from '@/components/catalog/MeepleGameCatalogCard';
+import {
+  MeepleGameCatalogCard,
+  MeepleGameCatalogCardSkeleton,
+} from '@/components/catalog/MeepleGameCatalogCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useSharedGames, useGameCategories, useGameMechanics } from '@/hooks/queries';
@@ -25,7 +28,11 @@ import type { SearchSharedGamesParams } from '@/lib/api';
 /**
  * Inner component that uses useSearchParams (requires Suspense boundary)
  */
-export function CatalogContent() {
+interface CatalogContentProps {
+  gameDetailBasePath?: string;
+}
+
+export function CatalogContent({ gameDetailBasePath = '/games' }: CatalogContentProps) {
   const router = useRouter();
 
   // URL-synced filter and pagination state (#2876)
@@ -79,9 +86,12 @@ export function CatalogContent() {
   const totalPages = gamesData ? Math.ceil(total / params.pageSize) : 0;
 
   // Navigate to game detail page
-  const handleGameClick = useCallback((gameId: string) => {
-    router.push(`/games/${gameId}`);
-  }, [router]);
+  const handleGameClick = useCallback(
+    (gameId: string) => {
+      router.push(`${gameDetailBasePath}/${gameId}`);
+    },
+    [router, gameDetailBasePath]
+  );
 
   // Handlers - update URL params (resets page to 1 for filter changes)
   const handleSearch = (term: string) => {
@@ -104,13 +114,20 @@ export function CatalogContent() {
     setParams({ maxPlayingTime: max, page: 1 });
   };
 
-  const handleSortChange = (sortBy: 'title' | 'complexity' | 'playingTime', descending: boolean) => {
+  const handleSortChange = (
+    sortBy: 'title' | 'complexity' | 'playingTime',
+    descending: boolean
+  ) => {
     setParams({ sortBy: sortBy as SortByField, sortDescending: descending });
   };
 
   // Map URL sortBy to CatalogFilters expected type
   const getFilterSortBy = (): 'title' | 'complexity' | 'playingTime' => {
-    if (params.sortBy === 'title' || params.sortBy === 'complexity' || params.sortBy === 'playingTime') {
+    if (
+      params.sortBy === 'title' ||
+      params.sortBy === 'complexity' ||
+      params.sortBy === 'playingTime'
+    ) {
       return params.sortBy;
     }
     return 'title';
@@ -126,7 +143,8 @@ export function CatalogContent() {
               Catalogo Giochi Condivisi
             </h1>
             <p className="text-muted-foreground">
-              Esplora {total} giochi disponibili. Aggiungi alla tua libreria per iniziare a chattare.
+              Esplora {total} giochi disponibili. Aggiungi alla tua libreria per iniziare a
+              chattare.
             </p>
           </div>
           <Link href="/library">
@@ -153,12 +171,14 @@ export function CatalogContent() {
               </div>
             ) : topRatedGames.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {topRatedGames.map((game) => (
+                {topRatedGames.map(game => (
                   <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">Nessun gioco con valutazione disponibile.</p>
+              <p className="text-muted-foreground text-sm">
+                Nessun gioco con valutazione disponibile.
+              </p>
             )}
           </section>
 
@@ -176,7 +196,7 @@ export function CatalogContent() {
               </div>
             ) : latestAddedGames.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {latestAddedGames.map((game) => (
+                {latestAddedGames.map(game => (
                   <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                 ))}
               </div>
@@ -251,7 +271,7 @@ export function CatalogContent() {
             {!isLoading && !error && games.length > 0 && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  {games.map((game) => (
+                  {games.map(game => (
                     <MeepleGameCatalogCard key={game.id} game={game} onClick={handleGameClick} />
                   ))}
                 </div>

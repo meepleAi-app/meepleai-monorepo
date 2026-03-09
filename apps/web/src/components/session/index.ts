@@ -1,5 +1,15 @@
 // Session Toolkit Components - Barrel Export
 
+export { LiveIndicator } from './LiveIndicator';
+export { LiveScoreSheet } from './LiveScoreSheet';
+export {
+  playerColorToHex,
+  toSession,
+  toParticipant,
+  toScoreEntry,
+  toScoreboardData,
+} from './adapters';
+
 export { SessionHeader } from './SessionHeader';
 export { ToolRail, BASE_TOOLS } from './ToolRail';
 export { SessionToolLayout } from './SessionToolLayout';
@@ -26,6 +36,20 @@ export { CounterTool } from './CounterTool';
 export type { CounterToolProps } from './CounterTool';
 export { WhiteboardTool } from './WhiteboardTool';
 export type { WhiteboardToolProps } from './WhiteboardTool';
+export { PhotoUploadModal } from './PhotoUploadModal';
+export type {
+  PhotoUploadModalProps,
+  SessionAttachmentDto,
+  AttachmentType,
+} from './PhotoUploadModal';
+export { SessionPhotoGallery } from './SessionPhotoGallery';
+export type { SessionPhotoGalleryProps, SessionAttachmentDetail } from './SessionPhotoGallery';
+export { ResumePhotoReview } from './ResumePhotoReview';
+export type { ResumePhotoReviewProps } from './ResumePhotoReview';
+export { CameraToolContent } from './CameraToolContent';
+export type { CameraToolContentProps } from './CameraToolContent';
+export { PauseSessionDialog } from './PauseSessionDialog';
+export type { PauseSessionDialogProps } from './PauseSessionDialog';
 
 export type {
   Participant,
@@ -63,4 +87,11 @@ export type {
   WhiteboardSSEEvent,
 } from './types';
 
-export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS, WHITEBOARD_COLORS, TOKEN_COLORS, THICKNESS_VALUES } from './types';
+export {
+  DICE_TYPES,
+  CARD_SUITS,
+  DEFAULT_WHEEL_COLORS,
+  WHITEBOARD_COLORS,
+  TOKEN_COLORS,
+  THICKNESS_VALUES,
+} from './types';

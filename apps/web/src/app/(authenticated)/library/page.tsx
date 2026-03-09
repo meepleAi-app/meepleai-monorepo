@@ -9,7 +9,7 @@
  *   ?tab=private        → Games      → GamesPageClient      (personal private games)
  *   ?tab=wishlist       → Wishlist
  *
- * MiniNav tabs are registered by layout.tsx (overridden by LibraryNavConfig in page).
+ * MiniNav tabs + ActionBar are registered by layout.tsx via LibraryNavConfig.
  */
 
 import { Suspense } from 'react';
@@ -17,12 +17,10 @@ import { Suspense } from 'react';
 import { RequireRole } from '@/components/auth/RequireRole';
 
 import { LibraryContent, LibraryLoadingSkeleton } from './_content';
-import { LibraryNavConfig } from './NavConfig';
 
 export default function LibraryPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
-      <LibraryNavConfig />
       <Suspense fallback={<LibraryLoadingSkeleton />}>
         <LibraryContent />
       </Suspense>

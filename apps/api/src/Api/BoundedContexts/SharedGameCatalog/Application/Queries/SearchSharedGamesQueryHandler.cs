@@ -126,6 +126,17 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             dbQuery = dbQuery.Where(g => g.PlayingTimeMinutes <= query.MaxPlayingTime.Value);
         }
 
+        // Complexity rating filter
+        if (query.MinComplexity.HasValue)
+        {
+            dbQuery = dbQuery.Where(g => g.ComplexityRating >= query.MinComplexity.Value);
+        }
+
+        if (query.MaxComplexity.HasValue)
+        {
+            dbQuery = dbQuery.Where(g => g.ComplexityRating <= query.MaxComplexity.Value);
+        }
+
         // Apply sorting
         dbQuery = query.SortBy switch
         {
@@ -140,6 +151,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             "CreatedAt" => query.SortDescending
                 ? dbQuery.OrderByDescending(g => g.CreatedAt).ThenBy(g => g.Title)
                 : dbQuery.OrderBy(g => g.CreatedAt).ThenBy(g => g.Title),
+
+            "ComplexityRating" => query.SortDescending
+                ? dbQuery.OrderByDescending(g => g.ComplexityRating).ThenBy(g => g.Title)
+                : dbQuery.OrderBy(g => g.ComplexityRating).ThenBy(g => g.Title),
 
             _ => query.SortDescending
                 ? dbQuery.OrderByDescending(g => g.Title)
@@ -199,7 +214,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var statusStr = query.Status?.ToString() ?? "null";
 
         // Create compact hash for long parameter combinations
-        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}";
+        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}";
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
 

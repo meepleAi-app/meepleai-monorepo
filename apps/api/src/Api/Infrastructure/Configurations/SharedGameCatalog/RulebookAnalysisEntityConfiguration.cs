@@ -66,6 +66,37 @@ internal sealed class RulebookAnalysisEntityConfiguration : IEntityTypeConfigura
             .HasDefaultValue("[]")
             .IsRequired();
 
+        // Issue #5448: Key concepts / glossary terms
+        builder.Property(a => a.KeyConceptsJson)
+            .HasColumnName("key_concepts_json")
+            .HasColumnType("jsonb")
+            .HasDefaultValue("[]")
+            .IsRequired();
+
+        // Issue #5449: Generated FAQ entries
+        builder.Property(a => a.GeneratedFaqsJson)
+            .HasColumnName("generated_faqs_json")
+            .HasColumnType("jsonb")
+            .HasDefaultValue("[]")
+            .IsRequired();
+
+        // Issue #5450: Game state tracking schema
+        builder.Property(a => a.GameStateSchemaJson)
+            .HasColumnName("game_state_schema_json")
+            .HasColumnType("jsonb");
+
+        // Issue #5452: Critical section quality gate
+        builder.Property(a => a.CompletionStatus)
+            .HasColumnName("completion_status")
+            .HasDefaultValue(0) // Complete by default
+            .IsRequired();
+
+        builder.Property(a => a.MissingSectionsJson)
+            .HasColumnName("missing_sections_json")
+            .HasColumnType("jsonb")
+            .HasDefaultValue("[]")
+            .IsRequired();
+
         builder.Property(a => a.ConfidenceScore)
             .HasColumnName("confidence_score")
             .HasPrecision(5, 4) // 0.0000 to 1.0000

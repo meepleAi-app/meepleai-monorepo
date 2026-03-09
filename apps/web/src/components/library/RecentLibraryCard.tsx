@@ -10,11 +10,8 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Library } from 'lucide-react';
-import Link from 'next/link';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Button } from '@/components/ui/primitives/button';
 import type { UserLibraryEntry } from '@/lib/api';
 
 export interface RecentLibraryCardProps {

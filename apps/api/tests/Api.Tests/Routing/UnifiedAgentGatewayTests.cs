@@ -18,7 +18,7 @@ public class UnifiedAgentGatewayTests
 
     [Theory]
     [InlineData("validate move e2 to e4", "ArbitroAgent")]
-    [InlineData("suggest move for my knight", "DecisoreAgent")]
+    [InlineData("suggest move for my knight", "StrategaAgent")]
     [InlineData("what are the rules for castling?", "TutorAgent")]
     [InlineData("how to play chess", "TutorAgent")]
     public void RouteQuery_ClearIntentQueries_RoutesToCorrectAgent(string query, string expectedAgent)
@@ -133,7 +133,7 @@ public class UnifiedAgentGatewayTests
         var testQueries = new Dictionary<string, string>
         {
             { "validate move", "ArbitroAgent" },
-            { "suggest move for my rook", "DecisoreAgent" },
+            { "suggest move for my rook", "StrategaAgent" },
             { "what is the rule for castling?", "TutorAgent" },
             { "tutorial for beginners", "TutorAgent" },
         };
@@ -163,13 +163,14 @@ public class UnifiedAgentGatewayTests
     [Fact]
     public void RoutingMetrics_ContainsAllAgents()
     {
-        var expectedAgents = new[] { "TutorAgent", "ArbitroAgent", "DecisoreAgent" };
+        var expectedAgents = new[] { "TutorAgent", "ArbitroAgent", "StrategaAgent", "NarratoreAgent" };
 
-        // Verify all three agents are present
-        Assert.Equal(3, expectedAgents.Length);
+        // Verify all four agents are present
+        Assert.Equal(4, expectedAgents.Length);
         Assert.Contains("TutorAgent", expectedAgents);
         Assert.Contains("ArbitroAgent", expectedAgents);
-        Assert.Contains("DecisoreAgent", expectedAgents);
+        Assert.Contains("StrategaAgent", expectedAgents);
+        Assert.Contains("NarratoreAgent", expectedAgents);
     }
 
     [Fact]

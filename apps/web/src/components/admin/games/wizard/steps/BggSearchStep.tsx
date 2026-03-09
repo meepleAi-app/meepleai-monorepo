@@ -8,18 +8,11 @@
 
 import { useState, useDeferredValue } from 'react';
 
-import {
-  SearchIcon,
-  CalendarIcon,
-  LoaderCircleIcon,
-  AlertTriangleIcon,
-} from 'lucide-react';
-
+import { SearchIcon, CalendarIcon, LoaderCircleIcon, AlertTriangleIcon } from 'lucide-react';
 import Image from 'next/image';
 
-import { Input } from '@/components/ui/primitives/input';
 import { Card, CardContent } from '@/components/ui/data-display/card';
-
+import { Input } from '@/components/ui/primitives/input';
 import { useSearchBggGames } from '@/hooks/queries/useSearchBggGames';
 import type { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 
@@ -51,7 +44,7 @@ export function BggSearchStep({ onGameSelected }: BggSearchStepProps) {
           type="text"
           placeholder="Search BoardGameGeek (e.g. Catan, Wingspan, Gloomhaven)..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={e => setQuery(e.target.value)}
           className="pl-10 h-11"
           autoFocus
         />
@@ -72,9 +65,7 @@ export function BggSearchStep({ onGameSelected }: BggSearchStepProps) {
         <div className="flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/20 p-3">
           <AlertTriangleIcon className="h-4 w-4 mt-0.5 text-red-500 shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-red-700 dark:text-red-400">
-              Search failed
-            </p>
+            <p className="font-medium text-red-700 dark:text-red-400">Search failed</p>
             <p className="text-red-600 dark:text-red-400/80">
               {error.message}. Retrying automatically...
             </p>
@@ -101,12 +92,8 @@ export function BggSearchStep({ onGameSelected }: BggSearchStepProps) {
             {data?.total ?? results.length} results found
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {results.map((game) => (
-              <BggGameCard
-                key={game.bggId}
-                game={game}
-                onSelect={onGameSelected}
-              />
+            {results.map(game => (
+              <BggGameCard key={game.bggId} game={game} onSelect={onGameSelected} />
             ))}
           </div>
         </div>
@@ -165,13 +152,9 @@ function BggGameCard({
                 {game.yearPublished}
               </span>
             )}
-            <span className="text-xs text-muted-foreground/60">
-              BGG #{game.bggId}
-            </span>
+            <span className="text-xs text-muted-foreground/60">BGG #{game.bggId}</span>
           </div>
-          <span className="text-xs text-muted-foreground capitalize">
-            {game.type}
-          </span>
+          <span className="text-xs text-muted-foreground capitalize">{game.type}</span>
         </div>
       </CardContent>
     </Card>

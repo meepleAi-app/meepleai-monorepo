@@ -1,6 +1,5 @@
 using Api.BoundedContexts.Administration.Domain.Enums;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
-using Auth = Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -11,14 +10,14 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 public sealed class Permission
 {
     public string FeatureName { get; }
-    public Auth.UserTier? RequiredTier { get; }
+    public UserTier? RequiredTier { get; }
     public Role? RequiredRole { get; }
     public PermissionLogic Logic { get; }
     public HashSet<string>? AllowedStates { get; }
 
     private Permission(
         string featureName,
-        Auth.UserTier? requiredTier,
+        UserTier? requiredTier,
         Role? requiredRole,
         PermissionLogic logic,
         HashSet<string>? allowedStates = null)
@@ -32,7 +31,7 @@ public sealed class Permission
 
     public static Permission CreateOr(
         string featureName,
-        Auth.UserTier? tier = null,
+        UserTier? tier = null,
         Role? role = null,
         HashSet<string>? allowedStates = null)
     {
@@ -44,7 +43,7 @@ public sealed class Permission
 
     public static Permission CreateAnd(
         string featureName,
-        Auth.UserTier tier,
+        UserTier tier,
         Role role,
         HashSet<string>? allowedStates = null)
     {
@@ -97,7 +96,7 @@ public enum PermissionLogic
 }
 
 public record PermissionContext(
-    Auth.UserTier UserTier,
+    UserTier UserTier,
     Role UserRole,
     UserAccountStatus UserStatus,
     string? ResourceState = null);

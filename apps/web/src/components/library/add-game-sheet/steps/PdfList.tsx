@@ -8,8 +8,8 @@
 
 import { FileText, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { cn } from '@/lib/utils';
 
 export interface PdfListProps {
   documents: PdfDocumentDto[];
@@ -64,12 +64,16 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
 
   return (
     <div className={cn('space-y-2', className)} data-testid="pdf-list">
-      {documents.map((doc) => {
+      {documents.map(doc => {
         const status = getStatusConfig(doc.processingStatus);
         const StatusIcon = status.icon;
-        const isProcessing = ['Processing', 'Extracting', 'Chunking', 'Embedding', 'Pending'].includes(
-          doc.processingStatus,
-        );
+        const isProcessing = [
+          'Processing',
+          'Extracting',
+          'Chunking',
+          'Embedding',
+          'Pending',
+        ].includes(doc.processingStatus);
 
         return (
           <div
@@ -88,7 +92,7 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
             <div
               className={cn(
                 'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
-                status.color,
+                status.color
               )}
             >
               <StatusIcon className={cn('h-3 w-3', isProcessing && 'animate-spin')} />

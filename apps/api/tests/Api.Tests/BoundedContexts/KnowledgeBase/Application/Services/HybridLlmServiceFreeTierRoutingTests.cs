@@ -9,7 +9,6 @@ using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.Tests.Constants;
-using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -33,9 +32,7 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
     private readonly Mock<ILlmClient> _ollamaMock = new();
     private readonly Mock<ILlmClient> _openRouterMock = new();
     private readonly Mock<ILlmRoutingStrategy> _routingStrategyMock = new();
-    private readonly Mock<ILlmCostLogRepository> _costLogMock = new();
     private readonly Mock<IAiModelConfigurationRepository> _modelConfigMock = new();
-    private readonly Mock<IPublisher> _publisherMock = new();
     private readonly Mock<IFreeModelQuotaTracker> _quotaTrackerMock = new();
     private readonly ILogger<HybridLlmService> _logger;
 
@@ -57,15 +54,6 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
             .Setup(r => r.GetActiveAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<Api.BoundedContexts.SystemConfiguration.Domain.Entities.AiModelConfiguration>());
 
-        // Cost logging no-op (not under test here)
-        _costLogMock
-            .Setup(r => r.LogCostAsync(
-                It.IsAny<Guid?>(), It.IsAny<string>(),
-                It.IsAny<LlmCostCalculation>(), It.IsAny<string>(), It.IsAny<bool>(),
-                It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
         // Quota tracker defaults: RPD not exhausted, recording is a no-op
         _quotaTrackerMock
             .Setup(t => t.IsRpdExhaustedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -81,7 +69,6 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
         new HybridLlmService(
             new[] { _ollamaMock.Object, _openRouterMock.Object },
             _routingStrategyMock.Object,
-            _costLogMock.Object,
             _logger,
             Options.Create(new AiProviderSettings
             {
@@ -94,7 +81,6 @@ public sealed class HybridLlmServiceFreeTierRoutingTests
                 FallbackChain = ["Ollama", "OpenRouter"]
             }),
             _modelConfigMock.Object,
-            _publisherMock.Object,
             freeModelQuotaTracker: _quotaTrackerMock.Object);
 
     private static LlmCompletionResult SuccessResult(string provider) =>

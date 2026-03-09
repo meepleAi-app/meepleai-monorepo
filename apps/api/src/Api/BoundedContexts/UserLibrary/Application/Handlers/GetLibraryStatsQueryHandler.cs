@@ -21,20 +21,16 @@ internal class GetLibraryStatsQueryHandler : IQueryHandler<GetLibraryStatsQuery,
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Issue #3651: Parallel fetch for all stats
-        var totalGamesTask = _libraryRepository.GetUserLibraryCountAsync(query.UserId, cancellationToken);
-        var favoriteGamesTask = _libraryRepository.GetFavoriteCountAsync(query.UserId, cancellationToken);
-        var privatePdfsTask = _libraryRepository.GetPrivatePdfCountAsync(query.UserId, cancellationToken);
-        var dateRangeTask = _libraryRepository.GetLibraryDateRangeAsync(query.UserId, cancellationToken);
-
-        await Task.WhenAll(totalGamesTask, favoriteGamesTask, privatePdfsTask, dateRangeTask).ConfigureAwait(false);
-
-        var (oldest, newest) = await dateRangeTask.ConfigureAwait(false);
+        // Sequential fetch — DbContext is not thread-safe, cannot use Task.WhenAll
+        var totalGames = await _libraryRepository.GetUserLibraryCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+        var favoriteGames = await _libraryRepository.GetFavoriteCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+        var privatePdfs = await _libraryRepository.GetPrivatePdfCountAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+        var (oldest, newest) = await _libraryRepository.GetLibraryDateRangeAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         return new UserLibraryStatsDto(
-            TotalGames: await totalGamesTask.ConfigureAwait(false),
-            FavoriteGames: await favoriteGamesTask.ConfigureAwait(false),
-            PrivatePdfs: await privatePdfsTask.ConfigureAwait(false),
+            TotalGames: totalGames,
+            FavoriteGames: favoriteGames,
+            PrivatePdfs: privatePdfs,
             OldestAddedAt: oldest,
             NewestAddedAt: newest
         );

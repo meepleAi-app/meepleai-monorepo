@@ -10,7 +10,7 @@
  * - Select all / deselect all toggle
  * - Clear selection button
  * - Mobile vs desktop rendering
- * - Orange floating bar styling (Issue #2868)
+ * - Glassmorphism design + safe area (Mobile UX #18)
  *
  * Target: ≥90% coverage
  */
@@ -168,10 +168,9 @@ describe('BulkActionBar - Rendering', () => {
   });
 
   it('does not render when selectedCount is 0', () => {
-    const { container } = render(
-      <BulkActionBar {...defaultProps} selectedCount={0} />,
-      { wrapper: createWrapper() }
-    );
+    const { container } = render(<BulkActionBar {...defaultProps} selectedCount={0} />, {
+      wrapper: createWrapper(),
+    });
 
     expect(container.firstChild).toBeNull();
   });
@@ -203,10 +202,9 @@ describe('BulkActionBar - Clear Selection', () => {
     const user = userEvent.setup();
     const onClearSelection = vi.fn();
 
-    render(
-      <BulkActionBar {...defaultProps} onClearSelection={onClearSelection} />,
-      { wrapper: createWrapper() }
-    );
+    render(<BulkActionBar {...defaultProps} onClearSelection={onClearSelection} />, {
+      wrapper: createWrapper(),
+    });
 
     await user.click(screen.getByRole('button', { name: /Esci dalla selezione/i }));
 
@@ -235,14 +233,9 @@ describe('BulkActionBar - Select All Toggle', () => {
 
   it('shows "Deseleziona tutti" when all selected', async () => {
     const user = userEvent.setup();
-    render(
-      <BulkActionBar
-        {...defaultProps}
-        selectedCount={3}
-        selectedIds={allGameIds}
-      />,
-      { wrapper: createWrapper() }
-    );
+    render(<BulkActionBar {...defaultProps} selectedCount={3} selectedIds={allGameIds} />, {
+      wrapper: createWrapper(),
+    });
 
     const button = screen.getByRole('button', { name: /Deseleziona tutti/i });
     expect(button).toBeInTheDocument();
@@ -264,10 +257,9 @@ describe('BulkActionBar - Bulk Favorite', () => {
     const user = userEvent.setup();
     const onClearSelection = vi.fn();
 
-    render(
-      <BulkActionBar {...defaultProps} onClearSelection={onClearSelection} />,
-      { wrapper: createWrapper() }
-    );
+    render(<BulkActionBar {...defaultProps} onClearSelection={onClearSelection} />, {
+      wrapper: createWrapper(),
+    });
 
     // Click desktop favorite button
     const buttons = screen.getAllByRole('button', { name: /Preferiti/i });
@@ -292,9 +284,7 @@ describe('BulkActionBar - Bulk Favorite', () => {
   });
 
   it('shows warning toast on partial success', async () => {
-    mockMutateAsync
-      .mockResolvedValueOnce({})
-      .mockRejectedValueOnce(new Error('Failed'));
+    mockMutateAsync.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('Failed'));
 
     const user = userEvent.setup();
 
@@ -342,10 +332,9 @@ describe('BulkActionBar - Bulk Change State', () => {
     const user = userEvent.setup();
     const onClearSelection = vi.fn();
 
-    render(
-      <BulkActionBar {...defaultProps} onClearSelection={onClearSelection} />,
-      { wrapper: createWrapper() }
-    );
+    render(<BulkActionBar {...defaultProps} onClearSelection={onClearSelection} />, {
+      wrapper: createWrapper(),
+    });
 
     // Open change state dropdown (desktop)
     const changeStateButtons = screen.getAllByRole('button', { name: /Cambia Stato/i });
@@ -545,7 +534,7 @@ describe('BulkActionBar - Bulk Export', () => {
     await user.click(getMenuItem(/csv - base/i));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith('Errore durante l\'esportazione');
+      expect(mockToastError).toHaveBeenCalledWith("Errore durante l'esportazione");
     });
   });
 });
@@ -574,26 +563,47 @@ describe('BulkActionBar - Remove Button', () => {
 });
 
 // ============================================================================
-// Styling Tests (Issue #2868)
+// Styling Tests (Mobile UX #18 - Glassmorphism + Safe Area)
 // ============================================================================
 
 describe('BulkActionBar - Styling', () => {
   beforeEach(resetMocks);
 
-  it('renders with orange background and white border', () => {
-    const { container } = render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+  it('renders with glassmorphism design', () => {
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
 
-    // Find the main floating bar div
-    const floatingBar = container.querySelector('.bg-orange-500');
-    expect(floatingBar).toBeInTheDocument();
-    expect(floatingBar).toHaveClass('border-2');
-    expect(floatingBar).toHaveClass('border-white');
+    const bar = screen.getByTestId('bulk-action-bar');
+    const innerCard = bar.querySelector('.backdrop-blur-md');
+    expect(innerCard).toBeInTheDocument();
+    expect(innerCard).toHaveClass('rounded-2xl');
   });
 
-  it('renders selection counter with white text', () => {
+  it('has safe area bottom positioning', () => {
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const bar = screen.getByTestId('bulk-action-bar');
+    expect(bar.className).toContain('safe-area-inset-bottom');
+  });
+
+  it('renders selection counter with foreground text', () => {
     render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
 
     const counter = screen.getByText('2 selezionati');
-    expect(counter).toHaveClass('text-white');
+    expect(counter).toHaveClass('text-foreground');
+  });
+
+  it('renders with slide-in animation', () => {
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const bar = screen.getByTestId('bulk-action-bar');
+    expect(bar).toHaveClass('animate-in');
+  });
+
+  it('mobile action buttons have 44px touch targets', () => {
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const bar = screen.getByTestId('bulk-action-bar');
+    const mobileButtons = bar.querySelectorAll('.min-w-\\[44px\\]');
+    expect(mobileButtons.length).toBeGreaterThanOrEqual(3);
   });
 });

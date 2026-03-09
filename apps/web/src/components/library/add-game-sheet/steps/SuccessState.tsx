@@ -7,8 +7,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-import Link from 'next/link';
+
 import { CheckCircle2, Library, ExternalLink, PlusCircle } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 
@@ -29,7 +30,7 @@ export interface SuccessStateProps {
 
 export function SuccessState({
   gameTitle,
-  libraryEntryId,
+  libraryEntryId: _libraryEntryId,
   gameId,
   onAddAnother,
   onAutoClose,
@@ -62,11 +63,7 @@ export function SuccessState({
 
       {/* Navigation links */}
       <div className="flex flex-col gap-2.5 w-full max-w-xs">
-        <Button
-          variant="default"
-          className="w-full gap-2 bg-teal-600 hover:bg-teal-700"
-          asChild
-        >
+        <Button variant="default" className="w-full gap-2 bg-teal-600 hover:bg-teal-700" asChild>
           <Link href="/library">
             <Library className="h-4 w-4" />
             Vai alla collezione

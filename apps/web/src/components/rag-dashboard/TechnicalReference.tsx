@@ -148,7 +148,7 @@ const INFRASTRUCTURE_SERVICES: InfraService[] = [
     name: 'Orchestrator (LangGraph)',
     container: 'meepleai-orchestrator',
     port: '8004',
-    description: 'Multi-agent coordination: Tutor, Arbitro, Decisore',
+    description: 'Multi-agent coordination: Tutor, Arbitro, Stratega, Narratore',
     icon: <Network className="h-5 w-5" />,
     color: 'hsl(320 76% 50%)',
   },

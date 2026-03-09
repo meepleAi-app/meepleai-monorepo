@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;

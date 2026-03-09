@@ -57,17 +57,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-import { cva, type VariantProps } from 'class-variance-authority';
+import { type VariantProps } from 'class-variance-authority';
 import { Info } from 'lucide-react';
-import Image from 'next/image';
 
-import { DiceIcon3D } from '@/components/ui/icons/dice-icon-3d';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 import { EntityLinkBadge } from './entity-link/entity-link-badge';
@@ -87,6 +79,7 @@ import { ChatUnreadBadge } from './meeple-card-features/ChatUnreadBadge';
 import { DocumentStatusBadge } from './meeple-card-features/DocumentStatusBadge';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
 import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
+import { GameBackContent } from './meeple-card-features/GameBackContent';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 // Issue #4689: Navigation footer
@@ -106,11 +99,26 @@ import { TimeTravelOverlay } from './meeple-card-features/TimeTravelOverlay';
 import { WishlistButton } from './meeple-card-features/WishlistButton';
 // Issue #4030: New action components
 import { MeepleCardInfoButton } from './meeple-card-info-button';
+import {
+  EntityIndicator,
+  VerticalTagStack,
+  CoverImage,
+  MetadataChips,
+  ActionButtons,
+  RatingDisplay,
+  MeepleCardSkeleton,
+} from './meeple-card-parts';
 import { MeepleCardQuickActions } from './meeple-card-quick-actions';
+import {
+  entityColors,
+  DRAWER_ENTITY_TYPE_MAP,
+  meepleCardVariants,
+  contentVariants,
+} from './meeple-card-styles';
 
 // Issue #5025: Drawer integration
 import type { EntityLinkType } from './entity-link/entity-link-types';
-import type { DrawerEntityType } from './extra-meeple-card/ExtraMeepleCardDrawer';
+import type { MeepleEntityType, MeepleCardVariant } from './meeple-card-styles';
 
 // Issue #5129: EntityLink components
 
@@ -126,27 +134,6 @@ import type { LucideIcon } from 'lucide-react';
 // ============================================================================
 
 /**
- * Supported entity types with semantic colors
- * Issue #4030: Extended from 5 to 7 types (removed collection, added session/agent/document/chatSession)
- */
-export type MeepleEntityType =
-  | 'game'
-  | 'player'
-  | 'session'
-  | 'agent'
-  | 'document'
-  | 'chatSession'
-  | 'event'
-  | 'toolkit'
-  | 'custom'
-  | 'kb_card';
-
-/**
- * Layout variant options
- */
-export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero';
-
-/**
  * Metadata item for displaying card information
  */
 export interface MeepleCardMetadata {
@@ -156,6 +143,8 @@ export interface MeepleCardMetadata {
   label?: string;
   /** Alternative: just a value (for icon + value pairs) */
   value?: string;
+  /** Optional click handler (makes metadata chip interactive) */
+  onClick?: () => void;
 }
 
 /**
@@ -397,6 +386,13 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   /** Session back content data (statistics, ranking, timeline) */
   sessionBackData?: import('./meeple-card-features/session-types').SessionBackData;
 
+  // ========== GAME BACK CONTENT ==========
+
+  /** Game back content data (stats, KB preview, quick actions) */
+  gameBackData?: import('./meeple-card-features/GameBackContent').GameBackData;
+  /** Game back content action handlers */
+  gameBackActions?: import('./meeple-card-features/GameBackContent').GameBackActions;
+
   // ========== SNAPSHOT HISTORY + TIME TRAVEL (Issue #4758) ==========
 
   /** Session snapshots for history slider */
@@ -409,526 +405,6 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   isTimeTravelMode?: boolean;
   /** Toggle time travel mode */
   onTimeTravelToggle?: (enabled: boolean) => void;
-}
-
-// ============================================================================
-// Entity Color Configuration
-// ============================================================================
-
-const entityColors: Record<MeepleEntityType, { hsl: string; name: string }> = {
-  game: { hsl: '25 95% 45%', name: 'Game' }, // Orange
-  player: { hsl: '262 83% 58%', name: 'Player' }, // Purple
-  session: { hsl: '240 60% 55%', name: 'Session' }, // Indigo
-  agent: { hsl: '38 92% 50%', name: 'Agent' }, // Amber
-  document: { hsl: '210 40% 55%', name: 'Document' }, // Slate
-  chatSession: { hsl: '220 80% 55%', name: 'Chat' }, // Blue
-  event: { hsl: '350 89% 60%', name: 'Event' }, // Rose
-  toolkit: { hsl: '142 70% 45%', name: 'Toolkit' }, // Green
-  custom: { hsl: '220 70% 50%', name: 'Custom' }, // Blue (default)
-  kb_card: { hsl: '174 60% 40%', name: 'KB Card' }, // Teal (Issue #5191)
-};
-
-// Map MeepleEntityType → DrawerEntityType for ExtraMeepleCardDrawer (Issue #5025)
-// Entities absent from this map do not render an info button.
-const DRAWER_ENTITY_TYPE_MAP: Partial<Record<MeepleEntityType, DrawerEntityType>> = {
-  game: 'game',
-  agent: 'agent',
-  chatSession: 'chat',
-  document: 'kb',
-  kb_card: 'kb',
-};
-
-// ============================================================================
-// CVA Variants
-// ============================================================================
-
-const meepleCardVariants = cva(
-  // Base styles for all variants — v2 warm styling (Issue #4604)
-  [
-    'group relative overflow-hidden cursor-pointer',
-    'transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-  ],
-  {
-    variants: {
-      variant: {
-        grid: [
-          'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card border border-border/50',
-          '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Glassmorphism via ::before pseudo in globals.css
-        ],
-        list: [
-          'flex flex-row items-center gap-4 p-3 rounded-xl',
-          'bg-card border border-border/50',
-          '[box-shadow:var(--shadow-warm-sm)] hover:[box-shadow:var(--shadow-warm-md)]',
-          'hover:translate-x-1',
-        ],
-        compact: [
-          'flex flex-row items-center gap-2 p-2 rounded-lg',
-          'bg-card/80 border border-border/30',
-          'hover:bg-card',
-        ],
-        featured: [
-          'flex flex-col rounded-2xl overflow-hidden',
-          'bg-card border border-border/50',
-          '[box-shadow:var(--shadow-warm-md)] hover:[box-shadow:var(--shadow-warm-xl)]',
-          // Glassmorphism via ::before pseudo in globals.css
-        ],
-        hero: [
-          'relative flex flex-col rounded-3xl overflow-hidden',
-          'min-h-[320px]',
-          '[box-shadow:var(--shadow-warm-xl)] hover:[box-shadow:var(--shadow-warm-2xl)]',
-          'hover:scale-[1.01]',
-        ],
-      },
-    },
-    defaultVariants: {
-      variant: 'grid',
-    },
-  }
-);
-
-const coverVariants = cva('relative overflow-hidden', {
-  variants: {
-    variant: {
-      grid: 'rounded-t-2xl', // aspect-ratio applied conditionally per entity type
-      list: 'w-16 h-16 rounded-lg flex-shrink-0',
-      compact: 'w-10 h-10 rounded-md flex-shrink-0',
-      featured: '', // aspect-ratio applied conditionally per entity type
-      hero: 'absolute inset-0',
-    },
-  },
-  defaultVariants: { variant: 'grid' },
-});
-
-const contentVariants = cva('', {
-  variants: {
-    variant: {
-      grid: 'flex-1 flex flex-col px-3.5 py-3',
-      list: 'flex-1 min-w-0 py-1',
-      compact: 'flex-1 min-w-0',
-      featured: 'flex-1 flex flex-col px-5 py-4',
-      hero: 'relative z-10 mt-auto flex flex-col justify-end p-6',
-    },
-  },
-  defaultVariants: { variant: 'grid' },
-});
-
-// ============================================================================
-// Subcomponents
-// ============================================================================
-
-/**
- * Entity type indicator (left border + badge)
- */
-function EntityIndicator({
-  entity,
-  variant,
-  customColor,
-  className,
-}: {
-  entity: MeepleEntityType;
-  variant: MeepleCardVariant;
-  customColor?: string;
-  className?: string;
-}) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const color = customColor || entityColors[entity].hsl;
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const name = entityColors[entity].name;
-
-  // Hero/featured uses ribbon, others use left border
-  if (variant === 'hero') {
-    return (
-      <span
-        className={cn(
-          'absolute top-4 right-[-2rem] z-20',
-          'py-1 px-10 text-xs font-bold uppercase tracking-wider',
-          'text-white shadow-md rotate-45',
-          className
-        )}
-        style={{ backgroundColor: `hsl(${color})` }}
-      >
-        {name}
-      </span>
-    );
-  }
-
-  if (variant === 'featured' || variant === 'grid') {
-    // Left border accent (4px → 6px on hover) — v2 style (Issue #4604)
-    return (
-      <span
-        className={cn(
-          'absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-250',
-          className
-        )}
-        style={{ backgroundColor: `hsl(${color})` }}
-        aria-hidden="true"
-      />
-    );
-  }
-
-  // List/compact: dot indicator
-  return (
-    <span
-      className={cn('w-2 h-2 rounded-full flex-shrink-0', className)}
-      style={{ backgroundColor: `hsl(${color})` }}
-      aria-hidden="true"
-    />
-  );
-}
-
-/**
- * Vertical tag stack (top-left of card)
- * Issue #4062: Stacks entity badge, status, and custom badge vertically
- * with compact sizing (80px max), truncation, and hover tooltips.
- */
-function VerticalTagStack({
-  entity,
-  customColor,
-  status,
-  showStatusIcon,
-  badge,
-}: {
-  entity: MeepleEntityType;
-  customColor?: string;
-  status?: MeepleCardProps['status'];
-  showStatusIcon?: boolean;
-  badge?: string;
-}) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const color = customColor || entityColors[entity].hsl;
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const name = entityColors[entity].name;
-
-  return (
-    <TooltipProvider delayDuration={300}>
-      <div
-        className="absolute top-2 left-2.5 z-10 flex flex-col gap-1.5"
-        data-testid="meeple-card-tag-stack"
-      >
-        {/* Entity type badge (highest priority) */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              className="max-w-[80px] truncate px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.04em] text-white rounded-[6px] shadow-sm cursor-default"
-              style={{ backgroundColor: `hsl(${color})` }}
-            >
-              {name}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            {name}
-          </TooltipContent>
-        </Tooltip>
-
-        {/* Status badge */}
-        {status && (
-          <StatusBadge status={status} showIcon={showStatusIcon} className="max-w-[80px]" />
-        )}
-
-        {/* Custom badge */}
-        {badge && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="max-w-[80px] truncate bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-muted-foreground border border-border/50 cursor-default">
-                {badge}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>
-              {badge}
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    </TooltipProvider>
-  );
-}
-
-/**
- * Cover image with optional gradient overlay and entity-specific placeholders
- */
-function CoverImage({
-  src,
-  alt,
-  variant,
-  entity,
-  customColor,
-}: {
-  src?: string;
-  alt: string;
-  variant: MeepleCardVariant;
-  entity: MeepleEntityType;
-  customColor?: string;
-}) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const color = customColor || entityColors[entity].hsl;
-
-  // Treat placehold.co URLs as "no image" - they return SVGs that Next.js Image can't optimize
-  const isPlaceholder = src?.includes('placehold.co');
-  const hasImage = src && !isPlaceholder;
-
-  // v2: Entity-specific aspect ratios (Issue #4604)
-  // chatSession uses shorter 4:3 ratio (like playing card), others use tall 7:10
-  const aspectRatioClass =
-    variant === 'grid'
-      ? entity === 'chatSession'
-        ? 'aspect-[4/3]'
-        : 'aspect-[7/10]'
-      : variant === 'featured'
-        ? entity === 'chatSession'
-          ? 'aspect-[3/1]'
-          : 'aspect-[16/9]'
-        : '';
-
-  const showOverlay = variant === 'hero' || variant === 'featured' || variant === 'grid';
-
-  // v2: Entity-specific gradient backgrounds for placeholders
-  const entityGradients: Record<MeepleEntityType, string> = {
-    game: 'linear-gradient(135deg, hsl(30,60%,85%), hsl(20,70%,75%))',
-    chatSession: 'linear-gradient(135deg, hsl(220,30%,88%), hsl(220,50%,75%))',
-    agent: 'linear-gradient(135deg, hsl(38,40%,85%), hsl(38,60%,70%))',
-    player: 'linear-gradient(135deg, hsl(262,30%,85%), hsl(262,50%,75%))',
-    session: 'linear-gradient(135deg, hsl(240,30%,85%), hsl(240,40%,70%))',
-    event: 'linear-gradient(135deg, hsl(350,40%,85%), hsl(350,60%,70%))',
-    toolkit: 'linear-gradient(135deg, hsl(142,30%,85%), hsl(142,50%,75%))',
-    document: 'linear-gradient(135deg, hsl(210,30%,85%), hsl(210,40%,70%))',
-    custom: 'linear-gradient(135deg, hsl(220,30%,85%), hsl(220,40%,70%))',
-    kb_card: 'linear-gradient(135deg, hsl(174,30%,85%), hsl(174,50%,70%))',
-  };
-
-  // Entity emoji fallbacks (when no image)
-  const entityEmoji: Record<MeepleEntityType, string> = {
-    game: '', // Uses DiceIcon3D component instead
-    chatSession: '💬',
-    agent: '🤖',
-    player: '👤',
-    session: '🎲',
-    event: '🏆',
-    toolkit: '🛠️',
-    document: '📄',
-    custom: '🎲',
-    kb_card: '📋',
-  };
-
-  return (
-    <div className={cn(coverVariants({ variant }), aspectRatioClass)}>
-      {hasImage ? (
-        /* Real image (game cover, agent icon, avatar, etc.) */
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          sizes={
-            variant === 'hero'
-              ? '100vw'
-              : variant === 'featured'
-                ? '(max-width: 768px) 100vw, 50vw'
-                : variant === 'grid'
-                  ? '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
-                  : '64px'
-          }
-          className={cn(
-            'object-cover transition-transform duration-500',
-            'group-hover:scale-[1.06]'
-          )}
-          loading="lazy"
-        />
-      ) : (
-        /* v2 Placeholder: gradient background + entity icon */
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{
-            // eslint-disable-next-line security/detect-object-injection
-            background: entityGradients[entity],
-          }}
-        >
-          {entity === 'game' ? (
-            <DiceIcon3D
-              size={variant === 'grid' ? 'md' : variant === 'featured' ? 'lg' : 'sm'}
-              className="opacity-60"
-            />
-          ) : (
-            <span className="text-6xl opacity-50" aria-hidden="true">
-              {entityEmoji[entity]}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* v2: Entity-colored gradient overlay (stronger than before) */}
-      {showOverlay && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              variant === 'hero'
-                ? `linear-gradient(180deg, transparent 0%, hsla(${color}, 0.1) 30%, hsla(${color}, 0.6) 70%, hsla(${color}, 0.9) 100%)`
-                : variant === 'featured'
-                  ? `linear-gradient(180deg, transparent 40%, hsla(${color}, 0.15) 70%, hsla(${color}, 0.4) 100%)`
-                  : `linear-gradient(to top, hsla(${color}, 0.15), transparent 60%)`,
-          }}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Shimmer effect on hover — v2 (Issue #4604) */}
-      {showOverlay && (
-        <div
-          className="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-          style={{
-            background:
-              'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)',
-            transform: 'translateX(-100%)',
-          }}
-          aria-hidden="true"
-        />
-      )}
-    </div>
-  );
-}
-
-/**
- * Metadata chips display
- */
-function MetadataChips({
-  metadata,
-  variant,
-  className,
-}: {
-  metadata: MeepleCardMetadata[];
-  variant: MeepleCardVariant;
-  className?: string;
-}) {
-  const isHero = variant === 'hero';
-  const chipClass = isHero
-    ? 'text-white/90 text-sm'
-    : 'text-muted-foreground text-xs bg-muted px-2 py-0.5 rounded-md';
-
-  return (
-    <div className={cn('flex flex-wrap gap-2', className)}>
-      {metadata.map((item, index) => (
-        <span key={index} className={cn('flex items-center gap-1', chipClass)}>
-          {item.icon && <item.icon className="w-3 h-3 opacity-70" aria-hidden="true" />}
-          <span>{item.label || item.value}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Action buttons for featured/hero variants
- */
-function ActionButtons({
-  actions,
-  entity,
-  customColor,
-  className,
-}: {
-  actions: MeepleCardAction[];
-  entity: MeepleEntityType;
-  customColor?: string;
-  className?: string;
-}) {
-  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
-  const color = customColor || entityColors[entity].hsl;
-
-  return (
-    <div className={cn('flex gap-2 mt-3 min-w-0', className)}>
-      {actions.map((action, index) => (
-        <button
-          key={index}
-          onClick={e => {
-            e.stopPropagation();
-            action.onClick?.();
-          }}
-          disabled={action.disabled}
-          title={action.label}
-          className={cn(
-            'flex-1 min-w-0 py-2 px-3 md:px-4 rounded-lg font-quicksand font-semibold',
-            'text-xs md:text-sm truncate',
-            'transition-all duration-200 hover:-translate-y-0.5',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0',
-            action.primary
-              ? 'text-white shadow-md hover:shadow-lg'
-              : 'bg-muted text-foreground hover:bg-muted/80'
-          )}
-          style={action.primary ? { backgroundColor: `hsl(${color})` } : undefined}
-        >
-          {action.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Rating stars display
- */
-function RatingDisplay({
-  rating,
-  max = 5,
-  className,
-}: {
-  rating: number;
-  max?: number;
-  className?: string;
-}) {
-  // Convert to 0-5 scale if needed
-  const normalized = max === 10 ? rating / 2 : rating;
-  const fullStars = Math.floor(normalized);
-  const hasHalfStar = normalized % 1 >= 0.5;
-
-  return (
-    <div
-      className={cn('flex items-center gap-0.5', className)}
-      aria-label={`Rating: ${rating} out of ${max}`}
-    >
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span
-          key={i}
-          className={cn(
-            'text-[0.78rem]',
-            i < fullStars
-              ? 'text-amber-400'
-              : i === fullStars && hasHalfStar
-                ? 'text-amber-400/50'
-                : 'text-muted-foreground/30'
-          )}
-        >
-          {'\u2605'}
-        </span>
-      ))}
-      <span className="text-[0.7rem] font-semibold text-muted-foreground ml-1">
-        {rating.toFixed(1)}
-      </span>
-    </div>
-  );
-}
-
-/**
- * Loading skeleton
- */
-function MeepleCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant }) {
-  return (
-    <div
-      className={cn(meepleCardVariants({ variant }), 'animate-pulse pointer-events-none')}
-      data-testid="meeple-card-skeleton"
-    >
-      <div className={cn(coverVariants({ variant }), 'bg-muted')} />
-      <div className={contentVariants({ variant })}>
-        <div className="h-5 bg-muted rounded w-3/4 mb-2" />
-        <div className="h-3 bg-muted rounded w-1/2 mb-3" />
-        <div className="flex gap-2">
-          <div className="h-4 bg-muted rounded w-12" />
-          <div className="h-4 bg-muted rounded w-12" />
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ============================================================================
@@ -1018,13 +494,15 @@ export const MeepleCard = React.memo(function MeepleCard({
   sessionStatus,
   sessionPlayers,
   sessionRoundScores,
-  sessionScoringConfig,
+  sessionScoringConfig: _sessionScoringConfig,
   sessionTurn,
   sessionActions,
   isSessionHost,
   onPrevTurn,
   onNextTurn,
   sessionBackData,
+  gameBackData,
+  gameBackActions,
   sessionSnapshots,
   currentSnapshotIndex,
   onSnapshotSelect,
@@ -1360,7 +838,7 @@ export const MeepleCard = React.memo(function MeepleCard({
                   ? 'text-base'
                   : variant === 'compact'
                     ? 'text-sm'
-                    : 'text-[0.95rem] mb-0.5',
+                    : 'text-[0.8rem] sm:text-[0.95rem] mb-0.5',
             variant !== 'hero' && 'text-card-foreground',
             variant === 'grid' && 'truncate',
             variant === 'list' && 'line-clamp-2'
@@ -1376,7 +854,7 @@ export const MeepleCard = React.memo(function MeepleCard({
               variant === 'hero'
                 ? 'text-white/85 text-sm mb-2'
                 : variant === 'grid'
-                  ? 'text-muted-foreground text-[0.78rem] mt-px mb-1 truncate'
+                  ? 'text-muted-foreground text-[0.7rem] sm:text-[0.78rem] mt-px mb-0.5 sm:mb-1 truncate'
                   : 'text-muted-foreground text-sm mb-2',
               variant === 'compact' && 'text-xs mb-0'
             )}
@@ -1586,15 +1064,37 @@ export const MeepleCard = React.memo(function MeepleCard({
           )}
           data-testid="meeple-card-footer"
         >
-          {metadata.map((item, index) => (
-            <span
-              key={index}
-              className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
-            >
-              {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
-              <span className="font-nunito">{item.label || item.value}</span>
-            </span>
-          ))}
+          {metadata.map((item, index) => {
+            const chipContent = (
+              <>
+                {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+                <span className="font-nunito">{item.label || item.value}</span>
+              </>
+            );
+            if (item.onClick) {
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={e => {
+                    e.stopPropagation();
+                    item.onClick!();
+                  }}
+                >
+                  {chipContent}
+                </button>
+              );
+            }
+            return (
+              <span
+                key={index}
+                className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-foreground/65 dark:text-foreground/60"
+              >
+                {chipContent}
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -1726,7 +1226,8 @@ export const MeepleCard = React.memo(function MeepleCard({
 
   // Feature: Wrap with FlipCard if enabled (takes priority over HoverPreview)
   // Session entities can flip with sessionBackData even without flipData
-  if (flippable && (flipData || sessionBackData)) {
+  // Game entities can flip with gameBackData even without flipData
+  if (flippable && (flipData || sessionBackData || gameBackData)) {
     // Session entities use custom back content (Issue #4752)
     const sessionBack =
       entity === 'session' && sessionStatus && sessionPlayers && sessionBackData ? (
@@ -1740,10 +1241,22 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       ) : undefined;
 
+    // Game entities use GameBackContent for stats + KB preview + actions
+    const gameBack =
+      entity === 'game' && gameBackData ? (
+        <GameBackContent
+          data={gameBackData}
+          actions={gameBackActions}
+          entityColor={color}
+          title={title}
+          detailHref={detailHref}
+        />
+      ) : undefined;
+
     return (
       <FlipCard
         flipData={flipData}
-        customBackContent={sessionBack}
+        customBackContent={sessionBack ?? gameBack}
         variant={variant}
         isFlipped={isFlipped}
         onFlip={onFlip}
@@ -1780,7 +1293,9 @@ export const MeepleCard = React.memo(function MeepleCard({
 // Exports
 // ============================================================================
 
-export { MeepleCardSkeleton, entityColors };
+export { MeepleCardSkeleton } from './meeple-card-parts';
+export { entityColors } from './meeple-card-styles';
+export type { MeepleEntityType, MeepleCardVariant } from './meeple-card-styles';
 export type { MeepleCardMetadata as MeepleMetadata, MeepleCardAction as MeepleAction };
 export type { MeepleCardFlipData } from './meeple-card-features/FlipCard';
 export type { AgentStatus } from './meeple-card-features/AgentStatusBadge';

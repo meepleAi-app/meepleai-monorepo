@@ -19,6 +19,7 @@ namespace Api.Tests.Unit.Administration.Infrastructure.Scheduling;
 public sealed class BatchJobProcessorJobTests
 {
     private readonly Mock<IBatchJobRepository> _repositoryMock;
+    private readonly Mock<IServiceProvider> _serviceProviderMock;
     private readonly Mock<ILogger<BatchJobProcessorJob>> _loggerMock;
     private readonly Mock<IJobExecutionContext> _contextMock;
     private readonly BatchJobProcessorJob _processor;
@@ -27,6 +28,7 @@ public sealed class BatchJobProcessorJobTests
     public BatchJobProcessorJobTests()
     {
         _repositoryMock = new Mock<IBatchJobRepository>();
+        _serviceProviderMock = new Mock<IServiceProvider>();
         _loggerMock = new Mock<ILogger<BatchJobProcessorJob>>();
         _contextMock = new Mock<IJobExecutionContext>();
 
@@ -34,6 +36,7 @@ public sealed class BatchJobProcessorJobTests
 
         _processor = new BatchJobProcessorJob(
             _repositoryMock.Object,
+            _serviceProviderMock.Object,
             _loggerMock.Object
         );
     }

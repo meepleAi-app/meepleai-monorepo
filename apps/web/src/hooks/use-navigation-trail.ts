@@ -135,7 +135,7 @@ export function useNavigationTrail(): UseNavigationTrailReturn {
       return;
     }
     // Check if we're navigating to a step already in the trail
-    const existingIndex = current.findIndex((s) => s.href === step.href);
+    const existingIndex = current.findIndex(s => s.href === step.href);
     if (existingIndex >= 0) {
       // Truncate to that point
       writeTrail(current.slice(0, existingIndex + 1));
@@ -156,6 +156,7 @@ export function useNavigationTrail(): UseNavigationTrailReturn {
   }, []);
 
   // Highlight management
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const highlightEntity = useMemo(() => readHighlight(), [snapshot]);
 
   const clearHighlight = useCallback(() => {

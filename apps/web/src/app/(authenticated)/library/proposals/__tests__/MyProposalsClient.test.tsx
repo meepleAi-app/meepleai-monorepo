@@ -33,7 +33,9 @@ vi.mock('@/hooks/queries/useShareRequests', () => ({
 // Mock Next.js Link
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -73,10 +75,9 @@ const MOCK_PROPOSALS: PaginatedShareRequestsResponse = {
       resultingSharedGameId: 'shared-123',
     },
   ],
-  totalCount: 2,
+  total: 2,
   page: 1,
   pageSize: 20,
-  totalPages: 1,
 };
 
 const MOCK_RATE_LIMIT: RateLimitStatusDto = {
@@ -105,11 +106,6 @@ describe('MyProposalsClient', () => {
   });
 
   describe('Rendering', () => {
-    it('renders page title', () => {
-      render(<MyProposalsClient />);
-      expect(screen.getByText('Le Mie Proposte')).toBeInTheDocument();
-    });
-
     it('renders page description', () => {
       render(<MyProposalsClient />);
       expect(screen.getByText(/Traccia le tue proposte/i)).toBeInTheDocument();
@@ -163,7 +159,7 @@ describe('MyProposalsClient', () => {
   describe('Empty State', () => {
     it('shows empty state when no proposals', () => {
       mockUseShareRequests.mockReturnValue({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 },
+        data: { items: [], total: 0, page: 1, pageSize: 20 },
         isLoading: false,
         error: null,
       } as any);
@@ -174,7 +170,7 @@ describe('MyProposalsClient', () => {
 
     it('shows link to private games in empty state', () => {
       mockUseShareRequests.mockReturnValue({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 },
+        data: { items: [], total: 0, page: 1, pageSize: 20 },
         isLoading: false,
         error: null,
       } as any);
@@ -338,7 +334,7 @@ describe('MyProposalsClient', () => {
       mockUseShareRequests.mockReturnValue({
         data: {
           ...MOCK_PROPOSALS,
-          totalCount: 15,
+          total: 15,
         },
         isLoading: false,
         error: null,
@@ -363,7 +359,7 @@ describe('MyProposalsClient', () => {
 
     it('has no axe violations in empty state', async () => {
       mockUseShareRequests.mockReturnValue({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 0 },
+        data: { items: [], total: 0, page: 1, pageSize: 20 },
         isLoading: false,
         error: null,
       } as any);

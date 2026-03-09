@@ -148,6 +148,24 @@ internal static class PdfEndpoints
         .RequireSession()
         .RequireAuthorization()
         .WithName("SetPdfVisibility");
+
+        // Issue #5446: Accept copyright disclaimer for a PDF
+        group.MapPost("/documents/{pdfId:guid}/accept-disclaimer", HandleAcceptCopyrightDisclaimer)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("AcceptCopyrightDisclaimer");
+
+        // Issue #5446: Toggle RAG active flag for a PDF
+        group.MapPatch("/documents/{pdfId:guid}/active", HandleSetActiveForRag)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("SetActiveForRag");
+
+        // Issue #5447: Reclassify document (category, base document, version label)
+        group.MapPatch("/documents/{pdfId:guid}/classify", HandleReclassifyDocument)
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("ReclassifyDocument");
     }
 
     private static void MapProcessingStateEndpoints(RouteGroupBuilder group)
@@ -429,6 +447,11 @@ internal static class PdfEndpoints
         if (!result.Success)
         {
             logger.LogWarning("PDF upload failed: {Error}", result.Message);
+            // Return 409 Conflict for duplicate content uploads
+            if (string.Equals(result.Message, UploadPdfCommandHandler.DuplicateContentErrorMessage, StringComparison.Ordinal))
+            {
+                return Results.Conflict(new { error = "duplicate_content", message = result.Message });
+            }
             return Results.BadRequest(new { error = result.Message });
         }
 
@@ -504,6 +527,12 @@ internal static class PdfEndpoints
         if (!result.Success)
         {
             logger.LogWarning("Failed to complete chunked upload {SessionId}: {Error}", request.SessionId, result.ErrorMessage);
+
+            // Return 409 Conflict for duplicate content uploads
+            if (string.Equals(result.ErrorMessage, CompleteChunkedUploadCommandHandler.DuplicateContentErrorMessage, StringComparison.Ordinal))
+            {
+                return Results.Conflict(new { error = "duplicate_content", message = result.ErrorMessage });
+            }
 
             if (result.MissingChunks != null && result.MissingChunks.Count > 0)
             {
@@ -751,6 +780,65 @@ internal static class PdfEndpoints
             ct).ConfigureAwait(false);
 
         return Results.Ok(new { success = true, message = result.Message, isPublic = request.IsPublic });
+    }
+
+    /// <summary>
+    /// Issue #5446: Accept copyright disclaimer for a PDF document.
+    /// </summary>
+    private static async Task<IResult> HandleAcceptCopyrightDisclaimer(
+        Guid pdfId,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        var result = await mediator.Send(new AcceptCopyrightDisclaimerCommand(pdfId, userId), ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            return Results.NotFound(new { error = result.Message });
+        }
+
+        return Results.Ok(new { success = true, message = result.Message });
+    }
+
+    /// <summary>
+    /// Issue #5446: Toggle RAG active flag for a PDF document.
+    /// </summary>
+    private static async Task<IResult> HandleSetActiveForRag(
+        Guid pdfId,
+        [FromBody] SetActiveForRagRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(new SetActiveForRagCommand(pdfId, request.IsActive), ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            return Results.NotFound(new { error = result.Message });
+        }
+
+        return Results.Ok(new { success = true, message = result.Message, isActive = request.IsActive });
+    }
+
+    private static async Task<IResult> HandleReclassifyDocument(
+        Guid pdfId,
+        [FromBody] ReclassifyDocumentRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ReclassifyDocumentCommand(pdfId, request.Category, request.BaseDocumentId, request.VersionLabel), ct)
+            .ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            return Results.NotFound(new { error = result.Message });
+        }
+
+        return Results.Ok(new { success = true, message = result.Message, pdfId = result.PdfId });
     }
 
     // Helpers
@@ -1222,4 +1310,6 @@ internal static class PdfEndpoints
 internal record InitChunkedUploadRequest(Guid? GameId, string FileName, long TotalFileSize, Guid? PrivateGameId = null);
 internal record CompleteChunkedUploadRequest(Guid SessionId);
 internal record SetPdfVisibilityRequest(bool IsPublic);
+internal record SetActiveForRagRequest(bool IsActive); // Issue #5446
+internal record ReclassifyDocumentRequest(string Category, Guid? BaseDocumentId, string? VersionLabel); // Issue #5447
 internal record ExtractBggGamesRequest(string PdfFilePath); // ISSUE-2513

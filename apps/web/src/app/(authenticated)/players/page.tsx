@@ -11,7 +11,7 @@
 
 import { useMemo } from 'react';
 
-import { Gamepad2, Trophy, Users } from 'lucide-react';
+import { Gamepad2, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { EntityListView } from '@/components/ui/data-display/entity-list-view';
@@ -27,17 +27,13 @@ interface PlayerListItem {
   playCount: number;
 }
 
-function renderPlayerCard(
-  player: PlayerListItem,
-): Omit<MeepleCardProps, 'entity' | 'variant'> {
+function renderPlayerCard(player: PlayerListItem): Omit<MeepleCardProps, 'entity' | 'variant'> {
   const navLinks = getNavigationLinks('player', { id: player.id });
 
   return {
     title: player.displayName,
     subtitle: player.gameName,
-    metadata: [
-      { icon: Gamepad2, value: `${player.playCount} partite` },
-    ],
+    metadata: [{ icon: Gamepad2, value: `${player.playCount} partite` }],
     navigateTo: navLinks,
   };
 }
@@ -69,9 +65,7 @@ export default function PlayersListPage() {
       <div className="min-h-screen bg-background py-8 px-4">
         <div className="container mx-auto max-w-7xl">
           <Alert variant="destructive">
-            <AlertDescription>
-              Errore nel caricamento dei giocatori.
-            </AlertDescription>
+            <AlertDescription>Errore nel caricamento dei giocatori.</AlertDescription>
           </Alert>
         </div>
       </div>
@@ -83,9 +77,7 @@ export default function PlayersListPage() {
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-quicksand font-bold text-foreground">
-            Giocatori
-          </h1>
+          <h1 className="text-3xl font-quicksand font-bold text-foreground">Giocatori</h1>
           <p className="text-muted-foreground font-nunito mt-1">
             I giocatori con cui hai condiviso partite
           </p>
@@ -110,7 +102,7 @@ export default function PlayersListPage() {
           persistenceKey="players-list"
           loading={isLoading}
           renderItem={renderPlayerCard}
-          onItemClick={(player) => router.push(`/players/${player.id}`)}
+          onItemClick={player => router.push(`/players/${player.id}`)}
           searchable
           searchPlaceholder="Cerca giocatore..."
           searchFields={['displayName', 'gameName']}

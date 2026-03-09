@@ -15,10 +15,7 @@ import { StrategyBadge } from '@/components/admin/rag/StrategyBadge';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Switch } from '@/components/ui/forms/switch';
 import {
   Select,
   SelectContent,
@@ -26,13 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Slider } from '@/components/ui/primitives/slider';
-import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
-import {
-  createAdminClient,
-  type StrategyModelMappingDto,
-} from '@/lib/api/clients/adminClient';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Slider } from '@/components/ui/primitives/slider';
+import { useToast } from '@/hooks/use-toast';
+import { createAdminClient, type StrategyModelMappingDto } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
 // ========== Types ==========
@@ -81,10 +78,7 @@ const PROVIDER_MODELS: Record<string, string[]> = {
   Ollama: ['llama3.1:8b', 'llama3.1:70b', 'mistral:7b', 'mixtral:8x7b'],
 };
 
-const RERANKER_MODELS = [
-  'cross-encoder/ms-marco-MiniLM-L-6-v2',
-  'BAAI/bge-reranker-v2-m3',
-];
+const RERANKER_MODELS = ['cross-encoder/ms-marco-MiniLM-L-6-v2', 'BAAI/bge-reranker-v2-m3'];
 
 const CACHE_TTL_OPTIONS = [
   { value: 15, label: '15 minutes' },
@@ -179,28 +173,28 @@ export default function StrategyConfigPage() {
 
   // Handlers
   const markRetrievalChanged = (field: keyof RetrievalConfig, value: unknown) => {
-    setChangedFields((prev) => ({
+    setChangedFields(prev => ({
       ...prev,
       retrieval: { ...prev.retrieval, [field]: value },
     }));
   };
 
   const markGenerationChanged = (field: keyof GenerationConfig, value: unknown) => {
-    setChangedFields((prev) => ({
+    setChangedFields(prev => ({
       ...prev,
       generation: { ...prev.generation, [field]: value },
     }));
   };
 
   const markThresholdsChanged = (field: keyof ConfidenceThresholds, value: number) => {
-    setChangedFields((prev) => ({
+    setChangedFields(prev => ({
       ...prev,
       thresholds: { ...prev.thresholds, [field]: value },
     }));
   };
 
   const handleProviderChange = (provider: string) => {
-    setGenerationConfig((prev) => ({
+    setGenerationConfig(prev => ({
       ...prev,
       provider,
       model: PROVIDER_MODELS[provider]?.[0] || prev.model,
@@ -210,7 +204,7 @@ export default function StrategyConfigPage() {
 
   const handleTierAccessChange = (tier: string, strategy: string, isEnabled: boolean) => {
     const key = `${tier}-${strategy}`;
-    setTierAccessChanges((prev) => new Map(prev).set(key, isEnabled));
+    setTierAccessChanges(prev => new Map(prev).set(key, isEnabled));
   };
 
   const handleSaveAll = async () => {
@@ -350,7 +344,7 @@ export default function StrategyConfigPage() {
                   size="sm"
                   onClick={() => {
                     const newValue = Math.max(1, retrievalConfig.topK - 1);
-                    setRetrievalConfig((prev) => ({ ...prev, topK: newValue }));
+                    setRetrievalConfig(prev => ({ ...prev, topK: newValue }));
                     markRetrievalChanged('topK', newValue);
                   }}
                 >
@@ -363,7 +357,7 @@ export default function StrategyConfigPage() {
                   value={retrievalConfig.topK}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = parseInt(e.target.value);
-                    setRetrievalConfig((prev) => ({ ...prev, topK: value }));
+                    setRetrievalConfig(prev => ({ ...prev, topK: value }));
                     markRetrievalChanged('topK', value);
                   }}
                   className="w-20 text-center font-mono"
@@ -373,7 +367,7 @@ export default function StrategyConfigPage() {
                   size="sm"
                   onClick={() => {
                     const newValue = Math.min(20, retrievalConfig.topK + 1);
-                    setRetrievalConfig((prev) => ({ ...prev, topK: newValue }));
+                    setRetrievalConfig(prev => ({ ...prev, topK: newValue }));
                     markRetrievalChanged('topK', newValue);
                   }}
                 >
@@ -392,7 +386,7 @@ export default function StrategyConfigPage() {
                   value={[retrievalConfig.minScore * 100]}
                   onValueChange={([value]) => {
                     const score = value / 100;
-                    setRetrievalConfig((prev) => ({ ...prev, minScore: score }));
+                    setRetrievalConfig(prev => ({ ...prev, minScore: score }));
                     markRetrievalChanged('minScore', score);
                   }}
                   min={0}
@@ -414,7 +408,7 @@ export default function StrategyConfigPage() {
               <Select
                 value={retrievalConfig.searchType}
                 onValueChange={(value: 'vector' | 'keyword' | 'hybrid') => {
-                  setRetrievalConfig((prev) => ({ ...prev, searchType: value }));
+                  setRetrievalConfig(prev => ({ ...prev, searchType: value }));
                   markRetrievalChanged('searchType', value);
                 }}
               >
@@ -437,15 +431,15 @@ export default function StrategyConfigPage() {
               <div className="flex items-center gap-3">
                 <Switch
                   checked={retrievalConfig.rerankerEnabled}
-                  onCheckedChange={(checked) => {
-                    setRetrievalConfig((prev) => ({ ...prev, rerankerEnabled: checked }));
+                  onCheckedChange={checked => {
+                    setRetrievalConfig(prev => ({ ...prev, rerankerEnabled: checked }));
                     markRetrievalChanged('rerankerEnabled', checked);
                   }}
                 />
                 <Select
                   value={retrievalConfig.rerankerModel}
-                  onValueChange={(value) => {
-                    setRetrievalConfig((prev) => ({ ...prev, rerankerModel: value }));
+                  onValueChange={value => {
+                    setRetrievalConfig(prev => ({ ...prev, rerankerModel: value }));
                     markRetrievalChanged('rerankerModel', value);
                   }}
                   disabled={!retrievalConfig.rerankerEnabled}
@@ -454,7 +448,7 @@ export default function StrategyConfigPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {RERANKER_MODELS.map((model) => (
+                    {RERANKER_MODELS.map(model => (
                       <SelectItem key={model} value={model}>
                         {model}
                       </SelectItem>
@@ -471,9 +465,9 @@ export default function StrategyConfigPage() {
               </Label>
               <Select
                 value={retrievalConfig.cacheTTL.toString()}
-                onValueChange={(value) => {
+                onValueChange={value => {
                   const ttl = parseInt(value);
-                  setRetrievalConfig((prev) => ({ ...prev, cacheTTL: ttl }));
+                  setRetrievalConfig(prev => ({ ...prev, cacheTTL: ttl }));
                   markRetrievalChanged('cacheTTL', ttl);
                 }}
               >
@@ -481,7 +475,7 @@ export default function StrategyConfigPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CACHE_TTL_OPTIONS.map((opt) => (
+                  {CACHE_TTL_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value.toString()}>
                       {opt.label}
                     </SelectItem>
@@ -511,7 +505,7 @@ export default function StrategyConfigPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(PROVIDER_MODELS).map((provider) => (
+                  {Object.keys(PROVIDER_MODELS).map(provider => (
                     <SelectItem key={provider} value={provider}>
                       {provider}
                     </SelectItem>
@@ -527,8 +521,8 @@ export default function StrategyConfigPage() {
               </Label>
               <Select
                 value={generationConfig.model}
-                onValueChange={(value) => {
-                  setGenerationConfig((prev) => ({ ...prev, model: value }));
+                onValueChange={value => {
+                  setGenerationConfig(prev => ({ ...prev, model: value }));
                   markGenerationChanged('model', value);
                 }}
               >
@@ -536,7 +530,7 @@ export default function StrategyConfigPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PROVIDER_MODELS[generationConfig.provider]?.map((model) => (
+                  {PROVIDER_MODELS[generationConfig.provider]?.map(model => (
                     <SelectItem key={model} value={model} className="font-mono">
                       {model}
                     </SelectItem>
@@ -555,7 +549,7 @@ export default function StrategyConfigPage() {
                   value={[generationConfig.temperature * 100]}
                   onValueChange={([value]) => {
                     const temp = value / 100;
-                    setGenerationConfig((prev) => ({ ...prev, temperature: temp }));
+                    setGenerationConfig(prev => ({ ...prev, temperature: temp }));
                     markGenerationChanged('temperature', temp);
                   }}
                   min={0}
@@ -582,7 +576,7 @@ export default function StrategyConfigPage() {
                 value={generationConfig.maxTokens}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const value = parseInt(e.target.value);
-                  setGenerationConfig((prev) => ({ ...prev, maxTokens: value }));
+                  setGenerationConfig(prev => ({ ...prev, maxTokens: value }));
                   markGenerationChanged('maxTokens', value);
                 }}
                 className="font-mono"
@@ -599,7 +593,7 @@ export default function StrategyConfigPage() {
                   value={[generationConfig.topP * 100]}
                   onValueChange={([value]) => {
                     const topP = value / 100;
-                    setGenerationConfig((prev) => ({ ...prev, topP }));
+                    setGenerationConfig(prev => ({ ...prev, topP }));
                     markGenerationChanged('topP', topP);
                   }}
                   min={0}
@@ -621,8 +615,8 @@ export default function StrategyConfigPage() {
               <div className="flex items-center gap-2">
                 <Switch
                   checked={generationConfig.budgetMode}
-                  onCheckedChange={(checked) => {
-                    setGenerationConfig((prev) => ({ ...prev, budgetMode: checked }));
+                  onCheckedChange={checked => {
+                    setGenerationConfig(prev => ({ ...prev, budgetMode: checked }));
                     markGenerationChanged('budgetMode', checked);
                   }}
                 />
@@ -670,18 +664,18 @@ export default function StrategyConfigPage() {
                       <td className="p-3 font-bold text-sm border-b">{tier}</td>
                       {matrix.strategies.map((strategy: { name: string; displayName: string }) => {
                         const access = matrix.accessMatrix.find(
-                          (a) => a.tier === tier && a.strategy === strategy.name
+                          a => a.tier === tier && a.strategy === strategy.name
                         );
                         const key = `${tier}-${strategy.name}`;
                         const isEnabled = tierAccessChanges.has(key)
                           ? tierAccessChanges.get(key)!
-                          : access?.isEnabled ?? false;
+                          : (access?.isEnabled ?? false);
 
                         return (
                           <td key={strategy.name} className="text-center p-3 border-b">
                             <Checkbox
                               checked={isEnabled}
-                              onCheckedChange={(checked) =>
+                              onCheckedChange={checked =>
                                 handleTierAccessChange(tier, strategy.name, checked as boolean)
                               }
                               className="mx-auto"
@@ -819,7 +813,7 @@ export default function StrategyConfigPage() {
                   value={[confidenceThresholds.lowThreshold * 100]}
                   onValueChange={([value]) => {
                     const threshold = value / 100;
-                    setConfidenceThresholds((prev) => ({ ...prev, lowThreshold: threshold }));
+                    setConfidenceThresholds(prev => ({ ...prev, lowThreshold: threshold }));
                     markThresholdsChanged('lowThreshold', threshold);
                   }}
                   min={0}
@@ -842,7 +836,7 @@ export default function StrategyConfigPage() {
                   value={[confidenceThresholds.highThreshold * 100]}
                   onValueChange={([value]) => {
                     const threshold = value / 100;
-                    setConfidenceThresholds((prev) => ({ ...prev, highThreshold: threshold }));
+                    setConfidenceThresholds(prev => ({ ...prev, highThreshold: threshold }));
                     markThresholdsChanged('highThreshold', threshold);
                   }}
                   min={0}

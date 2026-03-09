@@ -6,8 +6,11 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+
 import { Bot, Send, Sparkles, BookOpen, Loader2, Quote } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type { AITabData, AIChatMessage, AIQuickAction, AISource } from '../types';
 
 interface AITabProps {
@@ -52,14 +55,17 @@ function ChatBubble({ message }: { message: AIChatMessage }) {
         {/* Source citations */}
         {message.sources && message.sources.length > 0 && (
           <div className="mt-2 space-y-1 border-t border-slate-200/40 pt-1.5">
-            {message.sources.map((source) => (
+            {message.sources.map(source => (
               <SourceCitation key={source.title} source={source} />
             ))}
           </div>
         )}
 
         <span className="mt-1 block text-[10px] text-slate-400 font-nunito">
-          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(message.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </span>
       </div>
     </div>
@@ -80,13 +86,7 @@ function SourceCitation({ source }: { source: AISource }) {
 }
 
 /** Quick action button */
-function QuickActionButton({
-  action,
-  onClick,
-}: {
-  action: AIQuickAction;
-  onClick: () => void;
-}) {
+function QuickActionButton({ action, onClick }: { action: AIQuickAction; onClick: () => void }) {
   const Icon = action.icon || Sparkles;
 
   return (
@@ -152,7 +152,9 @@ export function AITab({ data, onSendMessage }: AITabProps) {
               <p className="font-nunito text-xs font-semibold text-amber-800">{data.agentName}</p>
             )}
             {data.sessionContext && (
-              <p className="font-nunito text-[10px] text-amber-600 truncate">{data.sessionContext}</p>
+              <p className="font-nunito text-[10px] text-amber-600 truncate">
+                {data.sessionContext}
+              </p>
             )}
           </div>
         </div>
@@ -167,7 +169,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
           </div>
         )}
 
-        {data.messages.map((msg) => (
+        {data.messages.map(msg => (
           <ChatBubble key={msg.id} message={msg} />
         ))}
 
@@ -186,7 +188,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
       {/* Quick actions */}
       {data.quickActions.length > 0 && !hasMessages && (
         <div className="flex flex-wrap gap-1.5 py-2" data-testid="ai-quick-actions">
-          {data.quickActions.map((action) => (
+          {data.quickActions.map(action => (
             <QuickActionButton
               key={action.label}
               action={action}
@@ -200,7 +202,7 @@ export function AITab({ data, onSendMessage }: AITabProps) {
       <div className="flex items-end gap-2 border-t border-slate-200/40 pt-2 mt-auto">
         <textarea
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={e => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask about rules, scores, strategy..."
           rows={1}

@@ -53,7 +53,9 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 - 010-019: Security & validation
 - 020-029: Frontend/backend integration
 - 030-039: Performance (reserved)
-- 040-049: Observability (reserved)
+- 040-049: Observability
+  - [042](adr-042-dashboard-performance.md): Dashboard Performance
+  - [043](adr-043-llm-subsystem-nfr.md): LLM Subsystem NFR Documentation
 - 050-059: Infrastructure (reserved)
 
 ## Related Docs
@@ -64,6 +66,6 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 
 ---
 
-**Last Updated**: 2026-02-12
-**Total ADRs**: 17 (15 Accepted/Implemented, 1 Rejected, 1 Deprecated)
+**Last Updated**: 2026-03-09
+**Total ADRs**: 18 (16 Accepted/Implemented, 1 Rejected, 1 Deprecated)
 **Archived**: 12 obsolete ADRs removed (see git history)

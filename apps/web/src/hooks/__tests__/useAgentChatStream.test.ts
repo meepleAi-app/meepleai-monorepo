@@ -44,6 +44,7 @@ const EventType = {
   Error: 5,
   Heartbeat: 6,
   FollowUpQuestions: 8,
+  ModelDowngrade: 21,
   // Debug events (Issue #4916) - names must match useAgentChatStream.ts constants
   DebugAgentRouter: 10,
   DebugStrategySelected: 11,
@@ -81,6 +82,7 @@ describe('useAgentChatStream', () => {
       chatThreadId: null,
       totalTokens: 0,
       debugSteps: [],
+      modelDowngrade: null,
     });
   });
 
@@ -426,5 +428,108 @@ describe('useAgentChatStream', () => {
     });
 
     expect(result.current.state.debugSteps).toHaveLength(0);
+  });
+
+  // ─── Model Downgrade Events ─────────────────────────────
+
+  it('handles ModelDowngrade event for free user with upgrade message', async () => {
+    const events = [
+      sseEvent(EventType.Token, { token: 'Ollama response' }),
+      sseEvent(EventType.ModelDowngrade, {
+        originalModel: 'meta-llama/llama-3.3-70b-instruct:free',
+        fallbackModel: 'llama3:8b',
+        reason: '429 rate limited',
+        isLocalFallback: true,
+        upgradeMessage: 'Passa a Premium per modelli più affidabili.',
+      }),
+      sseEvent(EventType.Complete, { totalTokens: 10 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.modelDowngrade).not.toBeNull();
+    expect(result.current.state.modelDowngrade!.originalModel).toBe('meta-llama/llama-3.3-70b-instruct:free');
+    expect(result.current.state.modelDowngrade!.fallbackModel).toBe('llama3:8b');
+    expect(result.current.state.modelDowngrade!.isLocalFallback).toBe(true);
+    expect(result.current.state.modelDowngrade!.upgradeMessage).toContain('Premium');
+  });
+
+  it('handles ModelDowngrade event for premium user without upgrade link', async () => {
+    const events = [
+      sseEvent(EventType.Token, { token: 'GPT response' }),
+      sseEvent(EventType.ModelDowngrade, {
+        originalModel: 'anthropic/claude-3.5-haiku',
+        fallbackModel: 'openai/gpt-4o-mini',
+        reason: 'provider_unavailable',
+        isLocalFallback: false,
+        upgradeMessage: null,
+      }),
+      sseEvent(EventType.Complete, { totalTokens: 20 }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.modelDowngrade).not.toBeNull();
+    expect(result.current.state.modelDowngrade!.isLocalFallback).toBe(false);
+    expect(result.current.state.modelDowngrade!.upgradeMessage).toBeNull();
+  });
+
+  it('resets modelDowngrade on new message send', async () => {
+    // First message triggers downgrade
+    const events1 = [
+      sseEvent(EventType.Token, { token: 'first' }),
+      sseEvent(EventType.ModelDowngrade, {
+        originalModel: 'model-a',
+        fallbackModel: 'model-b',
+        reason: 'error',
+        isLocalFallback: false,
+        upgradeMessage: null,
+      }),
+      sseEvent(EventType.Complete, { totalTokens: 1 }),
+    ];
+
+    const stream1 = createSSEStream(events1);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream1 });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.modelDowngrade).not.toBeNull();
+
+    // Second message resets state (including modelDowngrade)
+    const events2 = [
+      sseEvent(EventType.Token, { token: 'second' }),
+      sseEvent(EventType.Complete, { totalTokens: 1 }),
+    ];
+    const stream2 = createSSEStream(events2);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream2 });
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Another question');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.modelDowngrade).toBeNull();
+    expect(result.current.state.currentAnswer).toBe('second');
   });
 });

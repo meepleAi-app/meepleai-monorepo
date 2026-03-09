@@ -16,10 +16,12 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.StructuredRetrieval;
 // Note: ITierStrategyAccessService is in Api.BoundedContexts.KnowledgeBase.Domain.Services namespace
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
@@ -57,9 +59,12 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
+        services.AddScoped<IConversationQueryRewriter, Application.Services.ConversationQueryRewriter>(); // Issue #5258: Query rewriting for multi-turn RAG
+        services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
-        services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>(); // Issue #3184 (AGT-010): Session agent prompt building
+        services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
+        services.AddScoped<ITextChunkSearchService, Infrastructure.Services.TextChunkSearchService>(); // Phase 2: PostgreSQL FTS + adjacent chunk retrieval
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
         // Issue #3436: Tier-Strategy Access Validation Service
         // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
@@ -72,6 +77,11 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #2405: Ledger Mode Handler + State Parser
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.LedgerModeHandler>();
         services.AddScoped<IStateParser, NaturalLanguageStateParser>();
+
+        // Issue #5453: Structured RAG fusion — query intent classification + structured retrieval
+        services.AddSingleton<StructuredQueryIntentClassifier>();
+        services.AddScoped<IStructuredRetrievalService, Infrastructure.Services.StructuredRetrievalService>();
+        services.AddSingleton<StructuredRagFusionService>();
 
         // ISSUE-3491: Context Engineering Framework
         services.AddSingleton<ITokenEstimator, SimpleTokenEstimator>();
@@ -217,6 +227,13 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Issue #5087: Free model quota tracker — Redis-backed RPD exhaustion state (Singleton - stateless)
         services.AddSingleton<IFreeModelQuotaTracker, FreeModelQuotaTracker>();
+
+        // Issue #5476: Emergency override service — Redis-backed with IMemoryCache L1 + TTL auto-revert
+        services.AddSingleton<IEmergencyOverrideService, EmergencyOverrideService>();
+
+        // Issue #5477: Redis rate-limiting health monitor — pings Redis every 30s, alerts admins on failure
+        services.AddSingleton<RedisRateLimitingHealthMonitor>();
+        services.AddHostedService(sp => sp.GetRequiredService<RedisRateLimitingHealthMonitor>());
     }
 
     private static void AddInfrastructureServices(IServiceCollection services)
@@ -248,9 +265,11 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
+        services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
+        services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
 
-        // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
-        services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();
+        // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
+        services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)
         services.AddSingleton<IChunkRepository, InMemoryChunkRepository>();
     }

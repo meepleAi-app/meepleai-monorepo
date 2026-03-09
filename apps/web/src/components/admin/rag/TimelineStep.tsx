@@ -13,6 +13,7 @@
  */
 
 import { ChevronDown } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 export interface TimelineStepDetail {
@@ -134,9 +135,7 @@ export function TimelineStep({
         </span>
 
         {/* Step Name */}
-        <span className="font-quicksand font-bold text-sm flex-shrink-0">
-          {name}
-        </span>
+        <span className="font-quicksand font-bold text-sm flex-shrink-0">{name}</span>
 
         {/* Duration Bar */}
         <div className="flex-1 mx-3">
@@ -188,10 +187,7 @@ export function TimelineStep({
             {details.map((detail, idx) => (
               <div
                 key={idx}
-                className={cn(
-                  'flex flex-col gap-0.5',
-                  detail.wide && 'col-span-full'
-                )}
+                className={cn('flex flex-col gap-0.5', detail.wide && 'col-span-full')}
               >
                 {/* Label */}
                 <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">
@@ -201,16 +197,11 @@ export function TimelineStep({
                 {/* Value */}
                 {detail.badge ? (
                   <div>
-                    <DetailBadge variant={detail.badge}>
-                      {detail.value}
-                    </DetailBadge>
+                    <DetailBadge variant={detail.badge}>{detail.value}</DetailBadge>
                   </div>
                 ) : (
                   <span
-                    className={cn(
-                      'text-sm font-semibold',
-                      detail.mono && 'font-mono text-[13px]'
-                    )}
+                    className={cn('text-sm font-semibold', detail.mono && 'font-mono text-[13px]')}
                     style={detail.style}
                   >
                     {detail.value}

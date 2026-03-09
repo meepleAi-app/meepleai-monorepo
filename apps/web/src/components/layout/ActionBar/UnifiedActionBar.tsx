@@ -8,7 +8,7 @@
  * - Overflow menu for extra items
  *
  * Desktop navigation is handled by UnifiedHeader.
- * This component replaces both BottomNav and SmartFAB.
+ * This component replaces the deprecated BottomNav and SmartFAB.
  */
 
 'use client';
@@ -73,10 +73,7 @@ import {
 } from '@/components/ui/overlays/tooltip';
 import { useFAB } from '@/hooks/useFAB';
 import { useLongPress } from '@/hooks/useLongPress';
-import {
-  useUnifiedActionBar,
-  type UnifiedItem,
-} from '@/hooks/useUnifiedActionBar';
+import { useUnifiedActionBar, type UnifiedItem } from '@/hooks/useUnifiedActionBar';
 import { cn } from '@/lib/utils';
 
 /**
@@ -124,8 +121,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   edit: Edit,
 };
 
-export interface UnifiedActionBarProps
-  extends Omit<ComponentPropsWithoutRef<'nav'>, 'children'> {
+export interface UnifiedActionBarProps extends Omit<ComponentPropsWithoutRef<'nav'>, 'children'> {
   /** Animation stagger delay between items (in ms) */
   staggerDelay?: number;
 }
@@ -240,7 +236,7 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
                     'animate-in fade-in-0 slide-in-from-bottom-2'
                   )}
                 >
-                  {fabConfig.quickMenuItems.map((item) => {
+                  {fabConfig.quickMenuItems.map(item => {
                     const QuickIcon = ICON_MAP[item.icon] ?? Plus;
                     return (
                       <button
@@ -355,11 +351,7 @@ export function UnifiedActionBarSpacer({ className }: { className?: string }) {
 
   return (
     <div
-      className={cn(
-        'h-[56px]',
-        'pb-[env(safe-area-inset-bottom)]',
-        className
-      )}
+      className={cn('h-[56px]', 'pb-[env(safe-area-inset-bottom)]', className)}
       aria-hidden="true"
     />
   );
@@ -420,9 +412,7 @@ function UnifiedActionBarItem({
         aria-hidden="true"
       />
       {variant === 'icon-label' && (
-        <span className="text-[10px] font-medium truncate max-w-[56px]">
-          {item.label}
-        </span>
+        <span className="text-[10px] font-medium truncate max-w-[56px]">{item.label}</span>
       )}
     </div>
   );
@@ -471,12 +461,7 @@ interface UnifiedOverflowMenuProps {
   animationDelay: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function _UnifiedOverflowMenu({
-  items,
-  onItemClick,
-  animationDelay,
-}: UnifiedOverflowMenuProps) {
+function _UnifiedOverflowMenu({ items, onItemClick, animationDelay }: UnifiedOverflowMenuProps) {
   // Separate nav items and action items for menu sections
   const navItems = items.filter(item => item.type === 'nav');
   const actionItems = items.filter(item => item.type === 'action');
@@ -508,12 +493,7 @@ function _UnifiedOverflowMenu({
           <span className="text-[10px] font-medium">Altro</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        side="top"
-        sideOffset={8}
-        className="w-48"
-      >
+      <DropdownMenuContent align="end" side="top" sideOffset={8} className="w-48">
         {/* Navigation items section */}
         {navItems.length > 0 && (
           <>
@@ -535,9 +515,7 @@ function _UnifiedOverflowMenu({
         )}
 
         {/* Separator between nav and actions */}
-        {navItems.length > 0 && actionItems.length > 0 && (
-          <DropdownMenuSeparator />
-        )}
+        {navItems.length > 0 && actionItems.length > 0 && <DropdownMenuSeparator />}
 
         {/* Action items section */}
         {actionItems.map(item => {

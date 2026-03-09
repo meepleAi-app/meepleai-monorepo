@@ -16,8 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
-import type { NavAction } from '@/types/navigation';
 import { cn } from '@/lib/utils';
+import type { NavAction } from '@/types/navigation';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ export function ActionBarOverflow({ actions }: ActionBarOverflowProps) {
             'text-sm font-medium text-foreground/80',
             'hover:bg-accent hover:text-foreground',
             'transition-colors duration-150',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
           )}
         >
           <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -57,7 +57,7 @@ export function ActionBarOverflow({ actions }: ActionBarOverflowProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" side="top" sideOffset={8} className="w-48">
-        {actions.map((action) => {
+        {actions.map(action => {
           const Icon = action.icon;
           return (
             <DropdownMenuItem

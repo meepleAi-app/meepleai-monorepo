@@ -4,12 +4,15 @@
  * Issue #5049 — Admin Page Migrations
  *
  * Canonical entry for all content management admin pages.
- * Tabs: games · shared · faqs · kb · sessions
+ * Tabs: games · shared · kb
  */
 
 import { Suspense } from 'react';
 
-import Link from 'next/link';
+import { Gamepad2, Share2, Database } from 'lucide-react';
+
+import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
+import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
 
 import { KnowledgeBaseTab } from './KnowledgeBaseTab';
 import { AdminContentNavConfig } from './NavConfig';
@@ -19,27 +22,23 @@ interface AdminContentPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
 }
 
-const TABS = [
-  { id: 'games', label: 'Games', href: '/admin/content?tab=games' },
-  { id: 'shared', label: 'Shared Games', href: '/admin/content?tab=shared' },
-  { id: 'faqs', label: 'FAQs', href: '/admin/content?tab=faqs' },
-  { id: 'kb', label: 'Knowledge Base', href: '/admin/content?tab=kb' },
-  { id: 'sessions', label: 'Sessions', href: '/admin/content?tab=sessions' },
+const TABS: readonly HubTab[] = [
+  { id: 'games', label: 'Games', href: '/admin/content?tab=games', icon: <Gamepad2 /> },
+  { id: 'shared', label: 'Shared Games', href: '/admin/content?tab=shared', icon: <Share2 /> },
+  { id: 'kb', label: 'Knowledge Base', href: '/admin/content?tab=kb', icon: <Database /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
 function TabSkeleton() {
   return (
-    <div className="h-[600px] bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse" />
-  );
-}
-
-function ComingSoonTab({ label, description }: { label: string; description: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border/60 p-16 text-center">
-      <p className="text-base font-semibold text-foreground">{label}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    <div className="space-y-3 pt-2">
+      <div className="h-10 w-48 rounded-lg bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -64,20 +63,6 @@ function renderTabContent(tab: TabId) {
           <KnowledgeBaseTab />
         </Suspense>
       );
-    case 'faqs':
-      return (
-        <ComingSoonTab
-          label="FAQs"
-          description="Manage frequently asked questions for games and the platform."
-        />
-      );
-    case 'sessions':
-      return (
-        <ComingSoonTab
-          label="Game Sessions"
-          description="Browse and manage recorded game sessions."
-        />
-      );
     default:
       return null;
   }
@@ -88,36 +73,21 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
   const tab = (params.tab ?? 'shared') as TabId;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <AdminContentNavConfig />
       <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
           Content Management
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage games, shared content, FAQs, knowledge base, and sessions.
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Manage games, shared content, and knowledge base.
         </p>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-2 border-b border-border/50 pb-3">
-        {TABS.map(t => (
-          <Link
-            key={t.id}
-            href={t.href}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      <AdminHubTabBar tabs={TABS} activeTab={tab} />
+      <AdminTabPersistence hubName="content" defaultTab="shared" />
 
-      {/* Tab content */}
-      {renderTabContent(tab)}
+      <div className="pt-1">{renderTabContent(tab)}</div>
     </div>
   );
 }

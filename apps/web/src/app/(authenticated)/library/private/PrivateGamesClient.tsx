@@ -33,7 +33,13 @@ import { KbStatusBadge } from '@/components/library/KbStatusBadge';
 import { LibraryEmptyState } from '@/components/library/LibraryEmptyState';
 import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { ProposeGameModal } from '@/components/library/ProposeGameModal';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,13 +71,16 @@ import { Textarea } from '@/components/ui/primitives/textarea';
 import { useCreateShareRequest } from '@/hooks/queries/useShareRequests';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
-import type { PrivateGameDto, GetPrivateGamesParams } from '@/lib/api/schemas/private-games.schemas';
+import type {
+  PrivateGameDto,
+  GetPrivateGamesParams,
+} from '@/lib/api/schemas/private-games.schemas';
 
 type SortByOption = 'title' | 'createdAt' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
 
 export default function PrivateGamesClient() {
-  const router = useRouter();
+  const _router = useRouter();
   const { t } = useTranslation();
 
   // Data state
@@ -105,29 +114,32 @@ export default function PrivateGamesClient() {
 
   const PAGE_SIZE = 12;
 
-  const loadGames = useCallback(async (params?: Partial<GetPrivateGamesParams>) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.library.getPrivateGames({
-        page: params?.page ?? page,
-        pageSize: PAGE_SIZE,
-        search: params?.search ?? (search || undefined),
-        sortBy: params?.sortBy ?? sortBy,
-        sortDirection: params?.sortDirection ?? sortDirection,
-      });
-      setGames(response.items);
-      setTotalCount(response.totalCount);
-      setTotalPages(response.totalPages);
-      setHasNextPage(response.hasNextPage);
-      setHasPreviousPage(response.hasPreviousPage);
-    } catch (err) {
-      console.error('Failed to load private games:', err);
-      setError(t('privateGames.loadError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, sortBy, sortDirection]);
+  const loadGames = useCallback(
+    async (params?: Partial<GetPrivateGamesParams>) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await api.library.getPrivateGames({
+          page: params?.page ?? page,
+          pageSize: PAGE_SIZE,
+          search: params?.search ?? (search || undefined),
+          sortBy: params?.sortBy ?? sortBy,
+          sortDirection: params?.sortDirection ?? sortDirection,
+        });
+        setGames(response.items);
+        setTotalCount(response.totalCount);
+        setTotalPages(response.totalPages);
+        setHasNextPage(response.hasNextPage);
+        setHasPreviousPage(response.hasPreviousPage);
+      } catch (err) {
+        console.error('Failed to load private games:', err);
+        setError(t('privateGames.loadError'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, search, sortBy, sortDirection, t]
+  );
 
   // Initial load
   useEffect(() => {
@@ -158,7 +170,6 @@ export default function PrivateGamesClient() {
     setPage(newPage);
     loadGames({ page: newPage });
   };
-
 
   const handleEditGame = async (data: AddPrivateGameFormData) => {
     if (!selectedGame) return;
@@ -230,7 +241,7 @@ export default function PrivateGamesClient() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-4 space-y-4">
       {/* Journey Progress Banner — pass the most recently created private game so Steps 2-5 evaluate.
           Sort by createdAt desc (independent of the user's display sort order) so the banner always
           tracks the game the user most recently added, not whichever game is first in the current
@@ -238,9 +249,10 @@ export default function PrivateGamesClient() {
           agentDefinitionId is passed explicitly (even when null) so JourneyProgress skips the
           shared-catalog /games/{id}/agents call that 404s for private game UUIDs. */}
       {(() => {
-        const recentGame = games.length > 0
-          ? [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
-          : undefined;
+        const recentGame =
+          games.length > 0
+            ? [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+            : undefined;
         return (
           <JourneyProgress
             gameId={recentGame?.id}
@@ -249,18 +261,12 @@ export default function PrivateGamesClient() {
         );
       })()}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">{t('privateGames.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('privateGames.manageCollection')} ({t('privateGames.subtitle', { count: totalCount })})
-          </p>
-        </div>
-        <Button
-          onClick={() => setAddDrawerOpen(true)}
-          data-testid="add-private-game-btn"
-        >
+      {/* Compact header — subtitle + add button */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {t('privateGames.manageCollection')} ({t('privateGames.subtitle', { count: totalCount })})
+        </p>
+        <Button size="sm" onClick={() => setAddDrawerOpen(true)} data-testid="add-private-game-btn">
           <Plus className="h-4 w-4 mr-2" />
           {t('privateGames.addGame')}
         </Button>
@@ -269,11 +275,14 @@ export default function PrivateGamesClient() {
       {/* Search and Sort Controls */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             placeholder={t('privateGames.searchPlaceholder')}
             value={search}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={e => handleSearch(e.target.value)}
             className="pl-10"
             aria-label="Search private games"
             data-testid="search-input"
@@ -331,9 +340,7 @@ export default function PrivateGamesClient() {
                 <Gamepad2 className="h-16 w-16 text-muted-foreground" />
               </div>
               <CardTitle>{t('privateGames.noGamesFound')}</CardTitle>
-              <CardDescription>
-                {t('privateGames.noGamesMatchSearch', { search })}
-              </CardDescription>
+              <CardDescription>{t('privateGames.noGamesMatchSearch', { search })}</CardDescription>
             </CardHeader>
           </Card>
         ) : (
@@ -347,7 +354,7 @@ export default function PrivateGamesClient() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             data-testid="games-grid"
           >
-            {games.map((game) => (
+            {games.map(game => (
               <div key={game.id} className="relative">
                 <PrivateGameCard
                   game={game}
@@ -393,10 +400,13 @@ export default function PrivateGamesClient() {
       )}
 
       {/* Edit Game Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={(open: boolean) => {
-        setEditDialogOpen(open);
-        if (!open) setSelectedGame(null);
-      }}>
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open: boolean) => {
+          setEditDialogOpen(open);
+          if (!open) setSelectedGame(null);
+        }}
+      >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('privateGames.editGame')}</DialogTitle>
@@ -419,10 +429,13 @@ export default function PrivateGamesClient() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
-        setDeleteDialogOpen(open);
-        if (!open) setSelectedGame(null);
-      }}>
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={open => {
+          setDeleteDialogOpen(open);
+          if (!open) setSelectedGame(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('privateGames.deleteGame')}</AlertDialogTitle>
@@ -465,7 +478,11 @@ export default function PrivateGamesClient() {
       {/* Add Game Drawer — local instance so close stays on /library/private */}
       <AddGameDrawer
         open={addDrawerOpen}
-        onClose={() => { setAddDrawerOpen(false); setPage(1); void loadGames({ page: 1 }); }}
+        onClose={() => {
+          setAddDrawerOpen(false);
+          setPage(1);
+          void loadGames({ page: 1 });
+        }}
       />
     </div>
   );
@@ -497,20 +514,22 @@ function EditPrivateGameForm({
   );
 }
 
-const EditFormSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
-  minPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
-  maxPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
-  yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
-  playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
-  minAge: z.number().int().min(0).max(99).nullable().optional(),
-  complexityRating: z.number().min(0).max(5).nullable().optional(),
-  description: z.string().max(5000, 'Description too long').nullable().optional(),
-  imageUrl: z.string().url('Invalid URL').nullable().optional().or(z.literal('')),
-}).refine((data) => data.maxPlayers >= data.minPlayers, {
-  message: 'Max players must be >= min players',
-  path: ['maxPlayers'],
-});
+const EditFormSchema = z
+  .object({
+    title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
+    minPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
+    maxPlayers: z.number().int().min(1, 'Min 1 player').max(99, 'Max 99 players'),
+    yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
+    playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
+    minAge: z.number().int().min(0).max(99).nullable().optional(),
+    complexityRating: z.number().min(0).max(5).nullable().optional(),
+    description: z.string().max(5000, 'Description too long').nullable().optional(),
+    imageUrl: z.string().url('Invalid URL').nullable().optional().or(z.literal('')),
+  })
+  .refine(data => data.maxPlayers >= data.minPlayers, {
+    message: 'Max players must be >= min players',
+    path: ['maxPlayers'],
+  });
 
 function EditPrivateGameFormInner({
   game,
@@ -563,42 +582,98 @@ function EditPrivateGameFormInner({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="edit-minPlayers">{t('privateGameForm.minPlayers')} <span className="text-destructive">*</span></Label>
-          <Input id="edit-minPlayers" type="number" min="1" max="99" {...register('minPlayers', { valueAsNumber: true })} disabled={isSubmitting} />
-          {errors.minPlayers && <p className="text-sm text-destructive">{errors.minPlayers.message}</p>}
+          <Label htmlFor="edit-minPlayers">
+            {t('privateGameForm.minPlayers')} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="edit-minPlayers"
+            type="number"
+            min="1"
+            max="99"
+            {...register('minPlayers', { valueAsNumber: true })}
+            disabled={isSubmitting}
+          />
+          {errors.minPlayers && (
+            <p className="text-sm text-destructive">{errors.minPlayers.message}</p>
+          )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit-maxPlayers">{t('privateGameForm.maxPlayers')} <span className="text-destructive">*</span></Label>
-          <Input id="edit-maxPlayers" type="number" min="1" max="99" {...register('maxPlayers', { valueAsNumber: true })} disabled={isSubmitting} />
-          {errors.maxPlayers && <p className="text-sm text-destructive">{errors.maxPlayers.message}</p>}
+          <Label htmlFor="edit-maxPlayers">
+            {t('privateGameForm.maxPlayers')} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="edit-maxPlayers"
+            type="number"
+            min="1"
+            max="99"
+            {...register('maxPlayers', { valueAsNumber: true })}
+            disabled={isSubmitting}
+          />
+          {errors.maxPlayers && (
+            <p className="text-sm text-destructive">{errors.maxPlayers.message}</p>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="edit-yearPublished">{t('privateGameForm.yearPublished')}</Label>
-          <Input id="edit-yearPublished" type="number" min="1900" max="2100" {...register('yearPublished', { valueAsNumber: true })} disabled={isSubmitting} />
+          <Input
+            id="edit-yearPublished"
+            type="number"
+            min="1900"
+            max="2100"
+            {...register('yearPublished', { valueAsNumber: true })}
+            disabled={isSubmitting}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="edit-playingTimeMinutes">{t('privateGameForm.playingTime')}</Label>
-          <Input id="edit-playingTimeMinutes" type="number" min="1" max="10000" {...register('playingTimeMinutes', { valueAsNumber: true })} disabled={isSubmitting} />
+          <Input
+            id="edit-playingTimeMinutes"
+            type="number"
+            min="1"
+            max="10000"
+            {...register('playingTimeMinutes', { valueAsNumber: true })}
+            disabled={isSubmitting}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="edit-minAge">{t('privateGameForm.minAge')}</Label>
-          <Input id="edit-minAge" type="number" min="0" max="99" {...register('minAge', { valueAsNumber: true })} disabled={isSubmitting} />
+          <Input
+            id="edit-minAge"
+            type="number"
+            min="0"
+            max="99"
+            {...register('minAge', { valueAsNumber: true })}
+            disabled={isSubmitting}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="edit-complexityRating">{t('privateGameForm.complexity')}</Label>
-          <Input id="edit-complexityRating" type="number" min="0" max="5" step="0.1" {...register('complexityRating', { valueAsNumber: true })} disabled={isSubmitting} />
+          <Input
+            id="edit-complexityRating"
+            type="number"
+            min="0"
+            max="5"
+            step="0.1"
+            {...register('complexityRating', { valueAsNumber: true })}
+            disabled={isSubmitting}
+          />
         </div>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="edit-description">{t('privateGameForm.description')}</Label>
-        <Textarea id="edit-description" {...register('description')} rows={4} disabled={isSubmitting} />
+        <Textarea
+          id="edit-description"
+          {...register('description')}
+          rows={4}
+          disabled={isSubmitting}
+        />
       </div>
 
       <div className="space-y-2">

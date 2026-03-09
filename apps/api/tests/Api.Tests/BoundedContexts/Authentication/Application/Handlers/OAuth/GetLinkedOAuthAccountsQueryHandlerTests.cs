@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.Queries.OAuth;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;

@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.Configuration;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.Services.Qdrant;
@@ -86,6 +87,9 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
                 return;
             }
 
+            // Transition to Extracting state (persist to DB for polling endpoint)
+            await UpdateProcessingStateAsync(pdf, "Extracting", ProcessingStep.Extracting, 20, cancellationToken).ConfigureAwait(false);
+
             // 3. Extract text (check if already extracted)
             string extractedText;
             if (!string.IsNullOrWhiteSpace(pdf.ExtractedText))
@@ -101,12 +105,14 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
                 _logger.LogWarning(
                     "PDF {PdfId} has no extracted text, processing will be skipped. Text extraction should happen separately.",
                     notification.PdfDocumentId);
+                await UpdateProcessingStateAsync(pdf, "Failed", ProcessingStep.Failed, 0, cancellationToken).ConfigureAwait(false);
                 await PublishProgressAsync(notification, ProcessingProgressJson.Failed(
                     "PDF text extraction required. Please wait for extraction to complete."), cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            // 4. Chunk text
+            // 4. Chunk text — transition to Chunking state
+            await UpdateProcessingStateAsync(pdf, "Chunking", ProcessingStep.Chunking, 45, cancellationToken).ConfigureAwait(false);
             await PublishProgressAsync(notification, ProcessingProgressJson.ForStep(
                 ProcessingStep.Chunking, 45, "Creating text chunks..."), cancellationToken).ConfigureAwait(false);
 
@@ -114,6 +120,7 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
             if (textChunks.Count == 0)
             {
                 _logger.LogWarning("No chunks created for PDF {PdfId}", notification.PdfDocumentId);
+                await UpdateProcessingStateAsync(pdf, "Failed", ProcessingStep.Failed, 0, cancellationToken).ConfigureAwait(false);
                 await PublishProgressAsync(notification, ProcessingProgressJson.Failed("No text chunks could be created"), cancellationToken).ConfigureAwait(false);
                 return;
             }
@@ -121,23 +128,25 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
             _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, notification.PdfDocumentId);
             await PublishProgressAsync(notification, ProcessingProgressJson.ForChunking(textChunks.Count), cancellationToken).ConfigureAwait(false);
 
-            // 5. Generate embeddings in batches
+            // 5. Generate embeddings in batches — transition to Embedding state
+            await UpdateProcessingStateAsync(pdf, "Embedding", ProcessingStep.Embedding, 60, cancellationToken).ConfigureAwait(false);
             await PublishProgressAsync(notification, ProcessingProgressJson.ForStep(
                 ProcessingStep.Embedding, 60, "Generating AI embeddings..."), cancellationToken).ConfigureAwait(false);
 
             var documentChunks = await GenerateEmbeddingsAsync(
-                notification.PdfDocumentId, textChunks, notification, cancellationToken).ConfigureAwait(false);
+                pdf, notification.PdfDocumentId, textChunks, notification, cancellationToken).ConfigureAwait(false);
 
             if (documentChunks is null || documentChunks.Count == 0)
             {
-                return; // Error already published
+                return; // Error already published and DB state updated
             }
 
             _logger.LogInformation("Generated {EmbeddingCount} embeddings for PDF {PdfId}",
                 documentChunks.Count, notification.PdfDocumentId);
             await PublishProgressAsync(notification, ProcessingProgressJson.ForEmbedding(documentChunks.Count), cancellationToken).ConfigureAwait(false);
 
-            // 6. Ensure private_rules collection exists
+            // 6. Ensure private_rules collection exists — transition to Indexing state
+            await UpdateProcessingStateAsync(pdf, "Indexing", ProcessingStep.Indexing, 85, cancellationToken).ConfigureAwait(false);
             await PublishProgressAsync(notification, ProcessingProgressJson.ForStep(
                 ProcessingStep.Indexing, 85, "Preparing vector storage..."), cancellationToken).ConfigureAwait(false);
 
@@ -163,9 +172,11 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
 
             await PublishProgressAsync(notification, ProcessingProgressJson.ForIndexing(documentChunks.Count), cancellationToken).ConfigureAwait(false);
 
-            // 8. Update PDF processing status and save
+            // 8. Update PDF processing status to final state and save
+            pdf.ProcessingState = "Ready";
             pdf.ProcessingStatus = "indexed";
             pdf.ProcessedAt = DateTime.UtcNow;
+            UpdateProgressJson(pdf, ProcessingStep.Completed, 100);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             await PublishProgressAsync(notification, ProcessingProgressJson.Completed(), cancellationToken).ConfigureAwait(false);
@@ -183,6 +194,29 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
                 "Error processing PrivatePdfAssociatedEvent for PdfId={PdfId}: {Error}",
                 notification.PdfDocumentId, ex.Message);
 
+            // Persist failed state to DB so polling endpoint reflects the error
+            try
+            {
+                var failedPdf = await _db.PdfDocuments
+                    .FirstOrDefaultAsync(p => p.Id == notification.PdfDocumentId, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (failedPdf is not null)
+                {
+                    failedPdf.ProcessingState = "Failed";
+                    failedPdf.ProcessingStatus = "failed";
+                    failedPdf.ProcessingError = ex.Message;
+                    UpdateProgressJson(failedPdf, ProcessingStep.Failed, 0);
+                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
+#pragma warning disable CA1031
+            catch (Exception dbEx)
+            {
+                _logger.LogWarning(dbEx, "Failed to persist error state for PDF {PdfId}", notification.PdfDocumentId);
+            }
+#pragma warning restore CA1031
+
             await PublishProgressAsync(notification, ProcessingProgressJson.Failed($"Processing failed: {ex.Message}"), cancellationToken).ConfigureAwait(false);
         }
 #pragma warning restore CA1031
@@ -192,6 +226,7 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
     /// Generates embeddings for text chunks in batches.
     /// </summary>
     private async Task<List<DocumentChunk>?> GenerateEmbeddingsAsync(
+        PdfDocumentEntity pdf,
         Guid pdfId,
         List<TextChunk> textChunks,
         PrivatePdfAssociatedEvent notification,
@@ -219,6 +254,7 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
             {
                 _logger.LogError("Failed to generate embeddings for PDF {PdfId}: {Error}",
                     pdfId, embeddingResult.ErrorMessage);
+                await UpdateProcessingStateAsync(pdf, "Failed", ProcessingStep.Failed, 0, cancellationToken).ConfigureAwait(false);
                 await PublishProgressAsync(notification, ProcessingProgressJson.Failed(
                     $"Embedding generation failed: {embeddingResult.ErrorMessage}"), cancellationToken).ConfigureAwait(false);
                 return null;
@@ -228,6 +264,7 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
             {
                 _logger.LogError("Embedding count mismatch: expected {Expected}, got {Actual}",
                     batchSize, embeddingResult.Embeddings.Count);
+                await UpdateProcessingStateAsync(pdf, "Failed", ProcessingStep.Failed, 0, cancellationToken).ConfigureAwait(false);
                 await PublishProgressAsync(notification, ProcessingProgressJson.Failed(
                     "Embedding count mismatch"), cancellationToken).ConfigureAwait(false);
                 return null;
@@ -247,14 +284,47 @@ internal sealed class PrivatePdfAssociatedEventHandler : INotificationHandler<Pr
 
             documentChunks.AddRange(batchChunks);
 
-            // Publish intermediate progress
+            // Publish intermediate progress (SSE + DB)
             var progress = 60 + (int)(20 * ((double)documentChunks.Count / textChunks.Count));
+            UpdateProgressJson(pdf, ProcessingStep.Embedding, progress);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await PublishProgressAsync(notification, ProcessingProgressJson.ForStep(
                 ProcessingStep.Embedding, progress,
                 $"Generated {documentChunks.Count}/{textChunks.Count} embeddings..."), cancellationToken).ConfigureAwait(false);
         }
 
         return documentChunks;
+    }
+
+    /// <summary>
+    /// Updates processing state and progress in the database so the polling endpoint reflects current progress.
+    /// </summary>
+    private async Task UpdateProcessingStateAsync(
+        PdfDocumentEntity pdf,
+        string state,
+        ProcessingStep step,
+        int percent,
+        CancellationToken cancellationToken)
+    {
+        pdf.ProcessingState = state;
+        pdf.ProcessingStatus = string.Equals(state, "Failed", StringComparison.Ordinal) ? "failed" : "processing";
+        UpdateProgressJson(pdf, step, percent);
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the ProcessingProgressJson field on the entity (without saving).
+    /// </summary>
+    private static void UpdateProgressJson(PdfDocumentEntity pdf, ProcessingStep step, int percent)
+    {
+        pdf.ProcessingProgress = new ProcessingProgress
+        {
+            CurrentStep = step,
+            PercentComplete = percent,
+            PagesProcessed = pdf.PageCount ?? 0,
+            TotalPages = pdf.PageCount ?? 0,
+            StartedAt = pdf.UploadedAt,
+        };
     }
 
     /// <summary>

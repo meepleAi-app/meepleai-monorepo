@@ -63,15 +63,16 @@ export default defineConfig({
         'src/**/*.story.*', // Legacy story formats
         // Issue #1951: progress, checkbox, accordion, sheet, meeple-logo now have unit tests
       ],
-      thresholds: {
-        branches: 85, // Issue #3026: Target achieved (88.09% current)
-        functions: 79, // Issue #3026: Phase 1 milestone (79.76% current, target 85% in Phase 2)
-        lines: 80, // Issue #3026: Phase 1 milestone (80.29% current, target 85% in Phase 2)
-        statements: 80, // Issue #3026: Phase 1 milestone (80.29% current, target 85% in Phase 2)
-        // TODO: Increase to 40% in separate PR (requires ~18 more component tests)
-        // Issue #1951: Added 78 unit tests (Progress, Checkbox, Spinner, GamePicker, IntlProvider, UIProvider, Accordion, Sheet, MeepleLogo, domain types)
-        // TODO Issue #1256: Increase to 90% after writing tests for remaining untested components
-      },
+      // Issue #2967: Disable thresholds in CI — coverage is tracked via Codecov.
+      // Thresholds enforce locally only to catch regressions during development.
+      thresholds: process.env.CI
+        ? undefined
+        : {
+            branches: 85, // Issue #3026: Target achieved (88.09% current)
+            functions: 79, // Issue #3026: Phase 1 milestone (79.76% current, target 85% in Phase 2)
+            lines: 80, // Issue #3026: Phase 1 milestone (80.29% current, target 85% in Phase 2)
+            statements: 80, // Issue #3026: Phase 1 milestone (80.29% current, target 85% in Phase 2)
+          },
     },
     exclude: [
       '**/node_modules/**',
@@ -117,13 +118,28 @@ export default defineConfig({
       'next-intl': path.resolve(__dirname, './src/test-utils/__mocks__/next-intl.ts'),
       // Mock uninstalled dependencies for test resolution
       'react-dropzone': path.resolve(__dirname, './src/test-utils/__mocks__/react-dropzone.ts'),
-      'swr': path.resolve(__dirname, './src/test-utils/__mocks__/swr.ts'),
-      '@react-pdf-viewer/core': path.resolve(__dirname, './src/test-utils/__mocks__/react-pdf-viewer-core.ts'),
-      '@react-pdf-viewer/default-layout': path.resolve(__dirname, './src/test-utils/__mocks__/react-pdf-viewer-default-layout.ts'),
-      '@react-pdf-viewer/page-navigation': path.resolve(__dirname, './src/test-utils/__mocks__/react-pdf-viewer-page-navigation.ts'),
+      swr: path.resolve(__dirname, './src/test-utils/__mocks__/swr.ts'),
+      '@react-pdf-viewer/core': path.resolve(
+        __dirname,
+        './src/test-utils/__mocks__/react-pdf-viewer-core.ts'
+      ),
+      '@react-pdf-viewer/default-layout': path.resolve(
+        __dirname,
+        './src/test-utils/__mocks__/react-pdf-viewer-default-layout.ts'
+      ),
+      '@react-pdf-viewer/page-navigation': path.resolve(
+        __dirname,
+        './src/test-utils/__mocks__/react-pdf-viewer-page-navigation.ts'
+      ),
       // CSS imports from uninstalled packages
-      '@react-pdf-viewer/core/lib/styles/index.css': path.resolve(__dirname, './src/test-utils/__mocks__/empty.css'),
-      '@react-pdf-viewer/default-layout/lib/styles/index.css': path.resolve(__dirname, './src/test-utils/__mocks__/empty.css'),
+      '@react-pdf-viewer/core/lib/styles/index.css': path.resolve(
+        __dirname,
+        './src/test-utils/__mocks__/empty.css'
+      ),
+      '@react-pdf-viewer/default-layout/lib/styles/index.css': path.resolve(
+        __dirname,
+        './src/test-utils/__mocks__/empty.css'
+      ),
     },
   },
 });

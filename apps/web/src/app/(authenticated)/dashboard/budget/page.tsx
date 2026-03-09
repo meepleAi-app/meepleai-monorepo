@@ -1,13 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getUserBudget, type UserBudgetDto } from '@/lib/api/clients/budgetClient';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+
+import {
+  CreditCard,
+  TrendingUp,
+  Calendar,
+  AlertCircle,
+  ExternalLink,
+  DollarSign,
+} from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CreditCard, TrendingUp, Calendar, AlertCircle, ExternalLink, DollarSign } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
+import { getUserBudget, type UserBudgetDto } from '@/lib/api/clients/budgetClient';
 
 /**
  * Budget Dashboard Page
@@ -73,13 +82,11 @@ export default function BudgetDashboardPage() {
     );
   }
 
-  const dailyUsagePercent = budget.dailyLimit > 0
-    ? ((budget.dailyCreditsUsed / budget.dailyLimit) * 100)
-    : 0;
+  const dailyUsagePercent =
+    budget.dailyLimit > 0 ? (budget.dailyCreditsUsed / budget.dailyLimit) * 100 : 0;
 
-  const weeklyUsagePercent = budget.weeklyLimit > 0
-    ? ((budget.weeklyCreditsUsed / budget.weeklyLimit) * 100)
-    : 0;
+  const weeklyUsagePercent =
+    budget.weeklyLimit > 0 ? (budget.weeklyCreditsUsed / budget.weeklyLimit) * 100 : 0;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -108,9 +115,7 @@ export default function BudgetDashboardPage() {
           </CardHeader>
           <CardContent>
             <Button variant="default" size="sm" asChild>
-              <a href="/dashboard/settings/billing">
-                Upgrade to Pro for More Credits
-              </a>
+              <a href="/dashboard/settings/billing">Upgrade to Pro for More Credits</a>
             </Button>
           </CardContent>
         </Card>
@@ -125,12 +130,8 @@ export default function BudgetDashboardPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.floor(budget.creditsRemaining)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              of {budget.dailyLimit} remaining
-            </p>
+            <div className="text-2xl font-bold">{Math.floor(budget.creditsRemaining)}</div>
+            <p className="text-xs text-muted-foreground">of {budget.dailyLimit} remaining</p>
             <Progress value={100 - dailyUsagePercent} className="mt-3 h-2" />
             <div className="mt-2 flex items-center text-xs text-muted-foreground">
               <Calendar className="mr-1 h-3 w-3" />
@@ -149,9 +150,7 @@ export default function BudgetDashboardPage() {
             <div className="text-2xl font-bold">
               {Math.floor(budget.weeklyLimit - budget.weeklyCreditsUsed)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              of {budget.weeklyLimit} remaining
-            </p>
+            <p className="text-xs text-muted-foreground">of {budget.weeklyLimit} remaining</p>
             <Progress value={100 - weeklyUsagePercent} className="mt-3 h-2" />
             <div className="mt-2 flex items-center text-xs text-muted-foreground">
               <Calendar className="mr-1 h-3 w-3" />
@@ -169,14 +168,14 @@ export default function BudgetDashboardPage() {
           <CardContent>
             <div className="space-y-2">
               <Badge
-                variant={budget.isBlocked ? 'destructive' : dailyUsagePercent >= 80 ? 'default' : 'outline'}
+                variant={
+                  budget.isBlocked ? 'destructive' : dailyUsagePercent >= 80 ? 'default' : 'outline'
+                }
                 className="w-full justify-center"
               >
                 {budget.isBlocked ? 'Blocked' : dailyUsagePercent >= 80 ? 'Low Credits' : 'Active'}
               </Badge>
-              <div className="text-xs text-muted-foreground">
-                1 credit = $0.00001 USD
-              </div>
+              <div className="text-xs text-muted-foreground">1 credit = $0.00001 USD</div>
               <div className="text-xs text-muted-foreground">
                 Daily: {Math.floor(budget.dailyCreditsUsed)} / {budget.dailyLimit} used
               </div>
@@ -200,16 +199,19 @@ export default function BudgetDashboardPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Daily Usage</span>
               <span className="text-sm text-muted-foreground">
-                {Math.floor(budget.dailyCreditsUsed)} / {budget.dailyLimit} credits ({dailyUsagePercent.toFixed(1)}%)
+                {Math.floor(budget.dailyCreditsUsed)} / {budget.dailyLimit} credits (
+                {dailyUsagePercent.toFixed(1)}%)
               </span>
             </div>
             <Progress
               value={dailyUsagePercent}
               className="h-3"
               indicatorClassName={
-                dailyUsagePercent >= 95 ? 'bg-destructive' :
-                dailyUsagePercent >= 80 ? 'bg-yellow-500' :
-                'bg-primary'
+                dailyUsagePercent >= 95
+                  ? 'bg-destructive'
+                  : dailyUsagePercent >= 80
+                    ? 'bg-yellow-500'
+                    : 'bg-primary'
               }
             />
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -223,21 +225,28 @@ export default function BudgetDashboardPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Weekly Usage</span>
               <span className="text-sm text-muted-foreground">
-                {Math.floor(budget.weeklyCreditsUsed)} / {budget.weeklyLimit} credits ({weeklyUsagePercent.toFixed(1)}%)
+                {Math.floor(budget.weeklyCreditsUsed)} / {budget.weeklyLimit} credits (
+                {weeklyUsagePercent.toFixed(1)}%)
               </span>
             </div>
             <Progress
               value={weeklyUsagePercent}
               className="h-3"
               indicatorClassName={
-                weeklyUsagePercent >= 95 ? 'bg-destructive' :
-                weeklyUsagePercent >= 80 ? 'bg-yellow-500' :
-                'bg-primary'
+                weeklyUsagePercent >= 95
+                  ? 'bg-destructive'
+                  : weeklyUsagePercent >= 80
+                    ? 'bg-yellow-500'
+                    : 'bg-primary'
               }
             />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Remaining: {Math.floor(budget.weeklyLimit - budget.weeklyCreditsUsed)} credits</span>
-              <span>${((budget.weeklyLimit - budget.weeklyCreditsUsed) * 0.00001).toFixed(6)} USD</span>
+              <span>
+                Remaining: {Math.floor(budget.weeklyLimit - budget.weeklyCreditsUsed)} credits
+              </span>
+              <span>
+                ${((budget.weeklyLimit - budget.weeklyCreditsUsed) * 0.00001).toFixed(6)} USD
+              </span>
             </div>
           </div>
         </CardContent>
@@ -261,7 +270,9 @@ export default function BudgetDashboardPage() {
               <div className="rounded-lg border p-4 space-y-2 border-primary">
                 <div className="font-semibold flex items-center">
                   Pro Tier
-                  <Badge variant="default" className="ml-2">Popular</Badge>
+                  <Badge variant="default" className="ml-2">
+                    Popular
+                  </Badge>
                 </div>
                 <div className="text-2xl font-bold">5,000</div>
                 <div className="text-xs text-muted-foreground">credits/day</div>
@@ -275,9 +286,7 @@ export default function BudgetDashboardPage() {
               </div>
             </div>
             <Button className="w-full" asChild>
-              <a href="/dashboard/settings/billing">
-                View Upgrade Options
-              </a>
+              <a href="/dashboard/settings/billing">View Upgrade Options</a>
             </Button>
           </div>
         </CardContent>

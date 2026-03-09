@@ -11,8 +11,9 @@ import { Crown, Trophy } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-import type { ScoreboardTabData, SessionPlayerInfo } from '../types';
 import { PLAYER_COLOR_BG, PLAYER_COLOR_TEXT } from '../../meeple-card-features/session-types';
+
+import type { ScoreboardTabData, SessionPlayerInfo } from '../types';
 
 // ============================================================================
 // Sub-components
@@ -33,13 +34,7 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function PlayerScoreRow({
-  player,
-  isLeader,
-}: {
-  player: SessionPlayerInfo;
-  isLeader: boolean;
-}) {
+function PlayerScoreRow({ player, isLeader }: { player: SessionPlayerInfo; isLeader: boolean }) {
   const bgColor = PLAYER_COLOR_BG[player.color] ?? 'bg-slate-400';
   const textColor = PLAYER_COLOR_TEXT[player.color] ?? 'text-slate-500';
 
@@ -63,9 +58,7 @@ function PlayerScoreRow({
         <p className="truncate font-nunito text-sm font-semibold text-slate-800">
           {player.displayName}
         </p>
-        {!player.isActive && (
-          <p className="text-[10px] text-slate-400 italic">Inactive</p>
-        )}
+        {!player.isActive && <p className="text-[10px] text-slate-400 italic">Inactive</p>}
       </div>
       <span className={cn('font-mono text-lg font-bold tabular-nums', textColor)}>
         {player.totalScore}
@@ -97,7 +90,7 @@ export function ScoreboardTab({ data }: ScoreboardTabProps) {
   const leaderId = sortedPlayers[0]?.id;
 
   // Group round scores by round number
-  const roundNumbers = [...new Set(data.roundScores.map((s) => s.round))].sort((a, b) => a - b);
+  const roundNumbers = [...new Set(data.roundScores.map(s => s.round))].sort((a, b) => a - b);
 
   return (
     <div className="space-y-4">
@@ -107,12 +100,8 @@ export function ScoreboardTab({ data }: ScoreboardTabProps) {
           Leaderboard
         </h3>
         <div className="space-y-1.5">
-          {sortedPlayers.map((player) => (
-            <PlayerScoreRow
-              key={player.id}
-              player={player}
-              isLeader={player.id === leaderId}
-            />
+          {sortedPlayers.map(player => (
+            <PlayerScoreRow key={player.id} player={player} isLeader={player.id === leaderId} />
           ))}
         </div>
       </div>
@@ -128,7 +117,7 @@ export function ScoreboardTab({ data }: ScoreboardTabProps) {
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className="px-2 py-1.5 text-left text-slate-400 font-medium">Player</th>
-                  {roundNumbers.map((round) => (
+                  {roundNumbers.map(round => (
                     <th key={round} className="px-2 py-1.5 text-center text-slate-400 font-medium">
                       R{round}
                     </th>
@@ -137,17 +126,20 @@ export function ScoreboardTab({ data }: ScoreboardTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {sortedPlayers.map((player) => (
+                {sortedPlayers.map(player => (
                   <tr key={player.id} className="border-b border-slate-50 last:border-0">
                     <td className="px-2 py-1.5 font-medium text-slate-700 truncate max-w-[100px]">
                       {player.displayName}
                     </td>
-                    {roundNumbers.map((round) => {
+                    {roundNumbers.map(round => {
                       const score = data.roundScores.find(
-                        (s) => s.playerId === player.id && s.round === round
+                        s => s.playerId === player.id && s.round === round
                       );
                       return (
-                        <td key={round} className="px-2 py-1.5 text-center tabular-nums text-slate-600">
+                        <td
+                          key={round}
+                          className="px-2 py-1.5 text-center tabular-nums text-slate-600"
+                        >
                           {score?.value ?? '–'}
                         </td>
                       );

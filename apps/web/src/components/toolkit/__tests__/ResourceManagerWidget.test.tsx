@@ -7,6 +7,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
+vi.mock('@/lib/hooks/useWidgetSync', () => ({
+  useWidgetSync: () => ({ broadcastState: vi.fn(), isConnected: false }),
+}));
+
 import { ResourceManagerWidget } from '../ResourceManagerWidget';
 
 describe('ResourceManagerWidget', () => {

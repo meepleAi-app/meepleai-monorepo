@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands.TierStrategy;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries.TierStrategy;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -62,6 +63,17 @@ internal static class TierStrategyAdminEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
+
+        // POST /api/v1/admin/tier-strategy/apply-replacement - Apply model replacement
+        tierStrategyGroup.MapPost("/apply-replacement", HandleApplyReplacement)
+            .WithName("ApplyModelReplacement")
+            .WithSummary("Apply model replacement across affected strategies")
+            .WithDescription("Replaces a deprecated/unavailable model with a suggested replacement across all strategy mappings that use it as primary model. Issue #5499.")
+            .Produces<ApplyModelReplacementResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
 
         // POST /api/v1/admin/tier-strategy/reset - Reset to defaults
         tierStrategyGroup.MapPost("/reset", HandleReset)
@@ -158,6 +170,30 @@ internal static class TierStrategyAdminEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleApplyReplacement(
+        [FromBody] ApplyModelReplacementRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation(
+            "Admin {AdminId} applying model replacement: {DeprecatedModel} → {ReplacementModel}",
+            session!.User!.Id,
+            request.DeprecatedModelId,
+            request.ReplacementModelId);
+
+        var command = new ApplyModelReplacementCommand(
+            request.DeprecatedModelId,
+            request.ReplacementModelId);
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleReset(
         [FromBody] ResetTierStrategyConfigRequest? request,
         HttpContext context,
@@ -204,6 +240,15 @@ internal sealed record UpdateStrategyModelMappingRequest(
     string Provider,
     string PrimaryModel,
     IReadOnlyList<string>? FallbackModels = null
+);
+
+/// <summary>
+/// Request DTO for applying a model replacement.
+/// Issue #5499.
+/// </summary>
+internal sealed record ApplyModelReplacementRequest(
+    string DeprecatedModelId,
+    string ReplacementModelId
 );
 
 /// <summary>

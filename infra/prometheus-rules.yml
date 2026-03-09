@@ -121,6 +121,130 @@ groups:
           endpoint: explain
 
   # ========================================
+  # SLO Recording Rules (Issue #5541)
+  # Pre-computed metrics for SLO burn rate
+  # ========================================
+
+  - name: meepleai_slo_recording_rules
+    interval: 30s
+    rules:
+      # SLO-1: RAG Chat TTFT (Time-To-First-Token) p95
+      - record: meepleai:slo:rag_ttft:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(meepleai_rag_first_token_latency_bucket[5m])
+          )
+        labels:
+          service: meepleai-api
+          slo: rag_ttft
+          target: "800"
+
+      # SLO-1: RAG Chat TTFT error ratio (requests exceeding 800ms target)
+      - record: meepleai:slo:rag_ttft:error_ratio:1h
+        expr: |
+          (
+            1 - (
+              sum(rate(meepleai_rag_first_token_latency_bucket{le="800"}[1h]))
+              /
+              sum(rate(meepleai_rag_first_token_latency_count[1h]))
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: rag_ttft
+
+      - record: meepleai:slo:rag_ttft:error_ratio:6h
+        expr: |
+          (
+            1 - (
+              sum(rate(meepleai_rag_first_token_latency_bucket{le="800"}[6h]))
+              /
+              sum(rate(meepleai_rag_first_token_latency_count[6h]))
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: rag_ttft
+
+      # SLO-2: RAG Chat Total Response p95
+      - record: meepleai:slo:rag_total:error_ratio:1h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/agents/.*/chat",le="3"}[1h]))
+              /
+              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/agents/.*/chat"}[1h]))
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: rag_total
+
+      - record: meepleai:slo:rag_total:error_ratio:6h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/agents/.*/chat",le="3"}[6h]))
+              /
+              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/agents/.*/chat"}[6h]))
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: rag_total
+
+      # SLO-3: Search Response p95
+      - record: meepleai:slo:search:error_ratio:1h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/search.*",le="0.5"}[1h]))
+              /
+              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/search.*"}[1h]))
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: search
+
+      - record: meepleai:slo:search:error_ratio:6h
+        expr: |
+          (
+            1 - (
+              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/search.*",le="0.5"}[6h]))
+              /
+              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/search.*"}[6h]))
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: search
+
+      # SLO-4: API Error Rate (availability SLO)
+      - record: meepleai:slo:availability:error_ratio:1h
+        expr: |
+          (
+            sum(rate(http_server_request_duration_count{http_response_status_code=~"5.."}[1h]))
+            /
+            sum(rate(http_server_request_duration_count[1h]))
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: availability
+
+      - record: meepleai:slo:availability:error_ratio:6h
+        expr: |
+          (
+            sum(rate(http_server_request_duration_count{http_response_status_code=~"5.."}[6h]))
+            /
+            sum(rate(http_server_request_duration_count[6h]))
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          slo: availability
+
+  # ========================================
   # Alert Rules
   # Conditions that trigger notifications
   # ========================================
@@ -673,3 +797,116 @@ groups:
             Check for CPU-bound processes or I/O bottlenecks.
           runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
           dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+  # ========================================
+  # SLO Burn Rate Alerts (Issue #5541)
+  # Multi-window error budget consumption
+  # ========================================
+
+  - name: meepleai_slo_burn_rate_alerts
+    interval: 60s
+    rules:
+      # SLO: RAG TTFT - Fast burn (>50% budget consumed in 1h)
+      # Budget = 1 - SLO_target = 1 - 0.95 = 0.05 (5% allowed errors)
+      # Fast burn rate: error_ratio_1h / budget > 0.5/1h ≈ error_ratio > 0.025
+      - alert: SloRagTtftFastBurn
+        expr: |
+          meepleai:slo:rag_ttft:error_ratio:1h > 0.025
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: slo
+          slo: rag_ttft
+        annotations:
+          summary: "RAG TTFT SLO fast burn detected"
+          description: |
+            RAG Time-To-First-Token error ratio is {{ $value | humanize }}% in 1h window.
+            At this burn rate, >50% of 28-day error budget will be consumed.
+            Target: 95% of requests < 800ms.
+          runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
+
+      # SLO: RAG TTFT - Slow burn (>80% budget consumed in 6h)
+      - alert: SloRagTtftSlowBurn
+        expr: |
+          meepleai:slo:rag_ttft:error_ratio:6h > 0.04
+        for: 15m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: slo
+          slo: rag_ttft
+        annotations:
+          summary: "RAG TTFT SLO slow burn — error budget nearly exhausted"
+          description: |
+            RAG Time-To-First-Token error ratio is {{ $value | humanize }}% over 6h window.
+            At this rate, >80% of 28-day error budget will be consumed.
+          runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
+
+      # SLO: RAG Total Response - Fast burn
+      - alert: SloRagTotalFastBurn
+        expr: |
+          meepleai:slo:rag_total:error_ratio:1h > 0.025
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: slo
+          slo: rag_total
+        annotations:
+          summary: "RAG total response SLO fast burn detected"
+          description: |
+            RAG chat response error ratio is {{ $value | humanize }}% in 1h window.
+            Target: 95% of requests < 3s total response time.
+          runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
+
+      # SLO: RAG Total Response - Slow burn
+      - alert: SloRagTotalSlowBurn
+        expr: |
+          meepleai:slo:rag_total:error_ratio:6h > 0.04
+        for: 15m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: slo
+          slo: rag_total
+        annotations:
+          summary: "RAG total response SLO slow burn — error budget nearly exhausted"
+          description: |
+            RAG chat response error ratio is {{ $value | humanize }}% over 6h window.
+            At this rate, >80% of 28-day error budget will be consumed.
+          runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
+
+      # SLO: Availability - Fast burn
+      - alert: SloAvailabilityFastBurn
+        expr: |
+          meepleai:slo:availability:error_ratio:1h > 0.005
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: slo
+          slo: availability
+        annotations:
+          summary: "API availability SLO fast burn detected"
+          description: |
+            API 5xx error ratio is {{ $value | humanize }}% in 1h window.
+            Target: 99% availability (1% error budget).
+          runbook_url: "https://docs.meepleai.dev/runbooks/high-error-rate"
+
+      # SLO: Availability - Slow burn
+      - alert: SloAvailabilitySlowBurn
+        expr: |
+          meepleai:slo:availability:error_ratio:6h > 0.008
+        for: 15m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: slo
+          slo: availability
+        annotations:
+          summary: "API availability SLO slow burn — error budget nearly exhausted"
+          description: |
+            API 5xx error ratio is {{ $value | humanize }}% over 6h window.
+            At this rate, >80% of 28-day error budget will be consumed.
+          runbook_url: "https://docs.meepleai.dev/runbooks/high-error-rate"

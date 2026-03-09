@@ -96,6 +96,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         SendAgentMessageCommand command,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // Issue #5541: TTFT (Time-To-First-Token) SLO metric
+        var ttftStopwatch = Stopwatch.StartNew();
+
         _logger.LogInformation(
             "Starting agent chat for Agent {AgentId}, User {UserId}, Thread {ChatThreadId}",
             command.AgentId, command.UserId, command.ChatThreadId);
@@ -599,6 +602,10 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         llmActivity?.SetTag("rag.final_model", modelToUse);
         llmActivity?.SetTag("rag.used_fallback", !string.Equals(modelToUse, originalModel, StringComparison.Ordinal));
         llmActivity?.SetTag("rag.total_tokens", llmResult.Usage.TotalTokens);
+
+        // Issue #5541: Record TTFT metric (request start → first LLM response)
+        ttftStopwatch.Stop();
+        MeepleAiMetrics.RagFirstTokenLatency.Record(ttftStopwatch.ElapsedMilliseconds);
 
         // Emit downgrade notice if model changed
         if (!string.Equals(modelToUse, originalModel, StringComparison.Ordinal))

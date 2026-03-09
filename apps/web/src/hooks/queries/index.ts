@@ -187,6 +187,9 @@ export {
   useUpdateAgentConfiguration,
 } from './useModels';
 
+// Rulebook Analysis queries (Issue #5584)
+export { useRulebookAnalysis, rulebookAnalysisKeys } from './useRulebookAnalysis';
+
 // Game Setup Wizard queries (Issue #5583)
 export { useGameAnalysis, useGameExpansions, gameSetupKeys } from './useGameSetup';
 

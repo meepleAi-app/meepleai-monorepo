@@ -612,6 +612,9 @@ v1Api.MapAgentSessionEndpoints();
 // Issue #3483: Chat session persistence endpoints
 v1Api.MapChatSessionEndpoints();
 
+// Issue #5497: A/B Test backend API endpoints
+v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints();
+
 // Issue #3379: Agent test results history & persistence
 v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints();
 

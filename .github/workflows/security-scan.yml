@@ -45,7 +45,7 @@ jobs:
         if: matrix.language == 'csharp'
         working-directory: apps/api
         run: |
-          sudo apt-get update && sudo apt-get install -y libgdiplus
+          sudo apt-get update && sudo apt-get install -y libgdiplus || true
           dotnet restore
           dotnet build --no-restore
 
@@ -119,11 +119,14 @@ jobs:
   secrets:
     name: Secrets Detection
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    container:
-      image: semgrep/semgrep
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: |
+          python3 -m pip install --user semgrep
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run Semgrep
         run: |

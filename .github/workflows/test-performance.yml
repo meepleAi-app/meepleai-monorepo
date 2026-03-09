@@ -75,13 +75,14 @@ jobs:
     name: Detect Changes
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     outputs:
-      web: ${{ steps.filter.outputs.web }}
-      api: ${{ steps.filter.outputs.api }}
-      k6: ${{ steps.filter.outputs.k6 }}
+      web: ${{ steps.filter.outputs.web || 'true' }}
+      api: ${{ steps.filter.outputs.api || 'true' }}
+      k6: ${{ steps.filter.outputs.k6 || 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name == 'pull_request'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           filters: |
@@ -155,11 +156,20 @@ jobs:
 
       - name: Install k6 and Redis CLI
         run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install -y k6 redis-tools
+          ARCH=$(dpkg --print-architecture)
+          if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
+            # k6 deb repo doesn't support ARM64 — install from GitHub releases
+            K6_VERSION=$(curl -s https://api.github.com/repos/grafana/k6/releases/latest | grep tag_name | cut -d'"' -f4)
+            curl -sL "https://github.com/grafana/k6/releases/download/${K6_VERSION}/k6-${K6_VERSION}-linux-arm64.tar.gz" | tar xz
+            sudo mv k6-${K6_VERSION}-linux-arm64/k6 /usr/local/bin/k6
+          else
+            sudo gpg -k
+            sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+            echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+            sudo apt-get update
+            sudo apt-get install -y k6
+          fi
+          sudo apt-get update && sudo apt-get install -y redis-tools
 
       - name: Clean API build outputs
         working-directory: apps/api/src/Api

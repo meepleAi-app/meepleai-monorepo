@@ -307,6 +307,7 @@ groups:
             Memory usage: {{ $value | humanizePercentage }}.
             The API may be approaching memory limits.
             Check for memory leaks or increase container resources.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
           dashboard_url: "http://localhost:3001/d/infrastructure"
 
   - name: meepleai_info_alerts
@@ -331,6 +332,7 @@ groups:
             A new type of error has appeared in the system.
             Error rate: {{ $value | humanize }} errors/sec.
             Review logs to identify the new error type.
+          runbook_url: "https://docs.meepleai.dev/runbooks/high-error-rate"
           dashboard_url: "http://localhost:3001/d/error-monitoring"
 
   # ========================================

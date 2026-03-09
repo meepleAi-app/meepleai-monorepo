@@ -191,6 +191,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5489: Cost service (Scoped - uses scoped repositories via IServiceScopeFactory)
         services.AddScoped<ILlmCostService, LlmCostService>();
 
+        // Issue #5505: A/B test budget isolation (Scoped - uses Redis for daily budget + rate limits)
+        services.AddScoped<IAbTestBudgetService, AbTestBudgetService>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
         services.AddScoped<ILlmService, HybridLlmService>();

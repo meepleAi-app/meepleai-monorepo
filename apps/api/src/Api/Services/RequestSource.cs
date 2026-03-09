@@ -35,4 +35,10 @@ public enum RequestSource
     /// Admin-initiated operation (health checks, debug console, setup guides for admin users).
     /// </summary>
     AdminOperation,
+
+    /// <summary>
+    /// A/B testing playground — blind model comparison for editors/admins.
+    /// Issue #5505: Separate budget isolation and rate limiting.
+    /// </summary>
+    ABTesting,
 }

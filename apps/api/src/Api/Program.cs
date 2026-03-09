@@ -494,6 +494,7 @@ app.MapAdminGameImportWizardEndpoints(); // Issue #4157: Admin game import wizar
 v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
 v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
+v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard

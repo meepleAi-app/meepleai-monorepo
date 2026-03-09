@@ -66,6 +66,7 @@ internal class HybridLlmService : ILlmService
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
     private readonly IServiceScopeFactory? _scopeFactory; // Issue #5086: for fire-and-forget circuit breaker notifications
     private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker; // Issue #5087: RPD exhaustion state
+    private readonly IEmergencyOverrideService? _emergencyOverrideService; // Issue #5476: admin emergency controls
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -96,7 +97,8 @@ internal class HybridLlmService : ILlmService
         IOpenRouterUsageService? openRouterUsageService = null,
         IOpenRouterRateLimitTracker? rateLimitTracker = null,
         IServiceScopeFactory? scopeFactory = null,
-        IFreeModelQuotaTracker? freeModelQuotaTracker = null)
+        IFreeModelQuotaTracker? freeModelQuotaTracker = null,
+        IEmergencyOverrideService? emergencyOverrideService = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -110,6 +112,7 @@ internal class HybridLlmService : ILlmService
         _rateLimitTracker = rateLimitTracker; // Issue #5075: Optional - RPM/TPM sliding window
         _scopeFactory = scopeFactory; // Issue #5086: Optional - for circuit breaker notifications
         _freeModelQuotaTracker = freeModelQuotaTracker; // Issue #5087: Optional - RPD exhaustion state
+        _emergencyOverrideService = emergencyOverrideService; // Issue #5476: Optional - admin emergency controls
 
         if (_clients.Count == 0)
         {
@@ -185,6 +188,20 @@ internal class HybridLlmService : ILlmService
             // ISSUE-962: Route with circuit breaker awareness and support fallback retries
             // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
             decision = _routingStrategy.SelectProvider(user, strategy);
+
+            // Issue #5476: Emergency override — force all traffic to Ollama
+            if (_emergencyOverrideService != null
+                && string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal))
+            {
+                var forceOllama = await _emergencyOverrideService
+                    .IsForceOllamaOnlyAsync(cancellationToken).ConfigureAwait(false);
+                if (forceOllama)
+                {
+                    _logger.LogWarning("Emergency override active: force-ollama-only — rerouting from OpenRouter");
+                    var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
+                    decision = LlmRoutingDecision.Ollama(ollamaModelId, "Emergency override: force-ollama-only active");
+                }
+            }
 
             // Issue #5089: Proactively skip OpenRouter when RPD quota is known-exhausted
             if (string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal)
@@ -1017,6 +1034,33 @@ internal class HybridLlmService : ILlmService
             }
 #pragma warning restore CA1031
         });
+    }
+
+    /// <summary>
+    /// Issue #5476: Reset circuit breaker state for a specific provider (or all).
+    /// Called by admin emergency controls.
+    /// </summary>
+    public void ResetCircuitBreaker(string? targetProvider = null)
+    {
+        lock (_monitoringLock)
+        {
+            if (targetProvider != null)
+            {
+                if (_circuitBreakers.TryGetValue(targetProvider, out var breaker))
+                {
+                    breaker.Reset();
+                    _logger.LogWarning("Circuit breaker reset for provider {Provider}", targetProvider);
+                }
+            }
+            else
+            {
+                foreach (var (provider, breaker) in _circuitBreakers)
+                {
+                    breaker.Reset();
+                    _logger.LogWarning("Circuit breaker reset for provider {Provider} (reset-all)", provider);
+                }
+            }
+        }
     }
 
     /// <summary>

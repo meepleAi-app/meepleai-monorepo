@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -63,7 +64,7 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
 
         if (agent == null)
         {
-            throw new InvalidOperationException($"Agent {command.AgentId} not found");
+            throw new NotFoundException("Agent", command.AgentId.ToString());
         }
 
         // 2. Load agent configuration and selected documents

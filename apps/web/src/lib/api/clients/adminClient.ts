@@ -117,6 +117,14 @@ import {
   LlmSystemConfigDtoSchema,
   type LlmSystemConfigDto,
   type UpdateLlmSystemConfigRequest,
+  AbTestSessionDtoSchema,
+  type AbTestSessionDto,
+  AbTestSessionListDtoSchema,
+  type AbTestSessionListDto,
+  AbTestSessionRevealedDtoSchema,
+  type AbTestSessionRevealedDto,
+  AbTestAnalyticsDtoSchema,
+  type AbTestAnalyticsDto,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -2557,6 +2565,125 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       );
       if (!result) throw new Error('Failed to update LLM system config');
       return result;
+    },
+
+    // ========== A/B Testing (Issue #5497) ==========
+
+    /**
+     * Create a new A/B test session with parallel model generation.
+     * POST /api/v1/admin/ab-tests
+     */
+    async createAbTest(request: {
+      query: string;
+      modelIds: string[];
+      knowledgeBaseId?: string;
+    }): Promise<AbTestSessionDto> {
+      const result = await httpClient.post<AbTestSessionDto>(
+        '/api/v1/admin/ab-tests',
+        request,
+        AbTestSessionDtoSchema
+      );
+      if (!result) throw new Error('Failed to create A/B test');
+      return result;
+    },
+
+    /**
+     * List A/B test sessions (paginated).
+     * GET /api/v1/admin/ab-tests
+     */
+    async getAbTests(params?: {
+      page?: number;
+      pageSize?: number;
+      status?: string;
+    }): Promise<AbTestSessionListDto> {
+      const queryParams = new URLSearchParams();
+      if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+      if (params?.pageSize !== undefined)
+        queryParams.append('pageSize', params.pageSize.toString());
+      if (params?.status) queryParams.append('status', params.status);
+
+      const qs = queryParams.toString();
+      const url = qs ? `/api/v1/admin/ab-tests?${qs}` : '/api/v1/admin/ab-tests';
+
+      const result = await httpClient.get(url, AbTestSessionListDtoSchema);
+      return result ?? { items: [], totalCount: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get A/B test session in blind mode.
+     * GET /api/v1/admin/ab-tests/{id}
+     */
+    async getAbTest(id: string): Promise<AbTestSessionDto | null> {
+      return httpClient.get<AbTestSessionDto>(
+        `/api/v1/admin/ab-tests/${id}`,
+        AbTestSessionDtoSchema
+      );
+    },
+
+    /**
+     * Submit evaluation scores for A/B test variants.
+     * POST /api/v1/admin/ab-tests/{id}/evaluate
+     */
+    async evaluateAbTest(
+      id: string,
+      request: {
+        evaluations: Array<{
+          label: string;
+          accuracy: number;
+          completeness: number;
+          clarity: number;
+          tone: number;
+          notes?: string;
+        }>;
+      }
+    ): Promise<AbTestSessionRevealedDto> {
+      const result = await httpClient.post<AbTestSessionRevealedDto>(
+        `/api/v1/admin/ab-tests/${id}/evaluate`,
+        request,
+        AbTestSessionRevealedDtoSchema
+      );
+      if (!result) throw new Error('Failed to evaluate A/B test');
+      return result;
+    },
+
+    /**
+     * Reveal model identities (only after evaluation).
+     * GET /api/v1/admin/ab-tests/{id}/reveal
+     */
+    async revealAbTest(id: string): Promise<AbTestSessionRevealedDto | null> {
+      return httpClient.get<AbTestSessionRevealedDto>(
+        `/api/v1/admin/ab-tests/${id}/reveal`,
+        AbTestSessionRevealedDtoSchema
+      );
+    },
+
+    /**
+     * Get aggregated A/B test analytics.
+     * GET /api/v1/admin/ab-tests/analytics
+     */
+    async getAbTestAnalytics(params?: {
+      dateFrom?: string;
+      dateTo?: string;
+    }): Promise<AbTestAnalyticsDto> {
+      const queryParams = new URLSearchParams();
+      if (params?.dateFrom) queryParams.append('dateFrom', params.dateFrom);
+      if (params?.dateTo) queryParams.append('dateTo', params.dateTo);
+
+      const qs = queryParams.toString();
+      const url = qs
+        ? `/api/v1/admin/ab-tests/analytics?${qs}`
+        : '/api/v1/admin/ab-tests/analytics';
+
+      const result = await httpClient.get(url, AbTestAnalyticsDtoSchema);
+      return (
+        result ?? {
+          totalTests: 0,
+          completedTests: 0,
+          totalCost: 0,
+          modelWinRates: [],
+          modelAvgScores: [],
+        }
+      );
     },
   };
 }

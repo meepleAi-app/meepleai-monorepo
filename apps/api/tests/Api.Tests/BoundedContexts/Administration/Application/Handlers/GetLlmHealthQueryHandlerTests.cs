@@ -1,18 +1,10 @@
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
-using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
-using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
-using Api.Configuration;
-using Api.BoundedContexts.Administration.Application.Services;
-using Api.Services.LlmClients;
-using MediatR;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Api.Tests.Constants;
 using Moq;
 using Xunit;
-using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -21,48 +13,22 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests LLM provider health monitoring and circuit breaker status aggregation.
 /// NOTE: Complex handler with service dependencies - focused on construction and basic scenarios.
 /// RESOLVED: Issue #1690 - Integration tests added in LlmHealthIntegrationTests.cs.
+/// Issue #5487: Updated to use ICircuitBreakerRegistry directly instead of HybridLlmService.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class GetLlmHealthQueryHandlerTests
 {
     private readonly Mock<IProviderHealthCheckService> _healthCheckServiceMock;
-    private readonly Mock<HybridLlmService> _hybridLlmServiceMock;
+    private readonly Mock<ICircuitBreakerRegistry> _circuitBreakerRegistryMock;
 
     public GetLlmHealthQueryHandlerTests()
     {
         _healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
+        _circuitBreakerRegistryMock = new Mock<ICircuitBreakerRegistry>();
 
-        // Create mocks for HybridLlmService dependencies
-        var llmClientMock = new Mock<ILlmClient>();
-        llmClientMock.Setup(x => x.ProviderName).Returns("TestProvider");
-
-        var clients = new List<ILlmClient> { llmClientMock.Object };
-        var routingStrategyMock = new Mock<ILlmRoutingStrategy>();
-        var costLogRepositoryMock = new Mock<ILlmCostLogRepository>();
-        var loggerMock = new Mock<ILogger<HybridLlmService>>();
-        var aiSettingsMock = new Mock<IOptions<AiProviderSettings>>();
-        var modelConfigRepositoryMock = new Mock<IAiModelConfigurationRepository>();
-        var publisherMock = new Mock<IPublisher>();  // Fix: Added missing IPublisher parameter
-        var healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
-
-        // Configure aiSettingsMock to return a valid AiProviderSettings
-        aiSettingsMock.Setup(x => x.Value).Returns(new AiProviderSettings());
-
-        _hybridLlmServiceMock = new Mock<HybridLlmService>(
-            clients,
-            routingStrategyMock.Object,
-            costLogRepositoryMock.Object,
-            loggerMock.Object,
-            aiSettingsMock.Object,
-            modelConfigRepositoryMock.Object,
-            publisherMock.Object,
-            healthCheckServiceMock.Object,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!);
+        _circuitBreakerRegistryMock
+            .Setup(r => r.GetMonitoringStatus())
+            .Returns(new Dictionary<string, (string circuitState, string latencyStats)>());
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
@@ -70,7 +36,7 @@ public class GetLlmHealthQueryHandlerTests
         // Act
         var handler = new GetLlmHealthQueryHandler(
             _healthCheckServiceMock.Object,
-            _hybridLlmServiceMock.Object);
+            _circuitBreakerRegistryMock.Object);
 
         // Assert
         Assert.NotNull(handler);
@@ -83,11 +49,11 @@ public class GetLlmHealthQueryHandlerTests
         Assert.Throws<ArgumentNullException>(() =>
             new GetLlmHealthQueryHandler(
                 null!,
-                _hybridLlmServiceMock.Object));
+                _circuitBreakerRegistryMock.Object));
     }
 
     [Fact]
-    public void Constructor_WithNullHybridLlmService_ThrowsArgumentNullException()
+    public void Constructor_WithNullCircuitBreakerRegistry_ThrowsArgumentNullException()
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>

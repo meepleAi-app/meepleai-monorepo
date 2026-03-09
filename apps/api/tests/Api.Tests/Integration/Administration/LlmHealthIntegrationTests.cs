@@ -1,15 +1,9 @@
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
-using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
-using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
-using Api.Configuration;
 using Api.Models;
-using Api.Services.LlmClients;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -19,6 +13,7 @@ namespace Api.Tests.Integration.Administration;
 /// <summary>
 /// Comprehensive integration tests for LLM health monitoring workflow (Issue #1690).
 /// Tests health check aggregation, circuit breaker integration, and provider status tracking.
+/// Issue #5487: Updated to use ICircuitBreakerRegistry directly instead of HybridLlmService.
 ///
 /// Test Categories:
 /// 1. Health Check Aggregation: Multiple provider health status aggregation
@@ -36,39 +31,17 @@ public sealed class LlmHealthIntegrationTests
 {
     private static GetLlmHealthQueryHandler CreateHandler(
         IProviderHealthCheckService healthCheckService,
-        HybridLlmService hybridLlmService)
+        ICircuitBreakerRegistry circuitBreakerRegistry)
     {
-        return new GetLlmHealthQueryHandler(healthCheckService, hybridLlmService);
+        return new GetLlmHealthQueryHandler(healthCheckService, circuitBreakerRegistry);
     }
 
-    private static Mock<HybridLlmService> CreateMockHybridLlmService(
+    private static Mock<ICircuitBreakerRegistry> CreateMockCircuitBreakerRegistry(
         Dictionary<string, (string circuitState, string latencyStats)> monitoringStatus)
     {
-        // Create minimal dependencies for HybridLlmService
-        var llmClientMock = new Mock<ILlmClient>();
-        llmClientMock.Setup(x => x.ProviderName).Returns("TestProvider");
-
-        var clients = new List<ILlmClient> { llmClientMock.Object };
-        var routingStrategyMock = new Mock<ILlmRoutingStrategy>();
-        var costLogRepositoryMock = new Mock<ILlmCostLogRepository>();
-        var loggerMock = new Mock<ILogger<HybridLlmService>>();
-        var aiSettingsMock = new Mock<IOptions<AiProviderSettings>>();
-        aiSettingsMock.Setup(x => x.Value).Returns(new AiProviderSettings());
-        var modelConfigRepositoryMock = new Mock<IAiModelConfigurationRepository>();
-        var healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
-
-        var hybridServiceMock = new Mock<HybridLlmService>(
-            clients,
-            routingStrategyMock.Object,
-            costLogRepositoryMock.Object,
-            loggerMock.Object,
-            aiSettingsMock.Object,
-            modelConfigRepositoryMock.Object,
-            healthCheckServiceMock.Object);
-
-        hybridServiceMock.Setup(s => s.GetMonitoringStatus()).Returns(monitoringStatus);
-
-        return hybridServiceMock;
+        var mock = new Mock<ICircuitBreakerRegistry>();
+        mock.Setup(r => r.GetMonitoringStatus()).Returns(monitoringStatus);
+        return mock;
     }
     [Fact]
     public async Task GetLlmHealth_WithMultipleProviders_ReturnsAggregatedStatus()
@@ -99,8 +72,8 @@ public sealed class LlmHealthIntegrationTests
             ["anthropic"] = ("closed", "avg: 200ms")
         };
 
-        var hybridLlmServiceMock = CreateMockHybridLlmService(monitoringStatus);
-        var handler = CreateHandler(healthCheckServiceMock.Object, hybridLlmServiceMock.Object);
+        var registryMock = CreateMockCircuitBreakerRegistry(monitoringStatus);
+        var handler = CreateHandler(healthCheckServiceMock.Object, registryMock.Object);
         var query = new GetLlmHealthQuery();
 
         // Act
@@ -143,8 +116,8 @@ public sealed class LlmHealthIntegrationTests
             ["anthropic"] = ("open", "timeout")
         };
 
-        var hybridLlmServiceMock = CreateMockHybridLlmService(monitoringStatus);
-        var handler = CreateHandler(healthCheckServiceMock.Object, hybridLlmServiceMock.Object);
+        var registryMock = CreateMockCircuitBreakerRegistry(monitoringStatus);
+        var handler = CreateHandler(healthCheckServiceMock.Object, registryMock.Object);
         var query = new GetLlmHealthQuery();
 
         // Act
@@ -165,8 +138,8 @@ public sealed class LlmHealthIntegrationTests
         healthCheckServiceMock.Setup(s => s.GetAllProviderHealth()).Returns(providerHealth);
 
         var monitoringStatus = new Dictionary<string, (string, string)>();
-        var hybridLlmServiceMock = CreateMockHybridLlmService(monitoringStatus);
-        var handler = CreateHandler(healthCheckServiceMock.Object, hybridLlmServiceMock.Object);
+        var registryMock = CreateMockCircuitBreakerRegistry(monitoringStatus);
+        var handler = CreateHandler(healthCheckServiceMock.Object, registryMock.Object);
         var query = new GetLlmHealthQuery();
 
         // Act
@@ -195,8 +168,8 @@ public sealed class LlmHealthIntegrationTests
 
         // Empty monitoring status (no data for new-provider)
         var monitoringStatus = new Dictionary<string, (string, string)>();
-        var hybridLlmServiceMock = CreateMockHybridLlmService(monitoringStatus);
-        var handler = CreateHandler(healthCheckServiceMock.Object, hybridLlmServiceMock.Object);
+        var registryMock = CreateMockCircuitBreakerRegistry(monitoringStatus);
+        var handler = CreateHandler(healthCheckServiceMock.Object, registryMock.Object);
         var query = new GetLlmHealthQuery();
 
         // Act
@@ -234,8 +207,8 @@ public sealed class LlmHealthIntegrationTests
             ["anthropic"] = ("closed", "avg: 200ms")
         };
 
-        var hybridLlmServiceMock = CreateMockHybridLlmService(monitoringStatus);
-        var handler = CreateHandler(healthCheckServiceMock.Object, hybridLlmServiceMock.Object);
+        var registryMock = CreateMockCircuitBreakerRegistry(monitoringStatus);
+        var handler = CreateHandler(healthCheckServiceMock.Object, registryMock.Object);
         var query = new GetLlmHealthQuery();
 
         // Act - Execute 5 concurrent health checks

@@ -17,6 +17,7 @@ import {
   Activity,
   ListOrdered,
   ScrollText,
+  Settings,
   Tag,
 } from 'lucide-react';
 
@@ -26,6 +27,7 @@ import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersisten
 import { AgentsTab } from './AgentsTab';
 import { AiLabTab } from './AiLabTab';
 import { DefinitionsTab } from './DefinitionsTab';
+import { LlmConfigTab } from './LlmConfigTab';
 import { ModelsTab } from './ModelsTab';
 import { AdminAiNavConfig } from './NavConfig';
 import { PromptsTab } from './PromptsTab';
@@ -51,6 +53,7 @@ const TABS: readonly HubTab[] = [
   { id: 'models', label: 'Models', href: '/admin/ai?tab=models', icon: <Cpu /> },
   { id: 'requests', label: 'Requests', href: '/admin/ai?tab=requests', icon: <Activity /> },
   { id: 'rag', label: 'RAG', href: '/admin/ai?tab=rag', icon: <BrainCircuit /> },
+  { id: 'config', label: 'Config', href: '/admin/ai?tab=config', icon: <Settings /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -116,6 +119,12 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <RagTab />
+        </Suspense>
+      );
+    case 'config':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <LlmConfigTab />
         </Suspense>
       );
     default:

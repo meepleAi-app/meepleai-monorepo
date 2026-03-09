@@ -1,78 +1,36 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Entities;
-using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
-using Api.BoundedContexts.KnowledgeBase.Domain.Events;
-using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
-using Api.BoundedContexts.BusinessSimulations.Domain.Events;
-using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
-using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
-using MediatR;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using System.Globalization;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
-/// Hybrid LLM service coordinating multiple providers (Ollama, OpenRouter) with adaptive routing
-/// ISSUE-958: Implements hybrid architecture with user-tier based routing and traffic split
-/// ISSUE-962 (BGAI-020): Enhanced with circuit breaker, health monitoring, and latency tracking
-/// BGAI-022 (Issue #1153): Integrated with AI:Provider runtime configuration
+/// Hybrid LLM service coordinating multiple providers (Ollama, OpenRouter) with adaptive routing.
+/// Issue #5487: Delegates provider selection to ILlmProviderSelector and circuit breaker to ICircuitBreakerRegistry.
+/// Issue #5489: Delegates cost logging to ILlmCostService.
+///
+/// Responsibilities (select → execute → log):
+/// 1. Select provider via ILlmProviderSelector
+/// 2. Execute request against selected ILlmClient
+/// 3. Record outcome in ICircuitBreakerRegistry
+/// 4. Log cost via ILlmCostService
 /// </summary>
-/// <remarks>
-/// Architecture:
-/// - Coordinates ILlmClient implementations (OllamaLlmClient, OpenRouterLlmClient)
-/// - Uses ILlmRoutingStrategy for provider selection (user-type + traffic split)
-/// - Implements ILlmService interface for seamless integration with existing code
-/// - Supports both completion and streaming modes
-///
-/// Cost Optimization:
-/// - Target: 80% free tier (Ollama/Llama 3.3 70B free), 20% paid (GPT-4o-mini)
-/// - Anonymous/User: Heavy Ollama usage
-/// - Editor: Balanced
-/// - Admin: Premium models prioritized
-///
-/// Reliability (BGAI-020):
-/// - Circuit breaker: Prevents cascading failures (5 failures → open for 30s)
-/// - Health monitoring: Integration with ProviderHealthCheckService
-/// - Latency tracking: Real-time performance metrics (avg, P50, P95, P99)
-/// - Automatic failover: Routes to healthy providers
-///
-/// Runtime Configuration (BGAI-022):
-/// - AI:Providers[x].Enabled: Runtime provider enable/disable
-/// - AI:FallbackChain: Circuit breaker fallback order
-/// - Backward compatible: Works without AI section (uses defaults)
-/// </remarks>
 internal class HybridLlmService : ILlmService
 {
     private readonly List<ILlmClient> _clients;
-    private readonly ILlmRoutingStrategy _routingStrategy;
-    private readonly IUserBudgetService? _userBudgetService;
+    private readonly ILlmProviderSelector _providerSelector;
+    private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
+    private readonly ILlmCostService _costService;
     private readonly ILogger<HybridLlmService> _logger;
-    private readonly IProviderHealthCheckService? _healthCheckService;
-    private readonly IOptions<AiProviderSettings> _aiSettings;
-    private readonly IAiModelConfigurationRepository _modelConfigRepository;
-    private readonly IOpenRouterFileLogger? _openRouterFileLogger; // Issue #5073: rotating file logger
-    private readonly IOpenRouterUsageService? _openRouterUsageService; // Issue #5074: Redis usage cache
-    private readonly IOpenRouterRateLimitTracker? _rateLimitTracker; // Issue #5075: RPM/TPM sliding window
-    private readonly IServiceScopeFactory? _scopeFactory; // Issue #5086: for fire-and-forget circuit breaker notifications
-    private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker; // Issue #5087: RPD exhaustion state
-    private readonly IEmergencyOverrideService? _emergencyOverrideService; // Issue #5476: admin emergency controls
     private readonly IPiiDetector? _piiDetector; // Issue #5510: PII redaction for OpenRouter-bound prompts
-
-    // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
-    private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, LatencyStats> _latencyStats = new(StringComparer.Ordinal);
-    private readonly System.Threading.Lock _monitoringLock = new();
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
@@ -88,33 +46,17 @@ internal class HybridLlmService : ILlmService
 
     public HybridLlmService(
         IEnumerable<ILlmClient> clients,
-        ILlmRoutingStrategy routingStrategy,
+        ILlmProviderSelector providerSelector,
+        ICircuitBreakerRegistry circuitBreakerRegistry,
+        ILlmCostService costService,
         ILogger<HybridLlmService> logger,
-        IOptions<AiProviderSettings> aiSettings,
-        IAiModelConfigurationRepository modelConfigRepository,
-        IProviderHealthCheckService? healthCheckService = null,
-        IUserBudgetService? userBudgetService = null,
-        IOpenRouterFileLogger? openRouterFileLogger = null,
-        IOpenRouterUsageService? openRouterUsageService = null,
-        IOpenRouterRateLimitTracker? rateLimitTracker = null,
-        IServiceScopeFactory? scopeFactory = null,
-        IFreeModelQuotaTracker? freeModelQuotaTracker = null,
-        IEmergencyOverrideService? emergencyOverrideService = null,
         IPiiDetector? piiDetector = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
-        _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
+        _providerSelector = providerSelector ?? throw new ArgumentNullException(nameof(providerSelector));
+        _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
+        _costService = costService ?? throw new ArgumentNullException(nameof(costService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
-        _modelConfigRepository = modelConfigRepository ?? throw new ArgumentNullException(nameof(modelConfigRepository));
-        _healthCheckService = healthCheckService; // Optional - may not be registered in tests
-        _userBudgetService = userBudgetService; // Optional - for credit tracking
-        _openRouterFileLogger = openRouterFileLogger; // Issue #5073: Optional - rotating file logger
-        _openRouterUsageService = openRouterUsageService; // Issue #5074: Optional - Redis usage cache
-        _rateLimitTracker = rateLimitTracker; // Issue #5075: Optional - RPM/TPM sliding window
-        _scopeFactory = scopeFactory; // Issue #5086: Optional - for circuit breaker notifications
-        _freeModelQuotaTracker = freeModelQuotaTracker; // Issue #5087: Optional - RPD exhaustion state
-        _emergencyOverrideService = emergencyOverrideService; // Issue #5476: Optional - admin emergency controls
         _piiDetector = piiDetector; // Issue #5510: Optional - PII redaction for OpenRouter
 
         if (_clients.Count == 0)
@@ -122,24 +64,12 @@ internal class HybridLlmService : ILlmService
             throw new ArgumentException("At least one ILlmClient must be registered", nameof(clients));
         }
 
-        // ISSUE-962: Initialize circuit breakers and latency stats for each provider
-        // ISSUE-5086: Subscribe OnStateTransition callback for admin notifications
-        foreach (var providerName in _clients.Select(client => client.ProviderName))
-        {
-            var breaker = new CircuitBreakerState();
-            var capturedProvider = providerName; // Capture for closure
-            breaker.OnStateTransition = (prev, next) => PublishCircuitBreakerEvent(capturedProvider, prev, next);
-            _circuitBreakers[providerName] = breaker;
-            _latencyStats[providerName] = new LatencyStats();
-        }
-
-        var healthCheckStatus = _healthCheckService != null ? "enabled" : "disabled";
         _logger.LogInformation(
-            "HybridLlmService initialized with {ClientCount} providers: {Providers} (cost tracking + circuit breaker + latency tracking + health checks {HealthCheckStatus} + AI config integration)",
+            "HybridLlmService initialized with {ClientCount} providers: {Providers} (delegating selection to ILlmProviderSelector)",
             _clients.Count,
-            string.Join(", ", _clients.Select(c => c.ProviderName)),
-            healthCheckStatus);
+            string.Join(", ", _clients.Select(c => c.ProviderName)));
     }
+
     /// <inheritdoc/>
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
@@ -150,15 +80,15 @@ internal class HybridLlmService : ILlmService
         return await GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
-            user: null, // No user context (anonymous)
-            strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            user: null,
+            strategy: RagStrategy.Balanced,
             source: source,
             ct).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Generate completion with user context for adaptive routing.
-    /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
+    /// Issue #5487: Delegates provider selection to ILlmProviderSelector.
     /// </summary>
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
@@ -175,86 +105,19 @@ internal class HybridLlmService : ILlmService
             return LlmCompletionResult.CreateFailure("No user prompt provided");
         }
 
-        // Issue #5089: AutomatedTest requests must never consume free OpenRouter quota
-        // Issue #5089: If OpenRouter selected but RPD quota exhausted, route directly to Ollama
-        LlmRoutingDecision decision;
-        ILlmClient? client;
+        // Step 1: Select provider (routing + emergency override + RPD check + circuit breaker)
+        var selection = await _providerSelector.SelectProviderAsync(user, strategy, source, cancellationToken)
+            .ConfigureAwait(false);
 
-        if (source == RequestSource.AutomatedTest)
-        {
-            var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
-            decision = LlmRoutingDecision.Ollama(ollamaModelId, "AutomatedTest source: always routed to Ollama (free quota bypass)");
-            client = GetClientWithCircuitBreaker("Ollama");
-        }
-        else
-        {
-            // ISSUE-962: Route with circuit breaker awareness and support fallback retries
-            // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
-            decision = _routingStrategy.SelectProvider(user, strategy);
-
-            // Issue #5476: Emergency override — force all traffic to Ollama
-            if (_emergencyOverrideService != null
-                && string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal))
-            {
-                var forceOllama = await _emergencyOverrideService
-                    .IsForceOllamaOnlyAsync(cancellationToken).ConfigureAwait(false);
-                if (forceOllama)
-                {
-                    _logger.LogWarning("Emergency override active: force-ollama-only — rerouting from OpenRouter");
-                    var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
-                    decision = LlmRoutingDecision.Ollama(ollamaModelId, "Emergency override: force-ollama-only active");
-                }
-            }
-
-            // Issue #5089: Proactively skip OpenRouter when RPD quota is known-exhausted
-            if (string.Equals(decision.ProviderName, "OpenRouter", StringComparison.Ordinal)
-                && _freeModelQuotaTracker != null)
-            {
-                var isExhausted = await _freeModelQuotaTracker
-                    .IsRpdExhaustedAsync(decision.ModelId, cancellationToken)
-                    .ConfigureAwait(false);
-                if (isExhausted)
-                {
-                    _logger.LogWarning(
-                        "Free model {Model} RPD quota exhausted — proactively routing to Ollama", decision.ModelId);
-                    var ollamaModelId = await GetDefaultModelForProviderAsync("Ollama", cancellationToken).ConfigureAwait(false);
-                    decision = LlmRoutingDecision.Ollama(ollamaModelId, $"RPD quota exhausted for {decision.ModelId}");
-                }
-            }
-
-            client = GetClientWithCircuitBreaker(decision.ProviderName);
-        }
+        var client = selection.Client;
+        var decision = selection.Decision;
 
         if (client == null)
         {
-            _logger.LogError(
-                "No available provider found (circuit breakers may be open), using first client as fallback");
-            client = _clients[0]; // Safe: constructor ensures _clients.Count > 0
-
-            var originalProvider = decision.ProviderName;
-            var emergencyModelId = await GetDefaultModelForProviderAsync(client.ProviderName, cancellationToken).ConfigureAwait(false);
-            decision = new LlmRoutingDecision(
-                ProviderName: client.ProviderName,
-                ModelId: emergencyModelId,
-                Reason: $"Emergency fallback from {originalProvider} (all providers unavailable)");
-
-            _logger.LogWarning(
-                "Created emergency fallback decision: {Provider} ({Model})",
-                decision.ProviderName, decision.ModelId);
-        }
-        else if (!string.Equals(client.ProviderName, decision.ProviderName, StringComparison.Ordinal))
-        {
-            _logger.LogWarning(
-                "Primary provider {Primary} unavailable, using fallback {Fallback}",
-                decision.ProviderName, client.ProviderName);
-
-            var fallbackModelId = await GetDefaultModelForProviderAsync(client.ProviderName, cancellationToken).ConfigureAwait(false);
-            decision = new LlmRoutingDecision(
-                ProviderName: client.ProviderName,
-                ModelId: fallbackModelId,
-                Reason: $"Fallback from {decision.ProviderName} (circuit open or unhealthy)");
+            return LlmCompletionResult.CreateFailure("Provider error: No providers available");
         }
 
+        // Step 2: Execute with retry/fallback loop
         var attemptedProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         LlmCompletionResult? lastFailure = null;
 
@@ -264,15 +127,9 @@ internal class HybridLlmService : ILlmService
                 "Generating completion via {Provider} ({Model}) - Reason: {Reason}",
                 client.ProviderName, decision.ModelId, decision.Reason);
 
-            // Issue #5075: Warn if approaching RPM limit before sending request
-            if (_rateLimitTracker != null)
-            {
-                var isApproaching = await _rateLimitTracker
-                    .IsApproachingLimitAsync(client.ProviderName, thresholdPercent: 80, cancellationToken)
-                    .ConfigureAwait(false);
-                if (isApproaching)
-                    _logger.LogWarning("OpenRouter rate limit approaching 80% for provider {Provider}", client.ProviderName);
-            }
+            // Issue #5492: Warn if approaching RPM limit (delegated to selector)
+            await _providerSelector.WarnIfApproachingLimitAsync(client.ProviderName, cancellationToken)
+                .ConfigureAwait(false);
 
             // Issue #5510: Redact PII for OpenRouter-bound prompts (not needed for local Ollama)
             var effectiveSystemPrompt = systemPrompt;
@@ -298,57 +155,41 @@ internal class HybridLlmService : ILlmService
 
                 if (result.Success)
                 {
-                    RecordSuccess(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+                    // Step 3: Record success + log cost (Issue #5492: delegated to selector)
+                    _providerSelector.RecordSuccess(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await LogCostAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
-
-                    // Issue #5075: Record request in RPM/TPM sliding window (fire-and-forget)
-                    if (_rateLimitTracker != null)
-                    {
-                        var totalTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
-                        _ = _rateLimitTracker.RecordRequestAsync(client.ProviderName, decision.ModelId, totalTokens);
-                    }
+                    await _costService.LogSuccessAsync(result, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
 
                     return result;
                 }
 
-                RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+                // Issue #5492: Record failure (circuit breaker + rate limit tracking delegated to selector)
+                _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
 
-                // Issue #5087/#5088: Record rate limit events from OpenRouter for future routing avoidance
-                if (string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal)
-                    && _freeModelQuotaTracker != null
-                    && result.Metadata.TryGetValue("rate_limit_type", out var rlTypeStr)
-                    && Enum.TryParse<RateLimitErrorType>(rlTypeStr, ignoreCase: true, out var rlErrorType))
-                {
-                    result.Metadata.TryGetValue("rate_limit_reset_ms", out var resetMsStr);
-                    long? resetMs = long.TryParse(resetMsStr, NumberStyles.None, CultureInfo.InvariantCulture, out var resetMsVal)
-                        ? resetMsVal : null;
-                    result.Metadata.TryGetValue("rate_limit_model", out var rlModel);
-                    var modelForTracking = string.IsNullOrEmpty(rlModel) ? decision.ModelId : rlModel;
-                    _ = _freeModelQuotaTracker.RecordRateLimitErrorAsync(modelForTracking, rlErrorType, resetMs, cancellationToken);
-                }
-
-                await LogCostFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(result.ErrorMessage, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
             {
                 attemptStopwatch.Stop();
-                RecordFailure(client.ProviderName, attemptStopwatch.ElapsedMilliseconds);
+                _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds);
 
                 _logger.LogError(ex,
                     "Error generating completion with {Provider} ({Model}) - Circuit state: {CircuitState}",
-                    client.ProviderName, decision.ModelId, GetCircuitState(client.ProviderName));
+                    client.ProviderName, decision.ModelId,
+                    _circuitBreakerRegistry.GetCircuitStateDescription(client.ProviderName));
 
-                await LogCostFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(ex.Message, user, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
-            var (nextClient, nextDecision) = await GetNextFallbackClientAsync(client.ProviderName, attemptedProviders, cancellationToken).ConfigureAwait(false);
-            client = nextClient;
+            // Get next fallback
+            var nextSelection = await _providerSelector.GetNextFallbackAsync(client.ProviderName, attemptedProviders, cancellationToken)
+                .ConfigureAwait(false);
+            client = nextSelection.Client;
             if (client != null)
             {
-                decision = nextDecision;
+                decision = nextSelection.Decision;
             }
 
             if (client == null)
@@ -361,6 +202,7 @@ internal class HybridLlmService : ILlmService
 
         return lastFailure ?? LlmCompletionResult.CreateFailure("Provider error: No providers available");
     }
+
     /// <inheritdoc/>
     public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string systemPrompt,
@@ -371,16 +213,15 @@ internal class HybridLlmService : ILlmService
         return GenerateCompletionStreamAsync(
             systemPrompt,
             userPrompt,
-            user: null, // No user context (anonymous)
-            strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            user: null,
+            strategy: RagStrategy.Balanced,
             source: source,
             ct);
     }
 
     /// <summary>
     /// Generate streaming completion with user context for adaptive routing.
-    /// ISSUE-1725: Enhanced to return StreamChunk with usage metadata.
-    /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
+    /// Issue #5487: Delegates provider selection to ILlmProviderSelector.
     /// </summary>
 #pragma warning disable S3400 // Methods should not return constants - async iterator pattern requires this signature
 #pragma warning disable S4456 // Parameter validation on async iterator - validated before yield
@@ -402,22 +243,19 @@ internal class HybridLlmService : ILlmService
             yield break;
         }
 
-        // Route to appropriate provider
-        // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
-        var decision = _routingStrategy.SelectProvider(user, strategy);
-        var client = GetClient(decision.ProviderName);
+        var selection = await _providerSelector.SelectProviderAsync(user, strategy, source, cancellationToken)
+            .ConfigureAwait(false);
 
+        var client = selection.Client;
         if (client == null)
         {
-            _logger.LogError(
-                "No client found for provider {Provider}, falling back to first available",
-                decision.ProviderName);
-            client = _clients[0]; // Safe: constructor ensures _clients.Count > 0
+            _logger.LogError("No client found for streaming, falling back to first available");
+            client = _clients[0];
         }
 
         _logger.LogInformation(
             "Starting streaming completion via {Provider} ({Model}) - Reason: {Reason}",
-            client.ProviderName, decision.ModelId, decision.Reason);
+            client.ProviderName, selection.Decision.ModelId, selection.Decision.Reason);
 
         // Issue #5510: Redact PII for OpenRouter-bound streaming prompts
         var effectiveSystemPrompt = systemPrompt;
@@ -429,7 +267,7 @@ internal class HybridLlmService : ILlmService
         }
 
         await foreach (var chunk in client.GenerateCompletionStreamAsync(
-            decision.ModelId,
+            selection.Decision.ModelId,
             effectiveSystemPrompt,
             effectiveUserPrompt,
             DefaultTemperature,
@@ -450,15 +288,14 @@ internal class HybridLlmService : ILlmService
         return await GenerateJsonAsync<T>(
             systemPrompt,
             userPrompt,
-            user: null, // No user context (anonymous)
-            strategy: RagStrategy.Balanced, // Default to balanced for interface calls
+            user: null,
+            strategy: RagStrategy.Balanced,
             source: source,
             ct).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Generate JSON response with user context for adaptive routing.
-    /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
     /// </summary>
     public async Task<T?> GenerateJsonAsync<T>(
         string systemPrompt,
@@ -470,7 +307,7 @@ internal class HybridLlmService : ILlmService
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
         ArgumentNullException.ThrowIfNull(userPrompt);
-        // Enhance system prompt for JSON mode
+
         var enhancedSystemPrompt = $"""
             {systemPrompt}
 
@@ -488,9 +325,7 @@ internal class HybridLlmService : ILlmService
 
         try
         {
-            // Clean common LLM formatting artifacts
             var jsonText = CleanJsonResponse(result.Response);
-
             var parsed = System.Text.Json.JsonSerializer.Deserialize<T>(jsonText, s_jsonOptions);
 
             if (parsed == null)
@@ -508,657 +343,6 @@ internal class HybridLlmService : ILlmService
             _logger.LogWarning(ex, "Failed to parse LLM JSON response. Raw: {Response}", truncated);
             return null;
         }
-    }
-
-    /// <summary>
-    /// Get LLM client by provider name
-    /// </summary>
-    private ILlmClient? GetClient(string providerName)
-    {
-        return _clients.FirstOrDefault(c =>
-            c.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>
-    /// Clean LLM response to extract pure JSON
-    /// </summary>
-    private static string CleanJsonResponse(string response)
-    {
-        var cleaned = response.Trim();
-
-        // Remove markdown code blocks (```json ... ``` or ``` ... ```)
-        if (cleaned.StartsWith("```", StringComparison.Ordinal))
-        {
-            var firstNewline = cleaned.IndexOf('\n');
-            var lastBackticks = cleaned.LastIndexOf("```", StringComparison.Ordinal);
-
-            if (firstNewline > 0 && lastBackticks > firstNewline)
-            {
-                cleaned = cleaned.Substring(firstNewline + 1, lastBackticks - firstNewline - 1).Trim();
-            }
-        }
-
-        return cleaned;
-    }
-
-    /// <summary>
-    /// ISSUE-962: Get LLM client with circuit breaker and health awareness
-    /// BGAI-022: Enhanced with FallbackChain support
-    /// </summary>
-    private ILlmClient? GetClientWithCircuitBreaker(string providerName)
-    {
-        var client = GetClient(providerName);
-        if (client == null) return null;
-
-        // Check if provider is available (circuit breaker + health status + enabled flag)
-        if (!IsProviderAvailable(client.ProviderName))
-        {
-            _logger.LogWarning(
-                "Provider {Provider} unavailable (circuit open, unhealthy, or disabled). Trying fallback...",
-                client.ProviderName);
-
-            // BGAI-022: Use FallbackChain if configured, otherwise use all clients
-            var fallbackOrder = (_aiSettings.Value.FallbackChain?.Count ?? 0) > 0
-                ? _aiSettings.Value.FallbackChain!.Where(p => !string.Equals(p, client.ProviderName, StringComparison.Ordinal)).Select(p => p!)
-                : _clients.Where(c => !string.Equals(c.ProviderName, client.ProviderName, StringComparison.Ordinal)).Select(c => c.ProviderName);
-
-            foreach (var fallbackProviderName in fallbackOrder)
-            {
-                var fallbackClient = GetClient(fallbackProviderName);
-                if (fallbackClient != null && IsProviderAvailable(fallbackClient.ProviderName))
-                {
-                    _logger.LogInformation(
-                        "Using fallback provider {Fallback} ({Order}) - primary {Primary} unavailable",
-                        fallbackClient.ProviderName,
-                        (_aiSettings.Value.FallbackChain?.Count ?? 0) > 0 ? "from FallbackChain" : "auto-selected",
-                        client.ProviderName);
-                    return fallbackClient;
-                }
-            }
-
-            _logger.LogWarning("No fallback provider available, all providers unavailable");
-            return null;
-        }
-
-        return client;
-    }
-    /// <summary>
-    /// ISSUE-962: Check if provider is available (circuit breaker + health check)
-    /// BGAI-022: Enhanced with Enabled flag check
-    /// </summary>
-    private bool IsProviderAvailable(string providerName)
-    {
-        lock (_monitoringLock)
-        {
-            // BGAI-022: Check if provider is enabled in configuration
-            var settings = _aiSettings.Value;
-            if (settings.Providers?.ContainsKey(providerName) is true &&
-                !settings.Providers[providerName].Enabled)
-            {
-                _logger.LogDebug(
-                    "Provider {Provider} is disabled in configuration (AI:Providers:{ProviderName}:Enabled = false)",
-                    providerName, providerName);
-                return false; // Disabled in config - provider unavailable
-            }
-
-            // Check circuit breaker
-            if (_circuitBreakers.TryGetValue(providerName, out var breaker) && !breaker.AllowsRequests())
-            {
-                return false; // Circuit open - provider unavailable
-            }
-
-            // Check health status (if health check service is enabled)
-            if (_healthCheckService != null)
-            {
-                var healthStatus = _healthCheckService.GetProviderHealth(providerName);
-                if (healthStatus != null && !healthStatus.IsAvailable())
-                {
-                    _logger.LogDebug(
-                        "Provider {Provider} marked unhealthy: {Status}",
-                        providerName, healthStatus.GetStatusSummary());
-                    return false; // Unhealthy - provider unavailable
-                }
-            }
-
-            return true; // Provider is available
-        }
-    }
-
-    private void AddRoutingMetadata(
-        LlmCompletionResult result,
-        LlmRoutingDecision decision,
-        ILlmClient client,
-        long latencyMs)
-    {
-        if (result.Metadata is Dictionary<string, string> metadata)
-        {
-            metadata["routing_decision"] = decision.Reason;
-            metadata["selected_provider"] = client.ProviderName;
-            metadata["selected_model"] = decision.ModelId;
-            metadata["latency_ms"] = latencyMs.ToString(CultureInfo.InvariantCulture);
-            metadata["circuit_state"] = GetCircuitState(client.ProviderName);
-        }
-    }
-
-    /// <summary>
-    /// Log LLM cost and update usage stats.
-    /// Uses a dedicated DI scope for DB operations because this method may be called
-    /// fire-and-forget (e.g. from GenerateCompletionWithModelAsync line 1163), which
-    /// would otherwise cause DbContext concurrency with the caller's SaveChangesAsync.
-    /// </summary>
-    private async Task LogCostAsync(
-        LlmCompletionResult result,
-        User? user,
-        long latencyMs,
-        RequestSource source,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Use a dedicated scope for DB-dependent cost logging to prevent
-            // "A second operation was started on this context instance" when called fire-and-forget
-            if (_scopeFactory != null)
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
-                await costLogRepo.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
-                    new LlmCostCalculation
-                    {
-                        ModelId = result.Cost.ModelId,
-                        Provider = result.Cost.Provider,
-                        PromptTokens = result.Usage.PromptTokens,
-                        CompletionTokens = result.Usage.CompletionTokens,
-                        InputCost = result.Cost.InputCost,
-                        OutputCost = result.Cost.OutputCost
-                    },
-                    endpoint: "completion",
-                    success: true,
-                    errorMessage: null,
-                    latencyMs: (int)latencyMs,
-                    ipAddress: null,
-                    userAgent: null,
-                    source: source,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-
-            // Issue #2520: Update model usage statistics (uses its own scope internally)
-            await UpdateModelUsageStatsAsync(result, cancellationToken).ConfigureAwait(false);
-
-            // Budget Display System: Record credit usage (if service available and user authenticated)
-            if (_userBudgetService != null && user?.Id != null && _scopeFactory != null)
-            {
-                using var budgetScope = _scopeFactory.CreateScope();
-                var budgetService = budgetScope.ServiceProvider.GetRequiredService<IUserBudgetService>();
-                var requestCost = result.Cost.TotalCost;
-                var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
-
-                await budgetService
-                    .RecordUsageAsync(user.Id, requestCost, requestTokens, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-
-            // Issue #3721: Publish event for automatic financial ledger tracking
-            var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
-            if (totalCost > 0 && user?.Id != null && _scopeFactory != null)
-            {
-                using var publishScope = _scopeFactory.CreateScope();
-                var publisher = publishScope.ServiceProvider.GetRequiredService<IPublisher>();
-                await publisher.Publish(
-                    new TokenUsageLedgerEvent(
-                        UserId: user.Id,
-                        ModelId: result.Cost.ModelId,
-                        TokensConsumed: result.Usage.PromptTokens + result.Usage.CompletionTokens,
-                        CostUsd: totalCost,
-                        Endpoint: "completion",
-                        Timestamp: DateTime.UtcNow),
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            // Issue #5073: Write to rotating OpenRouter file log (no DB, safe without scope)
-            _openRouterFileLogger?.LogRequest(
-                requestId: Guid.NewGuid().ToString(),
-                model: result.Cost.ModelId,
-                provider: result.Cost.Provider,
-                source: source.ToString(),
-                userId: user?.Id,
-                promptTokens: result.Usage.PromptTokens,
-                completionTokens: result.Usage.CompletionTokens,
-                costUsd: result.Cost.TotalCost,
-                latencyMs: latencyMs,
-                success: true,
-                isFreeModel: result.Cost.TotalCost == 0,
-                sessionId: null);
-
-            // Issue #5074: Accumulate daily spend in Redis (fire-and-forget, no DB)
-            if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
-                _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost);
-        }
-        catch (Exception logEx)
-        {
-            _logger.LogWarning(logEx, "Failed to log LLM cost");
-        }
-    }
-
-    /// <summary>
-    /// Issue #2520: Update AiModelConfiguration usage statistics after successful request.
-    /// Uses a dedicated DI scope to avoid DbContext concurrency with the calling handler's scope.
-    /// Without this, long-running SSE requests (e.g. Ollama fallback) cause
-    /// "A second operation was started on this context instance" when the handler's
-    /// SaveChangesAsync runs concurrently with this repository call.
-    /// </summary>
-    private async Task UpdateModelUsageStatsAsync(LlmCompletionResult result, CancellationToken cancellationToken)
-    {
-        if (_scopeFactory is null)
-        {
-            _logger.LogDebug("IServiceScopeFactory not available, skipping usage stats update");
-            return;
-        }
-
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var repository = scope.ServiceProvider.GetRequiredService<IAiModelConfigurationRepository>();
-
-            var modelConfig = await repository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
-            if (modelConfig != null)
-            {
-                var inputTokens = result.Usage.PromptTokens;
-                var outputTokens = result.Usage.CompletionTokens;
-                var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
-
-                modelConfig.TrackUsage(inputTokens, outputTokens, totalCost); // Issue #2580: Use TrackUsage API
-                await repository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
-
-                _logger.LogDebug(
-                    "Updated usage stats for model {ModelId}: +{Tokens} tokens, +${Cost:F6}",
-                    result.Cost.ModelId, inputTokens + outputTokens, totalCost);
-            }
-            else
-            {
-                _logger.LogWarning("Model {ModelId} not found in DB for usage stats update", result.Cost.ModelId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update usage stats for model {ModelId}", result.Cost.ModelId);
-        }
-    }
-
-    /// <summary>
-    /// Log LLM failure cost. Uses a dedicated DI scope for the same concurrency reasons as LogCostAsync.
-    /// </summary>
-    private async Task LogCostFailureAsync(
-        string? errorMessage,
-        User? user,
-        long latencyMs,
-        RequestSource source,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (_scopeFactory != null)
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var costLogRepo = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
-                await costLogRepo.LogCostAsync(
-                    user?.Id,
-                    user?.Role.Value ?? "Anonymous",
-                    LlmCostCalculation.Empty,
-                    endpoint: "completion",
-                    success: false,
-                    errorMessage: errorMessage,
-                    latencyMs: (int)latencyMs,
-                    ipAddress: null,
-                    userAgent: null,
-                    source: source,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-
-            // Issue #5073: Write failure to rotating OpenRouter file log (no DB, safe without scope)
-            _openRouterFileLogger?.LogRequest(
-                requestId: Guid.NewGuid().ToString(),
-                model: string.Empty,
-                provider: string.Empty,
-                source: source.ToString(),
-                userId: user?.Id,
-                promptTokens: 0,
-                completionTokens: 0,
-                costUsd: 0,
-                latencyMs: latencyMs,
-                success: false,
-                isFreeModel: false,
-                sessionId: null,
-                errorMessage: errorMessage);
-        }
-        catch (Exception logEx)
-        {
-            _logger.LogWarning(logEx, "Failed to log LLM error cost");
-        }
-    }
-
-    /// <summary>
-    /// Issue #2520: Get next fallback client with DB-driven fallback chain
-    /// </summary>
-    private async Task<(ILlmClient? client, LlmRoutingDecision decision)> GetNextFallbackClientAsync(
-        string failedProvider,
-        HashSet<string> attemptedProviders,
-        CancellationToken cancellationToken = default)
-    {
-        var fallbackOrder = await BuildFallbackOrderAsync(cancellationToken).ConfigureAwait(false);
-
-        foreach (var providerName in fallbackOrder)
-        {
-            if (attemptedProviders.Contains(providerName))
-                continue;
-
-            var fallbackClient = GetClientWithCircuitBreaker(providerName);
-            if (fallbackClient != null)
-            {
-                var modelId = await GetDefaultModelForProviderAsync(fallbackClient.ProviderName, cancellationToken)
-                    .ConfigureAwait(false);
-
-                var decision = new LlmRoutingDecision(
-                    ProviderName: fallbackClient.ProviderName,
-                    ModelId: modelId,
-                    Reason: $"Fallback from {failedProvider}");
-                return (fallbackClient, decision);
-            }
-        }
-
-        return (null, default!);
-    }
-
-    /// <summary>
-    /// Issue #2520: Build fallback order from DB (AiModelConfiguration) with config fallback
-    /// </summary>
-    private async Task<List<string>> BuildFallbackOrderAsync(CancellationToken cancellationToken = default)
-    {
-        var order = new List<string>();
-
-        try
-        {
-            // Issue #2520: Query active models from DB ordered by Priority (ASC = higher priority first)
-            var activeModels = await _modelConfigRepository.GetActiveAsync(cancellationToken).ConfigureAwait(false);
-
-            if (activeModels.Count > 0)
-            {
-                // Group by Provider, take highest priority model per provider
-                var providerOrder = activeModels
-                    .GroupBy(m => m.Provider, StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(g => g.Min(m => m.Priority)) // Lowest Priority value = highest priority
-                    .Select(g => g.Key)
-                    .ToList();
-
-                order.AddRange(providerOrder);
-                _logger.LogDebug(
-                    "Built fallback order from DB: {Order} ({Count} active models)",
-                    string.Join(" → ", providerOrder), activeModels.Count);
-            }
-            else
-            {
-                _logger.LogWarning("No active models found in DB, using config fallback");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to query active models from DB, falling back to config");
-        }
-
-        // Fallback to config if DB query failed or empty
-        if (order.Count == 0)
-        {
-            var configuredFallback = _aiSettings.Value.FallbackChain?
-                .Where(p => !string.IsNullOrWhiteSpace(p))
-                .ToList();
-
-            if ((configuredFallback?.Count ?? 0) > 0)
-            {
-                order.AddRange(configuredFallback!);
-            }
-        }
-
-        // Add any remaining providers not in DB or config
-        order.AddRange(_clients
-            .Select(c => c.ProviderName)
-            .Where(name => !order.Contains(name, StringComparer.OrdinalIgnoreCase)));
-
-        return order;
-    }
-
-    /// <summary>
-    /// ISSUE-962: Record successful request (circuit breaker + latency)
-    /// </summary>
-    private void RecordSuccess(string providerName, long latencyMs)
-    {
-        lock (_monitoringLock)
-        {
-            if (_circuitBreakers.TryGetValue(providerName, out var breaker))
-            {
-                breaker.RecordSuccess();
-            }
-
-            if (_latencyStats.TryGetValue(providerName, out var stats))
-            {
-                stats.RecordLatency(latencyMs);
-            }
-
-            _logger.LogDebug(
-                "Request success: {Provider} - Latency: {Latency}ms, Circuit: {CircuitState}",
-                providerName, latencyMs, breaker?.GetStatus() ?? "unknown");
-        }
-    }
-
-    /// <summary>
-    /// ISSUE-962: Record failed request (circuit breaker + latency)
-    /// </summary>
-    private void RecordFailure(string providerName, long latencyMs)
-    {
-        lock (_monitoringLock)
-        {
-            if (_circuitBreakers.TryGetValue(providerName, out var breaker))
-            {
-                breaker.RecordFailure();
-            }
-
-            if (_latencyStats.TryGetValue(providerName, out var stats))
-            {
-                stats.RecordLatency(latencyMs); // Record even failures for complete picture
-            }
-
-            _logger.LogWarning(
-                "Request failure: {Provider} - Latency: {Latency}ms, Circuit: {CircuitState}",
-                providerName, latencyMs, breaker?.GetStatus() ?? "unknown");
-        }
-    }
-
-    private static LlmCompletionResult NormalizeFailureResult(
-        LlmCompletionResult result,
-        string providerName)
-    {
-        var message = string.IsNullOrWhiteSpace(result.ErrorMessage)
-            ? $"{providerName} provider error"
-            : result.ErrorMessage;
-
-        if (!message.Contains("error", StringComparison.OrdinalIgnoreCase))
-        {
-            message = $"Provider error: {message}";
-        }
-
-        return result with { ErrorMessage = message };
-    }
-
-    /// <summary>
-    /// ISSUE-962: Get circuit breaker state for a provider
-    /// </summary>
-    private string GetCircuitState(string providerName)
-    {
-        lock (_monitoringLock)
-        {
-            return _circuitBreakers.TryGetValue(providerName, out var breaker)
-                ? breaker.GetStatus()
-                : "unknown";
-        }
-    }
-
-    /// <summary>
-    /// ISSUE-962: Get latency statistics for a provider
-    /// </summary>
-    public string GetLatencyStats(string providerName)
-    {
-        lock (_monitoringLock)
-        {
-            return _latencyStats.TryGetValue(providerName, out var stats)
-                ? stats.GetSummary()
-                : "No data";
-        }
-    }
-
-    /// <summary>
-    /// ISSUE-5086: Fire-and-forget circuit breaker state change notification.
-    /// Uses a new DI scope so notifications survive request completion.
-    /// </summary>
-    private void PublishCircuitBreakerEvent(string providerName, CircuitState previousState, CircuitState newState)
-    {
-        if (_scopeFactory is null)
-            return;
-
-        var reason = (previousState, newState) switch
-        {
-            (CircuitState.Closed, CircuitState.Open) =>
-                $"{providerName} circuit breaker OPENED: consecutive failure threshold reached. Falling back to alternative provider.",
-            (CircuitState.HalfOpen, CircuitState.Open) =>
-                $"{providerName} circuit breaker REOPENED: recovery attempt failed.",
-            (CircuitState.HalfOpen, CircuitState.Closed) =>
-                $"{providerName} circuit breaker CLOSED: service recovered successfully.",
-            (CircuitState.Open, CircuitState.HalfOpen) =>
-                $"{providerName} circuit breaker HALF-OPEN: testing recovery.",
-            _ => $"{providerName} circuit breaker transitioned {previousState} → {newState}."
-        };
-
-        var evt = new CircuitBreakerStateChangedEvent(providerName, previousState, newState, reason, DateTime.UtcNow);
-        var scopeFactory = _scopeFactory;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                using var scope = scopeFactory.CreateScope();
-                var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
-                await publisher.Publish(evt, CancellationToken.None).ConfigureAwait(false);
-            }
-#pragma warning disable CA1031
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to publish CircuitBreakerStateChangedEvent for {Provider}", providerName);
-            }
-#pragma warning restore CA1031
-        });
-    }
-
-    /// <summary>
-    /// Issue #5476: Reset circuit breaker state for a specific provider (or all).
-    /// Called by admin emergency controls.
-    /// </summary>
-    public void ResetCircuitBreaker(string? targetProvider = null)
-    {
-        lock (_monitoringLock)
-        {
-            if (targetProvider != null)
-            {
-                if (_circuitBreakers.TryGetValue(targetProvider, out var breaker))
-                {
-                    breaker.Reset();
-                    _logger.LogWarning("Circuit breaker reset for provider {Provider}", targetProvider);
-                }
-            }
-            else
-            {
-                foreach (var (provider, breaker) in _circuitBreakers)
-                {
-                    breaker.Reset();
-                    _logger.LogWarning("Circuit breaker reset for provider {Provider} (reset-all)", provider);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// ISSUE-962: Get monitoring status for all providers
-    /// </summary>
-    public virtual Dictionary<string, (string circuitState, string latencyStats)> GetMonitoringStatus()
-    {
-        lock (_monitoringLock)
-        {
-            var status = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
-            foreach (var client in _clients)
-            {
-                var circuit = _circuitBreakers.TryGetValue(client.ProviderName, out var breaker)
-                    ? breaker.GetStatus()
-                    : "unknown";
-
-                var latency = _latencyStats.TryGetValue(client.ProviderName, out var stats)
-                    ? stats.GetSummary()
-                    : "No data";
-
-                status[client.ProviderName] = (circuit, latency);
-            }
-            return status;
-        }
-    }
-
-    /// <summary>
-    /// Issue #2520: Get default model for a provider from DB (primary or highest priority)
-    /// </summary>
-    private async Task<string> GetDefaultModelForProviderAsync(
-        string providerName,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            // Query primary model for this provider
-            var activeModels = await _modelConfigRepository.GetActiveAsync(cancellationToken).ConfigureAwait(false);
-            var providerModels = activeModels
-                .Where(m => string.Equals(m.Provider, providerName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (providerModels.Count > 0)
-            {
-                // Prefer IsPrimary, otherwise take highest priority (lowest Priority value)
-                var selectedModel = providerModels.FirstOrDefault(m => m.IsPrimary)
-                    ?? providerModels.OrderBy(m => m.Priority).First();
-
-                _logger.LogDebug(
-                    "Selected model {ModelId} for provider {Provider} from DB (IsPrimary: {IsPrimary}, Priority: {Priority})",
-                    selectedModel.ModelId, providerName, selectedModel.IsPrimary, selectedModel.Priority);
-
-                return selectedModel.ModelId;
-            }
-
-            _logger.LogWarning("No active models found for provider {Provider} in DB, using hardcoded fallback", providerName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to query default model for provider {Provider} from DB, using hardcoded fallback", providerName);
-        }
-
-        // Hardcoded fallback (backward compatibility)
-        return GetHardcodedDefaultModel(providerName);
-    }
-
-    /// <summary>
-    /// Fallback model when no DB configuration exists.
-    /// Uses AgentDefaults.DefaultModel (reads OPENROUTER_DEFAULT_MODEL env var).
-    /// </summary>
-    private static string GetHardcodedDefaultModel(string providerName)
-    {
-        return providerName.ToLowerInvariant() switch
-        {
-            "ollama" => AgentDefaults.OllamaFallbackModel,
-            "openrouter" => AgentDefaults.DefaultModel,
-            _ => AgentDefaults.OllamaFallbackModel
-        };
     }
 
     /// <inheritdoc/>
@@ -1183,14 +367,11 @@ internal class HybridLlmService : ILlmService
 
         var providerName = client.ProviderName;
 
-        // ISSUE-962: Check circuit breaker before attempting
-        lock (_monitoringLock)
+        // Check circuit breaker before attempting
+        if (_circuitBreakerRegistry.GetState(providerName) == CircuitState.Open)
         {
-            if (_circuitBreakers.TryGetValue(providerName, out var breaker) && breaker.State == CircuitState.Open)
-            {
-                _logger.LogWarning("Circuit breaker OPEN for {Provider}, skipping explicit model call", providerName);
-                return LlmCompletionResult.CreateFailure($"Provider {providerName} circuit breaker open");
-            }
+            _logger.LogWarning("Circuit breaker OPEN for {Provider}, skipping explicit model call", providerName);
+            return LlmCompletionResult.CreateFailure($"Provider {providerName} circuit breaker open");
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -1211,42 +392,17 @@ internal class HybridLlmService : ILlmService
 
             stopwatch.Stop();
 
-            // ISSUE-962: Record latency
-            lock (_monitoringLock)
-            {
-                if (_latencyStats.TryGetValue(providerName, out var stats))
-                {
-                    stats.RecordLatency(stopwatch.ElapsedMilliseconds);
-                }
-            }
-
             if (!result.Success)
             {
                 _logger.LogWarning("Explicit model {Model} call failed: {Error}", explicitModel, result.ErrorMessage);
-
-                // ISSUE-962: Record failure in circuit breaker
-                lock (_monitoringLock)
-                {
-                    if (_circuitBreakers.TryGetValue(providerName, out var breaker))
-                    {
-                        breaker.RecordFailure();
-                    }
-                }
-
+                _providerSelector.RecordFailure(providerName, explicitModel, stopwatch.ElapsedMilliseconds, result);
                 return result;
             }
 
-            // ISSUE-962: Record success in circuit breaker
-            lock (_monitoringLock)
-            {
-                if (_circuitBreakers.TryGetValue(providerName, out var breaker))
-                {
-                    breaker.RecordSuccess();
-                }
-            }
+            _providerSelector.RecordSuccess(providerName, explicitModel, stopwatch.ElapsedMilliseconds, result);
 
-            // Log cost asynchronously (fire-and-forget)
-            _ = LogCostAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, ct);
+            // Log cost asynchronously (fire-and-forget — use CancellationToken.None to survive request cancellation)
+            _ = _costService.LogSuccessAsync(result, user: null, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
 
             _logger.LogInformation(
                 "Explicit model {Model} completion successful (tokens: {Tokens}, cost: ${Cost:F6}, latency: {Latency}ms)",
@@ -1258,18 +414,58 @@ internal class HybridLlmService : ILlmService
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error generating completion with explicit model {Model}", explicitModel);
-
-            // ISSUE-962: Record failure
-            lock (_monitoringLock)
-            {
-                if (_circuitBreakers.TryGetValue(providerName, out var breaker))
-                {
-                    breaker.RecordFailure();
-                }
-            }
-
+            _providerSelector.RecordFailure(providerName, explicitModel, stopwatch.ElapsedMilliseconds);
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
     }
-}
 
+    private void AddRoutingMetadata(
+        LlmCompletionResult result,
+        LlmRoutingDecision decision,
+        ILlmClient client,
+        long latencyMs)
+    {
+        if (result.Metadata is Dictionary<string, string> metadata)
+        {
+            metadata["routing_decision"] = decision.Reason;
+            metadata["selected_provider"] = client.ProviderName;
+            metadata["selected_model"] = decision.ModelId;
+            metadata["latency_ms"] = latencyMs.ToString(CultureInfo.InvariantCulture);
+            metadata["circuit_state"] = _circuitBreakerRegistry.GetCircuitStateDescription(client.ProviderName);
+        }
+    }
+
+    private static LlmCompletionResult NormalizeFailureResult(
+        LlmCompletionResult result,
+        string providerName)
+    {
+        var message = string.IsNullOrWhiteSpace(result.ErrorMessage)
+            ? $"{providerName} provider error"
+            : result.ErrorMessage;
+
+        if (!message.Contains("error", StringComparison.OrdinalIgnoreCase))
+        {
+            message = $"Provider error: {message}";
+        }
+
+        return result with { ErrorMessage = message };
+    }
+
+    private static string CleanJsonResponse(string response)
+    {
+        var cleaned = response.Trim();
+
+        if (cleaned.StartsWith("```", StringComparison.Ordinal))
+        {
+            var firstNewline = cleaned.IndexOf('\n');
+            var lastBackticks = cleaned.LastIndexOf("```", StringComparison.Ordinal);
+
+            if (firstNewline > 0 && lastBackticks > firstNewline)
+            {
+                cleaned = cleaned.Substring(firstNewline + 1, lastBackticks - firstNewline - 1).Trim();
+            }
+        }
+
+        return cleaned;
+    }
+}

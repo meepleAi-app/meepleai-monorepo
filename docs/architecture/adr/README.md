@@ -56,6 +56,7 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 - 040-049: Observability
   - [042](adr-042-dashboard-performance.md): Dashboard Performance
   - [043](adr-043-llm-subsystem-nfr.md): LLM Subsystem NFR Documentation
+  - [044](adr-044-self-hosted-arm64-runner.md): Self-Hosted ARM64 Runner Migration
 - 050-059: Infrastructure (reserved)
 
 ## Related Docs
@@ -67,5 +68,5 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 ---
 
 **Last Updated**: 2026-03-09
-**Total ADRs**: 18 (16 Accepted/Implemented, 1 Rejected, 1 Deprecated)
+**Total ADRs**: 19 (17 Accepted/Implemented, 1 Rejected, 1 Deprecated)
 **Archived**: 12 obsolete ADRs removed (see git history)

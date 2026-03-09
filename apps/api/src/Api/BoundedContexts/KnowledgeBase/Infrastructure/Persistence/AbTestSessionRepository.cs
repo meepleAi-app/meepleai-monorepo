@@ -65,6 +65,16 @@ public sealed class AbTestSessionRepository : IAbTestSessionRepository
         return await query.CountAsync(ct).ConfigureAwait(false);
     }
 
+    public async Task<List<AbTestSession>> GetAllEvaluatedWithVariantsAsync(CancellationToken ct = default)
+    {
+        return await _context.Set<AbTestSession>()
+            .AsNoTracking()
+            .Include(s => s.Variants)
+            .Where(s => s.Status == AbTestStatus.Evaluated)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(ct).ConfigureAwait(false);
+    }
+
     public async Task AddAsync(AbTestSession session, CancellationToken ct = default)
     {
         await _context.Set<AbTestSession>().AddAsync(session, ct).ConfigureAwait(false);

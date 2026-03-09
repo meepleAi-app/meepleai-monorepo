@@ -457,5 +457,19 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithCronSchedule("0 0 2 * * ?")
                 .WithDescription("Runs daily at 2 AM UTC to pseudonymize UserId in logs older than 7 days"));
         });
+
+        // Issue #5493: Model availability verification — checks OpenRouter models every 6 hours
+        services.AddQuartz(q =>
+        {
+            q.AddJob<ModelAvailabilityCheckJob>(opts => opts
+                .WithIdentity("model-availability-check-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("model-availability-check-job", "knowledge-base")
+                .WithIdentity("model-availability-check-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 */6 * * ?")
+                .WithDescription("Runs every 6 hours to verify configured LLM models are still available on OpenRouter"));
+        });
     }
 }

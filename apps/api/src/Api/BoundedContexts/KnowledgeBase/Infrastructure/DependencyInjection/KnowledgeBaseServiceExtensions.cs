@@ -192,6 +192,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5489: Cost service (Scoped - uses scoped repositories via IServiceScopeFactory)
         services.AddScoped<ILlmCostService, LlmCostService>();
 
+        // Issue #5505: A/B test budget isolation (Scoped - uses Redis for daily budget + rate limits)
+        services.AddScoped<IAbTestBudgetService, AbTestBudgetService>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
         services.AddScoped<ILlmService, HybridLlmService>();
@@ -273,6 +276,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
+        services.AddScoped<IAbTestSessionRepository, AbTestSessionRepository>(); // Issue #5491: A/B test sessions
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
         services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD

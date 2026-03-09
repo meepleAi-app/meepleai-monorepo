@@ -70,6 +70,9 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5477: Redis rate-limiting subsystem degradation alert (admin)
     public static readonly NotificationType AdminRedisRateLimitingDegraded = new("admin_redis_rate_limiting_degraded");
 
+    // ISSUE-5499: LLM model deprecated/unavailable alert (admin)
+    public static readonly NotificationType AdminModelDeprecated = new("admin_model_deprecated");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -124,6 +127,7 @@ internal sealed class NotificationType : ValueObject
             "admin_circuit_breaker_state_changed" => AdminCircuitBreakerStateChanged,
             "admin_openrouter_daily_summary" => AdminOpenRouterDailySummary,
             "admin_redis_rate_limiting_degraded" => AdminRedisRateLimitingDegraded,
+            "admin_model_deprecated" => AdminModelDeprecated,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

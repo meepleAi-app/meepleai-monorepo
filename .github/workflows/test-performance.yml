@@ -306,6 +306,28 @@ jobs:
 
           echo "K6 tests completed"
 
+      # Issue #5542: Baseline regression gate
+      - name: Run baseline regression check
+        if: always()
+        working-directory: tests/k6
+        run: |
+          chmod +x utils/baseline-compare.sh
+          if utils/baseline-compare.sh reports; then
+            echo "✅ Baseline regression check passed"
+          else
+            echo "❌ Baseline regression check failed — performance regression detected"
+            # On PR, post the report as a comment
+            if [ "${{ github.event_name }}" == "pull_request" ] && [ -f reports/baseline-comparison.md ]; then
+              gh pr comment ${{ github.event.pull_request.number }} --body-file reports/baseline-comparison.md || true
+            fi
+            # Don't fail the workflow on smoke tests (informational only)
+            if [ "${{ inputs.test_type || 'smoke' }}" != "smoke" ]; then
+              exit 1
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Debug API logs on failure
         if: failure()
         run: |

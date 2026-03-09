@@ -28,6 +28,12 @@ internal static class SystemConfigurationServiceExtensions
         services.AddScoped<ConfigurationValidator>();
         services.AddScoped<IRateLimitEvaluator, RateLimitEvaluator>(); // Issue #2724: CreateShareRequest (updated #2730)
 
+        // Issue #5498: LLM system config repository (Scoped - uses DbContext)
+        services.AddScoped<ILlmSystemConfigRepository, EfLlmSystemConfigRepository>();
+
+        // Issue #5498: LLM system config provider (Singleton - uses IServiceScopeFactory for DB, 60s cache)
+        services.AddSingleton<ILlmSystemConfigProvider, LlmSystemConfigProvider>();
+
         // Issue #2596: LLM tier routing service (Singleton - uses IServiceScopeFactory for DB access)
         // Registered as Singleton for use by HybridAdaptiveRoutingStrategy
         services.AddSingleton<ILlmTierRoutingService, LlmTierRoutingService>();

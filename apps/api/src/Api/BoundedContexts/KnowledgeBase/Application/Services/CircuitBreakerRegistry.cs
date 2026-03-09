@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.SystemConfiguration.Application.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,6 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// Issue #5487: Shared circuit breaker registry extracted from HybridLlmService.
 /// Manages circuit breaker state and latency tracking for all LLM providers.
 /// Singleton — state must be shared across all scoped HybridLlmService instances.
+/// Issue #5498: Reads configurable thresholds from ILlmSystemConfigProvider (DB-first).
 /// </summary>
 internal sealed class CircuitBreakerRegistry : ICircuitBreakerRegistry
 {
@@ -17,13 +19,16 @@ internal sealed class CircuitBreakerRegistry : ICircuitBreakerRegistry
     private readonly Dictionary<string, LatencyStats> _latencyStats = new(StringComparer.Ordinal);
     private readonly System.Threading.Lock _monitoringLock = new();
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILlmSystemConfigProvider _configProvider;
     private readonly ILogger<CircuitBreakerRegistry> _logger;
 
     public CircuitBreakerRegistry(
         IServiceScopeFactory scopeFactory,
+        ILlmSystemConfigProvider configProvider,
         ILogger<CircuitBreakerRegistry> logger)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -35,13 +40,18 @@ internal sealed class CircuitBreakerRegistry : ICircuitBreakerRegistry
             if (_circuitBreakers.ContainsKey(providerName))
                 return;
 
-            var breaker = new CircuitBreakerState();
+            // Issue #5498: Read configurable thresholds (from cache or appsettings defaults — no async/DB call)
+            var (failureThreshold, openDurationSeconds, successThreshold) = _configProvider.GetCircuitBreakerThresholdsSnapshot();
+
+            var breaker = new CircuitBreakerState(failureThreshold, openDurationSeconds, successThreshold);
             var capturedProvider = providerName;
             breaker.OnStateTransition = (prev, next) => PublishCircuitBreakerEvent(capturedProvider, prev, next);
             _circuitBreakers[providerName] = breaker;
             _latencyStats[providerName] = new LatencyStats();
 
-            _logger.LogDebug("Circuit breaker initialized for provider {Provider}", providerName);
+            _logger.LogDebug(
+                "Circuit breaker initialized for provider {Provider} (failure: {Failure}, open: {Open}s, success: {Success})",
+                providerName, failureThreshold, openDurationSeconds, successThreshold);
         }
     }
 

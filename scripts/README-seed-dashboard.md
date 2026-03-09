@@ -10,20 +10,14 @@ Seed scripts per popolare il database con dati di test per la Gaming Hub Dashboa
 
 ## 🚀 Usage
 
-### Option 1: SQL Script (Recommended - Simple & Fast)
-
 **Con Docker** (raccomandato):
-```bash
-pwsh scripts/seed-dashboard-data.ps1 -UseDocker
-# oppure
-./scripts/seed-dashboard-data.sh --docker
+```powershell
+.\scripts\seed-dashboard-data.ps1 -UseDocker
 ```
 
 **Con PostgreSQL locale**:
-```bash
-pwsh scripts/seed-dashboard-data.ps1
-# oppure
-./scripts/seed-dashboard-data.sh
+```powershell
+.\scripts\seed-dashboard-data.ps1
 ```
 
 **Manuale con psql**:
@@ -91,11 +85,6 @@ cd infra && docker compose up -d postgres
 docker ps | grep postgres
 ```
 
-### Permission denied on .sh script
-```bash
-chmod +x scripts/seed-dashboard-data.sh
-```
-
 ### Connection refused
 ```bash
 # Verify PostgreSQL is listening
@@ -122,9 +111,8 @@ docker exec -it meepleai-postgres psql -U postgres -d meepleai -c \
 
 ## 📦 Files
 
-- `seed-dashboard-data.sql` - SQL script principale (✅ Funzionante)
-- `seed-dashboard-data.ps1` - PowerShell wrapper (✅ Raccomandato)
-- `seed-dashboard-data.sh` - Bash wrapper (✅ Alternative)
+- `seed-dashboard-data.sql` - SQL script principale
+- `seed-dashboard-data.ps1` - PowerShell wrapper (raccomandato)
 
 ## 🔗 Related
 

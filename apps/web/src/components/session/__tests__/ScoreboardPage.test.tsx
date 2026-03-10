@@ -8,13 +8,12 @@
  * - Player names rendered from GameSessionDto.players
  * - Winner badge highlighted when winnerName present
  * - Status badge (Active / Paused / Finalized) rendered
- * - "Registra Punteggio" button present
+ * - "Registra Punteggio" button present and opens Sheet on click
  * - Back navigation link present
- * - Session date displayed
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 
@@ -215,6 +214,30 @@ describe('ScoreboardPage', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /registra punteggio/i })).toBeInTheDocument();
+      });
+    });
+
+    it('opens score entry Sheet when "Registra Punteggio" is clicked', async () => {
+      mockGetById.mockResolvedValue(mockSession);
+
+      renderWithQuery(<ScoreboardPage sessionId="session-1" />);
+
+      // Wait for the session to load and the action-bar button to appear
+      const button = await screen.findByRole('button', { name: /registra punteggio/i });
+
+      fireEvent.click(button);
+
+      // Sheet dialog should open — Radix mounts a dialog role element
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      // Score inputs for each player should be present in the form
+      await waitFor(() => {
+        expect(
+          screen.getByRole('spinbutton', { name: /punteggio per alice/i })
+        ).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: /punteggio per bob/i })).toBeInTheDocument();
       });
     });
   });

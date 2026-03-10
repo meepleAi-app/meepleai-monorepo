@@ -258,7 +258,7 @@ export function SessionsContent() {
                     key={session.id}
                     sessionId={session.id}
                     gameName={session.gameName}
-                    pausedAt={session.updatedAt}
+                    lastActivityAt={session.updatedAt}
                     playerCount={session.playerCount}
                     sessionCode={session.sessionCode}
                   />

@@ -22,8 +22,13 @@ export interface ResumeSessionCardProps {
   sessionId: string;
   /** Display name of the game. */
   gameName: string;
-  /** ISO datetime when the session was paused. */
-  pausedAt: string;
+  /**
+   * ISO datetime of the last recorded activity on the session
+   * (maps to `LiveSessionSummaryDto.updatedAt`).
+   * Note: this is not guaranteed to be the exact pause timestamp —
+   * it is the most recent update time available from the DTO.
+   */
+  lastActivityAt: string;
   /** Number of players in the session. */
   playerCount: number;
   /** Short invite/join code for the session. */
@@ -35,13 +40,13 @@ export interface ResumeSessionCardProps {
 export function ResumeSessionCard({
   sessionId,
   gameName,
-  pausedAt,
+  lastActivityAt,
   playerCount,
   sessionCode,
   photoCount,
 }: ResumeSessionCardProps) {
-  const timeAgo = formatDistanceToNow(new Date(pausedAt), {
-    addSuffix: false,
+  const timeAgo = formatDistanceToNow(new Date(lastActivityAt), {
+    addSuffix: true,
     locale: it,
   });
 
@@ -65,7 +70,7 @@ export function ResumeSessionCard({
               >
                 In pausa
               </Badge>
-              <span className="text-xs text-muted-foreground">{timeAgo} fa</span>
+              <span className="text-xs text-muted-foreground">{timeAgo}</span>
             </div>
 
             {/* Game name */}

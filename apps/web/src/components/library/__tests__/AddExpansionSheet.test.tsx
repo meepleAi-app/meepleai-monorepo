@@ -273,15 +273,23 @@ describe('AddExpansionSheet', () => {
     });
   });
 
-  it('does not search BGG before debounce window expires', async () => {
+  it('does not fire a second BGG search before debounce window expires after new input', async () => {
+    // The initial mount fires one search for baseGameTitle via debouncedTerm.
+    // After typing new input, a second search must NOT fire until 400ms have elapsed.
+    mockBggSearch.mockResolvedValue(makeBggResponse());
     render(<AddExpansionSheet {...defaultProps} />);
 
+    // Let the initial mount search complete
+    vi.advanceTimersByTime(400);
+    await waitFor(() => expect(mockBggSearch).toHaveBeenCalledTimes(1));
+
+    // Now type new input — the debounce timer resets
     const input = screen.getByTestId('search-input');
     fireEvent.change(input, { target: { value: 'Cat' } });
 
-    vi.advanceTimersByTime(200); // Less than 400ms
+    vi.advanceTimersByTime(200); // Less than 400ms — debounce not yet expired
 
-    expect(mockBggSearch).not.toHaveBeenCalled();
+    expect(mockBggSearch).toHaveBeenCalledTimes(1); // Still only the initial call
   });
 
   it('calls onClose when the close button is clicked', () => {

@@ -1,6 +1,5 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
-using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -10,20 +9,19 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 /// Event handler that sets IsActiveForRag=true on the associated PdfDocument
 /// when a SharedGame document is approved for RAG processing.
 /// Issue #98: DocumentApprovedForRagEvent was published but had no handler.
+/// Delegates to SetActiveForRagCommand in DocumentProcessing BC via MediatR,
+/// avoiding direct cross-BC repository coupling.
 /// </summary>
 internal sealed class DocumentApprovedForRagEventHandler : INotificationHandler<DocumentApprovedForRagEvent>
 {
-    private readonly IPdfDocumentRepository _pdfDocumentRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMediator _mediator;
     private readonly ILogger<DocumentApprovedForRagEventHandler> _logger;
 
     public DocumentApprovedForRagEventHandler(
-        IPdfDocumentRepository pdfDocumentRepository,
-        IUnitOfWork unitOfWork,
+        IMediator mediator,
         ILogger<DocumentApprovedForRagEventHandler> logger)
     {
-        _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -35,34 +33,23 @@ internal sealed class DocumentApprovedForRagEventHandler : INotificationHandler<
 
         try
         {
-            var pdfDocument = await _pdfDocumentRepository.GetByIdAsync(
-                notification.PdfDocumentId, cancellationToken).ConfigureAwait(false);
+            var result = await _mediator.Send(
+                new SetActiveForRagCommand(notification.PdfDocumentId, true),
+                cancellationToken).ConfigureAwait(false);
 
-            if (pdfDocument is null)
-            {
-                _logger.LogWarning(
-                    "PdfDocument {PdfDocumentId} not found for DocumentApprovedForRagEvent. " +
-                    "The PDF may have been deleted after approval was initiated.",
-                    notification.PdfDocumentId);
-                return;
-            }
-
-            if (pdfDocument.IsActiveForRag)
+            if (result.Success)
             {
                 _logger.LogInformation(
-                    "PdfDocument {PdfDocumentId} is already active for RAG, skipping update",
-                    notification.PdfDocumentId);
-                return;
+                    "Successfully set IsActiveForRag=true on PdfDocument {PdfDocumentId} " +
+                    "for SharedGame {SharedGameId}, approved by {ApprovedBy}",
+                    notification.PdfDocumentId, notification.SharedGameId, notification.ApprovedBy);
             }
-
-            pdfDocument.SetActiveForRag(true);
-            await _pdfDocumentRepository.UpdateAsync(pdfDocument, cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Successfully set IsActiveForRag=true on PdfDocument {PdfDocumentId} " +
-                "for SharedGame {SharedGameId}, approved by {ApprovedBy}",
-                notification.PdfDocumentId, notification.SharedGameId, notification.ApprovedBy);
+            else
+            {
+                _logger.LogWarning(
+                    "SetActiveForRag returned failure for PdfDocument {PdfDocumentId}: {Message}",
+                    notification.PdfDocumentId, result.Message);
+            }
         }
         catch (Exception ex)
         {

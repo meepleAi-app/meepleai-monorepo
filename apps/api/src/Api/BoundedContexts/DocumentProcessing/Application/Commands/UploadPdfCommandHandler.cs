@@ -788,13 +788,15 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current status: {Status}", pdfDoc.ProcessingStatus);
 
         // IDEMPOTENCY CHECK (#1742): Skip if already processing/processed
-        if (!string.Equals(pdfDoc.ProcessingStatus, "pending", StringComparison.Ordinal))
+        var pendingState = nameof(PdfProcessingState.Pending);
+        if (!string.Equals(pdfDoc.ProcessingState, pendingState, StringComparison.Ordinal))
         {
             _logger.LogInformation(
-                "⏭️ [PDF-DEBUG-VALIDATE] PDF {PdfId} already processed (status: {Status}), skipping duplicate background task",
-                pdfId, pdfDoc.ProcessingStatus);
+                "⏭️ [PDF-DEBUG-VALIDATE] PDF {PdfId} already processed (state: {State}), skipping duplicate background task",
+                pdfId, pdfDoc.ProcessingState);
 
-            if (string.Equals(pdfDoc.ProcessingStatus, "failed", StringComparison.Ordinal))
+            var failedState = nameof(PdfProcessingState.Failed);
+            if (string.Equals(pdfDoc.ProcessingState, failedState, StringComparison.Ordinal))
             {
                 await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
             }

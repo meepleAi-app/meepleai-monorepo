@@ -1,0 +1,93 @@
+# HyperDX Observability Platform
+# Unified logs, traces, and session replay for MeepleAI
+#
+# Note: Inherits project name from docker-compose.yml (name: meepleai)
+# Volumes will be named: meepleai_hyperdx_data, meepleai_hyperdx_logs
+#
+# Usage: docker compose -f docker-compose.yml -f compose.hyperdx.yml up -d
+#
+# Ports:
+#   - 8180: HyperDX Web UI
+#   - 14317: OTLP gRPC endpoint
+#   - 14318: OTLP HTTP endpoint
+#
+# Security: ClickHouse port 8123 is NOT exposed to host (internal only)
+
+services:
+  meepleai-hyperdx:
+    # Issue #1567: Using v1 stable instead of v2-beta due to OpAMP supervisor issues
+    # v2-beta has a bug where the collector supervisor fails to connect to OpAMP server
+    # causing telemetry data to be accepted but not written to ClickHouse
+    image: docker.hyperdx.io/hyperdx/hyperdx-local:latest
+    container_name: meepleai-hyperdx
+    restart: unless-stopped
+    profiles: [observability, full]
+
+    ports:
+      # Web UI - Custom port to avoid conflict with meepleai-api:8080
+      - "127.0.0.1:8180:8080"
+
+      # OpenTelemetry Collector endpoints - Custom ports to avoid conflicts
+      - "127.0.0.1:14317:4317"  # OTLP gRPC
+      - "127.0.0.1:14318:4318"  # OTLP HTTP
+
+      # ClickHouse port 8123 intentionally NOT exposed for security
+      # Access via Docker internal networking only (e.g., for backups)
+
+    volumes:
+      # ClickHouse data persistence
+      - hyperdx_data:/var/lib/clickhouse
+
+      # HyperDX application logs
+      - hyperdx_logs:/var/log/hyperdx
+
+    environment:
+      # Core Configuration
+      - HYPERDX_API_KEY=${HYPERDX_API_KEY:-demo}
+      - HYPERDX_LOG_LEVEL=${HYPERDX_LOG_LEVEL:-info}
+      - HYPERDX_SERVICE_NAME=${HYPERDX_SERVICE_NAME:-meepleai}
+
+      # Data Retention Policy
+      # Logs/Traces: 30 days, Session Replay: 7 days (configurable in UI)
+      - HYPERDX_RETENTION_DAYS=${HYPERDX_RETENTION_DAYS:-30}
+      - HYPERDX_MAX_STORAGE_GB=${HYPERDX_MAX_STORAGE_GB:-50}
+
+      # ClickHouse Performance Tuning
+      - CLICKHOUSE_MAX_MEMORY_USAGE=${CLICKHOUSE_MAX_MEMORY_USAGE:-4GB}
+      - CLICKHOUSE_MAX_THREADS=${CLICKHOUSE_MAX_THREADS:-4}
+
+      # Alert Channels (optional - configure in UI)
+      - HYPERDX_ALERT_EMAIL=${HYPERDX_ALERT_EMAIL:-}
+      - HYPERDX_ALERT_SLACK_WEBHOOK=${SLACK_WEBHOOK_URL:-}
+
+    healthcheck:
+      # Issue #1570: Fixed health check to use correct API endpoint (port 8000 instead of 8080)
+      # Port 8080 is the Next.js app, port 8000 is the HyperDX API
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    networks:
+      - meepleai
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+volumes:
+  hyperdx_data:
+    driver: local
+  hyperdx_logs:
+    driver: local
+
+networks:
+  meepleai:
+    external: true
+    name: meepleai

@@ -359,7 +359,7 @@ meepleai-monorepo/
 │
 └── infra/
     ├── docker-compose.yml               # 🟢 Dev infrastructure
-    ├── docker-compose.traefik.yml       # Reverse proxy
+    ├── compose.traefik.yml       # Reverse proxy
     └── secrets/                         # Secret files
 ```
 

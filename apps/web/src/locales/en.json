@@ -583,6 +583,26 @@
   "legal": {
     "tableOfContents": "Table of Contents",
     "lastUpdated": "Last updated: {date}",
+    "cookieBanner": {
+      "title": "This site uses cookies",
+      "description": "We use essential technical cookies for site operation. With your consent, we also use analytics and functional cookies to improve your experience.",
+      "readPolicy": "Read Cookie Policy",
+      "ariaLabel": "Cookie consent",
+      "essential": "Essential",
+      "essentialAlways": "always active",
+      "essentialAriaLabel": "Essential cookies (always active)",
+      "analytics": "Analytics",
+      "analyticsDescription": "help us understand how you use the service",
+      "analyticsAriaLabel": "Analytics cookies",
+      "functional": "Functional",
+      "functionalDescription": "remember your preferences",
+      "functionalAriaLabel": "Functional cookies",
+      "customize": "Customize",
+      "essentialOnly": "Essential only",
+      "acceptAll": "Accept all",
+      "back": "Back",
+      "savePreferences": "Save preferences"
+    },
     "terms": {
       "title": "Terms and Conditions",
       "description": "Terms and conditions of use for MeepleAI service",
@@ -605,11 +625,11 @@
         },
         "userContent": {
           "title": "5. User-Uploaded Content",
-          "content": "By uploading PDFs or other content to MeepleAI, you represent and warrant that you have the right to use such content and to grant MeepleAI a limited license to process it in order to provide you with the service. Content is processed exclusively for your personal use and is not shared with other users without your consent."
+          "content": "By uploading PDFs or other content to MeepleAI, you represent and warrant that you have the right to use such content and to grant MeepleAI a limited license to process it in order to provide you with the service. Content is processed exclusively for your personal use and is not shared with other users without your consent.\n\n**Copyright Certification:** By uploading any content, you certify that you own or have obtained the necessary rights, licenses, or permissions to use and share such content. You confirm that your upload does not infringe upon any third party's intellectual property rights.\n\n**Indemnification:** You agree to indemnify, defend, and hold harmless MeepleAI and its operators from and against any claims, damages, losses, or expenses (including reasonable legal fees) arising from your upload of content that infringes upon any copyright, trademark, or other intellectual property right.\n\n**DMCA Compliance:** MeepleAI respects the intellectual property rights of others. If you believe that any content on MeepleAI infringes upon your copyright, you may submit a takedown notice to: **legal@meepleai.com**. Please include: identification of the copyrighted work, identification of the infringing material, your contact information, and a statement of good faith belief."
         },
         "aiUsage": {
           "title": "6. Use of Artificial Intelligence",
-          "content": "Responses provided by MeepleAI's AI are automatically generated and always include a reference to the source (page and section of the rulebook). However, the AI may make interpretation errors. We always recommend verifying responses against the original rulebook. MeepleAI does not guarantee absolute accuracy of responses and assumes no responsibility for decisions made based solely on AI responses."
+          "content": "Responses provided by MeepleAI's AI are **automatically generated** and always include a reference to the source (page and section of the rulebook). However, the AI **may contain errors** or misinterpretations. We always recommend **verifying responses against the original rulebook**. MeepleAI does not guarantee absolute accuracy of responses and assumes no responsibility for decisions made based solely on AI responses.\n\n**AI Providers:**\n- **Ollama** (self-hosted, EU): Handles approximately **80%** of all AI requests. Data stays within our infrastructure.\n- **OpenRouter** (USA): Handles approximately **20%** of AI requests when needed. Protected by DPA with Standard Contractual Clauses.\n\n**Consent Versioning:** Your AI consent preferences are versioned. When we make material changes to AI processing or add new providers, you will be notified and asked to review your consent.\n\n**Right to Opt-Out:** You may opt out of AI processing at any time by visiting **/settings/ai-consent**. Opting out will disable all AI-powered features for your account."
         },
         "intellectualProperty": {
           "title": "7. Intellectual Property",
@@ -629,7 +649,7 @@
         },
         "governingLaw": {
           "title": "11. Governing Law",
-          "content": "These Terms are governed by Italian and European Union laws. For any dispute arising from these Terms, the competent court shall be that of [City], Italy."
+          "content": "These Terms are governed by Italian and European Union laws. For any dispute arising from these Terms, the competent court shall be that of Milan, Italy."
         },
         "contact": {
           "title": "12. Contact",
@@ -692,6 +712,30 @@
         "contact": {
           "title": "13. Contact and Complaints",
           "content": "For privacy questions or to exercise your rights, contact: privacy@meepleai.com. You also have the right to file a complaint with the Data Protection Authority if you believe the processing of your data violates GDPR."
+        },
+        "aiProcessing": {
+          "title": "14. How We Use Artificial Intelligence",
+          "content": "MeepleAI uses **artificial intelligence (AI)** to help you understand board game rules. AI features include:\n\n- Answering questions about game rules via chat\n- Analyzing uploaded rulebook PDFs\n- Providing setup guides and rule clarifications\n\n**What data is processed by AI:**\n- Your query text (the question you ask)\n- Game context (selected game, relevant rulebook sections)\n- Chat history (up to **10 recent messages** for conversation continuity)\n- A **pseudonymized identifier** (not your real user ID)\n\n**What is NOT sent to AI providers:**\n- Your email address\n- Your real name or display name\n- Payment information\n- Your game library or collection data\n- Your account credentials"
+        },
+        "aiProviders": {
+          "title": "15. AI Providers",
+          "content": "MeepleAI uses a **local-first AI routing strategy** to maximize data protection:\n\n| Provider | Location | Hosting | Traffic Share | Data Control |\n|----------|----------|---------|---------------|-------------|\n| **Ollama** | EU (self-hosted) | Our infrastructure | ~80% | Fully controlled |\n| **OpenRouter** | USA | Third-party | ~20% | DPA with SCCs |\n\n**Routing priority:** All requests are routed to our **self-hosted Ollama instance** (EU) by default. Requests are only sent to OpenRouter when:\n- The self-hosted model is unavailable or overloaded\n- A specific model capability is required\n- The user has explicitly consented to external AI providers\n\nOpenRouter processing is protected by a **Data Processing Agreement (DPA)** with **Standard Contractual Clauses (SCCs)** for international data transfers."
+        },
+        "aiDataProtection": {
+          "title": "16. AI Data Protection",
+          "content": "We implement **4 key measures** to protect your data during AI processing:\n\n- **PII Stripping**: All personally identifiable information (names, emails, addresses) is automatically detected and removed before any data is sent to AI providers\n- **Pseudonymization**: Your user identity is replaced with a non-reversible pseudonymized identifier in all AI request logs\n- **TLS 1.3 Encryption**: All data in transit to AI providers is encrypted using TLS 1.3\n- **Data Minimization**: Only the minimum data necessary to generate a response is sent to AI providers — no library data, no account details, no browsing history"
+        },
+        "aiRetention": {
+          "title": "17. AI Data Retention",
+          "content": "AI-related data is retained for limited periods and automatically deleted:\n\n| Data Type | Retention Period | Purpose | Contains Personal Data |\n|-----------|-----------------|---------|----------------------|\n| AI request logs | **30 days** | Service monitoring & debugging | Pseudonymized only |\n| Conversation memories | **90 days** | Conversation context continuity | Pseudonymized only |\n| Aggregated usage stats | **1 year** | Service improvement analytics | **No** — fully anonymous |\n\nAll retention periods are enforced by **automated deletion jobs**. After the retention period expires, data is permanently and irreversibly deleted. Pseudonymization of request logs occurs automatically **after 7 days**."
+        },
+        "aiRights": {
+          "title": "18. Your Rights for AI Data",
+          "content": "You have full control over how your data is used with AI features.\n\n**Consent Management** — Visit **/settings/ai-consent** to:\n- Enable or disable AI processing entirely\n- Consent to or revoke consent for external AI providers (OpenRouter)\n- Withdraw consent at any time — changes take effect immediately\n\n**Opt-Out** — If you opt out of AI processing:\n- All AI-powered features (chat, rule Q&A, setup guides) will be disabled for your account\n- No new data will be sent to any AI provider\n- Existing AI data will be deleted according to the retention schedule above\n\n**Right to Erasure (Art. 17 GDPR)** — You can request deletion of all your AI-related data:\n- **Self-service**: Go to **Settings > Usage** and use the AI data deletion tool\n- **By request**: Contact privacy@meepleai.com\n- Deletion is completed within **72 hours** of your request\n\n**Right to Access (Art. 15 GDPR)** — You can request a copy of all AI-related data we hold about you by contacting privacy@meepleai.com. We will respond within 30 days."
+        },
+        "aiLegalBasis": {
+          "title": "19. Legal Basis for AI Processing",
+          "content": "The legal basis for AI data processing depends on the type of processing:\n\n| Processing Type | Legal Basis | GDPR Article |\n|----------------|-------------|-------------|\n| **Self-hosted AI** (Ollama) | Legitimate interest | Art. 6(1)(f) |\n| **External AI** (OpenRouter) | Explicit consent | Art. 6(1)(a) |\n| **Usage analytics** | Legitimate interest (pseudonymized) | Art. 6(1)(f) |\n\n**Self-hosted AI (Ollama):** Processing is based on our legitimate interest in providing the core service functionality. Data never leaves our EU infrastructure.\n\n**External AI (OpenRouter):** Processing requires your **explicit consent**, which you can grant or withdraw at any time via /settings/ai-consent.\n\n**International Transfers:** When data is processed by OpenRouter (USA), transfers are protected by:\n- **Standard Contractual Clauses (SCCs)** per Art. 46(2)(c) GDPR\n- **Technical measures**: PII stripping, pseudonymization, TLS 1.3 encryption\n- **Organizational measures**: Data Processing Agreement, access controls, audit rights"
         }
       }
     },
@@ -733,7 +777,7 @@
         },
         "policyUpdates": {
           "title": "9. Policy Updates",
-          "content": "We may update this Cookie Policy periodically. Changes will be communicated through the cookie banner or on this page. Last update: January 2026."
+          "content": "We may update this Cookie Policy periodically. Changes will be communicated through the cookie banner or on this page. Last update: March 2026."
         }
       }
     }

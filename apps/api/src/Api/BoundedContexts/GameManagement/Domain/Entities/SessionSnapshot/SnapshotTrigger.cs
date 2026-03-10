@@ -21,5 +21,11 @@ internal enum SnapshotTrigger
     ScoreChanged = 4,
 
     /// <summary>Automatic snapshot when a timer expires.</summary>
-    TimerExpired = 5
+    TimerExpired = 5,
+
+    /// <summary>Automatic snapshot when a session is paused.</summary>
+    SessionPaused = 6,
+
+    /// <summary>Automatic snapshot created before restoring a previous snapshot.</summary>
+    PreRestore = 7
 }

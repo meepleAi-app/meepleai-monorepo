@@ -209,10 +209,10 @@ Automation Stack (optional):
 COMPOSE_PROFILES=minimal,observability docker compose up -d
 
 # With Traefik reverse proxy
-docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+docker compose -f docker-compose.yml -f compose.traefik.yml up -d
 
 # With HyperDX unified observability
-docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml up -d
+docker compose -f docker-compose.yml -f compose.hyperdx.yml up -d
 
 # Force rebuild (after code changes)
 docker compose build --no-cache api web

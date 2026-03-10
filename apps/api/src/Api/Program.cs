@@ -476,6 +476,9 @@ v1Api.MapAuthEndpoints();
 v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
+v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
+v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
+v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
@@ -486,6 +489,7 @@ v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints
 v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoints
 v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
+v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
@@ -495,6 +499,7 @@ v1Api.MapAdminGameWizardEndpoints();    // Admin Game+PDF+Agent Wizard
 v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
+v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
 app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
@@ -608,6 +613,9 @@ v1Api.MapAgentSessionEndpoints();
 
 // Issue #3483: Chat session persistence endpoints
 v1Api.MapChatSessionEndpoints();
+
+// Issue #5497: A/B Test backend API endpoints
+v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints();
 
 // Issue #3379: Agent test results history & persistence
 v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints();

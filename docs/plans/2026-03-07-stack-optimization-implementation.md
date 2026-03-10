@@ -17,16 +17,16 @@
 ### Task 1.1: Create MVP docker-compose
 
 **Files:**
-- Create: `infra/docker-compose.mvp.yml`
+- Create: `infra/compose.mvp.yml`
 - Reference: `infra/docker-compose.yml` (full enterprise version)
 
 **Step 1: Read the current docker-compose to understand service definitions**
 
 Read `infra/docker-compose.yml` — note service names, volumes, networks, health checks for the 6 services to KEEP: postgres, redis, ollama, api, web, and the network definition.
 
-**Step 2: Create docker-compose.mvp.yml with only 6 services**
+**Step 2: Create compose.mvp.yml with only 6 services**
 
-Create `infra/docker-compose.mvp.yml` containing:
+Create `infra/compose.mvp.yml` containing:
 - `postgres` (from lines 7-40 of original, keep pgvector image, reduce RAM limit to 1.5GB)
 - `redis` (from lines 70-94, reduce maxmemory to 512mb, RAM limit 512MB)
 - `ollama` (from lines 181-218, add mxbai-embed-large pull, set OLLAMA_KEEP_ALIVE=24h, RAM limit 2.5GB)
@@ -82,15 +82,15 @@ ollama pull mxbai-embed-large
 echo "Models ready."
 ```
 
-**Step 5: Verify docker-compose.mvp.yml is valid**
+**Step 5: Verify compose.mvp.yml is valid**
 
-Run: `cd infra && docker compose -f docker-compose.mvp.yml config --quiet`
+Run: `cd infra && docker compose -f compose.mvp.yml config --quiet`
 Expected: No errors (validates YAML syntax and service references)
 
 **Step 6: Commit**
 
 ```bash
-git add infra/docker-compose.mvp.yml infra/Caddyfile infra/scripts/ollama-init.sh
+git add infra/compose.mvp.yml infra/Caddyfile infra/scripts/ollama-init.sh
 git commit -m "infra: add MVP docker-compose with 6 services, Caddyfile, Ollama init"
 ```
 
@@ -649,7 +649,7 @@ Add a new section or update existing:
 | Next.js | Frontend |
 | Caddy | Reverse proxy |
 
-Start: `cd infra && docker compose -f docker-compose.mvp.yml up -d`
+Start: `cd infra && docker compose -f compose.mvp.yml up -d`
 ```
 
 **Step 3: Commit**
@@ -678,7 +678,7 @@ Expected: Build succeeded
 
 **Step 4: Start MVP stack locally**
 
-Run: `cd infra && docker compose -f docker-compose.mvp.yml up -d`
+Run: `cd infra && docker compose -f compose.mvp.yml up -d`
 Expected: All 6 containers healthy
 
 **Step 5: Run smoke test**

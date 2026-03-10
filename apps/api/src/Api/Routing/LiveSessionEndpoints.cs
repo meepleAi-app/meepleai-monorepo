@@ -1,7 +1,9 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Application.DTOs.ToolState;
+using Api.BoundedContexts.GameManagement.Application.Queries.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
@@ -227,6 +229,22 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Get session toolkit")
             .WithDescription("Returns the four implicit base tools and any custom ToolState items for the session. Issue #4969.");
+
+        group.MapGet("/live-sessions/{sessionId}/context", HandleGetSessionContext)
+            .RequireAuthenticatedUser()
+            .Produces<GameSessionContextDto>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get game session context")
+            .WithDescription("Builds a cross-context view of the session including expansions, KB cards, rulebook analyses, and degradation level. Issue #5579.");
+
+        group.MapPost("/live-sessions/{sessionId}/context/refresh", HandleRefreshSessionContext)
+            .RequireAuthenticatedUser()
+            .Produces<GameSessionContextDto>(200)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Refresh game session context")
+            .WithDescription("Rebuilds the session context, useful after indexing new PDFs or linking expansions. Issue #5579.");
 
         return group;
     }
@@ -502,6 +520,24 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetSessionToolsQuery(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetSessionContext(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetGameSessionContextQuery(sessionId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleRefreshSessionContext(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new RefreshGameSessionContextQuery(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

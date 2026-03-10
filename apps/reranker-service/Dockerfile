@@ -36,7 +36,6 @@ RUN pip install --no-cache /wheels/*
 
 # Copy application code
 COPY main.py .
-COPY tests/ ./tests/
 
 # Set ownership
 RUN chown -R reranker:reranker /app

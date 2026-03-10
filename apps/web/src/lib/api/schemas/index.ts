@@ -107,3 +107,9 @@ export * from './live-sessions.schemas';
 
 // Session Tracking schemas (Issue #5041 — Sessions Redesign)
 export * from './session-tracking.schemas';
+
+// LLM System Configuration schemas (Issue #5495)
+export * from './llm-system-config.schemas';
+
+// A/B Test schemas (Issue #5500)
+export * from './ab-test.schemas';

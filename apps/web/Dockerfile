@@ -1,7 +1,7 @@
 # ==============================================================================
 # Stage 1: Dependencies - Install all dependencies
 # ==============================================================================
-FROM node:20.11.1-alpine3.19 AS deps
+FROM node:20.18-alpine3.21 AS deps
 WORKDIR /app
 
 # Install build dependencies for canvas package (Issue #4168)
@@ -17,7 +17,7 @@ RUN apk add --no-cache \
     pixman-dev
 
 # Install pnpm globally
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@10
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
@@ -28,11 +28,11 @@ RUN pnpm install --frozen-lockfile
 # ==============================================================================
 # Stage 2: Builder - Build the Next.js application
 # ==============================================================================
-FROM node:20.11.1-alpine3.19 AS builder
+FROM node:20.18-alpine3.21 AS builder
 WORKDIR /app
 
 # Install pnpm globally
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@10
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -58,7 +58,7 @@ RUN pnpm run build
 # ==============================================================================
 # Stage 3: Runner - Production runtime environment
 # ==============================================================================
-FROM node:20.11.1-alpine3.19 AS runner
+FROM node:20.18-alpine3.21 AS runner
 WORKDIR /app
 
 # Set environment to production

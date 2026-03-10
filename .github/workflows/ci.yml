@@ -27,6 +27,16 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
+      - name: Verify ARM64 runner
+        if: vars.RUNNER != ''
+        run: |
+          ARCH=$(uname -m)
+          echo "Runner architecture: $ARCH"
+          if [ "$ARCH" != "aarch64" ]; then
+            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
@@ -149,6 +159,27 @@ jobs:
         working-directory: apps/api
 
     steps:
+      - name: Verify ARM64 runner
+        if: vars.RUNNER != ''
+        run: |
+          ARCH=$(uname -m)
+          echo "Runner architecture: $ARCH"
+          if [ "$ARCH" != "aarch64" ]; then
+            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
+            exit 1
+          fi
+
+      - name: Pre-job disk check (self-hosted)
+        if: vars.RUNNER != ''
+        run: |
+          # Requires GNU df (--output flag)
+          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+          echo "Disk usage: ${USAGE}%"
+          if [ "$USAGE" -gt 90 ]; then
+            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
+            docker system prune -af --filter "until=24h" 2>/dev/null || true
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -373,6 +404,27 @@ jobs:
         working-directory: apps/web
 
     steps:
+      - name: Verify ARM64 runner
+        if: vars.RUNNER != ''
+        run: |
+          ARCH=$(uname -m)
+          echo "Runner architecture: $ARCH"
+          if [ "$ARCH" != "aarch64" ]; then
+            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
+            exit 1
+          fi
+
+      - name: Pre-job disk check (self-hosted)
+        if: vars.RUNNER != ''
+        run: |
+          # Requires GNU df (--output flag)
+          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+          echo "Disk usage: ${USAGE}%"
+          if [ "$USAGE" -gt 90 ]; then
+            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
+            docker system prune -af --filter "until=24h" 2>/dev/null || true
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -502,3 +554,9 @@ jobs:
             exit 1
           fi
           echo "✅ CI Passed"
+
+      - name: Post-CI cleanup (self-hosted)
+        if: always() && !contains(runner.name, 'GitHub Actions')
+        run: |
+          docker container prune -f 2>/dev/null || true
+          docker image prune -f 2>/dev/null || true

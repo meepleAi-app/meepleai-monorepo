@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -13,6 +16,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Handler for AskAgentQuestionCommand with 3 search strategies
 /// POC: Agent default behavior with token/cost tracking
+/// Issue #5580: Session-aware RAG chat — when GameSessionId is provided,
+/// loads GameSessionContext, caches it, and filters by all game IDs.
 /// </summary>
 internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestionCommand, AgentChatResponse>
 {
@@ -21,7 +26,12 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     private readonly ILlmService _llmService;
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
+    private readonly IGameSessionOrchestratorService _sessionOrchestrator;
+    private readonly IHybridCacheService _hybridCache;
     private readonly ILogger<AskAgentQuestionCommandHandler> _logger;
+
+    /// <summary>Cache TTL for GameSessionContext.</summary>
+    private static readonly TimeSpan SessionContextCacheTtl = TimeSpan.FromMinutes(5);
 
     public AskAgentQuestionCommandHandler(
         IQdrantService qdrantService,
@@ -29,6 +39,8 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         ILlmService llmService,
         ILlmCostLogRepository costLogRepository,
         IPdfDocumentRepository pdfDocumentRepository,
+        IGameSessionOrchestratorService sessionOrchestrator,
+        IHybridCacheService hybridCache,
         ILogger<AskAgentQuestionCommandHandler> logger)
     {
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
@@ -36,6 +48,8 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
+        _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
+        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -48,8 +62,54 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
             "Processing agent question with strategy={Strategy}, question={Question}",
             request.Strategy, request.Question);
 
+        // Issue #5580: Session-aware RAG — load session context when GameSessionId is provided
+        GameSessionContextDto? sessionContext = null;
+        if (request.GameSessionId.HasValue)
+        {
+            var cacheKey = $"game-session-context:{request.GameSessionId.Value}";
+            sessionContext = await _hybridCache.GetOrCreateAsync(
+                cacheKey,
+                async ct => await _sessionOrchestrator.BuildContextAsync(request.GameSessionId.Value, ct).ConfigureAwait(false),
+                tags: new[] { $"session:{request.GameSessionId.Value}" },
+                expiration: SessionContextCacheTtl,
+                cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Loaded session context for session {SessionId}: DegradationLevel={Level}, AllGameIds=[{GameIds}]",
+                request.GameSessionId.Value,
+                sessionContext.DegradationLevel,
+                string.Join(",", sessionContext.AllGameIds));
+
+            // If NoAI degradation, return informative message without hitting RAG
+            if (sessionContext.DegradationLevel == SessionDegradationLevel.NoAI)
+            {
+                _logger.LogInformation(
+                    "Session {SessionId} has NoAI degradation — returning informative message",
+                    request.GameSessionId.Value);
+
+                return new AgentChatResponse
+                {
+                    Strategy = request.Strategy,
+                    StrategyDescription = GetStrategyDescription(request.Strategy),
+                    Answer = SessionContextPromptBuilder.GetNoAiDegradationMessage(),
+                    RetrievedChunks = new List<CodeChunkDto>(),
+                    TokenUsage = new TokenUsageDto
+                    {
+                        PromptTokens = 0,
+                        CompletionTokens = 0,
+                        TotalTokens = 0,
+                        EmbeddingTokens = 0
+                    },
+                    CostBreakdown = CostBreakdownDto.Zero(),
+                    LatencyMs = (int)stopwatch.ElapsedMilliseconds,
+                    SessionId = sessionId,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
+        }
+
         // Step 0: Check if documents are still being processed
-        if (request.GameId.HasValue)
+        if (request.GameId.HasValue && sessionContext == null)
         {
             var documents = await _pdfDocumentRepository.FindByGameIdAsync(request.GameId.Value, cancellationToken).ConfigureAwait(false);
             if (documents.Count > 0)
@@ -93,13 +153,58 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         };
 
         // Step 2: Vector search in Qdrant (local, $0)
-        var gameId = request.GameId?.ToString() ?? "default";
-        var searchResult = await _qdrantService.SearchAsync(
-            gameId,
-            embeddingResult.Embeddings[0], // Use first embedding
-            request.TopK,
-            documentIds: null,
-            cancellationToken).ConfigureAwait(false);
+        // Issue #5580: When session context exists, search across all game IDs (primary + expansions)
+        var gameId = sessionContext != null && sessionContext.AllGameIds.Count > 0
+            ? string.Join(",", sessionContext.AllGameIds)
+            : request.GameId?.ToString() ?? "default";
+
+        SearchResult searchResult;
+        if (sessionContext != null && sessionContext.AllGameIds.Count > 0)
+        {
+            _logger.LogInformation(
+                "Session-aware search across {GameCount} games: [{GameIds}]",
+                sessionContext.AllGameIds.Count, gameId);
+
+            // Use the first game ID for the Qdrant search (IQdrantService only supports single gameId string)
+            // For true multi-game search we search each game and merge results
+            var allResults = new List<SearchResultItem>();
+            foreach (var gid in sessionContext.AllGameIds)
+            {
+                var partialResult = await _qdrantService.SearchAsync(
+                    gid.ToString(),
+                    embeddingResult.Embeddings[0],
+                    request.TopK,
+                    documentIds: null,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (partialResult.Success)
+                {
+                    allResults.AddRange(partialResult.Results);
+                }
+            }
+
+            // Sort by score and take top K
+            var topResults = allResults
+                .OrderByDescending(r => r.Score)
+                .Take(request.TopK)
+                .ToList();
+
+            searchResult = new SearchResult
+            {
+                Success = true,
+                Results = topResults
+            };
+        }
+        else
+        {
+            var singleGameId = request.GameId?.ToString() ?? "default";
+            searchResult = await _qdrantService.SearchAsync(
+                singleGameId,
+                embeddingResult.Embeddings[0],
+                request.TopK,
+                documentIds: null,
+                cancellationToken).ConfigureAwait(false);
+        }
 
         if (!searchResult.Success)
         {
@@ -145,6 +250,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
                 var singleResult = await GenerateSingleModelAnswer(
                     request.Question,
                     filteredChunks,
+                    sessionContext,
                     cancellationToken).ConfigureAwait(false);
 
                 answer = singleResult.Answer;
@@ -169,6 +275,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
                 var consensusResult = await GenerateMultiModelConsensus(
                     request.Question,
                     filteredChunks,
+                    sessionContext,
                     cancellationToken).ConfigureAwait(false);
 
                 answer = consensusResult.Answer;
@@ -226,11 +333,18 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     }
 
     private async Task<(string Answer, int PromptTokens, int CompletionTokens, decimal Cost, string Provider, string Model)>
-        GenerateSingleModelAnswer(string question, List<SearchResultItem> chunks, CancellationToken cancellationToken)
+        GenerateSingleModelAnswer(string question, List<SearchResultItem> chunks, GameSessionContextDto? sessionContext, CancellationToken cancellationToken)
     {
         var context = BuildContextFromChunks(chunks);
         var systemPrompt = "You are a helpful assistant that answers questions based on the provided context. " +
                           "If the context doesn't contain relevant information, say so clearly.";
+
+        // Issue #5580: Inject session context preamble
+        if (sessionContext != null)
+        {
+            systemPrompt = SessionContextPromptBuilder.BuildSessionPreamble(sessionContext) + systemPrompt;
+        }
+
         var userPrompt = $"Context:\n{context}\n\nQuestion: {question}\n\nProvide a concise answer based on the context.";
 
         var result = await _llmService.GenerateCompletionAsync(
@@ -260,10 +374,17 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     }
 
     private async Task<(string Answer, int PromptTokens, int CompletionTokens, decimal Cost, string Model)>
-        GenerateMultiModelConsensus(string question, List<SearchResultItem> chunks, CancellationToken cancellationToken)
+        GenerateMultiModelConsensus(string question, List<SearchResultItem> chunks, GameSessionContextDto? sessionContext, CancellationToken cancellationToken)
     {
         var context = BuildContextFromChunks(chunks);
         var systemPrompt = "You are a helpful assistant that answers questions based on the provided context.";
+
+        // Issue #5580: Inject session context preamble
+        if (sessionContext != null)
+        {
+            systemPrompt = SessionContextPromptBuilder.BuildSessionPreamble(sessionContext) + systemPrompt;
+        }
+
         var userPrompt = $"Context:\n{context}\n\nQuestion: {question}\n\nProvide a detailed answer.";
 
         // Call GPT-4 (via OpenRouter)

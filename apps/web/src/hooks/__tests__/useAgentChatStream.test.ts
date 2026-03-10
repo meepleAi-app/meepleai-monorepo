@@ -83,6 +83,8 @@ describe('useAgentChatStream', () => {
       totalTokens: 0,
       debugSteps: [],
       modelDowngrade: null,
+      strategyTier: null,
+      executionId: null,
     });
   });
 
@@ -351,7 +353,11 @@ describe('useAgentChatStream', () => {
   it('accumulates multiple debug events in order', async () => {
     const events = [
       sseEvent(EventType.DebugRetrievalStart, { query: 'test', gameId: 'g1' }),
-      sseEvent(EventType.DebugRetrievalResults, { filteredCount: 3, totalResults: 8, latencyMs: 80 }),
+      sseEvent(EventType.DebugRetrievalResults, {
+        filteredCount: 3,
+        totalResults: 8,
+        latencyMs: 80,
+      }),
       sseEvent(EventType.DebugPromptContext, {
         systemPrompt: 'You are an AI',
         userPromptPreview: 'What are the rules?',
@@ -407,7 +413,11 @@ describe('useAgentChatStream', () => {
 
   it('clears debugSteps on reset()', async () => {
     const events = [
-      sseEvent(EventType.DebugRetrievalResults, { filteredCount: 5, totalResults: 10, latencyMs: 50 }),
+      sseEvent(EventType.DebugRetrievalResults, {
+        filteredCount: 5,
+        totalResults: 10,
+        latencyMs: 50,
+      }),
       sseEvent(EventType.Complete, { totalTokens: 1 }),
     ];
 
@@ -456,7 +466,9 @@ describe('useAgentChatStream', () => {
     });
 
     expect(result.current.state.modelDowngrade).not.toBeNull();
-    expect(result.current.state.modelDowngrade!.originalModel).toBe('meta-llama/llama-3.3-70b-instruct:free');
+    expect(result.current.state.modelDowngrade!.originalModel).toBe(
+      'meta-llama/llama-3.3-70b-instruct:free'
+    );
     expect(result.current.state.modelDowngrade!.fallbackModel).toBe('llama3:8b');
     expect(result.current.state.modelDowngrade!.isLocalFallback).toBe(true);
     expect(result.current.state.modelDowngrade!.upgradeMessage).toContain('Premium');

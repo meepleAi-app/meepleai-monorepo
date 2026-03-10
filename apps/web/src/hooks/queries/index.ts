@@ -59,11 +59,7 @@ export {
 } from './useSharedGames';
 
 // Agent Configuration queries and mutations (Issue #2518)
-export {
-  useAgentConfig,
-  useUpdateAgentConfig,
-  agentConfigKeys,
-} from './useAgentConfig';
+export { useAgentConfig, useUpdateAgentConfig, agentConfigKeys } from './useAgentConfig';
 
 // Agent Typologies queries and mutations (Issue #3249)
 export {
@@ -124,12 +120,7 @@ export {
 export { useGameContributors, gameContributorsKeys } from './useGameContributors';
 
 // Badge & Gamification queries and mutations (Issue #2747)
-export {
-  useMyBadges,
-  useLeaderboard,
-  useToggleBadgeDisplay,
-  badgeKeys,
-} from './useBadges';
+export { useMyBadges, useLeaderboard, useToggleBadgeDisplay, badgeKeys } from './useBadges';
 
 // Session Quota queries (Issue #3075)
 export {
@@ -195,6 +186,12 @@ export {
   useAgentConfiguration,
   useUpdateAgentConfiguration,
 } from './useModels';
+
+// Rulebook Analysis queries (Issue #5584)
+export { useRulebookAnalysis, rulebookAnalysisKeys } from './useRulebookAnalysis';
+
+// Game Setup Wizard queries (Issue #5583)
+export { useGameAnalysis, useGameExpansions, gameSetupKeys } from './useGameSetup';
 
 // Re-export from @tanstack/react-query for convenience
 export {

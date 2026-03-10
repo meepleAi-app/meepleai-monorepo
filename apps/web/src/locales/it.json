@@ -682,6 +682,26 @@
   "legal": {
     "tableOfContents": "Indice",
     "lastUpdated": "Ultimo aggiornamento: {date}",
+    "cookieBanner": {
+      "title": "Questo sito utilizza i cookie",
+      "description": "Utilizziamo cookie tecnici essenziali per il funzionamento del sito. Con il tuo consenso, utilizziamo anche cookie analitici e funzionali per migliorare la tua esperienza.",
+      "readPolicy": "Leggi la Cookie Policy",
+      "ariaLabel": "Consenso cookie",
+      "essential": "Essenziali",
+      "essentialAlways": "sempre attivi",
+      "essentialAriaLabel": "Cookie essenziali (sempre attivi)",
+      "analytics": "Analitici",
+      "analyticsDescription": "ci aiutano a capire come usi il servizio",
+      "analyticsAriaLabel": "Cookie analitici",
+      "functional": "Funzionali",
+      "functionalDescription": "ricordano le tue preferenze",
+      "functionalAriaLabel": "Cookie funzionali",
+      "customize": "Personalizza",
+      "essentialOnly": "Solo essenziali",
+      "acceptAll": "Accetta tutti",
+      "back": "Indietro",
+      "savePreferences": "Salva preferenze"
+    },
     "terms": {
       "title": "Termini e Condizioni",
       "description": "Termini e condizioni di utilizzo del servizio MeepleAI",
@@ -704,11 +724,11 @@
         },
         "userContent": {
           "title": "5. Contenuti Caricati dagli Utenti",
-          "content": "Caricando PDF o altri contenuti su MeepleAI, dichiari e garantisci di avere il diritto di utilizzare tali contenuti e di concedere a MeepleAI una licenza limitata per elaborarli al fine di fornirti il servizio. I contenuti vengono elaborati esclusivamente per il tuo uso personale e non vengono condivisi con altri utenti senza il tuo consenso."
+          "content": "Caricando PDF o altri contenuti su MeepleAI, dichiari e garantisci di avere il diritto di utilizzare tali contenuti e di concedere a MeepleAI una licenza limitata per elaborarli al fine di fornirti il servizio. I contenuti vengono elaborati esclusivamente per il tuo uso personale e non vengono condivisi con altri utenti senza il tuo consenso.\n\n**Certificazione dei diritti d'autore**: caricando contenuti, certifichi di essere il legittimo proprietario o di avere ottenuto i diritti necessari per l'utilizzo dei materiali caricati. MeepleAI non è responsabile per la verifica della titolarità dei diritti.\n\n**Manleva**: l'utente si impegna a manlevare e tenere indenne MeepleAI da qualsiasi reclamo, danno o spesa derivante da violazioni del diritto d'autore relative ai contenuti caricati.\n\n**Conformità DMCA**: MeepleAI rispetta le procedure di rimozione per violazione del diritto d'autore. Le notifiche di takedown possono essere inviate a: **legal@meepleai.com**"
         },
         "aiUsage": {
           "title": "6. Utilizzo dell'Intelligenza Artificiale",
-          "content": "Le risposte fornite dall'AI di MeepleAI sono generate automaticamente e includono sempre un riferimento alla fonte (pagina e sezione del regolamento). Tuttavia, l'AI può commettere errori di interpretazione. Ti consigliamo sempre di verificare le risposte con il regolamento originale. MeepleAI non garantisce l'accuratezza assoluta delle risposte e non si assume responsabilità per decisioni prese basandosi esclusivamente sulle risposte dell'AI."
+          "content": "Le risposte fornite dall'AI di MeepleAI sono **generate automaticamente** e includono sempre un riferimento alla fonte (pagina e sezione del regolamento). Tuttavia, l'AI può commettere errori di interpretazione. **Ti consigliamo sempre di verificare le risposte con il regolamento originale.** MeepleAI non garantisce l'accuratezza assoluta delle risposte e non si assume responsabilità per decisioni prese basandosi esclusivamente sulle risposte dell'AI.\n\n**Provider AI utilizzati**:\n- **Ollama** (self-hosted, UE): ~80% del traffico, completamente controllato\n- **OpenRouter** (USA): ~20% del traffico, protetto da DPA e SCCs\n\n**Versionamento del consenso**: il consenso all'AI è versionato. In caso di modifiche significative al trattamento, ti verrà richiesto un nuovo consenso.\n\n**Diritto di opt-out**: puoi disattivare le funzionalità AI in qualsiasi momento dalla pagina `/settings/ai-consent`. La disattivazione non influisce sulle altre funzionalità del servizio."
         },
         "intellectualProperty": {
           "title": "7. Proprietà Intellettuale",
@@ -728,7 +748,7 @@
         },
         "governingLaw": {
           "title": "11. Legge Applicabile",
-          "content": "Questi Termini sono regolati dalle leggi italiane e dell'Unione Europea. Per qualsiasi controversia derivante da questi Termini, il foro competente è quello di [Città], Italia."
+          "content": "Questi Termini sono regolati dalle leggi italiane e dell'Unione Europea. Per qualsiasi controversia derivante da questi Termini, il foro competente è quello di Milano, Italia."
         },
         "contact": {
           "title": "12. Contatti",
@@ -791,6 +811,30 @@
         "contact": {
           "title": "13. Contatti e Reclami",
           "content": "Per domande sulla privacy o per esercitare i tuoi diritti, contatta: privacy@meepleai.com. Hai inoltre il diritto di presentare un reclamo all'Autorità Garante per la Protezione dei Dati Personali se ritieni che il trattamento dei tuoi dati violi il GDPR."
+        },
+        "aiProcessing": {
+          "title": "14. Come Utilizziamo l'Intelligenza Artificiale",
+          "content": "MeepleAI utilizza modelli di intelligenza artificiale (LLM) per fornire risposte sulle regole dei giochi da tavolo. Le funzionalità AI includono:\n- **Analisi dei regolamenti** caricati in formato PDF\n- **Risposte alle domande** sulle regole di gioco\n- **Chat contestuale** con memoria della conversazione\n\n**Dati elaborati dall'AI**:\n- Le tue query e domande\n- Il contesto del gioco selezionato\n- La cronologia della chat (fino a 10 messaggi per contesto)\n- Un identificatore pseudonimizzato (non riconducibile direttamente a te)\n\n**Dati NON inviati all'AI**:\n- Email e nome reale\n- Dati di pagamento\n- Libreria personale di giochi\n- Credenziali di accesso"
+        },
+        "aiProviders": {
+          "title": "15. Provider di Intelligenza Artificiale",
+          "content": "Utilizziamo due provider AI con una strategia **local-first** (priorità all'elaborazione locale):\n\n| Provider | Ubicazione | Hosting | Traffico | Controllo Dati |\n|----------|-----------|---------|----------|----------------|\n| **Ollama** | UE | Self-hosted | ~80% | Completamente controllato |\n| **OpenRouter** | USA | Cloud | ~20% | DPA con SCCs |\n\n**Routing prioritario**: tutte le richieste vengono prima instradate verso Ollama (self-hosted in UE). OpenRouter viene utilizzato solo come fallback quando Ollama non è disponibile o per modelli specifici non disponibili localmente. Il trasferimento verso OpenRouter è protetto da Clausole Contrattuali Standard (SCCs) e Data Processing Agreement (DPA)."
+        },
+        "aiDataProtection": {
+          "title": "16. Protezione dei Dati AI",
+          "content": "Implementiamo 4 misure di protezione specifiche per i dati elaborati dall'AI:\n\n- **Rimozione PII**: i dati personali identificabili vengono automaticamente rimossi prima dell'invio a qualsiasi provider AI. Un sistema di rilevamento analizza e rimuove email, numeri di telefono, indirizzi e altri dati sensibili\n- **Pseudonimizzazione**: il tuo identificatore utente viene sostituito con uno pseudonimo non riconducibile alla tua identità nei log delle richieste AI. Dopo 7 giorni, i log vengono ulteriormente pseudonimizzati\n- **Crittografia TLS 1.3**: tutte le comunicazioni con i provider AI sono protette da crittografia TLS 1.3 end-to-end\n- **Minimizzazione dei dati**: inviamo ai provider AI solo i dati strettamente necessari per generare la risposta, escludendo qualsiasi informazione non pertinente alla domanda"
+        },
+        "aiRetention": {
+          "title": "17. Conservazione Dati AI",
+          "content": "I dati relativi all'AI vengono conservati secondo le seguenti tempistiche:\n\n| Tipo di Dato | Durata | Finalità |\n|-------------|--------|----------|\n| Log richieste AI | 30 giorni | Monitoraggio e debugging |\n| Memorie conversazione | 90 giorni | Contesto conversazionale |\n| Statistiche aggregate | 1 anno | Analisi (nessun dato personale) |\n\nLa cancellazione avviene **automaticamente** alla scadenza dei periodi indicati. Puoi richiedere la cancellazione anticipata dei tuoi dati AI in qualsiasi momento."
+        },
+        "aiRights": {
+          "title": "18. I Tuoi Diritti per i Dati AI",
+          "content": "Hai il pieno controllo sull'utilizzo dell'AI per i tuoi dati.\n\n**Gestione del consenso** disponibile in `/settings/ai-consent`:\n- **Consenso all'AI**: attiva o disattiva l'elaborazione AI\n- **Consenso ai provider esterni**: controlla l'invio dati a OpenRouter\n- **Revoca del consenso**: puoi revocare in qualsiasi momento\n\n**Opt-out**: disattivando il consenso AI, le funzionalità di intelligenza artificiale vengono completamente disabilitate per il tuo account. Puoi continuare a usare MeepleAI per la gestione della libreria e il catalogo.\n\n**Diritto alla cancellazione (Art. 17 GDPR)**: puoi richiedere la cancellazione di tutti i tuoi dati AI tramite self-service in **Impostazioni > Utilizzo**, oppure contattando privacy@meepleai.com.\n\n**Diritto di accesso (Art. 15 GDPR)**: puoi richiedere una copia di tutti i dati AI associati al tuo account contattando privacy@meepleai.com."
+        },
+        "aiLegalBasis": {
+          "title": "19. Base Giuridica del Trattamento AI",
+          "content": "Il trattamento dei dati tramite AI si basa sulle seguenti basi giuridiche:\n\n| Trattamento | Base Giuridica | Riferimento |\n|------------|----------------|-------------|\n| AI self-hosted (Ollama) | Interesse legittimo | Art. 6(1)(f) GDPR |\n| AI esterno (OpenRouter) | Consenso | Art. 6(1)(a) GDPR |\n| Analisi di utilizzo | Interesse legittimo (pseudonimizzato) | Art. 6(1)(f) GDPR |\n\nI trasferimenti internazionali verso OpenRouter (USA) sono protetti da:\n- **Clausole Contrattuali Standard (SCCs)** ai sensi dell'Art. 46(2)(c) GDPR\n- **Misure tecniche supplementari**: crittografia TLS 1.3, pseudonimizzazione, rimozione PII automatica"
         }
       }
     },
@@ -804,36 +848,40 @@
         },
         "typesOfCookies": {
           "title": "2. Tipi di Cookie che Utilizziamo",
-          "content": "Utilizziamo diverse categorie di cookie: Cookie Tecnici (essenziali per il funzionamento del sito), Cookie di Preferenza (ricordano le tue scelte come lingua e tema), Cookie Analitici (ci aiutano a capire come usi il servizio), Cookie di Sessione (temporanei, eliminati alla chiusura del browser)."
+          "content": "Utilizziamo tre categorie di cookie:\n- **Cookie Tecnici** (essenziali per il funzionamento del servizio)\n- **Cookie Analitici** (per capire come utilizzi il sito)\n- **Cookie Funzionali** (per ricordare le tue preferenze come lingua e tema)"
         },
-        "essentialCookies": {
-          "title": "3. Cookie Essenziali",
-          "content": "Questi cookie sono necessari per il funzionamento del sito e non possono essere disattivati. Includono cookie per l'autenticazione, la sicurezza e il mantenimento della sessione utente. Senza questi cookie, il servizio non può funzionare correttamente."
+        "technicalCookies": {
+          "title": "3. Cookie Tecnici",
+          "content": "Questi cookie sono essenziali per il corretto funzionamento del servizio:\n- Cookie di sessione (autenticazione)\n- Cookie di sicurezza (protezione CSRF)\n- Cookie di bilanciamento del carico\n\nNon possono essere disattivati."
         },
-        "analyticsCookies": {
+        "analyticalCookies": {
           "title": "4. Cookie Analitici",
-          "content": "Con il tuo consenso, utilizziamo cookie analitici per raccogliere informazioni anonime su come utilizzi MeepleAI. Questi dati ci aiutano a migliorare il servizio e a identificare eventuali problemi tecnici."
+          "content": "Con il tuo consenso, utilizziamo cookie analitici anonimizzati per:\n- Capire quali pagine sono più visitate\n- Identificare problemi di navigazione\n- Migliorare le prestazioni del servizio\n\nNon condividiamo questi dati con terze parti."
+        },
+        "functionalCookies": {
+          "title": "5. Cookie Funzionali",
+          "content": "Questi cookie ricordano le tue preferenze:\n- Lingua (Italiano/Inglese)\n- Tema (chiaro/scuro)\n- Preferenze di visualizzazione (liste, filtri)\n\nRendono la tua esperienza più personalizzata."
         },
         "thirdPartyCookies": {
-          "title": "5. Cookie di Terze Parti",
-          "content": "Alcuni cookie possono essere impostati da servizi di terze parti che utilizziamo, come provider di autenticazione OAuth (Google, Discord, GitHub). Questi cookie sono soggetti alle rispettive privacy policy dei provider."
+          "title": "6. Cookie di Terze Parti",
+          "content": "Potremmo utilizzare servizi di terze parti che installano i propri cookie:\n- **Cloudflare** (sicurezza e prestazioni)\n- **Provider di autenticazione** (se usi il login social)\n\nQuesti servizi hanno le proprie privacy policy."
         },
-        "manageCookies": {
-          "title": "6. Come Gestire i Cookie",
-          "content": "Puoi gestire le tue preferenze sui cookie in diversi modi: tramite il banner dei cookie che appare alla prima visita, dalle impostazioni del tuo browser, o dalle impostazioni del tuo account MeepleAI. Nota che disabilitare alcuni cookie potrebbe influire sulla funzionalità del servizio."
+        "cookieManagement": {
+          "title": "7. Gestione dei Cookie",
+          "content": "Puoi gestire i cookie in diversi modi:\n- Tramite il banner dei cookie alla prima visita\n- Tramite le impostazioni del tuo browser (istruzioni su aboutcookies.org)\n- Eliminando i cookie già memorizzati\n\n**Nota**: disabilitare i cookie tecnici potrebbe influire sul funzionamento del servizio."
         },
-        "browserSettings": {
-          "title": "7. Impostazioni del Browser",
-          "content": "La maggior parte dei browser ti permette di controllare i cookie attraverso le impostazioni. Puoi bloccare tutti i cookie, accettare solo alcuni tipi, o ricevere una notifica quando un sito vuole impostare un cookie. Consulta la guida del tuo browser per istruzioni specifiche."
+        "cookieDuration": {
+          "title": "8. Durata dei Cookie",
+          "content": "- **Cookie tecnici**: durata della sessione\n- **Cookie di preferenza**: 1 anno\n- **Cookie analitici**: massimo 13 mesi\n- **Cookie di autenticazione**: fino al logout o alla scadenza del token"
         },
-        "updates": {
-          "title": "8. Aggiornamenti alla Cookie Policy",
-          "content": "Potremmo aggiornare questa Cookie Policy periodicamente per riflettere cambiamenti nelle nostre pratiche o per altri motivi operativi, legali o normativi. Ti invitiamo a consultare regolarmente questa pagina."
-        },
-        "contact": {
-          "title": "9. Contatti",
-          "content": "Per domande sulla nostra Cookie Policy, contattaci all'indirizzo: privacy@meepleai.com"
+        "policyUpdates": {
+          "title": "9. Aggiornamenti alla Policy",
+          "content": "Potremmo aggiornare questa Cookie Policy periodicamente. Le modifiche saranno comunicate tramite il banner dei cookie o su questa pagina. Ultimo aggiornamento: Marzo 2026."
         }
+      },
+      "contact": {
+        "title": "10. Contatti",
+        "content": "Per domande sulla nostra Cookie Policy, contattaci all'indirizzo: privacy@meepleai.com"
       }
     }
   },

@@ -244,6 +244,7 @@ export default function ModelHealthPage() {
     queryKey: ['admin', 'model-health'],
     queryFn: () => adminClient.getModelHealth(),
     refetchInterval: 60_000,
+    retry: 1,
   });
 
   const {
@@ -254,6 +255,7 @@ export default function ModelHealthPage() {
     queryKey: ['admin', 'model-change-history', historyLimit],
     queryFn: () => adminClient.getModelChangeHistory(undefined, historyLimit),
     refetchInterval: 60_000,
+    retry: 1,
   });
 
   // ── Check Now mutation ──

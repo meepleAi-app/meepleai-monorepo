@@ -224,6 +224,11 @@ describe('KnowledgeBaseStep', () => {
 
     // Wizard store should be marked dirty
     expect(useAddGameWizardStore.getState().customPdfUploaded).toBe(true);
+
+    // Disclaimer acceptance should be recorded on the backend
+    await waitFor(() => {
+      expect(mockApi.documents.acceptDisclaimer).toHaveBeenCalledWith('doc-new');
+    });
   });
 
   // --- Embedding status ---

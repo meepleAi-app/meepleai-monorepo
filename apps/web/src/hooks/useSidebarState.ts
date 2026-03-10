@@ -39,15 +39,19 @@ function syncCookie(value: boolean): void {
 export function useSidebarState(initialValue = false): UseSidebarStateReturn {
   const [isCollapsed, setIsCollapsed] = useState(initialValue);
 
-  // Read stored value on mount and sync cookie
+  // Read stored value on mount and sync cookie.
+  // If localStorage has a valid value, use it as source of truth.
+  // Otherwise keep initialValue (from RSC cookie) and sync it to cookie.
   useEffect(() => {
-    const stored = safeStorage.getRaw(STORAGE_KEY, 'false');
+    const stored = safeStorage.getRaw(STORAGE_KEY, '');
     const result = BoolStringSchema.safeParse(stored);
-    if (result.success && result.data === 'true') {
-      setIsCollapsed(true);
-      syncCookie(true);
+    if (result.success) {
+      const fromStorage = result.data === 'true';
+      setIsCollapsed(fromStorage);
+      syncCookie(fromStorage);
     } else {
-      syncCookie(isCollapsed);
+      // No valid localStorage value — keep initialValue and sync to cookie
+      syncCookie(initialValue);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

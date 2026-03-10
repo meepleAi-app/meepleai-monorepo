@@ -11,6 +11,8 @@ interface TechnicalDetailsPanelProps {
   debugSteps: DebugStep[];
   /** Execution ID for deep link to Debug Console (Issue #5486) */
   executionId?: string | null;
+  /** Show "View in Debug Console" link (requires Admin access to /admin/agents/debug-chat) */
+  showDebugLink?: boolean;
   className?: string;
 }
 
@@ -20,6 +22,7 @@ interface ExtractedMetadata {
   promptTokens: number | null;
   completionTokens: number | null;
   totalTokens: number | null;
+  costUsd: number | null;
   confidence: number | null;
   typology: string | null;
   searchStrategy: string | null;
@@ -35,6 +38,7 @@ function extractMetadata(steps: DebugStep[]): ExtractedMetadata {
     promptTokens: null,
     completionTokens: null,
     totalTokens: null,
+    costUsd: null,
     confidence: null,
     typology: null,
     searchStrategy: null,
@@ -55,6 +59,7 @@ function extractMetadata(steps: DebugStep[]): ExtractedMetadata {
         meta.promptTokens = (p.promptTokens as number) ?? meta.promptTokens;
         meta.completionTokens = (p.completionTokens as number) ?? meta.completionTokens;
         meta.totalTokens = (p.totalTokens as number) ?? meta.totalTokens;
+        meta.costUsd = (p.costUsd as number) ?? meta.costUsd;
         meta.confidence = (p.confidence as number) ?? meta.confidence;
         meta.typology = (p.typology as string) ?? meta.typology;
         break;
@@ -95,6 +100,7 @@ function extractMetadata(steps: DebugStep[]): ExtractedMetadata {
 export function TechnicalDetailsPanel({
   debugSteps,
   executionId,
+  showDebugLink = false,
   className,
 }: TechnicalDetailsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -111,6 +117,7 @@ export function TechnicalDetailsPanel({
       meta.promptTokens != null && `Prompt tokens: ${meta.promptTokens}`,
       meta.completionTokens != null && `Completion tokens: ${meta.completionTokens}`,
       meta.totalTokens != null && `Total tokens: ${meta.totalTokens}`,
+      meta.costUsd != null && `Cost: $${meta.costUsd.toFixed(4)}`,
       meta.latencyMs != null && `Latency: ${meta.latencyMs}ms`,
       meta.confidence != null && `Confidence: ${(meta.confidence * 100).toFixed(0)}%`,
       meta.typology && `Typology: ${meta.typology}`,
@@ -185,6 +192,12 @@ export function TechnicalDetailsPanel({
                   <dd className="tabular-nums font-medium">{meta.totalTokens}</dd>
                 </>
               )}
+              {meta.costUsd != null && (
+                <>
+                  <dt className="text-muted-foreground">Costo</dt>
+                  <dd className="tabular-nums">${meta.costUsd.toFixed(4)}</dd>
+                </>
+              )}
               {meta.latencyMs != null && (
                 <>
                   <dt className="text-muted-foreground">Latenza</dt>
@@ -249,7 +262,7 @@ export function TechnicalDetailsPanel({
             </div>
           )}
 
-          {executionId && (
+          {executionId && showDebugLink && (
             <div className="pt-1 border-t border-border/20">
               <a
                 href={`/admin/agents/debug-chat?executionId=${executionId}`}

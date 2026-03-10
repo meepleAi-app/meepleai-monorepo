@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -29,6 +30,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
     private readonly ILlmService _llmService;
     private readonly AgentOrchestrationService _orchestrationService;
     private readonly AgentRouterService _routerService;
+    private readonly IUserAiConsentCheckService _consentCheckService;
     private readonly ILogger<UnifiedAgentQueryCommandHandler> _logger;
 
     public UnifiedAgentQueryCommandHandler(
@@ -38,6 +40,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
         ILlmService llmService,
         AgentOrchestrationService orchestrationService,
         AgentRouterService routerService,
+        IUserAiConsentCheckService consentCheckService,
         ILogger<UnifiedAgentQueryCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -46,6 +49,7 @@ internal sealed class UnifiedAgentQueryCommandHandler
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _orchestrationService = orchestrationService ?? throw new ArgumentNullException(nameof(orchestrationService));
         _routerService = routerService ?? throw new ArgumentNullException(nameof(routerService));
+        _consentCheckService = consentCheckService ?? throw new ArgumentNullException(nameof(consentCheckService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -70,6 +74,25 @@ internal sealed class UnifiedAgentQueryCommandHandler
         _logger.LogInformation(
             "Unified gateway query from User {UserId}: \"{Query}\" (preferred={PreferredAgentId})",
             command.UserId, command.Query, command.PreferredAgentId);
+
+        // Issue #5513: Check AI consent — if user opted out, block LLM generation
+        var aiAllowed = await _consentCheckService
+            .IsAiProcessingAllowedAsync(command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!aiAllowed)
+        {
+            _logger.LogInformation(
+                "User {UserId} has not consented to AI processing — blocking unified query",
+                command.UserId);
+
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(
+                    "AI features are disabled. Enable AI processing in Settings > AI & Privacy to use this feature.",
+                    "AI_CONSENT_REQUIRED"));
+            yield break;
+        }
 
         // Phase 1: Agent Selection (via Router or explicit preference)
         yield return CreateEvent(

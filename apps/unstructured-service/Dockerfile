@@ -24,26 +24,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set Tesseract data directory
 ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
 
+# Create non-root user for security (before NLTK download so data is user-owned)
+RUN groupadd -r unstructured && useradd -r -g unstructured -m -d /home/unstructured unstructured
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download required NLTK datasets to avoid runtime races
-ENV NLTK_DATA=/root/nltk_data
-RUN python -m nltk.downloader punkt punkt_tab averaged_perceptron_tagger
+ENV NLTK_DATA=/home/unstructured/nltk_data
+RUN python -m nltk.downloader punkt punkt_tab averaged_perceptron_tagger \
+    && chown -R unstructured:unstructured /home/unstructured/nltk_data
 
 # Copy application code
 COPY src/ ./src/
 
 # Create temp directory with proper permissions
-RUN mkdir -p /tmp/pdf-extraction && chmod 777 /tmp/pdf-extraction
+RUN mkdir -p /tmp/pdf-extraction && chown unstructured:unstructured /tmp/pdf-extraction
+
+# Set ownership
+RUN chown -R unstructured:unstructured /app
+
+# Switch to non-root user
+USER unstructured
 
 # Expose port
 EXPOSE 8001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8001/health').raise_for_status()"
+    CMD curl -f http://localhost:8001/health || exit 1
 
 # Run with Gunicorn + Uvicorn workers
 CMD ["gunicorn", "src.main:app", \

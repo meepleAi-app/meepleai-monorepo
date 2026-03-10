@@ -4,6 +4,15 @@ using FluentValidation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Validators.SessionSnapshot;
 
+internal sealed class RestoreSessionSnapshotCommandValidator : AbstractValidator<RestoreSessionSnapshotCommand>
+{
+    public RestoreSessionSnapshotCommandValidator()
+    {
+        RuleFor(x => x.SessionId).NotEmpty();
+        RuleFor(x => x.SnapshotIndex).GreaterThanOrEqualTo(0);
+    }
+}
+
 internal sealed class CreateSnapshotCommandValidator : AbstractValidator<CreateSnapshotCommand>
 {
     public CreateSnapshotCommandValidator()

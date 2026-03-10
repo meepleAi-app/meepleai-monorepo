@@ -1,7 +1,7 @@
 #!/bin/bash
 # ollama-init.sh - Pull required models after Ollama is ready
 # Usage: docker exec meepleai-ollama bash /scripts/ollama-init.sh
-#   or:  Run from host after 'docker compose -f docker-compose.mvp.yml up -d'
+#   or:  Run from host after 'docker compose -f compose.mvp.yml up -d'
 
 set -e
 

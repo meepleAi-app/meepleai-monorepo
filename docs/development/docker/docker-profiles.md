@@ -194,7 +194,7 @@ cd infra
 docker compose --profile observability up -d
 
 # With HyperDX (unified observability)
-docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml --profile observability up -d
+docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observability up -d
 ```
 
 **When to Use**:
@@ -317,7 +317,7 @@ docker compose --profile minimal --profile dev --profile ai --profile observabil
 **Example**: Core + AI services without Ollama
 
 ```yaml
-# Create custom docker-compose.override.yml
+# Create custom compose.override.yml
 services:
   ollama:
     profiles:
@@ -486,7 +486,7 @@ docker compose --profile ai up -d
 
 ```bash
 # Observability with HyperDX
-docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml --profile observability up -d
+docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile observability up -d
 
 # Access:
 # - Grafana: http://localhost:3001

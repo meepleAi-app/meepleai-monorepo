@@ -81,7 +81,9 @@ export const UpdateStrategyModelMappingRequestSchema = z.object({
   fallbackModels: z.array(z.string()).optional(),
 });
 
-export type UpdateStrategyModelMappingRequest = z.infer<typeof UpdateStrategyModelMappingRequestSchema>;
+export type UpdateStrategyModelMappingRequest = z.infer<
+  typeof UpdateStrategyModelMappingRequestSchema
+>;
 
 export const ResetTierStrategyConfigRequestSchema = z.object({
   resetAccessMatrix: z.boolean().default(true),
@@ -106,11 +108,55 @@ export type TierStrategyResetResultDto = z.infer<typeof TierStrategyResetResultS
 // Constants
 // ========================================
 
-export const RAG_STRATEGIES = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'] as const;
+export const RAG_STRATEGIES = [
+  'FAST',
+  'BALANCED',
+  'PRECISE',
+  'EXPERT',
+  'CONSENSUS',
+  'CUSTOM',
+] as const;
 export type RagStrategy = (typeof RAG_STRATEGIES)[number];
 
 export const TIER_STRATEGY_USER_TIERS = ['Anonymous', 'User', 'Editor', 'Admin'] as const;
 export type TierStrategyUserTier = (typeof TIER_STRATEGY_USER_TIERS)[number];
 
 export const LLM_PROVIDERS = ['OpenRouter', 'Anthropic', 'DeepSeek', 'Mixed', 'Ollama'] as const;
+
+// ========================================
+// Model Health (Issue #5503)
+// ========================================
+
+export interface ModelHealthDto {
+  modelId: string;
+  displayName: string;
+  provider: string;
+  alternatives: string[];
+  contextWindow: number;
+  strengths: string[];
+  isCurrentlyAvailable: boolean;
+  isDeprecated: boolean;
+  lastVerifiedAt: string | null;
+}
+
+export interface ModelHealthResult {
+  models: ModelHealthDto[];
+}
+
+export interface ModelChangeHistoryDto {
+  id: string;
+  modelId: string;
+  changeType: string;
+  previousModelId: string | null;
+  newModelId: string | null;
+  affectedStrategy: string | null;
+  reason: string;
+  isAutomatic: boolean;
+  changedByUserId: string | null;
+  occurredAt: string;
+}
+
+export interface ModelChangeHistoryResult {
+  changes: ModelChangeHistoryDto[];
+}
 export type StrategyLlmProvider = (typeof LLM_PROVIDERS)[number];

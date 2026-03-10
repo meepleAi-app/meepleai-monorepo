@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.Services;
+using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionAttachment;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Entities.ToolState;
@@ -37,6 +38,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<ITurnOrderRepository, TurnOrderRepository>(); // Issue #4970: TurnOrder base toolkit
         services.AddScoped<IWhiteboardStateRepository, WhiteboardStateRepository>(); // Issue #4971: Whiteboard base toolkit
         services.AddScoped<ISessionAttachmentRepository, SessionAttachmentRepository>(); // Issue #5360: Session photo attachments
+        services.AddScoped<IGameNightPlaylistRepository, GameNightPlaylistRepository>(); // Issue #5582: Game Night Playlist
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -58,6 +60,9 @@ internal static class GameManagementServiceExtensions
 
         // Issue #5361: Session attachment service (upload, thumbnail, S3)
         services.AddScoped<ISessionAttachmentService, SessionAttachmentService>();
+
+        // Issue #5579: GameSessionContext cross-context orchestrator
+        services.AddScoped<IGameSessionOrchestratorService, GameSessionOrchestratorService>();
 
         // Issue #5366: Session attachment cleanup background job
         services.AddHostedService<SessionAttachmentCleanupJob>();

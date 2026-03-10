@@ -24,12 +24,16 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private readonly ICrossEncoderReranker _reranker;
     private readonly ILlmService _llmService;
     private readonly ITextChunkSearchService _textSearch;
+    private readonly IExpansionGameResolver _expansionResolver;
     private readonly ILogger<RagPromptAssemblyService> _logger;
 
     // RAG search parameters
     private const int DefaultTopK = 15; // Increased from 10 to feed reranker more candidates
     private const int RerankedTopK = 5;  // Final chunk count after reranking
     private const float DefaultMinScore = 0.55f;
+
+    // Issue #5588: Expansion priority boost factor
+    internal const float ExpansionBoostFactor = 1.3f;
 
     // Chat history thresholds
     private const int HistoryThreshold = 10;
@@ -63,6 +67,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ICrossEncoderReranker reranker,
         ILlmService llmService,
         ITextChunkSearchService textSearch,
+        IExpansionGameResolver expansionResolver,
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
@@ -70,6 +75,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _textSearch = textSearch ?? throw new ArgumentNullException(nameof(textSearch));
+        _expansionResolver = expansionResolver ?? throw new ArgumentNullException(nameof(expansionResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -86,11 +92,16 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ArgumentNullException.ThrowIfNull(gameTitle);
         ArgumentNullException.ThrowIfNull(userQuestion);
 
-        // Step 1: Retrieve RAG context
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, ct).ConfigureAwait(false);
+        // Step 0: Resolve expansion game IDs once (Issue #5588)
+        var expansionGameIds = await _expansionResolver
+            .GetExpansionGameIdsAsync(gameId, ct).ConfigureAwait(false);
+        var hasExpansions = expansionGameIds.Count > 0;
 
-        // Step 2: Build system prompt (persona + RAG chunks)
-        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext);
+        // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
+        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, ct).ConfigureAwait(false);
+
+        // Step 2: Build system prompt (persona + RAG chunks + expansion priority)
+        var systemPrompt = BuildSystemPrompt(agentTypology, gameTitle, gameState, ragContext, hasExpansions);
 
         // Step 3: Build user prompt (chat history + current question)
         var userPrompt = BuildUserPrompt(userQuestion, chatThread);
@@ -108,17 +119,27 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     }
 
     private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
-        string userQuestion, Guid gameId, CancellationToken ct)
+        string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, CancellationToken ct)
     {
         var citations = new List<ChunkCitation>();
 
         try
         {
+            // Issue #5588: Use pre-resolved expansion game IDs for score boosting
+            var expansionGameIdStrings = new HashSet<string>(
+                expansionGameIds.Select(id => id.ToString()),
+                StringComparer.OrdinalIgnoreCase);
+
             // Step 1: Query expansion (optional, graceful degradation)
             var queries = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
 
             // Step 2: Generate embeddings for all queries
             var allChunks = new List<SearchResultItem>();
+
+            // Collect all game IDs to search: base game + expansions
+            var gameIdsToSearch = new List<string> { gameId.ToString() };
+            gameIdsToSearch.AddRange(expansionGameIdStrings);
+
             foreach (var query in queries)
             {
                 var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, ct).ConfigureAwait(false);
@@ -132,16 +153,31 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     continue; // Skip failed expansion queries
                 }
 
-                var searchResult = await _qdrantService.SearchAsync(
-                    gameId.ToString(),
-                    embeddingResult.Embeddings[0],
-                    DefaultTopK,
-                    documentIds: null,
-                    ct).ConfigureAwait(false);
-
-                if (searchResult.Success)
+                // Search across base game and all expansion game collections
+                foreach (var searchGameId in gameIdsToSearch)
                 {
-                    allChunks.AddRange(searchResult.Results);
+                    var isExpansionGame = expansionGameIdStrings.Contains(searchGameId);
+
+                    var searchResult = await _qdrantService.SearchAsync(
+                        searchGameId,
+                        embeddingResult.Embeddings[0],
+                        DefaultTopK,
+                        documentIds: null,
+                        ct).ConfigureAwait(false);
+
+                    if (searchResult.Success)
+                    {
+                        if (isExpansionGame)
+                        {
+                            // Issue #5588: Boost expansion document scores by 1.3x
+                            allChunks.AddRange(searchResult.Results.Select(r =>
+                                r with { Score = r.Score * ExpansionBoostFactor }));
+                        }
+                        else
+                        {
+                            allChunks.AddRange(searchResult.Results);
+                        }
+                    }
                 }
             }
 
@@ -399,6 +435,26 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     }
 
     /// <summary>
+    /// Applies expansion boost to a list of search results.
+    /// Issue #5588: Expansion documents get 1.3x score multiplier because
+    /// expansion rules override/modify base game rules and should have priority.
+    /// This is a utility method for testing; the actual boost is applied inline
+    /// during the search loop where we know which game collection each chunk came from.
+    /// </summary>
+    /// <param name="chunks">Chunks to boost.</param>
+    /// <param name="boostFactor">Multiplicative boost factor (default: 1.3).</param>
+    /// <returns>New list with boosted scores, re-sorted by descending score.</returns>
+    internal static List<SearchResultItem> ApplyExpansionBoost(
+        List<SearchResultItem> chunks,
+        float boostFactor = ExpansionBoostFactor)
+    {
+        return chunks
+            .Select(c => c with { Score = c.Score * boostFactor })
+            .OrderByDescending(c => c.Score)
+            .ToList();
+    }
+
+    /// <summary>
     /// Computes confidence score based on RAG chunk quality and response content.
     /// </summary>
     internal static double? ComputeConfidence(List<ChunkCitation> citations, string responseText)
@@ -421,7 +477,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         return Math.Max(0.0, Math.Min(1.0, confidence));
     }
 
-    private static string BuildSystemPrompt(string agentTypology, string gameTitle, GameState? gameState, string ragContext)
+    private static string BuildSystemPrompt(
+        string agentTypology, string gameTitle, GameState? gameState, string ragContext,
+        bool hasExpansions = false)
     {
         var sb = new StringBuilder();
 
@@ -431,6 +489,15 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         sb.AppendLine("If the provided context does not contain enough information to answer, say so clearly.");
         sb.AppendLine("Always refer to specific rules when possible.");
         sb.AppendLine();
+
+        // Issue #5588: Expansion priority instruction
+        if (hasExpansions)
+        {
+            sb.AppendLine("## Expansion Priority");
+            sb.AppendLine("Se una regola dell'espansione contraddice il gioco base, l'espansione prevale sempre.");
+            sb.AppendLine("Quando una regola dell'espansione sovrascrive la base, segnalalo esplicitamente nella risposta.");
+            sb.AppendLine();
+        }
 
         // Chain-of-thought reasoning instructions
         sb.AppendLine("## Reasoning Approach");

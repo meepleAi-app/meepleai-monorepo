@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -8,18 +9,19 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Handler for GetLlmHealthQuery.
 /// ISSUE-962 (BGAI-020): Provides real-time LLM provider health monitoring
+/// Issue #5487: Uses ICircuitBreakerRegistry directly instead of HybridLlmService.
 /// </summary>
 internal class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHealthStatusDto>
 {
     private readonly IProviderHealthCheckService _healthCheckService;
-    private readonly HybridLlmService _hybridLlmService;
+    private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
 
     public GetLlmHealthQueryHandler(
         IProviderHealthCheckService healthCheckService,
-        HybridLlmService hybridLlmService)
+        ICircuitBreakerRegistry circuitBreakerRegistry)
     {
         _healthCheckService = healthCheckService ?? throw new ArgumentNullException(nameof(healthCheckService));
-        _hybridLlmService = hybridLlmService ?? throw new ArgumentNullException(nameof(hybridLlmService));
+        _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
     }
 
     public Task<LlmHealthStatusDto> Handle(GetLlmHealthQuery query, CancellationToken cancellationToken)
@@ -29,7 +31,7 @@ internal class GetLlmHealthQueryHandler : IQueryHandler<GetLlmHealthQuery, LlmHe
         var allHealth = _healthCheckService.GetAllProviderHealth();
 
         // Get monitoring status (circuit breaker + latency)
-        var monitoringStatus = _hybridLlmService.GetMonitoringStatus();
+        var monitoringStatus = _circuitBreakerRegistry.GetMonitoringStatus();
 
         // Build provider DTOs
         var providers = new Dictionary<string, ProviderHealthDto>(StringComparer.Ordinal);

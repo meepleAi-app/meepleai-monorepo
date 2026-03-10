@@ -43,6 +43,12 @@ public interface ILlmRequestLogRepository
     Task<int> DeleteExpiredAsync(DateTime cutoff, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Issue #5509: Deletes all LLM request log entries for a specific user (GDPR Art. 17 right to erasure).
+    /// Returns the number of deleted records.
+    /// </summary>
+    Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns per-source request counts grouped into time buckets (hourly or daily).
     /// Issue #5078: request timeline chart data.
     /// </summary>
@@ -74,6 +80,13 @@ public interface ILlmRequestLogRepository
     Task<IReadOnlyList<(string ModelId, int RequestsToday)>> GetFreeModelUsageAsync(
         DateOnly forDate,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #5511: Pseudonymizes UserId with salted SHA-256 hash for logs older than the cutoff.
+    /// Only processes records where IsAnonymized = false and UserId is not null.
+    /// Returns the number of pseudonymized records.
+    /// </summary>
+    Task<int> PseudonymizeOldLogsAsync(DateTime cutoff, string salt, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a paginated, optionally filtered list of recent LLM request log entries.

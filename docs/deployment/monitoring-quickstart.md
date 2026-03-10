@@ -44,7 +44,7 @@ cd infra
 docker compose up -d grafana prometheus node-exporter postgres-exporter redis-exporter
 
 # Start log aggregation (Loki + Fluent Bit) - Issue #3367
-docker compose -f docker-compose.logging.yml up -d
+docker compose -f compose.logging.yml up -d
 
 # Verify all running
 docker ps | grep -E 'grafana|prometheus|loki|fluent|exporter'

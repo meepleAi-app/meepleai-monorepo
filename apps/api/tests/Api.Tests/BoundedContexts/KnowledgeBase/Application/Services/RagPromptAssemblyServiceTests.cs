@@ -24,6 +24,7 @@ public class RagPromptAssemblyServiceTests
     private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<ITextChunkSearchService> _textSearchMock;
+    private readonly Mock<IExpansionGameResolver> _expansionResolverMock;
     private readonly Mock<ILogger<RagPromptAssemblyService>> _loggerMock;
 
     private static readonly Guid TestGameId = Guid.NewGuid();
@@ -36,6 +37,7 @@ public class RagPromptAssemblyServiceTests
         _rerankerMock = new Mock<ICrossEncoderReranker>();
         _llmMock = new Mock<ILlmService>();
         _textSearchMock = new Mock<ITextChunkSearchService>();
+        _expansionResolverMock = new Mock<IExpansionGameResolver>();
         _loggerMock = new Mock<ILogger<RagPromptAssemblyService>>();
 
         // Default: query expansion returns empty (no expansions)
@@ -43,6 +45,11 @@ public class RagPromptAssemblyServiceTests
             .Setup(l => l.GenerateCompletionAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult { Success = false });
+
+        // Default: no expansion games
+        _expansionResolverMock
+            .Setup(r => r.GetExpansionGameIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Guid>());
     }
 
     private RagPromptAssemblyService CreateService()
@@ -53,6 +60,7 @@ public class RagPromptAssemblyServiceTests
             _rerankerMock.Object,
             _llmMock.Object,
             _textSearchMock.Object,
+            _expansionResolverMock.Object,
             _loggerMock.Object);
     }
 
@@ -679,7 +687,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullEmbeddingService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            null!, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _loggerMock.Object);
+            null!, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("embeddingService");
     }
@@ -688,7 +696,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullQdrantService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("qdrantService");
     }
@@ -697,7 +705,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullReranker_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, _qdrantMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("reranker");
     }
@@ -706,7 +714,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullLlmService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _loggerMock.Object);
+            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("llmService");
     }
@@ -715,16 +723,25 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullTextSearchService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _loggerMock.Object);
+            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("textSearch");
+    }
+
+    [Fact]
+    public void Constructor_NullExpansionResolver_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("expansionResolver");
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!);
+            _embeddingMock.Object, _qdrantMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object, null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
@@ -752,6 +769,165 @@ public class RagPromptAssemblyServiceTests
         var totalLength = result.SystemPrompt.Length + result.UserPrompt.Length;
         var expectedMinTokens = (int)Math.Ceiling(totalLength / 4.0) - 1; // allow small rounding
         result.EstimatedTokens.Should().BeGreaterThanOrEqualTo(expectedMinTokens - 1);
+    }
+
+    #endregion
+
+    #region Issue #5588 - Expansion Boost
+
+    [Fact]
+    public void ApplyExpansionBoost_MultipliesScoresByBoostFactor()
+    {
+        // Arrange
+        var chunks = new List<SearchResultItem>
+        {
+            CreateChunk("doc1", 0, 0.80f, "Expansion rule A"),
+            CreateChunk("doc2", 0, 0.60f, "Expansion rule B")
+        };
+
+        // Act
+        var boosted = RagPromptAssemblyService.ApplyExpansionBoost(chunks);
+
+        // Assert
+        boosted.Should().HaveCount(2);
+        boosted[0].Score.Should().BeApproximately(0.80f * 1.3f, 0.001f);
+        boosted[1].Score.Should().BeApproximately(0.60f * 1.3f, 0.001f);
+    }
+
+    [Fact]
+    public void ApplyExpansionBoost_ReSortsByBoostedScore()
+    {
+        // Arrange — doc2 has lower raw score but after boost would rank differently
+        var chunks = new List<SearchResultItem>
+        {
+            CreateChunk("doc1", 0, 0.60f, "Lower score"),
+            CreateChunk("doc2", 0, 0.80f, "Higher score")
+        };
+
+        // Act
+        var boosted = RagPromptAssemblyService.ApplyExpansionBoost(chunks);
+
+        // Assert — should be sorted by descending boosted score
+        boosted[0].Score.Should().BeGreaterThan(boosted[1].Score);
+        boosted[0].PdfId.Should().Be("doc2"); // 0.80 * 1.3 = 1.04
+        boosted[1].PdfId.Should().Be("doc1"); // 0.60 * 1.3 = 0.78
+    }
+
+    [Fact]
+    public void ApplyExpansionBoost_BaseGameDocsKeepOriginalScore()
+    {
+        // Arrange — base game docs are NOT boosted (boost is applied only to expansion results)
+        var baseChunks = new List<SearchResultItem>
+        {
+            CreateChunk("base-doc1", 0, 0.85f, "Base game rule")
+        };
+
+        // Act — apply boost factor of 1.0 (no boost)
+        var result = RagPromptAssemblyService.ApplyExpansionBoost(baseChunks, 1.0f);
+
+        // Assert
+        result[0].Score.Should().BeApproximately(0.85f, 0.001f);
+    }
+
+    [Fact]
+    public void ExpansionBoostFactor_Is1Point3()
+    {
+        RagPromptAssemblyService.ExpansionBoostFactor.Should().Be(1.3f);
+    }
+
+    [Fact]
+    public async Task AssemblePrompt_WithExpansions_SearchesExpansionGames()
+    {
+        // Arrange
+        var expansionGameId = Guid.NewGuid();
+        _expansionResolverMock
+            .Setup(r => r.GetExpansionGameIdsAsync(TestGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { expansionGameId });
+
+        SetupSuccessfulEmbedding();
+        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Catan", null, "How do cities work?",
+            TestGameId, null, CancellationToken.None);
+
+        // Assert — Qdrant should be called for both base game AND expansion game
+        _qdrantMock.Verify(q => q.SearchAsync(
+            TestGameId.ToString(), It.IsAny<float[]>(), It.IsAny<int>(),
+            It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        _qdrantMock.Verify(q => q.SearchAsync(
+            expansionGameId.ToString(), It.IsAny<float[]>(), It.IsAny<int>(),
+            It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task AssemblePrompt_WithExpansions_IncludesExpansionPriorityInPrompt()
+    {
+        // Arrange
+        var expansionGameId = Guid.NewGuid();
+        _expansionResolverMock
+            .Setup(r => r.GetExpansionGameIdsAsync(TestGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { expansionGameId });
+
+        SetupSuccessfulEmbedding();
+        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "arbitro", "Catan", null, "Is this legal?",
+            TestGameId, null, CancellationToken.None);
+
+        // Assert
+        result.SystemPrompt.Should().Contain("Expansion Priority");
+        result.SystemPrompt.Should().Contain("l'espansione prevale sempre");
+        result.SystemPrompt.Should().Contain("segnalalo esplicitamente nella risposta");
+    }
+
+    [Fact]
+    public async Task AssemblePrompt_WithoutExpansions_OmitsExpansionPriority()
+    {
+        // Arrange — no expansions (default mock)
+        SetupSuccessfulEmbedding();
+        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "arbitro", "Catan", null, "Is this legal?",
+            TestGameId, null, CancellationToken.None);
+
+        // Assert
+        result.SystemPrompt.Should().NotContain("Expansion Priority");
+        result.SystemPrompt.Should().NotContain("l'espansione prevale sempre");
+    }
+
+    [Fact]
+    public async Task AssemblePrompt_ExpansionResolverFails_ContinuesWithoutBoost()
+    {
+        // Arrange — resolver throws
+        _expansionResolverMock
+            .Setup(r => r.GetExpansionGameIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Guid>()); // ExpansionGameResolver catches exceptions internally
+
+        SetupSuccessfulEmbedding();
+        SetupQdrantResults(CreateChunk("doc1", 0, 0.90f, "Rule text."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Catan", null, "Question?",
+            TestGameId, null, CancellationToken.None);
+
+        // Assert — should still work with base game results
+        result.Citations.Should().NotBeEmpty();
+        result.SystemPrompt.Should().NotContain("Expansion Priority");
     }
 
     #endregion

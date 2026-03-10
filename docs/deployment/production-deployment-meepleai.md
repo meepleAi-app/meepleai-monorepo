@@ -256,14 +256,11 @@ nano /opt/meepleai/infra/traefik/traefik.prod.yml
 
 ### 2. Deploy with Script
 
-```bash
+```powershell
 cd /opt/meepleai
 
-# Make deploy script executable
-chmod +x scripts/deployment/deploy-meepleai.sh
-
 # Start deployment
-./scripts/deployment/deploy-meepleai.sh up
+pwsh scripts/deployment/deploy-meepleai.ps1 up
 ```
 
 ### 3. Alternative: Manual Deployment
@@ -274,7 +271,7 @@ cd /opt/meepleai/infra
 # Start all services
 docker compose \
   -f docker-compose.yml \
-  -f docker-compose.traefik.yml \
+  -f compose.traefik.yml \
   -f compose.prod.yml \
   -f compose.meepleai.yml \
   --profile full \
@@ -285,7 +282,7 @@ docker compose \
 
 ```bash
 # Check service status
-docker compose -f docker-compose.yml -f docker-compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml ps
+docker compose -f docker-compose.yml -f compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml ps
 
 # Check Traefik logs for certificate issuance
 docker logs meepleai-traefik -f
@@ -336,7 +333,7 @@ curl -X POST https://api.meepleai.io/api/v1/auth/register \
 crontab -e
 
 # Add daily backup at 3 AM
-0 3 * * * /opt/meepleai/scripts/deployment/deploy-meepleai.sh backup >> /var/log/meepleai-backup.log 2>&1
+0 3 * * * pwsh /opt/meepleai/scripts/deployment/deploy-meepleai.ps1 backup >> /var/log/meepleai-backup.log 2>&1
 ```
 
 ---
@@ -347,18 +344,18 @@ crontab -e
 
 ```bash
 # All services
-./scripts/deployment/deploy-meepleai.sh logs
+pwsh scripts/deployment/deploy-meepleai.ps1 logs
 
 # Specific service
-./scripts/deployment/deploy-meepleai.sh logs api
-./scripts/deployment/deploy-meepleai.sh logs web
-./scripts/deployment/deploy-meepleai.sh logs traefik
+pwsh scripts/deployment/deploy-meepleai.ps1 logs api
+pwsh scripts/deployment/deploy-meepleai.ps1 logs web
+pwsh scripts/deployment/deploy-meepleai.ps1 logs traefik
 ```
 
 ### Restart Services
 
 ```bash
-./scripts/deployment/deploy-meepleai.sh restart
+pwsh scripts/deployment/deploy-meepleai.ps1 restart
 ```
 
 ### Update Application
@@ -370,13 +367,13 @@ cd /opt/meepleai
 git pull origin main
 
 # Update and restart
-./scripts/deployment/deploy-meepleai.sh update
+pwsh scripts/deployment/deploy-meepleai.ps1 update
 ```
 
 ### Manual Database Backup
 
 ```bash
-./scripts/deployment/deploy-meepleai.sh backup
+pwsh scripts/deployment/deploy-meepleai.ps1 backup
 ```
 
 ### Certificate Renewal
@@ -445,13 +442,13 @@ free -h
 
 ```bash
 # Stop all services
-./scripts/deployment/deploy-meepleai.sh down
+pwsh scripts/deployment/deploy-meepleai.ps1 down
 
 # Remove volumes (WARNING: data loss!)
 docker volume rm $(docker volume ls -q | grep meepleai)
 
 # Restart
-./scripts/deployment/deploy-meepleai.sh up
+pwsh scripts/deployment/deploy-meepleai.ps1 up
 ```
 
 ---
@@ -482,22 +479,22 @@ docker volume rm $(docker volume ls -q | grep meepleai)
 
 ```bash
 # Start
-./scripts/deployment/deploy-meepleai.sh up
+pwsh scripts/deployment/deploy-meepleai.ps1 up
 
 # Stop
-./scripts/deployment/deploy-meepleai.sh down
+pwsh scripts/deployment/deploy-meepleai.ps1 down
 
 # Logs
-./scripts/deployment/deploy-meepleai.sh logs
+pwsh scripts/deployment/deploy-meepleai.ps1 logs
 
 # Status
-./scripts/deployment/deploy-meepleai.sh status
+pwsh scripts/deployment/deploy-meepleai.ps1 status
 
 # Backup
-./scripts/deployment/deploy-meepleai.sh backup
+pwsh scripts/deployment/deploy-meepleai.ps1 backup
 
 # Update
-./scripts/deployment/deploy-meepleai.sh update
+pwsh scripts/deployment/deploy-meepleai.ps1 update
 ```
 
 ---

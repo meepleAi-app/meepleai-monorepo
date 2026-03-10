@@ -35,6 +35,10 @@ jobs:
               - 'apps/web/**'
 
   # Playwright Visual Snapshots
+  # NOTE (ARM64): Screenshot baselines must be regenerated when switching runner architecture.
+  # Font rendering and subpixel antialiasing differ between x86-64 and ARM64, causing false-positive diffs.
+  # To regenerate baselines: pnpm test:e2e:visual --update-snapshots --project=desktop-chrome
+  # See ADR-044 for full context: docs/architecture/adr/adr-044-self-hosted-arm64-runner.md
   playwright-visual:
     name: Playwright Visual Snapshots
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}

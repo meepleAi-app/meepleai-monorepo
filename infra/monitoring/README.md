@@ -20,10 +20,10 @@ Observability stack: Prometheus (metrics), Loki (logs), Grafana (visualization),
 docker compose up -d grafana prometheus
 
 # Start log aggregation (Issue #3367)
-docker compose -f docker-compose.logging.yml up -d
+docker compose -f compose.logging.yml up -d
 
 # Start HyperDX (optional - unified observability)
-docker compose -f docker-compose.hyperdx.yml up -d
+docker compose -f compose.hyperdx.yml up -d
 
 # Verify all healthy
 docker ps --filter "name=meepleai-" --format "{{.Names}}\t{{.Status}}"

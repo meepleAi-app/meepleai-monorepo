@@ -115,7 +115,7 @@
 | #704 | Create backup automation scripts | Medium | **Month 4** (data protection) |
 | #705 | Add infrastructure monitoring (cAdvisor + node-exporter) | Medium | **Month 4** (observability) |
 | #706 | Create operational runbooks documentation | High | **Month 3** (operational readiness) |
-| #707 | Add docker-compose.override.yml example | Low | **Month 3** (DX improvement) |
+| #707 | Add compose.override.yml example | Low | **Month 3** (DX improvement) |
 | #709 | DUPLICATE of #706 | - | **Close as duplicate** |
 | #818 | Quarterly security scan review process | Low | **Phase 2** (recurring process) |
 | #936 | Spike: POC Infisical Secret Rotation | Low | **Phase 2** (Phase 2 feature) |

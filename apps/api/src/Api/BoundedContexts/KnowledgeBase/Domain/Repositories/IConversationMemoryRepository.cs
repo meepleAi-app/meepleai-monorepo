@@ -54,4 +54,10 @@ internal interface IConversationMemoryRepository
     /// Deletes conversation memories older than the specified date.
     /// </summary>
     Task<int> DeleteOlderThanAsync(DateTime cutoffDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #5509: Deletes all conversation memories for a specific user (GDPR Art. 17 right to erasure).
+    /// Returns the number of deleted records.
+    /// </summary>
+    Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }

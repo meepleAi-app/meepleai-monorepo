@@ -78,6 +78,27 @@ jobs:
       web_image: ${{ steps.meta-web.outputs.tags }}
       version: ${{ steps.version.outputs.version }}
     steps:
+      - name: Verify ARM64 runner
+        if: vars.RUNNER != ''
+        run: |
+          ARCH=$(uname -m)
+          echo "Runner architecture: $ARCH"
+          if [ "$ARCH" != "aarch64" ]; then
+            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
+            exit 1
+          fi
+
+      - name: Pre-build disk check (self-hosted)
+        if: vars.RUNNER != ''
+        run: |
+          # Requires GNU df (--output flag)
+          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+          echo "Disk usage: ${USAGE}%"
+          if [ "$USAGE" -gt 90 ]; then
+            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
+            docker system prune -af --filter "until=24h" 2>/dev/null || true
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -153,6 +174,15 @@ jobs:
             NEXT_PUBLIC_ENV=production
             VERSION=${{ steps.version.outputs.version }}
 
+      - name: Post-build cleanup (self-hosted)
+        if: always() && !contains(runner.name, 'GitHub Actions')
+        run: |
+          echo "🧹 Cleaning up Docker build artifacts on self-hosted runner..."
+          docker container prune -f 2>/dev/null || true
+          docker image prune -f 2>/dev/null || true
+          echo "✅ Cleanup complete"
+          df -h / | tail -1
+
   # Manual approval gate before production deploy
   approve:
     name: Approval Gate
@@ -209,31 +239,31 @@ jobs:
             export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
 
             # Create backup point
-            docker compose -f docker-compose.prod.yml exec -T postgres \
+            docker compose -f compose.prod.yml exec -T postgres \
               pg_dump -U postgres meepleai > /backups/pre-deploy-$(date +%Y%m%d%H%M%S).sql
 
             # Start new containers (blue)
-            docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=2 api
+            docker compose -f compose.prod.yml up -d --no-deps --scale api=2 api
 
             # Wait for new container to be healthy
             sleep 30
 
             # Health check new container
-            if ! docker compose -f docker-compose.prod.yml exec -T api curl -sf localhost:8080/health; then
+            if ! docker compose -f compose.prod.yml exec -T api curl -sf localhost:8080/health; then
               echo "❌ New container unhealthy, rolling back..."
-              docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=1 api
+              docker compose -f compose.prod.yml up -d --no-deps --scale api=1 api
               exit 1
             fi
 
             # Run migrations (with backup)
-            docker compose -f docker-compose.prod.yml exec -T api \
+            docker compose -f compose.prod.yml exec -T api \
               dotnet ef database update --no-build
 
             # Switch traffic to new container
-            docker compose -f docker-compose.prod.yml up -d --no-deps web
+            docker compose -f compose.prod.yml up -d --no-deps web
 
             # Remove old container
-            docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=1 api
+            docker compose -f compose.prod.yml up -d --no-deps --scale api=1 api
 
             # Final health check
             sleep 10
@@ -332,7 +362,7 @@ jobs:
           echo "  3. Re-run that workflow"
           echo ""
           echo "Or SSH to server and run:"
-          echo "  docker compose -f docker-compose.prod.yml rollback"
+          echo "  docker compose -f compose.prod.yml rollback"
 
   # Notifications
   notify:

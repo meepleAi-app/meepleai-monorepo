@@ -44,6 +44,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
     private readonly ILogger<HybridLlmService> _serviceLogger;
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _strategyLogger;
     private readonly Mock<ILlmCostLogRepository> _mockCostLogRepository;
+    private readonly Mock<ILlmCostService> _mockCostService;
 
     // Constants for test configuration
     private const int CircuitBreakerFailureThreshold = 6; // 5 failures + 1 extra to ensure circuit opens
@@ -58,6 +59,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         _strategyLogger = _loggerFactory.CreateLogger<HybridAdaptiveRoutingStrategy>();
 
         _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
+        _mockCostService = new Mock<ILlmCostService>();
     }
 
     public ValueTask InitializeAsync()
@@ -335,19 +337,14 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         Assert.Equal(0m, result.Cost.OutputCost);
         Assert.Equal(0m, result.Cost.TotalCost);
 
-        // Verify cost was logged
-        _mockCostLogRepository.Verify(
-            r => r.LogCostAsync(
-                It.Is<Guid?>(id => id == user.Id),
-                It.Is<string>(role => role == "user"),
-                It.Is<LlmCostCalculation>(calc => calc.TotalCost == 0m),
-                It.IsAny<string>(),
-                It.Is<bool>(success => success),
-                It.IsAny<string?>(),
-                It.IsAny<int>(),
-                It.IsAny<string?>(),
-                It.IsAny<string?>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+        // Verify cost was logged via ILlmCostService
+        _mockCostService.Verify(
+            s => s.LogSuccessAsync(
+                It.Is<LlmCompletionResult>(r => r.Cost.TotalCost == 0m),
+                It.Is<User?>(u => u != null && u.Id == user.Id),
+                It.IsAny<long>(),
+                It.IsAny<RequestSource>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -378,19 +375,14 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         Assert.Equal("OpenRouter", result.Cost.Provider);
         Assert.True(result.Cost.TotalCost > 0m, "OpenRouter should have non-zero cost");
 
-        // Verify cost was logged with non-zero cost
-        _mockCostLogRepository.Verify(
-            r => r.LogCostAsync(
-                It.Is<Guid?>(id => id == user.Id),
-                It.Is<string>(role => role == "user"),
-                It.Is<LlmCostCalculation>(calc => calc.TotalCost > 0m),
-                It.IsAny<string>(),
-                It.Is<bool>(success => success),
-                It.IsAny<string?>(),
-                It.IsAny<int>(),
-                It.IsAny<string?>(),
-                It.IsAny<string?>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+        // Verify cost was logged via ILlmCostService with non-zero cost
+        _mockCostService.Verify(
+            s => s.LogSuccessAsync(
+                It.Is<LlmCompletionResult>(r => r.Cost.TotalCost > 0m),
+                It.Is<User?>(u => u != null && u.Id == user.Id),
+                It.IsAny<long>(),
+                It.IsAny<RequestSource>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
     [Fact]
@@ -424,19 +416,14 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         var latency = long.Parse(result.Metadata["latency_ms"]);
         Assert.True(latency > 0, "Latency should be tracked");
 
-        // Verify latency was logged
-        _mockCostLogRepository.Verify(
-            r => r.LogCostAsync(
-                It.IsAny<Guid?>(),
-                It.IsAny<string>(),
-                It.IsAny<LlmCostCalculation>(),
-                It.IsAny<string>(),
-                It.IsAny<bool>(),
-                It.IsAny<string?>(),
-                It.Is<int>(ms => ms > 0),
-                It.IsAny<string?>(),
-                It.IsAny<string?>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+        // Verify cost was logged via ILlmCostService with latency
+        _mockCostService.Verify(
+            s => s.LogSuccessAsync(
+                It.IsAny<LlmCompletionResult>(),
+                It.IsAny<User?>(),
+                It.Is<long>(ms => ms > 0),
+                It.IsAny<RequestSource>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -476,14 +463,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         Assert.All(latencies, latency => Assert.True(latency > 0, "All latencies should be positive"));
 
         var avgLatency = latencies.Average();
-        var monitoringStatus = service.GetMonitoringStatus();
-
-        Assert.NotEmpty(monitoringStatus);
-        foreach (var (provider, (circuitState, latencyStats)) in monitoringStatus)
-        {
-            Assert.NotNull(circuitState);
-            Assert.NotNull(latencyStats);
-        }
+        Assert.True(avgLatency > 0, "Average latency should be positive");
     }
     /// <summary>
     /// Creates a configured HybridLlmService instance for testing.
@@ -541,13 +521,34 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             aiSettings,
             _strategyLogger);
 
-        return new HybridLlmService(
+        // Issue #5487: Create ICircuitBreakerRegistry mock and real LlmProviderSelector
+        var circuitBreakerRegistryMock = new Mock<ICircuitBreakerRegistry>();
+        circuitBreakerRegistryMock.Setup(r => r.AllowsRequests(It.IsAny<string>())).Returns(true);
+        circuitBreakerRegistryMock.Setup(r => r.GetState(It.IsAny<string>())).Returns(CircuitState.Closed);
+        circuitBreakerRegistryMock.Setup(r => r.GetMonitoringStatus())
+            .Returns(new Dictionary<string, (string, string)>
+            {
+                ["Ollama"] = ("Closed", "avg: 50ms, p99: 100ms"),
+                ["OpenRouter"] = ("Closed", "avg: 150ms, p99: 300ms")
+            });
+        circuitBreakerRegistryMock.Setup(r => r.GetLatencyStats(It.IsAny<string>()))
+            .Returns("avg: 100ms, p99: 200ms");
+
+        var selectorLogger = _loggerFactory.CreateLogger<LlmProviderSelector>();
+        var selector = new LlmProviderSelector(
             clients,
             routingStrategy,
-            _serviceLogger,
+            circuitBreakerRegistryMock.Object,
             aiSettings,
             mockModelConfigRepository.Object,
-            scopeFactory: mockScopeFactory.Object);
+            selectorLogger);
+
+        return new HybridLlmService(
+            clients,
+            selector,
+            circuitBreakerRegistryMock.Object,
+            _mockCostService.Object,
+            _serviceLogger);
     }
 
     private static IOptions<AiProviderSettings> CreateAiSettings(

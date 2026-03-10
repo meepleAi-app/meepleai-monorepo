@@ -12,9 +12,12 @@
 
 'use client';
 
+import { useState } from 'react';
+
 import { ExternalLinkIcon } from 'lucide-react';
 import Link from 'next/link';
 
+import { CookieConsentBanner } from '@/components/legal/CookieConsentBanner';
 import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import { cn } from '@/lib/utils';
 
@@ -61,68 +64,48 @@ export function PublicFooter({
   className,
 }: PublicFooterProps) {
   const currentYear = new Date().getFullYear();
+  const [showCookieManager, setShowCookieManager] = useState(false);
 
   return (
-    <footer className={cn('mt-auto border-t bg-background', className)}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Main Footer Content - 3 Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          {/* Column 1: About */}
-          <div>
-            <div className="mb-4">
-              <MeepleLogo variant="full" size="sm" />
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Il tuo assistente AI per le regole dei giochi da tavolo. Impara, gioca e scopri nuovi
-              giochi con l'aiuto dell'intelligenza artificiale.
-            </p>
-            <div className="flex gap-4">
-              {SOCIAL_LINKS.map(social => (
-                <Link
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    'text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm'
-                  )}
-                  aria-label={social.label}
-                >
-                  <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
-                  <span>{social.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Column 2: Quick Links */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4">Link Rapidi</h3>
-            <ul className="space-y-2">
-              {QUICK_LINKS.map(link => (
-                <li key={link.href}>
+    <>
+      <footer className={cn('mt-auto border-t bg-background', className)}>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Main Footer Content - 3 Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            {/* Column 1: About */}
+            <div>
+              <div className="mb-4">
+                <MeepleLogo variant="full" size="sm" />
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Il tuo assistente AI per le regole dei giochi da tavolo. Impara, gioca e scopri
+                nuovi giochi con l'aiuto dell'intelligenza artificiale.
+              </p>
+              <div className="flex gap-4">
+                {SOCIAL_LINKS.map(social => (
                   <Link
-                    href={link.href}
+                    key={social.label}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={cn(
-                      'text-sm text-muted-foreground hover:text-foreground transition-colors',
+                      'text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm'
                     )}
+                    aria-label={social.label}
                   >
-                    {link.label}
+                    <ExternalLinkIcon className="h-4 w-4" aria-hidden="true" />
+                    <span>{social.label}</span>
                   </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+                ))}
+              </div>
+            </div>
 
-          {/* Column 3: About & Legal */}
-          <div className="space-y-6">
-            {/* About Section */}
+            {/* Column 2: Quick Links */}
             <div>
-              <h3 className="text-sm font-semibold mb-4">Chi Siamo</h3>
+              <h3 className="text-sm font-semibold mb-4">Link Rapidi</h3>
               <ul className="space-y-2">
-                {ABOUT_LINKS.map(link => (
+                {QUICK_LINKS.map(link => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
@@ -138,40 +121,78 @@ export function PublicFooter({
               </ul>
             </div>
 
-            {/* Legal Section */}
-            <div>
-              <h3 className="text-sm font-semibold mb-4">Legale</h3>
-              <ul className="space-y-2">
-                {LEGAL_LINKS.map(link => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
+            {/* Column 3: About & Legal */}
+            <div className="space-y-6">
+              {/* About Section */}
+              <div>
+                <h3 className="text-sm font-semibold mb-4">Chi Siamo</h3>
+                <ul className="space-y-2">
+                  {ABOUT_LINKS.map(link => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className={cn(
+                          'text-sm text-muted-foreground hover:text-foreground transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm'
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Legal Section */}
+              <div>
+                <h3 className="text-sm font-semibold mb-4">Legale</h3>
+                <ul className="space-y-2">
+                  {LEGAL_LINKS.map(link => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className={cn(
+                          'text-sm text-muted-foreground hover:text-foreground transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm'
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
+                    <button
+                      onClick={() => setShowCookieManager(true)}
                       className={cn(
                         'text-sm text-muted-foreground hover:text-foreground transition-colors',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm'
                       )}
+                      type="button"
                     >
-                      {link.label}
-                    </Link>
+                      Gestisci Cookie
+                    </button>
                   </li>
-                ))}
-              </ul>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar - Copyright */}
+          <div className="pt-8 border-t">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <p className="text-sm text-muted-foreground text-center sm:text-left">
+                © {currentYear} MeepleAI. Tutti i diritti riservati.
+              </p>
+              <p className="text-xs text-muted-foreground text-center sm:text-right">
+                Realizzato con ❤️ per gli appassionati di giochi da tavolo
+              </p>
             </div>
           </div>
         </div>
-
-        {/* Bottom Bar - Copyright */}
-        <div className="pt-8 border-t">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground text-center sm:text-left">
-              © {currentYear} MeepleAI. Tutti i diritti riservati.
-            </p>
-            <p className="text-xs text-muted-foreground text-center sm:text-right">
-              Realizzato con ❤️ per gli appassionati di giochi da tavolo
-            </p>
-          </div>
-        </div>
-      </div>
-    </footer>
+      </footer>
+      {showCookieManager && (
+        <CookieConsentBanner forceShow onDismiss={() => setShowCookieManager(false)} />
+      )}
+    </>
   );
 }

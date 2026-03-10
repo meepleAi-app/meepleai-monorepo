@@ -5,6 +5,8 @@
 # Usage:
 #   docker compose -f docker-compose.yml -f compose.staging.yml up -d
 #   docker compose -f docker-compose.yml -f compose.staging.yml down
+#
+# Secrets: Uses env_file (.secret files) — same pattern as docker-compose.yml.
 
 services:
   # ============================================================================
@@ -13,8 +15,9 @@ services:
 
   postgres:
     restart: unless-stopped
+    env_file:
+      - ./secrets/database.secret
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
     volumes:
@@ -28,14 +31,19 @@ services:
 
   redis:
     restart: unless-stopped
-    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
+    env_file:
+      - ./secrets/redis.secret
+    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $REDIS_PASSWORD"]
     volumes:
       - redisdata-staging:/data
-    secrets:
-      - redis-password
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
 
   qdrant:
     restart: unless-stopped
+    env_file:
+      - ./secrets/qdrant.secret
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
     volumes:
       - qdrantdata-staging:/qdrant/storage
 
@@ -45,12 +53,15 @@ services:
 
   api:
     restart: unless-stopped
+    env_file:
+      - ./secrets/database.secret
+      - ./secrets/jwt.secret
+      - ./secrets/admin.secret
+      - ./secrets/openrouter.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
-      # Connection string using secrets
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
     logging:
       driver: "json-file"
       options:
@@ -74,6 +85,8 @@ services:
 
   grafana:
     restart: unless-stopped
+    env_file:
+      - ./secrets/monitoring.secret
     volumes:
       - grafana-staging:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
@@ -92,17 +105,6 @@ services:
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheus-staging:/prometheus
 
-  jaeger:
-    restart: unless-stopped
-
-  seq:
-    restart: unless-stopped
-    environment:
-      ACCEPT_EULA: "Y"
-      SEQ_FIRSTRUN_ADMINPASSWORDHASH: ${SEQ_PASSWORD_HASH:-}
-    volumes:
-      - seqdata-staging:/data
-
   alertmanager:
     restart: unless-stopped
 
@@ -119,13 +121,7 @@ volumes:
     name: meepleai-qdrantdata-staging
   redisdata-staging:
     name: meepleai-redisdata-staging
-  seqdata-staging:
-    name: meepleai-seqdata-staging
   prometheus-staging:
     name: meepleai-prometheus-staging
   grafana-staging:
     name: meepleai-grafana-staging
-
-secrets:
-  redis-password:
-    file: ./secrets/staging/redis-password.txt

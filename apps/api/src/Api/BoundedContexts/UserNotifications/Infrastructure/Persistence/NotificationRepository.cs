@@ -147,7 +147,8 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             Metadata = notification.Metadata,
             IsRead = notification.IsRead,
             CreatedAt = notification.CreatedAt,
-            ReadAt = notification.ReadAt
+            ReadAt = notification.ReadAt,
+            CorrelationId = notification.CorrelationId
         };
     }
 
@@ -164,7 +165,8 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             notification.Metadata,
             notification.IsRead,
             notification.CreatedAt,
-            notification.ReadAt
+            notification.ReadAt,
+            notification.CorrelationId
         );
 
     // Persistence → Domain mapping
@@ -178,7 +180,8 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             title: entity.Title,
             message: entity.Message,
             link: entity.Link,
-            metadata: entity.Metadata
+            metadata: entity.Metadata,
+            correlationId: entity.CorrelationId
         );
 
         // Restore read status with original timestamp (not MarkAsRead which overwrites)

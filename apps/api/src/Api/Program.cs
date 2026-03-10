@@ -490,6 +490,7 @@ v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoint
 v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
+v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard
@@ -546,6 +547,7 @@ v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapNotificationPreferencesEndpoints(); // Notification preferences (Issue #4220)
+v1Api.MapUnsubscribeEndpoints();       // Issue #38: GDPR-compliant email unsubscribe
 v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapEntityLinkUserEndpoints();    // Entity link user endpoints (Issue #5137)

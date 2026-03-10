@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260310133931_AddGameNightEntities")]
+    partial class AddGameNightEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -10128,12 +10131,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
-                    b.Property<bool>("EmailOnGameNightInvitation")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("EmailOnGameNightReminder")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("EmailOnRetryAvailable")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -10148,9 +10145,6 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
-
-                    b.Property<bool>("InAppOnGameNightInvitation")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("InAppOnRetryAvailable")
                         .ValueGeneratedOnAdd()
@@ -10174,12 +10168,6 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
-
-                    b.Property<bool>("PushOnGameNightInvitation")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("PushOnGameNightReminder")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("PushOnRetryAvailable")
                         .ValueGeneratedOnAdd()

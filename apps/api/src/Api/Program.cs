@@ -566,6 +566,7 @@ v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Cont
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 v1Api.MapWorkflowEndpoints();          // n8n workflow integration
+app.MapN8nWebhookEndpoints();          // Issue #57: n8n → API webhook callbacks
 v1Api.MapSessionEndpoints();           // Session management
 v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and management
 v1Api.MapApiKeyEndpoints();            // API key management

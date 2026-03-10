@@ -357,6 +357,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Rate Limits',
         icon: ZapIcon,
       },
+      {
+        href: '/admin/config/n8n',
+        label: 'n8n Workflows',
+        icon: ZapIcon,
+      },
     ],
   },
 

@@ -209,4 +209,38 @@ public class SessionSnapshotDomainTests
             Guid.NewGuid(), _sessionId, 0, SnapshotTrigger.EventTriggered, "Event X", "{}", true, 0, null, null);
         Assert.Equal(SnapshotTrigger.EventTriggered, snapshot.TriggerType);
     }
+
+    // === Issue #5581: SessionPaused and PreRestore trigger types ===
+
+    [Fact]
+    public void Constructor_WithSessionPausedTrigger_Succeeds()
+    {
+        var snapshot = new Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot(
+            Guid.NewGuid(), _sessionId, 0, SnapshotTrigger.SessionPaused,
+            "Auto \u2014 Pausa turno 5", "{}", true, 5, 0, null);
+        Assert.Equal(SnapshotTrigger.SessionPaused, snapshot.TriggerType);
+        Assert.Equal("Auto \u2014 Pausa turno 5", snapshot.TriggerDescription);
+    }
+
+    [Fact]
+    public void Constructor_WithPreRestoreTrigger_Succeeds()
+    {
+        var snapshot = new Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot(
+            Guid.NewGuid(), _sessionId, 0, SnapshotTrigger.PreRestore,
+            "Auto \u2014 Pre-restore turno 3", "{}", true, 3, 1, null);
+        Assert.Equal(SnapshotTrigger.PreRestore, snapshot.TriggerType);
+        Assert.Equal("Auto \u2014 Pre-restore turno 3", snapshot.TriggerDescription);
+    }
+
+    [Fact]
+    public void SnapshotTrigger_SessionPaused_HasCorrectValue()
+    {
+        Assert.Equal(6, (int)SnapshotTrigger.SessionPaused);
+    }
+
+    [Fact]
+    public void SnapshotTrigger_PreRestore_HasCorrectValue()
+    {
+        Assert.Equal(7, (int)SnapshotTrigger.PreRestore);
+    }
 }

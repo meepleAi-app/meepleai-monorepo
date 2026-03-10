@@ -271,7 +271,9 @@ export function PersonalUsagePageClient() {
                   />
                   <YAxis tickFormatter={value => formatTokens(value)} fontSize={12} />
                   <Tooltip
-                    formatter={(value: number | undefined) => [formatTokens(value ?? 0), 'Tokens']}
+                    formatter={(
+                      value: number | string | ReadonlyArray<number | string> | undefined
+                    ) => [formatTokens(Number(value) || 0), 'Tokens']}
                     labelFormatter={label => `Date: ${label}`}
                   />
                   <Area
@@ -311,10 +313,9 @@ export function PersonalUsagePageClient() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number | undefined) => [
-                        formatTokens(value ?? 0),
-                        'Tokens',
-                      ]}
+                      formatter={(
+                        value: number | string | ReadonlyArray<number | string> | undefined
+                      ) => [formatTokens(Number(value) || 0), 'Tokens']}
                     />
                     <Legend />
                   </PieChart>
@@ -326,7 +327,11 @@ export function PersonalUsagePageClient() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" tickFormatter={value => formatTokens(value)} />
                     <YAxis type="category" dataKey="name" width={80} fontSize={12} />
-                    <Tooltip formatter={(value: number | undefined) => formatTokens(value ?? 0)} />
+                    <Tooltip
+                      formatter={(
+                        value: number | string | ReadonlyArray<number | string> | undefined
+                      ) => formatTokens(Number(value) || 0)}
+                    />
                     <Bar dataKey="tokens" fill="#d2691e" radius={[0, 4, 4, 0]}>
                       {modelChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />

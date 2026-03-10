@@ -219,6 +219,23 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         return new VectorDocumentIndexingInfo(inferredStatusViaInternal, 0, null);
     }
 
+    public async Task<List<Guid>> GetGameIdsWithDocumentsAsync(
+        IEnumerable<Guid> gameIds,
+        CancellationToken cancellationToken = default)
+    {
+        var idList = gameIds.ToList();
+        if (idList.Count == 0)
+            return new List<Guid>();
+
+        return await DbContext.VectorDocuments
+            .AsNoTracking()
+            .Where(vd => vd.GameId.HasValue && idList.Contains(vd.GameId.Value))
+            .Select(vd => vd.GameId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<bool> AnyBelongsToGameAsync(
         IEnumerable<Guid> ids,
         Guid gameId,

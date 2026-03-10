@@ -48,6 +48,27 @@ jobs:
       web_image: ${{ steps.meta-web.outputs.tags }}
       version: ${{ steps.version.outputs.version }}
     steps:
+      - name: Verify ARM64 runner
+        if: vars.RUNNER != ''
+        run: |
+          ARCH=$(uname -m)
+          echo "Runner architecture: $ARCH"
+          if [ "$ARCH" != "aarch64" ]; then
+            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
+            exit 1
+          fi
+
+      - name: Pre-build disk check (self-hosted)
+        if: vars.RUNNER != ''
+        run: |
+          # Requires GNU df (--output flag)
+          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
+          echo "Disk usage: ${USAGE}%"
+          if [ "$USAGE" -gt 90 ]; then
+            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
+            docker system prune -af --filter "until=24h" 2>/dev/null || true
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -115,6 +136,15 @@ jobs:
             NEXT_PUBLIC_ENV=staging
             VERSION=${{ steps.version.outputs.version }}
 
+      - name: Post-build cleanup (self-hosted)
+        if: always() && !contains(runner.name, 'GitHub Actions')
+        run: |
+          echo "🧹 Cleaning up Docker build artifacts on self-hosted runner..."
+          docker container prune -f 2>/dev/null || true
+          docker image prune -f 2>/dev/null || true
+          echo "✅ Cleanup complete"
+          df -h / | tail -1
+
   # Deploy to staging server
   deploy:
     name: Deploy to Staging
@@ -147,11 +177,11 @@ jobs:
             export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
 
             # Deploy with zero-downtime
-            docker compose -f docker-compose.staging.yml pull
-            docker compose -f docker-compose.staging.yml up -d --no-deps api web
+            docker compose -f compose.staging.yml pull
+            docker compose -f compose.staging.yml up -d --no-deps api web
 
             # Run database migrations
-            docker compose -f docker-compose.staging.yml exec -T api \
+            docker compose -f compose.staging.yml exec -T api \
               dotnet ef database update --no-build
 
             # Health check

@@ -11,6 +11,7 @@ import { entityListViewStory } from './entity-list-view.story';
 import { gameCarouselStory } from './game-carousel.story';
 import { meepleCardStory } from './meeple-card.story';
 import { pageTransitionStory } from './page-transition.story';
+import { ruleSourceCardStory } from './rule-source-card.story';
 import { tagStripStory } from './tag-strip.story';
 import { tierBadgeStory } from './tier-badge.story';
 
@@ -26,10 +27,11 @@ export const ALL_STORIES: ShowcaseStory<any>[] = [
   pageTransitionStory,
   confidenceBadgeStory,
   tierBadgeStory,
+  ruleSourceCardStory,
 ];
 
 /** Look up a story by its slug id */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const STORY_MAP: Record<string, ShowcaseStory<any>> = Object.fromEntries(
-  ALL_STORIES.map((s) => [s.id, s])
+  ALL_STORIES.map(s => [s.id, s])
 );

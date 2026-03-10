@@ -30,4 +30,10 @@ public class LlmRequestLogEntity
     public bool IsFreeModel { get; set; }
     public string? SessionId { get; set; }
     public DateTime ExpiresAt { get; set; }            // = RequestedAt + 30 days
+
+    /// <summary>
+    /// Issue #5511: GDPR pseudonymization flag.
+    /// When true, UserId has been replaced with a salted SHA-256 hash.
+    /// </summary>
+    public bool IsAnonymized { get; set; }
 }

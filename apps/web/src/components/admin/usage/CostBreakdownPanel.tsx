@@ -159,7 +159,9 @@ export function CostBreakdownPanel({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number | undefined) => [formatUsd(val ?? 0), 'Cost']}
+                  formatter={(
+                    val: number | string | ReadonlyArray<number | string> | undefined
+                  ) => [formatUsd(Number(val) || 0), 'Cost']}
                   contentStyle={{
                     fontSize: 12,
                     borderRadius: 8,

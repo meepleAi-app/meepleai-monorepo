@@ -1,0 +1,95 @@
+# MeepleAI Development Stack
+# Extends docker-compose.yml with development-specific overrides
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f compose.dev.yml up -d
+#   docker compose -f docker-compose.yml -f compose.dev.yml down
+#
+# Note: This file uses plain environment variables instead of secrets for easier local development
+
+services:
+  # ============================================================================
+  # Development Overrides (simpler auth, no secrets)
+  # ============================================================================
+
+  postgres:
+    env_file:
+      - ../.env.development
+    environment:
+      # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
+      # Passwords loaded from .env.development to ensure consistency with API
+      POSTGRES_PASSWORD_FILE: ""
+    secrets: []  # Disable secrets in dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      # Connection string built by SecretsHelper from POSTGRES_* env vars
+      # Override POSTGRES_HOST for Docker networking (service name, not localhost)
+      POSTGRES_HOST: postgres
+      POSTGRES_PASSWORD_FILE: ""
+      QDRANT_URL: http://qdrant:6333
+      # REDIS_URL built by load-secrets-env.sh from REDIS_PASSWORD (redis.secret)
+      # Removed hardcoded password to avoid mismatch with redis.secret
+      OLLAMA_URL: http://ollama:11434
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_MODEL: nomic-embed-text
+      LOCAL_EMBEDDING_URL: http://embedding-service:8000
+      EMBEDDING_FALLBACK_ENABLED: "true"
+      # OpenRouter key from env (not secret file)
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # Bootstrap admin (plain password for dev)
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@example.com}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-ChangeThisPassword123!}
+      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-Dev Admin}
+      # OAuth provider credentials (plain env vars for dev)
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      DISCORD_OAUTH_CLIENT_ID: ${DISCORD_OAUTH_CLIENT_ID:-}
+      DISCORD_OAUTH_CLIENT_SECRET: ${DISCORD_OAUTH_CLIENT_SECRET:-}
+      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
+      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+    env_file:
+      - ../.env.development
+      - ./secrets/redis.secret  # Required for REDIS_PASSWORD (used by load-secrets-env.sh)
+    secrets: []  # Disable secrets in dev
+
+  n8n:
+    environment:
+      # Override to use plain env vars instead of secrets
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}
+    env_file:
+      - ../.env.development
+    secrets: []  # Disable secrets in dev
+    entrypoint: []  # Use default n8n entrypoint
+    command: ["n8n"]
+
+  alertmanager:
+    environment:
+      # Override for dev - use plain env vars
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+    env_file:
+      - ../.env.development
+    secrets: []  # Disable secrets in dev
+    entrypoint: []  # Use default entrypoint
+    command:
+      - '/bin/alertmanager'
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+
+  grafana:
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}  # Plain password for dev
+      GF_SECURITY_ADMIN_PASSWORD__FILE: ""
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "http://localhost:3001"
+    secrets: []  # Disable secrets in dev

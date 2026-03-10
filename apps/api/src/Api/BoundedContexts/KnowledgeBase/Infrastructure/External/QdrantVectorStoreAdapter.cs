@@ -84,6 +84,31 @@ internal class QdrantVectorStoreAdapter : IQdrantVectorStoreAdapter
         return embeddings;
     }
 
+    /// <inheritdoc/>
+    public async Task<List<Embedding>> SearchByMultipleGameIdsAsync(
+        IReadOnlyList<Guid> gameIds,
+        Vector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (gameIds is not { Count: > 0 })
+            return new List<Embedding>();
+
+        // Search each game ID and merge results, sorted by score
+        var allEmbeddings = new List<Embedding>();
+        foreach (var gameId in gameIds)
+        {
+            var results = await SearchAsync(gameId, queryVector, topK, minScore, documentIds, cancellationToken)
+                .ConfigureAwait(false);
+            allEmbeddings.AddRange(results);
+        }
+
+        // Return top K by descending score (no score on Embedding, so we return all deduplicated)
+        return allEmbeddings.Take(topK).ToList();
+    }
+
     public async Task IndexBatchAsync(
         List<Embedding> embeddings,
         CancellationToken cancellationToken = default)

@@ -64,6 +64,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
+        services.AddScoped<IExpansionGameResolver, Infrastructure.Services.ExpansionGameResolver>(); // Issue #5588: Expansion priority in RAG search
         services.AddScoped<ITextChunkSearchService, Infrastructure.Services.TextChunkSearchService>(); // Phase 2: PostgreSQL FTS + adjacent chunk retrieval
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
         // Issue #3436: Tier-Strategy Access Validation Service
@@ -182,9 +183,20 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-2391 Sprint 2: LLM Provider Factory
         services.AddSingleton<LlmProviderFactory>();
 
+        // Issue #5487: Circuit breaker registry (Singleton - shared state across all scoped services)
+        services.AddSingleton<ICircuitBreakerRegistry, CircuitBreakerRegistry>();
+
+        // Issue #5487: Provider selector (Scoped - uses scoped IAiModelConfigurationRepository)
+        services.AddScoped<ILlmProviderSelector, LlmProviderSelector>();
+
+        // Issue #5489: Cost service (Scoped - uses scoped repositories via IServiceScopeFactory)
+        services.AddScoped<ILlmCostService, LlmCostService>();
+
+        // Issue #5505: A/B test budget isolation (Scoped - uses Redis for daily budget + rate limits)
+        services.AddScoped<IAbTestBudgetService, AbTestBudgetService>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
-        // ISSUE-5086: IServiceScopeFactory is auto-injected by the DI container (built-in singleton)
-        // enabling fire-and-forget circuit breaker notifications without coupling to request scope
+        // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
@@ -264,9 +276,11 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
+        services.AddScoped<IAbTestSessionRepository, AbTestSessionRepository>(); // Issue #5491: A/B test sessions
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
         services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
+        services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
 
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
         services.AddScoped<IQdrantVectorStoreAdapter, PgVectorStoreAdapter>();
@@ -295,6 +309,13 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-1907: ADR-016 Phase 5 - Grid Search and Benchmark Reports
         services.AddScoped<RunGridSearchHandler>();
         services.AddSingleton<IReportGeneratorService, ReportGeneratorService>();
+
+        // Issue #5513: AI consent check service (cross-cutting from Administration BC)
+        services.AddScoped<IUserAiConsentCheckService, UserAiConsentCheckService>();
+
+        // Issue #5510: PII detection and redaction for OpenRouter-bound prompts
+        services.AddOptions<PiiDetectorOptions>();
+        services.AddSingleton<IPiiDetector, PiiDetector>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)
@@ -420,6 +441,35 @@ internal static class KnowledgeBaseServiceExtensions
                 .WithIdentity("openrouter-daily-summary-trigger", "knowledge-base")
                 .WithCronSchedule("0 0 8 * * ?")
                 .WithDescription("Runs daily at 8 AM UTC to send yesterday's OpenRouter usage digest to all admins"));
+        });
+
+        // Issue #5511: GDPR pseudonymization of UserId in LLM request logs after 7 days
+        services.AddOptions<LlmRequestLogPseudonymizationOptions>();
+        services.AddQuartz(q =>
+        {
+            q.AddJob<LlmRequestLogPseudonymizationJob>(opts => opts
+                .WithIdentity("llm-log-pseudonymization-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("llm-log-pseudonymization-job", "knowledge-base")
+                .WithIdentity("llm-log-pseudonymization-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 2 * * ?")
+                .WithDescription("Runs daily at 2 AM UTC to pseudonymize UserId in logs older than 7 days"));
+        });
+
+        // Issue #5493: Model availability verification — checks OpenRouter models every 6 hours
+        services.AddQuartz(q =>
+        {
+            q.AddJob<ModelAvailabilityCheckJob>(opts => opts
+                .WithIdentity("model-availability-check-job", "knowledge-base")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("model-availability-check-job", "knowledge-base")
+                .WithIdentity("model-availability-check-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 */6 * * ?")
+                .WithDescription("Runs every 6 hours to verify configured LLM models are still available on OpenRouter"));
         });
     }
 }

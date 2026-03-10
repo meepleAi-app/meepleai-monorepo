@@ -98,8 +98,8 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps) {
                   boxShadow: '0 4px 12px rgba(139, 90, 60, 0.1)',
                 }}
                 formatter={(
-                  value: number | undefined,
-                  name: string | undefined,
+                  value: number | string | ReadonlyArray<number | string> | undefined,
+                  name: string | number | undefined,
                   props: { payload?: { count?: number } }
                 ) => [
                   `${props?.payload?.count?.toLocaleString() ?? value ?? 0} calls (${value ?? 0}%)`,

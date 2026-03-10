@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Administration.Application.Commands.TierStrategy;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries.TierStrategy;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -60,6 +62,44 @@ internal static class TierStrategyAdminEndpoints
             .WithDescription("Updates the LLM model configuration for a specific RAG strategy.")
             .Produces<StrategyModelMappingDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // POST /api/v1/admin/tier-strategy/apply-replacement - Apply model replacement
+        tierStrategyGroup.MapPost("/apply-replacement", HandleApplyReplacement)
+            .WithName("ApplyModelReplacement")
+            .WithSummary("Apply model replacement across affected strategies")
+            .WithDescription("Replaces a deprecated/unavailable model with a suggested replacement across all strategy mappings that use it as primary model. Issue #5499.")
+            .Produces<ApplyModelReplacementResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // GET /api/v1/admin/tier-strategy/model-health - Get model health/compatibility
+        tierStrategyGroup.MapGet("/model-health", HandleGetModelHealth)
+            .WithName("GetModelHealth")
+            .WithSummary("Get model health and availability status")
+            .WithDescription("Returns health/availability data for all tracked LLM models. Issue #5503.")
+            .Produces<GetModelHealthResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // GET /api/v1/admin/tier-strategy/model-change-history - Get model change audit log
+        tierStrategyGroup.MapGet("/model-change-history", HandleGetModelChangeHistory)
+            .WithName("GetModelChangeHistory")
+            .WithSummary("Get model change history")
+            .WithDescription("Returns audit trail of model changes (swaps, deprecations, fallbacks). Issue #5503.")
+            .Produces<GetModelChangeHistoryResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // POST /api/v1/admin/tier-strategy/check-now - Trigger immediate availability check
+        tierStrategyGroup.MapPost("/check-now", HandleCheckNow)
+            .WithName("TriggerModelAvailabilityCheck")
+            .WithSummary("Trigger immediate model availability check")
+            .WithDescription("Triggers the ModelAvailabilityCheckJob to run immediately. Issue #5503.")
+            .Produces<TriggerModelAvailabilityCheckResult>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
@@ -158,6 +198,77 @@ internal static class TierStrategyAdminEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleApplyReplacement(
+        [FromBody] ApplyModelReplacementRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation(
+            "Admin {AdminId} applying model replacement: {DeprecatedModel} → {ReplacementModel}",
+            session!.User!.Id,
+            request.DeprecatedModelId,
+            request.ReplacementModelId);
+
+        var command = new ApplyModelReplacementCommand(
+            request.DeprecatedModelId,
+            request.ReplacementModelId);
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetModelHealth(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetModelHealthQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetModelChangeHistory(
+        [FromQuery] string? modelId,
+        [FromQuery] int? limit,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var clampedLimit = Math.Clamp(limit ?? 50, 1, 500);
+        var query = new GetModelChangeHistoryQuery(modelId, clampedLimit);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleCheckNow(
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation(
+            "Admin {AdminId} triggered immediate model availability check",
+            session!.User!.Id);
+
+        var command = new TriggerModelAvailabilityCheckCommand();
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleReset(
         [FromBody] ResetTierStrategyConfigRequest? request,
         HttpContext context,
@@ -204,6 +315,15 @@ internal sealed record UpdateStrategyModelMappingRequest(
     string Provider,
     string PrimaryModel,
     IReadOnlyList<string>? FallbackModels = null
+);
+
+/// <summary>
+/// Request DTO for applying a model replacement.
+/// Issue #5499.
+/// </summary>
+internal sealed record ApplyModelReplacementRequest(
+    string DeprecatedModelId,
+    string ReplacementModelId
 );
 
 /// <summary>

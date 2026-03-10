@@ -1,0 +1,90 @@
+name: Self-Hosted Runner Maintenance
+
+on:
+  schedule:
+    # Weekly Sunday 3 AM UTC - low-traffic window
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      prune_age:
+        description: 'Docker prune age filter (e.g., 72h, 168h)'
+        required: false
+        default: '72h'
+
+concurrency:
+  group: runner-maintenance
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Runner Disk Cleanup
+    # Only run on self-hosted runner (skip if using GitHub-hosted)
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    if: ${{ vars.RUNNER != '' }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Check disk usage (before)
+        run: |
+          echo "=== Disk Usage Before Cleanup ==="
+          df -h / | tail -1
+          echo ""
+          echo "=== Docker Disk Usage ==="
+          docker system df 2>/dev/null || echo "Docker not available"
+
+      - name: Prune Docker resources
+        run: |
+          PRUNE_AGE="${{ github.event.inputs.prune_age || '72h' }}"
+          echo "Pruning Docker resources older than $PRUNE_AGE..."
+
+          # Remove stopped containers
+          docker container prune -f --filter "until=$PRUNE_AGE" 2>/dev/null || true
+
+          # Remove dangling images
+          docker image prune -f 2>/dev/null || true
+
+          # Remove unused images older than threshold
+          docker image prune -a -f --filter "until=$PRUNE_AGE" 2>/dev/null || true
+
+          # Remove unused volumes (careful - only dangling)
+          docker volume prune -f 2>/dev/null || true
+
+          # Remove unused networks
+          docker network prune -f --filter "until=$PRUNE_AGE" 2>/dev/null || true
+
+          # Remove build cache older than threshold
+          docker builder prune -f --filter "until=$PRUNE_AGE" 2>/dev/null || true
+
+      - name: Clean runner temp files
+        run: |
+          # Clean GitHub Actions runner temp directory
+          if [ -d "$RUNNER_TEMP" ]; then
+            find "$RUNNER_TEMP" -type f -mtime +3 -delete 2>/dev/null || true
+            echo "Cleaned runner temp files older than 3 days"
+          fi
+
+          # Clean old workflow logs
+          if [ -d "$HOME/actions-runner/_diag" ]; then
+            find "$HOME/actions-runner/_diag" -name "*.log" -mtime +7 -delete 2>/dev/null || true
+            echo "Cleaned runner diagnostic logs older than 7 days"
+          fi
+
+      - name: Check disk usage (after)
+        run: |
+          echo "=== Disk Usage After Cleanup ==="
+          df -h / | tail -1
+          echo ""
+          echo "=== Docker Disk Usage ==="
+          docker system df 2>/dev/null || echo "Docker not available"
+
+      - name: Alert on low disk space
+        run: |
+          USAGE=$(df -h / | tail -1 | awk '{print $5}' | sed 's/%//')
+          if [ "$USAGE" -gt 80 ]; then
+            echo "::warning::Disk usage is at ${USAGE}% - consider manual cleanup or expanding storage"
+          elif [ "$USAGE" -gt 90 ]; then
+            echo "::error::Disk usage is critically high at ${USAGE}%!"
+            exit 1
+          else
+            echo "Disk usage is healthy at ${USAGE}%"
+          fi

@@ -6,7 +6,9 @@
 #   docker compose -f docker-compose.yml -f compose.prod.yml up -d
 #   docker compose -f docker-compose.yml -f compose.prod.yml down
 #
-# IMPORTANT: Ensure all secrets are properly configured before deployment
+# Secrets: Uses env_file (.secret files) — same pattern as docker-compose.yml.
+# All secrets are loaded via ./secrets/*.secret and ./secrets/prod/*.secret files.
+# See infra/secrets/setup-secrets.ps1 for initial setup.
 
 services:
   # ============================================================================
@@ -15,8 +17,9 @@ services:
 
   postgres:
     restart: always
+    env_file:
+      - ./secrets/database.secret
     environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_prod}
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
     volumes:
@@ -39,11 +42,12 @@ services:
 
   redis:
     restart: always
-    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
+    env_file:
+      - ./secrets/redis.secret
+    command: ["sh", "-c", "redis-server /etc/redis/redis.conf --requirepass $REDIS_PASSWORD"]
     volumes:
       - redisdata-prod:/data
-    secrets:
-      - redis-password
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
     deploy:
       resources:
         limits:
@@ -55,6 +59,10 @@ services:
 
   qdrant:
     restart: always
+    env_file:
+      - ./secrets/qdrant.secret
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY is required - see secrets/qdrant.secret.example}
     volumes:
       - qdrantdata-prod:/qdrant/storage
     deploy:
@@ -72,20 +80,27 @@ services:
 
   api:
     restart: always
+    env_file:
+      - ./secrets/database.secret
+      - ./secrets/jwt.secret
+      - ./secrets/admin.secret
+      - ./secrets/openrouter.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: https://+:8080;http://+:8081
-      ASPNETCORE_Kestrel__Certificates__Default__Path: /run/secrets/api-cert.pfx
-      ASPNETCORE_Kestrel__Certificates__Default__Password__FILE: /run/secrets/api-cert-password
+      # TLS cert — mount via volume, not Docker secrets
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /app/certs/api-cert.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${API_CERT_PASSWORD:-}
       # Issue #2460: Database connection configuration (two options)
       # Option 1 (Default): POSTGRES_* vars - SecretsHelper builds connection string automatically
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_prod}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       # Option 2 (Advanced): Full connection string with SSL/TLS and optimized pooling
       # Uncomment below and comment Option 1 if using managed PostgreSQL (RDS, Azure, GCP)
       # See infra/secrets/postgres-connection-string-production.example.txt for template
       # ConnectionStrings__Postgres: "Host=HOST;Database=DB;Username=USER;Password=PASS;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=50;SSL Mode=Require;Trust Server Certificate=false;Command Timeout=30;Timeout=15"
+    volumes:
+      - ./secrets/prod/api-cert.pfx:/app/certs/api-cert.pfx:ro
     logging:
       driver: "json-file"
       options:
@@ -173,16 +188,15 @@ services:
 
   grafana:
     restart: always
+    env_file:
+      - ./secrets/monitoring.secret
     environment:
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:?GRAFANA_ROOT_URL is required}
-      GF_SECURITY_ADMIN_PASSWORD_FILE: /run/secrets/grafana-admin-password
     volumes:
       - grafana-prod:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./dashboards:/var/lib/grafana/dashboards:ro
-    secrets:
-      - grafana-admin-password
 
   prometheus:
     restart: always
@@ -204,41 +218,6 @@ services:
         reservations:
           cpus: '1'
           memory: 2G
-
-  jaeger:
-    restart: always
-    environment:
-      SPAN_STORAGE_TYPE: "badger"
-      BADGER_EPHEMERAL: "false"  # Use persistent storage in production
-      BADGER_DIRECTORY_VALUE: /badger/data
-      BADGER_DIRECTORY_KEY: /badger/key
-    volumes:
-      - jaeger-prod:/badger
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
-
-  seq:
-    restart: always
-    environment:
-      ACCEPT_EULA: "Y"
-      SEQ_FIRSTRUN_ADMINPASSWORDHASH: ${SEQ_PASSWORD_HASH:?SEQ_PASSWORD_HASH is required}
-      SEQ_CACHE_SYSTEMRAMTARGET: "0.5"
-    volumes:
-      - seqdata-prod:/data
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
 
   alertmanager:
     restart: always
@@ -264,36 +243,7 @@ volumes:
     name: meepleai-qdrantdata-prod
   redisdata-prod:
     name: meepleai-redisdata-prod
-  seqdata-prod:
-    name: meepleai-seqdata-prod
   prometheus-prod:
     name: meepleai-prometheus-prod
   grafana-prod:
     name: meepleai-grafana-prod
-  jaeger-prod:
-    name: meepleai-jaeger-prod
-
-# ============================================================================
-# Production Secrets (must be configured)
-# ============================================================================
-secrets:
-  grafana-admin-password:
-    file: ./secrets/prod/grafana-admin-password.txt
-  postgres-password:
-    file: ./secrets/prod/postgres-password.txt
-  openrouter-api-key:
-    file: ./secrets/prod/openrouter-api-key.txt
-  redis-password:
-    file: ./secrets/prod/redis-password.txt
-  n8n-encryption-key:
-    file: ./secrets/prod/n8n-encryption-key.txt
-  n8n-basic-auth-password:
-    file: ./secrets/prod/n8n-basic-auth-password.txt
-  gmail-app-password:
-    file: ./secrets/prod/gmail-app-password.txt
-  initial-admin-password:
-    file: ./secrets/prod/initial-admin-password.txt
-  api-cert-password:
-    file: ./secrets/prod/api-cert-password.txt
-  api-cert.pfx:
-    file: ./secrets/prod/api-cert.pfx

@@ -3,7 +3,7 @@
 # This file extends docker-compose.yml + compose.prod.yml with meepleai.io specific config
 #
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml up -d
+#   docker compose -f docker-compose.yml -f compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml up -d
 #
 # Or use the deploy script:
 #   ./scripts/deploy-meepleai.sh
@@ -171,20 +171,6 @@ services:
     environment:
       GF_SERVER_ROOT_URL: "https://grafana.meepleai.io"
       GF_SERVER_DOMAIN: "grafana.meepleai.io"
-
-  # ============================================================================
-  # Seq Logging (Internal Only - not exposed)
-  # ============================================================================
-  seq:
-    labels:
-      - "traefik.enable=false"
-
-  # ============================================================================
-  # Jaeger Tracing (Internal Only - not exposed)
-  # ============================================================================
-  jaeger:
-    labels:
-      - "traefik.enable=false"
 
   # ============================================================================
   # Prometheus (Internal Only - accessed via Grafana)

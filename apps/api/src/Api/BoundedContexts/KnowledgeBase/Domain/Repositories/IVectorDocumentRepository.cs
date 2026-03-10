@@ -84,6 +84,14 @@ internal interface IVectorDocumentRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the subset of game IDs that have at least one indexed vector document.
+    /// Used by GameSessionOrchestratorService to avoid N+1 queries (Issue #5578).
+    /// </summary>
+    Task<List<Guid>> GetGameIdsWithDocumentsAsync(
+        IEnumerable<Guid> gameIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns true if at least one of the given VectorDocument IDs belongs to the specified game.
     /// Used by AgentDefinition validators (Issue #5140) to enforce KB card game ownership.
     /// </summary>

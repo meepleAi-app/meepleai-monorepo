@@ -62,7 +62,14 @@ scrape_configs:
           service: 'grafana'
           component: 'visualization'
 
-  # Embedding service (local multilingual embeddings)
+  # ---------------------------------------------------------------------------
+  # AI/ML Services (profile: ai)
+  # These services are only available when started with --profile ai or --profile full.
+  # Expect "target is down" alerts in minimal/dev profiles — this is expected behavior.
+  # To suppress false alerts, use relabeling or inhibition rules in alertmanager.yml.
+  # ---------------------------------------------------------------------------
+
+  # Embedding service (local multilingual embeddings) [profile: ai]
   - job_name: 'embedding-service'
     scrape_interval: 15s
     metrics_path: '/metrics'
@@ -71,8 +78,9 @@ scrape_configs:
         labels:
           service: 'embedding-service'
           component: 'ml'
+          profile: 'ai'
 
-  # Unstructured PDF extraction service (stage 1)
+  # Unstructured PDF extraction service (stage 1) [profile: ai]
   - job_name: 'unstructured-service'
     scrape_interval: 15s
     metrics_path: '/metrics'
@@ -81,8 +89,9 @@ scrape_configs:
         labels:
           service: 'unstructured-service'
           component: 'ingestion'
+          profile: 'ai'
 
-  # SmolDocling VLM extraction service (stage 2)
+  # SmolDocling VLM extraction service (stage 2) [profile: ai]
   - job_name: 'smoldocling-service'
     scrape_interval: 15s
     metrics_path: '/metrics'
@@ -91,6 +100,7 @@ scrape_configs:
         labels:
           service: 'smoldocling-service'
           component: 'ingestion'
+          profile: 'ai'
 
   # OPS-05: Scrape Alertmanager metrics
   - job_name: 'alertmanager'

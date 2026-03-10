@@ -93,6 +93,13 @@ internal class ConversationMemoryRepository : RepositoryBase, IConversationMemor
             .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<int> DeleteByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<ConversationMemoryEntity>()
+            .Where(m => m.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     // ========== Mapping Methods ==========
 
     private static ConversationMemory MapToDomain(ConversationMemoryEntity entity)

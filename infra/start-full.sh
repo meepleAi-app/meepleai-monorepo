@@ -11,7 +11,7 @@ echo ""
 cd "$(dirname "$0")"
 
 # Start with full profile and include HyperDX
-docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml --profile full up -d
+docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile full up -d
 
 echo ""
 echo "✅ Full stack started successfully!"
@@ -39,4 +39,4 @@ echo ""
 echo "⚠️  Note: Full stack may take 2-3 minutes to fully initialize"
 echo ""
 echo "💡 To view logs: docker compose logs -f"
-echo "💡 To stop: docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml down"
+echo "💡 To stop: docker compose -f docker-compose.yml -f compose.hyperdx.yml down"

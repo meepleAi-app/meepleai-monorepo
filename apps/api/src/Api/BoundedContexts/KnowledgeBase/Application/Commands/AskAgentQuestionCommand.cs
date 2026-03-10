@@ -31,6 +31,14 @@ public record AskAgentQuestionCommand : IRequest<AgentChatResponse>
     public Guid? GameId { get; init; }
 
     /// <summary>
+    /// Optional: Live game session ID for session-aware RAG filtering.
+    /// When provided, vector search filters by all game IDs from the session context
+    /// (primary game + expansions) instead of a single GameId.
+    /// Issue #5580: Session-aware RAG chat.
+    /// </summary>
+    public Guid? GameSessionId { get; init; }
+
+    /// <summary>
     /// Optional: Language filter (en, it, de, fr, es)
     /// </summary>
     public string? Language { get; init; }

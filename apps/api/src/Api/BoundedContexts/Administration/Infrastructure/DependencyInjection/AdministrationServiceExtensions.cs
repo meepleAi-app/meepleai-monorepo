@@ -45,6 +45,9 @@ internal static class AdministrationServiceExtensions
         // Issue #4459: RAG execution replay repository
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>();
 
+        // Issue #5512: GDPR AI consent tracking
+        services.AddScoped<IUserAiConsentRepository, UserAiConsentRepository>();
+
         // Issue #3692: Token Management repositories + OpenRouter API
         services.AddScoped<ITokenTierRepository, TokenTierRepository>();
         services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();

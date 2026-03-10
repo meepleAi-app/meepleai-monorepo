@@ -30,10 +30,13 @@ export function AddExpansionSheet({
   baseGameTitle,
 }: AddExpansionSheetProps) {
   const [searchTerm, setSearchTerm] = useState(baseGameTitle);
+  const [debouncedTerm, setDebouncedTerm] = useState(baseGameTitle);
   const [results, setResults] = useState<BggSearchResult[]>([]);
   const [status, setStatus] = useState<Status>('idle');
   const [selectedResult, setSelectedResult] = useState<BggSearchResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Prevents "no results" message from flashing before any search has fired
+  const [hasSearched, setHasSearched] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,44 +44,68 @@ export function AddExpansionSheet({
   useEffect(() => {
     if (open) {
       setSearchTerm(baseGameTitle);
+      setDebouncedTerm(baseGameTitle);
       setResults([]);
       setStatus('idle');
       setSelectedResult(null);
       setErrorMessage(null);
+      setHasSearched(false);
     }
   }, [open, baseGameTitle]);
 
-  // Debounced BGG search
+  // Debounce: update debouncedTerm after DEBOUNCE_MS of input inactivity
   useEffect(() => {
     if (!open) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    const term = searchTerm.trim();
-    if (!term) {
-      setResults([]);
-      setStatus('idle');
-      return;
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      setStatus('searching');
-      setErrorMessage(null);
-      try {
-        const response = await api.bgg.search(term);
-        setResults(response.results);
-        setStatus('idle');
-      } catch {
-        setResults([]);
-        setStatus('error');
-        setErrorMessage('Errore nella ricerca BGG. Riprova.');
-      }
+    debounceRef.current = setTimeout(() => {
+      setDebouncedTerm(searchTerm);
     }, DEBOUNCE_MS);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [searchTerm, open]);
+
+  // Execute BGG search when debouncedTerm changes; stale flag prevents older
+  // responses from overwriting results when the user types quickly.
+  useEffect(() => {
+    if (!open) return;
+
+    if (!debouncedTerm.trim()) {
+      setResults([]);
+      return;
+    }
+
+    let stale = false;
+
+    const doSearch = async () => {
+      setStatus('searching');
+      setErrorMessage(null);
+      try {
+        const response = await api.bgg.search(debouncedTerm);
+        if (!stale) {
+          setResults(response.results);
+          setStatus('idle');
+          setHasSearched(true);
+        }
+      } catch {
+        if (!stale) {
+          setResults([]);
+          setStatus('error');
+          setErrorMessage('Errore nella ricerca BGG. Riprova.');
+          setHasSearched(true);
+        }
+      }
+    };
+
+    void doSearch();
+
+    return () => {
+      stale = true;
+    };
+  }, [debouncedTerm, open]);
 
   const handleSelectResult = (result: BggSearchResult) => {
     setSelectedResult(result);
@@ -97,6 +124,7 @@ export function AddExpansionSheet({
         source: 'BoardGameGeek',
         bggId: selectedResult.bggId,
         title: selectedResult.name,
+        // BGG search results don't include player counts; defaults used as placeholders
         minPlayers: 1,
         maxPlayers: 4,
         yearPublished: selectedResult.yearPublished ?? undefined,
@@ -240,8 +268,8 @@ export function AddExpansionSheet({
                 </div>
               )}
 
-              {/* No results */}
-              {results.length === 0 && status === 'idle' && searchTerm.trim().length > 0 && (
+              {/* No results — only shown after at least one search has completed */}
+              {hasSearched && results.length === 0 && status === 'idle' && (
                 <p className="text-sm text-slate-500 text-center py-4">
                   Nessun risultato trovato. Prova con un termine diverso.
                 </p>

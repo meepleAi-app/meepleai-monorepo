@@ -207,6 +207,8 @@ import {
 import {
   type TierStrategyMatrixDto,
   type StrategyModelMappingDto,
+  type ModelHealthResult,
+  type ModelChangeHistoryResult,
 } from '../schemas/tier-strategy.schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -2003,6 +2005,43 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       fallbackModels?: string[];
     }): Promise<void> {
       await httpClient.put('/api/v1/admin/tier-strategy/model-mapping', payload);
+    },
+
+    // ========== Model Health (Issue #5503) ==========
+
+    /**
+     * Get model health/availability status
+     * GET /api/v1/admin/tier-strategy/model-health
+     */
+    async getModelHealth(): Promise<ModelHealthResult> {
+      const result = await httpClient.get('/api/v1/admin/tier-strategy/model-health');
+      return (result as ModelHealthResult) || { models: [] };
+    },
+
+    /**
+     * Get model change history (audit trail)
+     * GET /api/v1/admin/tier-strategy/model-change-history
+     */
+    async getModelChangeHistory(
+      modelId?: string,
+      limit: number = 50
+    ): Promise<ModelChangeHistoryResult> {
+      const params = new URLSearchParams();
+      if (modelId) params.set('modelId', modelId);
+      params.set('limit', limit.toString());
+      const result = await httpClient.get(
+        `/api/v1/admin/tier-strategy/model-change-history?${params.toString()}`
+      );
+      return (result as ModelChangeHistoryResult) || { changes: [] };
+    },
+
+    /**
+     * Trigger immediate model availability check
+     * POST /api/v1/admin/tier-strategy/check-now
+     */
+    async triggerModelAvailabilityCheck(): Promise<{ triggered: boolean; message: string }> {
+      const result = await httpClient.post('/api/v1/admin/tier-strategy/check-now', {});
+      return result as { triggered: boolean; message: string };
     },
 
     // ========== PDF Analytics (Issue #3715) ==========

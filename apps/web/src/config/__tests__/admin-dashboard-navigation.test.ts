@@ -4,13 +4,20 @@ import { DASHBOARD_SECTIONS, getActiveSection, getSection } from '../admin-dashb
 
 describe('admin-dashboard-navigation', () => {
   describe('DASHBOARD_SECTIONS', () => {
-    it('should have 10 sections total', () => {
-      expect(DASHBOARD_SECTIONS).toHaveLength(10);
+    it('should have 6 sections total', () => {
+      expect(DASHBOARD_SECTIONS).toHaveLength(6);
     });
 
     it('should have unique section ids', () => {
       const ids = DASHBOARD_SECTIONS.map(s => s.id);
       expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('should include all expected section ids', () => {
+      const ids = DASHBOARD_SECTIONS.map(s => s.id);
+      expect(ids).toEqual(
+        expect.arrayContaining(['overview', 'content', 'ai', 'users', 'system', 'analytics'])
+      );
     });
   });
 
@@ -21,61 +28,61 @@ describe('admin-dashboard-navigation', () => {
       expect(section!.id).toBe('overview');
     });
 
-    it('should resolve agents/pipeline section', () => {
+    it('should resolve agents routes to ai section', () => {
       const section = getActiveSection('/admin/agents/pipeline');
       expect(section).toBeDefined();
-      expect(section!.id).toBe('agents');
+      expect(section!.id).toBe('ai');
     });
 
-    it('should resolve knowledge-base section', () => {
+    it('should resolve knowledge-base routes to content section', () => {
       const section = getActiveSection('/admin/knowledge-base');
       expect(section).toBeDefined();
-      expect(section!.id).toBe('knowledge-base');
+      expect(section!.id).toBe('content');
     });
   });
 
-  describe('new hub sections', () => {
-    it('should resolve monitor section', () => {
+  describe('merged sections', () => {
+    it('should resolve /admin/monitor to system section', () => {
       const section = getActiveSection('/admin/monitor');
       expect(section).toBeDefined();
-      expect(section!.id).toBe('monitor');
+      expect(section!.id).toBe('system');
     });
 
-    it('should resolve config section', () => {
+    it('should resolve /admin/config to system section', () => {
       const section = getActiveSection('/admin/config');
       expect(section).toBeDefined();
-      expect(section!.id).toBe('config');
+      expect(section!.id).toBe('system');
     });
 
-    it('should resolve analytics section', () => {
+    it('should resolve /admin/analytics to analytics section', () => {
       const section = getActiveSection('/admin/analytics');
       expect(section).toBeDefined();
       expect(section!.id).toBe('analytics');
     });
 
-    it('should resolve ai section', () => {
+    it('should resolve /admin/ai to ai section', () => {
       const section = getActiveSection('/admin/ai');
       expect(section).toBeDefined();
       expect(section!.id).toBe('ai');
     });
 
-    it('should resolve content section', () => {
+    it('should resolve /admin/content to content section', () => {
       const section = getActiveSection('/admin/content');
       expect(section).toBeDefined();
       expect(section!.id).toBe('content');
     });
   });
 
-  describe('new section sidebar items', () => {
-    it('monitor section should have Alerts sidebar item', () => {
-      const section = getSection('monitor');
+  describe('section sidebar items', () => {
+    it('system section should have Alerts sidebar item', () => {
+      const section = getSection('system');
       expect(section).toBeDefined();
       const alertsItem = section!.sidebarItems.find(i => i.label === 'Alerts');
       expect(alertsItem).toBeDefined();
     });
 
-    it('config section should have Feature Flags sidebar item', () => {
-      const section = getSection('config');
+    it('system section should have Feature Flags sidebar item', () => {
+      const section = getSection('system');
       expect(section).toBeDefined();
       const flagsItem = section!.sidebarItems.find(i => i.label === 'Feature Flags');
       expect(flagsItem).toBeDefined();
@@ -88,28 +95,24 @@ describe('admin-dashboard-navigation', () => {
       expect(auditItem).toBeDefined();
     });
 
-    it('ai section should have Agents sidebar item', () => {
+    it('ai section should have All Agents sidebar item', () => {
       const section = getSection('ai');
       expect(section).toBeDefined();
-      const agentsItem = section!.sidebarItems.find(i => i.label === 'Agents');
+      const agentsItem = section!.sidebarItems.find(i => i.label === 'All Agents');
       expect(agentsItem).toBeDefined();
     });
 
-    it('content section should have Games sidebar item', () => {
+    it('content section should have All Games sidebar item', () => {
       const section = getSection('content');
       expect(section).toBeDefined();
-      const gamesItem = section!.sidebarItems.find(i => i.label === 'Games');
+      const gamesItem = section!.sidebarItems.find(i => i.label === 'All Games');
       expect(gamesItem).toBeDefined();
     });
   });
 
-  describe('new section groups', () => {
-    it('monitor should be in core group', () => {
-      expect(getSection('monitor')!.group).toBe('core');
-    });
-
-    it('config should be in core group', () => {
-      expect(getSection('config')!.group).toBe('core');
+  describe('section groups', () => {
+    it('system should be in core group', () => {
+      expect(getSection('system')!.group).toBe('core');
     });
 
     it('analytics should be in core group', () => {

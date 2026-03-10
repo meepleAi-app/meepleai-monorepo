@@ -38,7 +38,6 @@
 
 import { type ReactNode, Suspense } from 'react';
 
-import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
@@ -111,18 +110,14 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
         className={cn(
           'flex flex-col flex-1',
           'transition-[margin] duration-200 ease-in-out',
-          isCollapsed
-            ? 'md:ml-[var(--sidebar-width-collapsed)]'
-            : 'md:ml-[var(--sidebar-width-expanded)]'
+          isCollapsed ? 'md:ml-[var(--sidebar-width-collapsed)]' : 'md:ml-[var(--sidebar-width-expanded)]'
         )}
         data-testid="layout-content-area"
       >
         {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────── */}
-        <ErrorBoundary fallback={null} componentName="MiniNav">
-          <Suspense>
-            <MiniNav />
-          </Suspense>
-        </ErrorBoundary>
+        <Suspense>
+          <MiniNav />
+        </Suspense>
 
         {/* ── Mobile Breadcrumb (below MiniNav, mobile only) ───────────── */}
         <MobileBreadcrumb />
@@ -146,29 +141,17 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
         </main>
 
         {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ───── */}
-        <ErrorBoundary fallback={null} componentName="FloatingActionBar">
-          <Suspense>
-            <FloatingActionBar />
-          </Suspense>
-        </ErrorBoundary>
+        <FloatingActionBar />
 
         {/* ── SmartFAB: context-aware primary action (mobile only) ────────── */}
-        <ErrorBoundary fallback={null} componentName="SmartFAB">
-          <Suspense>
-            <SmartFAB />
-          </Suspense>
-        </ErrorBoundary>
+        <SmartFAB />
       </div>
 
       {/* ── Level 0: MobileTabBar (persistent mobile navigation) ───────── */}
-      <ErrorBoundary fallback={null} componentName="MobileTabBar">
-        <MobileTabBar />
-      </ErrorBoundary>
+      <MobileTabBar />
 
       {/* Card Stack Panel — "Carte in Mano" */}
-      <ErrorBoundary fallback={null} componentName="CardStackPanel">
-        <CardStackPanel />
-      </ErrorBoundary>
+      <CardStackPanel />
     </div>
   );
 }

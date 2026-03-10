@@ -168,7 +168,7 @@ try {
     }
 
     $userRole = $loginData.user.role
-    if ($userRole -ne "Admin") {
+    if ($userRole -notin @("Admin", "admin")) {
         Write-Err "User role is '$userRole', Admin required"
         exit 1
     }
@@ -177,10 +177,6 @@ try {
 }
 catch {
     Write-Err "Login failed: $($_.Exception.Message)"
-    if ($_.Exception.Response) {
-        $reader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
-        Write-Info $reader.ReadToEnd()
-    }
     exit 1
 }
 
@@ -222,14 +218,10 @@ if (-not $SkipImport) {
         }
     }
     catch {
-        Write-Err "Bulk import failed: $($_.Exception.Message)"
-        if ($_.Exception.Response) {
-            $statusCode = [int]$_.Exception.Response.StatusCode
-            if ($statusCode -eq 429) {
-                Write-Warn "Rate limited (1 req/5min). Wait 5 minutes and retry with -SkipImport if games were partially imported."
-            }
-            $reader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
-            Write-Info $reader.ReadToEnd()
+        $msg = $_.Exception.Message
+        Write-Err "Bulk import failed: $msg"
+        if ($msg -match "429") {
+            Write-Warn "Rate limited (1 req/5min). Wait 5 minutes and retry, or use -SkipImport if games were already imported."
         }
         exit 1
     }
@@ -237,37 +229,33 @@ if (-not $SkipImport) {
     # Wait for BGG background service to process all imports
     Write-Phase "PHASE 1b" "Waiting for BGG import processing (~1 game/sec)"
 
+    # Poll queue status by checking DB state via duplicate-check endpoint
     $maxWaitSeconds = [math]::Max(120, $games.Count * 3)
     $elapsed = 0
-    $lastEnqueued = -1
+    $targetCount = $games.Count
 
     while ($elapsed -lt $maxWaitSeconds) {
         Start-Sleep -Seconds 5
         $elapsed += 5
 
         try {
-            # Check progress via SSE endpoint (single poll)
-            $progressResponse = Invoke-RestMethod `
-                -Uri "$BaseUrl/api/v1/admin/games/bulk-import/progress" `
+            # Count how many games exist in catalog via search
+            $searchResponse = Invoke-RestMethod `
+                -Uri "$BaseUrl/api/v1/shared-games?pageSize=1" `
                 -Method GET `
                 -Headers $headers `
                 -WebSession $webSession `
                 -TimeoutSec 10
 
-            # SSE returns text; parse last progress event
-            if ($progressResponse -match '"isActive"\s*:\s*false') {
-                Write-OK "BGG import complete"
-                break
-            }
+            $totalInCatalog = $searchResponse.totalCount
+            Write-Info "Catalog: $totalInCatalog games ($elapsed sec elapsed)"
 
-            # Extract counts from progress
-            if ($progressResponse -match '"completed"\s*:\s*(\d+)') {
-                $completed = [int]$Matches[1]
-                Write-Info "Progress: $completed/$($games.Count) completed ($elapsed sec elapsed)"
+            if ($totalInCatalog -ge $targetCount) {
+                Write-OK "BGG import complete ($totalInCatalog games in catalog)"
+                break
             }
         }
         catch {
-            # SSE endpoint may timeout; that's OK, just retry
             Write-Info "Polling... ($elapsed sec elapsed)"
         }
     }
@@ -345,114 +333,117 @@ if (-not $SkipUpload) {
             }
         }
 
-        # Step 2b: Upload PDF
+        # Step 2b: Upload PDF using PowerShell native multipart form
         try {
-            $boundary = [System.Guid]::NewGuid().ToString()
-            $LF = "`r`n"
-
-            # Build multipart/form-data manually for PowerShell compatibility
-            $fileBytes = [System.IO.File]::ReadAllBytes($pdfPath)
             $fileName = [System.IO.Path]::GetFileName($pdfPath)
 
-            $bodyLines = @()
+            # Build multipart form using .NET HttpClient for reliable binary upload
+            $multipartContent = [System.Net.Http.MultipartFormDataContent]::new()
 
             # File field
-            $bodyLines += "--$boundary"
-            $bodyLines += "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`""
-            $bodyLines += "Content-Type: application/pdf"
-            $bodyLines += ""
+            $fileStream = [System.IO.File]::OpenRead($pdfPath)
+            $fileContent = [System.Net.Http.StreamContent]::new($fileStream)
+            $fileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new("application/pdf")
+            $multipartContent.Add($fileContent, "file", $fileName)
 
-            # Convert to bytes
-            $headerBytes = [System.Text.Encoding]::UTF8.GetBytes(($bodyLines -join $LF) + $LF)
-
-            # Additional form fields
-            $formFields = @()
-
+            # Form fields
             if ($sharedGameId) {
-                $formFields += "--$boundary${LF}Content-Disposition: form-data; name=`"gameId`"${LF}${LF}$sharedGameId"
+                $multipartContent.Add([System.Net.Http.StringContent]::new($sharedGameId), "gameId")
             }
             else {
-                # Fallback: use gameName for auto-creation
-                $formFields += "--$boundary${LF}Content-Disposition: form-data; name=`"gameName`"${LF}${LF}$gameName"
+                $multipartContent.Add([System.Net.Http.StringContent]::new($gameName), "gameName")
+            }
+            $multipartContent.Add([System.Net.Http.StringContent]::new("base"), "versionType")
+            $multipartContent.Add([System.Net.Http.StringContent]::new($language), "language")
+            $multipartContent.Add([System.Net.Http.StringContent]::new("1.0"), "versionNumber")
+
+            # Use HttpClient for reliable multipart upload
+            $httpClient = [System.Net.Http.HttpClient]::new()
+            $httpClient.BaseAddress = [Uri]::new($BaseUrl)
+
+            # Copy session cookies
+            if ($webSession -and $webSession.Cookies) {
+                $cookieHeader = ($webSession.Cookies.GetCookies([Uri]::new($BaseUrl)) | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join "; "
+                if ($cookieHeader) {
+                    $httpClient.DefaultRequestHeaders.Add("Cookie", $cookieHeader)
+                }
             }
 
-            $formFields += "--$boundary${LF}Content-Disposition: form-data; name=`"versionType`"${LF}${LF}base"
-            $formFields += "--$boundary${LF}Content-Disposition: form-data; name=`"language`"${LF}${LF}$language"
-            $formFields += "--$boundary${LF}Content-Disposition: form-data; name=`"versionNumber`"${LF}${LF}1.0"
+            $response = $httpClient.PostAsync("/api/v1/ingest/pdf", $multipartContent).Result
+            $responseBody = $response.Content.ReadAsStringAsync().Result
 
-            $fieldBytes = [System.Text.Encoding]::UTF8.GetBytes(($formFields -join $LF) + $LF)
-            $endBytes   = [System.Text.Encoding]::UTF8.GetBytes("${LF}--${boundary}--${LF}")
+            $fileStream.Dispose()
+            $multipartContent.Dispose()
+            $httpClient.Dispose()
 
-            # Combine all parts
-            $bodyStream = [System.IO.MemoryStream]::new()
-            $bodyStream.Write($headerBytes, 0, $headerBytes.Length)
-            $bodyStream.Write($fileBytes, 0, $fileBytes.Length)
-            $bodyStream.Write($fieldBytes, 0, $fieldBytes.Length)
-            $bodyStream.Write($endBytes, 0, $endBytes.Length)
-            $bodyArray = $bodyStream.ToArray()
-            $bodyStream.Dispose()
-
-            $uploadResponse = Invoke-RestMethod `
-                -Uri "$BaseUrl/api/v1/ingest/pdf" `
-                -Method POST `
-                -ContentType "multipart/form-data; boundary=$boundary" `
-                -Body $bodyArray `
-                -Headers $headers `
-                -WebSession $webSession
-
-            if ($uploadResponse.document) {
-                Write-OK "  Uploaded: $($uploadResponse.document.id) (state: $($uploadResponse.document.processingState))"
-                $uploaded++
-            }
-            elseif ($uploadResponse.documentId) {
-                Write-OK "  Uploaded: $($uploadResponse.documentId)"
+            if ($response.IsSuccessStatusCode) {
+                $uploadResponse = $responseBody | ConvertFrom-Json
+                if ($uploadResponse.document) {
+                    Write-OK "  Uploaded: $($uploadResponse.document.id) (state: $($uploadResponse.document.processingState))"
+                }
+                elseif ($uploadResponse.documentId) {
+                    Write-OK "  Uploaded: $($uploadResponse.documentId)"
+                }
+                else {
+                    Write-OK "  Uploaded successfully"
+                }
                 $uploaded++
             }
             else {
-                Write-OK "  Uploaded successfully"
-                $uploaded++
-            }
-        }
-        catch {
-            $statusCode = 0
-            $errorBody = ""
-            if ($_.Exception.Response) {
-                $statusCode = [int]$_.Exception.Response.StatusCode
-                try {
-                    $reader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
-                    $errorBody = $reader.ReadToEnd()
-                }
-                catch {}
-            }
+                $statusCode = [int]$response.StatusCode
 
-            if ($statusCode -eq 409) {
-                Write-Warn "  Duplicate PDF (already uploaded)"
-                $skippedUpload++
-            }
-            elseif ($statusCode -eq 429) {
-                Write-Warn "  Rate limited. Waiting 30s then retrying..."
-                Start-Sleep -Seconds 30
-                # Simple retry (won't recurse further)
-                try {
-                    $retryResponse = Invoke-RestMethod `
-                        -Uri "$BaseUrl/api/v1/ingest/pdf" `
-                        -Method POST `
-                        -ContentType "multipart/form-data; boundary=$boundary" `
-                        -Body $bodyArray `
-                        -Headers $headers `
-                        -WebSession $webSession
-                    Write-OK "  Uploaded on retry"
-                    $uploaded++
+                if ($statusCode -eq 409) {
+                    Write-Warn "  Duplicate PDF (already uploaded)"
+                    $skippedUpload++
                 }
-                catch {
-                    Write-Err "  Upload failed on retry: $($_.Exception.Message)"
+                elseif ($statusCode -eq 429) {
+                    Write-Warn "  Rate limited. Waiting 30s then retrying..."
+                    Start-Sleep -Seconds 30
+
+                    # Simple retry with fresh HttpClient
+                    try {
+                        $retryFileStream = [System.IO.File]::OpenRead($pdfPath)
+                        $retryMultipart = [System.Net.Http.MultipartFormDataContent]::new()
+                        $retryFileContent = [System.Net.Http.StreamContent]::new($retryFileStream)
+                        $retryFileContent.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new("application/pdf")
+                        $retryMultipart.Add($retryFileContent, "file", $fileName)
+                        if ($sharedGameId) { $retryMultipart.Add([System.Net.Http.StringContent]::new($sharedGameId), "gameId") }
+                        $retryMultipart.Add([System.Net.Http.StringContent]::new("base"), "versionType")
+                        $retryMultipart.Add([System.Net.Http.StringContent]::new($language), "language")
+                        $retryMultipart.Add([System.Net.Http.StringContent]::new("1.0"), "versionNumber")
+
+                        $retryClient = [System.Net.Http.HttpClient]::new()
+                        $retryClient.BaseAddress = [Uri]::new($BaseUrl)
+                        if ($cookieHeader) { $retryClient.DefaultRequestHeaders.Add("Cookie", $cookieHeader) }
+                        $retryResp = $retryClient.PostAsync("/api/v1/ingest/pdf", $retryMultipart).Result
+
+                        $retryFileStream.Dispose()
+                        $retryMultipart.Dispose()
+                        $retryClient.Dispose()
+
+                        if ($retryResp.IsSuccessStatusCode) {
+                            Write-OK "  Uploaded on retry"
+                            $uploaded++
+                        }
+                        else {
+                            Write-Err "  Upload failed on retry: $([int]$retryResp.StatusCode)"
+                            $failed++
+                        }
+                    }
+                    catch {
+                        Write-Err "  Upload failed on retry: $($_.Exception.Message)"
+                        $failed++
+                    }
+                }
+                else {
+                    Write-Err "  Upload failed ($statusCode): $responseBody"
                     $failed++
                 }
             }
-            else {
-                Write-Err "  Upload failed ($statusCode): $errorBody"
-                $failed++
-            }
+        }
+        catch {
+            Write-Err "  Upload exception: $($_.Exception.Message)"
+            $failed++
         }
 
         # Small delay between uploads to avoid rate limiting

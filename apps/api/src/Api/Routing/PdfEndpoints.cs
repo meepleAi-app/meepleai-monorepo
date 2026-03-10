@@ -43,7 +43,8 @@ internal static class PdfEndpoints
     private static void MapStandardUploadEndpoint(RouteGroupBuilder group)
     {
         group.MapPost("/ingest/pdf", HandleStandardUpload)
-             .DisableAntiforgery(); // Ensure we can post files
+             .DisableAntiforgery() // Ensure we can post files
+             .WithMetadata(new RequestSizeLimitAttribute(104_857_600)); // 100 MB for large rulebooks
     }
 
     /// <summary>

@@ -211,7 +211,7 @@ jobs:
           NEXT_PUBLIC_API_BASE: http://localhost:8080
 
       # ===== Run E2E Tests =====
-      - name: Run E2E Tests (Shard ${{ matrix.shard }}/4)
+      - name: Run E2E Tests (Shard ${{ matrix.shard }}/${{ env.TOTAL_SHARDS }})
         working-directory: apps/web
         run: pnpm test:e2e:shard${{ matrix.shard }}
         env:
@@ -291,16 +291,62 @@ jobs:
       - name: Calculate Pass Rate
         id: metrics
         run: |
-          # Parse Playwright JSON report (if available)
-          # For now, rely on job success/failure
-          echo "pass_rate=95" >> $GITHUB_OUTPUT
-          echo "total_tests=109" >> $GITHUB_OUTPUT
-          echo "passed_tests=104" >> $GITHUB_OUTPUT
-          echo "failed_tests=5" >> $GITHUB_OUTPUT
+          TOTAL=0
+          PASSED=0
+          FAILED=0
+
+          # Parse Playwright JSON reports from all shards
+          for result_file in reports/results*.json reports/**/results*.json; do
+            if [ -f "$result_file" ]; then
+              FILE_TOTAL=$(jq '[.. | .status? // empty] | length' "$result_file" 2>/dev/null || echo 0)
+              FILE_PASSED=$(jq '[.. | select(.status? == "passed")] | length' "$result_file" 2>/dev/null || echo 0)
+              TOTAL=$((TOTAL + FILE_TOTAL))
+              PASSED=$((PASSED + FILE_PASSED))
+            fi
+          done
+
+          # Fallback: derive from job results if no JSON reports found
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "::warning::No Playwright JSON reports found, deriving pass rate from job results"
+            if [ "${{ needs.e2e-tests.result }}" == "success" ]; then
+              PASS_RATE=100
+            else
+              PASS_RATE=0
+            fi
+            echo "pass_rate=$PASS_RATE" >> $GITHUB_OUTPUT
+            echo "total_tests=0" >> $GITHUB_OUTPUT
+            echo "passed_tests=0" >> $GITHUB_OUTPUT
+            echo "failed_tests=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          FAILED=$((TOTAL - PASSED))
+          if [ "$TOTAL" -gt 0 ]; then
+            PASS_RATE=$((PASSED * 100 / TOTAL))
+          else
+            PASS_RATE=0
+          fi
+          echo "pass_rate=$PASS_RATE" >> $GITHUB_OUTPUT
+          echo "total_tests=$TOTAL" >> $GITHUB_OUTPUT
+          echo "passed_tests=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed_tests=$FAILED" >> $GITHUB_OUTPUT
 
       - name: Enforce Quality Gate (≥90% Pass Rate)
         run: |
           PASS_RATE=${{ steps.metrics.outputs.pass_rate }}
+          TOTAL=${{ steps.metrics.outputs.total_tests }}
+
+          # If no test metrics, fall back to job result
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "::warning::No test metrics available, quality gate based on job result"
+            if [ "${{ needs.e2e-tests.result }}" != "success" ]; then
+              echo "❌ E2E test shards failed"
+              exit 1
+            fi
+            echo "✅ All E2E test shards passed"
+            exit 0
+          fi
+
           if [ "$PASS_RATE" -lt 90 ]; then
             echo "❌ Quality gate failed: $PASS_RATE% < 90% threshold"
             exit 1

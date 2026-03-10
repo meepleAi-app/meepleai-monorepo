@@ -199,26 +199,6 @@ jobs:
             # Cleanup old images
             docker image prune -f
 
-      # Option 2: Kubernetes Deploy (AKS/EKS/GKE)
-      - name: Deploy to Kubernetes
-        if: vars.DEPLOY_METHOD == 'kubernetes'
-        run: |
-          echo "🚀 Deploying to Kubernetes cluster..."
-          # kubectl set image deployment/api api=${{ needs.build.outputs.api_image }}
-          # kubectl set image deployment/web web=${{ needs.build.outputs.web_image }}
-          # kubectl rollout status deployment/api
-          # kubectl rollout status deployment/web
-          echo "⚠️ Kubernetes deployment not yet configured"
-
-      # Option 3: Cloud Run / App Service
-      - name: Deploy to Cloud Run
-        if: vars.DEPLOY_METHOD == 'cloudrun'
-        run: |
-          echo "🚀 Deploying to Cloud Run..."
-          # gcloud run deploy api --image=${{ needs.build.outputs.api_image }}
-          # gcloud run deploy web --image=${{ needs.build.outputs.web_image }}
-          echo "⚠️ Cloud Run deployment not yet configured"
-
   # Post-deploy validation
   validate:
     name: Post-deploy Validation

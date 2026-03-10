@@ -85,41 +85,66 @@ export function useCookieConsent() {
     [consent]
   );
 
-  return { consent, updateConsent, hasConsented: consent !== null };
+  const resetConsent = useCallback(() => {
+    try {
+      localStorage.removeItem(CONSENT_KEY);
+    } catch {
+      // localStorage not available
+    }
+    setConsent(null);
+  }, []);
+
+  return { consent, updateConsent, resetConsent, hasConsented: consent !== null };
 }
 
 interface CookieConsentBannerProps {
   className?: string;
+  /** Force show even if user already consented (for "Manage Cookies" flow) */
+  forceShow?: boolean;
+  /** Called when banner is dismissed after forceShow */
+  onDismiss?: () => void;
 }
 
-export function CookieConsentBanner({ className }: CookieConsentBannerProps) {
+export function CookieConsentBanner({ className, forceShow, onDismiss }: CookieConsentBannerProps) {
   const { t } = useTranslation();
-  const { updateConsent, hasConsented } = useCookieConsent();
+  const { consent, updateConsent, hasConsented } = useCookieConsent();
   const [showDetails, setShowDetails] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Local state for checkboxes — only persisted when user clicks "Save preferences"
-  const [localAnalytics, setLocalAnalytics] = useState(false);
-  const [localFunctional, setLocalFunctional] = useState(false);
+  // Pre-fill from existing consent when re-managing
+  const [localAnalytics, setLocalAnalytics] = useState(consent?.analytics ?? false);
+  const [localFunctional, setLocalFunctional] = useState(consent?.functional ?? false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Sync local state when consent changes (e.g. forceShow with existing consent)
+  useEffect(() => {
+    if (consent) {
+      setLocalAnalytics(consent.analytics);
+      setLocalFunctional(consent.functional);
+    }
+  }, [consent]);
+
   // Don't render anything until mounted (avoid hydration mismatch)
-  // Don't render if user already consented
-  if (!mounted || hasConsented) return null;
+  // Don't render if user already consented (unless forceShow)
+  if (!mounted || (hasConsented && !forceShow)) return null;
 
   const handleAcceptAll = () => {
     updateConsent({ analytics: true, functional: true });
+    onDismiss?.();
   };
 
   const handleAcceptEssentialOnly = () => {
     updateConsent({ analytics: false, functional: false });
+    onDismiss?.();
   };
 
   const handleSavePreferences = () => {
     updateConsent({ analytics: localAnalytics, functional: localFunctional });
+    onDismiss?.();
   };
 
   return (

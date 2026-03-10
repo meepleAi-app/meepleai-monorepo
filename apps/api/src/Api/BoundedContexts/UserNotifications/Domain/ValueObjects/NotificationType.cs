@@ -76,6 +76,15 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5501: Auto-fallback activated when model deprecated (admin)
     public static readonly NotificationType AdminModelAutoFallback = new("admin_model_auto_fallback");
 
+    // GDPR Art. 17: Account deletion confirmation
+    public static readonly NotificationType GdprAccountDeleted = new("gdpr_account_deleted");
+
+    // GDPR Art. 20: Data export completed
+    public static readonly NotificationType GdprDataExportReady = new("gdpr_data_export_ready");
+
+    // GDPR Art. 7: AI consent updated
+    public static readonly NotificationType GdprAiConsentUpdated = new("gdpr_ai_consent_updated");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -132,6 +141,9 @@ internal sealed class NotificationType : ValueObject
             "admin_redis_rate_limiting_degraded" => AdminRedisRateLimitingDegraded,
             "admin_model_deprecated" => AdminModelDeprecated,
             "admin_model_auto_fallback" => AdminModelAutoFallback,
+            "gdpr_account_deleted" => GdprAccountDeleted,
+            "gdpr_data_export_ready" => GdprDataExportReady,
+            "gdpr_ai_consent_updated" => GdprAiConsentUpdated,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

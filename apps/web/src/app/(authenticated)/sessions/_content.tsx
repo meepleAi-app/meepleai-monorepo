@@ -18,6 +18,7 @@ import { Clock, Crown, History, Loader2, Play, Search, Users } from 'lucide-reac
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { ResumeSessionCard } from '@/components/session/ResumeSessionCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -194,10 +195,9 @@ export function SessionsContent() {
     loadData();
   }, [loadData]);
 
-  // Active sessions that are InProgress or Paused (for the resume banner)
-  const resumableSessions = activeSessions.filter(
-    s => s.status === 'InProgress' || s.status === 'Paused'
-  );
+  // Split active sessions by status for differentiated rendering
+  const inProgressSessions = activeSessions.filter(s => s.status === 'InProgress');
+  const pausedSessions = activeSessions.filter(s => s.status === 'Paused');
 
   // Filter history by search
   const filteredHistory = searchQuery
@@ -241,10 +241,31 @@ export function SessionsContent() {
       {/* Active Tab */}
       {tab === 'active' && (
         <div className="space-y-4">
-          {/* Resume banner for in-progress sessions */}
-          {resumableSessions.map(session => (
+          {/* In-progress sessions — green banner */}
+          {inProgressSessions.map(session => (
             <ActiveSessionBanner key={session.id} session={session} />
           ))}
+
+          {/* Paused sessions — amber ResumeSessionCard */}
+          {pausedSessions.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Partite in pausa
+              </h2>
+              <div className="space-y-3">
+                {pausedSessions.map(session => (
+                  <ResumeSessionCard
+                    key={session.id}
+                    sessionId={session.id}
+                    gameName={session.gameName}
+                    pausedAt={session.updatedAt}
+                    playerCount={session.playerCount}
+                    sessionCode={session.sessionCode}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* New Session CTA */}
           <NewSessionCta />

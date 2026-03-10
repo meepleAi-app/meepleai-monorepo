@@ -111,7 +111,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./apps/api
-          file: ./apps/api/Dockerfile
+          file: ./apps/api/src/Api/Dockerfile
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
@@ -152,7 +152,7 @@ jobs:
     needs: [build]
     environment:
       name: staging
-      url: https://staging.meepleai.com
+      url: https://meepleai.app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -166,27 +166,35 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            cd /opt/meepleai
+            cd /opt/meepleai/repo/infra
+
+            # Load secrets for docker compose
+            set -a
+            for f in secrets/*.secret; do source "$f" 2>/dev/null; done
+            set +a
 
             # Pull new images
             docker pull ${{ needs.build.outputs.api_image }}
             docker pull ${{ needs.build.outputs.web_image }}
 
-            # Update docker-compose with new image tags
+            # Update image tags
             export API_IMAGE="${{ needs.build.outputs.api_image }}"
             export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
 
             # Deploy with zero-downtime
-            docker compose -f compose.staging.yml pull
-            docker compose -f compose.staging.yml up -d --no-deps api web
+            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.staging-traefik.yml \
+              --profile minimal up -d --no-deps api web
 
-            # Run database migrations
-            docker compose -f compose.staging.yml exec -T api \
-              dotnet ef database update --no-build
-
-            # Health check
-            sleep 10
-            curl -sf https://staging.meepleai.com/health || exit 1
+            # Health check (internal - avoids SSL issues)
+            sleep 15
+            curl -sf http://localhost:8080/health | python3 -c "
+            import sys,json
+            d=json.load(sys.stdin)
+            healthy = [c['name'] for c in d['checks'] if c['status']=='Healthy']
+            print(f'Healthy services: {len(healthy)}')
+            assert any(c['name']=='postgres' and c['status']=='Healthy' for c in d['checks']), 'postgres unhealthy'
+            assert any(c['name']=='redis' and c['status']=='Healthy' for c in d['checks']), 'redis unhealthy'
+            " || exit 1
 
             # Cleanup old images
             docker image prune -f
@@ -223,7 +231,7 @@ jobs:
 
           # API Health
           for i in {1..30}; do
-            if curl -sf https://staging.meepleai.com/health; then
+            if curl -sf https://meepleai.app/health; then
               echo "✅ API healthy"
               break
             fi
@@ -232,15 +240,15 @@ jobs:
           done
 
           # Web Health
-          curl -sf https://staging.meepleai.com || exit 1
+          curl -sf https://meepleai.app || exit 1
           echo "✅ Web healthy"
 
       - name: Smoke Tests
         run: |
           echo "🧪 Running smoke tests..."
           # Add critical path smoke tests here
-          # curl -sf https://staging.meepleai.com/api/v1/health
-          # curl -sf https://staging.meepleai.com/api/v1/games?limit=1
+          # curl -sf https://meepleai.app/api/v1/health
+          # curl -sf https://meepleai.app/api/v1/games?limit=1
           echo "✅ Smoke tests passed"
 
   # Notify on completion
@@ -270,4 +278,4 @@ jobs:
           echo "| API Image | \`${{ needs.build.outputs.api_image }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Web Image | \`${{ needs.build.outputs.web_image }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | staging |" >> $GITHUB_STEP_SUMMARY
-          echo "| URL | https://staging.meepleai.com |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://meepleai.app |" >> $GITHUB_STEP_SUMMARY

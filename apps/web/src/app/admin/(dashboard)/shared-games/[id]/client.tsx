@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   Trash2,
   Unlink,
+  Wand2,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,6 +30,7 @@ import { useRouter } from 'next/navigation';
 
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
+import { RagWizard } from './rag-wizard/components/rag-wizard';
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   Card,
@@ -46,6 +48,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/navigation/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import {
@@ -181,6 +184,15 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId, 'documents'] });
     },
   });
+
+  // ── RAG Wizard state ────────────────────────────────────────────────────
+  const [showRagWizard, setShowRagWizard] = useState(false);
+
+  const handleRagWizardClose = useCallback(() => {
+    setShowRagWizard(false);
+    queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId, 'documents'] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId, 'kb-cards'] });
+  }, [queryClient, gameId]);
 
   // ── Agent linking state ──────────────────────────────────────────────────
   const [selectedAgentId, setSelectedAgentId] = useState('');
@@ -621,6 +633,14 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
         {/* ── Documents Tab ───────────────────────────────────────────────── */}
         <TabsContent value="documents" className="space-y-6 mt-6">
+          {/* RAG Wizard action */}
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setShowRagWizard(true)}>
+              <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+              Aggiungi RAG
+            </Button>
+          </div>
+
           {/* Upload */}
           <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
             <CardHeader>
@@ -676,6 +696,18 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* RAG Wizard Sheet */}
+      <Sheet open={showRagWizard} onOpenChange={(open) => { if (!open) handleRagWizardClose(); else setShowRagWizard(true); }}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Aggiungi RAG — {game.title}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <RagWizard sharedGameId={gameId} onClose={handleRagWizardClose} />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

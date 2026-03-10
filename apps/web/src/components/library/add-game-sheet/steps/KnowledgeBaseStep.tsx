@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { BookOpen, Upload } from 'lucide-react';
 
+import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { RagReadyIndicator } from '@/components/pdf/RagReadyIndicator';
 import { api } from '@/lib/api';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
@@ -32,6 +33,8 @@ export function KnowledgeBaseStep() {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   const gameId = selectedGame?.gameId ?? null;
 
@@ -79,11 +82,24 @@ export function KnowledgeBaseStep() {
     [gameId]
   );
 
+  const handleDisclaimerAccept = useCallback(() => {
+    setDisclaimerAccepted(true);
+    setShowDisclaimer(false);
+    setShowUpload(true);
+  }, []);
+
+  const handleDisclaimerCancel = useCallback(() => {
+    setShowDisclaimer(false);
+  }, []);
+
   const handleUploadComplete = useCallback(
     (documentId: string, fileName: string, fileSizeBytes: number) => {
       setUploadedDocId(documentId);
       setCustomPdfUploaded(true);
       setShowUpload(false);
+
+      // Fire-and-forget: record disclaimer acceptance on the backend
+      api.documents.acceptDisclaimer(documentId).catch(() => {});
 
       // Add to existing docs list
       setExistingDocs(prev => [
@@ -163,7 +179,7 @@ export function KnowledgeBaseStep() {
         {!showUpload && !customPdfUploaded ? (
           <button
             type="button"
-            onClick={() => setShowUpload(true)}
+            onClick={() => (disclaimerAccepted ? setShowUpload(true) : setShowDisclaimer(true))}
             className={cn(
               'flex w-full items-center gap-3 rounded-lg border border-dashed border-slate-700 px-4 py-3',
               'text-left transition-colors hover:border-teal-500/50 hover:bg-slate-800/30'
@@ -195,6 +211,13 @@ export function KnowledgeBaseStep() {
       <p className="text-xs text-slate-500 text-center" data-testid="skip-info">
         Questo passaggio è opzionale. Puoi procedere senza caricare PDF.
       </p>
+
+      {/* Copyright disclaimer modal */}
+      <CopyrightDisclaimerModal
+        open={showDisclaimer}
+        onAccept={handleDisclaimerAccept}
+        onCancel={handleDisclaimerCancel}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ vi.mock('@/lib/api', () => ({
   api: {
     documents: {
       getDocumentsByGame: vi.fn(),
+      acceptDisclaimer: vi.fn().mockResolvedValue({ success: true, message: 'ok' }),
     },
     pdf: {
       uploadPdf: vi.fn(),
@@ -22,16 +23,41 @@ vi.mock('@/lib/api', () => ({
 
 // Mock RagReadyIndicator (complex component with polling)
 vi.mock('@/components/pdf/RagReadyIndicator', () => ({
-  RagReadyIndicator: ({ gameId, 'data-testid': testId }: { gameId: string; 'data-testid'?: string }) => (
-    <div data-testid={testId ?? 'rag-ready-indicator'}>Embedding status for {gameId}</div>
-  ),
+  RagReadyIndicator: ({
+    gameId,
+    'data-testid': testId,
+  }: {
+    gameId: string;
+    'data-testid'?: string;
+  }) => <div data-testid={testId ?? 'rag-ready-indicator'}>Embedding status for {gameId}</div>,
+}));
+
+// Mock CopyrightDisclaimerModal: renders a button that triggers onAccept when open,
+// so existing upload tests can click through the disclaimer without the real modal.
+vi.mock('@/components/pdf/CopyrightDisclaimerModal', () => ({
+  CopyrightDisclaimerModal: ({
+    open,
+    onAccept,
+  }: {
+    open: boolean;
+    onAccept: () => void;
+    onCancel: () => void;
+  }) =>
+    open ? (
+      <button data-testid="mock-disclaimer-accept" onClick={onAccept}>
+        accept
+      </button>
+    ) : null,
 }));
 
 import { api } from '@/lib/api';
 import { KnowledgeBaseStep } from '../KnowledgeBaseStep';
 
 const mockApi = api as {
-  documents: { getDocumentsByGame: ReturnType<typeof vi.fn> };
+  documents: {
+    getDocumentsByGame: ReturnType<typeof vi.fn>;
+    acceptDisclaimer: ReturnType<typeof vi.fn>;
+  };
   pdf: { uploadPdf: ReturnType<typeof vi.fn> };
 };
 
@@ -52,11 +78,14 @@ const mockDocs = [
 ];
 
 function initializeStoreWithGame() {
-  useAddGameWizardStore.getState().initialize({ type: 'fromGameCard', sharedGameId: 'shared-1' }, {
-    gameId: 'game-abc',
-    title: 'Catan',
-    source: 'catalog',
-  });
+  useAddGameWizardStore.getState().initialize(
+    { type: 'fromGameCard', sharedGameId: 'shared-1' },
+    {
+      gameId: 'game-abc',
+      title: 'Catan',
+      source: 'catalog',
+    }
+  );
 }
 
 describe('KnowledgeBaseStep', () => {
@@ -149,7 +178,12 @@ describe('KnowledgeBaseStep', () => {
       expect(screen.getByTestId('show-upload-button')).toBeInTheDocument();
     });
 
+    // Click upload button → shows disclaimer modal (mocked), accept it → shows upload zone
     fireEvent.click(screen.getByTestId('show-upload-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-disclaimer-accept')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('mock-disclaimer-accept'));
     expect(screen.getByTestId('pdf-upload-zone')).toBeInTheDocument();
   });
 
@@ -168,8 +202,12 @@ describe('KnowledgeBaseStep', () => {
       expect(screen.getByTestId('show-upload-button')).toBeInTheDocument();
     });
 
-    // Open upload zone
+    // Open upload zone via disclaimer flow
     fireEvent.click(screen.getByTestId('show-upload-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-disclaimer-accept')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('mock-disclaimer-accept'));
 
     // Select a file
     const input = screen.getByTestId('pdf-file-input');
@@ -204,6 +242,10 @@ describe('KnowledgeBaseStep', () => {
     });
 
     fireEvent.click(screen.getByTestId('show-upload-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-disclaimer-accept')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('mock-disclaimer-accept'));
 
     const input = screen.getByTestId('pdf-file-input');
     fireEvent.change(input, {
@@ -238,8 +280,12 @@ describe('KnowledgeBaseStep', () => {
     // Store is reset, gameId is null
     render(<KnowledgeBaseStep />);
 
-    // Open upload zone
+    // Open upload zone via disclaimer flow
     fireEvent.click(screen.getByTestId('show-upload-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-disclaimer-accept')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('mock-disclaimer-accept'));
 
     // Select a file
     const input = screen.getByTestId('pdf-file-input');

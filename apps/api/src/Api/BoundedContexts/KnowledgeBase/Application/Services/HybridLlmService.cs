@@ -432,6 +432,11 @@ internal class HybridLlmService : ILlmService
             metadata["selected_model"] = decision.ModelId;
             metadata["latency_ms"] = latencyMs.ToString(CultureInfo.InvariantCulture);
             metadata["circuit_state"] = _circuitBreakerRegistry.GetCircuitStateDescription(client.ProviderName);
+
+            if (decision.UserRegion is not null)
+            {
+                metadata["user_region"] = decision.UserRegion;
+            }
         }
     }
 

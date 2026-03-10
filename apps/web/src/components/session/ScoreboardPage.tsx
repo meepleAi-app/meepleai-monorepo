@@ -71,7 +71,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
   } = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => api.sessions.getById(sessionId),
-    refetchInterval: 10_000,
+    refetchInterval: query => (query.state.status === 'error' ? false : 10_000),
     retry: false,
   });
 
@@ -193,7 +193,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
 
           return (
             <div
-              key={player.playerOrder}
+              key={player.playerName}
               className={`flex items-center gap-4 rounded-xl border p-4 transition-colors ${
                 isWinner
                   ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/10'
@@ -238,9 +238,6 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
                   </p>
                 )}
               </div>
-
-              {/* Rank label for ranks without medals */}
-              {!medal && <span className="text-xs text-muted-foreground font-medium">#{rank}</span>}
             </div>
           );
         })}
@@ -282,7 +279,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
 
               return (
                 <div
-                  key={player.playerOrder}
+                  key={player.playerName}
                   className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3"
                 >
                   <div

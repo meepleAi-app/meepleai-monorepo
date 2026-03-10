@@ -73,7 +73,7 @@ export function AdaptiveBottomBar({ className }: AdaptiveBottomBarProps) {
   const visibleActions = actionBarActions.filter(a => !a.hidden);
   const hasActions = visibleActions.length > 0;
 
-  const visibleTabs = TAB_ITEMS.filter(tab => !tab.authOnly || isAuthenticated);
+  const visibleTabs = TAB_ITEMS.filter(tab => !('authOnly' in tab && tab.authOnly) || isAuthenticated);
 
   return (
     <div

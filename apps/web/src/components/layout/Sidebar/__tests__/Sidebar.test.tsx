@@ -205,18 +205,18 @@ describe('Sidebar', () => {
   });
 
   describe('Expanded Mode', () => {
-    it('has 220px width when expanded', () => {
+    it('has CSS var width when expanded', () => {
       render(<Sidebar {...defaultProps} />);
       const sidebar = screen.getByTestId('sidebar');
-      expect(sidebar).toHaveClass('w-[220px]');
+      expect(sidebar).toHaveClass('w-[var(--sidebar-width-expanded)]');
     });
   });
 
   describe('Collapsed Mode', () => {
-    it('has 60px width when collapsed', () => {
+    it('has CSS var width when collapsed', () => {
       render(<Sidebar {...defaultProps} isCollapsed={true} />);
       const sidebar = screen.getByTestId('sidebar');
-      expect(sidebar).toHaveClass('w-[60px]');
+      expect(sidebar).toHaveClass('w-[var(--sidebar-width-collapsed)]');
     });
   });
 

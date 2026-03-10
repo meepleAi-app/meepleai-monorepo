@@ -2014,7 +2014,9 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * GET /api/v1/admin/tier-strategy/model-health
      */
     async getModelHealth(): Promise<ModelHealthResult> {
-      const result = await httpClient.get('/api/v1/admin/tier-strategy/model-health');
+      const result = await httpClient.get('/api/v1/admin/tier-strategy/model-health', undefined, {
+        skipCircuitBreaker: true,
+      });
       return (result as ModelHealthResult) || { models: [] };
     },
 
@@ -2030,7 +2032,9 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (modelId) params.set('modelId', modelId);
       params.set('limit', limit.toString());
       const result = await httpClient.get(
-        `/api/v1/admin/tier-strategy/model-change-history?${params.toString()}`
+        `/api/v1/admin/tier-strategy/model-change-history?${params.toString()}`,
+        undefined,
+        { skipCircuitBreaker: true }
       );
       return (result as ModelChangeHistoryResult) || { changes: [] };
     },

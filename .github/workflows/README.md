@@ -112,7 +112,6 @@ Workflows are organized by category with consistent naming prefixes:
 
 ### Required Secrets
 - `CODECOV_TOKEN` - Code coverage uploads
-- `CHROMATIC_PROJECT_TOKEN` - Chromatic visual testing
 - `LHCI_GITHUB_APP_TOKEN` - Lighthouse CI (optional, falls back to GITHUB_TOKEN)
 - `SLACK_WEBHOOK_URL` - Failure notifications (optional)
 

@@ -129,7 +129,7 @@ describe('BggSearchTab', () => {
     expect(mockOpenWizard).toHaveBeenCalledWith({ type: 'fromSearch', bggId: 13 });
   });
 
-  it('shows "no results" message when search returns empty', async () => {
+  it('shows "no results" message (not error) when search returns empty', async () => {
     mockBggSearch.mockResolvedValue({ ...mockBggResults, results: [], total: 0 });
 
     render(<BggSearchTab />);
@@ -144,9 +144,12 @@ describe('BggSearchTab', () => {
     await waitFor(() => {
       expect(screen.getByText(/Nessun risultato/i)).toBeInTheDocument();
     });
+
+    // Must not show an error — empty results is not an API failure
+    expect(screen.queryByText(/BoardGameGeek non disponibile/i)).not.toBeInTheDocument();
   });
 
-  it('shows error message on API failure', async () => {
+  it('shows error message on API failure, not a "no results" message', async () => {
     mockBggSearch.mockRejectedValue(new Error('Network error'));
 
     render(<BggSearchTab />);
@@ -161,6 +164,9 @@ describe('BggSearchTab', () => {
     await waitFor(() => {
       expect(screen.getByText(/BoardGameGeek non disponibile/i)).toBeInTheDocument();
     });
+
+    // Must not also show a "no results" message — error state takes precedence
+    expect(screen.queryByText(/Nessun risultato/i)).not.toBeInTheDocument();
   });
 
   it('shows clear button when input has text and clears on click', async () => {

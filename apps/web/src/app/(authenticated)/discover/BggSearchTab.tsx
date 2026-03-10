@@ -49,23 +49,30 @@ export function BggSearchTab() {
       return;
     }
 
+    let stale = false;
+
     const doSearch = async () => {
       setLoading(true);
       setError(null);
       try {
         const response = await api.bgg.search(debouncedTerm, false, 1, 20);
-        setResults(response.results);
-        if (response.results.length === 0) {
-          setError(`Nessun risultato per "${debouncedTerm}"`);
+        if (!stale) {
+          setResults(response.results);
         }
       } catch {
-        setError('BoardGameGeek non disponibile. Riprova più tardi.');
+        if (!stale) {
+          setError('BoardGameGeek non disponibile. Riprova più tardi.');
+        }
       } finally {
-        setLoading(false);
+        if (!stale) setLoading(false);
       }
     };
 
     void doSearch();
+
+    return () => {
+      stale = true;
+    };
   }, [debouncedTerm]);
 
   const handleSelect = useCallback(
@@ -127,9 +134,14 @@ export function BggSearchTab() {
           </div>
         )}
 
-        {/* Error / No results */}
-        {!loading && error && (
-          <p className="text-sm text-center text-muted-foreground py-8">{error}</p>
+        {/* API error */}
+        {!loading && error && <p className="text-sm text-center text-red-500 py-8">{error}</p>}
+
+        {/* No results (empty success, not an error) */}
+        {!loading && results.length === 0 && debouncedTerm.trim() && !error && (
+          <p className="text-sm text-center text-muted-foreground py-8">
+            Nessun risultato per &quot;{debouncedTerm}&quot;
+          </p>
         )}
 
         {/* Results */}

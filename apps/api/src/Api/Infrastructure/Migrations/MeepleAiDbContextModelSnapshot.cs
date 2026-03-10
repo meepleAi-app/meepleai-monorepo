@@ -3003,6 +3003,79 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("games", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("GameIdsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("game_ids");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("location");
+
+                    b.Property<int?>("MaxPlayers")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_players");
+
+                    b.Property<Guid>("OrganizerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organizer_id");
+
+                    b.Property<DateTimeOffset?>("Reminder1hSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_1h_sent_at");
+
+                    b.Property<DateTimeOffset?>("Reminder24hSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_24h_sent_at");
+
+                    b.Property<DateTimeOffset>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizerId", "ScheduledAt")
+                        .HasDatabaseName("IX_game_night_events_organizer_scheduled");
+
+                    b.HasIndex("Status", "ScheduledAt")
+                        .HasDatabaseName("IX_game_night_events_status_scheduled");
+
+                    b.ToTable("game_night_events", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightPlaylistEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3072,6 +3145,47 @@ namespace Api.Infrastructure.Migrations
                         .HasFilter("share_token IS NOT NULL");
 
                     b.ToTable("game_night_playlists", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightRsvpEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responded_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_game_night_rsvps_user_id");
+
+                    b.HasIndex("EventId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_game_night_rsvps_event_user");
+
+                    b.ToTable("game_night_rsvps", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameReviewEntity", b =>
@@ -9838,6 +9952,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlation_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -9898,6 +10016,10 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_email_queue_items_correlation_id")
+                        .HasFilter("correlation_id IS NOT NULL");
+
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_email_queue_items_status");
 
@@ -9917,6 +10039,10 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<Guid?>("CorrelationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlation_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -9968,6 +10094,10 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("IX_notifications_correlation_id")
+                        .HasFilter("correlation_id IS NOT NULL");
+
                     b.HasIndex("UserId", "CreatedAt")
                         .IsDescending(false, true)
                         .HasDatabaseName("IX_notifications_user_id_created_at");
@@ -9998,6 +10128,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("EmailOnGameNightInvitation")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("EmailOnGameNightReminder")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("EmailOnRetryAvailable")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -10012,6 +10148,9 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
+
+                    b.Property<bool>("InAppOnGameNightInvitation")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("InAppOnRetryAvailable")
                         .ValueGeneratedOnAdd()
@@ -10035,6 +10174,12 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
+
+                    b.Property<bool>("PushOnGameNightInvitation")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("PushOnGameNightReminder")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("PushOnRetryAvailable")
                         .ValueGeneratedOnAdd()
@@ -10939,6 +11084,17 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightRsvpEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", "Event")
+                        .WithMany("Rsvps")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameSessionStateEntity", b =>
@@ -12218,6 +12374,11 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Chats");
 
                     b.Navigation("RuleSpecs");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", b =>
+                {
+                    b.Navigation("Rsvps");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameSessionStateEntity", b =>

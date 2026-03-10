@@ -16,6 +16,7 @@
 
 import {
   Bot,
+  Calendar,
   CheckCircle2,
   Info,
   AlertTriangle,
@@ -164,6 +165,12 @@ function getTypeIcon(type: string): React.ComponentType<{ className?: string }> 
       return XCircle;
     case 'processing_job_completed':
       return Bot;
+    case 'game_night_invitation':
+    case 'game_night_rsvp_received':
+    case 'game_night_published':
+    case 'game_night_cancelled':
+    case 'game_night_reminder':
+      return Calendar;
     default:
       return Info;
   }

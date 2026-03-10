@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -494,7 +495,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         if (documents is null or { Count: 0 }) return (true, 0, 0);
 
         var notCompleted = documents.Count(d =>
-            !string.Equals(d.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase));
+            d.ProcessingState != PdfProcessingState.Ready);
         return (notCompleted == 0, notCompleted, documents.Count);
     }
 

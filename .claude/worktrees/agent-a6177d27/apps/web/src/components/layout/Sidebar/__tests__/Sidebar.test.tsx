@@ -205,7 +205,7 @@ describe('Sidebar', () => {
   });
 
   describe('Expanded Mode', () => {
-    it('has CSS var width when expanded', () => {
+    it('has expanded width when expanded', () => {
       render(<Sidebar {...defaultProps} />);
       const sidebar = screen.getByTestId('sidebar');
       expect(sidebar).toHaveClass('w-[var(--sidebar-width-expanded)]');
@@ -213,7 +213,7 @@ describe('Sidebar', () => {
   });
 
   describe('Collapsed Mode', () => {
-    it('has CSS var width when collapsed', () => {
+    it('has collapsed width when collapsed', () => {
       render(<Sidebar {...defaultProps} isCollapsed={true} />);
       const sidebar = screen.getByTestId('sidebar');
       expect(sidebar).toHaveClass('w-[var(--sidebar-width-collapsed)]');

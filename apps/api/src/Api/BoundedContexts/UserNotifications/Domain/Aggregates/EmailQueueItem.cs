@@ -136,6 +136,7 @@ internal sealed class EmailQueueItem : AggregateRoot<Guid>
             throw new InvalidOperationException($"Cannot reset email in status '{Status.Value}'");
 
         Status = EmailQueueStatus.Pending;
+        RetryCount = 0;
         NextRetryAt = null;
         ErrorMessage = null;
     }

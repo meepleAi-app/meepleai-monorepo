@@ -26,19 +26,20 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// Mock date-fns to get deterministic relative time output
+// Mock date-fns to get deterministic relative time output.
+// addSuffix: true is used in the component, so date-fns returns e.g. "circa 2 ore fa".
 vi.mock('date-fns', async () => {
   const actual = await vi.importActual<typeof import('date-fns')>('date-fns');
   return {
     ...actual,
-    formatDistanceToNow: () => '2 ore fa',
+    formatDistanceToNow: () => 'circa 2 ore fa',
   };
 });
 
 const BASE_PROPS = {
   sessionId: 's1',
   gameName: 'Azul',
-  pausedAt: '2026-03-10T22:30:00Z',
+  lastActivityAt: '2026-03-10T22:30:00Z',
   playerCount: 4,
   sessionCode: 'ABC123',
 };
@@ -84,9 +85,9 @@ describe('ResumeSessionCard', () => {
     expect(screen.getByText('ABC123')).toBeInTheDocument();
   });
 
-  it('shows relative paused time', () => {
+  it('shows relative last activity time', () => {
     render(<ResumeSessionCard {...BASE_PROPS} />);
 
-    expect(screen.getByText(/2 ore fa/i)).toBeInTheDocument();
+    expect(screen.getByText(/circa 2 ore fa/i)).toBeInTheDocument();
   });
 });

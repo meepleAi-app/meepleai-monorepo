@@ -478,6 +478,7 @@ v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
 v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
+v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
 v1Api.MapGameEndpoints();
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints

@@ -49,9 +49,9 @@ internal sealed class N8nWebhookClient : IN8nWebhookClient
     private readonly N8nWebhookClientOptions _options;
     private readonly ILogger<N8nWebhookClient> _logger;
 
-    // Simple circuit breaker state
+    // Simple circuit breaker state (thread-safe via Interlocked)
     private int _consecutiveFailures;
-    private DateTime _circuitOpenUntil = DateTime.MinValue;
+    private long _circuitOpenUntilTicks = DateTime.MinValue.Ticks;
 
     public N8nWebhookClient(
         IHttpClientFactory httpClientFactory,
@@ -72,9 +72,10 @@ internal sealed class N8nWebhookClient : IN8nWebhookClient
         }
 
         // Circuit breaker check
-        if (_consecutiveFailures >= _options.CircuitBreakerThreshold && DateTime.UtcNow < _circuitOpenUntil)
+        var circuitOpenUntil = new DateTime(Interlocked.Read(ref _circuitOpenUntilTicks), DateTimeKind.Utc);
+        if (_consecutiveFailures >= _options.CircuitBreakerThreshold && DateTime.UtcNow < circuitOpenUntil)
         {
-            _logger.LogWarning("n8n circuit breaker open until {Until}, skipping webhook {Path}", _circuitOpenUntil, webhookPath);
+            _logger.LogWarning("n8n circuit breaker open until {Until}, skipping webhook {Path}", circuitOpenUntil, webhookPath);
             return;
         }
 
@@ -120,7 +121,8 @@ internal sealed class N8nWebhookClient : IN8nWebhookClient
         var failures = Interlocked.Increment(ref _consecutiveFailures);
         if (failures >= _options.CircuitBreakerThreshold)
         {
-            _circuitOpenUntil = DateTime.UtcNow.AddSeconds(_options.CircuitBreakerCooldownSeconds);
+            var newOpenUntil = DateTime.UtcNow.AddSeconds(_options.CircuitBreakerCooldownSeconds);
+            Interlocked.Exchange(ref _circuitOpenUntilTicks, newOpenUntil.Ticks);
             _logger.LogWarning("n8n circuit breaker opened for {Seconds}s after {Failures} failures",
                 _options.CircuitBreakerCooldownSeconds, failures);
         }

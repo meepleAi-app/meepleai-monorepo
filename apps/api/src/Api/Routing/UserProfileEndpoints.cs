@@ -425,6 +425,64 @@ internal static class UserProfileEndpoints
 **Response**: UserAiUsageDto with detailed usage breakdown.")
         .Produces<UserAiUsageDto>(200)
         .Produces(401);
+
+        // Issue #94: Multi-period usage summary (today/7d/30d)
+        group.MapGet("/users/me/ai-usage/summary", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var query = new GetMyAiUsageSummaryQuery(session!.User!.Id);
+            return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyAiUsageSummary")
+        .WithTags("AI Usage")
+        .WithSummary("Get multi-period AI usage summary (today/7d/30d)")
+        .Produces<AiUsageSummaryDto>(200)
+        .Produces(401);
+
+        // Issue #94: Usage distributions (model, provider, operation)
+        group.MapGet("/users/me/ai-usage/distributions", async (
+            HttpContext context,
+            IMediator mediator,
+            int days = 30,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var clampedDays = Math.Clamp(days, 1, 90);
+            var query = new GetMyAiUsageDistributionsQuery(session!.User!.Id, clampedDays);
+            return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyAiUsageDistributions")
+        .WithTags("AI Usage")
+        .WithSummary("Get AI usage distribution breakdowns (model, provider, operation)")
+        .Produces<AiUsageDistributionsDto>(200)
+        .Produces(401);
+
+        // Issue #94: Recent individual requests (last 7 days, paginated)
+        group.MapGet("/users/me/ai-usage/recent", async (
+            HttpContext context,
+            IMediator mediator,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken ct = default) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var query = new GetMyAiUsageRecentQuery(session!.User!.Id, page, pageSize);
+            return Results.Ok(await mediator.Send(query, ct).ConfigureAwait(false));
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyAiUsageRecent")
+        .WithTags("AI Usage")
+        .WithSummary("Get recent AI requests (last 7 days, paginated)")
+        .Produces<AiUsageRecentDto>(200)
+        .Produces(401);
     }
 
     private static void MapFeatureAccessEndpoints(RouteGroupBuilder group)

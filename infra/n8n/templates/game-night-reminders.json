@@ -81,7 +81,7 @@
       "position": [1050, 200],
       "parameters": {
         "method": "GET",
-        "url": "={{ $parameter.apiBaseUrl }}/api/v1/game-nights/{{ $json.eventId }}",
+        "url": "={{ $parameter.apiBaseUrl }}+ '/api/v1/game-nights/' + $json.eventId }}",
         "options": {
           "timeout": 10000
         }
@@ -170,7 +170,7 @@
             },
             {
               "name": "payload",
-              "value": "={{ JSON.stringify({ eventId: $json.eventId, reminderType: 'follow_up', title: 'Com\\'è andata? Lascia una nota sulla serata' }) }}"
+              "value": "={{ JSON.stringify({ eventId: $json.eventId, userId: $json.organizerId, reminderType: 'follow_up', title: 'Com\\'è andata? Lascia una nota sulla serata', message: 'La serata � finita! Lascia un commento o una valutazione.' }) }}"
             }
           ]
         }

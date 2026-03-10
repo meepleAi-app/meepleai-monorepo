@@ -135,6 +135,7 @@ test-results/
 # Code Assistant Claude
 .claude/settings.local.json
 .claude/.mcp.local.json
+.claude/worktrees/
 
 # Playwright MCP temp files
 tmpclaude-*-cwd

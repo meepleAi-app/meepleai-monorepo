@@ -26,11 +26,11 @@ These implicit locality assumptions **will break** under multi-region deployment
 
 | # | Assumption | Component | File(s) | Resolution Required |
 |---|-----------|-----------|---------|---------------------|
-| A1 | In-memory circuit breaker state (Interlocked fields) | `CircuitBreakerState` | `KnowledgeBase/Domain/Services/LlmManagement/CircuitBreakerState.cs` | Move to Redis — pods currently disagree on circuit status |
-| A2 | Local Redis with no namespace partitioning | `FreeModelQuotaTracker`, `OpenRouterRateLimitTracker` | `KnowledgeBase/Application/Services/FreeModelQuotaTracker.cs`, `KnowledgeBase/Application/Services/OpenRouterRateLimitTracker.cs` | Namespace keys by region or share single Redis with latency budget |
-| A3 | Single PostgreSQL instance | All 15 bounded contexts | `Infrastructure/MeepleAiDbContext.cs` | Read replicas + PgBouncer for connection pooling |
+| A1 | In-memory circuit breaker state (Interlocked fields) | `CircuitBreakerState` | `apps/api/src/Api/BoundedContexts/KnowledgeBase/Domain/Services/LlmManagement/CircuitBreakerState.cs` | Move to Redis — pods currently disagree on circuit status |
+| A2 | Local Redis with no namespace partitioning | `FreeModelQuotaTracker`, `OpenRouterRateLimitTracker` | `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Services/FreeModelQuotaTracker.cs`, `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Services/OpenRouterRateLimitTracker.cs` | Namespace keys by region or share single Redis with latency budget |
+| A3 | Single PostgreSQL instance | All 15 bounded contexts | `apps/api/src/Api/Infrastructure/MeepleAiDbContext.cs` | Read replicas + PgBouncer for connection pooling |
 | A4 | Local Qdrant (Docker volume) | Vector search | Qdrant client configuration | Qdrant Cloud or cross-region replication (50ms local vs 200ms+ cross-region) |
-| A5 | Co-located Ollama | `OllamaLlmClient` | `Services/LlmClients/OllamaLlmClient.cs` | GPU node pools on K8s, cold start mitigation (30-60s) |
+| A5 | Co-located Ollama | `OllamaLlmClient` | `apps/api/src/Api/Services/LlmClients/OllamaLlmClient.cs` | GPU node pools on K8s, cold start mitigation (30-60s) |
 | A6 | No cross-pod state sharing | Circuit breaker + rate limits | Multiple services across KnowledgeBase BC | Redis-backed distributed state for all shared counters |
 
 ### Impact Assessment
@@ -214,6 +214,8 @@ resource "cloudflare_zone_settings_override" "tls" {
 ```hcl
 # Phase 2: Kubernetes single-cluster (EU)
 # Provider: Hetzner Cloud or similar (~$200-500/mo)
+# NOTE: Resource names below are illustrative pseudocode — actual Terraform
+# resource types vary by provider (e.g., hcloud_server for Hetzner, google_container_cluster for GKE).
 
 # --- Managed Kubernetes Cluster ---
 resource "hcloud_kubernetes_cluster" "meepleai" {

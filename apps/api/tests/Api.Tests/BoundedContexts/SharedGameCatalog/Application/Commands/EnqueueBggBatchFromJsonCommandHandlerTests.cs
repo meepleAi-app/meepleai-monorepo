@@ -58,7 +58,7 @@ public class EnqueueBggBatchFromJsonCommandHandlerTests
         };
 
         _mockQueueService
-            .Setup(s => s.EnqueueAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.EnqueueAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BggImportQueueEntity
             {
                 BggId = It.IsAny<int>(),
@@ -77,11 +77,11 @@ public class EnqueueBggBatchFromJsonCommandHandlerTests
         Assert.Empty(result.Errors);
 
         _mockQueueService.Verify(
-            s => s.EnqueueAsync(123, "Catan", It.IsAny<CancellationToken>()),
+            s => s.EnqueueAsync(123, "Catan", It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         _mockQueueService.Verify(
-            s => s.EnqueueAsync(456, "Wingspan", It.IsAny<CancellationToken>()),
+            s => s.EnqueueAsync(456, "Wingspan", It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -114,7 +114,7 @@ public class EnqueueBggBatchFromJsonCommandHandlerTests
         };
 
         _mockQueueService
-            .Setup(s => s.EnqueueAsync(456, "Wingspan", It.IsAny<CancellationToken>()))
+            .Setup(s => s.EnqueueAsync(456, "Wingspan", It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BggImportQueueEntity
             {
                 BggId = 456,
@@ -136,11 +136,11 @@ public class EnqueueBggBatchFromJsonCommandHandlerTests
 
         // Verify only Wingspan was enqueued
         _mockQueueService.Verify(
-            s => s.EnqueueAsync(456, "Wingspan", It.IsAny<CancellationToken>()),
+            s => s.EnqueueAsync(456, "Wingspan", It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         _mockQueueService.Verify(
-            s => s.EnqueueAsync(123, It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            s => s.EnqueueAsync(123, It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -202,7 +202,7 @@ public class EnqueueBggBatchFromJsonCommandHandlerTests
 
         // First game enqueues successfully, second throws
         _mockQueueService
-            .Setup(s => s.EnqueueAsync(123, "Catan", It.IsAny<CancellationToken>()))
+            .Setup(s => s.EnqueueAsync(123, "Catan", It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BggImportQueueEntity
             {
                 BggId = 123,
@@ -211,7 +211,7 @@ public class EnqueueBggBatchFromJsonCommandHandlerTests
             });
 
         _mockQueueService
-            .Setup(s => s.EnqueueAsync(456, "Wingspan", It.IsAny<CancellationToken>()))
+            .Setup(s => s.EnqueueAsync(456, "Wingspan", It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Queue service error"));
 
         // Act
@@ -262,7 +262,7 @@ public class EnqueueBggBatchFromJsonCommandHandlerTests
         };
 
         _mockQueueService
-            .Setup(s => s.EnqueueAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.EnqueueAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BggImportQueueEntity
             {
                 BggId = It.IsAny<int>(),

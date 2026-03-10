@@ -31,6 +31,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/primitives/button';
 import { useNavigation } from '@/context/NavigationContext';
 import { usePrefersReducedMotion } from '@/hooks/useResponsive';
+import { useScrollState } from '@/hooks/useScrollState';
 import { NAV_TEST_IDS } from '@/lib/test-ids';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +95,8 @@ export function MiniNav({ className }: MiniNavProps) {
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { direction: scrollDirection } = useScrollState({ scrolledThreshold: 4 });
+  const isHiddenByScroll = scrollDirection === 'down';
   const showArrows = miniNavTabs.length > ARROW_THRESHOLD;
 
   // ── Scroll state tracking ─────────────────────────────────────────────────
@@ -160,6 +163,8 @@ export function MiniNav({ className }: MiniNavProps) {
     <div
       className={cn(
         'sticky top-14 z-30',
+        'transition-all duration-200 ease-in-out motion-reduce:transition-none',
+        isHiddenByScroll && '-translate-y-full opacity-0 pointer-events-none',
         'flex items-stretch',
         'h-12',
         'border-b border-white/20 dark:border-border/40',

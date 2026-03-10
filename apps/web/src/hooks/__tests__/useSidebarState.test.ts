@@ -1,6 +1,6 @@
 /**
  * Tests for useSidebarState hook
- * Validates localStorage persistence, toggle, and graceful fallback.
+ * Validates localStorage persistence, cookie sync, toggle, and graceful fallback.
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -14,6 +14,7 @@ describe('useSidebarState', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    document.cookie = 'meepleai-sidebar-collapsed=; max-age=0';
     getItemSpy = vi.spyOn(Storage.prototype, 'getItem');
     setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
   });
@@ -26,6 +27,11 @@ describe('useSidebarState', () => {
   it('defaults to expanded (isCollapsed = false)', () => {
     const { result } = renderHook(() => useSidebarState());
     expect(result.current.isCollapsed).toBe(false);
+  });
+
+  it('respects initialValue parameter', () => {
+    const { result } = renderHook(() => useSidebarState(true));
+    expect(result.current.isCollapsed).toBe(true);
   });
 
   it('toggle switches collapsed state', () => {
@@ -66,6 +72,26 @@ describe('useSidebarState', () => {
     expect(setItemSpy).toHaveBeenCalledWith('meepleai-sidebar-collapsed', 'true');
   });
 
+  it('sets cookie on toggle', () => {
+    const { result } = renderHook(() => useSidebarState());
+
+    act(() => {
+      result.current.toggle();
+    });
+
+    expect(document.cookie).toContain('meepleai-sidebar-collapsed=true');
+  });
+
+  it('sets cookie on setCollapsed', () => {
+    const { result } = renderHook(() => useSidebarState());
+
+    act(() => {
+      result.current.setCollapsed(true);
+    });
+
+    expect(document.cookie).toContain('meepleai-sidebar-collapsed=true');
+  });
+
   it('reads stored value on mount', () => {
     localStorage.setItem('meepleai-sidebar-collapsed', 'true');
 
@@ -73,6 +99,14 @@ describe('useSidebarState', () => {
 
     // useEffect runs async, but in tests it's sync after renderHook
     expect(result.current.isCollapsed).toBe(true);
+  });
+
+  it('syncs cookie from localStorage on mount', () => {
+    localStorage.setItem('meepleai-sidebar-collapsed', 'true');
+
+    renderHook(() => useSidebarState());
+
+    expect(document.cookie).toContain('meepleai-sidebar-collapsed=true');
   });
 
   it('handles localStorage errors gracefully', () => {

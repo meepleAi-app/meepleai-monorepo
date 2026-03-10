@@ -341,6 +341,43 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("token_tiers", (string)null);
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Entities.UserAiConsent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConsentVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("ConsentedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ConsentedToAiProcessing")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ConsentedToExternalProviders")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("user_ai_consents", (string)null);
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Entities.UserTokenUsage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -833,6 +870,123 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("uq_toolkit_widgets_toolkit_type");
 
                     b.ToTable("toolkit_widgets", "game_toolkit");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid?>("KnowledgeBaseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("knowledge_base_id");
+
+                    b.Property<string>("Query")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("query");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ab_test_sessions", "knowledge_base");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestVariant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AbTestSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ab_test_session_id");
+
+                    b.Property<decimal>("CostUsd")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)")
+                        .HasColumnName("cost_usd");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<bool>("Failed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("failed");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("label");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("latency_ms");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("model_id");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("Response")
+                        .HasColumnType("text")
+                        .HasColumnName("response");
+
+                    b.Property<int>("TokensUsed")
+                        .HasColumnType("integer")
+                        .HasColumnName("tokens_used");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AbTestSessionId");
+
+                    b.HasIndex("ModelId");
+
+                    b.ToTable("ab_test_variants", "knowledge_base");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AdminRagStrategy", b =>
@@ -2849,6 +3003,77 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("games", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightPlaylistEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creator_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("GamesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("games_json");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsShared")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_shared");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<DateTime?>("ScheduledDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_date");
+
+                    b.Property<string>("ShareToken")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("share_token");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorUserId")
+                        .HasDatabaseName("ix_game_night_playlists_creator_user_id");
+
+                    b.HasIndex("ShareToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_game_night_playlists_share_token")
+                        .HasFilter("share_token IS NOT NULL");
+
+                    b.ToTable("game_night_playlists", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameReviewEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4796,6 +5021,128 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("decisore_move_feedback", "knowledge_base");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ModelChangeLogEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AffectedStrategy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("ChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsAutomatic")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NewModelId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PreviousModelId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AffectedStrategy");
+
+                    b.HasIndex("ChangeType");
+
+                    b.HasIndex("ModelId");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.ToTable("model_change_logs", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ModelCompatibilityEntryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("Alternatives")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("ContextWindow")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsCurrentlyAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeprecated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.PrimitiveCollection<string[]>("Strengths")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsCurrentlyAvailable");
+
+                    b.HasIndex("IsDeprecated");
+
+                    b.HasIndex("ModelId")
+                        .IsUnique();
+
+                    b.HasIndex("Provider");
+
+                    b.ToTable("model_compatibility_entries", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RagUserConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5173,6 +5520,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsAnonymized")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_anonymized");
 
                     b.Property<bool>("IsFreeModel")
                         .HasColumnType("boolean")
@@ -8309,6 +8662,61 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("AiModelConfigurations", "SystemConfiguration");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.LlmSystemConfigEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CircuitBreakerFailureThreshold")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(5);
+
+                    b.Property<int>("CircuitBreakerOpenDurationSeconds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
+                    b.Property<int>("CircuitBreakerSuccessThreshold")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<decimal>("DailyBudgetUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasDefaultValue(10.00m);
+
+                    b.Property<string>("FallbackChainJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]");
+
+                    b.Property<decimal>("MonthlyBudgetUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasDefaultValue(100.00m);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LlmSystemConfigs", "SystemConfiguration");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.ShareRequestLimitConfigEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -10130,6 +10538,59 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestVariant", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestSession", null)
+                        .WithMany("Variants")
+                        .HasForeignKey("AbTestSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.AbTestEvaluation", "Evaluation", b1 =>
+                        {
+                            b1.Property<Guid>("AbTestVariantId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Accuracy")
+                                .HasColumnType("integer")
+                                .HasColumnName("eval_accuracy");
+
+                            b1.Property<int>("Clarity")
+                                .HasColumnType("integer")
+                                .HasColumnName("eval_clarity");
+
+                            b1.Property<int>("Completeness")
+                                .HasColumnType("integer")
+                                .HasColumnName("eval_completeness");
+
+                            b1.Property<DateTime>("EvaluatedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("eval_evaluated_at");
+
+                            b1.Property<Guid>("EvaluatorId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("evaluator_id");
+
+                            b1.Property<string>("Notes")
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)")
+                                .HasColumnName("eval_notes");
+
+                            b1.Property<int>("Tone")
+                                .HasColumnType("integer")
+                                .HasColumnName("eval_tone");
+
+                            b1.HasKey("AbTestVariantId");
+
+                            b1.ToTable("ab_test_variants", "knowledge_base");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AbTestVariantId");
+                        });
+
+                    b.Navigation("Evaluation");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition", b =>
                 {
                     b.OwnsOne("Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.AgentDefinitionConfig", "Config", b1 =>
@@ -11718,6 +12179,11 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.BoundedContexts.GameToolkit.Domain.Entities.Toolkit", b =>
                 {
                     b.Navigation("Widgets");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestSession", b =>
+                {
+                    b.Navigation("Variants");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>

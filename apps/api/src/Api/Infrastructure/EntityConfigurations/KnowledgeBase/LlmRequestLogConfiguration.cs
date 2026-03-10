@@ -34,6 +34,9 @@ internal class LlmRequestLogConfiguration : IEntityTypeConfiguration<LlmRequestL
         builder.Property(x => x.SessionId).HasColumnName("session_id").HasMaxLength(100);
         builder.Property(x => x.ExpiresAt).HasColumnName("expires_at").IsRequired();
 
+        // Issue #5511: GDPR pseudonymization tracking
+        builder.Property(x => x.IsAnonymized).HasColumnName("is_anonymized").HasDefaultValue(false).IsRequired();
+
         // Analytics indexes
         builder.HasIndex(x => new { x.RequestedAt, x.RequestSource })
             .HasDatabaseName("ix_llm_request_logs_requested_at_source");

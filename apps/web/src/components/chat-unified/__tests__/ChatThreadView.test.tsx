@@ -58,6 +58,9 @@ const mockStreamState = {
   chatThreadId: null as string | null,
   totalTokens: 0,
   debugSteps: [] as import('@/hooks/useAgentChatStream').DebugStep[],
+  modelDowngrade: null as any,
+  strategyTier: null as string | null,
+  executionId: null as string | null,
 };
 
 vi.mock('@/hooks/useAgentChatStream', () => ({
@@ -642,5 +645,50 @@ describe('ChatThreadView', () => {
 
     // Reset mock state
     mockStreamState.debugSteps = [];
+  });
+
+  // ── Issue #5481: ResponseMetaBadge ──────────────────────────────────
+
+  it('shows strategy badge on last assistant message when strategyTier is set', async () => {
+    mockStreamState.strategyTier = 'Balanced';
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('response-meta-badge')).toBeInTheDocument();
+      expect(screen.getByText('Risposta bilanciata')).toBeInTheDocument();
+    });
+
+    // Reset
+    mockStreamState.strategyTier = null;
+  });
+
+  it('does not show strategy badge when strategyTier is null', async () => {
+    mockStreamState.strategyTier = null;
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-assistant')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('response-meta-badge')).not.toBeInTheDocument();
+  });
+
+  it('does not show strategy badge while streaming', async () => {
+    mockStreamState.strategyTier = 'Fast';
+    mockStreamState.isStreaming = true;
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-assistant')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('response-meta-badge')).not.toBeInTheDocument();
+
+    // Reset
+    mockStreamState.strategyTier = null;
+    mockStreamState.isStreaming = false;
   });
 });

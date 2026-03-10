@@ -83,4 +83,12 @@ export const STORY_METADATA: StoryMeta[] = [
     controlCount: 2,
     presetCount: 5,
   },
+  {
+    id: 'rule-source-card',
+    title: 'RuleSourceCard',
+    category: 'Feedback',
+    description: 'Citation card per risposte RAG con fonti dal regolamento.',
+    controlCount: 4,
+    presetCount: 4,
+  },
 ];

@@ -28,12 +28,15 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/store/voice/store';
 import type { Citation } from '@/types';
-import { isAdminOrAbove } from '@/types/auth';
+import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
 
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { CitationBadge } from './CitationBadge';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
+import { RuleSourceCard } from './RuleSourceCard';
+import { ResponseMetaBadge } from './ResponseMetaBadge';
+import { TechnicalDetailsPanel } from './TechnicalDetailsPanel';
 import { TtsSpeakerButton } from './TtsSpeakerButton';
 import { VoiceMicButton } from './VoiceMicButton';
 import { VoiceSettingsPopover } from './VoiceSettingsPopover';
@@ -76,6 +79,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const isAdmin = isAdminOrAbove(user);
+  const isEditor = isEditorOrAbove(user);
 
   // State
   const [thread, setThread] = useState<ThreadData | null>(null);
@@ -578,38 +582,50 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   </div>
                 </div>
               ) : (
-                messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      'max-w-[85%] rounded-2xl px-4 py-3',
-                      msg.role === 'user'
-                        ? 'ml-auto bg-amber-500 text-white'
-                        : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
-                    )}
-                    data-testid={`message-${msg.role}`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
-                    {msg.role === 'assistant' && isTtsSupported && voicePrefs.ttsEnabled && (
-                      <TtsSpeakerButton
-                        text={msg.content}
-                        isSpeaking={isSpeaking}
-                        onSpeak={speak}
-                        onStop={stopSpeaking}
-                      />
-                    )}
-                    {msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {msg.citations.map((c, i) => (
-                          <CitationBadge
-                            key={`${c.documentId}-${c.pageNumber}-${i}`}
-                            citation={c}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
+                messages.map((msg, msgIndex) => {
+                  // Show strategy badge on the last assistant message when available
+                  const isLastAssistant =
+                    msg.role === 'assistant' &&
+                    !streamState.isStreaming &&
+                    msgIndex === messages.length - 1;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={cn(
+                        'max-w-[85%] rounded-2xl px-4 py-3',
+                        msg.role === 'user'
+                          ? 'ml-auto bg-amber-500 text-white'
+                          : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
+                      )}
+                      data-testid={`message-${msg.role}`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+                      {msg.role === 'assistant' && isTtsSupported && voicePrefs.ttsEnabled && (
+                        <TtsSpeakerButton
+                          text={msg.content}
+                          isSpeaking={isSpeaking}
+                          onSpeak={speak}
+                          onStop={stopSpeaking}
+                        />
+                      )}
+                      {msg.citations && msg.citations.length > 0 && (
+                        <RuleSourceCard citations={msg.citations} gameTitle={game?.title} />
+                      )}
+                      {isLastAssistant && streamState.strategyTier && (
+                        <div className="mt-2">
+                          <ResponseMetaBadge strategyTier={streamState.strategyTier} />
+                        </div>
+                      )}
+                      {isLastAssistant && isEditor && streamState.debugSteps.length > 0 && (
+                        <TechnicalDetailsPanel
+                          debugSteps={streamState.debugSteps}
+                          executionId={streamState.executionId}
+                        />
+                      )}
+                    </div>
+                  );
+                })
               )}
               {/* Streaming status message */}
               {streamState.statusMessage && (

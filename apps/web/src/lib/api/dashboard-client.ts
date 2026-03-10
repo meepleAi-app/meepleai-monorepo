@@ -6,6 +6,7 @@
  */
 
 import { HttpClient } from './core/httpClient';
+import { UserAiUsageDtoSchema, type UserAiUsageDto } from './schemas/ai-usage.schemas';
 
 const httpClient = new HttpClient();
 
@@ -118,12 +119,24 @@ export const dashboardClient = {
     }
 
     const queryString = queryParams.toString();
-    const url = queryString
-      ? `/api/v1/users/me/games?${queryString}`
-      : '/api/v1/users/me/games';
+    const url = queryString ? `/api/v1/users/me/games?${queryString}` : '/api/v1/users/me/games';
 
     const response = await httpClient.get<PagedResult<UserGameDto>>(url);
     if (!response) throw new Error('Failed to fetch user games');
+    return response;
+  },
+
+  /**
+   * Get current user's AI usage statistics
+   * Issue #5484: Editor self-service AI usage
+   * @param days Lookback period (default: 30)
+   */
+  async getMyAiUsage(days = 30): Promise<UserAiUsageDto> {
+    const response = await httpClient.get<UserAiUsageDto>(
+      `/api/v1/users/me/ai-usage?days=${days}`,
+      UserAiUsageDtoSchema
+    );
+    if (!response) throw new Error('Failed to fetch AI usage');
     return response;
   },
 };

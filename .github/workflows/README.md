@@ -103,7 +103,7 @@ Workflows are organized by category with consistent naming prefixes:
 | ci.yml (Frontend) | 3-5 min | Parallel lint/typecheck |
 | ci.yml (Backend) | 5-7 min | With Testcontainers |
 | ci.yml (E2E) | 3-5 min | Critical paths only |
-| test-e2e.yml | 10-15 min | Full 4-shard suite |
+| test-e2e.yml | 10-15 min | Full 6-shard suite |
 | test-performance.yml | 15-20 min | K6 + Lighthouse |
 | test-visual.yml | 5-10 min | Playwright + Chromatic |
 | security-scan.yml | 8-12 min | Full security suite |
@@ -118,6 +118,75 @@ Workflows are organized by category with consistent naming prefixes:
 
 ### Environment Variables
 See individual workflow files for environment-specific configuration.
+
+## Self-Hosted ARM64 Runner
+
+All workflows use the configuration toggle pattern for runner selection:
+
+```yaml
+runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+```
+
+**Architecture Decision**: [ADR-044](../../docs/architecture/adr/adr-044-self-hosted-arm64-runner.md)
+
+### Runner Specs
+
+| Resource | Value |
+|----------|-------|
+| Provider | Oracle Cloud Free Tier |
+| CPU | Ampere A1, 4 OCPUs (ARM64) |
+| Memory | 24 GB |
+| Disk | 200 GB |
+| Max concurrent jobs | 2 (recommended) |
+
+### ARM64 Exclusions
+
+| Workflow | Job | Reason |
+|----------|-----|--------|
+| `security-scan.yml` | `codeql` | CodeQL CLI has no linux/arm64 binary |
+
+### Operational Workflows
+
+| Workflow | Schedule | Purpose |
+|----------|----------|---------|
+| `runner-health-check.yml` | Every 15 min | Docker, disk, memory monitoring |
+| `runner-maintenance.yml` | Weekly Sun 3 AM | Docker prune, temp cleanup, disk alerts |
+
+### Rollback Procedure
+
+**Full rollback** (all workflows revert to GitHub-hosted):
+1. Go to GitHub → Settings → Variables (organization or repository level)
+2. Delete or clear the `RUNNER` variable
+3. All workflows will immediately fall back to `ubuntu-latest`
+4. Verify: check workflow logs for `runner.name` containing "GitHub Actions"
+
+**Per-workflow rollback** (single workflow reverts):
+1. Edit the specific workflow file
+2. Replace `runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}` with `runs-on: ubuntu-latest`
+3. Commit and push — that workflow now always uses GitHub-hosted
+
+**Per-job rollback** (single job within a workflow):
+1. Override only the specific job's `runs-on` to `ubuntu-latest`
+2. Other jobs in the same workflow continue using the self-hosted runner
+
+### Visual Test Baselines
+
+When switching runner architecture (x86 ↔ ARM64), Playwright visual test baselines must be regenerated:
+
+```bash
+cd apps/web
+pnpm test:e2e:visual --update-snapshots --project=desktop-chrome
+```
+
+Font rendering differs between architectures, causing false-positive visual diffs.
+
+### Performance Notes
+
+| Category | Expected Delta (ARM64 vs x86) | Timeout |
+|----------|-------------------------------|---------|
+| Deploy workflows | ≤10% slower (network-bound) | Default |
+| Frontend CI | ≤15% slower | Default |
+| Backend tests | 30-40% slower (.NET JIT) | 60 min |
 
 ## Local Testing
 
@@ -139,6 +208,12 @@ act -W .github/workflows/ci.yml --dryrun
 2. Review path filters if jobs unexpectedly skipped
 3. Verify secrets are configured
 
+### Runner Issues
+1. Check runner status: GitHub → Settings → Actions → Runners
+2. Check health: Review latest `runner-health-check.yml` run
+3. Check disk: Review latest `runner-maintenance.yml` run or trigger manually
+4. Full rollback: Clear `vars.RUNNER` variable (see Rollback Procedure above)
+
 ### Performance Issues
 1. Check K6/Lighthouse reports in artifacts
 2. Review API response times
@@ -151,4 +226,4 @@ act -W .github/workflows/ci.yml --dryrun
 
 ---
 
-**Last Updated**: 2026-01-26
+**Last Updated**: 2026-03-09

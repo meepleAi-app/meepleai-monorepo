@@ -1,5 +1,8 @@
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
@@ -44,7 +47,13 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
     private readonly ChatContextDomainService _chatContextService;
     private readonly IConversationQueryRewriter _queryRewriter;
     private readonly IConversationSummarizer _conversationSummarizer;
+    private readonly IUserAiConsentCheckService _consentCheckService;
+    private readonly IGameSessionOrchestratorService _sessionOrchestrator;
+    private readonly IHybridCacheService _hybridCache;
     private readonly ILogger<SendAgentMessageCommandHandler> _logger;
+
+    /// <summary>Cache TTL for GameSessionContext.</summary>
+    private static readonly TimeSpan SessionContextCacheTtl = TimeSpan.FromMinutes(5);
 
     public SendAgentMessageCommandHandler(
         IAgentRepository agentRepository,
@@ -60,6 +69,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         ChatContextDomainService chatContextService,
         IConversationQueryRewriter queryRewriter,
         IConversationSummarizer conversationSummarizer,
+        IUserAiConsentCheckService consentCheckService,
+        IGameSessionOrchestratorService sessionOrchestrator,
+        IHybridCacheService hybridCache,
         ILogger<SendAgentMessageCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
@@ -75,6 +87,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _queryRewriter = queryRewriter ?? throw new ArgumentNullException(nameof(queryRewriter));
         _conversationSummarizer = conversationSummarizer ?? throw new ArgumentNullException(nameof(conversationSummarizer));
+        _consentCheckService = consentCheckService ?? throw new ArgumentNullException(nameof(consentCheckService));
+        _sessionOrchestrator = sessionOrchestrator ?? throw new ArgumentNullException(nameof(sessionOrchestrator));
+        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -102,6 +117,68 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         _logger.LogInformation(
             "Starting agent chat for Agent {AgentId}, User {UserId}, Thread {ChatThreadId}",
             command.AgentId, command.UserId, command.ChatThreadId);
+
+        // Issue #5513: Check AI consent — if user opted out, return search-only error
+        var aiAllowed = await _consentCheckService
+            .IsAiProcessingAllowedAsync(command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!aiAllowed)
+        {
+            _logger.LogInformation(
+                "User {UserId} has not consented to AI processing — blocking LLM generation",
+                command.UserId);
+
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(
+                    "AI features are disabled. Enable AI processing in Settings > AI & Privacy to use this feature.",
+                    "AI_CONSENT_REQUIRED"));
+            yield break;
+        }
+
+        // Issue #5580: Session-aware RAG — load session context when GameSessionId is provided
+        GameSessionContextDto? sessionContext = null;
+        if (command.GameSessionId.HasValue)
+        {
+            var cacheKey = $"game-session-context:{command.GameSessionId.Value}";
+            sessionContext = await _hybridCache.GetOrCreateAsync(
+                cacheKey,
+                async ct => await _sessionOrchestrator.BuildContextAsync(command.GameSessionId.Value, ct).ConfigureAwait(false),
+                tags: new[] { $"session:{command.GameSessionId.Value}" },
+                expiration: SessionContextCacheTtl,
+                cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Loaded session context for session {SessionId}: DegradationLevel={Level}, AllGameIds=[{GameIds}]",
+                command.GameSessionId.Value,
+                sessionContext.DegradationLevel,
+                string.Join(",", sessionContext.AllGameIds));
+
+            // If NoAI degradation, return informative message without hitting RAG
+            if (sessionContext.DegradationLevel == SessionDegradationLevel.NoAI)
+            {
+                _logger.LogInformation(
+                    "Session {SessionId} has NoAI degradation — returning informative message",
+                    command.GameSessionId.Value);
+
+                yield return CreateEvent(
+                    StreamingEventType.Token,
+                    new StreamingToken(SessionContextPromptBuilder.GetNoAiDegradationMessage()));
+                yield return CreateEvent(
+                    StreamingEventType.Complete,
+                    new StreamingComplete(
+                        estimatedReadingTimeMinutes: 0,
+                        promptTokens: 0,
+                        completionTokens: 0,
+                        totalTokens: 0,
+                        confidence: null,
+                        chatThreadId: null,
+                        strategyTier: "NoAI",
+                        executionId: null));
+                yield break;
+            }
+        }
 
         // Validate Agent exists
         var agent = await _agentRepository
@@ -347,9 +424,21 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         }
 
         // Step 2: Vector search in Qdrant with document filtering
-        // Resolve gameId: thread first, then agent, then vector docs
+        // Issue #5580: When session context exists, search across all game IDs
         Guid? gameIdForSearch = thread.GameId ?? agent.GameId;
         var pdfDocumentIds = new List<string>();
+        IReadOnlyList<Guid>? sessionGameIds = null;
+
+        if (sessionContext != null && sessionContext.AllGameIds.Count > 0)
+        {
+            sessionGameIds = sessionContext.AllGameIds;
+            // Use primary game ID as the main search target, but also search expansions
+            gameIdForSearch = sessionContext.PrimaryGameId ?? gameIdForSearch;
+
+            _logger.LogInformation(
+                "Session-aware search: {GameCount} games [{GameIds}]",
+                sessionGameIds.Count, string.Join(",", sessionGameIds));
+        }
 
         if (selectedDocumentIds.Count > 0)
         {
@@ -387,12 +476,43 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 typology = profile.Name
             });
 
-        var searchResult = await _qdrantService.SearchAsync(
-            gameId,
-            embeddingResult.Embeddings[0],
-            limit: profile.TopK,
-            documentIds: pdfDocumentIds, // Use PdfDocumentIds, not VectorDocument IDs
-            cancellationToken).ConfigureAwait(false);
+        Api.Services.SearchResult searchResult;
+        if (sessionGameIds is { Count: > 1 })
+        {
+            // Issue #5580: Multi-game search — search each game ID and merge results
+            var allResults = new List<SearchResultItem>();
+            foreach (var gid in sessionGameIds)
+            {
+                var partialResult = await _qdrantService.SearchAsync(
+                    gid.ToString(),
+                    embeddingResult.Embeddings[0],
+                    limit: profile.TopK,
+                    documentIds: pdfDocumentIds.Count > 0 ? pdfDocumentIds : null,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (partialResult.Success)
+                {
+                    allResults.AddRange(partialResult.Results);
+                }
+            }
+
+            // Merge: sort by score and take top K
+            var topResults = allResults
+                .OrderByDescending(r => r.Score)
+                .Take(profile.TopK)
+                .ToList();
+
+            searchResult = Api.Services.SearchResult.CreateSuccess(topResults);
+        }
+        else
+        {
+            searchResult = await _qdrantService.SearchAsync(
+                gameId,
+                embeddingResult.Embeddings[0],
+                limit: profile.TopK,
+                documentIds: pdfDocumentIds.Count > 0 ? pdfDocumentIds : null,
+                cancellationToken).ConfigureAwait(false);
+        }
 
         if (!searchResult.Success)
         {
@@ -470,6 +590,12 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         var gameName = await ResolveGameNameAsync(agent, cancellationToken).ConfigureAwait(false);
         var systemPrompt = _chatContextService.BuildSystemPrompt(
             agent.Name, typologyName, gameName, hasHistory);
+
+        // Issue #5580: Inject session context preamble into system prompt
+        if (sessionContext != null)
+        {
+            systemPrompt = SessionContextPromptBuilder.BuildSessionPreamble(sessionContext) + systemPrompt;
+        }
         var userPrompt = _chatContextService.BuildStructuredUserPrompt(
             command.UserQuestion,
             ragContext,
@@ -691,6 +817,12 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             }
         }
 
+        // Derive strategy tier from the model used (Issue #5481: Response Meta Badge)
+        var strategyTier = ResolveStrategyTier(modelToUse);
+
+        // Issue #5486: Include executionId for Editor/Admin deep link to Debug Console
+        Guid? executionId = isAdminCaller ? Guid.NewGuid() : null;
+
         // Complete event (include ThreadId for frontend)
         yield return CreateEvent(
             StreamingEventType.Complete,
@@ -700,7 +832,9 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 completionTokens: tokenCount,
                 totalTokens: tokenCount,
                 confidence: retrievalConfidence,
-                chatThreadId: thread.Id));
+                chatThreadId: thread.Id,
+                strategyTier: strategyTier,
+                executionId: executionId));
     }
 
     /// <summary>
@@ -783,6 +917,26 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
         return gameName;
+    }
+
+    /// <summary>
+    /// Maps the model tier to a user-facing strategy tier label.
+    /// Issue #5481: ResponseMetaBadge — soft quality badge on AI responses.
+    /// </summary>
+    private string ResolveStrategyTier(string modelId)
+    {
+        var modelConfig = _modelConfigService.GetModelById(modelId);
+        if (modelConfig == null)
+            return "Fast"; // Unknown model → conservative label
+
+        return modelConfig.Tier switch
+        {
+            ModelTier.Free => "Fast",
+            ModelTier.Normal => "Balanced",
+            ModelTier.Premium => "Premium",
+            ModelTier.Custom => "HybridRAG",
+            _ => "Balanced"
+        };
     }
 
     private static RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

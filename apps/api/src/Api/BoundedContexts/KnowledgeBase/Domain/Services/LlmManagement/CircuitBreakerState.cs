@@ -20,13 +20,21 @@ internal enum CircuitState
 }
 
 /// <summary>
-/// Circuit breaker state tracking for a single LLM provider
+/// Circuit breaker state tracking for a single LLM provider.
+/// Issue #5498: Thresholds are configurable via constructor (DB-first, appsettings fallback).
 /// </summary>
 internal sealed class CircuitBreakerState
 {
-    private const int FailureThreshold = 5; // Failures before opening circuit
-    private const int SuccessThreshold = 3; // Successes to close circuit from half-open
-    private const int OpenDurationSeconds = 30; // Time to wait before trying half-open
+    private readonly int _failureThreshold;
+    private readonly int _successThreshold;
+    private readonly int _openDurationSeconds;
+
+    public CircuitBreakerState(int failureThreshold = 5, int openDurationSeconds = 30, int successThreshold = 3)
+    {
+        _failureThreshold = failureThreshold > 0 ? failureThreshold : 5;
+        _successThreshold = successThreshold > 0 ? successThreshold : 3;
+        _openDurationSeconds = openDurationSeconds > 0 ? openDurationSeconds : 30;
+    }
 
     public CircuitState State { get; private set; } = CircuitState.Closed;
     public int ConsecutiveFailures { get; private set; }
@@ -50,7 +58,7 @@ internal sealed class CircuitBreakerState
         ConsecutiveFailures = 0;
         ConsecutiveSuccesses++;
 
-        if (State == CircuitState.HalfOpen && ConsecutiveSuccesses >= SuccessThreshold)
+        if (State == CircuitState.HalfOpen && ConsecutiveSuccesses >= _successThreshold)
         {
             // Recovery confirmed - close circuit
             State = CircuitState.Closed;
@@ -72,7 +80,7 @@ internal sealed class CircuitBreakerState
         ConsecutiveSuccesses = 0;
         ConsecutiveFailures++;
 
-        if (State == CircuitState.Closed && ConsecutiveFailures >= FailureThreshold)
+        if (State == CircuitState.Closed && ConsecutiveFailures >= _failureThreshold)
         {
             // Too many failures - open circuit
             State = CircuitState.Open;
@@ -83,7 +91,7 @@ internal sealed class CircuitBreakerState
             // Recovery failed - reopen circuit
             State = CircuitState.Open;
             OpenedAt = DateTime.UtcNow;
-            ConsecutiveFailures = FailureThreshold; // Already at threshold
+            ConsecutiveFailures = _failureThreshold; // Already at threshold
         }
 
         if (State != previous)
@@ -103,7 +111,7 @@ internal sealed class CircuitBreakerState
 
         // State == Open: Check if timeout expired
         if (OpenedAt.HasValue &&
-            (DateTime.UtcNow - OpenedAt.Value).TotalSeconds >= OpenDurationSeconds)
+            (DateTime.UtcNow - OpenedAt.Value).TotalSeconds >= _openDurationSeconds)
         {
             // Timeout expired - try half-open
             var previous = State;
@@ -142,7 +150,7 @@ internal sealed class CircuitBreakerState
         {
             CircuitState.Closed => $"Healthy (failures: {ConsecutiveFailures})",
             CircuitState.Open => $"Circuit Open (reopens in {GetRemainingOpenSeconds()}s)",
-            CircuitState.HalfOpen => $"Testing Recovery (successes: {ConsecutiveSuccesses}/{SuccessThreshold})",
+            CircuitState.HalfOpen => $"Testing Recovery (successes: {ConsecutiveSuccesses}/{_successThreshold})",
             _ => "Unknown"
         };
     }
@@ -151,7 +159,7 @@ internal sealed class CircuitBreakerState
     {
         if (!OpenedAt.HasValue) return 0;
         var elapsed = (DateTime.UtcNow - OpenedAt.Value).TotalSeconds;
-        var remaining = OpenDurationSeconds - elapsed;
+        var remaining = _openDurationSeconds - elapsed;
         return Math.Max(0, (int)remaining);
     }
 }

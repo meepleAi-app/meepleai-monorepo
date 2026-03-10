@@ -73,6 +73,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ProcessingQueueConfigEntity> ProcessingQueueConfigs => Set<ProcessingQueueConfigEntity>(); // ISSUE-5455: Queue configuration
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
+    public DbSet<BoundedContexts.Administration.Domain.Entities.UserAiConsent> UserAiConsents => Set<BoundedContexts.Administration.Domain.Entities.UserAiConsent>(); // ISSUE-5512: GDPR AI consent
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
@@ -131,6 +132,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameSessionStateEntity> GameSessionStates => Set<GameSessionStateEntity>(); // ISSUE-2403: Sprint 4 - Game session state tracking
     public DbSet<GameStateSnapshotEntity> GameStateSnapshots => Set<GameStateSnapshotEntity>(); // ISSUE-2403: Sprint 4 - State snapshots
     public DbSet<AiModelConfigurationEntity> AiModelConfigurations => Set<AiModelConfigurationEntity>(); // ISSUE-2512: Auto-configuration pipeline - AI model seed
+    public DbSet<LlmSystemConfigEntity> LlmSystemConfigs => Set<LlmSystemConfigEntity>(); // ISSUE-5498: LLM system config in DB
     public DbSet<BadgeEntity> Badges => Set<BadgeEntity>(); // ISSUE-2731: Badge gamification system
     public DbSet<UserBadgeEntity> UserBadges => Set<UserBadgeEntity>(); // ISSUE-2731: User badge awards
     public DbSet<ShareRequestLimitConfigEntity> ShareRequestLimitConfigs => Set<ShareRequestLimitConfigEntity>(); // ISSUE-2730: Rate limit config
@@ -181,6 +183,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<WhiteboardStateEntity> WhiteboardStates => Set<WhiteboardStateEntity>(); // ISSUE-4971: Whiteboard base toolkit
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity> SessionMedia => Set<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>(); // ISSUE-4760
     public DbSet<SessionAttachmentEntity> SessionAttachments => Set<SessionAttachmentEntity>(); // ISSUE-5360: Session photo attachments
+    public DbSet<GameNightPlaylistEntity> GameNightPlaylists => Set<GameNightPlaylistEntity>(); // ISSUE-5582: Game Night Playlist
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
     // Issue #4220: Notification preferences

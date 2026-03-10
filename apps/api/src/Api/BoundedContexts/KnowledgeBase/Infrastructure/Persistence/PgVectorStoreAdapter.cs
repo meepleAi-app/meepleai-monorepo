@@ -115,6 +115,93 @@ internal sealed class PgVectorStoreAdapter : IQdrantVectorStoreAdapter
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<List<Embedding>> SearchByMultipleGameIdsAsync(
+        IReadOnlyList<Guid> gameIds,
+        DomainVector queryVector,
+        int topK,
+        double minScore,
+        IReadOnlyList<Guid>? documentIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (gameIds is not { Count: > 0 })
+            return new List<Embedding>();
+
+        var connection = _context.Database.GetDbConnection();
+        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+
+        // Build SQL with IN clause for multiple game_ids
+        var sql = $"""
+            SELECT id, vector_document_id, text_content, model, chunk_index, page_number,
+                   1 - (vector <=> @queryVector) AS similarity
+            FROM {TableName}
+            WHERE game_id = ANY(@gameIds)
+              AND 1 - (vector <=> @queryVector) >= @minScore
+            """;
+
+        if (documentIds is { Count: > 0 })
+        {
+            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+        }
+
+        sql += $"""
+
+            ORDER BY vector <=> @queryVector
+            LIMIT @topK
+            """;
+
+        var command = (NpgsqlCommand)connection.CreateCommand();
+        await using (command.ConfigureAwait(false))
+        {
+            command.CommandText = sql;
+
+            var pgVector = new Pgvector.Vector(queryVector.Values);
+            command.Parameters.AddWithValue("@queryVector", pgVector);
+            command.Parameters.AddWithValue("@gameIds", gameIds.ToArray());
+            command.Parameters.AddWithValue("@minScore", minScore);
+            command.Parameters.AddWithValue("@topK", topK);
+
+            if (documentIds is { Count: > 0 })
+            {
+                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+            }
+
+            var results = new List<Embedding>();
+
+            var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            await using (reader.ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    var id = reader.GetGuid(0);
+                    var vectorDocumentId = reader.GetGuid(1);
+                    var textContent = reader.GetString(2);
+                    var model = reader.GetString(3);
+                    var chunkIndex = reader.GetInt32(4);
+                    var pageNumber = reader.GetInt32(5);
+
+                    var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
+                    var embedding = new Embedding(
+                        id: id,
+                        vectorDocumentId: vectorDocumentId,
+                        textContent: textContent,
+                        vector: placeholderVector,
+                        model: model,
+                        chunkIndex: chunkIndex,
+                        pageNumber: Math.Max(1, pageNumber));
+
+                    results.Add(embedding);
+                }
+            }
+
+            _logger.LogInformation(
+                "pgvector multi-game search returned {ResultCount} results for gameIds=[{GameIds}] (minScore={MinScore}, topK={TopK})",
+                results.Count, string.Join(",", gameIds), minScore, topK);
+
+            return results;
+        }
+    }
+
     public async Task IndexBatchAsync(
         List<Embedding> embeddings,
         CancellationToken cancellationToken = default)

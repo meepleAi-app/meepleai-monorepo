@@ -10,7 +10,7 @@ Write-Host ""
 Set-Location $PSScriptRoot
 
 # Start with full profile and include HyperDX
-docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml --profile full up -d
+docker compose -f docker-compose.yml -f compose.hyperdx.yml --profile full up -d
 
 Write-Host ""
 Write-Host "✅ Full stack started successfully!" -ForegroundColor Green
@@ -38,4 +38,4 @@ Write-Host ""
 Write-Host "⚠️  Note: Full stack may take 2-3 minutes to fully initialize" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "💡 To view logs: docker compose logs -f"
-Write-Host "💡 To stop: docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml down"
+Write-Host "💡 To stop: docker compose -f docker-compose.yml -f compose.hyperdx.yml down"

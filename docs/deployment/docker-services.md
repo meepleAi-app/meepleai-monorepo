@@ -59,8 +59,8 @@
 | File | Purpose | Environment |
 |------|---------|-------------|
 | `docker-compose.yml` | Main service definitions | All |
-| `docker-compose.traefik.yml` | Traefik override | Production |
-| `docker-compose.hyperdx.yml` | HyperDX override | Observability |
+| `compose.traefik.yml` | Traefik override | Production |
+| `compose.hyperdx.yml` | HyperDX override | Observability |
 | `infra/secrets/*.secret` | Secret values (gitignored) | All |
 | `infra/env/*.env` | Environment configs | Dev/Prod |
 | `infra/prometheus.yml` | Scrape targets | Observability |

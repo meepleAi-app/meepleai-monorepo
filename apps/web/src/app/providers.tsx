@@ -16,6 +16,7 @@ import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp, LayoutProvider } from '@/components/layout';
+import { CookieConsentBanner } from '@/components/legal';
 import { AddGameWizardProvider } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
@@ -105,6 +106,9 @@ function AppContent({ children }: { children: ReactNode }) {
       <AccessibleSkipLink href="#main-content" />
       {children}
       <Toaster />
+
+      {/* GDPR: Cookie consent banner (ePrivacy Art. 5(3)) */}
+      <CookieConsentBanner />
 
       {/* AUTH-05: Session expiry warning modal */}
       {isNearExpiry && remainingMinutes !== null && (

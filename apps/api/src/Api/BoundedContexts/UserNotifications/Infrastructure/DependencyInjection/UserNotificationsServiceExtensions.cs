@@ -26,6 +26,7 @@ internal static class UserNotificationsServiceExtensions
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<INotificationPreferencesRepository, NotificationPreferencesRepository>();
         services.AddScoped<IEmailQueueRepository, EmailQueueRepository>(); // Issue #4417
+        services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>(); // Issue #52: Email template admin management
 
         // Register services
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>(); // Issue #4417

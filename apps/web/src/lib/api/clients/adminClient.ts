@@ -125,6 +125,11 @@ import {
   type AbTestSessionRevealedDto,
   AbTestAnalyticsDtoSchema,
   type AbTestAnalyticsDto,
+  EmailTemplateDtoSchema,
+  GetEmailTemplatesResponseSchema,
+  type EmailTemplateDto,
+  type CreateEmailTemplateInput,
+  type UpdateEmailTemplateInput,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -2825,6 +2830,101 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         z.object({ success: z.boolean() })
       );
       return result?.success ?? false;
+    },
+
+    // ========== Email Templates (Issue #52-#56) ==========
+
+    /**
+     * List email templates with optional filters.
+     * GET /api/v1/admin/email-templates
+     */
+    async getEmailTemplates(params?: {
+      type?: string;
+      locale?: string;
+    }): Promise<EmailTemplateDto[]> {
+      const searchParams = new URLSearchParams();
+      if (params?.type) searchParams.set('type', params.type);
+      if (params?.locale) searchParams.set('locale', params.locale);
+      const query = searchParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates${query ? `?${query}` : ''}`,
+        GetEmailTemplatesResponseSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get a single email template by ID.
+     * GET /api/v1/admin/email-templates/:id
+     */
+    async getEmailTemplate(id: string): Promise<EmailTemplateDto> {
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates/${id}`,
+        EmailTemplateDtoSchema
+      );
+      if (!result) throw new Error(`Email template ${id} not found`);
+      return result;
+    },
+
+    /**
+     * Create a new email template.
+     * POST /api/v1/admin/email-templates
+     */
+    async createEmailTemplate(data: CreateEmailTemplateInput): Promise<{ id: string }> {
+      return httpClient.post<{ id: string }>(
+        '/api/v1/admin/email-templates',
+        data,
+        z.object({ id: z.string().uuid() })
+      );
+    },
+
+    /**
+     * Update an existing email template (creates new version).
+     * PUT /api/v1/admin/email-templates/:id
+     */
+    async updateEmailTemplate(
+      id: string,
+      data: UpdateEmailTemplateInput
+    ): Promise<{ success: boolean }> {
+      return httpClient.put<{ success: boolean }>(
+        `/api/v1/admin/email-templates/${id}`,
+        data,
+        z.object({ success: z.boolean() })
+      );
+    },
+
+    /**
+     * Publish (activate) an email template version.
+     * POST /api/v1/admin/email-templates/:id/publish
+     */
+    async publishEmailTemplate(id: string): Promise<void> {
+      await httpClient.post('/api/v1/admin/email-templates/' + id + '/publish', {});
+    },
+
+    /**
+     * Preview rendered email template with test data.
+     * POST /api/v1/admin/email-templates/:id/preview
+     */
+    async previewEmailTemplate(id: string, testData?: Record<string, string>): Promise<string> {
+      const result = await httpClient.post<{ html: string }>(
+        `/api/v1/admin/email-templates/${id}/preview`,
+        { testData },
+        z.object({ html: z.string() })
+      );
+      return result.html;
+    },
+
+    /**
+     * Get version history for a template by name.
+     * GET /api/v1/admin/email-templates/:name/versions
+     */
+    async getEmailTemplateVersions(name: string, locale?: string): Promise<EmailTemplateDto[]> {
+      const params = locale ? `?locale=${locale}` : '';
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates/${name}/versions${params}`,
+        GetEmailTemplatesResponseSchema
+      );
+      return result ?? [];
     },
   };
 }

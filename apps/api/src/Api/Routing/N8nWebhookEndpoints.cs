@@ -23,7 +23,7 @@ internal static class N8nWebhookEndpoints
 
     public static void MapN8nWebhookEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/webhooks/n8n", HandleN8nWebhook)
+        app.MapPost("/api/v1/webhooks/n8n", HandleN8nWebhook)
             .WithName("N8nWebhook")
             .WithTags("Webhooks")
             .WithSummary("Receive n8n webhook callbacks with HMAC-SHA256 validation")

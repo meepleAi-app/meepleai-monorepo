@@ -2728,10 +2728,157 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         }
       );
     },
+
+    // ========== Email Queue Management (Issue #39) ==========
+
+    /**
+     * Get email queue statistics.
+     * GET /api/v1/admin/emails/stats
+     */
+    async getEmailQueueStats(): Promise<EmailQueueStats> {
+      const result = await httpClient.get('/api/v1/admin/emails/stats', EmailQueueStatsSchema);
+      return (
+        result ?? {
+          pendingCount: 0,
+          processingCount: 0,
+          sentCount: 0,
+          failedCount: 0,
+          deadLetterCount: 0,
+          sentLastHour: 0,
+          sentLast24Hours: 0,
+        }
+      );
+    },
+
+    /**
+     * Get email history with pagination and optional search.
+     * GET /api/v1/admin/emails/history
+     */
+    async getEmailHistory(params?: {
+      skip?: number;
+      take?: number;
+      search?: string;
+    }): Promise<EmailHistoryResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.skip !== undefined) queryParams.append('skip', String(params.skip));
+      if (params?.take !== undefined) queryParams.append('take', String(params.take));
+      if (params?.search) queryParams.append('search', params.search);
+      const qs = queryParams.toString();
+      const url = qs ? `/api/v1/admin/emails/history?${qs}` : '/api/v1/admin/emails/history';
+      const result = await httpClient.get(url, EmailHistoryResultSchema);
+      return result ?? { items: [], totalCount: 0, skip: 0, take: 20 };
+    },
+
+    /**
+     * Get dead-lettered emails with pagination.
+     * GET /api/v1/admin/emails/dead-letter
+     */
+    async getDeadLetterEmails(params?: {
+      skip?: number;
+      take?: number;
+    }): Promise<DeadLetterResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.skip !== undefined) queryParams.append('skip', String(params.skip));
+      if (params?.take !== undefined) queryParams.append('take', String(params.take));
+      const qs = queryParams.toString();
+      const url = qs
+        ? `/api/v1/admin/emails/dead-letter?${qs}`
+        : '/api/v1/admin/emails/dead-letter';
+      const result = await httpClient.get(url, DeadLetterResultSchema);
+      return result ?? { items: [], totalCount: 0, skip: 0, take: 20 };
+    },
+
+    /**
+     * Retry a single dead-lettered email.
+     * POST /api/v1/admin/emails/{id}/retry
+     */
+    async retryEmail(id: string): Promise<boolean> {
+      const result = await httpClient.post(
+        `/api/v1/admin/emails/${encodeURIComponent(id)}/retry`,
+        {},
+        z.object({ success: z.boolean() })
+      );
+      return result?.success ?? false;
+    },
+
+    /**
+     * Retry all dead-lettered emails.
+     * POST /api/v1/admin/emails/retry-all-dead-letters
+     */
+    async retryAllDeadLetters(): Promise<number> {
+      const result = await httpClient.post(
+        '/api/v1/admin/emails/retry-all-dead-letters',
+        {},
+        z.object({ retried: z.number() })
+      );
+      return result?.retried ?? 0;
+    },
+
+    /**
+     * Send a test email (immediate, not queued).
+     * POST /api/v1/admin/emails/test
+     */
+    async sendTestEmail(to: string): Promise<boolean> {
+      const result = await httpClient.post(
+        '/api/v1/admin/emails/test',
+        { to },
+        z.object({ success: z.boolean() })
+      );
+      return result?.success ?? false;
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Email Queue Schemas (Issue #39) ==========
+
+const EmailQueueStatsSchema = z.object({
+  pendingCount: z.number(),
+  processingCount: z.number(),
+  sentCount: z.number(),
+  failedCount: z.number(),
+  deadLetterCount: z.number(),
+  sentLastHour: z.number(),
+  sentLast24Hours: z.number(),
+});
+
+export type EmailQueueStats = z.infer<typeof EmailQueueStatsSchema>;
+
+const EmailQueueItemSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  to: z.string(),
+  subject: z.string(),
+  status: z.string(),
+  retryCount: z.number(),
+  maxRetries: z.number(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.string(),
+  processedAt: z.string().nullable(),
+  failedAt: z.string().nullable(),
+  correlationId: z.string().nullable().optional(),
+});
+
+export type EmailQueueItem = z.infer<typeof EmailQueueItemSchema>;
+
+const EmailHistoryResultSchema = z.object({
+  items: z.array(EmailQueueItemSchema),
+  totalCount: z.number(),
+  skip: z.number(),
+  take: z.number(),
+});
+
+export type EmailHistoryResult = z.infer<typeof EmailHistoryResultSchema>;
+
+const DeadLetterResultSchema = z.object({
+  items: z.array(EmailQueueItemSchema),
+  totalCount: z.number(),
+  skip: z.number(),
+  take: z.number(),
+});
+
+export type DeadLetterResult = z.infer<typeof DeadLetterResultSchema>;
 
 // ========== Qdrant Admin Types (Issue #4877) ==========
 

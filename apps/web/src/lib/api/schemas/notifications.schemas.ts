@@ -35,6 +35,11 @@ export const KNOWN_NOTIFICATION_TYPES = [
   'game_proposal_kb_merged',
   'processing_job_failed',
   'agent_linked',
+  'game_night_invitation',
+  'game_night_rsvp_received',
+  'game_night_published',
+  'game_night_cancelled',
+  'game_night_reminder',
 ] as const;
 
 // Defensive schema — accepts any string to prevent API breaking on new backend types
@@ -84,6 +89,12 @@ export const NotificationPreferencesSchema = z.object({
   inAppOnDocumentFailed: z.boolean(),
   inAppOnRetryAvailable: z.boolean(),
   hasPushSubscription: z.boolean(),
+  // Game Night preferences (Issue #33 / #44 / #47)
+  inAppOnGameNightInvitation: z.boolean().optional().default(true),
+  emailOnGameNightInvitation: z.boolean().optional().default(true),
+  pushOnGameNightInvitation: z.boolean().optional().default(true),
+  emailOnGameNightReminder: z.boolean().optional().default(true),
+  pushOnGameNightReminder: z.boolean().optional().default(true),
 });
 export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>;
 

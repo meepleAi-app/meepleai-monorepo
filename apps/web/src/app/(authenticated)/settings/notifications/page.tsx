@@ -7,7 +7,18 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { Bell, Mail, Smartphone, MessageSquare, Save, Loader2, BellRing, BellOff, SendHorizontal } from 'lucide-react';
+import {
+  Bell,
+  Calendar,
+  Mail,
+  Smartphone,
+  MessageSquare,
+  Save,
+  Loader2,
+  BellRing,
+  BellOff,
+  SendHorizontal,
+} from 'lucide-react';
 
 import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
@@ -26,6 +37,12 @@ interface NotificationPreferences {
   inAppOnDocumentFailed: boolean;
   inAppOnRetryAvailable: boolean;
   hasPushSubscription: boolean;
+  // Game Night preferences (Issue #33)
+  inAppOnGameNightInvitation: boolean;
+  emailOnGameNightInvitation: boolean;
+  pushOnGameNightInvitation: boolean;
+  emailOnGameNightReminder: boolean;
+  pushOnGameNightReminder: boolean;
 }
 
 export default function NotificationSettingsPage() {
@@ -112,7 +129,10 @@ export default function NotificationSettingsPage() {
     }
   };
 
-  const updatePref = (key: keyof Omit<NotificationPreferences, 'userId' | 'hasPushSubscription'>, value: boolean) => {
+  const updatePref = (
+    key: keyof Omit<NotificationPreferences, 'userId' | 'hasPushSubscription'>,
+    value: boolean
+  ) => {
     if (!prefs) return;
     setPrefs({ ...prefs, [key]: value });
   };
@@ -166,7 +186,9 @@ export default function NotificationSettingsPage() {
         <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className={`p-2 rounded-lg ${push.isSubscribed ? 'bg-green-100 dark:bg-green-900/20' : 'bg-muted'}`}>
+              <div
+                className={`p-2 rounded-lg ${push.isSubscribed ? 'bg-green-100 dark:bg-green-900/20' : 'bg-muted'}`}
+              >
                 {push.isSubscribed ? (
                   <BellRing className="h-6 w-6 text-green-600 dark:text-green-400" />
                 ) : (
@@ -237,12 +259,14 @@ export default function NotificationSettingsPage() {
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">Email Notification</p>
-                <p className="text-sm text-muted-foreground">Receive email when document is ready</p>
+                <p className="text-sm text-muted-foreground">
+                  Receive email when document is ready
+                </p>
               </div>
             </div>
             <Switch
               checked={prefs.emailOnDocumentReady}
-              onCheckedChange={(checked) => updatePref('emailOnDocumentReady', checked)}
+              onCheckedChange={checked => updatePref('emailOnDocumentReady', checked)}
             />
           </div>
 
@@ -252,13 +276,15 @@ export default function NotificationSettingsPage() {
               <div>
                 <p className="font-medium">Push Notification</p>
                 <p className="text-sm text-muted-foreground">
-                  {pushEnabled ? 'Browser push notification when document is ready' : 'Enable push notifications above to use this'}
+                  {pushEnabled
+                    ? 'Browser push notification when document is ready'
+                    : 'Enable push notifications above to use this'}
                 </p>
               </div>
             </div>
             <Switch
               checked={prefs.pushOnDocumentReady}
-              onCheckedChange={(checked) => updatePref('pushOnDocumentReady', checked)}
+              onCheckedChange={checked => updatePref('pushOnDocumentReady', checked)}
               disabled={!pushEnabled}
             />
           </div>
@@ -268,12 +294,14 @@ export default function NotificationSettingsPage() {
               <MessageSquare className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">In-App Notification</p>
-                <p className="text-sm text-muted-foreground">Show notification in notification center</p>
+                <p className="text-sm text-muted-foreground">
+                  Show notification in notification center
+                </p>
               </div>
             </div>
             <Switch
               checked={prefs.inAppOnDocumentReady}
-              onCheckedChange={(checked) => updatePref('inAppOnDocumentReady', checked)}
+              onCheckedChange={checked => updatePref('inAppOnDocumentReady', checked)}
             />
           </div>
         </div>
@@ -304,7 +332,7 @@ export default function NotificationSettingsPage() {
             </div>
             <Switch
               checked={prefs.emailOnDocumentFailed}
-              onCheckedChange={(checked) => updatePref('emailOnDocumentFailed', checked)}
+              onCheckedChange={checked => updatePref('emailOnDocumentFailed', checked)}
             />
           </div>
 
@@ -314,13 +342,15 @@ export default function NotificationSettingsPage() {
               <div>
                 <p className="font-medium">Push Notification</p>
                 <p className="text-sm text-muted-foreground">
-                  {pushEnabled ? 'Browser push notification on processing failure' : 'Enable push notifications above to use this'}
+                  {pushEnabled
+                    ? 'Browser push notification on processing failure'
+                    : 'Enable push notifications above to use this'}
                 </p>
               </div>
             </div>
             <Switch
               checked={prefs.pushOnDocumentFailed}
-              onCheckedChange={(checked) => updatePref('pushOnDocumentFailed', checked)}
+              onCheckedChange={checked => updatePref('pushOnDocumentFailed', checked)}
               disabled={!pushEnabled}
             />
           </div>
@@ -335,7 +365,115 @@ export default function NotificationSettingsPage() {
             </div>
             <Switch
               checked={prefs.inAppOnDocumentFailed}
-              onCheckedChange={(checked) => updatePref('inAppOnDocumentFailed', checked)}
+              onCheckedChange={checked => updatePref('inAppOnDocumentFailed', checked)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Game Night Invitations (Issue #33) */}
+      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/20">
+            <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold mb-1">Serate Giochi — Inviti</h2>
+            <p className="text-sm text-muted-foreground">
+              Notifiche quando vieni invitato a una serata giochi
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Email</p>
+                <p className="text-sm text-muted-foreground">Ricevi email per nuovi inviti</p>
+              </div>
+            </div>
+            <Switch
+              checked={prefs.emailOnGameNightInvitation}
+              onCheckedChange={checked => updatePref('emailOnGameNightInvitation', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Push</p>
+                <p className="text-sm text-muted-foreground">
+                  {pushEnabled ? 'Notifica push per nuovi inviti' : 'Abilita le push sopra'}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={prefs.pushOnGameNightInvitation}
+              onCheckedChange={checked => updatePref('pushOnGameNightInvitation', checked)}
+              disabled={!pushEnabled}
+            />
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">In-App</p>
+                <p className="text-sm text-muted-foreground">Mostra nel centro notifiche</p>
+              </div>
+            </div>
+            <Switch
+              checked={prefs.inAppOnGameNightInvitation}
+              onCheckedChange={checked => updatePref('inAppOnGameNightInvitation', checked)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Game Night Reminders (Issue #33) */}
+      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/20">
+            <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold mb-1">Serate Giochi — Promemoria</h2>
+            <p className="text-sm text-muted-foreground">Promemoria 24h e 1h prima della serata</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Email</p>
+                <p className="text-sm text-muted-foreground">Ricevi email di promemoria</p>
+              </div>
+            </div>
+            <Switch
+              checked={prefs.emailOnGameNightReminder}
+              onCheckedChange={checked => updatePref('emailOnGameNightReminder', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Push</p>
+                <p className="text-sm text-muted-foreground">
+                  {pushEnabled ? 'Notifica push di promemoria' : 'Abilita le push sopra'}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={prefs.pushOnGameNightReminder}
+              onCheckedChange={checked => updatePref('pushOnGameNightReminder', checked)}
+              disabled={!pushEnabled}
             />
           </div>
         </div>
@@ -366,7 +504,7 @@ export default function NotificationSettingsPage() {
             </div>
             <Switch
               checked={prefs.emailOnRetryAvailable}
-              onCheckedChange={(checked) => updatePref('emailOnRetryAvailable', checked)}
+              onCheckedChange={checked => updatePref('emailOnRetryAvailable', checked)}
             />
           </div>
 
@@ -376,13 +514,15 @@ export default function NotificationSettingsPage() {
               <div>
                 <p className="font-medium">Push Notification</p>
                 <p className="text-sm text-muted-foreground">
-                  {pushEnabled ? 'Browser push notification on retry' : 'Enable push notifications above to use this'}
+                  {pushEnabled
+                    ? 'Browser push notification on retry'
+                    : 'Enable push notifications above to use this'}
                 </p>
               </div>
             </div>
             <Switch
               checked={prefs.pushOnRetryAvailable}
-              onCheckedChange={(checked) => updatePref('pushOnRetryAvailable', checked)}
+              onCheckedChange={checked => updatePref('pushOnRetryAvailable', checked)}
               disabled={!pushEnabled}
             />
           </div>
@@ -392,12 +532,14 @@ export default function NotificationSettingsPage() {
               <MessageSquare className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">In-App Notification</p>
-                <p className="text-sm text-muted-foreground">Show retry status in notification center</p>
+                <p className="text-sm text-muted-foreground">
+                  Show retry status in notification center
+                </p>
               </div>
             </div>
             <Switch
               checked={prefs.inAppOnRetryAvailable}
-              onCheckedChange={(checked) => updatePref('inAppOnRetryAvailable', checked)}
+              onCheckedChange={checked => updatePref('inAppOnRetryAvailable', checked)}
             />
           </div>
         </div>

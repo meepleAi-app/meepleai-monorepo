@@ -98,7 +98,6 @@ let mockUseQuery: ReturnType<typeof vi.fn>;
 let mockUseMutation: ReturnType<typeof vi.fn>;
 let mockUseQueryClient: ReturnType<typeof vi.fn>;
 let mockInvalidateQueries: ReturnType<typeof vi.fn>;
-let mockSetActiveForRag: ReturnType<typeof vi.fn>;
 let mockMutateAsync: ReturnType<typeof vi.fn>;
 
 const setup = (pdfs: PdfDocumentDto[] = [makePdf()]) => {
@@ -118,8 +117,6 @@ const setup = (pdfs: PdfDocumentDto[] = [makePdf()]) => {
     isPending: false,
   });
 
-  mockSetActiveForRag.mockResolvedValue({ success: true, isActive: true, message: 'OK' });
-
   return render(<PdfVersionManager gameId="game-1" gameName="Catan" />);
 };
 
@@ -135,10 +132,6 @@ beforeEach(async () => {
   mockUseQuery = queryModule.useQuery;
   mockUseMutation = queryModule.useMutation;
   mockUseQueryClient = queryModule.useQueryClient;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const apiModule = (await import('@/lib/api')) as any;
-  mockSetActiveForRag = apiModule.api.documents.setActiveForRag;
 });
 
 // ============================================================================
@@ -281,22 +274,6 @@ describe('PdfVersionManager - RAG Toggle', () => {
     });
   });
 
-  it('calls setActiveForRag with false when deactivating', async () => {
-    const user = userEvent.setup();
-    setup([makePdf({ isActiveForRag: true })]);
-
-    await waitFor(() => {
-      expect(screen.getByText('rulebook.pdf')).toBeInTheDocument();
-    });
-
-    const toggle = screen.getByRole('button', { name: /Attivo/i });
-    await user.click(toggle);
-
-    await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({ pdfId: 'doc-1', isActive: false });
-    });
-  });
-
   it('calls setActiveForRag with true when activating an inactive PDF', async () => {
     const user = userEvent.setup();
     setup([makePdf({ isActiveForRag: false })]);
@@ -381,6 +358,9 @@ describe('PdfVersionManager - Replace or Keep Both', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('replace-keep-dialog')).not.toBeInTheDocument();
     });
+
+    // Should NOT deactivate any PDFs
+    expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
   it('does not show dialog when no existing PDFs', async () => {

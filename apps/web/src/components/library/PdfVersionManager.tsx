@@ -143,6 +143,9 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
 
   // ─── Upload Handlers ──────────────────────────────────────────────────────
 
+  // NOTE: versionLabel and category are collected in the UI but not yet persisted
+  // to the backend — the upload API does not support these fields yet.
+  // When the backend adds support, forward them in handleUpload/handleUploadComplete.
   const handleUpload = async (
     file: File,
     onProgress: (percent: number) => void

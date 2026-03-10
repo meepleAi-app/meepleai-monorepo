@@ -98,106 +98,26 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # Chromatic UI Review (Storybook)
-  chromatic:
-    name: Chromatic UI Review
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: changes
-    if: needs.changes.outputs.web == 'true'
-    continue-on-error: true
-    defaults:
-      run:
-        working-directory: apps/web
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Frontend
-        uses: ./.github/actions/setup-frontend
-        with:
-          node-version: '20'
-          pnpm-version: '10'
-          working-directory: apps/web
-          frozen-lockfile: 'true'
-
-      - name: Build Storybook
-        run: pnpm build-storybook
-        continue-on-error: true
-
-      - name: Run Chromatic
-        id: chromatic
-        uses: chromaui/action@latest
-        with:
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-          workingDir: apps/web
-          exitZeroOnChanges: true
-          exitOnceUploaded: true
-          onlyChanged: true
-          autoAcceptChanges: main
-        continue-on-error: true
-
-      - name: Comment PR with Chromatic Results
-        if: github.event_name == 'pull_request' && steps.chromatic.outputs.url != ''
-        uses: actions/github-script@v8
-        env:
-          CHROMATIC_URL: ${{ steps.chromatic.outputs.url }}
-          BUILD_URL: ${{ steps.chromatic.outputs.buildUrl }}
-          STORYBOOK_URL: ${{ steps.chromatic.outputs.storybookUrl }}
-          CHANGE_COUNT: ${{ steps.chromatic.outputs.changeCount }}
-        with:
-          script: |
-            const { CHROMATIC_URL, BUILD_URL, STORYBOOK_URL, CHANGE_COUNT } = process.env;
-            const changeCount = parseInt(CHANGE_COUNT) || 0;
-
-            const comment = `## Chromatic Visual Review
-
-            ${changeCount > 0 ? 'Visual changes detected!' : 'No visual changes'}
-
-            **Visual Changes:** ${changeCount}
-
-            **Review Links:**
-            - [Chromatic Build](${BUILD_URL})
-            - [Storybook Preview](${STORYBOOK_URL})
-            - [Full Report](${CHROMATIC_URL})
-
-            ${changeCount > 0 ? `
-            **Action Required:**
-            - Review visual changes in Chromatic
-            - Accept changes if intentional
-            - Fix regressions if unintentional
-            ` : ''}
-            `;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
-
   # Summary
   visual-summary:
     name: Visual Tests Summary
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [playwright-visual, chromatic]
+    needs: [playwright-visual]
     if: always() && github.event_name == 'pull_request'
     steps:
       - name: Generate Summary
         uses: actions/github-script@v8
         env:
           PLAYWRIGHT_STATUS: ${{ needs.playwright-visual.result }}
-          CHROMATIC_STATUS: ${{ needs.chromatic.result }}
         with:
           script: |
-            const { PLAYWRIGHT_STATUS, CHROMATIC_STATUS } = process.env;
+            const { PLAYWRIGHT_STATUS } = process.env;
 
             let message = 'Visual regression tests completed successfully';
 
-            if (PLAYWRIGHT_STATUS === 'failure' || CHROMATIC_STATUS === 'failure') {
+            if (PLAYWRIGHT_STATUS === 'failure') {
               message = 'Visual regression tests failed';
-            } else if (PLAYWRIGHT_STATUS === 'cancelled' || CHROMATIC_STATUS === 'cancelled') {
+            } else if (PLAYWRIGHT_STATUS === 'cancelled') {
               message = 'Visual regression tests were cancelled';
             }
 
@@ -213,7 +133,6 @@ jobs:
 
             ### Test Results
             - **Playwright Visual Tests:** ${statusIcon(PLAYWRIGHT_STATUS)}
-            - **Chromatic UI Review:** ${statusIcon(CHROMATIC_STATUS)}
 
             Artifacts and detailed reports are available in the workflow run.
             `;

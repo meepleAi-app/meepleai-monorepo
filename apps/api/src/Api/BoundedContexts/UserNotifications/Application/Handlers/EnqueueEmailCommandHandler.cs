@@ -86,7 +86,8 @@ internal class EnqueueEmailCommandHandler : ICommandHandler<EnqueueEmailCommand,
             command.UserId,
             command.To,
             command.Subject,
-            htmlBody);
+            htmlBody,
+            command.CorrelationId);
 
         await _emailQueueRepository.AddAsync(emailQueueItem, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

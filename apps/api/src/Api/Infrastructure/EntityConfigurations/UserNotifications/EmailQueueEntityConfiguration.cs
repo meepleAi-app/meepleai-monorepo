@@ -29,6 +29,12 @@ internal class EmailQueueEntityConfiguration : IEntityTypeConfiguration<EmailQue
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.ProcessedAt).HasColumnName("processed_at");
         builder.Property(e => e.FailedAt).HasColumnName("failed_at");
+        builder.Property(e => e.CorrelationId).HasColumnName("correlation_id");
+
+        // CorrelationId index for cross-channel tracking
+        builder.HasIndex(e => e.CorrelationId)
+            .HasDatabaseName("IX_email_queue_items_correlation_id")
+            .HasFilter("correlation_id IS NOT NULL");
 
         // Primary index: batch pickup of pending/failed emails ready for retry
         builder.HasIndex(e => new { e.Status, e.NextRetryAt })

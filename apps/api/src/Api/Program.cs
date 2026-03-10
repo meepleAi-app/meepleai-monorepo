@@ -490,6 +490,7 @@ v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoint
 v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
+v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
 v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSessionStatisticsEndpoints(); // P4: Session analytics dashboard

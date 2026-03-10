@@ -49,6 +49,10 @@
      * ============================================================================ */
     --size-sidebar: 20rem;        /* 320px */
     --size-sidebar-collapsed: 0;
+
+    /* Desktop sidebar widths (single source of truth) */
+    --sidebar-width-expanded: 220px;
+    --sidebar-width-collapsed: 60px;
     --size-header: 4rem;          /* 64px */
     --size-modal-sm: 28rem;       /* 448px */
     --size-modal-md: 36rem;       /* 576px */
@@ -63,10 +67,6 @@
     --size-icon-md: 1.25rem;      /* 20px */
     --size-icon-lg: 1.5rem;       /* 24px */
     --size-icon-xl: 2rem;         /* 32px */
-
-    /* Sidebar */
-    --sidebar-width-expanded: 220px;
-    --sidebar-width-collapsed: 60px;
 
     /* Mobile-specific sizing (Issue #1092) */
     --size-mobile-nav-height: 4.5rem;      /* 72px - bottom nav bar */

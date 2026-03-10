@@ -215,6 +215,9 @@ export function PdfUploadSection({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('language', 'it');
+      if (gameId) {
+        formData.append('gameId', gameId);
+      }
 
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();

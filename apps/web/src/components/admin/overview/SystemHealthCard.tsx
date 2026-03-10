@@ -11,6 +11,19 @@ interface ServiceHealth {
   status: ServiceStatus;
 }
 
+interface ApiServiceHealth {
+  serviceName: string;
+  status: string;
+  description?: string | null;
+  isCritical: boolean;
+}
+
+interface ApiHealthResponse {
+  overallStatus: string;
+  services: ApiServiceHealth[];
+  timestamp: string;
+}
+
 const STATUS_CONFIG: Record<ServiceStatus, { dot: string; label: string }> = {
   healthy: { dot: 'bg-emerald-500', label: 'Healthy' },
   degraded: { dot: 'bg-amber-500', label: 'Degraded' },
@@ -18,14 +31,55 @@ const STATUS_CONFIG: Record<ServiceStatus, { dot: string; label: string }> = {
   unknown: { dot: 'bg-slate-400', label: 'Unknown' },
 };
 
+/** Map ASP.NET HealthStatus string to our UI status */
+function mapApiStatus(apiStatus: string): ServiceStatus {
+  switch (apiStatus.toLowerCase()) {
+    case 'healthy':
+      return 'healthy';
+    case 'degraded':
+      return 'degraded';
+    case 'unhealthy':
+      return 'down';
+    default:
+      return 'unknown';
+  }
+}
+
+/** Display-friendly name for backend service names */
+function formatServiceName(name: string): string {
+  const nameMap: Record<string, string> = {
+    postgres: 'PostgreSQL',
+    redis: 'Redis',
+    'redis-rate-limiting': 'Redis Rate Limit',
+    'shared-catalog-fts': 'Catalog FTS',
+    configuration: 'Configuration',
+    n8n: 'n8n',
+    openrouter: 'OpenRouter',
+    'embedding-service': 'Embedding',
+    'reranker-service': 'Reranker',
+    'unstructured-service': 'Unstructured',
+    'smoldocling-service': 'SmolDocling',
+    'bgg-api': 'BGG API',
+    'oauth-providers': 'OAuth',
+    'email-smtp': 'Email SMTP',
+    grafana: 'Grafana',
+    prometheus: 'Prometheus',
+    hyperdx: 'HyperDX',
+    's3-storage': 'S3 Storage',
+  };
+  return nameMap[name] ?? name;
+}
+
 const REFRESH_INTERVAL_MS = 60_000;
+
+/** Critical services shown first regardless of backend response */
+const CRITICAL_SERVICE_NAMES = ['postgres', 'redis'];
 
 export function SystemHealthCard() {
   const [services, setServices] = useState<ServiceHealth[]>([
     { name: 'API', status: 'unknown' },
     { name: 'PostgreSQL', status: 'unknown' },
     { name: 'Redis', status: 'unknown' },
-    { name: 'Ollama', status: 'unknown' },
   ]);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [checking, setChecking] = useState(false);
@@ -34,25 +88,35 @@ export function SystemHealthCard() {
     setChecking(true);
     try {
       const res = await fetch('/api/v1/admin/operations/health', {
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10_000),
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setServices([
-          { name: 'API', status: 'healthy' },
-          { name: 'PostgreSQL', status: data?.database ? 'healthy' : 'unknown' },
-          { name: 'Redis', status: data?.redis ? 'healthy' : 'unknown' },
-          { name: 'Ollama', status: data?.ollama ? 'healthy' : 'unknown' },
-        ]);
+        const data: ApiHealthResponse = await res.json();
+
+        // API is reachable — always healthy
+        const mapped: ServiceHealth[] = [{ name: 'API', status: 'healthy' }];
+
+        // Add critical services first, then the rest
+        const critical = data.services.filter(s => CRITICAL_SERVICE_NAMES.includes(s.serviceName));
+        const others = data.services.filter(s => !CRITICAL_SERVICE_NAMES.includes(s.serviceName));
+
+        for (const svc of [...critical, ...others]) {
+          mapped.push({
+            name: formatServiceName(svc.serviceName),
+            status: mapApiStatus(svc.status),
+          });
+        }
+
+        setServices(mapped);
       } else {
-        // API responded but with error — degraded
+        // API responded but with error — mark API degraded
         setServices(prev =>
           prev.map(s => (s.name === 'API' ? { ...s, status: 'degraded' as const } : s))
         );
       }
     } catch {
-      // API unreachable — if page loaded, API was up recently
+      // API unreachable
       setServices(prev =>
         prev.map(s => (s.name === 'API' ? { ...s, status: 'down' as const } : s))
       );

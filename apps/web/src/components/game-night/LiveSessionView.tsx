@@ -23,7 +23,6 @@ import { useState, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { toScoreboardData } from '@/components/session/adapters';
-import { PauseSessionDialog } from '@/components/session/PauseSessionDialog';
 import { ScoreInput } from '@/components/session/ScoreInput';
 import {
   Sheet,
@@ -39,6 +38,7 @@ import { useSessionStore } from '@/lib/stores/sessionStore';
 
 import { LiveScoreboard, type LiveScoreboardPlayer } from './LiveScoreboard';
 import { QuickActions } from './QuickActions';
+import { SaveCompleteDialog } from './SaveCompleteDialog';
 import { ScoreAssistant } from './ScoreAssistant';
 import { SessionChatWidget, type ChatMessage } from './SessionChatWidget';
 import { SessionHeader } from './SessionHeader';
@@ -112,7 +112,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [arbiterOpen, setArbiterOpen] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
-  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isChatStreaming, setIsChatStreaming] = useState(false);
 
@@ -148,14 +148,18 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     if (activeSession.status === 'Paused') {
       resumeSession();
     } else {
-      setPauseDialogOpen(true);
+      setSaveDialogOpen(true);
     }
   }, [activeSession, resumeSession]);
 
-  const handlePauseConfirm = useCallback(() => {
-    pauseSession();
-    setPauseDialogOpen(false);
-  }, [pauseSession]);
+  const handleSaveComplete = useCallback(() => {
+    // Session is already paused by the save-complete endpoint
+    const session = useSessionStore.getState().activeSession;
+    if (session) {
+      handleSessionUpdate({ ...session, status: 'Paused' });
+    }
+    setSaveDialogOpen(false);
+  }, [handleSessionUpdate]);
 
   const handleChatSend = useCallback((message: string) => {
     const userMsg: ChatMessage = {
@@ -346,13 +350,12 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         </SheetContent>
       </Sheet>
 
-      {/* Pause dialog with photo prompt */}
-      <PauseSessionDialog
-        open={pauseDialogOpen}
-        onOpenChange={setPauseDialogOpen}
+      {/* Save complete dialog (replaces PauseSessionDialog) */}
+      <SaveCompleteDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
         sessionId={sessionId}
-        playerId=""
-        onPause={handlePauseConfirm}
+        onSaveComplete={handleSaveComplete}
       />
     </div>
   );

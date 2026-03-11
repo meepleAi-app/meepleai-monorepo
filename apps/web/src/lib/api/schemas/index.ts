@@ -122,3 +122,6 @@ export * from './game-nights.schemas';
 
 // Email Templates schemas (Issue #52-#56)
 export * from './email-templates.schemas';
+
+// Enhanced Save/Resume schemas (Issue #122)
+export * from './save-resume.schemas';

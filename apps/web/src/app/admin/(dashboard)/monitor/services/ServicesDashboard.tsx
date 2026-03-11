@@ -289,6 +289,7 @@ export function ServicesDashboard() {
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasLoadedRef = useRef(false);
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
@@ -296,16 +297,16 @@ export function ServicesDashboard() {
       const result = await api.admin.getServiceDashboard();
       if (result) {
         setData(result);
+        hasLoadedRef.current = true;
       }
     } catch {
       // On first load show toast, on refresh silently fail
-      if (!data) {
+      if (!hasLoadedRef.current) {
         toast({ title: 'Failed to load service health data', variant: 'destructive' });
       }
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   // Initial fetch

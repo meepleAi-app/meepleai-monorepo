@@ -228,30 +228,60 @@ jobs:
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [deploy]
     steps:
-      - name: Health Check
+      - name: Deep Health Check
         run: |
-          echo "🔍 Running health checks..."
+          echo "🔍 Running deep health checks..."
 
-          # API Health
+          # Wait for API with structured health response
+          HEALTH=""
           for i in {1..30}; do
-            if curl -sf https://meepleai.app/health; then
-              echo "✅ API healthy"
+            HEALTH=$(curl -sf https://api.meepleai.app/health 2>/dev/null || true)
+            if [ -n "$HEALTH" ]; then
+              echo "📋 Health response received"
               break
             fi
             echo "⏳ Waiting for API... ($i/30)"
             sleep 10
           done
 
-          # Web Health
-          curl -sf https://meepleai.app || exit 1
-          echo "✅ Web healthy"
+          if [ -z "$HEALTH" ]; then
+            echo "❌ API did not respond within 5 minutes"
+            exit 1
+          fi
+
+          echo "$HEALTH" | jq . 2>/dev/null || echo "$HEALTH"
+
+          # Verify critical services from health response
+          for SERVICE in postgres redis; do
+            STATUS=$(echo "$HEALTH" | jq -r ".checks[] | select(.name==\"$SERVICE\") | .status" 2>/dev/null || true)
+            if [ "$STATUS" != "Healthy" ]; then
+              echo "❌ $SERVICE is $STATUS (expected Healthy)"
+              exit 1
+            fi
+            echo "✅ $SERVICE: Healthy"
+          done
+
+          echo "✅ All critical services healthy"
+
+      - name: Web Health Check
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://meepleai.app)
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Web returned status $HTTP_STATUS"
+            exit 1
+          fi
+          echo "✅ Web healthy (HTTP $HTTP_STATUS)"
 
       - name: Smoke Tests
         run: |
           echo "🧪 Running smoke tests..."
-          # Add critical path smoke tests here
-          # curl -sf https://meepleai.app/api/v1/health
-          # curl -sf https://meepleai.app/api/v1/games?limit=1
+
+          # Test API responds to actual requests
+          curl -sf https://api.meepleai.app/health > /dev/null || { echo "❌ API health failed"; exit 1; }
+
+          # Test web serves HTML
+          curl -sf https://meepleai.app -o /dev/null || { echo "❌ Web root failed"; exit 1; }
+
           echo "✅ Smoke tests passed"
 
   # Notify on completion

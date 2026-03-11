@@ -140,7 +140,7 @@ public class GetGameWizardPreviewQueryHandlerTests
         result.Documents.Should().HaveCount(1);
         result.DocumentCount.Should().Be(1);
         result.Documents[0].FileName.Should().Be("catan-rules.pdf");
-        result.Documents[0].Status.Should().Be("pending");
+        result.Documents[0].Status.Should().Be("Pending");
         result.Documents[0].DocumentType.Should().Be("base");
     }
 

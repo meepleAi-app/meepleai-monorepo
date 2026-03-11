@@ -12,6 +12,7 @@ using Api.Infrastructure.Entities.UserLibrary;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -38,17 +39,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         _mockLibraryRepo = new Mock<IUserLibraryRepository>();
         _mockSharedGameRepo = new Mock<ISharedGameRepository>();
 
-        // Create in-memory database for PdfDocuments cross-context query
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase($"test_db_{Guid.NewGuid()}")
-            .Options;
-
-        // Create mocks for DbContext dependencies
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
-
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         _handler = new GetUserLibraryQueryHandler(
             _mockLibraryRepo.Object,
@@ -82,11 +73,22 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         var gameId = sharedGame.Id;
         var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
 
+        // Seed a Games record that maps SharedGameId → game record ID
+        // The handler resolves SharedGameId → games.Id before querying PDFs
+        var gameRecordId = Guid.NewGuid();
+        _dbContext.Games.Add(new GameEntity
+        {
+            Id = gameRecordId,
+            Name = "Test Game",
+            SharedGameId = gameId
+        });
+
         // Add fully indexed PDF document (ProcessingState = "Ready") to DbContext
+        // PDF GameId references the game record ID (not SharedGameId)
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = gameId,
+            GameId = gameRecordId,
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,

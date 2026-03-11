@@ -50,7 +50,7 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]['id'];
 
-function getNotesKey(section: SectionId): keyof MechanicDraftDto {
+function _getNotesKey(section: SectionId): keyof MechanicDraftDto {
   return `${section}Notes` as keyof MechanicDraftDto;
 }
 

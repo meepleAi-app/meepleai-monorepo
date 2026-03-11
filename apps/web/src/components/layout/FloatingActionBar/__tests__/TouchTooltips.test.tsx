@@ -5,42 +5,47 @@
 
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-
-import { FloatingActionBar } from '../FloatingActionBar';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
+
+let mockIsMobile = false;
+
+vi.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({
+    isMobile: mockIsMobile,
+    isTablet: false,
+    isDesktop: !mockIsMobile,
+    deviceType: mockIsMobile ? 'mobile' : 'desktop',
+  }),
+  usePrefersReducedMotion: () => false,
+}));
+
+vi.mock('@/hooks/useScrollDirection', () => ({
+  useScrollDirection: () => 'up',
+}));
+
+vi.mock('@/hooks/useVirtualKeyboard', () => ({
+  useVirtualKeyboard: () => ({ isKeyboardOpen: false }),
+}));
 
 const mockUseNavigation = vi.fn();
 vi.mock('@/context/NavigationContext', () => ({
   useNavigation: () => mockUseNavigation(),
 }));
 
-const mockUseResponsive = vi.fn();
-vi.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => mockUseResponsive(),
-}));
+import { FloatingActionBar } from '../FloatingActionBar';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const DummyIcon = () => <span data-testid="icon">icon</span>;
 
 function setMobile() {
-  mockUseResponsive.mockReturnValue({
-    isMobile: true,
-    isTablet: false,
-    isDesktop: false,
-    deviceType: 'mobile',
-  });
+  mockIsMobile = true;
 }
 
 function setDesktop() {
-  mockUseResponsive.mockReturnValue({
-    isMobile: false,
-    isTablet: false,
-    isDesktop: true,
-    deviceType: 'desktop',
-  });
+  mockIsMobile = false;
 }
 
 function withCompactActions() {
@@ -77,6 +82,7 @@ describe('FloatingActionBar — Touch-Friendly Tooltips', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockIsMobile = false;
   });
 
   afterEach(() => {

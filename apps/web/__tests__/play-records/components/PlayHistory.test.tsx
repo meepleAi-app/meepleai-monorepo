@@ -24,18 +24,21 @@ vi.mock('@/lib/hooks/use-play-records', () => ({
   usePlayHistory: vi.fn(),
 }));
 
-// Mock Zustand store
+// Mock Zustand store — support selector pattern: usePlayRecordsStore(state => state.field)
+const mockStoreState = {
+  viewMode: 'grid' as const,
+  sortBy: 'recent' as const,
+  sidebarOpen: true,
+  setFilter: vi.fn(),
+  resetFilters: vi.fn(),
+  setViewMode: vi.fn(),
+  setSortBy: vi.fn(),
+  toggleSidebar: vi.fn(),
+};
 vi.mock('@/lib/stores/play-records-store', () => ({
-  usePlayRecordsStore: vi.fn(() => ({
-    viewMode: 'grid',
-    sortBy: 'recent',
-    sidebarOpen: true,
-    setFilter: vi.fn(),
-    resetFilters: vi.fn(),
-    setViewMode: vi.fn(),
-    setSortBy: vi.fn(),
-    toggleSidebar: vi.fn(),
-  })),
+  usePlayRecordsStore: vi.fn((selector?: (state: typeof mockStoreState) => unknown) =>
+    selector ? selector(mockStoreState) : mockStoreState
+  ),
   selectFilters: vi.fn(() => ({
     status: 'all',
     searchQuery: '',

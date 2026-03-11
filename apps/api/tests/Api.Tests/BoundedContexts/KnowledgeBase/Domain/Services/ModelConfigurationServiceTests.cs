@@ -119,28 +119,42 @@ public class ModelConfigurationServiceTests
     }
 
     [Fact]
-    public void GetModelsByTier_ResultsAreOrderedByTierThenName()
+    public void GetModelsByTier_ResultsAreOrderedByTierThenProviderThenName()
     {
         // Act
         var models = _service.GetModelsByTier(ModelTier.Premium);
 
-        // Assert
+        // Assert — ordering is: Tier asc → Cloud before Ollama → Name asc
         for (int i = 1; i < models.Count; i++)
         {
             var prev = models[i - 1];
             var curr = models[i];
 
-            if (prev.Tier == curr.Tier)
+            if (prev.Tier != curr.Tier)
             {
-                // Same tier: should be ordered by name
-                Assert.True(
-                    string.Compare(prev.Name, curr.Name, StringComparison.Ordinal) <= 0,
-                    $"Models with same tier should be ordered by name: {prev.Name} vs {curr.Name}");
+                // Different tier: lower tier should come first
+                Assert.True(prev.Tier < curr.Tier,
+                    $"Lower tier should come first: {prev.Tier} vs {curr.Tier}");
             }
             else
             {
-                // Different tier: lower tier should come first
-                Assert.True(prev.Tier < curr.Tier);
+                // Same tier: cloud providers (sort key 0) before ollama (sort key 1)
+                var prevIsOllama = string.Equals(prev.Provider, "ollama", StringComparison.Ordinal);
+                var currIsOllama = string.Equals(curr.Provider, "ollama", StringComparison.Ordinal);
+
+                if (prevIsOllama != currIsOllama)
+                {
+                    // Cloud before Ollama
+                    Assert.False(prevIsOllama,
+                        $"Cloud models should come before Ollama within same tier: {prev.Name} ({prev.Provider}) vs {curr.Name} ({curr.Provider})");
+                }
+                else
+                {
+                    // Same provider group: should be ordered by name
+                    Assert.True(
+                        string.Compare(prev.Name, curr.Name, StringComparison.Ordinal) <= 0,
+                        $"Models with same tier and provider group should be ordered by name: {prev.Name} vs {curr.Name}");
+                }
             }
         }
     }

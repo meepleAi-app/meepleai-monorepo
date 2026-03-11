@@ -26,6 +26,7 @@ public sealed class RequestSourceTests
         Assert.Contains(RequestSource.AutomatedTest, values);
         Assert.Contains(RequestSource.AgentTask, values);
         Assert.Contains(RequestSource.AdminOperation, values);
+        Assert.Contains(RequestSource.ABTesting, values);
     }
 
     [Theory]
@@ -35,6 +36,7 @@ public sealed class RequestSourceTests
     [InlineData(RequestSource.AutomatedTest, "AutomatedTest")]
     [InlineData(RequestSource.AgentTask, "AgentTask")]
     [InlineData(RequestSource.AdminOperation, "AdminOperation")]
+    [InlineData(RequestSource.ABTesting, "ABTesting")]
     public void RequestSource_ToStringMatchesExpected(RequestSource source, string expected)
     {
         Assert.Equal(expected, source.ToString());
@@ -47,6 +49,7 @@ public sealed class RequestSourceTests
     [InlineData("AutomatedTest", RequestSource.AutomatedTest)]
     [InlineData("AgentTask", RequestSource.AgentTask)]
     [InlineData("AdminOperation", RequestSource.AdminOperation)]
+    [InlineData("ABTesting", RequestSource.ABTesting)]
     public void RequestSource_ParsesFromString(string name, RequestSource expected)
     {
         var parsed = Enum.Parse<RequestSource>(name);
@@ -54,10 +57,10 @@ public sealed class RequestSourceTests
     }
 
     [Fact]
-    public void RequestSource_HasExactly6Values()
+    public void RequestSource_HasExactly7Values()
     {
         // Regression guard: adding/removing values requires updating monitoring logic
         var count = Enum.GetValues<RequestSource>().Length;
-        Assert.Equal(6, count);
+        Assert.Equal(7, count);
     }
 }

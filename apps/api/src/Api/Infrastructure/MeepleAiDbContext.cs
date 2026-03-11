@@ -184,6 +184,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity> SessionMedia => Set<Api.Infrastructure.Entities.SessionTracking.SessionMediaEntity>(); // ISSUE-4760
     public DbSet<SessionAttachmentEntity> SessionAttachments => Set<SessionAttachmentEntity>(); // ISSUE-5360: Session photo attachments
     public DbSet<GameNightPlaylistEntity> GameNightPlaylists => Set<GameNightPlaylistEntity>(); // ISSUE-5582: Game Night Playlist
+    public DbSet<GameNightEventEntity> GameNightEvents => Set<GameNightEventEntity>(); // ISSUE-42: Game Night Event
+    public DbSet<GameNightRsvpEntity> GameNightRsvps => Set<GameNightRsvpEntity>(); // ISSUE-42: Game Night RSVP
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity> SessionChatMessages => Set<Api.Infrastructure.Entities.SessionTracking.SessionChatMessageEntity>(); // ISSUE-4760
 
     // Issue #4220: Notification preferences
@@ -191,6 +193,9 @@ public class MeepleAiDbContext : DbContext
 
     // Issue #4417: Email notification queue
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity> EmailQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity>();
+
+    // Issue #52: Email template admin management
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

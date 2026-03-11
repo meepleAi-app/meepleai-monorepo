@@ -35,7 +35,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         'bg-sidebar text-sidebar-foreground',
         'border-r border-sidebar-border',
         'transition-[width] duration-200 ease-in-out motion-reduce:transition-none',
-        isCollapsed ? 'w-[60px]' : 'w-[220px]'
+        isCollapsed ? 'w-[var(--sidebar-width-collapsed)]' : 'w-[var(--sidebar-width-expanded)]'
       )}
       data-testid="sidebar"
       aria-label="Main sidebar navigation"

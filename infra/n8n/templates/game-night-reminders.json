@@ -1,0 +1,190 @@
+{
+  "name": "Game Night Reminder Series",
+  "description": "Automated reminder workflow for MeepleAI game nights. Sends reminders at 3 days, 24h, and 1h before the event, plus a follow-up 2h after.",
+  "version": "1.0.0",
+  "category": "game-nights",
+  "parameters": {
+    "apiBaseUrl": {
+      "description": "MeepleAI API base URL",
+      "default": "http://localhost:8080",
+      "required": true
+    },
+    "webhookSecret": {
+      "description": "Shared HMAC secret for webhook authentication",
+      "default": "",
+      "required": false
+    }
+  },
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Game Night Published Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "path": "game-night-published",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      }
+    },
+    {
+      "id": "wait_3d",
+      "name": "Wait until 3 days before",
+      "type": "n8n-nodes-base.wait",
+      "position": [450, 300],
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ new Date(new Date($json.scheduledAt).getTime() - 3 * 24 * 60 * 60 * 1000).toISOString() }}"
+      }
+    },
+    {
+      "id": "reminder_3d",
+      "name": "Send 3-day reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $parameter.apiBaseUrl }}/api/v1/webhooks/n8n",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "send_reminder"
+            },
+            {
+              "name": "payload",
+              "value": "={{ JSON.stringify({ eventId: $json.eventId, reminderType: '3_days', title: 'Tra 3 giorni: ' + $json.title }) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "wait_24h",
+      "name": "Wait until 24h before",
+      "type": "n8n-nodes-base.wait",
+      "position": [850, 300],
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ new Date(new Date($json.scheduledAt).getTime() - 24 * 60 * 60 * 1000).toISOString() }}"
+      }
+    },
+    {
+      "id": "check_rsvps",
+      "name": "Check pending RSVPs",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1050, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $parameter.apiBaseUrl }}+ '/api/v1/game-nights/' + $json.eventId }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "reminder_24h",
+      "name": "Send 24h reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1050, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $parameter.apiBaseUrl }}/api/v1/webhooks/n8n",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "send_reminder"
+            },
+            {
+              "name": "payload",
+              "value": "={{ JSON.stringify({ eventId: $json.eventId, reminderType: '24_hours', title: 'Domani: ' + $json.title }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wait_1h",
+      "name": "Wait until 1h before",
+      "type": "n8n-nodes-base.wait",
+      "position": [1250, 400],
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ new Date(new Date($json.scheduledAt).getTime() - 60 * 60 * 1000).toISOString() }}"
+      }
+    },
+    {
+      "id": "reminder_1h",
+      "name": "Send 1h push reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1450, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $parameter.apiBaseUrl }}/api/v1/webhooks/n8n",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "send_reminder"
+            },
+            {
+              "name": "payload",
+              "value": "={{ JSON.stringify({ eventId: $json.eventId, reminderType: '1_hour', title: 'Tra 1 ora: ' + $json.title + '!' }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wait_followup",
+      "name": "Wait 2h after event",
+      "type": "n8n-nodes-base.wait",
+      "position": [1650, 400],
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ new Date(new Date($json.scheduledAt).getTime() + 2 * 60 * 60 * 1000).toISOString() }}"
+      }
+    },
+    {
+      "id": "followup",
+      "name": "Send follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1850, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $parameter.apiBaseUrl }}/api/v1/webhooks/n8n",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "send_notification"
+            },
+            {
+              "name": "payload",
+              "value": "={{ JSON.stringify({ eventId: $json.eventId, userId: $json.organizerId, reminderType: 'follow_up', title: 'Com\\'Ã¨ andata? Lascia una nota sulla serata', message: 'La serata è finita! Lascia un commento o una valutazione.' }) }}"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "trigger": { "main": [["wait_3d"]] },
+    "wait_3d": { "main": [["reminder_3d"]] },
+    "reminder_3d": { "main": [["wait_24h"]] },
+    "wait_24h": { "main": [["check_rsvps", "reminder_24h"]] },
+    "reminder_24h": { "main": [["wait_1h"]] },
+    "wait_1h": { "main": [["reminder_1h"]] },
+    "reminder_1h": { "main": [["wait_followup"]] },
+    "wait_followup": { "main": [["followup"]] }
+  }
+}

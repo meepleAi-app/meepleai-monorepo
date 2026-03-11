@@ -26,10 +26,12 @@ internal static class UserNotificationsServiceExtensions
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<INotificationPreferencesRepository, NotificationPreferencesRepository>();
         services.AddScoped<IEmailQueueRepository, EmailQueueRepository>(); // Issue #4417
+        services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>(); // Issue #52: Email template admin management
 
         // Register services
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>(); // Issue #4417
         services.AddSingleton<IUserNotificationBroadcaster, InMemoryUserNotificationBroadcaster>(); // Issue #5005
+        services.AddSingleton<IUnsubscribeTokenService, UnsubscribeTokenService>(); // Issue #38
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -91,6 +93,34 @@ internal static class UserNotificationsServiceExtensions
                 .WithIdentity("email-processor-trigger", "notifications")
                 .WithCronSchedule("0/30 * * * * ?")  // Every 30 seconds
                 .WithDescription("Processes queued emails with retry and dead letter handling"));
+        });
+
+        // ISSUE-40: Dead letter monitor job - hourly
+        services.AddQuartz(q =>
+        {
+            q.AddJob<DeadLetterMonitorJob>(opts => opts
+                .WithIdentity("dead-letter-monitor-job", "notifications")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("dead-letter-monitor-job", "notifications")
+                .WithIdentity("dead-letter-monitor-trigger", "notifications")
+                .WithCronSchedule("0 0 * * * ?")  // Every hour at minute 0
+                .WithDescription("Monitors dead letter queue and alerts admin when threshold exceeded"));
+        });
+
+        // ISSUE-41: Notification cleanup job - daily at 3 AM UTC
+        services.AddQuartz(q =>
+        {
+            q.AddJob<NotificationCleanupJob>(opts => opts
+                .WithIdentity("notification-cleanup-job", "notifications")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("notification-cleanup-job", "notifications")
+                .WithIdentity("notification-cleanup-trigger", "notifications")
+                .WithCronSchedule("0 0 3 * * ?")  // Daily at 3:00 AM UTC
+                .WithDescription("Cleans up read notifications and old email queue items past retention period"));
         });
 
         // Note: AddQuartzHostedService is called once in Administration context

@@ -8,6 +8,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -30,10 +31,12 @@ public class CreateUserAgentCommandHandlerTests
 
     public CreateUserAgentCommandHandlerTests()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        _db = new MeepleAiDbContext(options, new Mock<IMediator>().Object, new Mock<IDomainEventCollector>().Object);
+        _db = TestDbContextFactory.CreateInMemoryDbContext();
+
+        // Default: ResolveGameIdAsync returns the same ID passed in (game exists in catalog)
+        _repository.Setup(r => r.ResolveGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) => id);
+
         _handler = new CreateUserAgentCommandHandler(_repository.Object, _db, _logger.Object);
     }
 

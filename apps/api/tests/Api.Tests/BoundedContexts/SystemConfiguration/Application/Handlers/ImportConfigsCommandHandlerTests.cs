@@ -31,6 +31,18 @@ public class ImportConfigsCommandHandlerTests
             _mockUnitOfWork.Object);
     }
 
+    /// <summary>
+    /// Helper: sets up GetByKeysAsync mock to return the given configs.
+    /// The handler now uses batch GetByKeysAsync instead of individual GetByKeyAsync.
+    /// </summary>
+    private void SetupGetByKeysAsync(params SystemConfig[] existingConfigs)
+    {
+        _mockConfigRepository
+            .Setup(r => r.GetByKeysAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string?>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<string> _, string? _, bool _, CancellationToken _) =>
+                (IReadOnlyList<SystemConfig>)existingConfigs.ToList());
+    }
+
     [Fact]
     public async Task Handle_WithNewConfigurations_ImportsAll()
     {
@@ -45,9 +57,7 @@ public class ImportConfigsCommandHandlerTests
 
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: false, UserId: userId);
 
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+        SetupGetByKeysAsync(); // No existing configs
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -77,9 +87,7 @@ public class ImportConfigsCommandHandlerTests
 
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: true, UserId: userId);
 
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("existing.key", "Production", false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingConfig);
+        SetupGetByKeysAsync(existingConfig);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -110,9 +118,7 @@ public class ImportConfigsCommandHandlerTests
 
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: false, UserId: userId);
 
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("existing.key", "Production", false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingConfig);
+        SetupGetByKeysAsync(existingConfig);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -140,9 +146,7 @@ public class ImportConfigsCommandHandlerTests
 
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: false, UserId: userId);
 
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+        SetupGetByKeysAsync(); // No existing configs
 
         SystemConfig? capturedConfig = null;
         _mockConfigRepository
@@ -175,12 +179,7 @@ public class ImportConfigsCommandHandlerTests
 
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: true, UserId: userId);
 
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("existing.key", "Production", false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingConfig);
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync("new.key", "Production", false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+        SetupGetByKeysAsync(existingConfig); // Only existing.key exists
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -202,6 +201,8 @@ public class ImportConfigsCommandHandlerTests
         var userId = Guid.NewGuid();
         var configurations = new List<ConfigurationImportItem>();
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: false, UserId: userId);
+
+        SetupGetByKeysAsync(); // No keys to look up
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -243,15 +244,15 @@ public class ImportConfigsCommandHandlerTests
         var cancellationToken = cancellationTokenSource.Token;
 
         _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<string>(), false, cancellationToken))
-            .ReturnsAsync((SystemConfig?)null);
+            .Setup(r => r.GetByKeysAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string?>(), false, cancellationToken))
+            .ReturnsAsync((IReadOnlyList<SystemConfig>)new List<SystemConfig>());
 
         // Act
         await _handler.Handle(command, cancellationToken);
 
         // Assert
         _mockConfigRepository.Verify(
-            r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<string>(), false, cancellationToken),
+            r => r.GetByKeysAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string?>(), false, cancellationToken),
             Times.Once);
         _mockConfigRepository.Verify(
             r => r.AddAsync(It.IsAny<SystemConfig>(), cancellationToken),
@@ -273,9 +274,7 @@ public class ImportConfigsCommandHandlerTests
 
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: false, UserId: userId);
 
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+        SetupGetByKeysAsync(); // No existing configs
 
         SystemConfig? capturedConfig = null;
         _mockConfigRepository
@@ -312,9 +311,7 @@ public class ImportConfigsCommandHandlerTests
 
         var command = new ImportConfigsCommand(configurations, OverwriteExisting: false, UserId: userId);
 
-        _mockConfigRepository
-            .Setup(r => r.GetByKeyAsync(It.IsAny<string>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SystemConfig?)null);
+        SetupGetByKeysAsync(); // No existing configs
 
         SystemConfig? capturedConfig = null;
         _mockConfigRepository

@@ -2282,6 +2282,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("RetryCount")
                         .HasColumnType("integer");
 

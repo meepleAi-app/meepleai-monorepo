@@ -54,6 +54,11 @@ internal static class UnsubscribeEndpoints
                 ClockSkew = TimeSpan.FromMinutes(5)
             }, out _);
 
+            // Validate purpose claim to prevent cross-token attacks (e.g., auth JWT used as unsubscribe token)
+            var purposeClaim = principal.FindFirst("purpose")?.Value;
+            if (!string.Equals(purposeClaim, "unsubscribe", StringComparison.Ordinal))
+                return Results.Content(GenerateHtmlPage("Invalid Token", "The unsubscribe link is invalid."), "text/html");
+
             var userIdClaim = principal.FindFirst("userId")?.Value ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var notificationTypeClaim = principal.FindFirst("notificationType")?.Value;
 

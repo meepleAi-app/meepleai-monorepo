@@ -34,9 +34,7 @@ describe('AdaptiveBottomBar', () => {
 
   it('shows contextual actions when present', () => {
     mockUseNavigation.mockReturnValue({
-      actionBarActions: [
-        { id: 'add', label: 'Add Game', variant: 'primary', onClick: vi.fn() },
-      ],
+      actionBarActions: [{ id: 'add', label: 'Add Game', variant: 'primary', onClick: vi.fn() }],
     });
     render(<AdaptiveBottomBar />);
     expect(screen.getByTestId('adaptive-actions')).toBeInTheDocument();

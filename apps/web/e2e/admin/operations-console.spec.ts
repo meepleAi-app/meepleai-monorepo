@@ -11,7 +11,7 @@ const API_BASE =
 /* ---------- Auth mock ---------- */
 
 async function mockAdminAuth(page: Page) {
-  await page.context().route(`${API_BASE}/api/v1/auth/me`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -121,28 +121,28 @@ const MOCK_AUDIT = {
 
 async function mockAllEndpoints(page: Page) {
   // Resources
-  await page.context().route(`${API_BASE}/api/v1/resources/database/metrics`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/resources/database/metrics`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(MOCK_DB_METRICS),
     })
   );
-  await page.context().route(`${API_BASE}/api/v1/resources/cache/metrics`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/resources/cache/metrics`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(MOCK_CACHE_METRICS),
     })
   );
-  await page.context().route(`${API_BASE}/api/v1/resources/vectors/metrics`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/resources/vectors/metrics`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(MOCK_VECTOR_METRICS),
     })
   );
-  await page.context().route(`${API_BASE}/api/v1/resources/database/tables/top**`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/resources/database/tables/top**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -151,14 +151,14 @@ async function mockAllEndpoints(page: Page) {
   );
 
   // Queue — status must be registered before the generic queue route
-  await page.context().route(`${API_BASE}/api/v1/admin/queue/status`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/admin/queue/status`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(MOCK_QUEUE_STATUS),
     })
   );
-  await page.context().route(`${API_BASE}/api/v1/admin/queue**`, (route) => {
+  await page.context().route(`${API_BASE}/api/v1/admin/queue**`, route => {
     const url = route.request().url();
     // Avoid re-handling the /status sub-route
     if (url.includes('/queue/status')) return route.fallback();
@@ -170,7 +170,7 @@ async function mockAllEndpoints(page: Page) {
   });
 
   // Emergency overrides
-  await page.context().route(`${API_BASE}/api/v1/admin/llm/emergency/active**`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/admin/llm/emergency/active**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -179,7 +179,7 @@ async function mockAllEndpoints(page: Page) {
   );
 
   // Audit logs
-  await page.context().route(`${API_BASE}/api/v1/admin/audit-log**`, (route) =>
+  await page.context().route(`${API_BASE}/api/v1/admin/audit-log**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -188,14 +188,10 @@ async function mockAllEndpoints(page: Page) {
   );
 
   // Catch-all for other admin endpoints
-  await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) => {
+  await page.context().route(`${API_BASE}/api/v1/admin/**`, route => {
     const url = route.request().url();
     // Let already-matched routes fall through
-    if (
-      url.includes('/queue') ||
-      url.includes('/audit-log') ||
-      url.includes('/llm/emergency')
-    ) {
+    if (url.includes('/queue') || url.includes('/audit-log') || url.includes('/llm/emergency')) {
       return route.fallback();
     }
     return route.fulfill({
@@ -239,13 +235,13 @@ test.describe('Operations Console', () => {
 
     // Verify job file names appear in the table
     const catanCell = page.getByText('catan.pdf').first();
-    if (await catanCell.count() > 0) {
+    if ((await catanCell.count()) > 0) {
       await expect(catanCell).toBeVisible({ timeout: 8000 });
     }
 
     // Verify status banner shows healthy state
     const banner = page.locator('[data-testid="queue-status-banner"]');
-    if (await banner.count() > 0) {
+    if ((await banner.count()) > 0) {
       await expect(banner).toBeVisible({ timeout: 8000 });
       await expect(banner.getByText('Queue Healthy')).toBeVisible();
     }
@@ -258,13 +254,13 @@ test.describe('Operations Console', () => {
 
     // Processing job should have a Cancel button
     const cancelBtn = page.locator('button[aria-label="Cancel job"]').first();
-    if (await cancelBtn.count() > 0) {
+    if ((await cancelBtn.count()) > 0) {
       await expect(cancelBtn).toBeVisible({ timeout: 8000 });
     }
 
     // Failed job with canRetry should have a Retry button
     const retryBtn = page.locator('button[aria-label="Retry job"]').first();
-    if (await retryBtn.count() > 0) {
+    if ((await retryBtn.count()) > 0) {
       await expect(retryBtn).toBeVisible({ timeout: 8000 });
     }
   });
@@ -276,11 +272,9 @@ test.describe('Operations Console', () => {
 
     // No overrides — empty state should be shown
     const noOverrides = page.locator('[data-testid="no-overrides"]');
-    if (await noOverrides.count() > 0) {
+    if ((await noOverrides.count()) > 0) {
       await expect(noOverrides).toBeVisible({ timeout: 8000 });
-      await expect(
-        noOverrides.getByText('No active emergency overrides')
-      ).toBeVisible();
+      await expect(noOverrides.getByText('No active emergency overrides')).toBeVisible();
     }
   });
 
@@ -291,12 +285,14 @@ test.describe('Operations Console', () => {
 
     // Verify the audit entry action appears in the table
     const actionBadge = page.getByText('UserCreated').first();
-    if (await actionBadge.count() > 0) {
+    if ((await actionBadge.count()) > 0) {
       await expect(actionBadge).toBeVisible({ timeout: 8000 });
     }
 
     // Verify filter inputs are present
-    await expect(page.locator('[data-testid="audit-action-filter"]')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('[data-testid="audit-action-filter"]')).toBeVisible({
+      timeout: 8000,
+    });
   });
 
   test('Audit tab has export buttons', async ({ page }) => {

@@ -13,22 +13,17 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-import {
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  Clock,
-  Upload,
-} from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Clock, Upload } from 'lucide-react';
 
+import { useJobSSE } from '@/app/admin/(dashboard)/knowledge-base/queue/hooks/use-job-sse';
+import { useJobDetail } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Progress } from '@/components/ui/feedback/progress';
 
 import { addRagToSharedGame, type AddRagResult } from '../lib/rag-api';
+
 import type { FileConfig } from './rag-wizard';
 import type { FileResult } from './rag-wizard';
-import { useJobSSE } from '@/app/admin/(dashboard)/knowledge-base/queue/hooks/use-job-sse';
-import { useJobDetail } from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -175,9 +170,7 @@ function JobTracker({
       <div className="flex flex-wrap gap-1.5">
         {PIPELINE_STEPS.map(step => {
           const isDone =
-            jobDetail?.steps?.some(
-              s => s.stepName === step && s.status === 'Completed'
-            ) ?? false;
+            jobDetail?.steps?.some(s => s.stepName === step && s.status === 'Completed') ?? false;
           const isCurrent = currentStep === step;
 
           return (
@@ -219,9 +212,7 @@ export function StepProgress({ sharedGameId, configs, onComplete }: StepProgress
 
   // Update a single file state immutably
   const updateFileState = useCallback((index: number, updates: Partial<FileState>) => {
-    setFileStates(prev =>
-      prev.map((fs, i) => (i === index ? { ...fs, ...updates } : fs))
-    );
+    setFileStates(prev => prev.map((fs, i) => (i === index ? { ...fs, ...updates } : fs)));
   }, []);
 
   // Process files sequentially
@@ -241,7 +232,7 @@ export function StepProgress({ sharedGameId, configs, onComplete }: StepProgress
             config.documentType,
             config.version,
             undefined,
-            (percent) => {
+            percent => {
               updateFileState(i, { uploadProgress: percent });
             }
           );
@@ -283,9 +274,7 @@ export function StepProgress({ sharedGameId, configs, onComplete }: StepProgress
   );
 
   // Check if all files are done (no 'waiting', 'uploading', or 'processing')
-  const allDone = fileStates.every(
-    fs => fs.status === 'completed' || fs.status === 'failed'
-  );
+  const allDone = fileStates.every(fs => fs.status === 'completed' || fs.status === 'failed');
 
   // Transition to complete step
   useEffect(() => {
@@ -304,9 +293,7 @@ export function StepProgress({ sharedGameId, configs, onComplete }: StepProgress
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Upload e indicizzazione in corso...
-      </p>
+      <p className="text-sm text-muted-foreground">Upload e indicizzazione in corso...</p>
 
       {fileStates.map((fs, index) => (
         <div
@@ -319,9 +306,7 @@ export function StepProgress({ sharedGameId, configs, onComplete }: StepProgress
           </div>
 
           {/* Upload progress bar */}
-          {fs.status === 'uploading' && (
-            <Progress value={fs.uploadProgress} className="h-1.5" />
-          )}
+          {fs.status === 'uploading' && <Progress value={fs.uploadProgress} className="h-1.5" />}
 
           {/* Error message */}
           {fs.status === 'failed' && fs.error && (
@@ -339,9 +324,7 @@ export function StepProgress({ sharedGameId, configs, onComplete }: StepProgress
           {/* Completed — auto-approved info */}
           {fs.status === 'completed' && fs.result && (
             <p className="text-xs text-muted-foreground">
-              {fs.result.autoApproved
-                ? 'Auto-approvato per RAG'
-                : 'In attesa di approvazione'}
+              {fs.result.autoApproved ? 'Auto-approvato per RAG' : 'In attesa di approvazione'}
             </p>
           )}
         </div>

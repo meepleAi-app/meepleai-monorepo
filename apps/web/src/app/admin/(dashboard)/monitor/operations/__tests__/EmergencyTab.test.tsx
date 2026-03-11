@@ -164,9 +164,7 @@ describe('EmergencyTab', () => {
     await waitFor(() => {
       expect(screen.getByText('Activate Emergency Override')).toBeInTheDocument();
       // Level 2 requires typing CONFIRM
-      expect(
-        screen.getByLabelText(/Type CONFIRM to proceed/i)
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText(/Type CONFIRM to proceed/i)).toBeInTheDocument();
     });
   });
 
@@ -307,9 +305,7 @@ describe('EmergencyTab', () => {
     render(<EmergencyTab />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText('Route all LLM requests through local Ollama')
-      ).toBeInTheDocument();
+      expect(screen.getByText('Route all LLM requests through local Ollama')).toBeInTheDocument();
     });
   });
 });

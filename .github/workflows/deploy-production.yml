@@ -38,7 +38,7 @@ jobs:
   # Verify staging is healthy before production deploy
   staging-check:
     name: Verify Staging
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     if: inputs.skip_staging_check != 'true'
     steps:
       - name: Check Staging Health
@@ -73,7 +73,7 @@ jobs:
   # is what gets deployed to production.
   build:
     name: Promote Staging Images
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [staging-check, test]
     if: always() && needs.test.result == 'success' && (needs.staging-check.result == 'success' || needs.staging-check.result == 'skipped')
@@ -160,7 +160,7 @@ jobs:
   # Manual approval gate before production deploy
   approve:
     name: Approval Gate
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [build]
     environment:
       name: production-approval
@@ -173,7 +173,7 @@ jobs:
   # Run database migrations before deploy (separated for safety)
   migrate-db:
     name: Database Migration
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [build, approve]
     if: vars.DEPLOY_METHOD == 'ssh'
     steps:
@@ -232,7 +232,7 @@ jobs:
   # Deploy to production with blue-green strategy
   deploy:
     name: Deploy to Production
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [build, approve, migrate-db]
     if: always() && needs.build.result == 'success' && needs.approve.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped')
@@ -325,7 +325,7 @@ jobs:
   # Post-deploy validation
   validate:
     name: Production Validation
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [deploy]
     steps:
       - name: Checkout
@@ -466,7 +466,7 @@ jobs:
   # Auto-rollback on deploy or validation failure
   rollback:
     name: Auto-Rollback
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [build, deploy, validate]
     if: failure() && vars.DEPLOY_METHOD == 'ssh'
     steps:
@@ -548,7 +548,7 @@ jobs:
   # Notifications
   notify:
     name: Notify
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [build, deploy, validate]
     if: always()
     steps:

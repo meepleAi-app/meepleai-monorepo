@@ -38,7 +38,7 @@ jobs:
   # Detect which components changed
   detect-changes:
     name: Detect Changes
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.changes.outputs.api }}
       web: ${{ steps.changes.outputs.web }}
@@ -91,7 +91,7 @@ jobs:
   # Build and push Docker images (only changed components)
   build:
     name: Build Images
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [test, detect-changes]
     if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
@@ -102,33 +102,6 @@ jobs:
       api_built: ${{ needs.detect-changes.outputs.deploy_api }}
       web_built: ${{ needs.detect-changes.outputs.deploy_web }}
     steps:
-      - name: Check Runner Fallback
-        if: vars.RUNNER != '' && !contains(runner.name, vars.RUNNER)
-        run: |
-          echo "::warning::Self-hosted runner '${{ vars.RUNNER }}' unavailable — fell back to GitHub-hosted runner"
-          echo "⚠️ This may produce x86 images incompatible with ARM64 staging server"
-
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - name: Pre-build disk check (self-hosted)
-        if: vars.RUNNER != ''
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-          echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
-            docker system prune -af --filter "until=24h" 2>/dev/null || true
-          fi
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -141,6 +114,11 @@ jobs:
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Setup QEMU for ARM64 cross-compilation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -178,6 +156,7 @@ jobs:
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
+          platforms: linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           # Note: No environment build-args. ASPNETCORE_ENVIRONMENT is injected
@@ -193,6 +172,7 @@ jobs:
           push: true
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
+          platforms: linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           # Note: No environment build-args. NODE_ENV is set in Dockerfile,
@@ -205,19 +185,10 @@ jobs:
           echo "  API built: ${{ needs.detect-changes.outputs.deploy_api }}"
           echo "  Web built: ${{ needs.detect-changes.outputs.deploy_web }}"
 
-      - name: Post-build cleanup (self-hosted)
-        if: always() && !contains(runner.name, 'GitHub Actions')
-        run: |
-          echo "🧹 Cleaning up Docker build artifacts on self-hosted runner..."
-          docker container prune -f 2>/dev/null || true
-          docker image prune -f 2>/dev/null || true
-          echo "✅ Cleanup complete"
-          df -h / | tail -1
-
   # Run database migrations BEFORE deploying new code
   migrate-db:
     name: Database Migration
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [build]
     if: vars.DEPLOY_METHOD == 'ssh'
     steps:
@@ -273,7 +244,7 @@ jobs:
   # Deploy to staging server (only changed services)
   deploy:
     name: Deploy to Staging
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build, migrate-db]
     if: always() && needs.build.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped')
@@ -360,7 +331,7 @@ jobs:
   # Post-deploy validation
   validate:
     name: Post-deploy Validation
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [deploy]
     steps:
       - name: Deep Health Check
@@ -535,7 +506,7 @@ jobs:
   # Notify on completion
   notify:
     name: Notify
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [build, deploy, validate, e2e-staging]
     if: always()
     steps:

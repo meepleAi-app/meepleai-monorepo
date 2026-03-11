@@ -274,15 +274,61 @@ jobs:
 
       - name: Smoke Tests
         run: |
-          echo "🧪 Running smoke tests..."
+          echo "🧪 Running staging smoke tests..."
+          FAIL=0
+          RESULTS=""
 
-          # Test API responds to actual requests
-          curl -sf https://api.meepleai.app/health > /dev/null || { echo "❌ API health failed"; exit 1; }
+          smoke_test() {
+            local name="$1" url="$2" expect="$3"
+            local status
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
+            if echo "$expect" | grep -q "$status"; then
+              echo "  ✅ $name: HTTP $status"
+              RESULTS="${RESULTS}| $name | $status | ✅ |\n"
+            else
+              echo "  ❌ $name: HTTP $status (expected $expect)"
+              RESULTS="${RESULTS}| $name | $status | ❌ |\n"
+              FAIL=1
+            fi
+          }
 
-          # Test web serves HTML
-          curl -sf https://meepleai.app -o /dev/null || { echo "❌ Web root failed"; exit 1; }
+          # Critical smoke tests (failure = deployment issue)
+          smoke_test "API Health" "https://meepleai.app/health" "200"
+          smoke_test "Web Root" "https://meepleai.app" "200"
+          smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-game-catalog/games?limit=1" "200 401"
+          smoke_test "Swagger Docs" "https://meepleai.app/swagger/index.html" "200"
 
-          echo "✅ Smoke tests passed"
+          # Health endpoint JSON validation
+          echo "  Validating health response structure..."
+          HEALTH_JSON=$(curl -sf --max-time 10 https://meepleai.app/health 2>/dev/null || true)
+          if [ -n "$HEALTH_JSON" ] && echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
+            echo "  ✅ Health JSON: valid structure"
+          else
+            echo "  ⚠️ Health JSON: unexpected format (non-blocking)"
+          fi
+
+          # Response time check
+          RT=$(curl -sf -o /dev/null -w "%{time_total}" --max-time 10 https://meepleai.app 2>/dev/null || echo "9.999")
+          echo "  📊 Response time: ${RT}s"
+
+          # Write summary to job output
+          {
+            echo "## 🧪 Staging Smoke Test Results"
+            echo ""
+            echo "| Test | Status | Result |"
+            echo "|------|--------|--------|"
+            echo -e "$RESULTS"
+            echo ""
+            echo "**Response Time**: ${RT}s"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo ""
+            echo "❌ Smoke tests FAILED"
+            exit 1
+          fi
+          echo ""
+          echo "✅ All smoke tests passed"
 
   # Notify on completion
   notify:

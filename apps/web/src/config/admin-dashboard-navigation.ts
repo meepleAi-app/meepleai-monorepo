@@ -341,6 +341,7 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/monitor/operations',
         label: 'Operations',
         icon: ScrollTextIcon,
+        activePattern: /^\/admin\/monitor\/operations/,
       },
       // Config items
       {

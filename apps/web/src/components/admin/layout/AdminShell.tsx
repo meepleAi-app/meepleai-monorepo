@@ -15,6 +15,7 @@ import { AdminErrorBoundary } from './AdminErrorBoundary';
 import { AdminMobileNav } from './AdminMobileNav';
 import { AdminMobileTabBar } from './AdminMobileTabBar';
 import { AdminTopNav } from './AdminTopNav';
+import { EmergencyBanner } from './EmergencyBanner';
 
 export interface AdminShellProps {
   children: ReactNode;
@@ -34,6 +35,9 @@ export function AdminShell({ children, badges = {}, userName, userEmail }: Admin
     <NavigationProvider>
       <TooltipProvider>
         <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-amber-50/20 to-orange-50/10 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+          {/* Emergency override banner (global) */}
+          <EmergencyBanner />
+
           {/* Top Navigation */}
           <AdminTopNav badges={badges} userName={userName} userEmail={userEmail} />
 

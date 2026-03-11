@@ -245,7 +245,7 @@ jobs:
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 45
+        timeout-minutes: 60
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432

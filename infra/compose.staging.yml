@@ -58,10 +58,18 @@ services:
       - ./secrets/jwt.secret
       - ./secrets/admin.secret
       - ./secrets/openrouter.secret
+      - ./secrets/oauth.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
+      # OAuth: callback URL must match the public domain (not localhost)
+      Authentication__OAuth__CallbackBaseUrl: "https://meepleai.app"
+      # Frontend URL for post-OAuth redirect (not localhost)
+      FrontendUrl: "https://meepleai.app"
+      # HTTPS cookies for staging (Traefik terminates TLS)
+      Authentication__SessionCookie__Secure: "true"
+      Authentication__SessionCookie__SameSite: "Lax"
     logging:
       driver: "json-file"
       options:

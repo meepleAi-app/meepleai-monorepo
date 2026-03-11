@@ -362,19 +362,43 @@ jobs:
 
           echo "✅ Smoke tests passed"
 
-      - name: Performance Check
+      - name: Performance Baseline
         run: |
           echo "⚡ Running performance baseline check..."
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚡ Performance Baseline" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Avg (s) | P95 (s) | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|---------|--------|" >> $GITHUB_STEP_SUMMARY
 
-          # Measure response time
-          RESPONSE_TIME=$(curl -sf -o /dev/null -w "%{time_total}" https://meepleai.com)
-          echo "Response time: ${RESPONSE_TIME}s"
+          THRESHOLD=2.0
+          FAIL=0
 
-          # Alert if response time > 2s
-          if (( $(echo "$RESPONSE_TIME > 2.0" | bc -l) )); then
-            echo "⚠️ Response time exceeds threshold (2s)"
+          for ENDPOINT in "/health" "/" "/api/v1/shared-game-catalog/games?limit=1"; do
+            TIMES=""
+            for i in {1..5}; do
+              T=$(curl -sf -o /dev/null -w "%{time_total}" "https://meepleai.com$ENDPOINT" 2>/dev/null || echo "9.999")
+              TIMES="$TIMES $T"
+            done
+
+            AVG=$(echo $TIMES | tr ' ' '\n' | awk '{sum+=$1} END {printf "%.3f", sum/NR}')
+            P95=$(echo $TIMES | tr ' ' '\n' | sort -n | tail -1)
+
+            if (( $(echo "$P95 > $THRESHOLD" | bc -l 2>/dev/null || echo 0) )); then
+              STATUS="⚠️ Slow"
+              FAIL=1
+            else
+              STATUS="✅ OK"
+            fi
+
+            echo "$ENDPOINT: avg=${AVG}s p95=${P95}s $STATUS"
+            echo "| \`$ENDPOINT\` | $AVG | $P95 | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          done
+
+          if [ "$FAIL" = "1" ]; then
+            echo "::warning::Some endpoints exceeded the ${THRESHOLD}s P95 threshold"
           else
-            echo "✅ Response time within threshold"
+            echo "✅ All endpoints within threshold"
           fi
 
   # Rollback capability

@@ -363,6 +363,37 @@ jobs:
 
           echo "✅ Smoke tests passed"
 
+      - name: Performance Baseline
+        run: |
+          echo "⚡ Running performance baseline..."
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚡ Performance Baseline" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Avg (s) | P95 (s) | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          THRESHOLD=3.0
+
+          for ENDPOINT in "/health" "/"; do
+            TIMES=""
+            for i in {1..5}; do
+              T=$(curl -sf -o /dev/null -w "%{time_total}" "https://meepleai.app$ENDPOINT" 2>/dev/null || echo "9.999")
+              TIMES="$TIMES $T"
+            done
+
+            AVG=$(echo $TIMES | tr ' ' '\n' | awk '{sum+=$1} END {printf "%.3f", sum/NR}')
+            P95=$(echo $TIMES | tr ' ' '\n' | sort -n | tail -1)
+
+            if (( $(echo "$P95 > $THRESHOLD" | bc -l 2>/dev/null || echo 0) )); then
+              STATUS="⚠️ Slow"
+            else
+              STATUS="✅ OK"
+            fi
+
+            echo "$ENDPOINT: avg=${AVG}s p95=${P95}s $STATUS"
+            echo "| \`$ENDPOINT\` | $AVG | $P95 | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          done
+
   # Notify on completion
   notify:
     name: Notify

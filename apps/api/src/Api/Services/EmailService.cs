@@ -2479,6 +2479,21 @@ internal class EmailService : IEmailService
 ";
     }
 
+    // ISSUE-124: Invitation system emails
+    public Task SendInvitationEmailAsync(
+        string toEmail,
+        string role,
+        string inviteLink,
+        string invitedByName,
+        CancellationToken ct = default)
+    {
+        // Stub: Full invitation email template will be added in Chunk 3
+        _logger.LogInformation(
+            "Invitation email to {Email} for role {Role} (link: {Link})",
+            DataMasking.MaskEmail(toEmail), role, inviteLink);
+        return Task.CompletedTask;
+    }
+
     // ISSUE-4417: Raw email sending for queue processor
     public async Task SendRawEmailAsync(
         string toEmail,

@@ -230,13 +230,13 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
 
         // User1: 2 requests, User2: 1 request, System: 1 request (null userId)
         await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
-            userId1, "user", 100, 50, 0.01m, 200, true, null, false, false, null, TestCancellationToken);
+            userId1, "user", 100, 50, 0.01m, 200, true, null, false, false, null, null, TestCancellationToken);
         await Repository.LogRequestAsync("model", "openrouter", RequestSource.RagPipeline,
-            userId1, "user", 200, 100, 0.02m, 300, true, null, false, false, null, TestCancellationToken);
+            userId1, "user", 200, 100, 0.02m, 300, true, null, false, false, null, null, TestCancellationToken);
         await Repository.LogRequestAsync("model", "ollama", RequestSource.Manual,
-            userId2, "admin", 50, 25, 0m, 100, true, null, false, true, null, TestCancellationToken);
+            userId2, "admin", 50, 25, 0m, 100, true, null, false, true, null, null, TestCancellationToken);
         await Repository.LogRequestAsync("model", "ollama", RequestSource.AgentTask,
-            null, null, 50, 25, 0m, 100, true, null, false, true, null, TestCancellationToken);
+            null, null, 50, 25, 0m, 100, true, null, false, true, null, null, TestCancellationToken);
 
         // Act
         var count = await Repository.GetActiveAiUserCountAsync(
@@ -254,7 +254,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var userId = Guid.NewGuid();
 
         await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
-            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, TestCancellationToken);
+            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, null, TestCancellationToken);
 
         // Pseudonymize all records
         await Repository.PseudonymizeOldLogsAsync(
@@ -290,7 +290,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         var userId = Guid.NewGuid();
 
         await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
-            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, TestCancellationToken);
+            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, null, TestCancellationToken);
 
         // Act — query with future 'from' date (all records are "old")
         var count = await Repository.GetActiveAiUserCountAsync(

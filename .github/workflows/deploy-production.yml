@@ -269,6 +269,21 @@ jobs:
             sleep 10
             curl -sf https://meepleai.com/health || exit 1
 
+            # Record deployment version
+            cat > /opt/meepleai/DEPLOYMENT.json << VEREOF
+            {
+              "version": "${{ needs.build.outputs.version }}",
+              "api_image": "${{ needs.build.outputs.api_image }}",
+              "web_image": "${{ needs.build.outputs.web_image }}",
+              "environment": "production",
+              "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "deployed_by": "${{ github.actor }}",
+              "commit": "${{ github.sha }}",
+              "workflow_run": "${{ github.run_id }}"
+            }
+            VEREOF
+            echo "📋 Version recorded: ${{ needs.build.outputs.version }}"
+
             # Cleanup
             docker image prune -f
 

@@ -68,6 +68,9 @@ internal static class GameManagementServiceExtensions
         // Issue #5579: GameSessionContext cross-context orchestrator
         services.AddScoped<IGameSessionOrchestratorService, GameSessionOrchestratorService>();
 
+        // Game Night AI Assistant: Player name resolution for score parsing
+        services.AddScoped<IPlayerNameResolutionService, PlayerNameResolutionService>();
+
         // Issue #44/#47: Game night email templates
         services.AddScoped<IGameNightEmailService, GameNightEmailService>();
 

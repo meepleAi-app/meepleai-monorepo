@@ -197,7 +197,7 @@ internal class NoOpEmailService : IEmailService
     public Task SendInvitationEmailAsync(
         string toEmail,
         string role,
-        string inviteLink,
+        string token,
         string invitedByName,
         CancellationToken ct = default)
         => Task.CompletedTask;

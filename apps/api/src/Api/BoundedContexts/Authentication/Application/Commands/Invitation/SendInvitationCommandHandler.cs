@@ -77,11 +77,10 @@ internal sealed class SendInvitationCommandHandler : ICommandHandler<SendInvitat
         // Send email (fire-and-forget pattern — log errors but don't fail the operation)
         try
         {
-            var inviteLink = $"/accept-invite?token={rawToken}";
             await _emailService.SendInvitationEmailAsync(
                 normalizedEmail,
                 command.Role,
-                inviteLink,
+                rawToken,
                 "Admin",
                 cancellationToken).ConfigureAwait(false);
         }

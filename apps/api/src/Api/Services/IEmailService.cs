@@ -173,7 +173,7 @@ internal interface IEmailService
     Task SendInvitationEmailAsync(
         string toEmail,
         string role,
-        string inviteLink,
+        string token,
         string invitedByName,
         CancellationToken ct = default);
 

@@ -29,6 +29,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
     private readonly IFreeModelQuotaTracker? _freeModelQuotaTracker;
     private readonly IEmergencyOverrideService? _emergencyOverrideService;
     private readonly IOpenRouterRateLimitTracker? _rateLimitTracker;
+    private readonly IUserRegionDetector? _userRegionDetector;
     private readonly ILogger<LlmProviderSelector> _logger;
 
     public LlmProviderSelector(
@@ -41,7 +42,8 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         IProviderHealthCheckService? healthCheckService = null,
         IFreeModelQuotaTracker? freeModelQuotaTracker = null,
         IEmergencyOverrideService? emergencyOverrideService = null,
-        IOpenRouterRateLimitTracker? rateLimitTracker = null)
+        IOpenRouterRateLimitTracker? rateLimitTracker = null,
+        IUserRegionDetector? userRegionDetector = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _routingStrategy = routingStrategy ?? throw new ArgumentNullException(nameof(routingStrategy));
@@ -53,6 +55,7 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
         _freeModelQuotaTracker = freeModelQuotaTracker;
         _emergencyOverrideService = emergencyOverrideService;
         _rateLimitTracker = rateLimitTracker;
+        _userRegionDetector = userRegionDetector;
 
         if (_clients.Count == 0)
         {
@@ -151,6 +154,13 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
                 Reason: $"Fallback from {decision.ProviderName} (circuit open or unhealthy)");
         }
 
+        // Issue #27: Attach region hint from request context (populated but not used for routing)
+        var userRegion = _userRegionDetector?.DetectRegion();
+        if (userRegion is not null)
+        {
+            decision = decision with { UserRegion = userRegion };
+        }
+
         return new ProviderSelectionResult(client, decision);
     }
 
@@ -176,7 +186,11 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
                 var decision = new LlmRoutingDecision(
                     ProviderName: fallbackClient.ProviderName,
                     ModelId: modelId,
-                    Reason: $"Fallback from {failedProvider}");
+                    Reason: $"Fallback from {failedProvider}")
+                {
+                    // Issue #27: Preserve region hint across fallback decisions
+                    UserRegion = _userRegionDetector?.DetectRegion()
+                };
                 return new ProviderSelectionResult(fallbackClient, decision);
             }
         }

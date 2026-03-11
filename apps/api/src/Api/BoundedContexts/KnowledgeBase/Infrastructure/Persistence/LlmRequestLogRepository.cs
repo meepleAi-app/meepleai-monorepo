@@ -44,6 +44,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         bool isStreaming,
         bool isFreeModel,
         string? sessionId,
+        string? userRegion = null,
         CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
@@ -64,6 +65,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
             IsStreaming = isStreaming,
             IsFreeModel = isFreeModel,
             SessionId = sessionId,
+            UserRegion = userRegion,
             RequestedAt = now,
             ExpiresAt = now.Add(RetentionPeriod)
         };

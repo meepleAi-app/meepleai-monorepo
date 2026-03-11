@@ -195,6 +195,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5505: A/B test budget isolation (Scoped - uses Redis for daily budget + rate limits)
         services.AddScoped<IAbTestBudgetService, AbTestBudgetService>();
 
+        // Issue #27: User region detection from Accept-Language header (Scoped - uses IHttpContextAccessor)
+        services.AddScoped<IUserRegionDetector, UserRegionDetector>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
         services.AddScoped<ILlmService, HybridLlmService>();

@@ -496,25 +496,87 @@ jobs:
             echo "✅ All endpoints within threshold"
           fi
 
-  # Rollback capability
+  # Auto-rollback on deploy or validation failure
   rollback:
-    name: Rollback (Manual)
+    name: Auto-Rollback
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [deploy]
-    if: failure()
-    environment:
-      name: production-rollback
+    needs: [build, deploy, validate]
+    if: failure() && vars.DEPLOY_METHOD == 'ssh'
     steps:
-      - name: Trigger Rollback
+      - name: Rollback via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/meepleai
+
+            echo "🔄 Auto-rollback triggered — finding previous working version..."
+
+            PREV_API=""
+            PREV_WEB=""
+
+            # Strategy 1: Read from DEPLOYMENT.json (written by successful deploys)
+            if [ -f /opt/meepleai/DEPLOYMENT.json ]; then
+              PREV_API=$(jq -r '.api_image // empty' /opt/meepleai/DEPLOYMENT.json 2>/dev/null || true)
+              PREV_WEB=$(jq -r '.web_image // empty' /opt/meepleai/DEPLOYMENT.json 2>/dev/null || true)
+              if [ -n "$PREV_API" ] && [ -n "$PREV_WEB" ]; then
+                echo "📋 Found previous version from DEPLOYMENT.json"
+              fi
+            fi
+
+            # Strategy 2: Fallback to GHCR image history
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "⚠️ DEPLOYMENT.json not available, searching local images..."
+              PREV_API=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'api:(v|prod)' | head -2 | tail -1)
+              PREV_WEB=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'web:(v|prod)' | head -2 | tail -1)
+            fi
+
+            # Strategy 3: Last resort — use the *-latest tags
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "⚠️ No versioned images found, trying latest tags..."
+              PREV_API=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'api:' | grep -v 'staging' | head -1)
+              PREV_WEB=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'web:' | grep -v 'staging' | head -1)
+            fi
+
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "❌ CRITICAL: Cannot find ANY previous images for rollback!"
+              echo "Manual intervention required."
+              exit 1
+            fi
+
+            echo "Rolling back to: API=$PREV_API, WEB=$PREV_WEB"
+
+            export API_IMAGE="$PREV_API"
+            export WEB_IMAGE="$PREV_WEB"
+
+            # Rollback containers
+            docker compose -f compose.prod.yml up -d --no-deps api web
+
+            # Verify rollback
+            for i in {1..12}; do
+              if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ Rollback successful — services healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for rollback health... ($i/12)"
+              sleep 5
+            done
+
+            echo "❌ CRITICAL: Rollback health check failed!"
+            exit 1
+
+      - name: Rollback Summary
+        if: always()
         run: |
-          echo "🔄 Deployment failed, rollback may be needed"
-          echo "To rollback manually:"
-          echo "  1. Go to GitHub Actions"
-          echo "  2. Find previous successful deployment"
-          echo "  3. Re-run that workflow"
-          echo ""
-          echo "Or SSH to server and run:"
-          echo "  docker compose -f compose.prod.yml rollback"
+          echo "## 🔄 Auto-Rollback Executed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deploy or validation failed — previous version restored." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Failed version:** \`${{ needs.build.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** Deploy/validation failure" >> $GITHUB_STEP_SUMMARY
 
   # Notifications
   notify:

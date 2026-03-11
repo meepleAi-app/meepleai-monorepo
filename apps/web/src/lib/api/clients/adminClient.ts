@@ -36,6 +36,7 @@ import {
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
+  EnhancedServiceDashboardSchema,
   MetricsTimeSeriesResponseSchema,
   GetUserActivityResultSchema,
   type CreateUserRequest,
@@ -828,6 +829,21 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return httpClient.get(
         `/api/v1/admin/infrastructure/metrics/timeseries?range=${range}`,
         MetricsTimeSeriesResponseSchema
+      );
+    },
+
+    // ========== Enhanced Service Dashboard (Issue #132) ==========
+
+    /**
+     * Get enhanced service health dashboard with uptime, trends, and categories.
+     * GET /api/v1/admin/infrastructure/services/dashboard
+     *
+     * Issue #132: Enhanced ServiceHealthMatrix data.
+     */
+    async getServiceDashboard() {
+      return httpClient.get(
+        '/api/v1/admin/infrastructure/services/dashboard',
+        EnhancedServiceDashboardSchema
       );
     },
 

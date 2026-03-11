@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 export const UsagePeriodDtoSchema = z.object({
   from: z.string(), // DateOnly as string
-  to: z.string(),   // DateOnly as string
+  to: z.string(), // DateOnly as string
 });
 
 export type UsagePeriodDto = z.infer<typeof UsagePeriodDtoSchema>;

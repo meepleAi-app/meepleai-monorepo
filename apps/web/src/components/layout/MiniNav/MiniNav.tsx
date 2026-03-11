@@ -5,7 +5,7 @@
  * Issue #5037 — MiniNav Component
  *
  * Renders tabs declared via NavigationContext (useSetNavConfig).
- * Positioned sticky below the Navbar (48px height on desktop, 44px on mobile).
+ * Positioned sticky below the TopBar (48px height = top-12).
  *
  * Behavior:
  * - Reads `miniNavTabs` from useNavigation()
@@ -162,7 +162,7 @@ export function MiniNav({ className }: MiniNavProps) {
   return (
     <div
       className={cn(
-        'sticky top-14 z-30',
+        'sticky top-12 z-30',
         'transition-all duration-200 ease-in-out motion-reduce:transition-none',
         isHiddenByScroll && '-translate-y-full opacity-0 pointer-events-none',
         'flex items-stretch',

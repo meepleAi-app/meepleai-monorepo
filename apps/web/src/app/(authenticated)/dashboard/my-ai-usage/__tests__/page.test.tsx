@@ -272,12 +272,39 @@ describe('MyAiUsagePage', () => {
 
   it('shows empty state when no requests', async () => {
     mockGetMyAiUsageSummary.mockResolvedValue({
-      today: { requestCount: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, costUsd: 0, averageLatencyMs: 0 },
-      last7Days: { requestCount: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, costUsd: 0, averageLatencyMs: 0 },
-      last30Days: { requestCount: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, costUsd: 0, averageLatencyMs: 0 },
+      today: {
+        requestCount: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        costUsd: 0,
+        averageLatencyMs: 0,
+      },
+      last7Days: {
+        requestCount: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        costUsd: 0,
+        averageLatencyMs: 0,
+      },
+      last30Days: {
+        requestCount: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        costUsd: 0,
+        averageLatencyMs: 0,
+      },
     });
     mockGetMyAiUsageDistributions.mockResolvedValue({ models: [], providers: [], operations: [] });
-    mockGetMyAiUsageRecent.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20, note: '' });
+    mockGetMyAiUsageRecent.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      note: '',
+    });
     mockGetMyAiUsage.mockResolvedValue({
       ...mockDailyUsage,
       requestCount: 0,

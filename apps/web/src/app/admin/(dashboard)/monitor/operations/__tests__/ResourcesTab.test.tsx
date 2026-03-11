@@ -201,9 +201,7 @@ describe('ResourcesTab', () => {
 
     await waitFor(() => {
       // The dialog message confirms it opened
-      expect(
-        screen.getByText(/This will clear all cached data from Redis/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/This will clear all cached data from Redis/)).toBeInTheDocument();
     });
   });
 
@@ -218,9 +216,7 @@ describe('ResourcesTab', () => {
     await user.click(screen.getByTestId('vacuum-db-button'));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Standard VACUUM reclaims storage/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Standard VACUUM reclaims storage/)).toBeInTheDocument();
       // Level 2 requires typing CONFIRM
       expect(screen.getByLabelText(/Type CONFIRM to proceed/i)).toBeInTheDocument();
     });
@@ -237,9 +233,7 @@ describe('ResourcesTab', () => {
     await user.click(screen.getByTestId('full-vacuum-db-button'));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/This will briefly lock the database/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/This will briefly lock the database/)).toBeInTheDocument();
     });
   });
 

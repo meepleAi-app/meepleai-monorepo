@@ -57,7 +57,9 @@ export const useGameNightStore = create<GameNightState>()(
         }),
       addPlayer: player =>
         set(s => {
-          s.players.push(player);
+          if (!s.players.find(p => p.id === player.id)) {
+            s.players.push(player);
+          }
         }),
       removePlayer: playerId =>
         set(s => {
@@ -65,7 +67,9 @@ export const useGameNightStore = create<GameNightState>()(
         }),
       addGame: game =>
         set(s => {
-          s.selectedGames.push(game);
+          if (!s.selectedGames.find(g => g.id === game.id)) {
+            s.selectedGames.push(game);
+          }
         }),
       removeGame: gameId =>
         set(s => {

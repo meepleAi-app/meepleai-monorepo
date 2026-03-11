@@ -220,12 +220,32 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      # Stage 2: Backend Unit Tests
-      # Stage 4: Backend Integration Tests (Testcontainers)
-      # Both stages run sequentially in this job with service containers
-      - name: Run Tests
-        # Issue #2967: ARM64 self-hosted runner is 30-40% slower than x86-64.
-        timeout-minutes: 60
+      # Stage 2: Backend Unit Tests (fast, no DB dependency)
+      - name: Run Unit Tests
+        timeout-minutes: 20
+        env:
+          CI: true
+        run: |
+          echo "🧪 Running unit tests..."
+          dotnet test \
+            --filter "Category=Unit" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --configuration Release \
+            --blame-hang-timeout 5min \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./coverage/unit-coverage.xml
+          echo "✅ Unit tests passed"
+
+      # Stage 3: Backend Integration Tests (requires service containers)
+      # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
+      # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
+      # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
+      # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
+      # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
+      - name: Run Integration Tests
+        timeout-minutes: 45
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -240,38 +260,17 @@ jobs:
           # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
           DISABLE_RATE_LIMITING: "true"
         run: |
-          UNIT_EXIT=0
-          INT_EXIT=0
-
-          # Run Unit tests
-          dotnet test \
-            --filter "Category=Unit" \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/unit-coverage.xml || UNIT_EXIT=$?
-
-          # Run Integration tests
-          # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
-          # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
-          # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
-          # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
-          # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
+          echo "🧪 Running integration tests..."
           dotnet test \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
+            --blame-hang-timeout 5min \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/integration-coverage.xml || INT_EXIT=$?
-
-          if [ $UNIT_EXIT -ne 0 ] || [ $INT_EXIT -ne 0 ]; then
-            echo "::error::Test failures detected (Unit exit: $UNIT_EXIT, Integration exit: $INT_EXIT)"
-            exit 1
-          fi
+            -p:CoverletOutput=./coverage/integration-coverage.xml
+          echo "✅ Integration tests passed"
 
       - name: Upload Coverage
         if: always()

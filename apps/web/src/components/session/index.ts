@@ -50,6 +50,13 @@ export { CameraToolContent } from './CameraToolContent';
 export type { CameraToolContentProps } from './CameraToolContent';
 export { PauseSessionDialog } from './PauseSessionDialog';
 export type { PauseSessionDialogProps } from './PauseSessionDialog';
+export { ActivityFeedEvent } from './ActivityFeedEvent';
+export { ActivityFeed } from './ActivityFeed';
+export { SimpleDiceRoller } from './SimpleDiceRoller';
+export { LiveSessionLayout } from './LiveSessionLayout';
+export { MobileStatusBar } from './MobileStatusBar';
+export { ActivityFeedInputBar } from './ActivityFeedInputBar';
+export { MobileScorebar } from './MobileScorebar';
 
 export type {
   Participant,

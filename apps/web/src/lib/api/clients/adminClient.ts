@@ -28,6 +28,10 @@ import {
   WorkflowTemplateSchema,
   WorkflowTemplateDetailSchema,
   ImportWorkflowResponseSchema,
+  N8nConfigDtoSchema,
+  N8nTestResultDtoSchema,
+  type N8nConfigDto,
+  type N8nTestResultDto,
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
@@ -125,6 +129,11 @@ import {
   type AbTestSessionRevealedDto,
   AbTestAnalyticsDtoSchema,
   type AbTestAnalyticsDto,
+  EmailTemplateDtoSchema,
+  GetEmailTemplatesResponseSchema,
+  type EmailTemplateDto,
+  type CreateEmailTemplateInput,
+  type UpdateEmailTemplateInput,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -680,6 +689,66 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         { parameters },
         ImportWorkflowResponseSchema
       );
+    },
+
+    // ========== N8N Configuration (Issue #60) ==========
+
+    /**
+     * Get all n8n configurations (admin only)
+     * GET /api/v1/admin/n8n
+     */
+    async getN8nConfigs(): Promise<N8nConfigDto[]> {
+      const result = await httpClient.get<{ configs: N8nConfigDto[] }>(
+        '/api/v1/admin/n8n',
+        z.object({ configs: z.array(N8nConfigDtoSchema) })
+      );
+      return result?.configs ?? [];
+    },
+
+    /**
+     * Create n8n configuration (admin only)
+     * POST /api/v1/admin/n8n
+     */
+    async createN8nConfig(data: {
+      name: string;
+      baseUrl: string;
+      apiKey: string;
+      webhookUrl?: string;
+    }): Promise<N8nConfigDto> {
+      return httpClient.post('/api/v1/admin/n8n', data, N8nConfigDtoSchema);
+    },
+
+    /**
+     * Update n8n configuration (admin only)
+     * PUT /api/v1/admin/n8n/{configId}
+     */
+    async updateN8nConfig(
+      configId: string,
+      data: {
+        name?: string;
+        baseUrl?: string;
+        apiKey?: string;
+        webhookUrl?: string;
+        isActive?: boolean;
+      }
+    ): Promise<N8nConfigDto> {
+      return httpClient.put(`/api/v1/admin/n8n/${configId}`, data, N8nConfigDtoSchema);
+    },
+
+    /**
+     * Delete n8n configuration (admin only)
+     * DELETE /api/v1/admin/n8n/{configId}
+     */
+    async deleteN8nConfig(configId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/n8n/${configId}`);
+    },
+
+    /**
+     * Test n8n configuration connection (admin only)
+     * POST /api/v1/admin/n8n/{configId}/test
+     */
+    async testN8nConnection(configId: string): Promise<N8nTestResultDto> {
+      return httpClient.post(`/api/v1/admin/n8n/${configId}/test`, {}, N8nTestResultDtoSchema);
     },
 
     /**
@@ -2825,6 +2894,101 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         z.object({ success: z.boolean() })
       );
       return result?.success ?? false;
+    },
+
+    // ========== Email Templates (Issue #52-#56) ==========
+
+    /**
+     * List email templates with optional filters.
+     * GET /api/v1/admin/email-templates
+     */
+    async getEmailTemplates(params?: {
+      type?: string;
+      locale?: string;
+    }): Promise<EmailTemplateDto[]> {
+      const searchParams = new URLSearchParams();
+      if (params?.type) searchParams.set('type', params.type);
+      if (params?.locale) searchParams.set('locale', params.locale);
+      const query = searchParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates${query ? `?${query}` : ''}`,
+        GetEmailTemplatesResponseSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get a single email template by ID.
+     * GET /api/v1/admin/email-templates/:id
+     */
+    async getEmailTemplate(id: string): Promise<EmailTemplateDto> {
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates/${id}`,
+        EmailTemplateDtoSchema
+      );
+      if (!result) throw new Error(`Email template ${id} not found`);
+      return result;
+    },
+
+    /**
+     * Create a new email template.
+     * POST /api/v1/admin/email-templates
+     */
+    async createEmailTemplate(data: CreateEmailTemplateInput): Promise<{ id: string }> {
+      return httpClient.post<{ id: string }>(
+        '/api/v1/admin/email-templates',
+        data,
+        z.object({ id: z.string().uuid() })
+      );
+    },
+
+    /**
+     * Update an existing email template (creates new version).
+     * PUT /api/v1/admin/email-templates/:id
+     */
+    async updateEmailTemplate(
+      id: string,
+      data: UpdateEmailTemplateInput
+    ): Promise<{ success: boolean }> {
+      return httpClient.put<{ success: boolean }>(
+        `/api/v1/admin/email-templates/${id}`,
+        data,
+        z.object({ success: z.boolean() })
+      );
+    },
+
+    /**
+     * Publish (activate) an email template version.
+     * POST /api/v1/admin/email-templates/:id/publish
+     */
+    async publishEmailTemplate(id: string): Promise<void> {
+      await httpClient.post('/api/v1/admin/email-templates/' + id + '/publish', {});
+    },
+
+    /**
+     * Preview rendered email template with test data.
+     * POST /api/v1/admin/email-templates/:id/preview
+     */
+    async previewEmailTemplate(id: string, testData?: Record<string, string>): Promise<string> {
+      const result = await httpClient.post<{ html: string }>(
+        `/api/v1/admin/email-templates/${id}/preview`,
+        { testData },
+        z.object({ html: z.string() })
+      );
+      return result.html;
+    },
+
+    /**
+     * Get version history for a template by name.
+     * GET /api/v1/admin/email-templates/:name/versions
+     */
+    async getEmailTemplateVersions(name: string, locale?: string): Promise<EmailTemplateDto[]> {
+      const params = locale ? `?locale=${locale}` : '';
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates/${name}/versions${params}`,
+        GetEmailTemplatesResponseSchema
+      );
+      return result ?? [];
     },
   };
 }

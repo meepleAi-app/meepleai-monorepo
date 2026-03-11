@@ -141,6 +141,27 @@ internal sealed class Agent : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Sets the game this agent is associated with.
+    /// Issue #97: Set Agent.GameId when linking to SharedGame.
+    /// </summary>
+    public void SetGameId(Guid gameId)
+    {
+        if (gameId == Guid.Empty)
+            throw new ArgumentException("GameId cannot be empty", nameof(gameId));
+
+        GameId = gameId;
+    }
+
+    /// <summary>
+    /// Clears the game association for this agent.
+    /// Issue #97: Clear Agent.GameId when unlinking from SharedGame.
+    /// </summary>
+    public void ClearGameId()
+    {
+        GameId = null;
+    }
+
+    /// <summary>
     /// Updates the agent name.
     /// </summary>
     public void Rename(string newName)

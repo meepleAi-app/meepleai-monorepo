@@ -194,6 +194,9 @@ public class MeepleAiDbContext : DbContext
     // Issue #4417: Email notification queue
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity> EmailQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity>();
 
+    // Issue #52: Email template admin management
+    public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);

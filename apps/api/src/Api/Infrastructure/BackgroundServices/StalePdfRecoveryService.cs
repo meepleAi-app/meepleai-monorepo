@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -130,16 +131,28 @@ internal sealed class StalePdfRecoveryService : BackgroundService
         var pendingCutoff = now - PendingStaleness;
         var processingCutoff = now - ProcessingStaleness;
 
+        // Use ProcessingState enum (stored as string) instead of deprecated ProcessingStatus
+        var pendingState = nameof(PdfProcessingState.Pending);
+        var uploadingState = nameof(PdfProcessingState.Uploading);
+        var extractingState = nameof(PdfProcessingState.Extracting);
+        var chunkingState = nameof(PdfProcessingState.Chunking);
+        var embeddingState = nameof(PdfProcessingState.Embedding);
+        var indexingState = nameof(PdfProcessingState.Indexing);
+
         return await db.PdfDocuments
             .Where(p =>
-                (p.ProcessingStatus == "pending" && p.UploadedAt < pendingCutoff) ||
-                (p.ProcessingStatus == "processing" && p.UploadedAt < processingCutoff))
+                (p.ProcessingState == pendingState && p.UploadedAt < pendingCutoff) ||
+                ((p.ProcessingState == uploadingState ||
+                  p.ProcessingState == extractingState ||
+                  p.ProcessingState == chunkingState ||
+                  p.ProcessingState == embeddingState ||
+                  p.ProcessingState == indexingState) && p.UploadedAt < processingCutoff))
             .Select(p => new StalePdfInfo
             {
                 Id = p.Id,
                 FilePath = p.FilePath,
                 UploadedByUserId = p.UploadedByUserId,
-                OriginalStatus = p.ProcessingStatus,
+                OriginalStatus = p.ProcessingState,
                 UploadedAt = p.UploadedAt
             })
             .OrderBy(p => p.UploadedAt)
@@ -156,9 +169,11 @@ internal sealed class StalePdfRecoveryService : BackgroundService
             .FindAsync(new object[] { pdfDocumentId }, cancellationToken)
             .ConfigureAwait(false);
 
-        if (pdfDoc != null && !string.Equals(pdfDoc.ProcessingStatus, "completed", StringComparison.Ordinal))
+        var readyState = nameof(PdfProcessingState.Ready);
+        if (pdfDoc != null && !string.Equals(pdfDoc.ProcessingState, readyState, StringComparison.Ordinal))
         {
-            pdfDoc.ProcessingStatus = "pending";
+            pdfDoc.ProcessingState = nameof(PdfProcessingState.Pending);
+            pdfDoc.ProcessingStatus = "pending"; // Keep deprecated field in sync
             pdfDoc.ProcessingError = null;
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }

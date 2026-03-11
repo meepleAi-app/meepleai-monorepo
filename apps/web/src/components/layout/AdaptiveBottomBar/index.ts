@@ -1,0 +1,1 @@
+export { AdaptiveBottomBar } from './AdaptiveBottomBar';

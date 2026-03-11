@@ -534,6 +534,7 @@ v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops,
 v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
+v1Api.MapAdminEmailTemplateEndpoints(); // Issue #52: Admin email template management
 v1Api.MapAdminBusinessStatsEndpoints(); // Issue #4562: App Usage Stats (Epic #3688)
 v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
@@ -565,6 +566,7 @@ v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Cont
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 v1Api.MapWorkflowEndpoints();          // n8n workflow integration
+v1Api.MapN8nWebhookEndpoints();        // Issue #57: n8n → API webhook callbacks
 v1Api.MapSessionEndpoints();           // Session management
 v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and management
 v1Api.MapApiKeyEndpoints();            // API key management

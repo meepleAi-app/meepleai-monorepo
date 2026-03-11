@@ -754,7 +754,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
         var fullResponse = llmResult.Response;
         var tokenCount = llmResult.Usage.TotalTokens;
 
-        // Debug: emit cost/token update (Issue #4916)
+        // Debug: emit cost/token update (Issue #4916, #93)
         yield return CreateEvent(
             StreamingEventType.DebugCostUpdate,
             new
@@ -763,6 +763,7 @@ internal sealed class SendAgentMessageCommandHandler : IStreamingQueryHandler<Se
                 promptTokens = llmResult.Usage.PromptTokens,
                 completionTokens = llmResult.Usage.CompletionTokens,
                 totalTokens = tokenCount,
+                costUsd = (double)llmResult.Cost.TotalCost,
                 confidence = retrievalConfidence,
                 typology = profile.Name
             });

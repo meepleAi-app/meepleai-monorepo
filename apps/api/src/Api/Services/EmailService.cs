@@ -2483,12 +2483,13 @@ internal class EmailService : IEmailService
     public async Task SendInvitationEmailAsync(
         string toEmail,
         string role,
-        string inviteLink,
+        string token,
         string invitedByName,
         CancellationToken ct = default)
     {
         try
         {
+            var inviteLink = $"{_frontendBaseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
             var subject = "You've been invited to MeepleAI";
             var body = BuildInvitationEmailBody(role, inviteLink, invitedByName);
 

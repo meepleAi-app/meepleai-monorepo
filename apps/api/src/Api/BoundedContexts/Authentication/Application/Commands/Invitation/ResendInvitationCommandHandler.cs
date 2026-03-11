@@ -81,11 +81,10 @@ internal sealed class ResendInvitationCommandHandler : ICommandHandler<ResendInv
         // Send email (fire-and-forget)
         try
         {
-            var inviteLink = $"/accept-invite?token={rawToken}";
             await _emailService.SendInvitationEmailAsync(
                 existingInvitation.Email,
                 existingInvitation.Role,
-                inviteLink,
+                rawToken,
                 "Admin",
                 cancellationToken).ConfigureAwait(false);
         }

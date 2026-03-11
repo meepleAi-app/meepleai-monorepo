@@ -33,7 +33,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download required NLTK datasets to avoid runtime races
 ENV NLTK_DATA=/home/unstructured/nltk_data
-RUN python -m nltk.downloader punkt punkt_tab averaged_perceptron_tagger \
+RUN python -m nltk.downloader -d /home/unstructured/nltk_data punkt punkt_tab averaged_perceptron_tagger \
     && chown -R unstructured:unstructured /home/unstructured/nltk_data
 
 # Copy application code

@@ -20,3 +20,4 @@ export type { LiveSessionViewProps } from './LiveSessionView';
 export { ScoreAssistant } from './ScoreAssistant';
 export { SaveCompleteDialog } from './SaveCompleteDialog';
 export { ResumeSessionPanel } from './ResumeSessionPanel';
+export { GameNightWizard } from './GameNightWizard';

@@ -26,6 +26,11 @@ internal sealed class InvitationToken : AggregateRoot<Guid>
     private InvitationToken(Guid id) : base(id) { }
 
     /// <summary>
+    /// Internal constructor for repository materialization (avoids reflection).
+    /// </summary>
+    internal static InvitationToken CreateForHydration(Guid id) => new(id);
+
+    /// <summary>
     /// Factory method to create a new invitation token.
     /// </summary>
     /// <param name="email">Email address of the invitee</param>

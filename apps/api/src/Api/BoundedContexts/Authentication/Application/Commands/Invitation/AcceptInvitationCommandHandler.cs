@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
@@ -60,7 +61,13 @@ internal sealed class AcceptInvitationCommandHandler : ICommandHandler<AcceptInv
         var role = Role.Parse(invitation.Role);
         var passwordHash = PasswordHash.Create(command.Password);
         var userId = Guid.NewGuid();
-        var displayName = email.Value.Split('@')[0]; // Default display name from email
+        // Sanitize display name: strip non-alphanumeric chars except dots/hyphens/underscores, max 50 chars
+        var rawName = email.Value.Split('@')[0];
+        var displayName = Regex.Replace(rawName, @"[^a-zA-Z0-9._\-]", "", RegexOptions.None, TimeSpan.FromSeconds(1));
+        if (string.IsNullOrWhiteSpace(displayName))
+            displayName = "User";
+        if (displayName.Length > 50)
+            displayName = displayName[..50];
 
         var user = new User(
             id: userId,

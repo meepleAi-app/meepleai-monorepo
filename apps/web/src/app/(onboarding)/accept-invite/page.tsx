@@ -34,6 +34,7 @@ function AcceptInviteContent() {
       .then(result => {
         if (!result.valid) {
           setError('This invitation has expired or is invalid. Contact your administrator.');
+          return;
         }
         setValidation(result);
       })

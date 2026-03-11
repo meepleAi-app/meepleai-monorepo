@@ -643,6 +643,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .WithTags("Authentication", "Invitations")
         .WithSummary("Accept an invitation and create an account")
         .WithDescription("Validates the invitation token, creates the user account, and returns a session for immediate login.")
+        .RequireRateLimiting("AuthRegister")
         .Produces(200)
         .Produces(400);
     }
@@ -682,6 +683,7 @@ Clients can also store the key securely and send it via the `Authorization: ApiK
         .WithTags("Authentication", "Invitations")
         .WithSummary("Validate an invitation token")
         .WithDescription("Checks whether an invitation token is valid without consuming it. Returns role and expiry info.")
+        .RequireRateLimiting("AuthRegister")
         .Produces(200)
         .Produces(400);
     }

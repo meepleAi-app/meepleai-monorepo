@@ -277,6 +277,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         activePattern: /^\/admin\/users$/,
       },
       {
+        href: '/admin/users/invitations',
+        label: 'Invitations',
+        icon: MailIcon,
+      },
+      {
         href: '/admin/users/roles',
         label: 'Roles & Permissions',
         icon: ShieldIcon,

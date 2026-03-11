@@ -64,7 +64,7 @@ export function OnboardingWizard({ token, role }: OnboardingWizardProps) {
   const goToPrev = useCallback(() => {
     setState(prev => ({
       ...prev,
-      currentStep: Math.max(1, prev.currentStep - 1),
+      currentStep: Math.max(prev.passwordCompleted ? 2 : 1, prev.currentStep - 1),
     }));
   }, []);
 

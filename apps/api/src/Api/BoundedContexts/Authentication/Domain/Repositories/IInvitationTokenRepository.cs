@@ -29,4 +29,9 @@ internal interface IInvitationTokenRepository : IRepository<InvitationToken, Gui
     /// Counts invitations with a specific status.
     /// </summary>
     Task<int> CountByStatusAsync(InvitationStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts all invitations regardless of status.
+    /// </summary>
+    Task<int> CountAllAsync(CancellationToken cancellationToken = default);
 }

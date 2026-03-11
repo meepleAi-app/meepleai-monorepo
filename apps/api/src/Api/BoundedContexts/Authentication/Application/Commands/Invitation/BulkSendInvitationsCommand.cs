@@ -16,11 +16,11 @@ internal record BulkSendInvitationsCommand(
 /// <summary>
 /// Response for bulk invitation operation.
 /// </summary>
-public sealed record BulkInviteResponse(
+internal sealed record BulkInviteResponse(
     IReadOnlyList<InvitationDto> Successful,
     IReadOnlyList<BulkInviteFailure> Failed);
 
 /// <summary>
 /// Represents a failed invitation in a bulk operation.
 /// </summary>
-public sealed record BulkInviteFailure(string Email, string Error);
+internal sealed record BulkInviteFailure(string Email, string Error);

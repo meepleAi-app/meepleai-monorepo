@@ -93,7 +93,14 @@ internal sealed class BulkSendInvitationsCommandHandler
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to send invitation to {Email}", email);
-                failed.Add(new BulkInviteFailure(email, ex.Message));
+                var userFacingError = ex switch
+                {
+                    Api.Middleware.Exceptions.ConflictException => "A pending invitation or user already exists for this email",
+                    ArgumentException ae => ae.Message,
+                    FluentValidation.ValidationException => "Invalid email or role",
+                    _ => "Failed to send invitation"
+                };
+                failed.Add(new BulkInviteFailure(email, userFacingError));
             }
 #pragma warning restore CA1031
         }

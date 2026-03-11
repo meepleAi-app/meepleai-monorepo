@@ -39,11 +39,7 @@ internal sealed class GetInvitationsQueryHandler
         }
         else
         {
-            // Count all statuses
-            var pending = await _invitationRepo.CountByStatusAsync(InvitationStatus.Pending, cancellationToken).ConfigureAwait(false);
-            var accepted = await _invitationRepo.CountByStatusAsync(InvitationStatus.Accepted, cancellationToken).ConfigureAwait(false);
-            var expired = await _invitationRepo.CountByStatusAsync(InvitationStatus.Expired, cancellationToken).ConfigureAwait(false);
-            totalCount = pending + accepted + expired;
+            totalCount = await _invitationRepo.CountAllAsync(cancellationToken).ConfigureAwait(false);
         }
 
         var items = invitations.Select(SendInvitationCommandHandler.MapToDto).ToList();

@@ -43,7 +43,6 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
         ArgumentNullException.ThrowIfNull(entity);
         var infrastructureEntity = MapToInfrastructure(entity);
         await _context.InvitationTokens.AddAsync(infrastructureEntity, cancellationToken).ConfigureAwait(false);
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task UpdateAsync(InvitationToken entity, CancellationToken cancellationToken = default)
@@ -60,8 +59,6 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
         existingEntity.Status = entity.Status.ToString();
         existingEntity.AcceptedAt = entity.AcceptedAt;
         existingEntity.AcceptedByUserId = entity.AcceptedByUserId;
-
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(InvitationToken entity, CancellationToken cancellationToken = default)
@@ -74,7 +71,6 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
         if (existingEntity != null)
         {
             _context.InvitationTokens.Remove(existingEntity);
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -131,16 +127,20 @@ internal sealed class InvitationTokenRepository : IInvitationTokenRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<int> CountAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.InvitationTokens
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Maps infrastructure entity to domain aggregate.
-    /// Uses internal RestoreState method (S3011 compliant, no reflection).
+    /// Uses internal factory + RestoreState method (no reflection).
     /// </summary>
     private static InvitationToken MapToDomain(InvitationTokenEntity entity)
     {
-        var token = (InvitationToken)Activator.CreateInstance(typeof(InvitationToken), true)!;
-
-        // Set Id via base class property
-        typeof(InvitationToken).GetProperty(nameof(InvitationToken.Id))!.SetValue(token, entity.Id);
+        var token = InvitationToken.CreateForHydration(entity.Id);
 
         // Restore all state via internal method
         token.RestoreState(

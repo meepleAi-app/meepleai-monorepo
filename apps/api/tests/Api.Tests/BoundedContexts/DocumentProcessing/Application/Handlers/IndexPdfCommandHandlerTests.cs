@@ -480,6 +480,8 @@ public class IndexPdfCommandHandlerTests
             UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ProcessingStatus = status,
+            // Handler validates ProcessingState == "Ready" before indexing
+            ProcessingState = status == "completed" ? "Ready" : "Pending",
             ExtractedText = extractedText,
             Game = new GameEntity
             {

@@ -15,7 +15,7 @@ jobs:
   health-check:
     name: Runner Health Check
     # Only run when self-hosted runner is configured
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     if: ${{ vars.RUNNER != '' }}
     timeout-minutes: 5
 

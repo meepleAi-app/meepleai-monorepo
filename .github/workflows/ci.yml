@@ -21,23 +21,13 @@ jobs:
   # Quick path filtering to skip unchanged areas
   changes:
     name: Detect Changes
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       python: ${{ steps.filter.outputs.python }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
@@ -60,7 +50,7 @@ jobs:
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
   frontend:
     name: Frontend - Build & Test
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -112,7 +102,7 @@ jobs:
   # Backend: Build, Unit Tests, Integration Tests
   backend:
     name: Backend - Build & Test
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -162,27 +152,6 @@ jobs:
         working-directory: apps/api
 
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - name: Pre-job disk check (self-hosted)
-        if: vars.RUNNER != ''
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-          echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
-            docker system prune -af --filter "until=24h" 2>/dev/null || true
-          fi
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -251,12 +220,32 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      # Stage 2: Backend Unit Tests
-      # Stage 4: Backend Integration Tests (Testcontainers)
-      # Both stages run sequentially in this job with service containers
-      - name: Run Tests
-        # Issue #2967: ARM64 self-hosted runner is 30-40% slower than x86-64.
-        timeout-minutes: 60
+      # Stage 2: Backend Unit Tests (fast, no DB dependency)
+      - name: Run Unit Tests
+        timeout-minutes: 20
+        env:
+          CI: true
+        run: |
+          echo "🧪 Running unit tests..."
+          dotnet test \
+            --filter "Category=Unit" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --configuration Release \
+            --blame-hang-timeout 5min \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./coverage/unit-coverage.xml
+          echo "✅ Unit tests passed"
+
+      # Stage 3: Backend Integration Tests (requires service containers)
+      # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
+      # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
+      # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
+      # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
+      # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
+      - name: Run Integration Tests
+        timeout-minutes: 90
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -271,38 +260,17 @@ jobs:
           # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
           DISABLE_RATE_LIMITING: "true"
         run: |
-          UNIT_EXIT=0
-          INT_EXIT=0
-
-          # Run Unit tests
-          dotnet test \
-            --filter "Category=Unit" \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/unit-coverage.xml || UNIT_EXIT=$?
-
-          # Run Integration tests
-          # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
-          # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
-          # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
-          # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
-          # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
+          echo "🧪 Running integration tests..."
           dotnet test \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
+            --blame-hang-timeout 15min \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/integration-coverage.xml || INT_EXIT=$?
-
-          if [ $UNIT_EXIT -ne 0 ] || [ $INT_EXIT -ne 0 ]; then
-            echo "::error::Test failures detected (Unit exit: $UNIT_EXIT, Integration exit: $INT_EXIT)"
-            exit 1
-          fi
+            -p:CoverletOutput=./coverage/integration-coverage.xml
+          echo "✅ Integration tests passed"
 
       - name: Upload Coverage
         if: always()
@@ -318,7 +286,7 @@ jobs:
   # Python Services: Pytest for orchestration-service
   python-tests:
     name: Python - Orchestration Service Tests
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.python == 'true' || needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -366,7 +334,7 @@ jobs:
   # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
   e2e:
     name: E2E - Critical Paths
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -412,27 +380,6 @@ jobs:
         working-directory: apps/web
 
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - name: Pre-job disk check (self-hosted)
-        if: vars.RUNNER != ''
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-          echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
-            docker system prune -af --filter "until=24h" 2>/dev/null || true
-          fi
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -554,7 +501,7 @@ jobs:
   # Final status check
   ci-success:
     name: CI Success
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     needs: [frontend, backend, python-tests, e2e]
     if: always()
     steps:
@@ -568,9 +515,3 @@ jobs:
             exit 1
           fi
           echo "✅ CI Passed"
-
-      - name: Post-CI cleanup (self-hosted)
-        if: always() && !contains(runner.name, 'GitHub Actions')
-        run: |
-          docker container prune -f 2>/dev/null || true
-          docker image prune -f 2>/dev/null || true

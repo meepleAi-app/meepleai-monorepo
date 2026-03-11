@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -9,6 +10,7 @@ using Api.Tests.Services;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Handlers;
@@ -23,6 +25,7 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly FakeHybridCache _cache;
     private readonly FakeTimeProvider _timeProvider;
+    private readonly Mock<ILlmRequestLogRepository> _mockLlmRequestLogRepository;
     private readonly GetAdminOverviewStatsQueryHandler _handler;
 
     public GetAdminOverviewStatsQueryHandlerTests()
@@ -31,8 +34,12 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
         _cache = new FakeHybridCache();
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(new DateTimeOffset(2024, 6, 15, 12, 0, 0, TimeSpan.Zero));
+        _mockLlmRequestLogRepository = new Mock<ILlmRequestLogRepository>();
+        _mockLlmRequestLogRepository
+            .Setup(x => x.GetActiveAiUserCountAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
-        _handler = new GetAdminOverviewStatsQueryHandler(_dbContext, _cache, _timeProvider);
+        _handler = new GetAdminOverviewStatsQueryHandler(_dbContext, _cache, _mockLlmRequestLogRepository.Object, _timeProvider);
     }
 
     public void Dispose()
@@ -58,6 +65,7 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
         result.PublishedGames.Should().Be(0);
         result.TotalUsers.Should().Be(0);
         result.ActiveUsers.Should().Be(0);
+        result.ActiveAiUsers.Should().Be(0);
         result.ApprovalRate.Should().Be(0);
         result.PendingApprovals.Should().Be(0);
         result.RecentSubmissions.Should().Be(0);
@@ -145,6 +153,24 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
 
         // Assert
         result.RecentSubmissions.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsActiveAiUsersFromRepository()
+    {
+        // Arrange
+        _mockLlmRequestLogRepository
+            .Setup(x => x.GetActiveAiUserCountAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(42);
+
+        // Act
+        var result = await _handler.Handle(new GetAdminOverviewStatsQuery(), CancellationToken.None);
+
+        // Assert
+        result.ActiveAiUsers.Should().Be(42);
+        _mockLlmRequestLogRepository.Verify(
+            x => x.GetActiveAiUserCountAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

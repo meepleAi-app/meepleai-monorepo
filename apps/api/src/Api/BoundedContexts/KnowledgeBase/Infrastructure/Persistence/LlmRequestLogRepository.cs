@@ -78,6 +78,17 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
             provider, modelId, source, promptTokens + completionTokens, costUsd, latencyMs);
     }
 
+    public async Task<int> GetActiveAiUserCountAsync(DateTime from, CancellationToken cancellationToken = default)
+    {
+        return await _context.LlmRequestLogs
+            .AsNoTracking()
+            .Where(x => x.RequestedAt >= from && x.UserId != null && !x.IsAnonymized)
+            .Select(x => x.UserId)
+            .Distinct()
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<int> GetTodayCountAsync(DateOnly utcDate, CancellationToken cancellationToken = default)
     {
         var startUtc = utcDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);

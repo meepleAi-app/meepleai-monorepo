@@ -195,8 +195,8 @@ describe('ToolRail', () => {
     const desktopRail = tablists.find(t => t.getAttribute('aria-orientation') === 'vertical')!;
 
     fireEvent.keyDown(desktopRail, { key: 'ArrowUp' });
-    // scoreboard is index 0, previous wraps to last (whiteboard, index 3)
-    expect(onToolChange).toHaveBeenCalledWith('whiteboard');
+    // scoreboard is index 0, previous wraps to last (camera, index 4)
+    expect(onToolChange).toHaveBeenCalledWith('camera');
   });
 
   it('ArrowRight on mobile tablist cycles to next tool', () => {
@@ -260,9 +260,9 @@ describe('ToolRail', () => {
     expect(screen.getByRole('button', { name: 'Comprimi rail' })).toBeInTheDocument();
   });
 
-  it('exports BASE_TOOLS with 4 base tool definitions', () => {
-    expect(BASE_TOOLS).toHaveLength(4);
-    expect(BASE_TOOLS.map(t => t.id)).toEqual(['scoreboard', 'turn-order', 'dice', 'whiteboard']);
+  it('exports BASE_TOOLS with 5 base tool definitions', () => {
+    expect(BASE_TOOLS).toHaveLength(5);
+    expect(BASE_TOOLS.map(t => t.id)).toEqual(['scoreboard', 'turn-order', 'dice', 'whiteboard', 'camera']);
     BASE_TOOLS.forEach(t => expect(t.type).toBe('base'));
   });
 });

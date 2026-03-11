@@ -6,6 +6,7 @@
  * - catalog (default): Full shared games catalog via CatalogContent
  * - proposals: User game proposals via MyProposalsClient
  * - community: Placeholder for future community features
+ * - bgg: Direct BGG search via BggSearchTab
  */
 
 import { Suspense } from 'react';
@@ -13,6 +14,8 @@ import { Suspense } from 'react';
 import MyProposalsClient from '@/app/(authenticated)/library/proposals/MyProposalsClient';
 import { CatalogContent } from '@/app/(public)/games/catalog/_content';
 import { MeepleGameCatalogCardSkeleton } from '@/components/catalog/MeepleGameCatalogCard';
+
+import { BggSearchTab } from './BggSearchTab';
 
 interface DiscoverPageProps {
   searchParams: Promise<{ tab?: string }>;
@@ -49,6 +52,10 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
         </div>
       </div>
     );
+  }
+
+  if (tab === 'bgg') {
+    return <BggSearchTab />;
   }
 
   return (

@@ -7,6 +7,9 @@ vi.mock('../AuditLogTab', () => ({ AuditLogTab: () => <div data-testid="audit-ta
 vi.mock('../ReportsTab', () => ({ ReportsTab: () => <div data-testid="reports-tab" /> }));
 vi.mock('../ApiKeysTab', () => ({ ApiKeysTab: () => <div data-testid="api-keys-tab" /> }));
 vi.mock('../NavConfig', () => ({ AdminAnalyticsNavConfig: () => null }));
+vi.mock('@/components/admin/layout/AdminTabPersistence', () => ({
+  AdminTabPersistence: () => null,
+}));
 
 import AdminAnalyticsPage from '../page';
 

@@ -12,6 +12,16 @@
 
 **Independent of:** Phases 1-3 (audit system is self-contained)
 
+> **Existing `AuditLog` entity:** `Administration/Domain/Entities/AuditLog.cs` already exists with similar fields. `AuditLogEntry` is a more comprehensive replacement with event-driven population, JSONB details, and typed `AuditAction` enum. The existing `AuditLog` will be deprecated after migration.
+
+> **Existing endpoints:** `Routing/AdminAuditLogEndpoints.cs` already has basic `GET /admin/audit-log` and `GET /admin/audit-log/export`. This plan extends these rather than creating new ones.
+
+> **Existing frontend schema:** `admin.schemas.ts` defines `AuditLogEntrySchema` (line 617). New audit schemas will extend/replace this.
+
+> **Existing AuditTab:** `app/admin/(dashboard)/monitor/operations/AuditTab.tsx` exists. The new `/admin/monitor/audit` page is the enhanced replacement.
+
+> **Cross-context events:** `RoleChangedEvent` is `internal sealed` in Authentication. The `RoleChangedAuditHandler` should either live in Authentication context, or the event should be made `public sealed`.
+
 ---
 
 ## File Structure
@@ -23,14 +33,14 @@
 | `Administration/Domain/Enums/AuditAction.cs` | 26-value enum |
 | `Administration/Domain/Repositories/IAuditLogRepository.cs` | Repository interface |
 | `Administration/Infrastructure/Repositories/AuditLogRepository.cs` | EF Core implementation |
-| `Administration/Infrastructure/Configuration/AuditLogEntryConfiguration.cs` | EF config with indexes |
+| `Administration/Infrastructure/Persistence/Configurations/AuditLogEntryConfiguration.cs` | EF config with indexes |
 | `Administration/Application/Commands/ChangeUserRoleCommand.cs` | Dedicated role change |
 | `Administration/Application/Queries/GetAuditLogQuery.cs` | Paginated + filtered |
 | `Administration/Application/Queries/GetUserAuditLogQuery.cs` | Per-user filtered |
 | `Administration/Application/Queries/ExportAuditLogQuery.cs` | CSV export |
 | `Administration/Application/EventHandlers/AuditLogEventHandler.cs` | Centralized audit writer |
 | `Administration/Infrastructure/Jobs/AuditLogCleanupJob.cs` | Quartz: 90-day retention |
-| `Routing/AdminAuditEndpoints.cs` | Audit log endpoints |
+| `Routing/AdminAuditLogEndpoints.cs` | **Modified** — extend existing audit log endpoints |
 
 ### Backend — Modified Files
 | File | Change |
@@ -44,20 +54,20 @@
 ### Frontend — New Files
 | File | Responsibility |
 |------|---------------|
-| `components/admin/users/InlineRoleSelect.tsx` | Dropdown + confirmation modal |
-| `components/admin/users/UserActivityTimeline.tsx` | Per-user event timeline |
-| `app/admin/(dashboard)/monitor/audit/page.tsx` | Audit log page |
-| `components/admin/audit/AuditLogTable.tsx` | Filterable table |
-| `components/admin/audit/AuditLogFilters.tsx` | Filter controls |
-| `components/admin/audit/AuditLogExport.tsx` | CSV export button |
-| `lib/api/clients/auditClient.ts` | API client |
-| `lib/api/schemas/audit.schemas.ts` | Zod schemas |
+| `src/components/admin/users/InlineRoleSelect.tsx` | Dropdown + confirmation modal |
+| `src/components/admin/users/UserActivityTimeline.tsx` | Per-user event timeline |
+| `src/app/admin/(dashboard)/monitor/audit/page.tsx` | Audit log page |
+| `src/components/admin/audit/AuditLogTable.tsx` | Filterable table |
+| `src/components/admin/audit/AuditLogFilters.tsx` | Filter controls |
+| `src/components/admin/audit/AuditLogExport.tsx` | CSV export button |
+| `src/lib/api/clients/auditClient.ts` | API client |
+| `src/lib/api/schemas/audit.schemas.ts` | Zod schemas |
 
 ### Frontend — Modified Files
 | File | Change |
 |------|--------|
-| `lib/api/index.ts` | Register auditClient |
-| `components/admin/users/activity-table.tsx` | Wire to real API (currently mock data) |
+| `src/lib/api/index.ts` | Register auditClient |
+| `src/components/admin/users/activity-table.tsx` | Wire to real API (currently mock data) |
 | Admin user detail page | Add "Activity" tab |
 
 ### Tests
@@ -67,8 +77,12 @@
 | `Api.Tests/Administration/Commands/ChangeUserRoleCommandTests.cs` | Unit: handler |
 | `Api.Tests/Administration/Queries/GetAuditLogQueryTests.cs` | Unit: query handler |
 | `Api.Tests/Administration/EventHandlers/AuditLogEventHandlerTests.cs` | Unit: event handler |
-| `apps/web/__tests__/admin/audit/AuditLogTable.test.tsx` | Frontend: table |
-| `apps/web/__tests__/admin/users/InlineRoleSelect.test.tsx` | Frontend: role change |
+| `Api.Tests/Administration/Queries/ExportAuditLogQueryTests.cs` | Unit: export handler |
+| `Api.Tests/Administration/Queries/GetUserAuditLogQueryTests.cs` | Unit: per-user query handler |
+| `Api.Tests/Administration/Jobs/AuditLogCleanupJobTests.cs` | Unit: retention job |
+| `apps/web/src/__tests__/admin/audit/AuditLogTable.test.tsx` | Frontend: table |
+| `apps/web/src/__tests__/admin/users/InlineRoleSelect.test.tsx` | Frontend: role change |
+| `apps/web/src/__tests__/admin/users/UserActivityTimeline.test.tsx` | Frontend: activity timeline |
 
 ### Migration
 | File | Description |
@@ -149,7 +163,7 @@ public sealed class AuditLogEntry : Entity<Guid>
 
 ### Task 3: Create repository + EF config
 
-- [ ] **Step 1: Write IAuditLogRepository** — methods: AddAsync, GetPagedAsync(filters), GetByUserIdAsync, GetForExportAsync
+- [ ] **Step 1: Write IAuditLogRepository** — methods: AddAsync, GetPagedAsync(filters), GetByUserIdAsync, GetForExportAsync, DeleteOlderThanAsync(DateTime cutoff, CancellationToken ct)
 - [ ] **Step 2: Write AuditLogRepository** — EF Core with filter predicates
 - [ ] **Step 3: Write EF configuration** with 3 indexes:
   - `IX_AuditLogEntry_CreatedAt` (for retention cleanup)
@@ -169,6 +183,7 @@ public sealed class AuditLogEntry : Entity<Guid>
 
 ### Task 5: Add ChangedById to RoleChangedEvent
 
+- [ ] **Step 0: Grep for `UpdateRole` calls** to identify all callers that need the new `changedById` parameter
 - [ ] **Step 1: Read RoleChangedEvent.cs** (Authentication/Domain/Events/)
 - [ ] **Step 2: Add `ChangedById` property**
 
@@ -284,6 +299,12 @@ internal sealed class AuditLogCleanupJob : IJob
 - [ ] **Step 2: Write handler** generating CSV string
 - [ ] **Step 3: Commit**
 
+### Task 10b: Create GetUserAuditLogQuery
+
+- [ ] **Step 1: Write query** with userId filter + pagination (limit, offset, dateFrom, dateTo)
+- [ ] **Step 2: Write handler** calling `IAuditLogRepository.GetByUserIdAsync`
+- [ ] **Step 3: Test + commit**
+
 ### Task 11: Create AdminAuditEndpoints
 
 - [ ] **Step 1: Write endpoints**
@@ -322,14 +343,15 @@ interface InlineRoleSelectProps {
 
 - [ ] **Step 1: Write component** — chronological event list with icons per action type
 - [ ] **Step 2: Wire to GET /admin/users/{id}/audit-log**
-- [ ] **Step 3: Add as tab in admin user detail page**
-- [ ] **Step 4: Test + commit**
+- [ ] **Step 3: Add pagination/infinite scroll** — useInfiniteQuery with cursor-based loading for long activity histories
+- [ ] **Step 4: Add as tab in admin user detail page**
+- [ ] **Step 5: Test + commit**
 
 ### Task 15: Create Audit Log page
 
 - [ ] **Step 1: Write page** at `/admin/monitor/audit/page.tsx`
 - [ ] **Step 2: Write AuditLogTable** — filterable table with action badges
-- [ ] **Step 3: Write AuditLogFilters** — user picker, action dropdown, date range
+- [ ] **Step 3: Write AuditLogFilters** — user picker, action dropdown, date range, full-text search input (searches details JSONB and user/actor names)
 - [ ] **Step 4: Write AuditLogExport** — CSV download button
 - [ ] **Step 5: Add to admin navigation** in `config/admin-dashboard-navigation.ts`
 - [ ] **Step 6: Test + commit**

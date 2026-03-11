@@ -18,12 +18,6 @@ namespace Api.Infrastructure.Migrations
                 maxLength: 10,
                 nullable: true);
 
-            migrationBuilder.AddColumn<Guid>(
-                name: "RequestedByUserId",
-                table: "BggImportQueue",
-                type: "uuid",
-                nullable: true);
-
             migrationBuilder.CreateTable(
                 name: "email_templates",
                 columns: table => new
@@ -54,10 +48,6 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.DropColumn(
                 name: "user_region",
                 table: "llm_request_logs");
-
-            migrationBuilder.DropColumn(
-                name: "RequestedByUserId",
-                table: "BggImportQueue");
         }
     }
 }

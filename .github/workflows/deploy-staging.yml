@@ -41,6 +41,7 @@ jobs:
   build:
     name: Build Images
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 45
     needs: [test]
     if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true))
     outputs:
@@ -48,6 +49,12 @@ jobs:
       web_image: ${{ steps.meta-web.outputs.tags }}
       version: ${{ steps.version.outputs.version }}
     steps:
+      - name: Check Runner Fallback
+        if: vars.RUNNER != '' && !contains(runner.name, vars.RUNNER)
+        run: |
+          echo "::warning::Self-hosted runner '${{ vars.RUNNER }}' unavailable — fell back to GitHub-hosted runner"
+          echo "⚠️ This may produce x86 images incompatible with ARM64 staging server"
+
       - name: Verify ARM64 runner
         if: vars.RUNNER != ''
         run: |
@@ -149,6 +156,7 @@ jobs:
   deploy:
     name: Deploy to Staging
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     needs: [build]
     environment:
       name: staging

@@ -71,6 +71,7 @@ jobs:
   build:
     name: Build Production Images
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 45
     needs: [staging-check, test]
     if: always() && needs.test.result == 'success' && (needs.staging-check.result == 'success' || needs.staging-check.result == 'skipped')
     outputs:
@@ -78,6 +79,12 @@ jobs:
       web_image: ${{ steps.meta-web.outputs.tags }}
       version: ${{ steps.version.outputs.version }}
     steps:
+      - name: Check Runner Fallback
+        if: vars.RUNNER != '' && !contains(runner.name, vars.RUNNER)
+        run: |
+          echo "::warning::Self-hosted runner '${{ vars.RUNNER }}' unavailable — fell back to GitHub-hosted runner"
+          echo "⚠️ This may produce x86 images incompatible with ARM64 production server"
+
       - name: Verify ARM64 runner
         if: vars.RUNNER != ''
         run: |
@@ -200,6 +207,7 @@ jobs:
   deploy:
     name: Deploy to Production
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
     needs: [build, approve]
     environment:
       name: production

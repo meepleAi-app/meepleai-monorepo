@@ -33,6 +33,18 @@ import {
   type TriggerSnapshotRequest,
   type UpdateNotesRequest,
 } from '../schemas/live-sessions.schemas';
+import {
+  SessionSaveResultSchema,
+  SessionResumeContextSchema,
+  type SessionSaveResult,
+  type SessionResumeContext,
+} from '../schemas/save-resume.schemas';
+import {
+  ScoreParseResultSchema,
+  type ScoreParseResult,
+  type ParseScoreRequest,
+  type ConfirmScoreRequest,
+} from '../schemas/score-tracking.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -132,6 +144,22 @@ export interface LiveSessionsClient {
 
   /** Update session notes */
   updateNotes(sessionId: string, request: UpdateNotesRequest): Promise<void>;
+
+  // ========== AI Score Tracking (Issue #121) ==========
+
+  /** Parse a natural language message for score data, optionally auto-record */
+  parseScore(sessionId: string, request: ParseScoreRequest): Promise<ScoreParseResult>;
+
+  /** Confirm and record a previously parsed score */
+  confirmScore(sessionId: string, request: ConfirmScoreRequest): Promise<void>;
+
+  // ========== Enhanced Save/Resume (Issue #122) ==========
+
+  /** Save complete session state: pause + snapshot + agent persist + recap */
+  saveComplete(sessionId: string): Promise<SessionSaveResult>;
+
+  /** Get session resume context with recap, scores, and photos */
+  getResumeContext(sessionId: string): Promise<SessionResumeContext>;
 }
 
 export function createLiveSessionsClient({
@@ -296,6 +324,39 @@ export function createLiveSessionsClient({
 
     async updateNotes(sessionId, request) {
       await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/notes`, request);
+    },
+
+    // ========== AI Score Tracking (Issue #121) ==========
+
+    async parseScore(sessionId, request) {
+      const response = await httpClient.post<ScoreParseResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/scores/parse`,
+        request
+      );
+      if (!response) throw new Error('Parse score failed');
+      return ScoreParseResultSchema.parse(response);
+    },
+
+    async confirmScore(sessionId, request) {
+      await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/scores/confirm`, request);
+    },
+
+    // ========== Enhanced Save/Resume (Issue #122) ==========
+
+    async saveComplete(sessionId) {
+      const response = await httpClient.post<SessionSaveResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/save-complete`
+      );
+      if (!response) throw new Error('Save complete failed');
+      return SessionSaveResultSchema.parse(response);
+    },
+
+    async getResumeContext(sessionId) {
+      const response = await httpClient.get<SessionResumeContext>(
+        `${BASE}/${encodeURIComponent(sessionId)}/resume-context`
+      );
+      if (!response) throw new Error('Resume context not found');
+      return SessionResumeContextSchema.parse(response);
     },
   };
 }

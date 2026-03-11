@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Interfaces;
@@ -11,21 +12,25 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Handler for GetAdminOverviewStatsQuery.
 /// Issue #4198: Lightweight overview stats for StatsOverview component.
+/// Issue #113: Added ActiveAiUsers for MAU-AI monitoring.
 /// </summary>
 internal class GetAdminOverviewStatsQueryHandler : IQueryHandler<GetAdminOverviewStatsQuery, AdminOverviewStatsDto>
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly HybridCache _cache;
     private readonly TimeProvider _timeProvider;
+    private readonly ILlmRequestLogRepository _llmRequestLogRepository;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(1);
 
     public GetAdminOverviewStatsQueryHandler(
         MeepleAiDbContext dbContext,
         HybridCache cache,
+        ILlmRequestLogRepository llmRequestLogRepository,
         TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _llmRequestLogRepository = llmRequestLogRepository ?? throw new ArgumentNullException(nameof(llmRequestLogRepository));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -62,6 +67,10 @@ internal class GetAdminOverviewStatsQueryHandler : IQueryHandler<GetAdminOvervie
                     .Distinct()
                     .CountAsync(cancel).ConfigureAwait(false);
 
+                // Issue #113: Active AI users — distinct users with >=1 LLM request in last 30 days
+                var activeAiUsers = await _llmRequestLogRepository
+                    .GetActiveAiUserCountAsync(thirtyDaysAgo, cancel).ConfigureAwait(false);
+
                 // Share request / approval stats
                 var shareRequests = _dbContext.Set<ShareRequestEntity>();
 
@@ -93,6 +102,7 @@ internal class GetAdminOverviewStatsQueryHandler : IQueryHandler<GetAdminOvervie
                     PublishedGames: publishedGames,
                     TotalUsers: totalUsers,
                     ActiveUsers: activeUsers,
+                    ActiveAiUsers: activeAiUsers,
                     ApprovalRate: approvalRate,
                     PendingApprovals: pendingApprovals,
                     RecentSubmissions: recentSubmissions);

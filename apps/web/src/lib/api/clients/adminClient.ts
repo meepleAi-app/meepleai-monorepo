@@ -20,6 +20,7 @@ import {
   PromptResponseSchema,
   ActivateVersionResponseSchema,
   AdminStatsSchema,
+  AdminOverviewStatsSchema,
   AiRequestsResponseSchema,
   PromptVersionsResponseSchema,
   PromptAuditLogsResponseSchema,
@@ -45,6 +46,7 @@ import {
   type PromptTemplate,
   type ActivateVersionResponse,
   type AdminStats,
+  type AdminOverviewStats,
   type AiRequest,
   type PromptVersion,
   type PromptAuditLog,
@@ -538,6 +540,22 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const result = await httpClient.get<AdminStats>('/api/v1/admin/stats', AdminStatsSchema);
       if (!result) {
         throw new Error('Failed to fetch admin stats');
+      }
+      return result;
+    },
+
+    /**
+     * Get admin overview statistics (admin only)
+     * Issue #113: Includes ActiveAiUsers for MAU-AI monitoring.
+     * GET /api/v1/admin/overview-stats
+     */
+    async getOverviewStats(): Promise<AdminOverviewStats> {
+      const result = await httpClient.get<AdminOverviewStats>(
+        '/api/v1/admin/overview-stats',
+        AdminOverviewStatsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch admin overview stats');
       }
       return result;
     },

@@ -33,6 +33,12 @@ import {
   type TriggerSnapshotRequest,
   type UpdateNotesRequest,
 } from '../schemas/live-sessions.schemas';
+import {
+  ScoreParseResultSchema,
+  type ScoreParseResult,
+  type ParseScoreRequest,
+  type ConfirmScoreRequest,
+} from '../schemas/score-tracking.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -132,6 +138,14 @@ export interface LiveSessionsClient {
 
   /** Update session notes */
   updateNotes(sessionId: string, request: UpdateNotesRequest): Promise<void>;
+
+  // ========== AI Score Tracking (Issue #121) ==========
+
+  /** Parse a natural language message for score data, optionally auto-record */
+  parseScore(sessionId: string, request: ParseScoreRequest): Promise<ScoreParseResult>;
+
+  /** Confirm and record a previously parsed score */
+  confirmScore(sessionId: string, request: ConfirmScoreRequest): Promise<void>;
 }
 
 export function createLiveSessionsClient({
@@ -296,6 +310,21 @@ export function createLiveSessionsClient({
 
     async updateNotes(sessionId, request) {
       await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/notes`, request);
+    },
+
+    // ========== AI Score Tracking (Issue #121) ==========
+
+    async parseScore(sessionId, request) {
+      const response = await httpClient.post<ScoreParseResult>(
+        `${BASE}/${encodeURIComponent(sessionId)}/scores/parse`,
+        request
+      );
+      if (!response) throw new Error('Parse score failed');
+      return ScoreParseResultSchema.parse(response);
+    },
+
+    async confirmScore(sessionId, request) {
+      await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/scores/confirm`, request);
     },
   };
 }

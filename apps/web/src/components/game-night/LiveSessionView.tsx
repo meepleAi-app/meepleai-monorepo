@@ -39,6 +39,7 @@ import { useSessionStore } from '@/lib/stores/sessionStore';
 
 import { LiveScoreboard, type LiveScoreboardPlayer } from './LiveScoreboard';
 import { QuickActions } from './QuickActions';
+import { ScoreAssistant } from './ScoreAssistant';
 import { SessionChatWidget, type ChatMessage } from './SessionChatWidget';
 import { SessionHeader } from './SessionHeader';
 
@@ -267,6 +268,9 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         <div className="flex-1 space-y-4 lg:max-w-[60%]">
           {/* Scoreboard */}
           <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
+
+          {/* AI Score Assistant */}
+          <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
 
           {/* Quick Actions */}
           <QuickActions

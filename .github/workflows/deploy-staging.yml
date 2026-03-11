@@ -215,12 +215,69 @@ jobs:
           echo "✅ Cleanup complete"
           df -h / | tail -1
 
+  # Run database migrations BEFORE deploying new code
+  migrate-db:
+    name: Database Migration
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    needs: [build]
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Run Migrations via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/meepleai/repo/infra
+
+            set -a
+            for f in secrets/*.secret; do source "$f" 2>/dev/null; done
+            set +a
+
+            docker pull ${{ needs.build.outputs.api_image }}
+            export API_IMAGE="${{ needs.build.outputs.api_image }}"
+
+            mkdir -p /backups
+            BACKUP_FILE="/backups/pre-migration-staging-$(date +%Y%m%d%H%M%S).sql"
+            echo "💾 Creating backup: $BACKUP_FILE"
+            docker compose -f docker-compose.yml -f compose.staging.yml exec -T postgres \
+              pg_dump -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai_staging} > "$BACKUP_FILE" 2>/dev/null || {
+              echo "⚠️ Backup failed (postgres may not be running) — continuing"
+            }
+
+            echo "🔍 Checking EF CLI availability..."
+            HAS_EF=$(docker run --rm "$API_IMAGE" dotnet ef --version 2>/dev/null && echo "yes" || echo "no")
+
+            if [ "$HAS_EF" = "yes" ]; then
+              CONN_STRING=$(docker compose -f docker-compose.yml -f compose.staging.yml exec -T api \
+                printenv ConnectionStrings__DefaultConnection 2>/dev/null || echo "")
+              if [ -n "$CONN_STRING" ]; then
+                echo "🔄 Applying migrations..."
+                docker run --rm --network meepleai \
+                  -e "ConnectionStrings__DefaultConnection=$CONN_STRING" \
+                  "$API_IMAGE" dotnet ef database update --no-build 2>&1 || {
+                  echo "❌ Migration failed — restoring backup"
+                  docker compose -f docker-compose.yml -f compose.staging.yml exec -T postgres \
+                    psql -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai_staging} < "$BACKUP_FILE"
+                  exit 1
+                }
+                echo "✅ Migrations applied"
+              else
+                echo "ℹ️ No connection string — migrations will apply on API startup"
+              fi
+            else
+              echo "ℹ️ EF CLI not in image — migrations will apply on API startup"
+            fi
+
   # Deploy to staging server (only changed services)
   deploy:
     name: Deploy to Staging
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
-    needs: [build]
+    needs: [build, migrate-db]
+    if: always() && needs.build.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app

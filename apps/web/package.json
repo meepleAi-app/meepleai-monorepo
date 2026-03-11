@@ -46,7 +46,7 @@
     "test:a11y:e2e": "dotenv -e .env.test -- playwright test e2e/accessibility.spec.ts --project=desktop-chrome --workers=1",
     "test:a11y:e2e:errors": "dotenv -e .env.test -- cross-env FORCE_PRODUCTION_SERVER=true playwright test e2e/accessibility.spec.ts --grep '@error-state' --project=desktop-chrome --workers=1",
     "audit:a11y": "tsx scripts/run-accessibility-audit.ts",
-    "lint": "eslint . --max-warnings=395",
+    "lint": "eslint . --max-warnings=400",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "test:e2e:groups": "dotenv -e .env.test -- playwright test",

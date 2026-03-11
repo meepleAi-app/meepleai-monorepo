@@ -31,6 +31,13 @@ public interface ILlmRequestLogRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the count of distinct users with at least one LLM request since the specified date.
+    /// Excludes anonymized records and null UserIds (system/anonymous requests).
+    /// Issue #113: MAU-AI monitoring for ADR-045 scaling triggers.
+    /// </summary>
+    Task<int> GetActiveAiUserCountAsync(DateTime from, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the total number of LLM request log entries recorded on the specified UTC date.
     /// Used by the admin usage dashboard to display today's request count.
     /// </summary>

@@ -159,7 +159,7 @@ export function MiniNav({ className }: MiniNavProps) {
   return (
     <div
       className={cn(
-        'sticky top-14 z-30',
+        'sticky top-12 z-30',
         'flex items-stretch',
         'h-12',
         'border-b border-white/20 dark:border-border/40',

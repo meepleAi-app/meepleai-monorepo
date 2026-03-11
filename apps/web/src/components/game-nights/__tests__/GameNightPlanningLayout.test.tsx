@@ -46,4 +46,9 @@ describe('GameNightPlanningLayout', () => {
     render(<GameNightPlanningLayout title="Test" />);
     expect(screen.getAllByText(/programma/i)[0]).toBeInTheDocument();
   });
+
+  it('renders AI suggestion card in left column', () => {
+    render(<GameNightPlanningLayout title="Test" />);
+    expect(screen.getByText(/suggerimenti ai/i)).toBeInTheDocument();
+  });
 });

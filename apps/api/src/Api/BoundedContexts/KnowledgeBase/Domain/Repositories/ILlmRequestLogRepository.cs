@@ -28,6 +28,7 @@ public interface ILlmRequestLogRepository
         bool isStreaming,
         bool isFreeModel,
         string? sessionId,
+        string? userRegion = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -54,6 +54,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             isStreaming: false,
             isFreeModel: false,
             sessionId: "test-session",
+            userRegion: null,
             cancellationToken: TestCancellationToken);
 
         // Assert
@@ -87,7 +88,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         await Repository.LogRequestAsync(
             "model", "provider", RequestSource.Manual,
             null, null, 0, 0, 0m, 0, false, null, false, false, null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
@@ -108,7 +109,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             null, null, 100, 0, 0m, 100, success: false,
             errorMessage: "Rate limit exceeded",
             isStreaming: false, isFreeModel: false, sessionId: null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
@@ -131,7 +132,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         await Repository.LogRequestAsync(
             "model", "provider", source,
             null, null, 0, 0, 0m, 0, true, null, false, false, null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);

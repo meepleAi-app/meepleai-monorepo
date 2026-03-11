@@ -8,6 +8,8 @@ using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -173,6 +175,23 @@ internal static class LiveSessionEndpoints
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Update session notes");
+
+        group.MapPost("/live-sessions/{sessionId}/scores/parse", HandleParseScore)
+            .RequireAuthenticatedUser()
+            .Produces<ScoreParseResultDto>(200)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Parse a natural language message for score data")
+            .WithDescription("Parses a message and optionally auto-records the score if confidence is high enough.");
+
+        group.MapPost("/live-sessions/{sessionId}/scores/confirm", HandleConfirmScore)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Confirm and record a previously parsed score");
 
         // === Queries ===
         // NOTE: Literal-segment routes MUST be registered before parameterized {sessionId} route
@@ -455,6 +474,42 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleParseScore(
+        Guid sessionId,
+        [FromBody] ParseScoreRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var command = new ParseAndRecordScoreCommand
+        {
+            SessionId = sessionId,
+            Message = request.Message,
+            AutoRecord = request.AutoRecord
+        };
+
+        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleConfirmScore(
+        Guid sessionId,
+        [FromBody] ConfirmScoreRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var command = new ConfirmScoreCommand
+        {
+            SessionId = sessionId,
+            PlayerId = request.PlayerId,
+            Dimension = request.Dimension,
+            Value = request.Value,
+            Round = request.Round
+        };
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     #endregion
 
     #region Query Handlers
@@ -580,6 +635,10 @@ internal static class LiveSessionEndpoints
         SnapshotTrigger TriggerType,
         string? Description = null,
         Guid? CreatedByPlayerId = null);
+
+    private sealed record ParseScoreRequest(string Message, bool AutoRecord = true);
+
+    private sealed record ConfirmScoreRequest(Guid PlayerId, string Dimension, int Value, int Round);
 
     #endregion
 }

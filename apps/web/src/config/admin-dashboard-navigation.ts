@@ -45,6 +45,7 @@ import {
   ClipboardListIcon,
   KeyIcon,
   MailIcon,
+  ScrollTextIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -334,6 +335,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/monitor?tab=email',
         label: 'Email',
         icon: MailIcon,
+      },
+      // Operations Console (Issue #126)
+      {
+        href: '/admin/monitor/operations',
+        label: 'Operations',
+        icon: ScrollTextIcon,
       },
       // Config items
       {

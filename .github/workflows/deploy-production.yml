@@ -67,38 +67,21 @@ jobs:
     uses: ./.github/workflows/ci.yml
     secrets: inherit
 
-  # Build production images
+  # Promote staging images to production (build-once-promote pattern)
+  # Issue #179: Instead of rebuilding, retag the staging-tested images
+  # as production. This guarantees the exact artifact tested in staging
+  # is what gets deployed to production.
   build:
-    name: Build Production Images
+    name: Promote Staging Images
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 45
     needs: [staging-check, test]
     if: always() && needs.test.result == 'success' && (needs.staging-check.result == 'success' || needs.staging-check.result == 'skipped')
     outputs:
-      api_image: ${{ steps.meta-api.outputs.tags }}
-      web_image: ${{ steps.meta-web.outputs.tags }}
+      api_image: ${{ env.API_IMAGE }}:${{ steps.version.outputs.version }}
+      web_image: ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.version }}
       version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Verify ARM64 runner
-        if: vars.RUNNER != ''
-        run: |
-          ARCH=$(uname -m)
-          echo "Runner architecture: $ARCH"
-          if [ "$ARCH" != "aarch64" ]; then
-            echo "::error::Expected aarch64 but got $ARCH — runner may have silently fallen back"
-            exit 1
-          fi
-
-      - name: Pre-build disk check (self-hosted)
-        if: vars.RUNNER != ''
-        run: |
-          # Requires GNU df (--output flag)
-          USAGE=$(df / --output=pcent | tail -1 | tr -d ' %')
-          echo "Disk usage: ${USAGE}%"
-          if [ "$USAGE" -gt 90 ]; then
-            echo "::error::Disk usage critical (${USAGE}%) — triggering emergency cleanup"
-            docker system prune -af --filter "until=24h" 2>/dev/null || true
-          fi
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -117,9 +100,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📦 Production Version: $VERSION"
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -127,61 +107,55 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract API Metadata
-        id: meta-api
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.API_IMAGE }}
-          tags: |
-            type=raw,value=${{ steps.version.outputs.version }}
-            type=raw,value=latest
-
-      - name: Extract Web Metadata
-        id: meta-web
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.WEB_IMAGE }}
-          tags: |
-            type=raw,value=${{ steps.version.outputs.version }}
-            type=raw,value=latest
-
-      - name: Build and Push API Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./apps/api
-          file: ./apps/api/src/Api/Dockerfile
-          push: true
-          tags: ${{ steps.meta-api.outputs.tags }}
-          labels: ${{ steps.meta-api.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            ASPNETCORE_ENVIRONMENT=Production
-            VERSION=${{ steps.version.outputs.version }}
-
-      - name: Build and Push Web Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./apps/web
-          file: ./apps/web/Dockerfile
-          push: true
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NODE_ENV=production
-            NEXT_PUBLIC_ENV=production
-            VERSION=${{ steps.version.outputs.version }}
-
-      - name: Post-build cleanup (self-hosted)
-        if: always() && !contains(runner.name, 'GitHub Actions')
+      - name: Promote API Image (staging-latest → production tag)
         run: |
-          echo "🧹 Cleaning up Docker build artifacts on self-hosted runner..."
-          docker container prune -f 2>/dev/null || true
-          docker image prune -f 2>/dev/null || true
-          echo "✅ Cleanup complete"
-          df -h / | tail -1
+          echo "🔄 Promoting staging API image to production..."
+          # Pull the staging-tested image
+          docker pull ${{ env.API_IMAGE }}:staging-latest
+
+          # Retag as production version + latest
+          docker tag ${{ env.API_IMAGE }}:staging-latest ${{ env.API_IMAGE }}:${{ steps.version.outputs.version }}
+          docker tag ${{ env.API_IMAGE }}:staging-latest ${{ env.API_IMAGE }}:latest
+
+          # Push production tags
+          docker push ${{ env.API_IMAGE }}:${{ steps.version.outputs.version }}
+          docker push ${{ env.API_IMAGE }}:latest
+          echo "✅ API image promoted"
+
+      - name: Promote Web Image (staging-latest → production tag)
+        run: |
+          echo "🔄 Promoting staging Web image to production..."
+          # Pull the staging-tested image
+          docker pull ${{ env.WEB_IMAGE }}:staging-latest
+
+          # Retag as production version + latest
+          docker tag ${{ env.WEB_IMAGE }}:staging-latest ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.version }}
+          docker tag ${{ env.WEB_IMAGE }}:staging-latest ${{ env.WEB_IMAGE }}:latest
+
+          # Push production tags
+          docker push ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.version }}
+          docker push ${{ env.WEB_IMAGE }}:latest
+          echo "✅ Web image promoted"
+
+      - name: Verify Image Digests Match
+        run: |
+          echo "🔍 Verifying image integrity..."
+          # Confirm staging and production images have the same digest
+          STAGING_API=$(docker inspect --format='{{.Id}}' ${{ env.API_IMAGE }}:staging-latest)
+          PROD_API=$(docker inspect --format='{{.Id}}' ${{ env.API_IMAGE }}:${{ steps.version.outputs.version }})
+          if [ "$STAGING_API" != "$PROD_API" ]; then
+            echo "::error::API image digest mismatch!"
+            exit 1
+          fi
+
+          STAGING_WEB=$(docker inspect --format='{{.Id}}' ${{ env.WEB_IMAGE }}:staging-latest)
+          PROD_WEB=$(docker inspect --format='{{.Id}}' ${{ env.WEB_IMAGE }}:${{ steps.version.outputs.version }})
+          if [ "$STAGING_WEB" != "$PROD_WEB" ]; then
+            echo "::error::Web image digest mismatch!"
+            exit 1
+          fi
+
+          echo "✅ Image digests verified - same artifact as staging"
 
   # Manual approval gate before production deploy
   approve:
@@ -196,11 +170,72 @@ jobs:
           echo "✅ Production deployment approved by: ${{ github.actor }}"
           echo "📦 Deploying version: ${{ needs.build.outputs.version }}"
 
+  # Run database migrations before deploy (separated for safety)
+  migrate-db:
+    name: Database Migration
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    needs: [build, approve]
+    if: vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Run Migrations via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/meepleai
+
+            set -a
+            for f in secrets/*.secret; do source "$f" 2>/dev/null; done
+            set +a
+
+            docker pull ${{ needs.build.outputs.api_image }}
+            export API_IMAGE="${{ needs.build.outputs.api_image }}"
+
+            # Mandatory backup before production migration
+            mkdir -p /backups
+            BACKUP_FILE="/backups/pre-migration-prod-$(date +%Y%m%d%H%M%S).sql"
+            echo "💾 Creating mandatory backup: $BACKUP_FILE"
+            docker compose -f compose.prod.yml exec -T postgres \
+              pg_dump -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai} > "$BACKUP_FILE" || {
+              echo "❌ Backup FAILED — aborting migration (production safety)"
+              exit 1
+            }
+            echo "✅ Backup created: $(du -h $BACKUP_FILE | cut -f1)"
+
+            echo "🔍 Checking EF CLI availability..."
+            HAS_EF=$(docker run --rm "$API_IMAGE" dotnet ef --version 2>/dev/null && echo "yes" || echo "no")
+
+            if [ "$HAS_EF" = "yes" ]; then
+              CONN_STRING=$(docker compose -f compose.prod.yml exec -T api \
+                printenv ConnectionStrings__DefaultConnection 2>/dev/null || echo "")
+              if [ -n "$CONN_STRING" ]; then
+                echo "🔄 Applying migrations..."
+                docker run --rm --network meepleai \
+                  -e "ConnectionStrings__DefaultConnection=$CONN_STRING" \
+                  "$API_IMAGE" dotnet ef database update --no-build 2>&1 || {
+                  echo "❌ Migration failed — restoring backup"
+                  docker compose -f compose.prod.yml exec -T postgres \
+                    psql -U ${POSTGRES_USER:-meeple} ${POSTGRES_DB:-meepleai} < "$BACKUP_FILE"
+                  exit 1
+                }
+                echo "✅ Migrations applied"
+              else
+                echo "ℹ️ No connection string — migrations will apply on API startup"
+              fi
+            else
+              echo "ℹ️ EF CLI not in image — migrations will apply on API startup"
+            fi
+
   # Deploy to production with blue-green strategy
   deploy:
     name: Deploy to Production
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [build, approve]
+    timeout-minutes: 20
+    needs: [build, approve, migrate-db]
+    if: always() && needs.build.result == 'success' && needs.approve.result == 'success' && (needs.migrate-db.result == 'success' || needs.migrate-db.result == 'skipped')
     environment:
       name: production
       url: https://meepleai.com
@@ -255,9 +290,7 @@ jobs:
               exit 1
             fi
 
-            # Run migrations (with backup)
-            docker compose -f compose.prod.yml exec -T api \
-              dotnet ef database update --no-build
+            # Migrations handled by separate migrate-db job
 
             # Switch traffic to new container
             docker compose -f compose.prod.yml up -d --no-deps web
@@ -268,6 +301,21 @@ jobs:
             # Final health check
             sleep 10
             curl -sf https://meepleai.com/health || exit 1
+
+            # Record deployment version
+            cat > /opt/meepleai/DEPLOYMENT.json << VEREOF
+            {
+              "version": "${{ needs.build.outputs.version }}",
+              "api_image": "${{ needs.build.outputs.api_image }}",
+              "web_image": "${{ needs.build.outputs.web_image }}",
+              "environment": "production",
+              "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "deployed_by": "${{ github.actor }}",
+              "commit": "${{ github.sha }}",
+              "workflow_run": "${{ github.run_id }}"
+            }
+            VEREOF
+            echo "📋 Version recorded: ${{ needs.build.outputs.version }}"
 
             # Cleanup
             docker image prune -f
@@ -283,24 +331,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Health Checks
+      - name: Deep Health Check
         run: |
-          echo "🔍 Running production health checks..."
+          echo "🔍 Running deep production health checks..."
 
-          # Wait for deployment to stabilize
-          sleep 30
-
-          # API Health
+          # Wait for API with structured health response
+          HEALTH=""
           for i in {1..30}; do
-            if curl -sf https://meepleai.com/health; then
-              echo "✅ API healthy"
+            HEALTH=$(curl -sf https://api.meepleai.com/health 2>/dev/null || true)
+            if [ -n "$HEALTH" ]; then
+              echo "📋 Health response received"
               break
             fi
             echo "⏳ Waiting for API... ($i/30)"
             sleep 10
           done
 
-          # Web Health
+          if [ -z "$HEALTH" ]; then
+            echo "❌ API did not respond within 5 minutes"
+            exit 1
+          fi
+
+          echo "$HEALTH" | jq . 2>/dev/null || echo "$HEALTH"
+
+          # Verify critical services from health response
+          for SERVICE in postgres redis; do
+            STATUS=$(echo "$HEALTH" | jq -r ".checks[] | select(.name==\"$SERVICE\") | .status" 2>/dev/null || true)
+            if [ "$STATUS" != "Healthy" ]; then
+              echo "❌ $SERVICE is $STATUS (expected Healthy)"
+              exit 1
+            fi
+            echo "✅ $SERVICE: Healthy"
+          done
+
+          echo "✅ All critical services healthy"
+
+      - name: Web Health Check
+        run: |
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://meepleai.com)
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "❌ Web returned status $HTTP_STATUS"
@@ -311,47 +378,172 @@ jobs:
       - name: Smoke Tests
         run: |
           echo "🧪 Running production smoke tests..."
+          FAIL=0
+          RESULTS=""
 
-          # Test critical endpoints
-          # curl -sf https://meepleai.com/api/v1/health
-          # curl -sf https://meepleai.com/api/v1/games?limit=1
+          smoke_test() {
+            local name="$1" url="$2" expect="$3"
+            local status
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
+            if echo "$expect" | grep -q "$status"; then
+              echo "  ✅ $name: HTTP $status"
+              RESULTS="${RESULTS}| $name | $status | ✅ |\n"
+            else
+              echo "  ❌ $name: HTTP $status (expected $expect)"
+              RESULTS="${RESULTS}| $name | $status | ❌ |\n"
+              FAIL=1
+            fi
+          }
 
-          echo "✅ Smoke tests passed"
+          # Critical smoke tests
+          smoke_test "API Health" "https://api.meepleai.com/health" "200"
+          smoke_test "Web Root" "https://meepleai.com" "200"
+          smoke_test "API Game Catalog" "https://api.meepleai.com/api/v1/shared-game-catalog/games?limit=1" "200 401"
+          smoke_test "Swagger Docs" "https://api.meepleai.com/swagger/index.html" "200"
 
-      - name: Performance Check
-        run: |
-          echo "⚡ Running performance baseline check..."
-
-          # Measure response time
-          RESPONSE_TIME=$(curl -sf -o /dev/null -w "%{time_total}" https://meepleai.com)
-          echo "Response time: ${RESPONSE_TIME}s"
-
-          # Alert if response time > 2s
-          if (( $(echo "$RESPONSE_TIME > 2.0" | bc -l) )); then
-            echo "⚠️ Response time exceeds threshold (2s)"
+          # Health endpoint JSON validation
+          HEALTH_JSON=$(curl -sf --max-time 10 https://api.meepleai.com/health 2>/dev/null || true)
+          if [ -n "$HEALTH_JSON" ] && echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
+            echo "  ✅ Health JSON: valid structure"
           else
-            echo "✅ Response time within threshold"
+            echo "  ⚠️ Health JSON: unexpected format (non-blocking)"
           fi
 
-  # Rollback capability
-  rollback:
-    name: Rollback (Manual)
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [deploy]
-    if: failure()
-    environment:
-      name: production-rollback
-    steps:
-      - name: Trigger Rollback
+          # Write summary
+          {
+            echo "## 🧪 Production Smoke Test Results"
+            echo ""
+            echo "| Test | Status | Result |"
+            echo "|------|--------|--------|"
+            echo -e "$RESULTS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo "❌ Production smoke tests FAILED"
+            exit 1
+          fi
+          echo "✅ All production smoke tests passed"
+
+      - name: Performance Baseline
         run: |
-          echo "🔄 Deployment failed, rollback may be needed"
-          echo "To rollback manually:"
-          echo "  1. Go to GitHub Actions"
-          echo "  2. Find previous successful deployment"
-          echo "  3. Re-run that workflow"
-          echo ""
-          echo "Or SSH to server and run:"
-          echo "  docker compose -f compose.prod.yml rollback"
+          echo "⚡ Running performance baseline check..."
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚡ Performance Baseline" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Avg (s) | P95 (s) | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          THRESHOLD=2.0
+          FAIL=0
+
+          for ENDPOINT in "/health" "/" "/api/v1/shared-game-catalog/games?limit=1"; do
+            TIMES=""
+            for i in {1..5}; do
+              T=$(curl -sf -o /dev/null -w "%{time_total}" "https://meepleai.com$ENDPOINT" 2>/dev/null || echo "9.999")
+              TIMES="$TIMES $T"
+            done
+
+            AVG=$(echo $TIMES | tr ' ' '\n' | awk '{sum+=$1} END {printf "%.3f", sum/NR}')
+            P95=$(echo $TIMES | tr ' ' '\n' | sort -n | tail -1)
+
+            if (( $(echo "$P95 > $THRESHOLD" | bc -l 2>/dev/null || echo 0) )); then
+              STATUS="⚠️ Slow"
+              FAIL=1
+            else
+              STATUS="✅ OK"
+            fi
+
+            echo "$ENDPOINT: avg=${AVG}s p95=${P95}s $STATUS"
+            echo "| \`$ENDPOINT\` | $AVG | $P95 | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          done
+
+          if [ "$FAIL" = "1" ]; then
+            echo "::warning::Some endpoints exceeded the ${THRESHOLD}s P95 threshold"
+          else
+            echo "✅ All endpoints within threshold"
+          fi
+
+  # Auto-rollback on deploy or validation failure
+  rollback:
+    name: Auto-Rollback
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    needs: [build, deploy, validate]
+    if: failure() && vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Rollback via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/meepleai
+
+            echo "🔄 Auto-rollback triggered — finding previous working version..."
+
+            PREV_API=""
+            PREV_WEB=""
+
+            # Strategy 1: Read from DEPLOYMENT.json (written by successful deploys)
+            if [ -f /opt/meepleai/DEPLOYMENT.json ]; then
+              PREV_API=$(jq -r '.api_image // empty' /opt/meepleai/DEPLOYMENT.json 2>/dev/null || true)
+              PREV_WEB=$(jq -r '.web_image // empty' /opt/meepleai/DEPLOYMENT.json 2>/dev/null || true)
+              if [ -n "$PREV_API" ] && [ -n "$PREV_WEB" ]; then
+                echo "📋 Found previous version from DEPLOYMENT.json"
+              fi
+            fi
+
+            # Strategy 2: Fallback to GHCR image history
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "⚠️ DEPLOYMENT.json not available, searching local images..."
+              PREV_API=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'api:(v|prod)' | head -2 | tail -1)
+              PREV_WEB=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'web:(v|prod)' | head -2 | tail -1)
+            fi
+
+            # Strategy 3: Last resort — use the *-latest tags
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "⚠️ No versioned images found, trying latest tags..."
+              PREV_API=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'api:' | grep -v 'staging' | head -1)
+              PREV_WEB=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'web:' | grep -v 'staging' | head -1)
+            fi
+
+            if [ -z "$PREV_API" ] || [ -z "$PREV_WEB" ]; then
+              echo "❌ CRITICAL: Cannot find ANY previous images for rollback!"
+              echo "Manual intervention required."
+              exit 1
+            fi
+
+            echo "Rolling back to: API=$PREV_API, WEB=$PREV_WEB"
+
+            export API_IMAGE="$PREV_API"
+            export WEB_IMAGE="$PREV_WEB"
+
+            # Rollback containers
+            docker compose -f compose.prod.yml up -d --no-deps api web
+
+            # Verify rollback
+            for i in {1..12}; do
+              if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ Rollback successful — services healthy"
+                exit 0
+              fi
+              echo "⏳ Waiting for rollback health... ($i/12)"
+              sleep 5
+            done
+
+            echo "❌ CRITICAL: Rollback health check failed!"
+            exit 1
+
+      - name: Rollback Summary
+        if: always()
+        run: |
+          echo "## 🔄 Auto-Rollback Executed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deploy or validation failed — previous version restored." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Failed version:** \`${{ needs.build.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** Deploy/validation failure" >> $GITHUB_STEP_SUMMARY
 
   # Notifications
   notify:

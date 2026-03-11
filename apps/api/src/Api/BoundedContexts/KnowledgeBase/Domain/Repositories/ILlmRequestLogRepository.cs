@@ -28,7 +28,15 @@ public interface ILlmRequestLogRepository
         bool isStreaming,
         bool isFreeModel,
         string? sessionId,
+        string? userRegion = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the count of distinct users with at least one LLM request since the specified date.
+    /// Excludes anonymized records and null UserIds (system/anonymous requests).
+    /// Issue #113: MAU-AI monitoring for ADR-045 scaling triggers.
+    /// </summary>
+    Task<int> GetActiveAiUserCountAsync(DateTime from, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the total number of LLM request log entries recorded on the specified UTC date.

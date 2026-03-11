@@ -54,6 +54,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             isStreaming: false,
             isFreeModel: false,
             sessionId: "test-session",
+            userRegion: null,
             cancellationToken: TestCancellationToken);
 
         // Assert
@@ -87,7 +88,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         await Repository.LogRequestAsync(
             "model", "provider", RequestSource.Manual,
             null, null, 0, 0, 0m, 0, false, null, false, false, null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
@@ -108,7 +109,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
             null, null, 100, 0, 0m, 100, success: false,
             errorMessage: "Rate limit exceeded",
             isStreaming: false, isFreeModel: false, sessionId: null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
@@ -131,7 +132,7 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         await Repository.LogRequestAsync(
             "model", "provider", source,
             null, null, 0, 0, 0m, 0, true, null, false, false, null,
-            TestCancellationToken);
+            userRegion: null, cancellationToken: TestCancellationToken);
 
         // Assert
         var log = await DbContext.LlmRequestLogs.SingleAsync(TestCancellationToken);
@@ -215,5 +216,87 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
 
         // Assert
         Assert.Equal(0, deleted);
+    }
+
+    // ─── GetActiveAiUserCountAsync ────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_ReturnsDistinctUserCount()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var userId1 = Guid.NewGuid();
+        var userId2 = Guid.NewGuid();
+
+        // User1: 2 requests, User2: 1 request, System: 1 request (null userId)
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
+            userId1, "user", 100, 50, 0.01m, 200, true, null, false, false, null, TestCancellationToken);
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.RagPipeline,
+            userId1, "user", 200, 100, 0.02m, 300, true, null, false, false, null, TestCancellationToken);
+        await Repository.LogRequestAsync("model", "ollama", RequestSource.Manual,
+            userId2, "admin", 50, 25, 0m, 100, true, null, false, true, null, TestCancellationToken);
+        await Repository.LogRequestAsync("model", "ollama", RequestSource.AgentTask,
+            null, null, 50, 25, 0m, 100, true, null, false, true, null, TestCancellationToken);
+
+        // Act
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddDays(-30), TestCancellationToken);
+
+        // Assert — 2 distinct users (null userId excluded)
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_ExcludesAnonymizedRecords()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var userId = Guid.NewGuid();
+
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
+            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, TestCancellationToken);
+
+        // Pseudonymize all records
+        await Repository.PseudonymizeOldLogsAsync(
+            DateTime.UtcNow.AddMinutes(1), "test-salt", TestCancellationToken);
+
+        // Act
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddDays(-30), TestCancellationToken);
+
+        // Assert — anonymized records excluded
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_EmptyTable_ReturnsZero()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+
+        // Act
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddDays(-30), TestCancellationToken);
+
+        // Assert
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
+    public async Task GetActiveAiUserCountAsync_ExcludesOldRecords()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var userId = Guid.NewGuid();
+
+        await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
+            userId, "user", 100, 50, 0.01m, 200, true, null, false, false, null, TestCancellationToken);
+
+        // Act — query with future 'from' date (all records are "old")
+        var count = await Repository.GetActiveAiUserCountAsync(
+            DateTime.UtcNow.AddMinutes(1), TestCancellationToken);
+
+        // Assert
+        Assert.Equal(0, count);
     }
 }

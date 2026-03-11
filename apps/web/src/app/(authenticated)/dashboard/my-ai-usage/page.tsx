@@ -1,33 +1,39 @@
 'use client';
 
 /**
- * My AI Usage Page — Issue #5484
+ * My AI Usage Page — Issue #94 (C3: Editor Self-Service AI Usage Page)
  * Route: /dashboard/my-ai-usage
  * Self-service AI usage dashboard for Editor and Admin roles.
+ * Shows multi-period summary, distribution charts, and recent requests.
  */
 
 import { useEffect, useState, useCallback } from 'react';
 
-import { Brain, Cpu, Zap, DollarSign, BarChart3, RefreshCw } from 'lucide-react';
+import {
+  Brain,
+  Cpu,
+  Zap,
+  DollarSign,
+  Clock,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+} from 'lucide-react';
 
 import { RequireRole } from '@/components/auth/RequireRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { dashboardClient } from '@/lib/api/dashboard-client';
 import type {
+  AiUsageSummaryDto,
+  AiUsagePeriodSummaryDto,
+  AiUsageDistributionsDto,
+  DistributionItemDto,
+  AiUsageRecentDto,
   UserAiUsageDto,
-  ModelUsageDto,
-  DailyUsageDto,
 } from '@/lib/api/schemas/ai-usage.schemas';
 import { cn } from '@/lib/utils';
-
-type Period = 1 | 7 | 30;
-
-const PERIOD_OPTIONS: { value: Period; label: string }[] = [
-  { value: 1, label: 'Oggi' },
-  { value: 7, label: '7 giorni' },
-  { value: 30, label: '30 giorni' },
-];
 
 export default function MyAiUsagePage() {
   return (
@@ -39,17 +45,29 @@ export default function MyAiUsagePage() {
 
 function MyAiUsageContent() {
   const { user } = useAuth();
-  const [usage, setUsage] = useState<UserAiUsageDto | null>(null);
+  const [summary, setSummary] = useState<AiUsageSummaryDto | null>(null);
+  const [distributions, setDistributions] = useState<AiUsageDistributionsDto | null>(null);
+  const [recent, setRecent] = useState<AiUsageRecentDto | null>(null);
+  const [dailyData, setDailyData] = useState<UserAiUsageDto | null>(null);
+  const [recentPage, setRecentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<Period>(7);
 
-  const fetchUsage = useCallback(async (days: Period) => {
+  const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await dashboardClient.getMyAiUsage(days);
-      setUsage(data);
+      const [summaryData, distData, recentData, daily] = await Promise.all([
+        dashboardClient.getMyAiUsageSummary(),
+        dashboardClient.getMyAiUsageDistributions(30),
+        dashboardClient.getMyAiUsageRecent(1, 20),
+        dashboardClient.getMyAiUsage(30),
+      ]);
+      setSummary(summaryData);
+      setDistributions(distData);
+      setRecent(recentData);
+      setDailyData(daily);
+      setRecentPage(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nel caricamento');
     } finally {
@@ -57,14 +75,20 @@ function MyAiUsageContent() {
     }
   }, []);
 
+  const fetchRecentPage = useCallback(async (page: number) => {
+    try {
+      const data = await dashboardClient.getMyAiUsageRecent(page, 20);
+      setRecent(data);
+      setRecentPage(page);
+    } catch {
+      // Keep existing data on pagination error
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) return;
-    fetchUsage(period);
-  }, [user, period, fetchUsage]);
-
-  const handlePeriodChange = (p: Period) => {
-    setPeriod(p);
-  };
+    fetchAll();
+  }, [user, fetchAll]);
 
   return (
     <div className="container mx-auto py-8 space-y-6" data-testid="my-ai-usage-page">
@@ -76,40 +100,18 @@ function MyAiUsageContent() {
             Il mio utilizzo AI
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Statistiche personali di utilizzo dei modelli AI
+            Scopri come utilizzi le funzionalità AI di MeepleAI
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Period selector */}
-          <div className="flex rounded-md border" data-testid="period-selector">
-            {PERIOD_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handlePeriodChange(opt.value)}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium transition-colors',
-                  'first:rounded-l-md last:rounded-r-md',
-                  period === opt.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-background text-muted-foreground hover:bg-muted'
-                )}
-                data-testid={`period-${opt.value}d`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => fetchUsage(period)}
-            disabled={loading}
-            className="p-2 rounded-md border hover:bg-muted transition-colors disabled:opacity-50"
-            aria-label="Aggiorna"
-          >
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={fetchAll}
+          disabled={loading}
+          className="p-2 rounded-md border hover:bg-muted transition-colors disabled:opacity-50"
+          aria-label="Aggiorna"
+        >
+          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+        </button>
       </div>
 
       {/* Error */}
@@ -120,9 +122,9 @@ function MyAiUsageContent() {
       )}
 
       {/* Loading skeleton */}
-      {loading && !usage && (
-        <div className="grid gap-4 md:grid-cols-4" data-testid="usage-skeleton">
-          {[...Array(4)].map((_, i) => (
+      {loading && !summary && (
+        <div className="grid gap-4 md:grid-cols-3" data-testid="usage-skeleton">
+          {[...Array(3)].map((_, i) => (
             <Card key={i}>
               <CardContent className="py-6">
                 <div className="h-4 w-24 bg-muted animate-pulse rounded mb-2" />
@@ -133,75 +135,62 @@ function MyAiUsageContent() {
         </div>
       )}
 
-      {/* Stats cards */}
-      {usage && (
-        <>
-          <div className="grid gap-4 md:grid-cols-4" data-testid="usage-stats">
-            <StatCard
-              icon={Zap}
-              label="Richieste"
-              value={usage.requestCount.toLocaleString()}
-              description={`Ultimi ${period === 1 ? 'oggi' : `${period} giorni`}`}
-            />
-            <StatCard
-              icon={Cpu}
-              label="Token totali"
-              value={formatTokens(usage.totalTokens)}
-              description="Prompt + completamento"
-            />
-            <StatCard
-              icon={DollarSign}
-              label="Costo stimato"
-              value={`$${usage.totalCostUsd.toFixed(4)}`}
-              description="USD equivalente"
-            />
-            <StatCard
-              icon={BarChart3}
-              label="Modelli usati"
-              value={usage.byModel.length.toString()}
-              description="Modelli diversi"
-            />
-          </div>
-
-          {/* Model distribution + Daily chart */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <ModelDistribution models={usage.byModel} totalTokens={usage.totalTokens} />
-            <DailyUsageChart dailyUsage={usage.dailyUsage} />
-          </div>
-
-          {/* Operation breakdown */}
-          {usage.byOperation.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Distribuzione per tipo</CardTitle>
-                <CardDescription>
-                  Ripartizione delle richieste per tipologia operazione
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {usage.byOperation.map(op => (
-                    <div key={op.operation} className="flex items-center justify-between text-sm">
-                      <span className="font-medium capitalize">{op.operation}</span>
-                      <div className="flex items-center gap-4 tabular-nums">
-                        <span className="text-muted-foreground">{op.count} richieste</span>
-                        <span>{formatTokens(op.tokens)} token</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
+      {/* Summary cards — today / 7d / 30d */}
+      {summary && (
+        <div className="grid gap-4 md:grid-cols-3" data-testid="usage-summary">
+          <SummaryCard label="Oggi" period={summary.today} />
+          <SummaryCard label="7 Giorni" period={summary.last7Days} />
+          <SummaryCard label="30 Giorni" period={summary.last30Days} />
+        </div>
       )}
 
+      {/* Daily chart + Distributions */}
+      {(dailyData || distributions) && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {dailyData && <DailyUsageChart dailyUsage={dailyData.dailyUsage} />}
+          {distributions && distributions.models.length > 0 && (
+            <DistributionCard title="Distribuzione modelli" items={distributions.models} />
+          )}
+        </div>
+      )}
+
+      {distributions && distributions.providers.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <DistributionCard title="Distribuzione provider" items={distributions.providers} />
+          {distributions.operations.length > 0 && (
+            <DistributionCard title="Distribuzione operazioni" items={distributions.operations} />
+          )}
+        </div>
+      )}
+
+      {/* Recent requests table */}
+      {recent && (
+        <RecentRequestsTable
+          data={recent}
+          currentPage={recentPage}
+          onPageChange={fetchRecentPage}
+        />
+      )}
+
+      {/* Info banner */}
+      <div
+        className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200"
+        data-testid="usage-info-banner"
+      >
+        <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+        <p>
+          I dettagli individuali delle richieste sono disponibili per gli ultimi 7 giorni. I totali
+          aggregati coprono fino a 30 giorni.
+        </p>
+      </div>
+
       {/* Empty state */}
-      {!loading && usage && usage.requestCount === 0 && (
+      {!loading && summary && summary.last30Days.requestCount === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Brain className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p>Nessun utilizzo AI nel periodo selezionato.</p>
+            <p>Non hai ancora utilizzato le funzionalità AI.</p>
+            <p className="text-xs mt-1">Prova a chattare con un agente!</p>
           </CardContent>
         </Card>
       )}
@@ -211,86 +200,40 @@ function MyAiUsageContent() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  description,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  description: string;
-}) {
+function SummaryCard({ label, period }: { label: string; period: AiUsagePeriodSummaryDto }) {
   return (
-    <Card>
-      <CardContent className="py-4">
-        <div className="flex items-center gap-2 text-muted-foreground mb-1">
-          <Icon className="h-4 w-4" />
-          <span className="text-xs font-medium">{label}</span>
-        </div>
-        <div className="text-2xl font-bold tabular-nums">{value}</div>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ModelDistribution({
-  models,
-  totalTokens,
-}: {
-  models: ModelUsageDto[];
-  totalTokens: number;
-}) {
-  if (models.length === 0) return null;
-
-  const sorted = [...models].sort((a, b) => b.tokens - a.tokens);
-  const colors = [
-    'bg-blue-500',
-    'bg-violet-500',
-    'bg-amber-500',
-    'bg-emerald-500',
-    'bg-rose-500',
-    'bg-cyan-500',
-  ];
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Distribuzione modelli</CardTitle>
-        <CardDescription>Token per modello AI utilizzato</CardDescription>
+    <Card data-testid={`summary-card-${label.toLowerCase().replace(/\s/g, '-')}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {sorted.map((m, i) => {
-          const pct = totalTokens > 0 ? (m.tokens / totalTokens) * 100 : 0;
-          return (
-            <div key={m.model} className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-mono truncate max-w-[200px]" title={m.model}>
-                  {m.model}
-                </span>
-                <span className="tabular-nums text-muted-foreground ml-2">{pct.toFixed(0)}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className={cn('h-full rounded-full transition-all', colors[i % colors.length])}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
-                <span>{formatTokens(m.tokens)} token</span>
-                <span>${m.cost.toFixed(4)}</span>
-              </div>
-            </div>
-          );
-        })}
+      <CardContent className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-amber-500" />
+          <span className="text-2xl font-bold tabular-nums">
+            {period.requestCount.toLocaleString()}
+          </span>
+          <span className="text-xs text-muted-foreground">richieste</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="flex items-center gap-1">
+            <Cpu className="h-3 w-3 text-muted-foreground" />
+            <span className="tabular-nums">{formatTokens(period.totalTokens)}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3 text-muted-foreground" />
+            <span className="tabular-nums">${period.costUsd.toFixed(4)}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3 text-muted-foreground" />
+            <span className="tabular-nums">{period.averageLatencyMs}ms</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function DailyUsageChart({ dailyUsage }: { dailyUsage: DailyUsageDto[] }) {
+function DailyUsageChart({ dailyUsage }: { dailyUsage: { date: string; tokens: number }[] }) {
   if (dailyUsage.length === 0) return null;
 
   const maxTokens = Math.max(...dailyUsage.map(d => d.tokens), 1);
@@ -299,7 +242,7 @@ function DailyUsageChart({ dailyUsage }: { dailyUsage: DailyUsageDto[] }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Utilizzo giornaliero</CardTitle>
-        <CardDescription>Token consumati per giorno</CardDescription>
+        <CardDescription>Token consumati per giorno (30g)</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-end gap-1 h-32" data-testid="daily-usage-chart">
@@ -324,6 +267,159 @@ function DailyUsageChart({ dailyUsage }: { dailyUsage: DailyUsageDto[] }) {
             );
           })}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+const DISTRIBUTION_COLORS = [
+  'bg-blue-500',
+  'bg-violet-500',
+  'bg-amber-500',
+  'bg-emerald-500',
+  'bg-rose-500',
+  'bg-cyan-500',
+  'bg-orange-500',
+  'bg-teal-500',
+];
+
+function DistributionCard({ title, items }: { title: string; items: DistributionItemDto[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {items.map((item, i) => (
+          <div key={item.name} className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-mono truncate max-w-[200px]" title={item.name}>
+                {item.name}
+              </span>
+              <span className="tabular-nums text-muted-foreground ml-2">
+                {item.percentage.toFixed(1)}%
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all',
+                  DISTRIBUTION_COLORS[i % DISTRIBUTION_COLORS.length]
+                )}
+                style={{ width: `${item.percentage}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-muted-foreground tabular-nums">
+              {item.count} richieste
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecentRequestsTable({
+  data,
+  currentPage,
+  onPageChange,
+}: {
+  data: AiUsageRecentDto;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (data.items.length === 0 && currentPage === 1) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Richieste recenti</CardTitle>
+          <CardDescription>Ultimi 7 giorni</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Nessuna richiesta negli ultimi 7 giorni.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalPages = Math.ceil(data.total / data.pageSize);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Richieste recenti</CardTitle>
+        <CardDescription>Ultimi 7 giorni — {data.total} richieste totali</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs" data-testid="recent-requests-table">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="pb-2 pr-4">Data/Ora</th>
+                <th className="pb-2 pr-4">Modello</th>
+                <th className="pb-2 pr-4">Provider</th>
+                <th className="pb-2 pr-4">Operazione</th>
+                <th className="pb-2 pr-4 text-right">Token</th>
+                <th className="pb-2 pr-4 text-right">Costo</th>
+                <th className="pb-2 text-right">Latenza</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((item, i) => (
+                <tr key={i} className="border-b last:border-0">
+                  <td className="py-2 pr-4 tabular-nums whitespace-nowrap">
+                    {new Date(item.requestedAt).toLocaleString('it-IT', {
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </td>
+                  <td className="py-2 pr-4 font-mono truncate max-w-[160px]" title={item.model}>
+                    {item.model}
+                  </td>
+                  <td className="py-2 pr-4">{item.provider}</td>
+                  <td className="py-2 pr-4 capitalize">{item.operation}</td>
+                  <td className="py-2 pr-4 tabular-nums text-right">
+                    {(item.promptTokens + item.completionTokens).toLocaleString()}
+                  </td>
+                  <td className="py-2 pr-4 tabular-nums text-right">${item.costUsd.toFixed(4)}</td>
+                  <td className="py-2 tabular-nums text-right">{item.latencyMs}ms</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-3 pt-3 border-t">
+            <span className="text-xs text-muted-foreground">
+              Pagina {currentPage} di {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="p-1 rounded hover:bg-muted disabled:opacity-30"
+                aria-label="Pagina precedente"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="p-1 rounded hover:bg-muted disabled:opacity-30"
+                aria-label="Pagina successiva"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

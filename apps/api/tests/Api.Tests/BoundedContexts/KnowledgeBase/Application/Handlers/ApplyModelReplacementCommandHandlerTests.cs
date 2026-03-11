@@ -4,11 +4,10 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
-using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -31,14 +30,7 @@ public class ApplyModelReplacementCommandHandlerTests : IDisposable
 
     public ApplyModelReplacementCommandHandlerTests()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        _dbContext = new MeepleAiDbContext(
-            options,
-            Mock.Of<IMediator>(),
-            new DomainEventCollector());
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _compatibilityRepoMock = new Mock<IModelCompatibilityRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
 

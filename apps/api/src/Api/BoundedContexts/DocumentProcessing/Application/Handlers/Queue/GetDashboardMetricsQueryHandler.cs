@@ -44,12 +44,15 @@ internal sealed class GetDashboardMetricsQueryHandler
         var docs = _db.Set<PdfDocumentEntity>()
             .Where(d => d.UploadedAt >= cutoff);
 
+        var readyState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
+        var failedState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed);
+
         var totalProcessed = await docs
-            .CountAsync(d => d.ProcessingStatus == "completed", cancellationToken)
+            .CountAsync(d => d.ProcessingState == readyState, cancellationToken)
             .ConfigureAwait(false);
 
         var totalFailed = await docs
-            .CountAsync(d => d.ProcessingStatus == "failed", cancellationToken)
+            .CountAsync(d => d.ProcessingState == failedState, cancellationToken)
             .ConfigureAwait(false);
 
         var total = totalProcessed + totalFailed;

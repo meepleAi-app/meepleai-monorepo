@@ -10,7 +10,16 @@ vi.mock('../CommandCenterTab', () => ({
   CommandCenterTab: () => <div data-testid="command-tab" />,
 }));
 vi.mock('../TestingTab', () => ({ TestingTab: () => <div data-testid="testing-tab" /> }));
+vi.mock('../BulkExportTab', () => ({
+  BulkExportTab: () => <div data-testid="export-tab" />,
+}));
+vi.mock('../EmailManagementTab', () => ({
+  EmailManagementTab: () => <div data-testid="email-tab" />,
+}));
 vi.mock('../NavConfig', () => ({ AdminMonitorNavConfig: () => null }));
+vi.mock('@/components/admin/layout/AdminTabPersistence', () => ({
+  AdminTabPersistence: () => null,
+}));
 
 import AdminMonitorPage from '../page';
 
@@ -59,11 +68,11 @@ describe('AdminMonitorPage', () => {
     expect(screen.getByText('Monitor')).toBeInTheDocument();
   });
 
-  it('renders coming soon for export tab', async () => {
+  it('renders export tab content', async () => {
     const page = await AdminMonitorPage({
       searchParams: Promise.resolve({ tab: 'export' }),
     });
     render(page);
-    expect(screen.getByText('Export users, audit logs, and API keys in bulk.')).toBeInTheDocument();
+    expect(screen.getByTestId('export-tab')).toBeInTheDocument();
   });
 });

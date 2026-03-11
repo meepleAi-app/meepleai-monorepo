@@ -1,20 +1,22 @@
-import { BarChart3, Users, Gamepad2, BookOpen } from 'lucide-react';
-import { type Metadata } from 'next';
+'use client';
+
+import { useEffect, useState } from 'react';
+
+import { BarChart3, Users, Gamepad2, BookOpen, BrainCircuit, ClipboardCheck } from 'lucide-react';
 
 import { QuickActionsWidget } from '@/components/admin/overview/QuickActionsWidget';
 import { SystemHealthCard } from '@/components/admin/overview/SystemHealthCard';
-
-export const metadata: Metadata = {
-  title: 'Overview',
-  description: 'Admin dashboard overview with platform stats and quick actions',
-};
+import { createApiClient } from '@/lib/api';
+import type { AdminOverviewStats } from '@/lib/api/schemas/admin.schemas';
 
 function StatCard({
   label,
+  value,
   icon: Icon,
   description,
 }: {
   label: string;
+  value?: number | string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
 }) {
@@ -26,7 +28,13 @@ function StatCard({
         </div>
         <div>
           <p className="font-quicksand text-sm font-semibold text-foreground">{label}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          {value !== undefined ? (
+            <p className="font-nunito text-lg font-bold text-foreground">
+              {typeof value === 'number' ? value.toLocaleString() : value}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">{description}</p>
+          )}
         </div>
       </div>
     </div>
@@ -34,6 +42,16 @@ function StatCard({
 }
 
 export default function OverviewPage() {
+  const [stats, setStats] = useState<AdminOverviewStats | null>(null);
+
+  useEffect(() => {
+    const api = createApiClient();
+    api.admin
+      .getOverviewStats()
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-8">
       <div>
@@ -46,10 +64,45 @@ export default function OverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={BarChart3} label="Analytics" description="View usage statistics" />
-        <StatCard icon={Users} label="Users" description="Manage user accounts" />
-        <StatCard icon={Gamepad2} label="Games" description="Shared game catalog" />
-        <StatCard icon={BookOpen} label="Knowledge Base" description="Documents and vectors" />
+        <StatCard
+          icon={Users}
+          label="Utenti Totali"
+          value={stats?.totalUsers}
+          description="Utenti registrati"
+        />
+        <StatCard
+          icon={BarChart3}
+          label="Utenti Attivi (30gg)"
+          value={stats?.activeUsers}
+          description="Sessioni attive"
+        />
+        <StatCard
+          icon={BrainCircuit}
+          label="Utenti AI Attivi (30gg)"
+          value={stats?.activeAiUsers}
+          description="Utenti con interazione AI"
+        />
+        <StatCard
+          icon={Gamepad2}
+          label="Giochi"
+          value={stats ? `${stats.publishedGames} / ${stats.totalGames}` : undefined}
+          description="Pubblicati / Totali"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <StatCard
+          icon={ClipboardCheck}
+          label="Approvazioni in attesa"
+          value={stats?.pendingApprovals}
+          description="Da revisionare"
+        />
+        <StatCard
+          icon={BookOpen}
+          label="Invii recenti (7gg)"
+          value={stats?.recentSubmissions}
+          description="Nuove sottomissioni"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

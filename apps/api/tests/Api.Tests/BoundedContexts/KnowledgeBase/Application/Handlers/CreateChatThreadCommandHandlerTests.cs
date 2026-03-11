@@ -31,6 +31,17 @@ public class CreateChatThreadCommandHandlerTests
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockPublisher = new Mock<IPublisher>();
         _mockLogger = new Mock<ILogger<CreateChatThreadCommandHandler>>();
+
+        // Default: resolve any GameId to itself (identity mapping)
+        _mockAgentRepository
+            .Setup(r => r.ResolveGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) => id);
+
+        // Default: no agents for any game
+        _mockAgentRepository
+            .Setup(r => r.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Agent>());
+
         _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockAgentRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object, _mockLogger.Object);
     }
 

@@ -6,7 +6,16 @@
  */
 
 import { HttpClient } from './core/httpClient';
-import { UserAiUsageDtoSchema, type UserAiUsageDto } from './schemas/ai-usage.schemas';
+import {
+  UserAiUsageDtoSchema,
+  type UserAiUsageDto,
+  AiUsageSummaryDtoSchema,
+  type AiUsageSummaryDto,
+  AiUsageDistributionsDtoSchema,
+  type AiUsageDistributionsDto,
+  AiUsageRecentDtoSchema,
+  type AiUsageRecentDto,
+} from './schemas/ai-usage.schemas';
 
 const httpClient = new HttpClient();
 
@@ -137,6 +146,45 @@ export const dashboardClient = {
       UserAiUsageDtoSchema
     );
     if (!response) throw new Error('Failed to fetch AI usage');
+    return response;
+  },
+
+  /**
+   * Get multi-period AI usage summary (today/7d/30d)
+   * Issue #94: C3 Editor Self-Service AI Usage Page
+   */
+  async getMyAiUsageSummary(): Promise<AiUsageSummaryDto> {
+    const response = await httpClient.get<AiUsageSummaryDto>(
+      '/api/v1/users/me/ai-usage/summary',
+      AiUsageSummaryDtoSchema
+    );
+    if (!response) throw new Error('Failed to fetch AI usage summary');
+    return response;
+  },
+
+  /**
+   * Get AI usage distributions (model, provider, operation)
+   * Issue #94: C3 Editor Self-Service AI Usage Page
+   */
+  async getMyAiUsageDistributions(days = 30): Promise<AiUsageDistributionsDto> {
+    const response = await httpClient.get<AiUsageDistributionsDto>(
+      `/api/v1/users/me/ai-usage/distributions?days=${days}`,
+      AiUsageDistributionsDtoSchema
+    );
+    if (!response) throw new Error('Failed to fetch AI usage distributions');
+    return response;
+  },
+
+  /**
+   * Get recent AI requests (last 7 days, paginated)
+   * Issue #94: C3 Editor Self-Service AI Usage Page
+   */
+  async getMyAiUsageRecent(page = 1, pageSize = 20): Promise<AiUsageRecentDto> {
+    const response = await httpClient.get<AiUsageRecentDto>(
+      `/api/v1/users/me/ai-usage/recent?page=${page}&pageSize=${pageSize}`,
+      AiUsageRecentDtoSchema
+    );
+    if (!response) throw new Error('Failed to fetch recent AI requests');
     return response;
   },
 };

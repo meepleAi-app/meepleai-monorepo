@@ -326,37 +326,6 @@ jobs:
             fi
           fi
 
-  visual-regression:
-    name: Visual Regression (Chromatic)
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: frontend-unit-tests
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Full history for Chromatic
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - run: cd apps/web && pnpm install --frozen-lockfile
-
-      - name: Build Storybook
-        run: cd apps/web && pnpm build-storybook
-
-      - name: Run Chromatic
-        uses: chromaui/action@v11
-        with:
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-          workingDir: apps/web
-          buildScriptName: build-storybook
-          onlyChanged: true # Only test changed stories
-          autoAcceptChanges: main-dev # Auto-approve on main-dev
-
   performance-tests:
     name: Performance Benchmarks
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}

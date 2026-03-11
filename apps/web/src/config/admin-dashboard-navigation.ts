@@ -45,6 +45,7 @@ import {
   ClipboardListIcon,
   KeyIcon,
   MailIcon,
+  ScrollTextIcon,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -118,7 +119,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
     label: 'Content',
     icon: FileTextIcon,
     baseRoute: '/admin/shared-games',
-    additionalRoutes: ['/admin/content', '/admin/knowledge-base', '/admin/games'],
+    additionalRoutes: [
+      '/admin/content',
+      '/admin/knowledge-base',
+      '/admin/games',
+      '/admin/content/email-templates',
+    ],
     description: 'Games, documents, vectors, and RAG pipeline',
     group: 'core',
     sidebarItems: [
@@ -170,6 +176,12 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         href: '/admin/knowledge-base/upload',
         label: 'Upload & Process',
         icon: UploadIcon,
+      },
+      // Email Templates (Issue #52)
+      {
+        href: '/admin/content/email-templates',
+        label: 'Email Templates',
+        icon: MailIcon,
       },
     ],
   },
@@ -324,6 +336,13 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         label: 'Email',
         icon: MailIcon,
       },
+      // Operations Console (Issue #126)
+      {
+        href: '/admin/monitor/operations',
+        label: 'Operations',
+        icon: ScrollTextIcon,
+        activePattern: /^\/admin\/monitor\/operations/,
+      },
       // Config items
       {
         href: '/admin/config?tab=general',
@@ -344,6 +363,11 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
       {
         href: '/admin/config?tab=rate-limits',
         label: 'Rate Limits',
+        icon: ZapIcon,
+      },
+      {
+        href: '/admin/config/n8n',
+        label: 'n8n Workflows',
         icon: ZapIcon,
       },
     ],

@@ -29,7 +29,7 @@ internal class EnqueueBggCommandHandler : IRequestHandler<EnqueueBggCommand, Bgg
         try
         {
             return await _queueService
-                .EnqueueAsync(request.BggId, request.GameName, cancellationToken)
+                .EnqueueAsync(request.BggId, request.GameName, requestedByUserId: null, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)

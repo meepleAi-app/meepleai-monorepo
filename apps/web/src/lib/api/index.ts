@@ -52,6 +52,7 @@ import {
   createSessionTrackingClient,
   createGameToolkitClient,
   createSessionStatisticsClient,
+  createGameNightsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -84,6 +85,7 @@ import {
   type SessionTrackingClient,
   type GameToolkitClient,
   type SessionStatisticsClient,
+  type GameNightsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -267,6 +269,9 @@ export interface ApiClient {
   /** Session Analytics Dashboard (P4) */
   sessionStatistics: SessionStatisticsClient;
 
+  /** Game Nights (Issue #33) */
+  gameNights: GameNightsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -349,6 +354,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     sessionTracking: createSessionTrackingClient({ httpClient }), // ISSUE-5041
     gameToolkit: createGameToolkitClient({ httpClient }), // AI Toolkit Generation
     sessionStatistics: createSessionStatisticsClient({ httpClient }), // P4: Session Analytics
+    gameNights: createGameNightsClient({ httpClient }), // Issue #33
     delete: (path: string) => httpClient.delete(path),
   };
 

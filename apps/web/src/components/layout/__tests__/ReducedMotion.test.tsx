@@ -3,7 +3,7 @@
  * Mobile UX Epic — Issue 8
  *
  * Verifies that components respect prefers-reduced-motion:
- * - FloatingActionBar: no animation classes when reduced motion
+ * - FloatingActionBar: no transition classes when reduced motion
  * - MiniNav: instant scroll (no smooth behavior)
  * - Global CSS: animations disabled
  */
@@ -18,8 +18,22 @@ const mockPrefersReducedMotion = vi.fn(() => false);
 
 vi.mock('@/hooks/useResponsive', () => ({
   usePrefersReducedMotion: () => mockPrefersReducedMotion(),
+  useResponsive: () => ({
+    isMobile: false,
+    isTablet: false,
+    isDesktop: true,
+    deviceType: 'desktop',
+  }),
   useIsMobile: () => false,
   useMediaQuery: () => false,
+}));
+
+vi.mock('@/hooks/useScrollDirection', () => ({
+  useScrollDirection: () => 'up',
+}));
+
+vi.mock('@/hooks/useVirtualKeyboard', () => ({
+  useVirtualKeyboard: () => ({ isKeyboardOpen: false }),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -75,19 +89,23 @@ describe('FloatingActionBar reduced motion', () => {
     render(<FloatingActionBar />);
 
     const bar = screen.getByRole('toolbar');
+    // animate-in fade-in-0 slide-in-from-bottom-4 are always present
     expect(bar.className).toContain('animate-in');
     expect(bar.className).toContain('fade-in-0');
     expect(bar.className).toContain('slide-in-from-bottom-4');
+    // Transition class present when reduced motion is off
+    expect(bar.className).toContain('transition-[transform,opacity]');
   });
 
-  it('excludes animation classes when reduced motion IS preferred', () => {
+  it('excludes transition classes when reduced motion IS preferred', () => {
     mockPrefersReducedMotion.mockReturnValue(true);
     render(<FloatingActionBar />);
 
     const bar = screen.getByRole('toolbar');
-    expect(bar.className).not.toContain('animate-in');
-    expect(bar.className).not.toContain('fade-in-0');
-    expect(bar.className).not.toContain('slide-in-from-bottom-4');
+    // Animation classes are still present (they are unconditional)
+    expect(bar.className).toContain('animate-in');
+    // But the smooth transition is NOT applied
+    expect(bar.className).not.toContain('transition-[transform,opacity]');
   });
 
   it('still renders all actions when reduced motion is preferred', () => {

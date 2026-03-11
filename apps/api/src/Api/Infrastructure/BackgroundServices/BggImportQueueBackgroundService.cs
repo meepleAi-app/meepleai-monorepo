@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.Infrastructure.Services;
 using Api.Models;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Api.Infrastructure.BackgroundServices;
@@ -100,72 +101,117 @@ internal sealed class BggImportQueueBackgroundService : BackgroundService
 
     /// <summary>
     /// Process the next queued item (lowest position).
+    /// Uses separate DI scopes for queue operations vs MediatR command execution
+    /// to prevent the handler's DbContext mutations from polluting queue state.
     /// </summary>
     private async Task ProcessNextQueueItemAsync(CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-
-        // Get next queued item
-        var queueItem = await queueService.GetNextQueuedItemAsync(cancellationToken).ConfigureAwait(false);
-        if (queueItem == null)
+        // Scope 1: Read next queued item (isolated from handler's DbContext)
+        Guid queueItemId;
+        int bggId;
+        int retryCount;
+        Guid? requestedByUserId;
         {
-            // Queue is empty - check for cleanup
-            if (_config.AutoCleanupDays > 0)
+            using var readScope = _scopeFactory.CreateScope();
+            var readQueueService = readScope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
+
+            var queueItem = await readQueueService.GetNextQueuedItemAsync(cancellationToken).ConfigureAwait(false);
+            if (queueItem == null)
             {
-                await PerformCleanupAsync(queueService, cancellationToken).ConfigureAwait(false);
+                if (_config.AutoCleanupDays > 0)
+                {
+                    await PerformCleanupAsync(readQueueService, cancellationToken).ConfigureAwait(false);
+                }
+                return;
             }
-            return;
-        }
 
-        _logger.LogInformation(
-            "Processing BGG import: Id={Id}, BggId={BggId}, Position={Position}, Attempt={Attempt}",
-            queueItem.Id, queueItem.BggId, queueItem.Position, queueItem.RetryCount + 1);
-
-        try
-        {
-            // Mark as processing
-            await queueService.MarkAsProcessingAsync(queueItem.Id, cancellationToken).ConfigureAwait(false);
-
-            // Execute import via CQRS command
-            // Note: Background queue imports use system user ID (Guid.Empty) since they are global operations
-            var command = new ImportGameFromBggCommand(queueItem.BggId, Guid.Empty);
-            var createdGameId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-
-            // Mark as completed
-            await queueService.MarkAsCompletedAsync(queueItem.Id, createdGameId, cancellationToken).ConfigureAwait(false);
+            queueItemId = queueItem.Id;
+            bggId = queueItem.BggId;
+            retryCount = queueItem.RetryCount;
+            requestedByUserId = queueItem.RequestedByUserId;
 
             _logger.LogInformation(
-                "Successfully imported BGG game: QueueId={QueueId}, BggId={BggId}, CreatedGameId={CreatedGameId}",
-                queueItem.Id, queueItem.BggId, createdGameId);
+                "Processing BGG import: Id={Id}, BggId={BggId}, Position={Position}, Attempt={Attempt}",
+                queueItem.Id, queueItem.BggId, queueItem.Position, retryCount + 1);
+
+            // Mark as processing in the same scope that loaded it
+            await readQueueService.MarkAsProcessingAsync(queueItemId, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Scope 2: Execute MediatR command (separate DbContext)
+        Guid? createdGameId = null;
+        Exception? importException = null;
+        try
+        {
+            using var commandScope = _scopeFactory.CreateScope();
+            var mediator = commandScope.ServiceProvider.GetRequiredService<IMediator>();
+
+            var userId = requestedByUserId ?? Guid.Empty;
+            var command = new ImportGameFromBggCommand(bggId, userId);
+            createdGameId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            // Mark as failed (handles retry logic internally)
-            var errorMessage = $"{ex.GetType().Name}: {ex.Message}";
-            await queueService.MarkAsFailedAsync(
-                queueItem.Id,
-                errorMessage,
-                _config.MaxRetryAttempts,
-                cancellationToken).ConfigureAwait(false);
+            importException = ex;
+        }
 
-            _logger.LogError(
-                ex,
-                "Failed to import BGG game: QueueId={QueueId}, BggId={BggId}, Attempt={Attempt}/{MaxAttempts}",
-                queueItem.Id, queueItem.BggId, queueItem.RetryCount + 1, _config.MaxRetryAttempts);
+        // Scope 3: Update queue status (fresh DbContext, no pollution from handler)
+        {
+            using var updateScope = _scopeFactory.CreateScope();
+            var updateQueueService = updateScope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
 
-            // Exponential backoff delay if retry will occur
-            if (queueItem.RetryCount + 1 < _config.MaxRetryAttempts)
+            if (importException == null && createdGameId.HasValue)
             {
-                var backoffDelay = TimeSpan.FromSeconds(
-                    _config.BaseRetryDelaySeconds * Math.Pow(2, queueItem.RetryCount));
+                // Success path
+                await updateQueueService.MarkAsCompletedAsync(queueItemId, createdGameId.Value, cancellationToken).ConfigureAwait(false);
 
                 _logger.LogInformation(
-                    "Retry scheduled with exponential backoff: {Delay} seconds",
-                    backoffDelay.TotalSeconds);
+                    "Successfully imported BGG game: QueueId={QueueId}, BggId={BggId}, CreatedGameId={CreatedGameId}",
+                    queueItemId, bggId, createdGameId.Value);
+            }
+            else if (importException is InvalidOperationException { Message: var msg } && msg.Contains("already exists"))
+            {
+                // Game was already imported — look up existing and mark completed
+                var updateDbContext = updateScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                var existingGame = await updateDbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(g => g.BggId == bggId, cancellationToken)
+                    .ConfigureAwait(false);
 
-                await Task.Delay(backoffDelay, cancellationToken).ConfigureAwait(false);
+                var existingGameId = existingGame?.Id ?? Guid.Empty;
+                await updateQueueService.MarkAsCompletedAsync(queueItemId, existingGameId, cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    importException,
+                    "BGG game already exists, marked as completed: QueueId={QueueId}, BggId={BggId}, ExistingGameId={GameId}",
+                    queueItemId, bggId, existingGameId);
+            }
+            else if (importException != null)
+            {
+                // General failure — mark as failed with retry logic
+                var errorMessage = $"{importException.GetType().Name}: {importException.Message}";
+                await updateQueueService.MarkAsFailedAsync(
+                    queueItemId,
+                    errorMessage,
+                    _config.MaxRetryAttempts,
+                    cancellationToken).ConfigureAwait(false);
+
+                _logger.LogError(
+                    importException,
+                    "Failed to import BGG game: QueueId={QueueId}, BggId={BggId}, Attempt={Attempt}/{MaxAttempts}",
+                    queueItemId, bggId, retryCount + 1, _config.MaxRetryAttempts);
+
+                if (retryCount + 1 < _config.MaxRetryAttempts)
+                {
+                    var backoffDelay = TimeSpan.FromSeconds(
+                        _config.BaseRetryDelaySeconds * Math.Pow(2, retryCount));
+
+                    _logger.LogInformation(
+                        "Retry scheduled with exponential backoff: {Delay} seconds",
+                        backoffDelay.TotalSeconds);
+
+                    await Task.Delay(backoffDelay, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
     }

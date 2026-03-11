@@ -2,10 +2,10 @@
  * Admin Dashboard Navigation Config Tests - Issue #4844
  *
  * Covers:
- * - isSectionActive: baseRoute matching
+ * - isSectionActive: baseRoute + additionalRoutes matching
  * - getActiveSection: route-to-section mapping
  * - isSidebarItemActive: activePattern and prefix matching
- * - DASHBOARD_SECTIONS: Documents item present in knowledge-base
+ * - DASHBOARD_SECTIONS: Documents item present in content section
  */
 
 import { describe, it, expect } from 'vitest';
@@ -24,7 +24,7 @@ import {
 describe('getSection', () => {
   it('returns section by id', () => {
     expect(getSection('overview')?.id).toBe('overview');
-    expect(getSection('knowledge-base')?.id).toBe('knowledge-base');
+    expect(getSection('content')?.id).toBe('content');
   });
 
   it('returns undefined for unknown id', () => {
@@ -34,7 +34,7 @@ describe('getSection', () => {
 
 describe('getSidebarItems', () => {
   it('returns items for known section', () => {
-    const items = getSidebarItems('knowledge-base');
+    const items = getSidebarItems('content');
     expect(items.length).toBeGreaterThan(0);
   });
 
@@ -46,26 +46,27 @@ describe('getSidebarItems', () => {
 // ─── isSectionActive ─────────────────────────────────────────────────────────
 
 describe('isSectionActive', () => {
-  const kb = DASHBOARD_SECTIONS.find(s => s.id === 'knowledge-base')!;
+  const content = DASHBOARD_SECTIONS.find(s => s.id === 'content')!;
   const overview = DASHBOARD_SECTIONS.find(s => s.id === 'overview')!;
 
   describe('baseRoute matching', () => {
     it('matches exact baseRoute', () => {
-      expect(isSectionActive(kb, '/admin/knowledge-base')).toBe(true);
+      expect(isSectionActive(content, '/admin/shared-games')).toBe(true);
     });
 
     it('matches sub-routes under baseRoute', () => {
-      expect(isSectionActive(kb, '/admin/knowledge-base/vectors')).toBe(true);
-      expect(isSectionActive(kb, '/admin/knowledge-base/settings')).toBe(true);
+      expect(isSectionActive(content, '/admin/shared-games/all')).toBe(true);
+      expect(isSectionActive(content, '/admin/shared-games/new')).toBe(true);
     });
 
-    it('matches documents sub-route under baseRoute', () => {
-      expect(isSectionActive(kb, '/admin/knowledge-base/documents')).toBe(true);
+    it('matches additionalRoutes for knowledge-base', () => {
+      expect(isSectionActive(content, '/admin/knowledge-base')).toBe(true);
+      expect(isSectionActive(content, '/admin/knowledge-base/documents')).toBe(true);
     });
 
     it('does not match unrelated routes', () => {
-      expect(isSectionActive(kb, '/admin/users')).toBe(false);
-      expect(isSectionActive(kb, '/admin/agents')).toBe(false);
+      expect(isSectionActive(content, '/admin/users')).toBe(false);
+      expect(isSectionActive(content, '/admin/agents')).toBe(false);
     });
   });
 
@@ -74,8 +75,8 @@ describe('isSectionActive', () => {
       expect(isSectionActive(overview, '/admin/overview')).toBe(true);
     });
 
-    it('overview section is not active for /admin/knowledge-base', () => {
-      expect(isSectionActive(overview, '/admin/knowledge-base')).toBe(false);
+    it('overview section is not active for /admin/shared-games', () => {
+      expect(isSectionActive(overview, '/admin/shared-games')).toBe(false);
     });
   });
 });
@@ -87,27 +88,35 @@ describe('getActiveSection', () => {
     expect(getActiveSection('/admin/overview')?.id).toBe('overview');
   });
 
-  it('returns knowledge-base for /admin/knowledge-base', () => {
-    expect(getActiveSection('/admin/knowledge-base')?.id).toBe('knowledge-base');
+  it('returns content for /admin/knowledge-base (additionalRoute)', () => {
+    expect(getActiveSection('/admin/knowledge-base')?.id).toBe('content');
   });
 
-  it('returns knowledge-base for /admin/knowledge-base/vectors', () => {
-    expect(getActiveSection('/admin/knowledge-base/vectors')?.id).toBe('knowledge-base');
+  it('returns content for /admin/knowledge-base/vectors', () => {
+    expect(getActiveSection('/admin/knowledge-base/vectors')?.id).toBe('content');
   });
 
-  it('returns knowledge-base for /admin/knowledge-base/documents', () => {
-    expect(getActiveSection('/admin/knowledge-base/documents')?.id).toBe('knowledge-base');
+  it('returns content for /admin/knowledge-base/documents', () => {
+    expect(getActiveSection('/admin/knowledge-base/documents')?.id).toBe('content');
   });
 
-  it('returns agents for /admin/agents', () => {
-    expect(getActiveSection('/admin/agents')?.id).toBe('agents');
+  it('returns ai for /admin/agents', () => {
+    expect(getActiveSection('/admin/agents')?.id).toBe('ai');
+  });
+
+  it('returns system for /admin/monitor', () => {
+    expect(getActiveSection('/admin/monitor')?.id).toBe('system');
+  });
+
+  it('returns system for /admin/config (additionalRoute)', () => {
+    expect(getActiveSection('/admin/config')?.id).toBe('system');
   });
 
   it('returns undefined for unknown route', () => {
     expect(getActiveSection('/totally/unknown')).toBeUndefined();
   });
 
-  it('does not return knowledge-base for /admin/pdfstuff (no prefix false-positive)', () => {
+  it('does not return content for /admin/pdfstuff (no prefix false-positive)', () => {
     expect(getActiveSection('/admin/pdfstuff')).toBeUndefined();
   });
 });
@@ -115,11 +124,11 @@ describe('getActiveSection', () => {
 // ─── isSidebarItemActive ──────────────────────────────────────────────────────
 
 describe('isSidebarItemActive', () => {
-  const kbItems = getSidebarItems('knowledge-base');
-  const documentsItem = kbItems.find(i => i.href === '/admin/knowledge-base/documents');
-  const overviewItem = kbItems.find(i => i.href === '/admin/knowledge-base');
+  const contentItems = getSidebarItems('content');
+  const documentsItem = contentItems.find(i => i.href === '/admin/knowledge-base/documents');
+  const kbOverviewItem = contentItems.find(i => i.href === '/admin/knowledge-base');
 
-  it('documents item exists in knowledge-base sidebar', () => {
+  it('documents item exists in content sidebar', () => {
     expect(documentsItem).toBeDefined();
     expect(documentsItem?.label).toBe('Documents');
   });
@@ -136,30 +145,32 @@ describe('isSidebarItemActive', () => {
     expect(isSidebarItemActive(documentsItem!, '/admin/knowledge-base')).toBe(false);
   });
 
-  it('overview item is active on /admin/knowledge-base', () => {
-    expect(isSidebarItemActive(overviewItem!, '/admin/knowledge-base')).toBe(true);
+  it('kb overview item is active on /admin/knowledge-base', () => {
+    expect(isSidebarItemActive(kbOverviewItem!, '/admin/knowledge-base')).toBe(true);
   });
 
-  it('overview item is NOT active on /admin/knowledge-base/vectors (activePattern exact)', () => {
-    expect(isSidebarItemActive(overviewItem!, '/admin/knowledge-base/vectors')).toBe(false);
+  it('kb overview item is NOT active on /admin/knowledge-base/vectors (activePattern exact)', () => {
+    expect(isSidebarItemActive(kbOverviewItem!, '/admin/knowledge-base/vectors')).toBe(false);
   });
 });
 
 // ─── DASHBOARD_SECTIONS structure ────────────────────────────────────────────
 
 describe('DASHBOARD_SECTIONS structure', () => {
-  it('has 5 sections', () => {
-    expect(DASHBOARD_SECTIONS).toHaveLength(5);
+  it('has 6 sections', () => {
+    expect(DASHBOARD_SECTIONS).toHaveLength(6);
   });
 
-  it('knowledge-base section has no additionalRoutes', () => {
-    const kb = DASHBOARD_SECTIONS.find(s => s.id === 'knowledge-base')!;
-    expect(kb.additionalRoutes).toBeUndefined();
+  it('content section has additionalRoutes including knowledge-base', () => {
+    const content = DASHBOARD_SECTIONS.find(s => s.id === 'content')!;
+    expect(content.additionalRoutes).toContain('/admin/knowledge-base');
   });
 
-  it('knowledge-base sidebar contains Documents item pointing to /admin/knowledge-base/documents', () => {
-    const kb = DASHBOARD_SECTIONS.find(s => s.id === 'knowledge-base')!;
-    const documentsItem = kb.sidebarItems.find(i => i.href === '/admin/knowledge-base/documents');
+  it('content sidebar contains Documents item pointing to /admin/knowledge-base/documents', () => {
+    const content = DASHBOARD_SECTIONS.find(s => s.id === 'content')!;
+    const documentsItem = content.sidebarItems.find(
+      i => i.href === '/admin/knowledge-base/documents'
+    );
     expect(documentsItem).toBeDefined();
     expect(documentsItem?.label).toBe('Documents');
   });

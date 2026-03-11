@@ -59,7 +59,7 @@ internal static class ApplicationServiceExtensions
         services.AddKnowledgeBaseServices();
 
         // DDD-PHASE3: WorkflowIntegration bounded context
-        services.AddWorkflowIntegrationContext();
+        services.AddWorkflowIntegrationContext(configuration);
 
         // DDD-PHASE3: SystemConfiguration bounded context
         services.AddSystemConfigurationContext();

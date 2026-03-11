@@ -185,7 +185,8 @@ internal class EmailQueueRepository : RepositoryBase, IEmailQueueRepository
             ErrorMessage = item.ErrorMessage,
             CreatedAt = item.CreatedAt,
             ProcessedAt = item.ProcessedAt,
-            FailedAt = item.FailedAt
+            FailedAt = item.FailedAt,
+            CorrelationId = item.CorrelationId
         };
     }
 
@@ -204,6 +205,7 @@ internal class EmailQueueRepository : RepositoryBase, IEmailQueueRepository
             errorMessage: entity.ErrorMessage,
             createdAt: entity.CreatedAt,
             processedAt: entity.ProcessedAt,
-            failedAt: entity.FailedAt);
+            failedAt: entity.FailedAt,
+            correlationId: entity.CorrelationId);
     }
 }

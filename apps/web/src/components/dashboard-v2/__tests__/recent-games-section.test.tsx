@@ -20,9 +20,7 @@ const makeGame = (overrides: Partial<UserGameDto> = {}): UserGameDto => ({
 
 describe('RecentGamesSection', () => {
   it('renders loading skeletons when isLoading', () => {
-    const { container } = render(
-      <RecentGamesSection games={[]} isLoading={true} />
-    );
+    const { container } = render(<RecentGamesSection games={[]} isLoading={true} />);
     // Skeletons present, no game titles
     expect(screen.queryByText('I Coloni di Catan')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
@@ -32,9 +30,7 @@ describe('RecentGamesSection', () => {
     render(<RecentGamesSection games={[]} isLoading={false} />);
 
     expect(screen.getByText('Nessun gioco in libreria')).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: /Aggiungi il tuo primo gioco/ })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Aggiungi il tuo primo gioco/ })).toBeInTheDocument();
   });
 
   it('renders up to 3 games', () => {
@@ -54,12 +50,7 @@ describe('RecentGamesSection', () => {
   });
 
   it('shows "Libreria" badge for owned games', () => {
-    render(
-      <RecentGamesSection
-        games={[makeGame({ isOwned: true })]}
-        isLoading={false}
-      />
-    );
+    render(<RecentGamesSection games={[makeGame({ isOwned: true })]} isLoading={false} />);
 
     expect(screen.getByText('Libreria')).toBeInTheDocument();
   });
@@ -67,23 +58,15 @@ describe('RecentGamesSection', () => {
   it('links to /library for "Vedi tutti"', () => {
     render(<RecentGamesSection games={[makeGame()]} isLoading={false} />);
 
-    expect(screen.getByRole('link', { name: /Vedi tutti/ })).toHaveAttribute(
-      'href',
-      '/library'
-    );
+    expect(screen.getByRole('link', { name: /Vedi tutti/ })).toHaveAttribute('href', '/library');
   });
 
-  it('links each card to /library/{id}', () => {
-    render(
-      <RecentGamesSection
-        games={[makeGame({ id: 'game-42' })]}
-        isLoading={false}
-      />
-    );
+  it('links each card to /library', () => {
+    render(<RecentGamesSection games={[makeGame({ id: 'game-42' })]} isLoading={false} />);
 
     expect(screen.getByRole('link', { name: /I Coloni di Catan/ })).toHaveAttribute(
       'href',
-      '/library/game-42'
+      '/library'
     );
   });
 });

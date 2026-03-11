@@ -20,6 +20,7 @@ import {
   PromptResponseSchema,
   ActivateVersionResponseSchema,
   AdminStatsSchema,
+  AdminOverviewStatsSchema,
   AiRequestsResponseSchema,
   PromptVersionsResponseSchema,
   PromptAuditLogsResponseSchema,
@@ -28,6 +29,10 @@ import {
   WorkflowTemplateSchema,
   WorkflowTemplateDetailSchema,
   ImportWorkflowResponseSchema,
+  N8nConfigDtoSchema,
+  N8nTestResultDtoSchema,
+  type N8nConfigDto,
+  type N8nTestResultDto,
   DashboardStatsSchema,
   RecentActivityDtoSchema,
   InfrastructureDetailsSchema,
@@ -41,6 +46,7 @@ import {
   type PromptTemplate,
   type ActivateVersionResponse,
   type AdminStats,
+  type AdminOverviewStats,
   type AiRequest,
   type PromptVersion,
   type PromptAuditLog,
@@ -125,6 +131,25 @@ import {
   type AbTestSessionRevealedDto,
   AbTestAnalyticsDtoSchema,
   type AbTestAnalyticsDto,
+  EmailTemplateDtoSchema,
+  GetEmailTemplatesResponseSchema,
+  type EmailTemplateDto,
+  type CreateEmailTemplateInput,
+  type UpdateEmailTemplateInput,
+  DatabaseMetricsSchema,
+  type DatabaseMetrics,
+  CacheMetricsSchema,
+  type CacheMetrics,
+  TableSizeSchema,
+  type TableSize,
+  VectorStoreMetricsSchema,
+  type VectorStoreMetrics,
+  PaginatedQueueSchema,
+  type PaginatedQueue,
+  QueueStatusSchema,
+  type QueueStatus,
+  ActiveOverrideSchema,
+  type ActiveOverride,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -534,6 +559,22 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     },
 
     /**
+     * Get admin overview statistics (admin only)
+     * Issue #113: Includes ActiveAiUsers for MAU-AI monitoring.
+     * GET /api/v1/admin/overview-stats
+     */
+    async getOverviewStats(): Promise<AdminOverviewStats> {
+      const result = await httpClient.get<AdminOverviewStats>(
+        '/api/v1/admin/overview-stats',
+        AdminOverviewStatsSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch admin overview stats');
+      }
+      return result;
+    },
+
+    /**
      * Get AI requests with filtering (admin only)
      * GET /api/v1/admin/requests
      */
@@ -680,6 +721,66 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         { parameters },
         ImportWorkflowResponseSchema
       );
+    },
+
+    // ========== N8N Configuration (Issue #60) ==========
+
+    /**
+     * Get all n8n configurations (admin only)
+     * GET /api/v1/admin/n8n
+     */
+    async getN8nConfigs(): Promise<N8nConfigDto[]> {
+      const result = await httpClient.get<{ configs: N8nConfigDto[] }>(
+        '/api/v1/admin/n8n',
+        z.object({ configs: z.array(N8nConfigDtoSchema) })
+      );
+      return result?.configs ?? [];
+    },
+
+    /**
+     * Create n8n configuration (admin only)
+     * POST /api/v1/admin/n8n
+     */
+    async createN8nConfig(data: {
+      name: string;
+      baseUrl: string;
+      apiKey: string;
+      webhookUrl?: string;
+    }): Promise<N8nConfigDto> {
+      return httpClient.post('/api/v1/admin/n8n', data, N8nConfigDtoSchema);
+    },
+
+    /**
+     * Update n8n configuration (admin only)
+     * PUT /api/v1/admin/n8n/{configId}
+     */
+    async updateN8nConfig(
+      configId: string,
+      data: {
+        name?: string;
+        baseUrl?: string;
+        apiKey?: string;
+        webhookUrl?: string;
+        isActive?: boolean;
+      }
+    ): Promise<N8nConfigDto> {
+      return httpClient.put(`/api/v1/admin/n8n/${configId}`, data, N8nConfigDtoSchema);
+    },
+
+    /**
+     * Delete n8n configuration (admin only)
+     * DELETE /api/v1/admin/n8n/{configId}
+     */
+    async deleteN8nConfig(configId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/n8n/${configId}`);
+    },
+
+    /**
+     * Test n8n configuration connection (admin only)
+     * POST /api/v1/admin/n8n/{configId}/test
+     */
+    async testN8nConnection(configId: string): Promise<N8nTestResultDto> {
+      return httpClient.post(`/api/v1/admin/n8n/${configId}/test`, {}, N8nTestResultDtoSchema);
     },
 
     /**
@@ -2728,10 +2829,424 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         }
       );
     },
+
+    // ========== Email Queue Management (Issue #39) ==========
+
+    /**
+     * Get email queue statistics.
+     * GET /api/v1/admin/emails/stats
+     */
+    async getEmailQueueStats(): Promise<EmailQueueStats> {
+      const result = await httpClient.get('/api/v1/admin/emails/stats', EmailQueueStatsSchema);
+      return (
+        result ?? {
+          pendingCount: 0,
+          processingCount: 0,
+          sentCount: 0,
+          failedCount: 0,
+          deadLetterCount: 0,
+          sentLastHour: 0,
+          sentLast24Hours: 0,
+        }
+      );
+    },
+
+    /**
+     * Get email history with pagination and optional search.
+     * GET /api/v1/admin/emails/history
+     */
+    async getEmailHistory(params?: {
+      skip?: number;
+      take?: number;
+      search?: string;
+    }): Promise<EmailHistoryResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.skip !== undefined) queryParams.append('skip', String(params.skip));
+      if (params?.take !== undefined) queryParams.append('take', String(params.take));
+      if (params?.search) queryParams.append('search', params.search);
+      const qs = queryParams.toString();
+      const url = qs ? `/api/v1/admin/emails/history?${qs}` : '/api/v1/admin/emails/history';
+      const result = await httpClient.get(url, EmailHistoryResultSchema);
+      return result ?? { items: [], totalCount: 0, skip: 0, take: 20 };
+    },
+
+    /**
+     * Get dead-lettered emails with pagination.
+     * GET /api/v1/admin/emails/dead-letter
+     */
+    async getDeadLetterEmails(params?: {
+      skip?: number;
+      take?: number;
+    }): Promise<DeadLetterResult> {
+      const queryParams = new URLSearchParams();
+      if (params?.skip !== undefined) queryParams.append('skip', String(params.skip));
+      if (params?.take !== undefined) queryParams.append('take', String(params.take));
+      const qs = queryParams.toString();
+      const url = qs
+        ? `/api/v1/admin/emails/dead-letter?${qs}`
+        : '/api/v1/admin/emails/dead-letter';
+      const result = await httpClient.get(url, DeadLetterResultSchema);
+      return result ?? { items: [], totalCount: 0, skip: 0, take: 20 };
+    },
+
+    /**
+     * Retry a single dead-lettered email.
+     * POST /api/v1/admin/emails/{id}/retry
+     */
+    async retryEmail(id: string): Promise<boolean> {
+      const result = await httpClient.post(
+        `/api/v1/admin/emails/${encodeURIComponent(id)}/retry`,
+        {},
+        z.object({ success: z.boolean() })
+      );
+      return result?.success ?? false;
+    },
+
+    /**
+     * Retry all dead-lettered emails.
+     * POST /api/v1/admin/emails/retry-all-dead-letters
+     */
+    async retryAllDeadLetters(): Promise<number> {
+      const result = await httpClient.post(
+        '/api/v1/admin/emails/retry-all-dead-letters',
+        {},
+        z.object({ retried: z.number() })
+      );
+      return result?.retried ?? 0;
+    },
+
+    /**
+     * Send a test email (immediate, not queued).
+     * POST /api/v1/admin/emails/test
+     */
+    async sendTestEmail(to: string): Promise<boolean> {
+      const result = await httpClient.post(
+        '/api/v1/admin/emails/test',
+        { to },
+        z.object({ success: z.boolean() })
+      );
+      return result?.success ?? false;
+    },
+
+    // ========== Email Templates (Issue #52-#56) ==========
+
+    /**
+     * List email templates with optional filters.
+     * GET /api/v1/admin/email-templates
+     */
+    async getEmailTemplates(params?: {
+      type?: string;
+      locale?: string;
+    }): Promise<EmailTemplateDto[]> {
+      const searchParams = new URLSearchParams();
+      if (params?.type) searchParams.set('type', params.type);
+      if (params?.locale) searchParams.set('locale', params.locale);
+      const query = searchParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates${query ? `?${query}` : ''}`,
+        GetEmailTemplatesResponseSchema
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get a single email template by ID.
+     * GET /api/v1/admin/email-templates/:id
+     */
+    async getEmailTemplate(id: string): Promise<EmailTemplateDto> {
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates/${id}`,
+        EmailTemplateDtoSchema
+      );
+      if (!result) throw new Error(`Email template ${id} not found`);
+      return result;
+    },
+
+    /**
+     * Create a new email template.
+     * POST /api/v1/admin/email-templates
+     */
+    async createEmailTemplate(data: CreateEmailTemplateInput): Promise<{ id: string }> {
+      return httpClient.post<{ id: string }>(
+        '/api/v1/admin/email-templates',
+        data,
+        z.object({ id: z.string().uuid() })
+      );
+    },
+
+    /**
+     * Update an existing email template (creates new version).
+     * PUT /api/v1/admin/email-templates/:id
+     */
+    async updateEmailTemplate(
+      id: string,
+      data: UpdateEmailTemplateInput
+    ): Promise<{ success: boolean }> {
+      return httpClient.put<{ success: boolean }>(
+        `/api/v1/admin/email-templates/${id}`,
+        data,
+        z.object({ success: z.boolean() })
+      );
+    },
+
+    /**
+     * Publish (activate) an email template version.
+     * POST /api/v1/admin/email-templates/:id/publish
+     */
+    async publishEmailTemplate(id: string): Promise<void> {
+      await httpClient.post('/api/v1/admin/email-templates/' + id + '/publish', {});
+    },
+
+    /**
+     * Preview rendered email template with test data.
+     * POST /api/v1/admin/email-templates/:id/preview
+     */
+    async previewEmailTemplate(id: string, testData?: Record<string, string>): Promise<string> {
+      const result = await httpClient.post<{ html: string }>(
+        `/api/v1/admin/email-templates/${id}/preview`,
+        { testData },
+        z.object({ html: z.string() })
+      );
+      return result.html;
+    },
+
+    /**
+     * Get version history for a template by name.
+     * GET /api/v1/admin/email-templates/:name/versions
+     */
+    async getEmailTemplateVersions(name: string, locale?: string): Promise<EmailTemplateDto[]> {
+      const params = locale ? `?locale=${locale}` : '';
+      const result = await httpClient.get(
+        `/api/v1/admin/email-templates/${name}/versions${params}`,
+        GetEmailTemplatesResponseSchema
+      );
+      return result ?? [];
+    },
+
+    // ========== Resources Monitoring (Issue #125) ==========
+
+    /**
+     * Get database metrics (size, connections, transactions)
+     * GET /api/v1/resources/database/metrics
+     */
+    async getResourceDatabaseMetrics(): Promise<DatabaseMetrics | null> {
+      return httpClient.get('/api/v1/resources/database/metrics', DatabaseMetricsSchema);
+    },
+
+    /**
+     * Get top database tables by size
+     * GET /api/v1/resources/database/tables/top
+     */
+    async getResourceDatabaseTopTables(limit = 10): Promise<TableSize[]> {
+      const result = await httpClient.get(
+        `/api/v1/resources/database/tables/top?limit=${limit}`,
+        z.array(TableSizeSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get cache (Redis) metrics
+     * GET /api/v1/resources/cache/metrics
+     */
+    async getResourceCacheMetrics(): Promise<CacheMetrics | null> {
+      return httpClient.get('/api/v1/resources/cache/metrics', CacheMetricsSchema);
+    },
+
+    /**
+     * Get vector store (Qdrant) metrics
+     * GET /api/v1/resources/vectors/metrics
+     */
+    async getResourceVectorMetrics(): Promise<VectorStoreMetrics | null> {
+      return httpClient.get('/api/v1/resources/vectors/metrics', VectorStoreMetricsSchema);
+    },
+
+    /**
+     * Clear all cache keys
+     * POST /api/v1/resources/cache/clear?confirmed=true
+     */
+    async clearCache(): Promise<void> {
+      await httpClient.post('/api/v1/resources/cache/clear?confirmed=true');
+    },
+
+    /**
+     * Run database VACUUM
+     * POST /api/v1/resources/database/vacuum?confirmed=true
+     */
+    async vacuumDatabase(fullVacuum = false): Promise<void> {
+      await httpClient.post(
+        `/api/v1/resources/database/vacuum?confirmed=true&fullVacuum=${fullVacuum}`
+      );
+    },
+
+    /**
+     * Rebuild vector store indices
+     * POST /api/v1/resources/vectors/rebuild?confirmed=true
+     */
+    async rebuildVectors(): Promise<void> {
+      await httpClient.post('/api/v1/resources/vectors/rebuild?confirmed=true');
+    },
+
+    // ========== Processing Queue (Issue #125) ==========
+
+    /**
+     * Get paginated processing queue
+     * GET /api/v1/admin/queue/
+     */
+    async getProcessingQueue(params?: {
+      status?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<PaginatedQueue | null> {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set('status', params.status);
+      if (params?.search) qs.set('search', params.search);
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+      const query = qs.toString();
+      return httpClient.get(`/api/v1/admin/queue${query ? `?${query}` : ''}`, PaginatedQueueSchema);
+    },
+
+    /**
+     * Get queue status (depth, pressure, workers)
+     * GET /api/v1/admin/queue/status
+     */
+    async getQueueStatus(): Promise<QueueStatus | null> {
+      return httpClient.get('/api/v1/admin/queue/status', QueueStatusSchema);
+    },
+
+    /**
+     * Enqueue a new processing job
+     * POST /api/v1/admin/queue/enqueue
+     */
+    async enqueueJob(params: {
+      jobType: string;
+      parameters?: Record<string, unknown>;
+      priority?: number;
+    }): Promise<void> {
+      await httpClient.post('/api/v1/admin/queue/enqueue', params);
+    },
+
+    /**
+     * Cancel a processing job
+     * POST /api/v1/admin/queue/{jobId}/cancel
+     */
+    async cancelJob(jobId: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/queue/${jobId}/cancel`);
+    },
+
+    /**
+     * Retry a failed processing job
+     * POST /api/v1/admin/queue/{jobId}/retry
+     */
+    async retryJob(jobId: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/queue/${jobId}/retry`);
+    },
+
+    /**
+     * Remove a completed/cancelled job
+     * DELETE /api/v1/admin/queue/{jobId}
+     */
+    async removeJob(jobId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/queue/${jobId}`);
+    },
+
+    /**
+     * Reorder queue jobs
+     * PUT /api/v1/admin/queue/reorder
+     */
+    async reorderQueue(orderedJobIds: string[]): Promise<void> {
+      await httpClient.put('/api/v1/admin/queue/reorder', { orderedJobIds });
+    },
+
+    // ========== Emergency Controls (Issue #125) ==========
+
+    /**
+     * Get active LLM emergency overrides
+     * GET /api/v1/admin/llm/emergency/active
+     */
+    async getActiveEmergencyOverrides(): Promise<ActiveOverride[]> {
+      const result = await httpClient.get(
+        '/api/v1/admin/llm/emergency/active',
+        z.array(ActiveOverrideSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Activate a new emergency override
+     * POST /api/v1/admin/llm/emergency/activate
+     */
+    async activateEmergencyOverride(params: {
+      action: string;
+      reason: string;
+      durationMinutes?: number;
+      targetProvider?: string;
+    }): Promise<void> {
+      await httpClient.post('/api/v1/admin/llm/emergency/activate', params);
+    },
+
+    /**
+     * Deactivate an emergency override
+     * POST /api/v1/admin/llm/emergency/deactivate
+     */
+    async deactivateEmergencyOverride(action: string): Promise<void> {
+      await httpClient.post('/api/v1/admin/llm/emergency/deactivate', { action });
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Email Queue Schemas (Issue #39) ==========
+
+const EmailQueueStatsSchema = z.object({
+  pendingCount: z.number(),
+  processingCount: z.number(),
+  sentCount: z.number(),
+  failedCount: z.number(),
+  deadLetterCount: z.number(),
+  sentLastHour: z.number(),
+  sentLast24Hours: z.number(),
+});
+
+export type EmailQueueStats = z.infer<typeof EmailQueueStatsSchema>;
+
+const EmailQueueItemSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  to: z.string(),
+  subject: z.string(),
+  status: z.string(),
+  retryCount: z.number(),
+  maxRetries: z.number(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.string(),
+  processedAt: z.string().nullable(),
+  failedAt: z.string().nullable(),
+  correlationId: z.string().nullable().optional(),
+});
+
+export type EmailQueueItem = z.infer<typeof EmailQueueItemSchema>;
+
+const EmailHistoryResultSchema = z.object({
+  items: z.array(EmailQueueItemSchema),
+  totalCount: z.number(),
+  skip: z.number(),
+  take: z.number(),
+});
+
+export type EmailHistoryResult = z.infer<typeof EmailHistoryResultSchema>;
+
+const DeadLetterResultSchema = z.object({
+  items: z.array(EmailQueueItemSchema),
+  totalCount: z.number(),
+  skip: z.number(),
+  take: z.number(),
+});
+
+export type DeadLetterResult = z.infer<typeof DeadLetterResultSchema>;
 
 // ========== Qdrant Admin Types (Issue #4877) ==========
 

@@ -44,6 +44,39 @@ public sealed class LlmRequestLogEntityTests
     }
 
     [Fact]
+    public void NewEntity_UserRegion_DefaultsToNull()
+    {
+        // Act
+        var entity = new LlmRequestLogEntity
+        {
+            ModelId = "openai/gpt-4o",
+            Provider = "openrouter"
+        };
+
+        // Assert — Issue #27: UserRegion defaults to null
+        Assert.Null(entity.UserRegion);
+    }
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("it-IT")]
+    [InlineData("de-DE")]
+    [InlineData(null)]
+    public void UserRegion_StoresAssignedValue(string? region)
+    {
+        // Arrange & Act
+        var entity = new LlmRequestLogEntity
+        {
+            ModelId = "model",
+            Provider = "provider",
+            UserRegion = region
+        };
+
+        // Assert — Issue #27: UserRegion stores the assigned value
+        Assert.Equal(region, entity.UserRegion);
+    }
+
+    [Fact]
     public void UniqueIds_EveryNewInstance()
     {
         // Act

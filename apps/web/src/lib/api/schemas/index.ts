@@ -125,3 +125,6 @@ export * from './email-templates.schemas';
 
 // Enhanced Save/Resume schemas (Issue #122)
 export * from './save-resume.schemas';
+
+// Invitation schemas (Issue #132)
+export * from './invitation.schemas';

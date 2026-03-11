@@ -15,6 +15,9 @@ vi.mock('../ModelsTab', () => ({ ModelsTab: () => <div data-testid="models-tab" 
 vi.mock('../RequestsTab', () => ({ RequestsTab: () => <div data-testid="requests-tab" /> }));
 vi.mock('../RagTab', () => ({ RagTab: () => <div data-testid="rag-tab" /> }));
 vi.mock('../NavConfig', () => ({ AdminAiNavConfig: () => null }));
+vi.mock('@/components/admin/layout/AdminTabPersistence', () => ({
+  AdminTabPersistence: () => null,
+}));
 vi.mock('@/components/admin/layout/AdminHubTabBar', () => ({
   AdminHubTabBar: ({
     tabs,

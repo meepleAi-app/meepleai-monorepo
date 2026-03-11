@@ -54,11 +54,6 @@ exports[`MeepleCard - Snapshots > Complete Examples > should match snapshot for 
       class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
       style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
-    />
   </div>
   <div
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
@@ -408,11 +403,6 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for colle
       class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
       style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
-    />
   </div>
   <div
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
@@ -500,11 +490,6 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for custo
       class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
       style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
-    />
   </div>
   <div
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
@@ -577,11 +562,6 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for event
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
-    />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
     <div
       aria-hidden="true"
@@ -725,11 +705,6 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for game 
       class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
       style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
-    />
   </div>
   <div
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
@@ -865,11 +840,6 @@ exports[`MeepleCard - Snapshots > Entity Types > should match snapshot for playe
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
-    />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
     <div
       aria-hidden="true"
@@ -1204,11 +1174,6 @@ exports[`MeepleCard - Snapshots > Layout Variants > should match snapshot for gr
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
-    />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
     <div
       aria-hidden="true"
@@ -1898,11 +1863,6 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with ba
       class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
       style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
-    />
   </div>
   <div
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
@@ -2421,11 +2381,6 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with mi
       class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
       style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
-    />
   </div>
   <div
     class="flex-1 flex flex-col px-2.5 py-2 sm:px-3.5 sm:py-3"
@@ -2667,11 +2622,6 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot with on
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
-    />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
     <div
       aria-hidden="true"
@@ -2922,11 +2872,6 @@ exports[`MeepleCard - Snapshots > Special States > should match snapshot without
     <div
       aria-hidden="true"
       class="absolute inset-0 pointer-events-none"
-    />
-    <div
-      aria-hidden="true"
-      class="absolute inset-0 pointer-events-none group-hover:animate-mc-shimmer"
-      style="background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.25) 50%, transparent 60%); transform: translateX(-100%);"
     />
     <div
       aria-hidden="true"

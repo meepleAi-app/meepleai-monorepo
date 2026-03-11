@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -18,6 +19,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 public class LinkAgentToSharedGameCommandHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock;
+    private readonly Mock<IAgentRepository> _agentRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<LinkAgentToSharedGameCommandHandler>> _loggerMock;
     private readonly LinkAgentToSharedGameCommandHandler _handler;
@@ -25,10 +27,12 @@ public class LinkAgentToSharedGameCommandHandlerTests
     public LinkAgentToSharedGameCommandHandlerTests()
     {
         _repositoryMock = new Mock<ISharedGameRepository>();
+        _agentRepositoryMock = new Mock<IAgentRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<LinkAgentToSharedGameCommandHandler>>();
         _handler = new LinkAgentToSharedGameCommandHandler(
             _repositoryMock.Object,
+            _agentRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
     }

@@ -38,6 +38,7 @@
 
 import { type ReactNode, Suspense } from 'react';
 
+import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { CardStackPanel } from '@/components/ui/navigation/card-stack-panel';
 import { NavigationProvider } from '@/context/NavigationContext';
@@ -114,9 +115,11 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
       >
         <div className="flex flex-col flex-1" data-testid="layout-content-area">
           {/* ── Level 2: MiniNav (auto-hides when no tabs) ─────────────────── */}
-          <Suspense>
-            <MiniNav />
-          </Suspense>
+          <ErrorBoundary fallback={null} componentName="MiniNav">
+            <Suspense>
+              <MiniNav />
+            </Suspense>
+          </ErrorBoundary>
 
           {/* ── Mobile Breadcrumb (below MiniNav, mobile only) ───────────── */}
           <MobileBreadcrumb />
@@ -140,10 +143,18 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
           </main>
 
           {/* ── Level 3: FloatingActionBar (auto-hides when no actions) ───── */}
-          <FloatingActionBar />
+          <ErrorBoundary fallback={null} componentName="FloatingActionBar">
+            <Suspense>
+              <FloatingActionBar />
+            </Suspense>
+          </ErrorBoundary>
 
           {/* ── SmartFAB: context-aware primary action (mobile only) ────────── */}
-          <SmartFAB />
+          <ErrorBoundary fallback={null} componentName="SmartFAB">
+            <Suspense>
+              <SmartFAB />
+            </Suspense>
+          </ErrorBoundary>
         </div>
 
         {/* ── QuickView panel (rules / FAQ / AI, xl+ only) ─────────────────── */}
@@ -151,10 +162,14 @@ function LayoutShellInner({ children, fullWidth, className }: LayoutShellProps) 
       </div>
 
       {/* ── Level 0: MobileTabBar (persistent mobile navigation) ───────── */}
-      <MobileTabBar />
+      <ErrorBoundary fallback={null} componentName="MobileTabBar">
+        <MobileTabBar />
+      </ErrorBoundary>
 
       {/* Card Stack Panel — "Carte in Mano" */}
-      <CardStackPanel />
+      <ErrorBoundary fallback={null} componentName="CardStackPanel">
+        <CardStackPanel />
+      </ErrorBoundary>
     </div>
   );
 }

@@ -1,12 +1,22 @@
-import { GameNightList } from '@/components/game-nights/GameNightList';
+/**
+ * Game Nights Page
+ * Issue #33 — P3 Game Night Frontend
+ *
+ * Lists upcoming and user-organized game nights with tab navigation.
+ */
+
+import { Suspense } from 'react';
+
+import { RequireRole } from '@/components/auth/RequireRole';
+
+import { GameNightsContent, GameNightsLoadingSkeleton } from './_content';
 
 export default function GameNightsPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold font-quicksand">Serate di Gioco</h1>
-      </div>
-      <GameNightList nights={[]} isLoading={false} />
-    </div>
+    <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
+      <Suspense fallback={<GameNightsLoadingSkeleton />}>
+        <GameNightsContent />
+      </Suspense>
+    </RequireRole>
   );
 }

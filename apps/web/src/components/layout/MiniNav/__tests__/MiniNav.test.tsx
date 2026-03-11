@@ -7,7 +7,17 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Home, Settings, Users, BookOpen, MessageSquare, Gamepad2, BarChart3, Lightbulb, Globe } from 'lucide-react';
+import {
+  Home,
+  Settings,
+  Users,
+  BookOpen,
+  MessageSquare,
+  Gamepad2,
+  BarChart3,
+  Lightbulb,
+  Globe,
+} from 'lucide-react';
 
 import { MiniNav } from '../MiniNav';
 import { MiniNavTab } from '../MiniNavTab';
@@ -24,6 +34,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockMiniNavTabs = vi.fn<[], NavTab[]>(() => []);
+const mockScrollDirection = vi.fn<[], 'up' | 'down' | null>(() => null);
+
+vi.mock('@/hooks/useScrollState', () => ({
+  useScrollState: () => ({
+    scrollY: 0,
+    direction: mockScrollDirection(),
+    isScrolled: false,
+    isScrolling: false,
+  }),
+}));
 
 vi.mock('@/context/NavigationContext', () => ({
   useNavigation: () => ({
@@ -63,6 +83,7 @@ describe('MiniNav', () => {
     vi.clearAllMocks();
     mockPathname.mockReturnValue('/library');
     mockMiniNavTabs.mockReturnValue([]);
+    mockScrollDirection.mockReturnValue(null);
   });
 
   // ── Visibility ──────────────────────────────────────────────────────────────
@@ -152,9 +173,7 @@ describe('MiniNav', () => {
   });
 
   it('renders string badge', () => {
-    const tabWithBadge: NavTab[] = [
-      { id: 'new', label: 'New', href: '/new', badge: 'NEW' },
-    ];
+    const tabWithBadge: NavTab[] = [{ id: 'new', label: 'New', href: '/new', badge: 'NEW' }];
     mockMiniNavTabs.mockReturnValue(tabWithBadge);
     render(<MiniNav />);
     expect(screen.getByText('NEW')).toBeInTheDocument();
@@ -189,6 +208,51 @@ describe('MiniNav', () => {
     mockMiniNavTabs.mockReturnValue(libraryTabs);
     render(<MiniNav className="test-custom" />);
     expect(screen.getByTestId('mini-nav')).toHaveClass('test-custom');
+  });
+
+  // ── Scroll-hide behavior ──────────────────────────────────────────────────
+
+  it('hides with opacity-0 and pointer-events-none when scrollDirection is down', () => {
+    mockMiniNavTabs.mockReturnValue(libraryTabs);
+    mockScrollDirection.mockReturnValue('down');
+    render(<MiniNav />);
+    const nav = screen.getByTestId(NAV_TEST_IDS.miniNav);
+    expect(nav).toHaveClass('opacity-0');
+    expect(nav).toHaveClass('pointer-events-none');
+    expect(nav).toHaveClass('-translate-y-full');
+  });
+
+  it('does not hide when scrollDirection is up', () => {
+    mockMiniNavTabs.mockReturnValue(libraryTabs);
+    mockScrollDirection.mockReturnValue('up');
+    render(<MiniNav />);
+    const nav = screen.getByTestId(NAV_TEST_IDS.miniNav);
+    expect(nav).not.toHaveClass('opacity-0');
+    expect(nav).not.toHaveClass('pointer-events-none');
+  });
+
+  it('does not hide when scrollDirection is null (initial state)', () => {
+    mockMiniNavTabs.mockReturnValue(libraryTabs);
+    mockScrollDirection.mockReturnValue(null);
+    render(<MiniNav />);
+    const nav = screen.getByTestId(NAV_TEST_IDS.miniNav);
+    expect(nav).not.toHaveClass('opacity-0');
+    expect(nav).not.toHaveClass('pointer-events-none');
+  });
+
+  it('has transition classes for smooth animation', () => {
+    mockMiniNavTabs.mockReturnValue(libraryTabs);
+    render(<MiniNav />);
+    const nav = screen.getByTestId(NAV_TEST_IDS.miniNav);
+    expect(nav).toHaveClass('transition-all');
+    expect(nav).toHaveClass('duration-200');
+  });
+
+  it('respects prefers-reduced-motion with motion-reduce class', () => {
+    mockMiniNavTabs.mockReturnValue(libraryTabs);
+    render(<MiniNav />);
+    const nav = screen.getByTestId(NAV_TEST_IDS.miniNav);
+    expect(nav.className).toContain('motion-reduce:transition-none');
   });
 });
 

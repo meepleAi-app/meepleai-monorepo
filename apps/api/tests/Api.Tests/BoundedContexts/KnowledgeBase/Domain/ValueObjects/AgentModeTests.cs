@@ -31,21 +31,27 @@ public sealed class AgentModeTests
         ((int)AgentMode.Ledger).Should().Be(2);
     }
 
+    [Fact]
+    public void Arbiter_HasCorrectValue()
+    {
+        ((int)AgentMode.Arbiter).Should().Be(3);
+    }
+
     #endregion
 
     #region Enum Completeness Tests
 
     [Fact]
-    public void AgentMode_HasThreeValues()
+    public void AgentMode_HasFourValues()
     {
         var values = Enum.GetValues<AgentMode>();
-        values.Should().HaveCount(3);
+        values.Should().HaveCount(4);
     }
 
     [Fact]
     public void AgentMode_AllValuesCanBeParsed()
     {
-        var names = new[] { "Chat", "Player", "Ledger" };
+        var names = new[] { "Chat", "Player", "Ledger", "Arbiter" };
 
         foreach (var name in names)
         {
@@ -60,6 +66,7 @@ public sealed class AgentModeTests
         AgentMode.Chat.ToString().Should().Be("Chat");
         AgentMode.Player.ToString().Should().Be("Player");
         AgentMode.Ledger.ToString().Should().Be("Ledger");
+        AgentMode.Arbiter.ToString().Should().Be("Arbiter");
     }
 
     #endregion
@@ -96,6 +103,7 @@ public sealed class AgentModeTests
     [InlineData(0, AgentMode.Chat)]
     [InlineData(1, AgentMode.Player)]
     [InlineData(2, AgentMode.Ledger)]
+    [InlineData(3, AgentMode.Arbiter)]
     public void AgentMode_CastFromInt_ReturnsCorrectValue(int value, AgentMode expected)
     {
         ((AgentMode)value).Should().Be(expected);
@@ -107,12 +115,13 @@ public sealed class AgentModeTests
         Enum.IsDefined(typeof(AgentMode), 0).Should().BeTrue();
         Enum.IsDefined(typeof(AgentMode), 1).Should().BeTrue();
         Enum.IsDefined(typeof(AgentMode), 2).Should().BeTrue();
+        Enum.IsDefined(typeof(AgentMode), 3).Should().BeTrue();
     }
 
     [Fact]
     public void AgentMode_IsDefined_ReturnsFalseForInvalidValues()
     {
-        Enum.IsDefined(typeof(AgentMode), 3).Should().BeFalse();
+        Enum.IsDefined(typeof(AgentMode), 4).Should().BeFalse();
         Enum.IsDefined(typeof(AgentMode), -1).Should().BeFalse();
     }
 

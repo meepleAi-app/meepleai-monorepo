@@ -55,7 +55,7 @@ export function TurnManagerWidget({
   const [round, setRound] = useState(1);
   const [newPlayerName, setNewPlayerName] = useState('');
 
-  const { broadcastState, isConnected } = useWidgetSync({
+  const { broadcastState, isConnected: _isConnected } = useWidgetSync({
     sessionId,
     toolkitId,
     widgetType: 'TurnManager',

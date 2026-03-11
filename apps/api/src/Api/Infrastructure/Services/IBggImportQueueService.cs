@@ -13,12 +13,14 @@ public interface IBggImportQueueService
     /// </summary>
     /// <param name="bggId">BGG game ID to import</param>
     /// <param name="gameName">Optional game name for UI display</param>
+    /// <param name="requestedByUserId">Optional user ID who requested the import (for audit trail)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created queue entity</returns>
     /// <exception cref="InvalidOperationException">If BGG ID is already queued or imported</exception>
     Task<BggImportQueueEntity> EnqueueAsync(
         int bggId,
         string? gameName = null,
+        Guid? requestedByUserId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

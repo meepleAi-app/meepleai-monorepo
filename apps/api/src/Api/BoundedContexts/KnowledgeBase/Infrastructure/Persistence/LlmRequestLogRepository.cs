@@ -44,6 +44,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         bool isStreaming,
         bool isFreeModel,
         string? sessionId,
+        string? userRegion = null,
         CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
@@ -64,6 +65,7 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
             IsStreaming = isStreaming,
             IsFreeModel = isFreeModel,
             SessionId = sessionId,
+            UserRegion = userRegion,
             RequestedAt = now,
             ExpiresAt = now.Add(RetentionPeriod)
         };
@@ -74,6 +76,17 @@ public sealed class LlmRequestLogRepository : ILlmRequestLogRepository
         _logger.LogDebug(
             "Logged LLM request: {Provider}/{Model}, source={Source}, tokens={Tokens}, cost=${Cost:F6}, latency={Latency}ms",
             provider, modelId, source, promptTokens + completionTokens, costUsd, latencyMs);
+    }
+
+    public async Task<int> GetActiveAiUserCountAsync(DateTime from, CancellationToken cancellationToken = default)
+    {
+        return await _context.LlmRequestLogs
+            .AsNoTracking()
+            .Where(x => x.RequestedAt >= from && x.UserId != null && !x.IsAnonymized)
+            .Select(x => x.UserId)
+            .Distinct()
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<int> GetTodayCountAsync(DateOnly utcDate, CancellationToken cancellationToken = default)

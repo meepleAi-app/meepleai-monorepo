@@ -136,6 +136,20 @@ import {
   type EmailTemplateDto,
   type CreateEmailTemplateInput,
   type UpdateEmailTemplateInput,
+  DatabaseMetricsSchema,
+  type DatabaseMetrics,
+  CacheMetricsSchema,
+  type CacheMetrics,
+  TableSizeSchema,
+  type TableSize,
+  VectorStoreMetricsSchema,
+  type VectorStoreMetrics,
+  PaginatedQueueSchema,
+  type PaginatedQueue,
+  QueueStatusSchema,
+  type QueueStatus,
+  ActiveOverrideSchema,
+  type ActiveOverride,
 } from '../schemas';
 import {
   BulkDeleteResultSchema,
@@ -3007,6 +3021,161 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         GetEmailTemplatesResponseSchema
       );
       return result ?? [];
+    },
+
+    // ========== Resources Monitoring (Issue #125) ==========
+
+    /**
+     * Get database metrics (size, connections, transactions)
+     * GET /api/v1/resources/database/metrics
+     */
+    async getResourceDatabaseMetrics(): Promise<DatabaseMetrics | null> {
+      return httpClient.get('/api/v1/resources/database/metrics', DatabaseMetricsSchema);
+    },
+
+    /**
+     * Get top database tables by size
+     * GET /api/v1/resources/database/tables/top
+     */
+    async getResourceDatabaseTopTables(limit = 10): Promise<TableSize[]> {
+      const result = await httpClient.get(
+        `/api/v1/resources/database/tables/top?limit=${limit}`,
+        z.array(TableSizeSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get cache (Redis) metrics
+     * GET /api/v1/resources/cache/metrics
+     */
+    async getResourceCacheMetrics(): Promise<CacheMetrics | null> {
+      return httpClient.get('/api/v1/resources/cache/metrics', CacheMetricsSchema);
+    },
+
+    /**
+     * Get vector store (Qdrant) metrics
+     * GET /api/v1/resources/vectors/metrics
+     */
+    async getResourceVectorMetrics(): Promise<VectorStoreMetrics | null> {
+      return httpClient.get('/api/v1/resources/vectors/metrics', VectorStoreMetricsSchema);
+    },
+
+    /**
+     * Clear all cache keys
+     * POST /api/v1/resources/cache/clear?confirmed=true
+     */
+    async clearCache(): Promise<void> {
+      await httpClient.post('/api/v1/resources/cache/clear?confirmed=true');
+    },
+
+    /**
+     * Run database VACUUM
+     * POST /api/v1/resources/database/vacuum?confirmed=true
+     */
+    async vacuumDatabase(fullVacuum = false): Promise<void> {
+      await httpClient.post(
+        `/api/v1/resources/database/vacuum?confirmed=true&fullVacuum=${fullVacuum}`
+      );
+    },
+
+    // ========== Processing Queue (Issue #125) ==========
+
+    /**
+     * Get paginated processing queue
+     * GET /api/v1/admin/queue/
+     */
+    async getProcessingQueue(params?: {
+      status?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<PaginatedQueue | null> {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set('status', params.status);
+      if (params?.search) qs.set('search', params.search);
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+      const query = qs.toString();
+      return httpClient.get(
+        `/api/v1/admin/queue/${query ? `?${query}` : ''}`,
+        PaginatedQueueSchema
+      );
+    },
+
+    /**
+     * Get queue status (depth, pressure, workers)
+     * GET /api/v1/admin/queue/status
+     */
+    async getQueueStatus(): Promise<QueueStatus | null> {
+      return httpClient.get('/api/v1/admin/queue/status', QueueStatusSchema);
+    },
+
+    /**
+     * Cancel a processing job
+     * POST /api/v1/admin/queue/{jobId}/cancel
+     */
+    async cancelJob(jobId: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/queue/${jobId}/cancel`);
+    },
+
+    /**
+     * Retry a failed processing job
+     * POST /api/v1/admin/queue/{jobId}/retry
+     */
+    async retryJob(jobId: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/queue/${jobId}/retry`);
+    },
+
+    /**
+     * Remove a completed/cancelled job
+     * DELETE /api/v1/admin/queue/{jobId}
+     */
+    async removeJob(jobId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/queue/${jobId}`);
+    },
+
+    /**
+     * Reorder queue jobs
+     * PUT /api/v1/admin/queue/reorder
+     */
+    async reorderQueue(orderedJobIds: string[]): Promise<void> {
+      await httpClient.put('/api/v1/admin/queue/reorder', { orderedJobIds });
+    },
+
+    // ========== Emergency Controls (Issue #125) ==========
+
+    /**
+     * Get active LLM emergency overrides
+     * GET /api/v1/admin/llm/emergency/active
+     */
+    async getActiveEmergencyOverrides(): Promise<ActiveOverride[]> {
+      const result = await httpClient.get(
+        '/api/v1/admin/llm/emergency/active',
+        z.array(ActiveOverrideSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Activate a new emergency override
+     * POST /api/v1/admin/llm/emergency/activate
+     */
+    async activateEmergencyOverride(params: {
+      action: string;
+      reason: string;
+      durationMinutes?: number;
+      targetProvider?: string;
+    }): Promise<void> {
+      await httpClient.post('/api/v1/admin/llm/emergency/activate', params);
+    },
+
+    /**
+     * Deactivate an emergency override
+     * POST /api/v1/admin/llm/emergency/deactivate
+     */
+    async deactivateEmergencyOverride(action: string): Promise<void> {
+      await httpClient.post('/api/v1/admin/llm/emergency/deactivate', { action });
     },
   };
 }

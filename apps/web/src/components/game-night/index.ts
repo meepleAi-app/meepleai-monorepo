@@ -17,3 +17,7 @@ export { SessionChatWidget } from './SessionChatWidget';
 export type { SessionChatWidgetProps, ChatMessage } from './SessionChatWidget';
 export { LiveSessionView } from './LiveSessionView';
 export type { LiveSessionViewProps } from './LiveSessionView';
+export { ScoreAssistant } from './ScoreAssistant';
+export { SaveCompleteDialog } from './SaveCompleteDialog';
+export { ResumeSessionPanel } from './ResumeSessionPanel';
+export { GameNightWizard } from './GameNightWizard';

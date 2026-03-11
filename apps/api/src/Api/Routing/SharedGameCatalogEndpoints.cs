@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddRagToSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RecordGameEvent;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCatalogTrending;
@@ -2548,6 +2549,33 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status409Conflict);
+
+        // RAG Wizard: Single upload + process
+        group.MapPost("/admin/shared-games/{id:guid}/rag", HandleAddRagToSharedGame)
+            .DisableAntiforgery() // Required for multipart/form-data file uploads
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("AddRagToSharedGame")
+            .WithSummary("Upload PDF and start RAG processing for a shared game (Admin/Editor)")
+            .WithDescription("Uploads a PDF, links it as a document to the shared game, and enqueues for RAG processing. Admin uploads are auto-approved; Editor uploads require separate approval.")
+            .Produces<AddRagToSharedGameResult>(StatusCodes.Status202Accepted)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // RAG Wizard: Batch upload + process
+        group.MapPost("/admin/shared-games/batch-rag", HandleBatchAddRagToSharedGame)
+            .DisableAntiforgery() // Required for multipart/form-data file uploads
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("BatchAddRagToSharedGame")
+            .WithSummary("Batch upload PDFs and start RAG processing for multiple shared games (Admin/Editor)")
+            .WithDescription("Uploads PDFs for multiple shared games in a single request. Supports partial success — individual failures don't stop the batch.")
+            .Produces<BatchAddRagToSharedGameResult>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
     }
 
     private static async Task<IResult> HandleGetCatalogTrending(
@@ -2758,6 +2786,144 @@ internal static class SharedGameCatalogEndpoints
             logger.LogWarning(ex, "Wizard create game conflict: {Message}", ex.Message);
             return Results.Conflict(new { error = ex.Message });
         }
+    }
+
+    // ========================================
+    // RAG WIZARD HANDLERS
+    // ========================================
+
+    /// <summary>
+    /// Handler for single RAG upload + process endpoint.
+    /// Uploads PDF, links to SharedGame, and enqueues for RAG processing.
+    /// </summary>
+    private static async Task<IResult> HandleAddRagToSharedGame(
+        Guid id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
+
+        var file = form.Files.GetFile("file");
+        if (file == null || file.Length == 0)
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["file"] = "No file provided or file is empty" } });
+        }
+
+        var documentTypeStr = form["documentType"].ToString();
+        if (string.IsNullOrWhiteSpace(documentTypeStr) || !Enum.TryParse<SharedGameDocumentType>(documentTypeStr, ignoreCase: true, out var documentType))
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["documentType"] = "Invalid or missing document type" } });
+        }
+
+        var version = form["version"].ToString();
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["version"] = "Version is required" } });
+        }
+
+        var tagsStr = form["tags"].ToString();
+        List<string>? tags = string.IsNullOrWhiteSpace(tagsStr)
+            ? null
+            : tagsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+        var isAdmin = context.User.IsInRole("Admin");
+
+        var command = new AddRagToSharedGameCommand(
+            id,
+            file,
+            documentType,
+            version,
+            tags,
+            session!.User!.Id,
+            isAdmin);
+
+        logger.LogInformation(
+            "RAG wizard: SharedGameId={SharedGameId}, File={FileName}, DocType={DocType}, IsAdmin={IsAdmin}",
+            id, file.FileName, documentType, isAdmin);
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "RAG wizard completed: PdfId={PdfId}, DocId={DocId}, AutoApproved={AutoApproved}",
+            result.PdfDocumentId, result.SharedGameDocumentId, result.AutoApproved);
+
+        return Results.Accepted($"/api/v1/admin/shared-games/{id}/rag", result);
+    }
+
+    /// <summary>
+    /// Handler for batch RAG upload + process endpoint.
+    /// Uploads PDFs for multiple shared games in a single request.
+    /// </summary>
+    private static async Task<IResult> HandleBatchAddRagToSharedGame(
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
+
+        var sharedGameIdStrings = form["sharedGameIds"].ToList();
+        var files = form.Files.GetFiles("files").ToList();
+        var documentTypes = form["documentTypes"].ToList();
+        var versions = form["versions"].ToList();
+
+        if (sharedGameIdStrings.Count == 0 || files.Count == 0)
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["items"] = "At least one shared game ID and file are required" } });
+        }
+
+        if (sharedGameIdStrings.Count != files.Count || sharedGameIdStrings.Count != documentTypes.Count || sharedGameIdStrings.Count != versions.Count)
+        {
+            return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["items"] = "sharedGameIds, files, documentTypes, and versions must have the same count" } });
+        }
+
+        var isAdmin = context.User.IsInRole("Admin");
+        var userId = session!.User!.Id;
+        var items = new List<AddRagToSharedGameCommand>();
+
+        for (var i = 0; i < sharedGameIdStrings.Count; i++)
+        {
+            if (!Guid.TryParse(sharedGameIdStrings[i], out var sharedGameId))
+            {
+                return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { [$"sharedGameIds[{i}]"] = "Invalid GUID" } });
+            }
+
+            if (!Enum.TryParse<SharedGameDocumentType>(documentTypes[i], ignoreCase: true, out var docType))
+            {
+                return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { [$"documentTypes[{i}]"] = "Invalid document type" } });
+            }
+
+            items.Add(new AddRagToSharedGameCommand(
+                sharedGameId,
+                files[i],
+                docType,
+                versions[i] ?? "1.0",
+                null,
+                userId,
+                isAdmin));
+        }
+
+        var batchCommand = new BatchAddRagToSharedGameCommand(items);
+
+        logger.LogInformation(
+            "Batch RAG wizard: {Count} items, IsAdmin={IsAdmin}, UserId={UserId}",
+            items.Count, isAdmin, userId);
+
+        var result = await mediator.Send(batchCommand, ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "Batch RAG wizard completed: Success={Success}, Failed={Failed}",
+            result.SuccessCount, result.FailureCount);
+
+        return Results.Ok(result);
     }
 }
 

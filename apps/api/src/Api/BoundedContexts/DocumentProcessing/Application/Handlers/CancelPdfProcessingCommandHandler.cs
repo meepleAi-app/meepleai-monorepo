@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure.Entities;
@@ -66,8 +67,10 @@ internal class CancelPdfProcessingCommandHandler : ICommandHandler<CancelPdfProc
         }
 
         // Step 3: Check if processing is still in progress
-        if (string.Equals(pdf.ProcessingStatus, "completed", StringComparison.Ordinal) ||
-            string.Equals(pdf.ProcessingStatus, "failed", StringComparison.Ordinal))
+        var readyState = nameof(PdfProcessingState.Ready);
+        var failedState = nameof(PdfProcessingState.Failed);
+        if (string.Equals(pdf.ProcessingState, readyState, StringComparison.Ordinal) ||
+            string.Equals(pdf.ProcessingState, failedState, StringComparison.Ordinal))
         {
             _logger.LogInformation(
                 "PDF {PdfId} processing already completed/failed (status: {Status})",

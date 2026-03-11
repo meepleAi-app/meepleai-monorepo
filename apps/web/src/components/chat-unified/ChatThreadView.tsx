@@ -621,6 +621,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                         <TechnicalDetailsPanel
                           debugSteps={streamState.debugSteps}
                           executionId={streamState.executionId}
+                          showDebugLink={isAdmin}
                         />
                       )}
                     </div>

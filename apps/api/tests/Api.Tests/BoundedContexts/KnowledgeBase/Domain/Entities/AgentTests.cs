@@ -356,6 +356,76 @@ public class AgentTests
         Assert.Null(agent.CreatedByUserId);
     }
 
+    // ── Issue #97: SetGameId / ClearGameId domain methods ──
+
+    [Fact]
+    public void SetGameId_ValidId_SetsGameId()
+    {
+        // Arrange
+        var agent = CreateTestAgent();
+        var gameId = Guid.NewGuid();
+
+        // Act
+        agent.SetGameId(gameId);
+
+        // Assert
+        Assert.Equal(gameId, agent.GameId);
+    }
+
+    [Fact]
+    public void SetGameId_EmptyGuid_ThrowsArgumentException()
+    {
+        // Arrange
+        var agent = CreateTestAgent();
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => agent.SetGameId(Guid.Empty));
+    }
+
+    [Fact]
+    public void SetGameId_OverwritesExistingGameId()
+    {
+        // Arrange
+        var agent = CreateTestAgent();
+        var firstGameId = Guid.NewGuid();
+        var secondGameId = Guid.NewGuid();
+        agent.SetGameId(firstGameId);
+
+        // Act
+        agent.SetGameId(secondGameId);
+
+        // Assert
+        Assert.Equal(secondGameId, agent.GameId);
+    }
+
+    [Fact]
+    public void ClearGameId_WithExistingGameId_SetsNull()
+    {
+        // Arrange
+        var agent = CreateTestAgent();
+        agent.SetGameId(Guid.NewGuid());
+
+        // Act
+        agent.ClearGameId();
+
+        // Assert
+        Assert.Null(agent.GameId);
+    }
+
+    [Fact]
+    public void ClearGameId_WithNoGameId_RemainsNull()
+    {
+        // Arrange
+        var agent = CreateTestAgent();
+        Assert.Null(agent.GameId);
+
+        // Act
+        agent.ClearGameId();
+
+        // Assert
+        Assert.Null(agent.GameId);
+    }
+
     // Helper method
     private static Agent CreateTestAgent(
         string name = "Test Agent",

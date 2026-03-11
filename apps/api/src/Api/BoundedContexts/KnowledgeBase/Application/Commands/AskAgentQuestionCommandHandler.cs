@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Services;
@@ -115,14 +116,20 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
             if (documents.Count > 0)
             {
                 var notCompleted = documents.Count(d =>
-                    !string.Equals(d.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase));
+                    d.ProcessingState != PdfProcessingState.Ready);
                 if (notCompleted > 0)
                 {
+                    // Build state breakdown for better diagnostics
+                    var stateBreakdown = documents
+                        .GroupBy(d => d.ProcessingState)
+                        .Select(g => $"{g.Key}={g.Count()}")
+                        .ToList();
+
                     _logger.LogInformation(
-                        "Documents not ready for game {GameId}: {Processing}/{Total} still processing",
-                        request.GameId, notCompleted, documents.Count);
+                        "Documents not ready for game {GameId}: {NotReady}/{Total} not ready. States: {States}",
+                        request.GameId, notCompleted, documents.Count, string.Join(", ", stateBreakdown));
                     throw new InvalidOperationException(
-                        $"{notCompleted} of {documents.Count} documents are still being processed. Please wait for processing to complete before asking questions.");
+                        $"{notCompleted} of {documents.Count} documents are not ready (states: {string.Join(", ", stateBreakdown)}). Please wait for processing to complete before asking questions.");
                 }
             }
         }

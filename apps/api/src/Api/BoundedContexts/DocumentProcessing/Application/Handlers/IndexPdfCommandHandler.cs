@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -142,10 +143,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             return (false, pdf, null, "PDF text extraction required. Please extract text before indexing.", PdfIndexingErrorCode.TextExtractionRequired);
         }
 
-        if (!string.Equals(pdf.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase))
+        var readyState = nameof(PdfProcessingState.Ready);
+        if (!string.Equals(pdf.ProcessingState, readyState, StringComparison.Ordinal))
         {
-            _logger.LogWarning("PDF {PdfId} processing status is {Status}, expected 'completed'",
-                pdfId, pdf.ProcessingStatus);
+            _logger.LogWarning("PDF {PdfId} processing state is {State}, expected '{Expected}'",
+                pdfId, pdf.ProcessingState, readyState);
             return (false, pdf, null, "PDF text extraction not completed", PdfIndexingErrorCode.TextExtractionRequired);
         }
 

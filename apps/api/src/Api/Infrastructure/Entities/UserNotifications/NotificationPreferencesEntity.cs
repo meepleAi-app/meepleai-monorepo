@@ -16,4 +16,11 @@ public class NotificationPreferencesEntity
     public bool InAppOnDocumentReady { get; set; } = true;
     public bool InAppOnDocumentFailed { get; set; } = true;
     public bool InAppOnRetryAvailable { get; set; } = true;
+
+    // Game Night - Issue #44/#47
+    public bool InAppOnGameNightInvitation { get; set; } = true;
+    public bool EmailOnGameNightInvitation { get; set; } = true;
+    public bool PushOnGameNightInvitation { get; set; } = true;
+    public bool EmailOnGameNightReminder { get; set; } = true;
+    public bool PushOnGameNightReminder { get; set; } = true;
 }

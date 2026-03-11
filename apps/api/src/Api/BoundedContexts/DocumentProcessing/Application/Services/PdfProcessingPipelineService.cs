@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -70,8 +71,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             // Idempotency: skip if already completed or failed
-            if (string.Equals(pdfDoc.ProcessingStatus, "completed", StringComparison.Ordinal)
-                || string.Equals(pdfDoc.ProcessingStatus, "failed", StringComparison.Ordinal))
+            var readyState = nameof(PdfProcessingState.Ready);
+            var failedState = nameof(PdfProcessingState.Failed);
+            if (string.Equals(pdfDoc.ProcessingState, readyState, StringComparison.Ordinal)
+                || string.Equals(pdfDoc.ProcessingState, failedState, StringComparison.Ordinal))
             {
                 _logger.LogInformation(
                     "[PdfPipeline] PDF {PdfId} already in terminal state ({Status}), skipping",

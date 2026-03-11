@@ -15,5 +15,6 @@ internal record EmailQueueItemDto(
     string? ErrorMessage,
     DateTime CreatedAt,
     DateTime? ProcessedAt,
-    DateTime? FailedAt
+    DateTime? FailedAt,
+    Guid? CorrelationId = null
 );

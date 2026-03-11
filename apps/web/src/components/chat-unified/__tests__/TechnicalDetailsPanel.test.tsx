@@ -40,6 +40,7 @@ const mockDebugSteps: DebugStep[] = [
       promptTokens: 450,
       completionTokens: 230,
       totalTokens: 680,
+      costUsd: 0.0042,
       confidence: 0.87,
       typology: 'Tutor',
     },
@@ -128,9 +129,11 @@ describe('TechnicalDetailsPanel', () => {
     expect(copied).toContain('Typology: Tutor');
   });
 
-  it('shows debug console deep link when executionId provided', async () => {
+  it('shows debug console deep link when executionId and showDebugLink are provided', async () => {
     const user = userEvent.setup();
-    render(<TechnicalDetailsPanel debugSteps={mockDebugSteps} executionId="abc-123-def" />);
+    render(
+      <TechnicalDetailsPanel debugSteps={mockDebugSteps} executionId="abc-123-def" showDebugLink />,
+    );
 
     await user.click(screen.getByTestId('technical-details-toggle'));
 
@@ -140,13 +143,67 @@ describe('TechnicalDetailsPanel', () => {
     expect(link).toHaveTextContent('Vedi in Debug Console');
   });
 
+  it('hides debug console link when showDebugLink is false even with executionId', async () => {
+    const user = userEvent.setup();
+    render(<TechnicalDetailsPanel debugSteps={mockDebugSteps} executionId="abc-123-def" />);
+
+    await user.click(screen.getByTestId('technical-details-toggle'));
+
+    expect(screen.queryByTestId('debug-console-link')).not.toBeInTheDocument();
+  });
+
   it('hides debug console link when no executionId', async () => {
+    const user = userEvent.setup();
+    render(<TechnicalDetailsPanel debugSteps={mockDebugSteps} showDebugLink />);
+
+    await user.click(screen.getByTestId('technical-details-toggle'));
+
+    expect(screen.queryByTestId('debug-console-link')).not.toBeInTheDocument();
+  });
+
+  it('displays cost when costUsd is present in debug steps', async () => {
     const user = userEvent.setup();
     render(<TechnicalDetailsPanel debugSteps={mockDebugSteps} />);
 
     await user.click(screen.getByTestId('technical-details-toggle'));
 
-    expect(screen.queryByTestId('debug-console-link')).not.toBeInTheDocument();
+    expect(screen.getByText('Costo')).toBeInTheDocument();
+    expect(screen.getByText('$0.0042')).toBeInTheDocument();
+  });
+
+  it('includes cost in clipboard text', async () => {
+    const user = userEvent.setup();
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: mockWriteText },
+      writable: true,
+      configurable: true,
+    });
+
+    render(<TechnicalDetailsPanel debugSteps={mockDebugSteps} />);
+
+    await user.click(screen.getByTestId('technical-details-toggle'));
+    await user.click(screen.getByTestId('technical-details-copy'));
+
+    const copied = mockWriteText.mock.calls[0][0] as string;
+    expect(copied).toContain('Cost: $0.0042');
+  });
+
+  it('hides cost row when costUsd is not in debug steps', async () => {
+    const noCostSteps: DebugStep[] = [
+      {
+        type: 17,
+        name: 'Cost Update',
+        payload: { model: 'llama3:8b', totalTokens: 100 },
+        timestamp: '2024-01-01T00:00:00Z',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<TechnicalDetailsPanel debugSteps={noCostSteps} />);
+
+    await user.click(screen.getByTestId('technical-details-toggle'));
+
+    expect(screen.queryByText('Costo')).not.toBeInTheDocument();
   });
 
   it('detects Ollama provider from model name', () => {

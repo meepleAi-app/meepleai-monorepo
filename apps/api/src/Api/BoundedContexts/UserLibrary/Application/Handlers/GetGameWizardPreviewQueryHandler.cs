@@ -62,7 +62,7 @@ internal class GetGameWizardPreviewQueryHandler : IQueryHandler<GetGameWizardPre
                 Id: d.Id,
                 FileName: d.FileName.Value,
                 PageCount: d.PageCount,
-                Status: d.ProcessingStatus,
+                Status: d.ProcessingState.ToString(),
                 DocumentType: d.DocumentType?.Value ?? "base"
             ))
             .ToList();

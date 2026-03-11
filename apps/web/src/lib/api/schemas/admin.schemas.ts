@@ -46,9 +46,9 @@ export const AdminUserSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1),
   role: z.string().min(1),
-  tier: z.string().optional().default('Free'),              // Issue #3698: User tier
-  tokenUsage: z.number().int().optional().default(0),       // Issue #3698: Tokens used
-  tokenLimit: z.number().int().optional().default(10_000),  // Issue #3698: Monthly limit
+  tier: z.string().optional().default('Free'), // Issue #3698: User tier
+  tokenUsage: z.number().int().optional().default(0), // Issue #3698: Tokens used
+  tokenLimit: z.number().int().optional().default(10_000), // Issue #3698: Monthly limit
   createdAt: z.string().datetime(),
   lastSeenAt: z.string().datetime().nullable().optional(),
   isTwoFactorEnabled: z.boolean().optional(),
@@ -351,6 +351,30 @@ export const ImportWorkflowResponseSchema = z.object({
 });
 
 export type ImportWorkflowResponse = z.infer<typeof ImportWorkflowResponseSchema>;
+
+// ========== N8N Configuration (Issue #60) ==========
+
+export const N8nConfigDtoSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  baseUrl: z.string(),
+  webhookUrl: z.string().nullable().optional(),
+  isActive: z.boolean(),
+  lastTestedAt: z.string().datetime().nullable().optional(),
+  lastTestResult: z.string().nullable().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type N8nConfigDto = z.infer<typeof N8nConfigDtoSchema>;
+
+export const N8nTestResultDtoSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  latencyMs: z.number().nullable().optional(),
+});
+
+export type N8nTestResultDto = z.infer<typeof N8nTestResultDtoSchema>;
 
 // ========== Analytics Dashboard (Issue #1977) ==========
 
@@ -693,7 +717,13 @@ export const BatchJobTypeSchema = z.enum([
 ]);
 export type BatchJobType = z.infer<typeof BatchJobTypeSchema>;
 
-export const BatchJobStatusSchema = z.enum(['Queued', 'Running', 'Completed', 'Failed', 'Cancelled']);
+export const BatchJobStatusSchema = z.enum([
+  'Queued',
+  'Running',
+  'Completed',
+  'Failed',
+  'Cancelled',
+]);
 export type BatchJobStatus = z.infer<typeof BatchJobStatusSchema>;
 
 export const BatchJobDtoSchema = z.object({

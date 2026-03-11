@@ -113,3 +113,9 @@ export * from './llm-system-config.schemas';
 
 // A/B Test schemas (Issue #5500)
 export * from './ab-test.schemas';
+
+// Game Nights schemas (Issue #33)
+export * from './game-nights.schemas';
+
+// Email Templates schemas (Issue #52-#56)
+export * from './email-templates.schemas';

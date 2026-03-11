@@ -2,45 +2,25 @@
 
 import { useState } from 'react';
 
-import { AlertCircle, RefreshCw, Send, Clock, XCircle, Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  RefreshCw,
+  Send,
+  Clock,
+  XCircle,
+  Loader2,
+  CheckCircle,
+  Search,
+  Mail,
+  RotateCcw,
+} from 'lucide-react';
 
 import { toast } from '@/components/layout';
+import { createAdminClient, type EmailQueueItem } from '@/lib/api/clients/adminClient';
+import { HttpClient } from '@/lib/api/core/httpClient';
 
-interface DeadLetterEmail {
-  id: string;
-  recipient: string;
-  subject: string;
-  error: string;
-  failedAt: string;
-  retries: number;
-}
-
-const PLACEHOLDER_DEAD_LETTERS: DeadLetterEmail[] = [
-  {
-    id: '1',
-    recipient: 'user@example.com',
-    subject: 'Welcome to MeepleAI',
-    error: 'SMTP connection timeout',
-    failedAt: '2 hours ago',
-    retries: 2,
-  },
-  {
-    id: '2',
-    recipient: 'admin@boardgame.io',
-    subject: 'Game Approval Notification',
-    error: 'Recipient mailbox full',
-    failedAt: '5 hours ago',
-    retries: 1,
-  },
-  {
-    id: '3',
-    recipient: 'player@test.dev',
-    subject: 'Password Reset',
-    error: 'Invalid recipient address',
-    failedAt: '1 day ago',
-    retries: 3,
-  },
-];
+const httpClient = new HttpClient();
+const adminClient = createAdminClient({ httpClient });
 
 function StatCard({
   label,
@@ -49,7 +29,7 @@ function StatCard({
   color,
 }: {
   label: string;
-  value: string;
+  value: string | number;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
 }) {
@@ -68,57 +48,178 @@ function StatCard({
   );
 }
 
-export function EmailManagementTab() {
-  const [retryingId, setRetryingId] = useState<string | null>(null);
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleString();
+  } catch {
+    return dateStr;
+  }
+}
 
-  async function handleRetry(email: DeadLetterEmail) {
+function formatRelative(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  } catch {
+    return dateStr;
+  }
+}
+
+export function EmailManagementTab() {
+  const queryClient = useQueryClient();
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [testEmailTo, setTestEmailTo] = useState('');
+
+  // Queries
+  const statsQuery = useQuery({
+    queryKey: ['admin', 'email-stats'],
+    queryFn: () => adminClient.getEmailQueueStats(),
+    refetchInterval: 30000, // Auto-refresh every 30s
+  });
+
+  const deadLetterQuery = useQuery({
+    queryKey: ['admin', 'dead-letter-emails'],
+    queryFn: () => adminClient.getDeadLetterEmails({ take: 50 }),
+  });
+
+  const historyQuery = useQuery({
+    queryKey: ['admin', 'email-history', searchTerm],
+    queryFn: () => adminClient.getEmailHistory({ take: 20, search: searchTerm || undefined }),
+  });
+
+  // Mutations
+  const retryMutation = useMutation({
+    mutationFn: (id: string) => adminClient.retryEmail(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'email-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dead-letter-emails'] });
+      toast.success('Email queued for retry');
+    },
+    onError: () => toast.error('Failed to retry email'),
+  });
+
+  const retryAllMutation = useMutation({
+    mutationFn: () => adminClient.retryAllDeadLetters(),
+    onSuccess: count => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'email-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dead-letter-emails'] });
+      toast.success(`${count} emails queued for retry`);
+    },
+    onError: () => toast.error('Failed to retry dead letters'),
+  });
+
+  const sendTestMutation = useMutation({
+    mutationFn: (to: string) => adminClient.sendTestEmail(to),
+    onSuccess: () => {
+      toast.success('Test email sent');
+      setTestEmailTo('');
+    },
+    onError: () => toast.error('Failed to send test email'),
+  });
+
+  async function handleRetry(email: EmailQueueItem) {
     setRetryingId(email.id);
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      toast.info(`Retry for "${email.subject}": API endpoint not yet connected`);
+      await retryMutation.mutateAsync(email.id);
     } finally {
       setRetryingId(null);
     }
   }
 
+  const stats = statsQuery.data;
+  const deadLetters = deadLetterQuery.data?.items ?? [];
+  const history = historyQuery.data?.items ?? [];
+
   return (
     <div className="space-y-6">
-      {/* Info banner */}
-      <div className="flex items-center gap-2 rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-amber-50/50 dark:bg-amber-900/10 px-4 py-3">
-        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          Showing placeholder data. Email management will display real stats once the email service
-          API is connected.
-        </p>
-      </div>
-
       {/* Stats cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <StatCard
-          label="Emails Sent (24h)"
-          value="—"
+          label="Sent (24h)"
+          value={stats?.sentLast24Hours ?? '—'}
           icon={Send}
           color="bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
         />
         <StatCard
+          label="Sent (1h)"
+          value={stats?.sentLastHour ?? '—'}
+          icon={CheckCircle}
+          color="bg-blue-100/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+        />
+        <StatCard
           label="Pending"
-          value="—"
+          value={stats?.pendingCount ?? '—'}
           icon={Clock}
           color="bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
         />
         <StatCard
-          label="Failed (Dead Letter)"
-          value={String(PLACEHOLDER_DEAD_LETTERS.length)}
+          label="Dead Letter"
+          value={stats?.deadLetterCount ?? '—'}
           icon={XCircle}
           color="bg-red-100/80 dark:bg-red-900/30 text-red-700 dark:text-red-400"
         />
       </div>
 
+      {/* Send Test Email */}
+      <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm p-5">
+        <h2 className="font-quicksand text-sm font-semibold text-foreground mb-3">
+          Send Test Email
+        </h2>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={testEmailTo}
+            onChange={e => setTestEmailTo(e.target.value)}
+            placeholder="recipient@example.com"
+            className="flex-1 rounded-lg border border-slate-200/60 dark:border-zinc-700/40 bg-white/50 dark:bg-zinc-900/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+          />
+          <button
+            onClick={() => testEmailTo && sendTestMutation.mutate(testEmailTo)}
+            disabled={!testEmailTo || sendTestMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-900/30 px-4 py-2 text-sm font-semibold text-amber-900 dark:text-amber-300 transition-colors hover:bg-amber-200/80 dark:hover:bg-amber-900/50 disabled:opacity-60"
+          >
+            {sendTestMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="h-4 w-4" />
+            )}
+            Send Test
+          </button>
+        </div>
+      </div>
+
       {/* Dead letter queue */}
       <div>
-        <h2 className="font-quicksand text-sm font-semibold text-foreground mb-3">
-          Dead Letter Queue
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-quicksand text-sm font-semibold text-foreground">
+            Dead Letter Queue ({deadLetters.length})
+          </h2>
+          {deadLetters.length > 0 && (
+            <button
+              onClick={() => retryAllMutation.mutate()}
+              disabled={retryAllMutation.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100/80 dark:bg-amber-900/30 px-3 py-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 transition-colors hover:bg-amber-200/80 dark:hover:bg-amber-900/50 disabled:opacity-60"
+            >
+              {retryAllMutation.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RotateCcw className="h-3 w-3" />
+              )}
+              Retry All
+            </button>
+          )}
+        </div>
         <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -145,23 +246,36 @@ export function EmailManagementTab() {
                 </tr>
               </thead>
               <tbody>
-                {PLACEHOLDER_DEAD_LETTERS.map(email => {
+                {deadLetters.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                      No dead letter emails
+                    </td>
+                  </tr>
+                )}
+                {deadLetters.map((email: EmailQueueItem) => {
                   const isRetrying = retryingId === email.id;
                   return (
                     <tr
                       key={email.id}
                       className="border-b border-slate-100/60 dark:border-zinc-800/40 last:border-0"
                     >
-                      <td className="px-4 py-3 font-medium text-foreground">{email.recipient}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{email.subject}</td>
+                      <td className="px-4 py-3 font-medium text-foreground">{email.to}</td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">
+                        {email.subject}
+                      </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 text-xs">
-                          <XCircle className="h-3 w-3" />
-                          {email.error}
+                        <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 text-xs max-w-[200px] truncate">
+                          <XCircle className="h-3 w-3 shrink-0" />
+                          {email.errorMessage ?? 'Unknown error'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{email.failedAt}</td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{email.retries}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {formatRelative(email.failedAt)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {email.retryCount}/{email.maxRetries}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => handleRetry(email)}
@@ -184,6 +298,121 @@ export function EmailManagementTab() {
           </div>
         </div>
       </div>
+
+      {/* Email History */}
+      <div>
+        <h2 className="font-quicksand text-sm font-semibold text-foreground mb-3">Email History</h2>
+        <div className="mb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search by email or subject..."
+              className="w-full rounded-lg border border-slate-200/60 dark:border-zinc-700/40 bg-white/50 dark:bg-zinc-900/50 pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+            />
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                    Recipient
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                    Subject
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                    Created
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground">
+                    Processed
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                      {historyQuery.isLoading ? 'Loading...' : 'No emails found'}
+                    </td>
+                  </tr>
+                )}
+                {history.map((email: EmailQueueItem) => (
+                  <tr
+                    key={email.id}
+                    className="border-b border-slate-100/60 dark:border-zinc-800/40 last:border-0"
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">{email.to}</td>
+                    <td className="px-4 py-3 text-muted-foreground max-w-[250px] truncate">
+                      {email.subject}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={email.status} />
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                      {formatDate(email.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                      {formatDate(email.processedAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const config: Record<string, { bg: string; text: string; label: string }> = {
+    sent: {
+      bg: 'bg-emerald-100/80 dark:bg-emerald-900/30',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      label: 'Sent',
+    },
+    pending: {
+      bg: 'bg-amber-100/80 dark:bg-amber-900/30',
+      text: 'text-amber-700 dark:text-amber-400',
+      label: 'Pending',
+    },
+    processing: {
+      bg: 'bg-blue-100/80 dark:bg-blue-900/30',
+      text: 'text-blue-700 dark:text-blue-400',
+      label: 'Processing',
+    },
+    failed: {
+      bg: 'bg-orange-100/80 dark:bg-orange-900/30',
+      text: 'text-orange-700 dark:text-orange-400',
+      label: 'Failed',
+    },
+    dead_letter: {
+      bg: 'bg-red-100/80 dark:bg-red-900/30',
+      text: 'text-red-700 dark:text-red-400',
+      label: 'Dead Letter',
+    },
+  };
+
+  const c = config[status] ?? {
+    bg: 'bg-slate-100/80 dark:bg-slate-900/30',
+    text: 'text-slate-700 dark:text-slate-400',
+    label: status,
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${c.bg} ${c.text}`}
+    >
+      {c.label}
+    </span>
   );
 }

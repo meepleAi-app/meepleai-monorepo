@@ -46,7 +46,7 @@ jobs:
           echo "🔍 Verifying staging environment..."
 
           # Check staging is healthy
-          if ! curl -sf https://staging.meepleai.com/health; then
+          if ! curl -sf https://meepleai.app/health; then
             echo "❌ Staging is not healthy. Deploy to staging first."
             exit 1
           fi
@@ -149,7 +149,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./apps/api
-          file: ./apps/api/Dockerfile
+          file: ./apps/api/src/Api/Dockerfile
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
@@ -273,17 +273,6 @@ jobs:
             docker image prune -f
 
             echo "✅ Blue-green deployment complete"
-
-      # Option 2: Kubernetes Rolling Update
-      - name: Deploy to Kubernetes
-        if: vars.DEPLOY_METHOD == 'kubernetes'
-        run: |
-          echo "🚀 Deploying to Kubernetes with rolling update..."
-          # kubectl set image deployment/api api=${{ needs.build.outputs.api_image }} --record
-          # kubectl set image deployment/web web=${{ needs.build.outputs.web_image }} --record
-          # kubectl rollout status deployment/api --timeout=300s
-          # kubectl rollout status deployment/web --timeout=300s
-          echo "⚠️ Kubernetes deployment not yet configured"
 
   # Post-deploy validation
   validate:

@@ -33,7 +33,7 @@ jobs:
   # Run tests before deploy (unless skipped for emergency)
   test:
     name: Pre-deploy Tests
-    if: github.event_name == 'push' || inputs.skip_tests != 'true'
+    if: github.event_name == 'push' || inputs.skip_tests != true
     uses: ./.github/workflows/ci.yml
     secrets: inherit
 
@@ -42,7 +42,7 @@ jobs:
     name: Build Images
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     needs: [test]
-    if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == 'true'))
+    if: always() && (needs.test.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true))
     outputs:
       api_image: ${{ steps.meta-api.outputs.tags }}
       web_image: ${{ steps.meta-web.outputs.tags }}
@@ -198,26 +198,6 @@ jobs:
 
             # Cleanup old images
             docker image prune -f
-
-      # Option 2: Kubernetes Deploy (AKS/EKS/GKE)
-      - name: Deploy to Kubernetes
-        if: vars.DEPLOY_METHOD == 'kubernetes'
-        run: |
-          echo "🚀 Deploying to Kubernetes cluster..."
-          # kubectl set image deployment/api api=${{ needs.build.outputs.api_image }}
-          # kubectl set image deployment/web web=${{ needs.build.outputs.web_image }}
-          # kubectl rollout status deployment/api
-          # kubectl rollout status deployment/web
-          echo "⚠️ Kubernetes deployment not yet configured"
-
-      # Option 3: Cloud Run / App Service
-      - name: Deploy to Cloud Run
-        if: vars.DEPLOY_METHOD == 'cloudrun'
-        run: |
-          echo "🚀 Deploying to Cloud Run..."
-          # gcloud run deploy api --image=${{ needs.build.outputs.api_image }}
-          # gcloud run deploy web --image=${{ needs.build.outputs.web_image }}
-          echo "⚠️ Cloud Run deployment not yet configured"
 
   # Post-deploy validation
   validate:

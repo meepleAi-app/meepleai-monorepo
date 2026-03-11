@@ -76,6 +76,13 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5501: Auto-fallback activated when model deprecated (admin)
     public static readonly NotificationType AdminModelAutoFallback = new("admin_model_auto_fallback");
 
+    // ISSUE-44/47: Game night notification types
+    public static readonly NotificationType GameNightInvitation = new("game_night_invitation");
+    public static readonly NotificationType GameNightRsvpReceived = new("game_night_rsvp_received");
+    public static readonly NotificationType GameNightReminder24h = new("game_night_reminder_24h");
+    public static readonly NotificationType GameNightReminder1h = new("game_night_reminder_1h");
+    public static readonly NotificationType GameNightCancelled = new("game_night_cancelled");
+
     // GDPR Art. 17: Account deletion confirmation
     public static readonly NotificationType GdprAccountDeleted = new("gdpr_account_deleted");
 
@@ -93,6 +100,11 @@ internal sealed class NotificationType : ValueObject
     public bool IsPdfUploadCompleted => string.Equals(Value, PdfUploadCompleted.Value, StringComparison.Ordinal);
     public bool IsRuleSpecGenerated => string.Equals(Value, RuleSpecGenerated.Value, StringComparison.Ordinal);
     public bool IsProcessingFailed => string.Equals(Value, ProcessingFailed.Value, StringComparison.Ordinal);
+    public bool IsGameNightInvitation => string.Equals(Value, GameNightInvitation.Value, StringComparison.Ordinal);
+    public bool IsGameNightRsvpReceived => string.Equals(Value, GameNightRsvpReceived.Value, StringComparison.Ordinal);
+    public bool IsGameNightReminder24h => string.Equals(Value, GameNightReminder24h.Value, StringComparison.Ordinal);
+    public bool IsGameNightReminder1h => string.Equals(Value, GameNightReminder1h.Value, StringComparison.Ordinal);
+    public bool IsGameNightCancelled => string.Equals(Value, GameNightCancelled.Value, StringComparison.Ordinal);
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {
@@ -144,6 +156,11 @@ internal sealed class NotificationType : ValueObject
             "gdpr_account_deleted" => GdprAccountDeleted,
             "gdpr_data_export_ready" => GdprDataExportReady,
             "gdpr_ai_consent_updated" => GdprAiConsentUpdated,
+            "game_night_invitation" => GameNightInvitation,
+            "game_night_rsvp_received" => GameNightRsvpReceived,
+            "game_night_reminder_24h" => GameNightReminder24h,
+            "game_night_reminder_1h" => GameNightReminder1h,
+            "game_night_cancelled" => GameNightCancelled,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

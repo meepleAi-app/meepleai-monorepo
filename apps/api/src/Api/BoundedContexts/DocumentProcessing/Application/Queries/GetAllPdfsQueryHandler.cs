@@ -28,10 +28,32 @@ internal sealed class GetAllPdfsQueryHandler : IQueryHandler<GetAllPdfsQuery, Pd
             .Include(p => p.Game)
             .AsQueryable();
 
-        // Filter by legacy status
+        // Filter by legacy status — map to ProcessingState when possible
         if (!string.IsNullOrWhiteSpace(query.Status))
         {
-            pdfsQuery = pdfsQuery.Where(p => p.ProcessingStatus == query.Status);
+            var mappedState = query.Status switch
+            {
+                "pending" => nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Pending),
+                "completed" => nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+                "failed" => nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed),
+                _ => (string?)null
+            };
+
+            if (mappedState != null)
+            {
+                pdfsQuery = pdfsQuery.Where(p => p.ProcessingState == mappedState);
+            }
+            else
+            {
+                // "processing" maps to multiple states — filter out terminal states
+                var readyState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
+                var failedState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed);
+                var pendingState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Pending);
+                pdfsQuery = pdfsQuery.Where(p =>
+                    p.ProcessingState != readyState &&
+                    p.ProcessingState != failedState &&
+                    p.ProcessingState != pendingState);
+            }
         }
 
         // Filter by 7-state processing state

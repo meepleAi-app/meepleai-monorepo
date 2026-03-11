@@ -6,6 +6,10 @@ namespace Api.Infrastructure.Services;
 /// <summary>
 /// Service for managing the BGG import queue with PostgreSQL persistence.
 /// Issue #3541: BGG Import Queue Service
+///
+/// IMPORTANT: This service uses .AsTracking() on all mutation queries because
+/// the DbContext defaults to QueryTrackingBehavior.NoTracking (PERF-06).
+/// Without explicit tracking, SaveChangesAsync silently skips untracked entity changes.
 /// </summary>
 internal sealed class BggImportQueueService : IBggImportQueueService
 {
@@ -26,6 +30,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
     public async Task<BggImportQueueEntity> EnqueueAsync(
         int bggId,
         string? gameName = null,
+        Guid? requestedByUserId = null,
         CancellationToken cancellationToken = default)
     {
         // Check if already queued or imported
@@ -55,6 +60,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
             Status = BggImportStatus.Queued,
             Position = nextPosition,
             RetryCount = 0,
+            RequestedByUserId = requestedByUserId,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
@@ -163,6 +169,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.BggImportQueue
+            .AsTracking()
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -187,6 +194,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.BggImportQueue
+            .AsTracking()
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -225,6 +233,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         var cutoffDate = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-retentionDays);
 
         var oldJobs = await _dbContext.BggImportQueue
+            .AsTracking()
             .Where(q =>
                 (q.Status == BggImportStatus.Completed || q.Status == BggImportStatus.Failed) &&
                 q.ProcessedAt.HasValue &&
@@ -249,6 +258,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.BggImportQueue
+            .AsTracking()
             .Where(q => q.Status == BggImportStatus.Queued)
             .OrderBy(q => q.Position)
             .FirstOrDefaultAsync(cancellationToken)
@@ -260,6 +270,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.BggImportQueue
+            .AsTracking()
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -282,6 +293,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.BggImportQueue
+            .AsTracking()
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -313,6 +325,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.BggImportQueue
+            .AsTracking()
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -356,6 +369,7 @@ internal sealed class BggImportQueueService : IBggImportQueueService
         CancellationToken cancellationToken = default)
     {
         var queuedItems = await _dbContext.BggImportQueue
+            .AsTracking()
             .Where(q => q.Status == BggImportStatus.Queued)
             .OrderBy(q => q.Position)
             .ToListAsync(cancellationToken)

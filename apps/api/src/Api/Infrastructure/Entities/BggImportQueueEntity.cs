@@ -53,6 +53,11 @@ public sealed class BggImportQueueEntity
     public Guid? CreatedGameId { get; set; }
 
     /// <summary>
+    /// User who requested the import (for audit trail and command attribution)
+    /// </summary>
+    public Guid? RequestedByUserId { get; set; }
+
+    /// <summary>
     /// When the queue entry was created
     /// </summary>
     public DateTime CreatedAt { get; set; }

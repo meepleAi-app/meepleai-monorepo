@@ -497,11 +497,47 @@ jobs:
             echo "| \`$ENDPOINT\` | $AVG | $P95 | $STATUS |" >> $GITHUB_STEP_SUMMARY
           done
 
+  # Post-deploy E2E smoke tests against live staging
+  e2e-staging:
+    name: Staging E2E Smoke Tests
+    runs-on: ubuntu-latest  # Needs browser support (not self-hosted ARM64)
+    needs: [validate]
+    if: needs.validate.result == 'success'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+
+      - name: Setup Playwright
+        uses: ./.github/actions/setup-playwright
+
+      - name: Run Smoke Tests against Staging
+        working-directory: apps/web
+        env:
+          STAGING_URL: https://meepleai.app
+          CI: 'true'
+        run: |
+          echo "🧪 Running E2E smoke tests against staging..."
+          pnpm exec playwright test e2e/smoke.spec.ts \
+            --config=playwright.staging.config.ts \
+            --reporter=list
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-e2e-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
   # Notify on completion
   notify:
     name: Notify
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-    needs: [build, deploy, validate]
+    needs: [build, deploy, validate, e2e-staging]
     if: always()
     steps:
       - name: Slack Notification

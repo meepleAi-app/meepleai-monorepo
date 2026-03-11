@@ -41,6 +41,7 @@ export function MobileStatusBar({ gameName, currentPlayer }: MobileStatusBarProp
           </span>
         )}
         <span className="font-medium truncate">{gameName}</span>
+        <span className="text-xs text-muted-foreground truncate">· {currentPlayer}</span>
       </div>
 
       <div className="flex items-center gap-3 shrink-0">

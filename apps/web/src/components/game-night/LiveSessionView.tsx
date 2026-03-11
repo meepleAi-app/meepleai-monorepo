@@ -6,23 +6,26 @@
  * Mobile-first layout:
  *   Header → Scoreboard → Quick Actions → Chat Widget
  *
- * Desktop (lg+): 2-column — scoreboard+actions left, chat right.
+ * Desktop (lg+): 3-column via LiveSessionLayout —
+ *   Left panel (scoreboard + actions) | Center (activity feed) | Right panel (chat)
  *
  * Integrates with:
  * - useSessionStore (Zustand) for session state
  * - useSessionSync (SSE) for real-time updates
- * - PauseSessionDialog for pause flow
+ * - LiveSessionLayout for desktop 3-column layout
+ * - useQuickViewStore for session-contextual quick view
  * - Sheet (slide-over) for rules explainer
  * - ScoreInput for quick score entry
  *
  * Issue #5587 — Live Game Session UI
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
 import { toScoreboardData } from '@/components/session/adapters';
+import { LiveSessionLayout } from '@/components/session/LiveSessionLayout';
 import { ScoreInput } from '@/components/session/ScoreInput';
 import {
   Sheet,
@@ -32,9 +35,11 @@ import {
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
+import { useResponsive } from '@/hooks/useResponsive';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { useSessionStore } from '@/lib/stores/sessionStore';
+import { useQuickViewStore } from '@/store/quick-view';
 
 import { LiveScoreboard, type LiveScoreboardPlayer } from './LiveScoreboard';
 import { QuickActions } from './QuickActions';
@@ -108,6 +113,29 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const resumeSession = useSessionStore(s => s.resumeSession);
   const handleSessionUpdate = useSessionStore(s => s.handleSessionUpdate);
 
+  // ----- Responsive -----
+  const { isDesktop } = useResponsive();
+
+  // ----- QuickView session context -----
+  useEffect(() => {
+    if (activeSession?.gameId) {
+      useQuickViewStore.getState().openForSession(sessionId, activeSession.gameId);
+    }
+    return () => {
+      useQuickViewStore.getState().close();
+    };
+  }, [sessionId, activeSession?.gameId]);
+
+  // ----- Refs -----
+  const chatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up chat timer on unmount
+  useEffect(() => {
+    return () => {
+      if (chatTimerRef.current) clearTimeout(chatTimerRef.current);
+    };
+  }, []);
+
   // ----- Local UI state -----
   const [rulesOpen, setRulesOpen] = useState(false);
   const [arbiterOpen, setArbiterOpen] = useState(false);
@@ -173,7 +201,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
     // Simulate a placeholder response (actual integration with agent API
     // will be wired in a follow-up issue)
     setIsChatStreaming(true);
-    setTimeout(() => {
+    chatTimerRef.current = setTimeout(() => {
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -183,6 +211,7 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
       };
       setChatMessages(prev => [...prev, assistantMsg]);
       setIsChatStreaming(false);
+      chatTimerRef.current = null;
     }, 1200);
   }, []);
 
@@ -238,68 +267,55 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
   const roundNumbers = scores.map(s => s.round);
   const currentRound = roundNumbers.length > 0 ? Math.max(1, ...roundNumbers) : 1;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/30 to-white dark:from-slate-950 dark:to-slate-900">
-      {/* Header */}
-      <SessionHeader
-        gameName={activeSession.gameName || 'Sessione di gioco'}
-        turnNumber={turnNumber}
-        currentPhase={null}
-        status={sessionStatus}
+  // ----- Shared sub-sections (used in both layouts) -----
+
+  const connectionIndicator = (
+    <div className="flex items-center justify-center py-2">
+      {isConnected ? (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          </span>
+          Live
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
+          <span className="h-2 w-2 rounded-full bg-red-500" />
+          Disconnesso
+        </span>
+      )}
+    </div>
+  );
+
+  const scoreboardSection = (
+    <div className="space-y-4 p-4">
+      <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
+      <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
+      <QuickActions
+        isPaused={isPaused}
+        isLoading={isLoading}
+        onOpenRules={() => setRulesOpen(true)}
+        onAskArbiter={() => setArbiterOpen(true)}
+        onTogglePause={handleTogglePause}
+        onOpenScores={() => setScoresOpen(true)}
       />
+    </div>
+  );
 
-      {/* Connection indicator */}
-      <div className="flex items-center justify-center py-2">
-        {isConnected ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            Live
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
-            <span className="h-2 w-2 rounded-full bg-red-500" />
-            Disconnesso
-          </span>
-        )}
-      </div>
+  const chatSection = (
+    <div className="p-4 h-full">
+      <SessionChatWidget
+        messages={chatMessages}
+        isStreaming={isChatStreaming}
+        onSend={handleChatSend}
+        defaultExpanded={isDesktop}
+      />
+    </div>
+  );
 
-      {/* Main content: responsive 2-column on desktop */}
-      <div className="px-4 pb-8 lg:flex lg:gap-6 lg:px-6 max-w-5xl mx-auto">
-        {/* Left column (mobile: full width) */}
-        <div className="flex-1 space-y-4 lg:max-w-[60%]">
-          {/* Scoreboard */}
-          <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
-
-          {/* AI Score Assistant */}
-          <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
-
-          {/* Quick Actions */}
-          <QuickActions
-            isPaused={isPaused}
-            isLoading={isLoading}
-            onOpenRules={() => setRulesOpen(true)}
-            onAskArbiter={() => setArbiterOpen(true)}
-            onTogglePause={handleTogglePause}
-            onOpenScores={() => setScoresOpen(true)}
-          />
-        </div>
-
-        {/* Right column (mobile: below actions) */}
-        <div className="mt-4 lg:mt-0 lg:w-[40%]">
-          <SessionChatWidget
-            messages={chatMessages}
-            isStreaming={isChatStreaming}
-            onSend={handleChatSend}
-            defaultExpanded={false}
-          />
-        </div>
-      </div>
-
-      {/* ===== Overlays ===== */}
-
+  const overlays = (
+    <>
       {/* Rules slide-over (Sheet) */}
       <Sheet open={rulesOpen} onOpenChange={setRulesOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
@@ -357,6 +373,78 @@ export function LiveSessionView({ sessionId }: LiveSessionViewProps) {
         sessionId={sessionId}
         onSaveComplete={handleSaveComplete}
       />
+    </>
+  );
+
+  // ----- Desktop layout (lg+): 3-column via LiveSessionLayout -----
+  if (isDesktop) {
+    return (
+      <div className="flex flex-col bg-gradient-to-b from-amber-50/30 to-white dark:from-slate-950 dark:to-slate-900">
+        {/* Header */}
+        <SessionHeader
+          gameName={activeSession.gameName || 'Sessione di gioco'}
+          turnNumber={turnNumber}
+          currentPhase={null}
+          status={sessionStatus}
+        />
+
+        {/* 3-column layout */}
+        <LiveSessionLayout
+          leftPanel={scoreboardSection}
+          centerContent={
+            <div className="flex flex-col h-full overflow-auto">
+              {connectionIndicator}
+              {/* Activity feed placeholder — will be wired in a follow-up issue */}
+              <div
+                className="flex-1 flex items-center justify-center text-sm text-muted-foreground"
+                data-testid="activity-feed-placeholder"
+              >
+                Feed attività in arrivo
+              </div>
+            </div>
+          }
+          rightPanel={chatSection}
+        />
+
+        {overlays}
+      </div>
+    );
+  }
+
+  // ----- Mobile layout: stacked -----
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-amber-50/30 to-white dark:from-slate-950 dark:to-slate-900">
+      {/* Header */}
+      <SessionHeader
+        gameName={activeSession.gameName || 'Sessione di gioco'}
+        turnNumber={turnNumber}
+        currentPhase={null}
+        status={sessionStatus}
+      />
+
+      {connectionIndicator}
+
+      {/* Main content: stacked on mobile */}
+      <div className="px-4 pb-8 space-y-4">
+        <LiveScoreboard players={scoreboardPlayers} isRealTime={isConnected} />
+        <ScoreAssistant sessionId={sessionId} onScoreRecorded={loadScores} />
+        <QuickActions
+          isPaused={isPaused}
+          isLoading={isLoading}
+          onOpenRules={() => setRulesOpen(true)}
+          onAskArbiter={() => setArbiterOpen(true)}
+          onTogglePause={handleTogglePause}
+          onOpenScores={() => setScoresOpen(true)}
+        />
+        <SessionChatWidget
+          messages={chatMessages}
+          isStreaming={isChatStreaming}
+          onSend={handleChatSend}
+          defaultExpanded={false}
+        />
+      </div>
+
+      {overlays}
     </div>
   );
 }

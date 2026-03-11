@@ -353,14 +353,51 @@ jobs:
       - name: Smoke Tests
         run: |
           echo "🧪 Running production smoke tests..."
+          FAIL=0
+          RESULTS=""
 
-          # Test API responds to actual requests
-          curl -sf https://api.meepleai.com/health > /dev/null || { echo "❌ API health failed"; exit 1; }
+          smoke_test() {
+            local name="$1" url="$2" expect="$3"
+            local status
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
+            if echo "$expect" | grep -q "$status"; then
+              echo "  ✅ $name: HTTP $status"
+              RESULTS="${RESULTS}| $name | $status | ✅ |\n"
+            else
+              echo "  ❌ $name: HTTP $status (expected $expect)"
+              RESULTS="${RESULTS}| $name | $status | ❌ |\n"
+              FAIL=1
+            fi
+          }
 
-          # Test web serves HTML
-          curl -sf https://meepleai.com -o /dev/null || { echo "❌ Web root failed"; exit 1; }
+          # Critical smoke tests
+          smoke_test "API Health" "https://api.meepleai.com/health" "200"
+          smoke_test "Web Root" "https://meepleai.com" "200"
+          smoke_test "API Game Catalog" "https://api.meepleai.com/api/v1/shared-game-catalog/games?limit=1" "200 401"
+          smoke_test "Swagger Docs" "https://api.meepleai.com/swagger/index.html" "200"
 
-          echo "✅ Smoke tests passed"
+          # Health endpoint JSON validation
+          HEALTH_JSON=$(curl -sf --max-time 10 https://api.meepleai.com/health 2>/dev/null || true)
+          if [ -n "$HEALTH_JSON" ] && echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
+            echo "  ✅ Health JSON: valid structure"
+          else
+            echo "  ⚠️ Health JSON: unexpected format (non-blocking)"
+          fi
+
+          # Write summary
+          {
+            echo "## 🧪 Production Smoke Test Results"
+            echo ""
+            echo "| Test | Status | Result |"
+            echo "|------|--------|--------|"
+            echo -e "$RESULTS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo "❌ Production smoke tests FAILED"
+            exit 1
+          fi
+          echo "✅ All production smoke tests passed"
 
       - name: Performance Baseline
         run: |

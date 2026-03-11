@@ -2,8 +2,10 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.Commands.AccountLockout;
+using Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
+using Api.BoundedContexts.Authentication.Application.Queries.Invitation;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.Extensions;
@@ -48,6 +50,8 @@ internal static class AdminUserEndpoints
         MapUserQuickActionsEndpoints(group);
         MapUserImpersonateEndpoint(group);
         MapEndImpersonationEndpoint(group);
+        // ISSUE-124: Invitation endpoints
+        MapInvitationEndpoints(group);
 
         return group;
     }
@@ -1115,6 +1119,143 @@ internal static class AdminUserEndpoints
 
         return Results.BadRequest(new EndImpersonationResponse(false, "Failed to end impersonation"));
     }
+
+    // ISSUE-124: Invitation system endpoints
+    private static void MapInvitationEndpoints(RouteGroupBuilder group)
+    {
+        group.MapPost("/admin/users/invite", HandleSendInvitation)
+            .WithName("SendInvitation")
+            .WithTags("Admin")
+            .Produces<InvitationDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapPost("/admin/users/bulk/invite", HandleBulkSendInvitations)
+            .WithName("BulkSendInvitations")
+            .WithTags("Admin")
+            .Accepts<IFormFile>("multipart/form-data")
+            .Produces<BulkInviteResponse>(StatusCodes.Status200OK);
+
+        group.MapPost("/admin/users/invitations/{id}/resend", HandleResendInvitation)
+            .WithName("ResendInvitation")
+            .WithTags("Admin")
+            .Produces<InvitationDto>(StatusCodes.Status200OK);
+
+        group.MapGet("/admin/users/invitations", HandleGetInvitations)
+            .WithName("GetInvitations")
+            .WithTags("Admin")
+            .Produces<GetInvitationsResponse>(StatusCodes.Status200OK);
+
+        group.MapGet("/admin/users/invitations/stats", HandleGetInvitationStats)
+            .WithName("GetInvitationStats")
+            .WithTags("Admin")
+            .Produces<InvitationStatsResponse>(StatusCodes.Status200OK);
+    }
+
+    private static async Task<IResult> HandleSendInvitation(
+        SendInvitationRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} sending invitation to {Email} with role {Role}",
+            session!.User!.Id, DataMasking.MaskEmail(request.Email), request.Role);
+
+        var command = new SendInvitationCommand(request.Email, request.Role, session.User.Id);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("Invitation {InvitationId} sent to {Email}", result.Id, DataMasking.MaskEmail(request.Email));
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleBulkSendInvitations(
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+
+        if (file == null || file.Length == 0)
+        {
+            return Results.BadRequest(new { error = "A CSV file is required" });
+        }
+
+        using var reader = new StreamReader(file.OpenReadStream());
+        var csvContent = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+
+        logger.LogInformation("Admin {AdminId} bulk-sending invitations from CSV ({Size} bytes)",
+            session!.User!.Id, file.Length);
+
+        var command = new BulkSendInvitationsCommand(csvContent, session.User.Id);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("Bulk invitation: {SuccessCount} sent, {FailCount} failed",
+            result.Successful.Count, result.Failed.Count);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleResendInvitation(
+        string id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        if (!Guid.TryParse(id, out var invitationId))
+        {
+            return Results.BadRequest(new { error = "Invalid invitation ID format" });
+        }
+
+        logger.LogInformation("Admin {AdminId} resending invitation {InvitationId}",
+            session!.User!.Id, invitationId);
+
+        var command = new ResendInvitationCommand(invitationId, session.User.Id);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("Invitation {InvitationId} resent successfully", result.Id);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetInvitations(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct,
+        string? status = null,
+        int page = 1,
+        int pageSize = 50)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetInvitationsQuery(status, page, pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetInvitationStats(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetInvitationStatsQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 }
 
 /// <summary>
@@ -1161,3 +1302,8 @@ internal record ResetUserPasswordRequest(string NewPassword);
 /// Request payload for sending email to user (Issue #2890).
 /// </summary>
 internal record SendUserEmailRequest(string Subject, string Body);
+
+/// <summary>
+/// Request payload for sending an invitation (Issue #124).
+/// </summary>
+internal record SendInvitationRequest(string Email, string Role);

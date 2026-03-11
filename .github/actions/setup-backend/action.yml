@@ -17,6 +17,13 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Fix dotnet directory permissions
+      shell: bash
+      run: |
+        if [ -d "/usr/share/dotnet" ]; then
+          sudo chown -R $(whoami) /usr/share/dotnet || true
+        fi
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
